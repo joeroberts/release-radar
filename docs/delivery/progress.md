@@ -26,9 +26,9 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-03 truthful-outcome recovery is implemented after the round-2 deadline work reached its stop rule; fresh independent code, QA, architecture, and security/privacy review remains required.
-- Next eligible task: RR-03 independent review only. RR-04 is not eligible until every Required RR-03 finding is closed and the release gate records acceptance.
-- Open product blockers: no known implementation blocker; independent confirmation of the recovered wire, admission, uncertain-outcome, replay, and strict-decoding contracts remains open.
+- Current task: RR-03 is accepted and released; RR-04 onboarding and first-phase creation is the active dependency-safe slice.
+- Next eligible task: RR-04 only, with one fresh Implementer and no concurrent writer.
+- Open product blockers: none known for RR-04.
 - Open operational risks: macOS may require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
 ## Task ledger
@@ -72,14 +72,19 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 ### RR-03 — Typed agent action bridge
 
-- Status: Truthful-outcome recovery implemented; awaiting fresh independent code, QA, architecture, and security/privacy review. Not accepted or released.
-- Commits: `6b7262c` (`feat: add typed agent delivery actions`), `fa8eea0` (`feat: add signed agent bridge transport`), `abb92ef` (`fix: enforce agent bridge result contracts`), and `6cbfcb4` (`fix: enforce bridge deadline inside store transaction`).
+- Status: Accepted and released.
+- Commits: `6b7262c` (`feat: add typed agent delivery actions`), `fa8eea0` (`feat: add signed agent bridge transport`), `abb92ef` (`fix: enforce agent bridge result contracts`), `6cbfcb4` (`fix: enforce bridge deadline inside store transaction`), and `7afbe0b` (`fix: report uncertain bridge outcomes truthfully`).
 - Implemented scope: the committed typed command/dispatcher core plus a packaged MCP stdio tool, sandboxed LaunchAgent broker, application-hosted callback, exact wire/envelope/size/admission-deadline bounds, same-user and pinned team/identifier signing requirements on every XPC hop, app lifecycle registration, and explicit definitive-versus-uncertain delivery results. The broker/tool do not link `ReleaseRadarCore` or SQLite and cannot open the authoritative store.
 - TDD: the original transport and two deadline fix rounds remain recorded in the task report. Recovery RED `/tmp/rr03-recovery-red-clean.log` exposed the absent `outcomeUnknown` result and post-dispatch/pre-reply seam. Recovery GREEN `/tmp/rr03-recovery-green-3.log` passed all 11 focused bridge/transport cases, including pre-admission expiry with no eventual write, committed reply loss followed by exact replay, callback invalidation after handoff, distinct wire/envelope versions, MCP error flags, and strict JSON integer/optional-string rejection.
 - Verification: a fresh normal Debug app build passed. Strict deep signing plus explicit app/broker/tool requirements passed; the broker had exactly sandbox + the approved app group, the tool was unsandboxed with no app group, no embedded profile existed, and `otool` showed no Core/SQLite dependency in either executable. The recovery combined run exercised byte-identical normal-package broker/tool binaries and passed 26/26 transport/core/store tests with 0 failures/skips. Normal/test CDHashes matched before and after execution: broker `ce676ee13847bb703a648ad8c5e4e71ca90b0024`, tool `5dd2f5fecc2d98c84ab8189afe635d37ba01d39f`. Cleanup left no registered service or exact helper process; diff checks passed.
 - Stop-rule recovery: the earlier anonymous-endpoint and app-owned listener attempts remain recorded as stopped and removed. The fresh recovery used the architect-approved minimal correction: a sandboxed broker with the same-team app group, an unsandboxed tool without the group, two team-prefixed Mach services, and no weaker fallback.
 - Deadline stop-rule recovery: after two deadline remediation rounds, independent review showed that `appUnavailable` could still falsely imply no mutation after authenticated callback handoff. The recovery preserves pre-admission no-write enforcement but gives post-handoff uncertainty its own non-persisted `outcomeUnknown` result. Wire protocol version 2 is distinct from durable envelope version 1; once a transaction is admitted it runs to completion, and exact replay after an unknown result returns the original durable result without a duplicate mutation or audit.
-- Required blocker: implementation is complete, but fresh independent code, QA, architecture, and security/privacy review of the recovery remains required.
-- Reviews: prior review history remains recorded as evidence, not acceptance of the recovery. All four recovery reviews are pending.
+- Controller verification: on 2026-08-24, the exact focused `AgentBridgeTransportAcceptanceTests`, `AgentBridgeAcceptanceTests`, and `StoreAcceptanceTests` command passed 26/26 with 0 failures/skips from `/tmp/rr03-controller-verify`; strict deep package signing passed and cleanup reported no registered LaunchAgent or helper process.
+- Reviews: Code Reviewer ACCEPT, Required 0, Optional 0, Out of scope 0. QA ACCEPT after a fresh 26/26 signed-package run, Required 0, Optional 0. Architect APPROVED, Required 0 and no ADR update required. Security/privacy PASS, Required 0, Optional 0, Out of scope 0; the original permissive JSON, MCP error, and false timeout findings are closed.
 - Decisions/risks: preserve the app-only SQLite writer boundary and durable envelope-version-1 replay. The app composes persisted authorized roots into the existing registry seam; the broker holds only the latest authenticated callback in memory. Transport failures before authenticated callback invocation are definitive `appUnavailable`; timer, callback, or XPC failure after invocation is `outcomeUnknown`. On machines where ServiceManagement returns `requiresApproval`, the app logs the explicit Login Items & Extensions owner action and does not weaken or bypass the gate.
-- Next eligible task: RR-03 independent code, QA, architecture, and security/privacy review. RR-04 remains closed.
+- Next eligible task: RR-04 onboarding and required first-phase creation.
+
+### RR-04 release gate
+
+- TPM: GO; RR-03 is technically accepted with all Required findings closed, truthful outcome/replay semantics verified, and scope controlled through the recorded stop-rule recovery.
+- Delivery Manager: GO; RR-03 commits, 26-case focused verification, signed-package boundaries, cleanup, and all four independent reviews are durable. RR-04 is dependency-safe and released to one fresh Implementer with no concurrent writer.
