@@ -30,3 +30,23 @@ The approved board has exactly five persisted lanes: Backlog, In progress, Needs
 ## Consequences
 
 Later integrations must prove a supported sandbox-compatible transport before implementation. Unavailable observation remains explicit and stale rather than silently becoming authoritative. All delivery mutations are app-validated, transactional, and audited.
+
+## RR-05 feasibility outcome — 2026-08-24
+
+Codex CLI `0.147.0` documentation and command help describe app-server clients
+connecting through the transport selected when that app-server process starts.
+The running Codex desktop app starts its app-server without an explicit listener,
+which selects the parent-owned standard-input/standard-output transport. Process
+and listener inspection found no supported named Unix or TCP listener through
+which a separately sandboxed Release Radar process could authenticate and attach
+to that already-running desktop task. Starting another app-server process would
+not prove access to the desktop process's live task state.
+
+The shared live-observation gate is therefore blocked. Release Radar does not
+implement an app-server client, helper, or private-state reader for RR-05. It
+retains the stable `CodexObserver` contract and normalized thread/goal models,
+but its configured observer explicitly reports `unavailable`; an injected
+last-known snapshot is always downgraded to `stale`. Neither state may be
+presented as live or mutate a formal delivery lane. This is the approved
+degraded dependency outcome for continuing to RR-07 after independent RR-05
+review.

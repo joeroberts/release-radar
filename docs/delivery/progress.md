@@ -26,9 +26,9 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-06 is accepted and released; RR-05 read-only live Codex observation is the active dependency-safe feasibility slice.
-- Next eligible task: RR-05 only, with one fresh Implementer and no concurrent writer.
-- Open product blockers: none known for the bounded RR-05 feasibility gate.
+- Current task: RR-05 has implemented the approved explicit unavailable/stale outcome after the supported shared live-attachment gate could not be proven; it is pending independent review and is not accepted or released.
+- Next eligible task: RR-05 independent Code Reviewer, QA, Architect, and Security/privacy review only. RR-07 remains closed until that gate is accepted.
+- Open product blockers: no supported authenticated sandbox-compatible endpoint was found for attaching Release Radar to the already-running Codex desktop task. Live cwd/thread/goal/waiting/completion observation remains blocked; the approved degraded path is explicit unavailable or cached-stale state.
 - Open operational risks: the existing owner sandbox database reports schema version 3 while its `audit_events` table lacks `thread_attribution`, so the normal bundle launches into the existing typed unavailable state; RR-06 did not modify or reset that authoritative database. macOS may also require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
 ## Task ledger
@@ -124,3 +124,13 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 - TPM: GO; RR-06 is technically accepted with its navigation and project-goal findings closed, responsive board evidence verified, and no manual delivery controls or deferred-screen scope added.
 - Delivery Manager: GO; RR-06 commits, 8-case controller verification, signed build/launch evidence, wide/narrow screenshots, and all four independent reviews are durable. RR-05 is dependency-safe and released to one fresh Implementer with no concurrent writer.
+
+### RR-05 — Read-only Codex observation feasibility
+
+- Status: Implemented as the explicit unavailable/cached-stale feasibility outcome; not accepted or released pending independent review.
+- Commit: `ae5fd63` (`feat: define unavailable Codex observation`).
+- Feasibility evidence: Codex CLI `0.147.0` official manual/help and the running desktop process were inspected in two bounded read-only passes. The desktop app-server uses its default parent-owned stdio transport and exposes no supported named Unix or TCP listener for a separately sandboxed authenticated client. A separately started app-server is not evidence of the desktop task's state. No Codex database, rollout/session file, terminal, log, UI, or undocumented IPC content was read; no Codex task was mutated.
+- Scope: Added normalized thread, goal, completion, waiting, freshness, snapshot, and event models; the required read-only `CodexObserver` contract; an `UnavailableCodexObserver`; and app-state loading. With no cache it reports `unavailable`. Any injected cached snapshot, including one captured as live, is normalized to `stale` with its last-observed time and retained last-known state. No app-server client, helper, importer, notification sender, dependency screen, or RR-07 feature was added.
+- TDD and verification: Initial RED failed because the observer models did not exist. Focused observer GREEN passed 4/4, and the app-state integration test passed 1/1 (`/tmp/rr05-focused-green.log`). The fixture covers Active, Paused, Blocked, Awaiting input, Completed/Ready for review, active flags, active goal, and cleared goal. A store-backed boundary case proves observation leaves the formal RR-05 ticket lane unchanged. The directly affected `DashboardProjectionTests` regression passed 5/5 (`/tmp/rr05-projection-regression.log`). `./script/build_and_run.sh --verify` completed the configured signed Debug build (`/tmp/rr05-build-run.log`), and strict deep codesign verification passed (`/tmp/rr05-codesign.log`). Diff checks passed.
+- Decision/risk: Live observation remains blocked until Codex exposes a supported authenticated attach surface for the running desktop task. Fixture/cache data is never labeled live, and observer failure cannot become delivery authority. RR-07's explicit unavailable/stale presentation dependency becomes eligible only after independent acceptance of this recorded outcome.
+- Next eligible task: independent RR-05 Code Reviewer, QA, Architect, and Security/privacy review. RR-07 remains closed.
