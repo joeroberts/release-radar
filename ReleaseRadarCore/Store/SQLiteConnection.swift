@@ -150,6 +150,13 @@ public final class SQLiteConnection: @unchecked Sendable {
         return try body()
     }
 
+    func withReadCallbackRestrictions<T>(_ body: () throws -> T) throws -> T {
+        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreTransactionControlAuthorizer, nil)
+        guard result == SQLITE_OK else { throw currentError(code: result) }
+        defer { sqlite3_set_authorizer(databaseHandle, nil, nil) }
+        return try body()
+    }
+
     var isInTransaction: Bool {
         sqlite3_get_autocommit(databaseHandle) == 0
     }
@@ -210,15 +217,23 @@ public final class SQLiteConnection: @unchecked Sendable {
 }
 
 private func deliveryStoreTransactionAuthorizer(
-    _: UnsafeMutableRawPointer?,
+    context: UnsafeMutableRawPointer?,
     action: Int32,
     firstArgument: UnsafePointer<CChar>?,
     secondArgument: UnsafePointer<CChar>?,
-    _: UnsafePointer<CChar>?,
-    _: UnsafePointer<CChar>?
+    databaseName: UnsafePointer<CChar>?,
+    triggerName: UnsafePointer<CChar>?
 ) -> Int32 {
-    if action == SQLITE_TRANSACTION || action == SQLITE_SAVEPOINT {
-        return SQLITE_DENY
+    let transactionControlResult = deliveryStoreTransactionControlAuthorizer(
+        context,
+        action: action,
+        firstArgument,
+        secondArgument,
+        databaseName,
+        triggerName
+    )
+    guard transactionControlResult == SQLITE_OK else {
+        return transactionControlResult
     }
 
     let protectedTable = "audit_events"
@@ -230,6 +245,17 @@ private func deliveryStoreTransactionAuthorizer(
     }
 
     return SQLITE_OK
+}
+
+private func deliveryStoreTransactionControlAuthorizer(
+    _: UnsafeMutableRawPointer?,
+    action: Int32,
+    _: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?
+) -> Int32 {
+    action == SQLITE_TRANSACTION || action == SQLITE_SAVEPOINT ? SQLITE_DENY : SQLITE_OK
 }
 
 enum SQLiteConnectionAccess {

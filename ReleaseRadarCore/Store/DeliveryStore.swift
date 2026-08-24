@@ -114,7 +114,9 @@ public actor DeliveryStore {
         let connection = try availableConnection()
         let scopedConnection = connection.makeScopedConnection(access: .readOnly)
         defer { scopedConnection.invalidate() }
-        return try body(scopedConnection)
+        return try connection.withReadCallbackRestrictions {
+            try body(scopedConnection)
+        }
     }
 
     public static func applicationSupportDatabaseURL(

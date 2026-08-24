@@ -182,6 +182,32 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.1, 1)
     }
 
+    func testReadCallbackCannotControlTransactionOrPoisonSubsequentAuditedWrite() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.read { connection in
+                _ = try connection.row("BEGIN")
+            }
+        }
+
+        try await store.transact(actor: .init(id: "agent-accept"), reason: "Accept ticket") { connection in
+            try connection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'agent-accept' AND reason = 'Accept ticket'")
+            )
+        }
+        XCTAssertEqual(state.0, TicketLane.accepted.rawValue)
+        XCTAssertEqual(state.1, 2)
+        XCTAssertEqual(state.2, 1)
+    }
+
     func testConnectionReturnedFromTransactionCannotWriteAfterCallbackCompletes() async throws {
         let store = DeliveryStore(databaseURL: try makeDatabaseURL())
         try await seedProject(store)
