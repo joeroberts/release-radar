@@ -26,7 +26,7 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-01 accepted; RR-02 awaiting TPM/Delivery Manager release.
+- Current task: RR-02 released by TPM and Delivery Manager.
 - Next eligible task: RR-02 transactional local delivery store.
 - Open product blockers: none.
 - Open operational risks: none.
@@ -46,6 +46,11 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 - Stop-rule event: first implementer attempt produced no files within the foundation timebox and was interrupted; a fresh bounded implementer completed the slice without expanding scope.
 - Decisions/risks: UI acceptance execution remains assigned to the later seeded UI slice; no product risk in RR-01.
 - Next eligible task: RR-02 transactional local delivery store.
+
+### RR-02 release gate
+
+- TPM: GO; RR-01 technically accepted and RR-02 dependency-safe.
+- Delivery Manager: GO; no remaining Required blocker.
 
 ### RR-01 — Standalone signed application foundation
 
