@@ -1,10 +1,42 @@
 import AppKit
+import OSLog
+import ReleaseRadarCore
 import SwiftUI
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "AgentBridge")
+    private var agentBridgeHost: AgentBridgeApplicationHost?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            return
+        }
+        Task { [weak self] in
+            do {
+                _ = try await self?.startAgentBridge()
+            } catch {
+                self?.logger.error("Agent bridge startup failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        agentBridgeHost?.disconnectCallback()
+        agentBridgeHost = nil
+    }
+
+    func startAgentBridge(
+        databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL()
+    ) async throws -> AgentBridgeApplicationHost {
+        if let agentBridgeHost {
+            return agentBridgeHost
+        }
+        let host = try await AgentBridgeApplicationHost.start(databaseURL: databaseURL)
+        agentBridgeHost = host
+        return host
     }
 }
 
