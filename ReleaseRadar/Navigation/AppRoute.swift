@@ -64,3 +64,8 @@ enum AppRoute: Hashable, Sendable {
         }
     }
 }
+
+enum SidebarBadgePolicy {
+    static let badgedRoutes: [AppRoute] = [.needsReview, .notifications]
+    static let notificationBadgeSurfaceCount = badgedRoutes.filter { $0 == .notifications }.count
+}

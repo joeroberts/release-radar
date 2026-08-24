@@ -117,6 +117,82 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         }
     }
 
+    func testActivityCombinesPersistedSourcesAndKeepsRuntimeSeparateFromDeliveryLane() async throws {
+        let store = try await seededStore()
+        let registry = InMemoryAuthorizedProjectRegistry(projects: [
+            AuthorizedProject(
+                projectID: DashboardSampleData.projectID,
+                canonicalRoot: projectRoot,
+                authorizedRoots: [projectRoot]
+            ),
+        ])
+        let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry)
+        _ = await dispatcher.dispatch(envelope(
+            reason: "Resolve agent-review after owner validation",
+            command: .resolveImportReview(reviewItemID: "agent-review")
+        ))
+        _ = await dispatcher.dispatch(envelope(
+            reason: "Record UX-D10 completion",
+            command: .recordCompletion(
+                id: "rr07-completion",
+                ticketID: "UX-D10",
+                summary: "Agent completed export confirmation"
+            )
+        ))
+
+        let activity = try await ProjectActivityProjection.load(
+            from: store,
+            projectID: DashboardSampleData.projectID
+        )
+
+        XCTAssertTrue(activity.items.contains { $0.source == .audit })
+        XCTAssertTrue(activity.items.contains { $0.source == .runtime })
+        XCTAssertTrue(activity.items.contains { $0.source == .review })
+        XCTAssertTrue(activity.items.contains { $0.source == .completion })
+        XCTAssertTrue(activity.items.contains { $0.source == .notification })
+        let runtime = try XCTUnwrap(activity.items.first { $0.source == .runtime && $0.ticketID?.rawValue == "VD2-07c" })
+        XCTAssertEqual(runtime.runtimeState?.title, "Blocked")
+        XCTAssertEqual(runtime.deliveryLane, .blocked)
+        XCTAssertTrue(runtime.freshnessText?.hasPrefix("Last seen ") == true)
+        XCTAssertFalse(activity.items.contains {
+            $0.title.lowercased().split(separator: " ").contains("live")
+        })
+        XCTAssertEqual(RuntimeStateLanguage(storedValue: "active").title, "Active")
+        XCTAssertEqual(RuntimeStateLanguage(storedValue: "paused").title, "Paused")
+        XCTAssertEqual(RuntimeStateLanguage(storedValue: "awaiting_input").title, "Awaiting input")
+        XCTAssertEqual(RuntimeStateLanguage(storedValue: "completed").title, "Completed")
+        XCTAssertEqual(RuntimeStateLanguage(storedValue: "missing").title, "Unavailable")
+    }
+
+    func testSettingsTabsAndNavigationExposeTruthfulAccessibleSurfacesWithoutDuplicateNotificationBadge() {
+        XCTAssertEqual(SettingsTab.allCases.map(\.title), [
+            "General", "Connections", "Notifications", "Projects",
+        ])
+        XCTAssertEqual(Set(SettingsTab.allCases.map(\.accessibilityID)).count, 4)
+        let unavailable = CodexConnectionPresentation(
+            freshness: CodexObservationFreshness(
+                state: .unavailable,
+                lastObservedAt: nil,
+                reason: "No supported attachment"
+            )
+        )
+        let stale = CodexConnectionPresentation(
+            freshness: CodexObservationFreshness(
+                state: .stale,
+                lastObservedAt: Date(timeIntervalSince1970: 1_700_000_000),
+                reason: "Codex is offline"
+            )
+        )
+        XCTAssertEqual(unavailable.status, "Unavailable")
+        XCTAssertEqual(unavailable.detail, "No supported attachment")
+        XCTAssertEqual(stale.status, "Stale")
+        XCTAssertTrue(stale.detail.hasPrefix("Last seen "))
+        XCTAssertEqual(AppRoute.phaseBoard(DashboardSampleData.projectID).systemImage, "rectangle.split.3x1")
+        XCTAssertEqual(AppRoute.notifications.systemImage, "bell")
+        XCTAssertEqual(SidebarBadgePolicy.badgedRoutes, [.needsReview, .notifications])
+        XCTAssertEqual(SidebarBadgePolicy.notificationBadgeSurfaceCount, 1)
+    }
+
     private func seededStore() async throws -> DeliveryStore {
         let store = DeliveryStore(databaseURL: databaseURL)
         try await DashboardSampleData.seedIfNeeded(in: store)
