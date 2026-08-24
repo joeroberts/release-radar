@@ -59,7 +59,7 @@ Create the standalone Xcode project and these responsibility boundaries:
 
 ---
 
-### RR-01: Scaffold the signed standalone application
+### Task 1 (RR-01): Scaffold the signed standalone application
 
 **Dependencies:** none.
 
@@ -92,7 +92,7 @@ enum AppRoute: Hashable, Sendable {
 - [ ] Run `xcodebuild -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -configuration Debug build` and record the resolved signing identity in `docs/delivery/progress.md`.
 - [ ] Commit the accepted foundation: `git commit -am "feat: scaffold Release Radar macOS app"` after staging the new files.
 
-### RR-02: Add the transactional local delivery store
+### Task 2 (RR-02): Add the transactional local delivery store
 
 **Dependencies:** RR-01.
 
@@ -127,7 +127,7 @@ enum TicketLane: String, Codable, CaseIterable, Sendable {
 - [ ] Run `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -only-testing:ReleaseRadarTests/StoreAcceptanceTests`.
 - [ ] Obtain independent code, QA, architecture, and security review; update the ledger and commit as `feat: add transactional delivery store`.
 
-### RR-03: Expose one narrow agent action bridge
+### Task 3 (RR-03): Expose one narrow agent action bridge
 
 **Dependencies:** RR-02.
 
@@ -164,7 +164,7 @@ struct AgentCommandResult: Codable, Sendable {
 - [ ] Write one integration scenario proving a valid command commits delivery state and audit ID, while invalid reference/cross-project/cycle commands return structured errors with full rollback; app unavailable returns `appUnavailable` and never writes elsewhere.
 - [ ] Run the focused bridge test target, perform independent review, update the ledger, and commit as `feat: add typed agent delivery actions`.
 
-### RR-04: Onboard folder-backed projects and require phase one
+### Task 4 (RR-04): Onboard folder-backed projects and require phase one
 
 **Dependencies:** RR-02, RR-03.
 
@@ -193,7 +193,7 @@ protocol ProjectOnboarding: Sendable {
 - [ ] Persist that the first dashboard has not yet been opened so onboarding creates no notification eligibility.
 - [ ] Run `OnboardingAcceptanceTests`, review, update the ledger, and commit as `feat: onboard folder-backed projects`.
 
-### RR-06: Deliver the recognizable local-first board
+### Task 5 (RR-06): Deliver the recognizable local-first board
 
 **Dependencies:** RR-02, RR-04. This task intentionally precedes live Codex work.
 
@@ -224,7 +224,7 @@ struct PhaseBoardProjection: Equatable, Sendable {
 - [ ] Verify projection membership/counts and one seeded wide/narrow UI flow covering 220-to-96 sidebar collapse, unclipped badges/highlight, visible full-width titles, and narrow ID-only cards.
 - [ ] Build and launch the signed app, capture wide/narrow owner comparison screenshots without a pixel-diff gate, review, update the ledger, and commit as `feat: deliver local phase board`.
 
-### RR-05: Prove and add read-only live Codex observation
+### Task 6 (RR-05): Prove and add read-only live Codex observation
 
 **Dependencies:** RR-04, RR-06.
 
@@ -254,7 +254,7 @@ protocol CodexObserver: Sendable {
 - [ ] Assert that every observed transition updates runtime state/timestamp and never changes the linked ticket’s formal lane.
 - [ ] Reject malformed, oversized, or version-mismatched events; retain last-known state as stale; perform architecture, security, code, and QA review; update the ledger; commit the proven implementation as `feat: observe Codex delivery state` or record a blocked gate without speculative fallback.
 
-### RR-07: Add Needs Review, dependencies, activity, and settings navigation
+### Task 7 (RR-07): Add Needs Review, dependencies, activity, and settings navigation
 
 **Dependencies:** RR-05 when live observation succeeds; otherwise RR-06 with explicit stale/unavailable presentation.
 
@@ -273,7 +273,7 @@ protocol CodexObserver: Sendable {
 - [ ] Extend the one seeded UI flow across all seven approved surfaces and assert key accessible content, multi-dependency endpoints, tab navigation, and absence of duplicate bell/count UI.
 - [ ] Run the focused review/graph and seeded UI acceptance tests, review, update the ledger, and commit as `feat: add review dependency and activity views`.
 
-### RR-08: Import Rekon delivery artifacts once
+### Task 8 (RR-08): Import Rekon delivery artifacts once
 
 **Dependencies:** RR-04, RR-07.
 
@@ -300,7 +300,7 @@ protocol DeliveryArtifactImporter: Sendable {
 - [ ] Prove relaunch persistence and mark moved/removed evidence unavailable without deleting imported state.
 - [ ] Run the focused importer scenario, review, update the ledger, and commit as `feat: import Rekon delivery records`.
 
-### RR-09: Add app-owned Pushover and notification history
+### Task 9 (RR-09): Add app-owned Pushover and notification history
 
 **Dependencies:** RR-02, RR-03, the recorded RR-05 live-or-degraded semantics, and RR-07.
 
@@ -327,7 +327,7 @@ protocol NotificationDispatcher: Sendable {
 - [ ] Implement the full-width Notifications screen and menu-bar alert surface without duplicate bells/counts; complete Connections and Notifications settings states.
 - [ ] Perform security, architecture, code, and QA review; update the ledger and commit as `feat: add durable Pushover alerts`.
 
-### RR-10: Integrate failure states and deliver the signed MVP
+### Task 10 (RR-10): Integrate failure states and deliver the signed MVP
 
 **Dependencies:** RR-06, RR-07, RR-08, RR-09 and the recorded RR-05 gate result.
 
