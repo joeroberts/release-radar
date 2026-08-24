@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 1
+    static let currentVersion: Int64 = 2
 
     static func migrate(_ connection: SQLiteConnection) throws {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -12,8 +12,13 @@ enum StoreMigrations {
 
         try connection.execute("BEGIN EXCLUSIVE TRANSACTION")
         do {
-            try connection.executeScript(schemaVersion1)
-            try connection.execute("PRAGMA user_version = 1")
+            if version < 1 {
+                try connection.executeScript(schemaVersion1)
+            }
+            if version < 2 {
+                try connection.executeScript(schemaVersion2)
+            }
+            try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
         } catch {
             try? connection.execute("ROLLBACK")
@@ -201,6 +206,28 @@ enum StoreMigrations {
         goal_id TEXT REFERENCES observed_goals(id) ON DELETE SET NULL,
         provider_receipt TEXT,
         acknowledged_at TEXT
+    );
+    """
+
+    private static let schemaVersion2 = """
+    ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
+        CHECK (thread_attribution IN ('none', 'asserted', 'verified'));
+    ALTER TABLE blockers ADD COLUMN resolved_at TEXT;
+    ALTER TABLE review_items ADD COLUMN status TEXT NOT NULL DEFAULT 'open'
+        CHECK (status IN ('open', 'resolved', 'dismissed'));
+    CREATE TABLE completion_records (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id) ON DELETE CASCADE
+    );
+    CREATE TABLE agent_command_requests (
+        request_id TEXT PRIMARY KEY NOT NULL,
+        request_body BLOB NOT NULL,
+        result_data BLOB NOT NULL,
+        created_at TEXT NOT NULL
     );
     """
 }

@@ -79,6 +79,20 @@ public actor DeliveryStore {
         reason: String,
         _ body: @Sendable (SQLiteConnection) throws -> T
     ) throws -> T {
+        try transact(
+            actor: actor,
+            reason: reason,
+            auditEventID: .init(rawValue: UUID().uuidString),
+            body
+        )
+    }
+
+    public func transact<T: Sendable>(
+        actor: DeliveryActor,
+        reason: String,
+        auditEventID: AuditEventID,
+        _ body: @Sendable (SQLiteConnection) throws -> T
+    ) throws -> T {
         let connection = try availableConnection()
         try connection.execute("BEGIN IMMEDIATE TRANSACTION")
         let scopedConnection = connection.makeScopedConnection(access: .transaction)
@@ -91,11 +105,12 @@ public actor DeliveryStore {
                 throw SQLiteError(code: SQLITE_MISUSE, message: "The transaction callback ended the store-owned transaction")
             }
             try connection.execute(
-                "INSERT INTO audit_events (id, actor_id, thread_id, reason, created_at) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO audit_events (id, actor_id, thread_id, thread_attribution, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 bindings: [
-                    .text(UUID().uuidString),
+                    .text(auditEventID.rawValue),
                     .text(actor.id),
                     actor.threadID.map(SQLiteValue.text) ?? .null,
+                    .text(actor.threadAttribution.rawValue),
                     .text(reason),
                     .text(ISO8601DateFormatter().string(from: Date())),
                 ]

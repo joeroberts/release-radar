@@ -27,13 +27,25 @@ public enum TicketLane: String, Codable, CaseIterable, Sendable {
     case accepted
 }
 
+public enum ThreadAttribution: String, Codable, CaseIterable, Sendable {
+    case none
+    case asserted
+    case verified
+}
+
 public struct DeliveryActor: Codable, Equatable, Sendable {
     public let id: String
     public let threadID: String?
+    public let threadAttribution: ThreadAttribution
 
-    public init(id: String, threadID: String? = nil) {
+    public init(
+        id: String,
+        threadID: String? = nil,
+        threadAttribution: ThreadAttribution? = nil
+    ) {
         self.id = id
         self.threadID = threadID
+        self.threadAttribution = threadAttribution ?? (threadID == nil ? .none : .asserted)
     }
 }
 
@@ -50,5 +62,5 @@ public struct ThreadExclusionRecord: Codable, Equatable, Sendable { public let i
 public struct ObservedThreadRecord: Codable, Equatable, Sendable { public let id: ObservedThreadID; public let projectID: ProjectID; public let status: String; public let lastObservedAt: Date }
 public struct ObservedGoalRecord: Codable, Equatable, Sendable { public let id: ObservedGoalID; public let projectID: ProjectID; public let threadID: ObservedThreadID; public let status: String; public let text: String; public let lastObservedAt: Date }
 public struct ReviewItemRecord: Codable, Equatable, Sendable { public let id: ReviewItemID; public let projectID: ProjectID; public let ticketID: TicketID?; public let kind: String; public let summary: String }
-public struct AuditEventRecord: Codable, Equatable, Sendable { public let id: AuditEventID; public let actorID: String; public let threadID: String?; public let reason: String; public let createdAt: Date }
+public struct AuditEventRecord: Codable, Equatable, Sendable { public let id: AuditEventID; public let actorID: String; public let threadID: String?; public let threadAttribution: ThreadAttribution; public let reason: String; public let createdAt: Date }
 public struct NotificationEventRecord: Codable, Equatable, Sendable { public let id: NotificationEventID; public let fingerprint: String; public let state: String; public let ticketID: TicketID?; public let goalID: ObservedGoalID? }
