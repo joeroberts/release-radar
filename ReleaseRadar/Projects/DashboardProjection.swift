@@ -83,10 +83,12 @@ struct DashboardProjection: Equatable, Sendable {
                 let attentionCount = lanes
                     .filter { $0.lane == .needsReview || $0.lane == .blocked }
                     .reduce(0) { $0 + $1.count }
+                let goalContext = try connection.projectGoalContext(projectID: projectID)
                 let project = ProjectDashboardProjection(
                     id: projectID,
                     name: try projectRow.text("name"),
                     activePhaseName: try phaseRow.text("name"),
+                    goalContext: goalContext,
                     currentWorkCount: currentWorkCount,
                     attentionCount: attentionCount
                 )
@@ -108,6 +110,7 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
     let id: ProjectID
     let name: String
     let activePhaseName: String
+    let goalContext: GoalContextProjection
     let currentWorkCount: Int
     let attentionCount: Int
 }
@@ -304,6 +307,32 @@ private extension SQLiteConnection {
             evidence: evidence,
             auditHistory: auditHistory,
             notificationHistory: notificationHistory
+        )
+    }
+
+    func projectGoalContext(projectID: ProjectID) throws -> GoalContextProjection {
+        guard let goalRow = try row(
+            """
+            SELECT text, status, last_observed_at
+            FROM observed_goals
+            WHERE project_id = ?
+            ORDER BY last_observed_at DESC, rowid DESC LIMIT 1
+            """,
+            bindings: [.text(projectID.rawValue)]
+        ) else {
+            return GoalContextProjection(
+                linkQuality: .unavailable,
+                text: nil,
+                status: nil,
+                lastObservedAt: nil
+            )
+        }
+
+        return GoalContextProjection(
+            linkQuality: .verified,
+            text: try goalRow.text("text"),
+            status: try goalRow.text("status"),
+            lastObservedAt: ISO8601DateFormatter().date(from: try goalRow.text("last_observed_at"))
         )
     }
 }

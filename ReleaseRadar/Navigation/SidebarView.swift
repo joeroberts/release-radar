@@ -73,7 +73,7 @@ struct SidebarView: View {
                 .padding(.horizontal, 12)
 
             if !model.isSidebarCompact {
-                Text(model.dashboard?.projects.first?.name ?? "Current project")
+                Text(model.currentProject?.name ?? "Current project")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -171,7 +171,7 @@ struct SidebarView: View {
             switch model.selection {
             case .projects:
                 ProjectsView(projection: dashboard) { projectID in
-                    model.selection = .projectOverview(projectID)
+                    model.openProject(projectID)
                 }
             case let .projectOverview(projectID):
                 if let board = dashboard.board(for: projectID) {

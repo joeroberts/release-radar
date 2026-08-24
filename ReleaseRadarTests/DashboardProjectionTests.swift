@@ -28,6 +28,13 @@ final class DashboardProjectionTests: XCTestCase {
 
         XCTAssertEqual(project.name, "Rekon Pursuit")
         XCTAssertEqual(project.activePhaseName, "Post-MVP refinement")
+        XCTAssertEqual(project.goalContext.linkQuality, .verified)
+        XCTAssertEqual(project.goalContext.status, "Blocked")
+        XCTAssertEqual(project.goalContext.text, "Resolve the policy boundary for Activity and AI areas.")
+        XCTAssertEqual(
+            project.goalContext.lastObservedAt,
+            ISO8601DateFormatter().date(from: "2026-08-23T22:14:00Z")
+        )
         XCTAssertEqual(project.currentWorkCount, 13)
         XCTAssertEqual(project.attentionCount, 3)
         XCTAssertEqual(board.lanes.map(\.lane), TicketLane.allCases)
@@ -75,6 +82,38 @@ final class DashboardProjectionTests: XCTestCase {
         let board = try XCTUnwrap(projection.board(for: DashboardSampleData.projectID))
 
         XCTAssertEqual(board.lanes.reduce(0) { $0 + $1.count }, 31)
+    }
+
+    func testProjectWithoutPersistedGoalReportsGoalContextUnavailable() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(
+            actor: DeliveryActor(id: "dashboard-projection-test"),
+            reason: "Add project without observed goal",
+            auditEventID: AuditEventID(rawValue: "dashboard-project-without-goal")
+        ) { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0)",
+                bindings: [.text("project-without-goal"), .text("No Goal Project")]
+            )
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?)",
+                bindings: [.text("no-goal-phase"), .text("project-without-goal"), .text("Planning")]
+            )
+        }
+
+        let projection = try await DashboardProjection.load(from: store)
+        let project = try XCTUnwrap(
+            projection.projects.first { $0.id.rawValue == "project-without-goal" }
+        )
+
+        XCTAssertEqual(project.activePhaseName, "Planning")
+        XCTAssertEqual(project.goalContext.linkQuality, .unavailable)
+        XCTAssertNil(project.goalContext.status)
+        XCTAssertNil(project.goalContext.text)
+        XCTAssertNil(project.goalContext.lastObservedAt)
+        XCTAssertEqual(project.currentWorkCount, 0)
+        XCTAssertEqual(project.attentionCount, 0)
     }
 
     func testResponsivePresentationUsesFullOutcomesWideAndIDsOnlyCompact() {

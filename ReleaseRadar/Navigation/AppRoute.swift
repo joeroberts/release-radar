@@ -51,4 +51,16 @@ enum AppRoute: Hashable, Sendable {
         case .activity: "clock.arrow.circlepath"
         }
     }
+
+    var projectID: ProjectID? {
+        switch self {
+        case let .projectOverview(projectID),
+             let .phaseBoard(projectID),
+             let .dependencies(projectID),
+             let .activity(projectID):
+            projectID
+        case .projects, .needsReview, .notifications, .settings:
+            nil
+        }
+    }
 }

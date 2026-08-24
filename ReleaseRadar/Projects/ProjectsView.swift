@@ -25,6 +25,9 @@ struct ProjectsView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(project.name)
                                             .font(.title3.weight(.semibold))
+                                        Text("Active phase")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
                                         Text(project.activePhaseName)
                                             .foregroundStyle(.secondary)
                                     }
@@ -34,13 +37,15 @@ struct ProjectsView: View {
                                         .foregroundStyle(.tertiary)
                                 }
 
+                                ProjectGoalSummaryView(context: project.goalContext)
+
                                 HStack(spacing: 26) {
                                     projectMetric(value: project.currentWorkCount, label: "Current work")
                                     projectMetric(value: project.attentionCount, label: "Needs attention")
                                 }
                             }
                             .padding(20)
-                            .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
                             .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
                             .overlay {
                                 RoundedRectangle(cornerRadius: 14)
@@ -66,5 +71,46 @@ struct ProjectsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+struct ProjectGoalSummaryView: View {
+    let context: GoalContextProjection
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: context.linkQuality == .verified ? "checkmark.seal" : "questionmark.circle")
+                .font(.system(size: 16, weight: .light))
+                .foregroundStyle(context.linkQuality == .verified ? Color.green : Color.secondary)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(context.linkQuality == .verified ? "Verified last-known goal" : "Last-known goal unavailable")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+
+                if let status = context.status {
+                    Text(status)
+                        .font(.subheadline.weight(.semibold))
+                }
+
+                if let text = context.text {
+                    Text(text)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                } else {
+                    Text("No persisted goal observation")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
+                if let observedAt = context.lastObservedAt {
+                    Text("Observed \(observedAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }

@@ -21,6 +21,11 @@ struct ProjectOverviewView: View {
                     summaryCard("Owner attention", value: "\(board.project.attentionCount)", systemImage: "person.crop.circle.badge.exclamationmark")
                 }
 
+                ProjectGoalSummaryView(context: board.project.goalContext)
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
