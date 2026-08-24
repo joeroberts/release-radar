@@ -191,10 +191,102 @@ final class RekonImportAcceptanceTests: XCTestCase {
             }
         }
 
-        try Data(count: 1_048_577).write(to: fixture.artifactURL)
+        let oversizedHandle = try FileHandle(forWritingTo: fixture.artifactURL)
+        try oversizedHandle.truncate(atOffset: 1_048_577)
+        try oversizedHandle.close()
         XCTAssertThrowsError(try importer.preview(fixture.root)) { error in
             XCTAssertEqual(error as? RekonImportError, .inputTooLarge)
         }
+    }
+
+    func testPreviewStopsWhenRecognizedEvidenceDirectoryExceedsScanLimit() throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let importer = RekonArtifactImporter(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            project: fixture.authorizedProject
+        )
+        let taskBriefs = fixture.root.appendingPathComponent("docs/delivery/task-briefs", isDirectory: true)
+        for index in 0...512 {
+            FileManager.default.createFile(
+                atPath: taskBriefs.appendingPathComponent("generated-\(index).md").path,
+                contents: Data()
+            )
+        }
+
+        XCTAssertThrowsError(try importer.preview(fixture.root)) { error in
+            guard case .limitExceeded = error as? RekonImportError else {
+                return XCTFail("Expected bounded evidence scan, got \(error)")
+            }
+        }
+        XCTAssertFalse(importer.canImport(fixture.root))
+    }
+
+    func testTwoNodePhaseAndTicketCyclesBecomeReviewsWhileConfidentEdgesApply() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: fixture.artifactURL)) as? [String: Any]
+        )
+        var phases = try XCTUnwrap(object["phases"] as? [[String: Any]])
+        phases[0]["dependsOnPhaseIds"] = ["phase-next"]
+        object["phases"] = phases
+        var tasks = try XCTUnwrap(object["tasks"] as? [[String: Any]])
+        tasks[0]["dependsOnTaskIds"] = ["TASK-B"]
+        object["tasks"] = tasks
+        try JSONSerialization.data(withJSONObject: object).write(to: fixture.artifactURL)
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+
+        let preview = try importer.preview(fixture.root)
+
+        XCTAssertEqual(preview.phaseDependencies, [
+            .init(phaseID: .init(rawValue: "phase-main"), dependsOnPhaseID: .init(rawValue: "phase-next")),
+        ])
+        XCTAssertEqual(preview.ticketDependencies, [
+            .init(ticketID: .init(rawValue: "TASK-A"), dependsOnTicketID: .init(rawValue: "TASK-B")),
+        ])
+        let cycleReviews = preview.reviewItems.filter { $0.kind == .unresolvedDependency }
+        XCTAssertTrue(cycleReviews.contains { $0.sourceID == "phase-next→phase-main" })
+        XCTAssertTrue(cycleReviews.contains { $0.sourceID == "TASK-B→TASK-A" })
+
+        try await importer.apply(preview, to: fixture.projectID)
+        let state = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_dependencies WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_dependencies WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = 'project-import' AND kind = 'unresolved_dependency'")
+            )
+        }
+        XCTAssertEqual(state.0, 2)
+        XCTAssertEqual(state.1, 3)
+        XCTAssertEqual(state.2, 1)
+        XCTAssertEqual(state.3, 1)
+        XCTAssertEqual(state.4, 3)
+    }
+
+    func testPreviewRejectsArtifactSymlinkThatEscapesAuthorizedRoot() throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let importer = RekonArtifactImporter(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            project: fixture.authorizedProject
+        )
+        let externalDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RekonImportExternal-\(UUID().uuidString)", isDirectory: true)
+        let externalArtifact = externalDirectory.appendingPathComponent("dashboard-status.json")
+        try FileManager.default.createDirectory(at: externalDirectory, withIntermediateDirectories: true)
+        try Data(contentsOf: fixture.artifactURL).write(to: externalArtifact)
+        try FileManager.default.removeItem(at: fixture.artifactURL)
+        try FileManager.default.createSymbolicLink(at: fixture.artifactURL, withDestinationURL: externalArtifact)
+        addTeardownBlock { try? FileManager.default.removeItem(at: externalDirectory) }
+
+        XCTAssertThrowsError(try importer.preview(fixture.root)) { error in
+            guard case .invalidPath = error as? RekonImportError else {
+                return XCTFail("Expected escaped artifact rejection, got \(error)")
+            }
+        }
+        XCTAssertFalse(importer.canImport(fixture.root))
     }
 }
 

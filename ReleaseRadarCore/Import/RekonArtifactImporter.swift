@@ -8,6 +8,8 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
     private static let maximumDependencies = 20_000
     private static let maximumIdentifierBytes = 256
     private static let maximumTextBytes = 4_096
+    private static let maximumScannedEvidenceEntries = 512
+    private static let maximumEvidenceRecords = 1_024
 
     private let store: DeliveryStore
     private let project: AuthorizedProject
@@ -26,14 +28,29 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         guard project.authorizedRoots.contains(root) else {
             throw RekonImportError.unauthorizedFolder
         }
-        let artifactURL = root.appendingPathComponent(Self.artifactPath)
-        guard FileManager.default.fileExists(atPath: artifactURL.path) else {
+        let requestedArtifactURL = root.appendingPathComponent(Self.artifactPath)
+        guard FileManager.default.fileExists(atPath: requestedArtifactURL.path) else {
             throw RekonImportError.missingArtifact
         }
-        let data = try Data(contentsOf: artifactURL, options: [.mappedIfSafe])
-        guard data.count <= Self.maximumArtifactBytes else {
+        let artifactURL = AuthorizedProject.canonicalize(requestedArtifactURL)
+        let artifactValues = try artifactURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+        guard Self.contains(artifactURL, within: root), artifactValues.isRegularFile == true else {
+            throw RekonImportError.invalidPath(requestedArtifactURL.path)
+        }
+        guard let artifactSize = artifactValues.fileSize,
+              artifactSize <= Self.maximumArtifactBytes else {
             throw RekonImportError.inputTooLarge
         }
+        let artifactHandle = try FileHandle(forReadingFrom: artifactURL)
+        let data: Data
+        do {
+            data = try artifactHandle.read(upToCount: Self.maximumArtifactBytes + 1) ?? Data()
+            try artifactHandle.close()
+        } catch {
+            try? artifactHandle.close()
+            throw error
+        }
+        guard data.count <= Self.maximumArtifactBytes else { throw RekonImportError.inputTooLarge }
         let artifact: RekonArtifact
         do {
             artifact = try JSONDecoder().decode(RekonArtifact.self, from: data)
@@ -70,7 +87,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         }
         let phaseIDs = Set(phases.map(\.id))
 
-        var phaseDependencies: [ImportPhaseDependency] = []
+        var phaseDependencyCandidates: [ImportPhaseDependency] = []
         for phase in artifact.phases where phaseCounts[phase.id] == 1 && phaseIDs.contains(.init(rawValue: phase.id)) {
             for dependencyID in phase.dependsOnPhaseIds ?? [] {
                 if dependencyID == phase.id {
@@ -81,7 +98,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                         summary: "Phase \(phase.id) cannot depend on itself"
                     ))
                 } else if phaseIDs.contains(.init(rawValue: dependencyID)) {
-                    phaseDependencies.append(.init(
+                    phaseDependencyCandidates.append(.init(
                         phaseID: .init(rawValue: phase.id),
                         dependsOnPhaseID: .init(rawValue: dependencyID)
                     ))
@@ -94,6 +111,20 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     ))
                 }
             }
+        }
+        let filteredPhaseDependencies = filterCycles(
+            phaseDependencyCandidates,
+            subject: { $0.phaseID.rawValue },
+            dependency: { $0.dependsOnPhaseID.rawValue }
+        )
+        let phaseDependencies = filteredPhaseDependencies.accepted
+        for dependency in filteredPhaseDependencies.rejected {
+            reviews.append(.init(
+                sourceID: "\(dependency.phaseID.rawValue)→\(dependency.dependsOnPhaseID.rawValue)",
+                ticketID: nil,
+                kind: .unresolvedDependency,
+                summary: "Phase dependency would create a cycle"
+            ))
         }
 
         let taskCounts = Dictionary(grouping: artifact.tasks, by: \.id).mapValues(\.count)
@@ -144,7 +175,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         }
         let ticketIDs = Set(tickets.map(\.id))
 
-        var ticketDependencies: [ImportTicketDependency] = []
+        var ticketDependencyCandidates: [ImportTicketDependency] = []
         for task in artifact.tasks where taskCounts[task.id] == 1 && ticketIDs.contains(.init(rawValue: task.id)) {
             for dependencyID in task.dependsOnTaskIds ?? [] {
                 if dependencyID == task.id {
@@ -155,7 +186,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                         summary: "Task \(task.id) cannot depend on itself"
                     ))
                 } else if ticketIDs.contains(.init(rawValue: dependencyID)) {
-                    ticketDependencies.append(.init(
+                    ticketDependencyCandidates.append(.init(
                         ticketID: .init(rawValue: task.id),
                         dependsOnTicketID: .init(rawValue: dependencyID)
                     ))
@@ -168,6 +199,20 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     ))
                 }
             }
+        }
+        let filteredTicketDependencies = filterCycles(
+            ticketDependencyCandidates,
+            subject: { $0.ticketID.rawValue },
+            dependency: { $0.dependsOnTicketID.rawValue }
+        )
+        let ticketDependencies = filteredTicketDependencies.accepted
+        for dependency in filteredTicketDependencies.rejected {
+            reviews.append(.init(
+                sourceID: "\(dependency.ticketID.rawValue)→\(dependency.dependsOnTicketID.rawValue)",
+                ticketID: dependency.ticketID,
+                kind: .unresolvedDependency,
+                summary: "Task dependency would create a cycle"
+            ))
         }
 
         let evidence = try collectEvidence(
@@ -213,7 +258,9 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         let currentPreview = try self.preview(preview.sourceRoot)
         guard preview == currentPreview,
               preview.sourceRoot == self.project.canonicalRoot || self.project.authorizedRoots.contains(preview.sourceRoot),
-              preview.artifactURL == preview.sourceRoot.appendingPathComponent(Self.artifactPath) else {
+              preview.artifactURL == AuthorizedProject.canonicalize(
+                preview.sourceRoot.appendingPathComponent(Self.artifactPath)
+              ) else {
             throw RekonImportError.malformedArtifact
         }
 
@@ -462,18 +509,21 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         taskCounts: [String: Int]
     ) throws -> [ImportEvidence] {
         var records: [String: ImportEvidence] = [:]
+        var scannedEntryCount = 0
         let virtualDashboardDirectory = root.appendingPathComponent("docs/delivery/dashboard", isDirectory: true)
         for task in artifact.tasks where taskCounts[task.id] == 1 && confidentTicketIDs.contains(.init(rawValue: task.id)) {
             guard let evidence = task.evidence, let href = boundedText(evidence.href) else { continue }
-            let resolved = AuthorizedProject.canonicalize(URL(fileURLWithPath: href, relativeTo: virtualDashboardDirectory))
-            guard contains(resolved, within: root) else {
-                throw RekonImportError.invalidPath(href)
-            }
+            let resolvedEvidence = try validateEvidence(
+                URL(fileURLWithPath: href, relativeTo: virtualDashboardDirectory),
+                within: root,
+                allowMissing: true
+            )
+            let resolved = resolvedEvidence.url
             let record = ImportEvidence(
                 ticketID: .init(rawValue: task.id),
                 label: boundedText(evidence.label) ?? resolved.lastPathComponent,
                 path: resolved.path,
-                isAvailable: FileManager.default.fileExists(atPath: resolved.path)
+                isAvailable: resolvedEvidence.isAvailable
             )
             if let existing = records[resolved.path], existing.ticketID != record.ticketID {
                 records[resolved.path] = .init(
@@ -483,16 +533,33 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     isAvailable: existing.isAvailable
                 )
             } else {
-                records[resolved.path] = record
+                try retainEvidence(record, records: &records)
             }
         }
 
         let delivery = root.appendingPathComponent("docs/delivery", isDirectory: true)
-        addEvidenceIfPresent(delivery.appendingPathComponent("roadmap.md"), label: "Roadmap", within: root, records: &records)
-        try addRecognizedMarkdown(in: delivery.appendingPathComponent("task-briefs", isDirectory: true), label: "Task brief", within: root, records: &records)
-        try addRecognizedMarkdown(in: delivery.appendingPathComponent("handoffs", isDirectory: true), label: "Handoff", within: root, records: &records)
-        try addLedgers(in: delivery, within: root, records: &records)
-        try addLedgers(in: delivery.appendingPathComponent("reviews", isDirectory: true), within: root, records: &records)
+        try addEvidenceIfPresent(delivery.appendingPathComponent("roadmap.md"), label: "Roadmap", within: root, records: &records)
+        try addRecognizedMarkdown(
+            in: delivery.appendingPathComponent("task-briefs", isDirectory: true),
+            label: "Task brief",
+            within: root,
+            scannedEntryCount: &scannedEntryCount,
+            records: &records
+        )
+        try addRecognizedMarkdown(
+            in: delivery.appendingPathComponent("handoffs", isDirectory: true),
+            label: "Handoff",
+            within: root,
+            scannedEntryCount: &scannedEntryCount,
+            records: &records
+        )
+        try addLedgers(in: delivery, within: root, scannedEntryCount: &scannedEntryCount, records: &records)
+        try addLedgers(
+            in: delivery.appendingPathComponent("reviews", isDirectory: true),
+            within: root,
+            scannedEntryCount: &scannedEntryCount,
+            records: &records
+        )
         return Array(records.values)
     }
 
@@ -500,27 +567,37 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         in directory: URL,
         label: String,
         within root: URL,
+        scannedEntryCount: inout Int,
         records: inout [String: ImportEvidence]
     ) throws {
-        guard FileManager.default.fileExists(atPath: directory.path) else { return }
-        for url in try FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        ) where url.pathExtension.lowercased() == "md" {
-            addEvidenceIfPresent(url, label: label, within: root, records: &records)
+        try scanTopLevel(
+            in: directory,
+            within: root,
+            scannedEntryCount: &scannedEntryCount,
+            records: &records
+        ) { url in
+            guard url.pathExtension.lowercased() == "md" else { return nil }
+            return label
         }
     }
 
-    private func addLedgers(in directory: URL, within root: URL, records: inout [String: ImportEvidence]) throws {
-        guard FileManager.default.fileExists(atPath: directory.path) else { return }
-        for url in try FileManager.default.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        ) where url.pathExtension.lowercased() == "md"
-            && url.deletingPathExtension().lastPathComponent.lowercased().contains("ledger") {
-            addEvidenceIfPresent(url, label: "Delivery ledger", within: root, records: &records)
+    private func addLedgers(
+        in directory: URL,
+        within root: URL,
+        scannedEntryCount: inout Int,
+        records: inout [String: ImportEvidence]
+    ) throws {
+        try scanTopLevel(
+            in: directory,
+            within: root,
+            scannedEntryCount: &scannedEntryCount,
+            records: &records
+        ) { url in
+            guard url.pathExtension.lowercased() == "md",
+                  url.deletingPathExtension().lastPathComponent.lowercased().contains("ledger") else {
+                return nil
+            }
+            return "Delivery ledger"
         }
     }
 
@@ -529,13 +606,82 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         label: String,
         within root: URL,
         records: inout [String: ImportEvidence]
-    ) {
-        let resolved = AuthorizedProject.canonicalize(url)
-        guard contains(resolved, within: root),
-              FileManager.default.fileExists(atPath: resolved.path) else { return }
+    ) throws {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let resolvedEvidence = try validateEvidence(url, within: root, allowMissing: false)
+        let resolved = resolvedEvidence.url
         if records[resolved.path] == nil {
-            records[resolved.path] = .init(ticketID: nil, label: label, path: resolved.path, isAvailable: true)
+            try retainEvidence(
+                .init(ticketID: nil, label: label, path: resolved.path, isAvailable: true),
+                records: &records
+            )
         }
+    }
+
+    private func scanTopLevel(
+        in requestedDirectory: URL,
+        within root: URL,
+        scannedEntryCount: inout Int,
+        records: inout [String: ImportEvidence],
+        label: (URL) -> String?
+    ) throws {
+        guard FileManager.default.fileExists(atPath: requestedDirectory.path) else { return }
+        let directory = AuthorizedProject.canonicalize(requestedDirectory)
+        let directoryValues = try directory.resourceValues(forKeys: [.isDirectoryKey])
+        guard contains(directory, within: root), directoryValues.isDirectory == true else {
+            throw RekonImportError.invalidPath(requestedDirectory.path)
+        }
+        var enumerationFailed = false
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants],
+            errorHandler: { _, _ in
+                enumerationFailed = true
+                return false
+            }
+        ) else {
+            throw RekonImportError.invalidPath(requestedDirectory.path)
+        }
+        while let url = enumerator.nextObject() as? URL {
+            scannedEntryCount += 1
+            guard scannedEntryCount <= Self.maximumScannedEvidenceEntries else {
+                throw RekonImportError.limitExceeded("Evidence discovery exceeds 512 scanned entries")
+            }
+            guard let label = label(url) else { continue }
+            try addEvidenceIfPresent(url, label: label, within: root, records: &records)
+        }
+        guard !enumerationFailed else { throw RekonImportError.invalidPath(requestedDirectory.path) }
+    }
+
+    private func validateEvidence(
+        _ requestedURL: URL,
+        within root: URL,
+        allowMissing: Bool
+    ) throws -> (url: URL, isAvailable: Bool) {
+        let resolved = AuthorizedProject.canonicalize(requestedURL)
+        guard contains(resolved, within: root) else {
+            throw RekonImportError.invalidPath(requestedURL.path)
+        }
+        guard FileManager.default.fileExists(atPath: resolved.path) else {
+            guard allowMissing else { throw RekonImportError.invalidPath(requestedURL.path) }
+            return (resolved, false)
+        }
+        let values = try resolved.resourceValues(forKeys: [.isRegularFileKey])
+        guard values.isRegularFile == true else {
+            throw RekonImportError.invalidPath(requestedURL.path)
+        }
+        return (resolved, true)
+    }
+
+    private func retainEvidence(
+        _ evidence: ImportEvidence,
+        records: inout [String: ImportEvidence]
+    ) throws {
+        guard records[evidence.path] != nil || records.count < Self.maximumEvidenceRecords else {
+            throw RekonImportError.limitExceeded("Evidence discovery exceeds 1024 records")
+        }
+        records[evidence.path] = evidence
     }
 
     private static func contains(_ candidate: URL, within root: URL) -> Bool {
@@ -571,6 +717,49 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
 
     private func ticketDependencyOrder(_ lhs: ImportTicketDependency, _ rhs: ImportTicketDependency) -> Bool {
         (lhs.ticketID.rawValue, lhs.dependsOnTicketID.rawValue) < (rhs.ticketID.rawValue, rhs.dependsOnTicketID.rawValue)
+    }
+
+    private func filterCycles<Edge>(
+        _ candidates: [Edge],
+        subject: (Edge) -> String,
+        dependency: (Edge) -> String
+    ) -> (accepted: [Edge], rejected: [Edge]) {
+        let ordered = candidates.sorted {
+            (subject($0), dependency($0)) < (subject($1), dependency($1))
+        }
+        var accepted: [Edge] = []
+        var rejected: [Edge] = []
+        var adjacency: [String: Set<String>] = [:]
+        var seenEdges = Set<String>()
+
+        for candidate in ordered {
+            let source = subject(candidate)
+            let target = dependency(candidate)
+            let edgeKey = "\(source)\u{0}\(target)"
+            guard seenEdges.insert(edgeKey).inserted else { continue }
+            if Self.hasPath(from: target, to: source, adjacency: adjacency) {
+                rejected.append(candidate)
+            } else {
+                accepted.append(candidate)
+                adjacency[source, default: []].insert(target)
+            }
+        }
+        return (accepted, rejected)
+    }
+
+    private static func hasPath(
+        from start: String,
+        to destination: String,
+        adjacency: [String: Set<String>]
+    ) -> Bool {
+        var pending = [start]
+        var visited = Set<String>()
+        while let current = pending.popLast() {
+            if current == destination { return true }
+            guard visited.insert(current).inserted else { continue }
+            pending.append(contentsOf: (adjacency[current] ?? []).sorted(by: >))
+        }
+        return false
     }
 }
 
