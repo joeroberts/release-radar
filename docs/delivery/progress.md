@@ -26,8 +26,8 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-07 is accepted and released with Needs Review, dependency, activity/goal-state, responsive navigation, and tabbed settings surfaces working in explicit unavailable/stale observation mode.
-- Next eligible task: RR-08 one-time import of recognized Rekon delivery artifacts into the app-owned project state, with uncertainty held in Needs Review.
+- Current task: RR-08 implementation is committed and awaiting independent code, QA, architecture, and security/privacy review.
+- Next eligible task: None until RR-08's independent review gate is accepted; RR-09 remains dependency-blocked.
 - Open product blockers: no supported authenticated sandbox-compatible endpoint was found for attaching Release Radar to the already-running Codex desktop task. Live cwd/thread/goal/waiting/completion observation remains blocked; the approved degraded path is explicit unavailable or cached-stale state.
 - Open operational risks: the existing owner sandbox database reports schema version 3 while its `audit_events` table lacks `thread_attribution`, so the normal bundle launches into the existing typed unavailable state; RR-06 did not modify or reset that authoritative database. macOS may also require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
@@ -162,3 +162,15 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 - TPM: GO; RR-07 is accepted with all Required graph, audit-attribution, and project-isolation findings closed, and its final controller evidence is proportional and clean.
 - Delivery Manager: GO; RR-07 commits, two bounded remediation rounds, 43-case controller verification, signed package, four screenshots, and four independent reviews are durable. RR-08 is dependency-safe and released to one Implementer with no concurrent writer.
+
+### RR-08 — One-time recognized Rekon delivery import
+
+- Status: Implemented; independent reviews pending. RR-09 is not released.
+- Commit: `e0569be` (`feat: import Rekon delivery records`).
+- Scope: Added a bounded schema-version-1 Rekon dashboard JSON preview and one-time importer. It maps confident phases, tickets, five lane values, phase/ticket dependencies, and explicit evidence links; recognizes only the fixed roadmap, task-brief, handoff, and ledger evidence families; and never parses arbitrary Markdown as delivery authority. Duplicate IDs, missing outcomes, unresolved references, unmapped states, and existing-record conflicts become deterministic Needs Review items.
+- Persistence and boundaries: Apply revalidates the preview, configured authorization, persisted project/root ownership, and evidence containment before writing. One app-owned audited transaction inserts only non-conflicting delivery records, preserves resolved/dismissed review status on replay, remains record-idempotent, writes no notification events, and marks missing importer-owned evidence unavailable without deleting imported delivery state or changing source files.
+- TDD: Preview RED is `/tmp/rr08-preview-red.log`; preview GREEN is `/tmp/rr08-preview-green.log`; apply RED is `/tmp/rr08-apply-red.log`; the bounded compile correction is `/tmp/rr08-apply-green-attempt1.log`; and first full apply GREEN is `/tmp/rr08-apply-green-attempt2.log`.
+- Implementer verification: Fresh focused verification at `/tmp/rr08-final-tests.log` passed 6/6 `RekonImportAcceptanceTests` with zero failures/skips. The separate configured Debug build at `/tmp/rr08-final-build.log` succeeded with the configured Apple Development identity, and strict deep codesign verification of `/tmp/rr08-final-build/Build/Products/Debug/ReleaseRadar.app` passed. `git diff --check` passed before the feature commit.
+- Reviews: Code Reviewer pending. QA pending. Architect pending. Security/privacy pending.
+- Decisions/risks: The existing Rekon project was inspected read-only only to confirm the stable field and evidence-path shapes; acceptance uses a copied synthetic fixture and never imports owner project data. This is a one-time seed, not ongoing synchronization. No notification delivery, UI integration, live Codex attachment, arbitrary Markdown inference, schema migration, or owner database recovery was introduced.
+- Next eligible task: None until the RR-08 review gate is accepted.
