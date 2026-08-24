@@ -92,6 +92,7 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 ### RR-04 — Folder-backed project onboarding and first phase
 
 - Status: Implemented; not accepted or released pending fresh independent code, QA, architecture, and security/privacy review.
+- Commit: `0012372` (`feat: onboard folder-backed projects`).
 - Scope: Native folder selection, read-only security-scoped bookmark persistence, canonical component containment, Git-root/worktree discovery, separately authorized external worktrees, durable task exclusions, first-phase gating through the typed dispatcher, persisted unmatched-task review items, and `first_dashboard_opened = false`.
 - TDD: RED at `/tmp/rr04-red.log` established the missing onboarding/bookmark/worktree contracts. A second focused RED at `/tmp/rr04-red-authorize.log` established that external worktrees require an explicit authorization path. GREEN at `/tmp/rr04-green.log` covers root/descendant/contained-worktree inclusion, sibling-prefix/outside rejection, separately authorized worktrees, no-phase refusal, typed first-phase audit, durable exclusion after a recreated onboarding service, persisted review items, and notification ineligibility.
 - Verification: Fresh focused `OnboardingAcceptanceTests` and directly affected `StoreAcceptanceTests` passed 17/17 with 0 failures/skips at `/tmp/rr04-final-tests.log`. A normal signed Debug `ReleaseRadar` build passed at `/tmp/rr04-final-build.log` with the configured Apple Development identity. Final diff check is recorded with the implementation commit.
