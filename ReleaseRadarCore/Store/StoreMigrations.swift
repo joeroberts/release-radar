@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 3
+    static let currentVersion: Int64 = 4
 
     static func migrate(_ connection: SQLiteConnection) throws {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -20,6 +20,12 @@ enum StoreMigrations {
             }
             if version < 3 {
                 try connection.executeScript(schemaVersion3)
+            }
+            if version < 4,
+               try connection.scalarInt(
+                   "SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'thread_attribution'"
+               ) == 0 {
+                try connection.executeScript(schemaVersion4)
             }
             try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
@@ -244,5 +250,10 @@ enum StoreMigrations {
         is_stale INTEGER NOT NULL DEFAULT 0 CHECK (is_stale IN (0, 1)),
         PRIMARY KEY(project_id, path)
     );
+    """
+
+    private static let schemaVersion4 = """
+    ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
+        CHECK (thread_attribution IN ('none', 'asserted', 'verified'));
     """
 }
