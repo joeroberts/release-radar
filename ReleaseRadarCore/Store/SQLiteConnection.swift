@@ -151,7 +151,7 @@ public final class SQLiteConnection: @unchecked Sendable {
     }
 
     func withReadCallbackRestrictions<T>(_ body: () throws -> T) throws -> T {
-        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreTransactionControlAuthorizer, nil)
+        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreReadAuthorizer, nil)
         guard result == SQLITE_OK else { throw currentError(code: result) }
         defer { sqlite3_set_authorizer(databaseHandle, nil, nil) }
         return try body()
@@ -256,6 +256,22 @@ private func deliveryStoreTransactionControlAuthorizer(
     _: UnsafePointer<CChar>?
 ) -> Int32 {
     action == SQLITE_TRANSACTION || action == SQLITE_SAVEPOINT ? SQLITE_DENY : SQLITE_OK
+}
+
+private func deliveryStoreReadAuthorizer(
+    _: UnsafeMutableRawPointer?,
+    action: Int32,
+    _: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?
+) -> Int32 {
+    switch action {
+    case SQLITE_SELECT, SQLITE_READ, SQLITE_FUNCTION:
+        SQLITE_OK
+    default:
+        SQLITE_DENY
+    }
 }
 
 enum SQLiteConnectionAccess {

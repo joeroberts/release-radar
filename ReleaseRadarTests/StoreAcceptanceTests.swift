@@ -208,6 +208,50 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.2, 1)
     }
 
+    func testReadCallbackCannotDisableForeignKeysOrBypassAuditedIntegrity() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.read { connection in
+                _ = try connection.row("PRAGMA foreign_keys = OFF")
+            }
+        }
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "agent-invalid"), reason: "Reject missing ticket") { connection in
+                try connection.execute(
+                    "INSERT INTO blockers (id, project_id, ticket_id, summary) VALUES ('rejected', 'project-1', 'missing', 'Rejected')"
+                )
+            }
+        }
+
+        let foreignKeys = try await store.transact(
+            actor: .init(id: "agent-accept"),
+            reason: "Accept ticket"
+        ) { connection in
+            let foreignKeys = try connection.scalarInt("PRAGMA foreign_keys")
+            try connection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+            return foreignKeys
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM blockers"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'agent-invalid'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'agent-accept' AND reason = 'Accept ticket'")
+            )
+        }
+        XCTAssertEqual(foreignKeys, 1)
+        XCTAssertEqual(state.0, TicketLane.accepted.rawValue)
+        XCTAssertEqual(state.1, 0)
+        XCTAssertEqual(state.2, 2)
+        XCTAssertEqual(state.3, 0)
+        XCTAssertEqual(state.4, 1)
+    }
+
     func testConnectionReturnedFromTransactionCannotWriteAfterCallbackCompletes() async throws {
         let store = DeliveryStore(databaseURL: try makeDatabaseURL())
         try await seedProject(store)
@@ -319,16 +363,16 @@ final class StoreAcceptanceTests: XCTestCase {
             (
                 try connection.scalarText("SELECT outcome FROM tickets WHERE id = 'RR-02'"),
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
-                try connection.scalarInt("PRAGMA user_version"),
                 try connection.scalarInt("SELECT COUNT(*) FROM blockers")
             )
         }
+        let relaunchedDatabase = try SQLiteConnection(url: databaseURL)
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL))
 
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
-        XCTAssertEqual(persisted.2, 1)
-        XCTAssertEqual(persisted.3, 0)
+        XCTAssertEqual(persisted.2, 0)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 1)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }
