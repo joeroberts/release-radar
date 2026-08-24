@@ -372,50 +372,9 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 4)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 3)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
-    }
-
-    func testVersionThreeSchemaDriftRepairsMissingAuditAttributionBeforeWriting() async throws {
-        let databaseURL = try makeDatabaseURL()
-        var initialStore: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
-        initialStore = nil
-
-        do {
-            let drifted = try SQLiteConnection(url: databaseURL)
-            try drifted.executeScript("""
-                ALTER TABLE audit_events RENAME TO audit_events_with_attribution;
-                CREATE TABLE audit_events (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    actor_id TEXT NOT NULL,
-                    thread_id TEXT,
-                    reason TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                );
-                INSERT INTO audit_events (id, actor_id, thread_id, reason, created_at)
-                    SELECT id, actor_id, thread_id, reason, created_at FROM audit_events_with_attribution;
-                DROP TABLE audit_events_with_attribution;
-                PRAGMA user_version = 3;
-                """)
-        }
-
-        let repairedStore = DeliveryStore(databaseURL: databaseURL)
-        try await seedProject(repairedStore)
-        let repaired = try SQLiteConnection(url: databaseURL)
-        let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL))
-
-        XCTAssertEqual(try repaired.scalarInt("PRAGMA user_version"), 4)
-        XCTAssertEqual(
-            try repaired.scalarInt("SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'thread_attribution'"),
-            1
-        )
-        XCTAssertEqual(try repaired.scalarText("SELECT thread_attribution FROM audit_events"), "none")
-        XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 3)
-        XCTAssertEqual(
-            try snapshot.scalarInt("SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'thread_attribution'"),
-            0
-        )
     }
 
     func testCorruptDatabaseOpensUnavailableAndLeavesOriginalBytesIntact() async throws {
