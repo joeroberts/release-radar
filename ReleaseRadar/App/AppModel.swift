@@ -121,13 +121,16 @@ final class AppModel {
             case .dismiss: .dismissImportReview(reviewItemID: item.id.rawValue)
             }
             let verb = decision == .resolve ? "Resolve" : "Dismiss"
-            let result = await dispatcher.dispatch(AgentCommandEnvelope(
-                version: AgentCommandDispatcher.commandEnvelopeVersion,
-                requestID: UUID(),
-                projectRoot: selectedRootPath,
-                reason: "\(verb) review \(item.id.rawValue)",
-                command: command
-            ))
+            let result = await dispatcher.dispatch(
+                AgentCommandEnvelope(
+                    version: AgentCommandDispatcher.commandEnvelopeVersion,
+                    requestID: UUID(),
+                    projectRoot: selectedRootPath,
+                    reason: "\(verb) review \(item.id.rawValue)",
+                    command: command
+                ),
+                origin: .ownerApp
+            )
             if let error = result.error {
                 reviewActionError = "Review action failed: \(String(describing: error))"
                 return

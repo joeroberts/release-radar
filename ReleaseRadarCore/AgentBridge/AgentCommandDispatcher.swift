@@ -1,5 +1,10 @@
 import Foundation
 
+public enum AgentCommandOrigin: Sendable {
+    case externalAgent
+    case ownerApp
+}
+
 public actor AgentCommandDispatcher {
     public static let commandEnvelopeVersion = 1
 
@@ -13,6 +18,7 @@ public actor AgentCommandDispatcher {
 
     public func dispatch(
         _ envelope: AgentCommandEnvelope,
+        origin: AgentCommandOrigin = .externalAgent,
         admissionDeadline: TimeInterval? = nil
     ) async -> AgentCommandResult {
         if let error = validate(envelope) {
@@ -27,17 +33,23 @@ public actor AgentCommandDispatcher {
             let auditEventID = AuditEventID(rawValue: UUID().uuidString)
             let result = resultForCommand(envelope.command, auditEventID: auditEventID)
             let resultData = try JSONEncoder().encode(result)
+            let auditScope = Self.auditScope(for: envelope.command, projectID: project.projectID)
+            let actor: DeliveryActor = switch origin {
+            case .externalAgent:
+                .init(
+                    id: "release-radar-agent",
+                    threadID: envelope.assertedThreadID,
+                    threadAttribution: envelope.assertedThreadID == nil ? .none : .asserted
+                )
+            case .ownerApp:
+                .init(id: "release-radar-owner")
+            }
             do {
                 return try await store.transact(
-                    actor: .init(
-                        id: "release-radar-agent",
-                        threadID: envelope.assertedThreadID,
-                        threadAttribution: envelope.assertedThreadID == nil
-                            ? ThreadAttribution.none
-                            : ThreadAttribution.asserted
-                    ),
+                    actor: actor,
                     reason: envelope.reason,
-                    auditEventID: auditEventID
+                    auditEventID: auditEventID,
+                    auditScope: auditScope
                 ) { connection in
                     if let admissionDeadline,
                        admissionDeadline <= Date().timeIntervalSince1970 {
@@ -189,6 +201,23 @@ public actor AgentCommandDispatcher {
         case let .resolveImportReview(reviewItemID), let .dismissImportReview(reviewItemID):
             return .init(entityIDs: [reviewItemID], auditEventID: auditEventID, error: nil)
         }
+    }
+
+    private static func auditScope(for command: AgentCommand, projectID: ProjectID) -> AuditScope {
+        let entity: (AuditEntityType, String) = switch command {
+        case let .upsertPhase(phaseID, _): (.phase, phaseID)
+        case let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _): (.ticket, ticketID)
+        case let .setDependency(id, kind, _, _):
+            (kind == .ticket ? .ticketDependency : .phaseDependency, id)
+        case let .recordBlocker(id, _, _), let .resolveBlocker(id): (.blocker, id)
+        case let .addEvidence(id, _, _): (.evidence, id)
+        case let .linkThread(id, _, _): (.threadLink, id)
+        case let .requestReview(id, _, _, _),
+             let .resolveImportReview(id),
+             let .dismissImportReview(id): (.reviewItem, id)
+        case let .recordCompletion(id, _, _): (.completion, id)
+        }
+        return AuditScope(projectID: projectID, entityType: entity.0, entityID: entity.1)
     }
 
     private static func apply(

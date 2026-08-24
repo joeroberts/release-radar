@@ -52,13 +52,49 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
                 try connection.scalarText("SELECT status FROM review_items WHERE id = 'duplicate-review'"),
                 try connection.scalarText("SELECT status FROM review_items WHERE id = 'excluded-review'"),
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-agent'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-agent' AND thread_id = 'rr07-review-thread' AND thread_attribution = 'asserted'"),
                 try connection.scalarText("SELECT lane FROM tickets WHERE id = 'VD2-08'")
             )
         }
         XCTAssertEqual(state.0, "resolved")
         XCTAssertEqual(state.1, "dismissed")
         XCTAssertEqual(state.2, 2)
-        XCTAssertEqual(state.3, TicketLane.inProgress.rawValue)
+        XCTAssertEqual(state.3, 2)
+        XCTAssertEqual(state.4, TicketLane.inProgress.rawValue)
+    }
+
+    func testAppReviewDecisionAuditsOwnerOriginWithoutThreadAttribution() async throws {
+        let store = try await seededStore()
+        let model = AppModel(store: store)
+        await model.loadDashboard()
+        let item = try XCTUnwrap(
+            model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.first {
+                $0.id.rawValue == "duplicate-review"
+            }
+        )
+
+        await model.performReviewDecision(.resolve, item: item)
+
+        XCTAssertNil(model.reviewActionError)
+        let audit = try await store.read { connection in
+            try connection.row(
+                """
+                SELECT actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id
+                FROM audit_events
+                WHERE reason = 'Resolve review duplicate-review'
+                """
+            )
+        }
+        XCTAssertEqual(audit?["actor_id"], .text("release-radar-owner"))
+        XCTAssertEqual(audit?["thread_id"], .null)
+        XCTAssertEqual(audit?["thread_attribution"], .text("none"))
+        XCTAssertEqual(audit?["project_id"], .text(DashboardSampleData.projectID.rawValue))
+        XCTAssertEqual(audit?["entity_type"], .text(AuditEntityType.reviewItem.rawValue))
+        XCTAssertEqual(audit?["entity_id"], .text("duplicate-review"))
+        let lane = try await store.read { connection in
+            try connection.scalarText("SELECT lane FROM tickets WHERE id = 'VD2-08'")
+        }
+        XCTAssertEqual(lane, TicketLane.inProgress.rawValue)
     }
 
     func testPersistedInboxProjectsEverySupportedOpenReviewKindAcrossRelaunch() async throws {
@@ -250,6 +286,64 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertEqual(RuntimeStateLanguage(storedValue: "awaiting_input").title, "Awaiting input")
         XCTAssertEqual(RuntimeStateLanguage(storedValue: "completed").title, "Completed")
         XCTAssertEqual(RuntimeStateLanguage(storedValue: "missing").title, "Unavailable")
+    }
+
+    func testActivityUsesStructuredProjectAndEntityScopeWithoutReasonFallback() async throws {
+        let store = try await seededStore()
+        let projectA = DashboardSampleData.projectID
+        let projectB = ProjectID(rawValue: "rr07-project-b")
+        try await store.transact(
+            actor: DeliveryActor(id: "project-b-agent"),
+            reason: "Project B mentions VD2-08 but must not contaminate Project A",
+            auditScope: AuditScope(projectID: projectB, entityType: .ticket, entityID: "B-01")
+        ) { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('rr07-project-b', 'Project B')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('rr07-phase-b', 'rr07-project-b', 'B phase')")
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('B-01', 'rr07-project-b', 'rr07-phase-b', 'Project B ticket', 'backlog')"
+            )
+        }
+        try await store.transact(
+            actor: DeliveryActor(id: "legacy-writer"),
+            reason: "Legacy unscoped VD2-08 mention must fail closed"
+        ) { _ in }
+        try await store.transact(
+            actor: DeliveryActor(id: "release-radar-owner"),
+            reason: "Owner recorded a visually verified state",
+            auditScope: AuditScope(projectID: projectA, entityType: .ticket, entityID: "VD2-08")
+        ) { _ in }
+
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                AuthorizedProject(
+                    projectID: projectA,
+                    canonicalRoot: projectRoot,
+                    authorizedRoots: [projectRoot]
+                ),
+            ])
+        )
+        let reviewResult = await dispatcher.dispatch(
+            envelope(
+                reason: "Owner confirmed a duplicate",
+                command: .resolveImportReview(reviewItemID: "duplicate-review")
+            ),
+            origin: .ownerApp
+        )
+        XCTAssertNil(reviewResult.error)
+
+        let activity = try await ProjectActivityProjection.load(from: store, projectID: projectA)
+        let auditDetails = activity.items.filter { $0.source == .audit }.map(\.detail)
+
+        XCTAssertFalse(auditDetails.contains("Project B mentions VD2-08 but must not contaminate Project A"))
+        XCTAssertFalse(auditDetails.contains("Legacy unscoped VD2-08 mention must fail closed"))
+        let scopedTicketAudit = try XCTUnwrap(activity.items.first {
+            $0.source == .audit && $0.detail == "Owner recorded a visually verified state"
+        })
+        XCTAssertEqual(scopedTicketAudit.ticketID?.rawValue, "VD2-08")
+        let resolvedReview = try XCTUnwrap(activity.items.first { $0.id == "review-duplicate-review" })
+        XCTAssertNotNil(resolvedReview.observedAt)
+        XCTAssertEqual(resolvedReview.ticketID?.rawValue, "VD2-08")
     }
 
     func testSettingsTabsAndNavigationExposeTruthfulAccessibleSurfacesWithoutDuplicateNotificationBadge() {

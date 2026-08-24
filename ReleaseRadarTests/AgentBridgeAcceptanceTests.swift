@@ -37,13 +37,19 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
                 try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-03'"),
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Move RR-03 into implementation'"),
                 try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = ?", bindings: [.text(requestID.uuidString)]),
-                try connection.scalarText("SELECT thread_attribution FROM audit_events WHERE reason = 'Move RR-03 into implementation'")
+                try connection.scalarText("SELECT thread_attribution FROM audit_events WHERE reason = 'Move RR-03 into implementation'"),
+                try connection.scalarText("SELECT project_id FROM audit_events WHERE reason = 'Move RR-03 into implementation'"),
+                try connection.scalarText("SELECT entity_type FROM audit_events WHERE reason = 'Move RR-03 into implementation'"),
+                try connection.scalarText("SELECT entity_id FROM audit_events WHERE reason = 'Move RR-03 into implementation'")
             )
         }
         XCTAssertEqual(state.0, TicketLane.inProgress.rawValue)
         XCTAssertEqual(state.1, 1)
         XCTAssertEqual(state.2, 1)
         XCTAssertEqual(state.3, ThreadAttribution.asserted.rawValue)
+        XCTAssertEqual(state.4, "project-1")
+        XCTAssertEqual(state.5, AuditEntityType.ticket.rawValue)
+        XCTAssertEqual(state.6, "RR-03")
     }
 
     func testApprovedCommandsPersistOnlyTheirBoundedDeliveryRecords() async throws {

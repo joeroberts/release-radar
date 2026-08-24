@@ -31,6 +31,31 @@ public enum DeliveryStoreAvailability: Equatable, Sendable {
     case unavailable(StoreRecoveryState)
 }
 
+public enum AuditEntityType: String, Equatable, Sendable {
+    case project
+    case phase
+    case ticket
+    case phaseDependency = "phase_dependency"
+    case ticketDependency = "ticket_dependency"
+    case blocker
+    case evidence
+    case threadLink = "thread_link"
+    case reviewItem = "review_item"
+    case completion
+}
+
+public struct AuditScope: Equatable, Sendable {
+    public let projectID: ProjectID
+    public let entityType: AuditEntityType
+    public let entityID: String
+
+    public init(projectID: ProjectID, entityType: AuditEntityType, entityID: String) {
+        self.projectID = projectID
+        self.entityType = entityType
+        self.entityID = entityID
+    }
+}
+
 public actor DeliveryStore {
     private let connection: SQLiteConnection?
     public let availability: DeliveryStoreAvailability
@@ -77,12 +102,14 @@ public actor DeliveryStore {
     public func transact<T: Sendable>(
         actor: DeliveryActor,
         reason: String,
+        auditScope: AuditScope? = nil,
         _ body: @Sendable (SQLiteConnection) throws -> T
     ) throws -> T {
         try transact(
             actor: actor,
             reason: reason,
             auditEventID: .init(rawValue: UUID().uuidString),
+            auditScope: auditScope,
             body
         )
     }
@@ -91,6 +118,7 @@ public actor DeliveryStore {
         actor: DeliveryActor,
         reason: String,
         auditEventID: AuditEventID,
+        auditScope: AuditScope? = nil,
         _ body: @Sendable (SQLiteConnection) throws -> T
     ) throws -> T {
         let connection = try availableConnection()
@@ -105,12 +133,15 @@ public actor DeliveryStore {
                 throw SQLiteError(code: SQLITE_MISUSE, message: "The transaction callback ended the store-owned transaction")
             }
             try connection.execute(
-                "INSERT INTO audit_events (id, actor_id, thread_id, thread_attribution, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO audit_events (id, actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id, reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 bindings: [
                     .text(auditEventID.rawValue),
                     .text(actor.id),
                     actor.threadID.map(SQLiteValue.text) ?? .null,
                     .text(actor.threadAttribution.rawValue),
+                    auditScope.map { .text($0.projectID.rawValue) } ?? .null,
+                    auditScope.map { .text($0.entityType.rawValue) } ?? .null,
+                    auditScope.map { .text($0.entityID) } ?? .null,
                     .text(reason),
                     .text(ISO8601DateFormatter().string(from: Date())),
                 ]

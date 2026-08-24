@@ -69,7 +69,8 @@ enum DashboardSampleData {
         try await store.transact(
             actor: DeliveryActor(id: "release-radar.sample-seed"),
             reason: "Seed RR-06 dashboard examples including VD2-07c",
-            auditEventID: AuditEventID(rawValue: "rr06-dashboard-seed-audit")
+            auditEventID: AuditEventID(rawValue: "rr06-dashboard-seed-audit"),
+            auditScope: AuditScope(projectID: projectID, entityType: .ticket, entityID: "VD2-07c")
         ) { connection in
             try connection.execute(
                 "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0)",

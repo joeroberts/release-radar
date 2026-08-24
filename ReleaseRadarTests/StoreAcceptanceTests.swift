@@ -54,6 +54,41 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(audit?["reason"], .text("Complete transactional storage"))
     }
 
+    func testAuditedTransactionPersistsOptionalStructuredEntityScope() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+        let projectID = ProjectID(rawValue: "project-1")
+
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"),
+            reason: "Owner accepted the ticket",
+            auditScope: AuditScope(
+                projectID: projectID,
+                entityType: .ticket,
+                entityID: "RR-02"
+            )
+        ) { connection in
+            try connection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+        }
+
+        let scoped = try await store.read { connection in
+            try connection.row(
+                "SELECT project_id, entity_type, entity_id FROM audit_events WHERE reason = 'Owner accepted the ticket'"
+            )
+        }
+        let unscoped = try await store.read { connection in
+            try connection.row(
+                "SELECT project_id, entity_type, entity_id FROM audit_events WHERE reason = 'Seed project'"
+            )
+        }
+        XCTAssertEqual(scoped?["project_id"], .text("project-1"))
+        XCTAssertEqual(scoped?["entity_type"], .text("ticket"))
+        XCTAssertEqual(scoped?["entity_id"], .text("RR-02"))
+        XCTAssertEqual(unscoped?["project_id"], .null)
+        XCTAssertEqual(unscoped?["entity_type"], .null)
+        XCTAssertEqual(unscoped?["entity_id"], .null)
+    }
+
     func testInvalidReferenceRollsBackDeliveryAndAuditWrites() async throws {
         let store = DeliveryStore(databaseURL: try makeDatabaseURL())
         try await seedProject(store)
@@ -372,7 +407,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 3)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 4)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }

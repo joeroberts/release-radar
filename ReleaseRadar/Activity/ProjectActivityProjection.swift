@@ -91,37 +91,60 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 bindings: [.text(projectID.rawValue)]
             )
             let auditRows = try connection.activityRows(
-                "SELECT id, reason, created_at FROM audit_events ORDER BY created_at DESC",
-                bindings: []
+                """
+                SELECT id, reason, created_at, entity_type, entity_id
+                FROM audit_events
+                WHERE project_id = ?
+                ORDER BY created_at DESC
+                """,
+                bindings: [.text(projectID.rawValue)]
             )
-            let tokens = Set(ticketLanes.keys.map(\.rawValue) + reviewRows.compactMap { try? $0.activityText("id") })
-            let relevantAudits = try auditRows.filter { row in
-                let reason = try row.activityText("reason")
-                return tokens.contains { reason.localizedCaseInsensitiveContains($0) }
-            }
+            let reviewTicketIDs = try Dictionary(
+                uniqueKeysWithValues: reviewRows.compactMap { row -> (String, TicketID)? in
+                    guard let ticketID = row.activityOptionalText("ticket_id") else { return nil }
+                    return (try row.activityText("id"), TicketID(rawValue: ticketID))
+                }
+            )
             let formatter = ISO8601DateFormatter()
             func lane(for ticketID: TicketID?) -> TicketLane? {
                 ticketID.flatMap { ticketLanes[$0] }
             }
-            func auditDate(for reviewID: String) -> Date? {
-                auditRows.first { row in
-                    (try? row.activityText("reason"))?.localizedCaseInsensitiveContains(reviewID) == true
-                }.flatMap { row in
-                    (try? row.activityText("created_at")).flatMap(formatter.date(from:))
+            func ticketID(for auditRow: [String: SQLiteValue]) -> TicketID? {
+                guard
+                    let rawType = auditRow.activityOptionalText("entity_type"),
+                    let entityType = AuditEntityType(rawValue: rawType),
+                    let entityID = auditRow.activityOptionalText("entity_id")
+                else { return nil }
+
+                switch entityType {
+                case .ticket:
+                    return TicketID(rawValue: entityID)
+                case .reviewItem:
+                    return reviewTicketIDs[entityID]
+                default:
+                    return nil
                 }
             }
+            var reviewObservedAt: [String: Date] = [:]
+            for row in auditRows where row.activityOptionalText("entity_type") == AuditEntityType.reviewItem.rawValue {
+                guard
+                    let reviewID = row.activityOptionalText("entity_id"),
+                    reviewObservedAt[reviewID] == nil,
+                    let observedAt = formatter.date(from: try row.activityText("created_at"))
+                else { continue }
+                reviewObservedAt[reviewID] = observedAt
+            }
 
-            var items = try relevantAudits.map { row in
-                ProjectActivityItem(
+            var items = try auditRows.map { row in
+                let ticketID = ticketID(for: row)
+                return ProjectActivityItem(
                     id: "audit-\(try row.activityText("id"))",
                     source: .audit,
                     title: "Delivery record updated",
                     detail: try row.activityText("reason"),
                     observedAt: formatter.date(from: try row.activityText("created_at")),
-                    ticketID: ticketLanes.keys.first {
-                        (try? row.activityText("reason"))?.localizedCaseInsensitiveContains($0.rawValue) == true
-                    },
-                    deliveryLane: nil,
+                    ticketID: ticketID,
+                    deliveryLane: lane(for: ticketID),
                     runtimeState: nil
                 )
             }
@@ -147,7 +170,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     source: .review,
                     title: "Review \(try row.activityText("status"))",
                     detail: try row.activityText("summary"),
-                    observedAt: auditDate(for: reviewID),
+                    observedAt: reviewObservedAt[reviewID],
                     ticketID: ticketID,
                     deliveryLane: lane(for: ticketID),
                     runtimeState: nil
