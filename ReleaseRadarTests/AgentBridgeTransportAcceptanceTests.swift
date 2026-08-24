@@ -8,8 +8,15 @@ import XCTest
 final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     func testPackagedSignedToolUsesRegisteredBrokerAndFailsClosedWithoutTheApp() async throws {
         let fixture = try await makeTransportFixture()
+        let delayedRequestID = UUID(uuidString: "99999999-9999-4999-8999-999999999999")!
         let appDelegate = AppDelegate()
-        let host = try await appDelegate.startAgentBridge(databaseURL: fixture.databaseURL)
+        let host = try await appDelegate.startAgentBridge(
+            databaseURL: fixture.databaseURL,
+            beforeDispatch: { envelope in
+                guard envelope.requestID == delayedRequestID else { return }
+                try? await Task.sleep(for: .milliseconds(10_500))
+            }
+        )
         defer {
             host.disconnectCallback()
             try? host.unregister()
@@ -37,6 +44,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let firstResult = try decodeCommandResult(first)
         XCTAssertNil(firstResult.error)
         XCTAssertNotNil(firstResult.auditEventID)
+        XCTAssertEqual(mcpIsError(first), false)
 
         let replay = try runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: arguments)
         XCTAssertEqual(try decodeCommandResult(replay), firstResult)
@@ -70,6 +78,19 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
+        let expired = try runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
+            "version": 1,
+            "requestID": delayedRequestID.uuidString,
+            "projectRoot": fixture.projectRoot.path,
+            "reason": "Do not persist after the transport deadline",
+            "ticketID": "RR-03",
+            "lane": "blocked",
+        ])
+        XCTAssertEqual(try decodeCommandResult(expired).error, .appUnavailable)
+        try await Task.sleep(for: .seconds(1))
+        let expiredCounts = try await expiredRequestCounts(fixture.store)
+        XCTAssertEqual(expiredCounts, [0, 0, 0])
+
         host.disconnectCallback()
         let unavailable = try runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
             "version": 1,
@@ -80,6 +101,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             "lane": "blocked",
         ])
         XCTAssertEqual(try decodeCommandResult(unavailable).error, .appUnavailable)
+        XCTAssertEqual(mcpIsError(unavailable), true)
         counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
@@ -214,11 +236,25 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         ((response["error"] as? [String: Any])?["code"] as? NSNumber)?.intValue
     }
 
+    private func mcpIsError(_ response: [String: Any]) -> Bool? {
+        (response["result"] as? [String: Any])?["isError"] as? Bool
+    }
+
     private func transportCounts(_ store: DeliveryStore) async throws -> [Int64] {
         try await store.read { connection in
             [
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Prove the packaged signed transport'") ?? -1,
                 try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '77777777-7777-4777-8777-777777777777'") ?? -1,
+            ]
+        }
+    }
+
+    private func expiredRequestCounts(_ store: DeliveryStore) async throws -> [Int64] {
+        try await store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE id = 'RR-03' AND lane = 'blocked'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Do not persist after the transport deadline'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '99999999-9999-4999-8999-999999999999'") ?? -1,
             ]
         }
     }

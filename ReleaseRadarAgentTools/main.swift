@@ -130,9 +130,10 @@ private struct MCPServer {
             do {
                 let envelope = try Self.makeEnvelope(tool: name, arguments: arguments)
                 let response = try BridgeClient().forward(envelope)
+                let isError = try Self.isDomainError(response)
                 return success(id: id, result: [
                     "content": [["type": "text", "text": String(decoding: response, as: UTF8.self)]],
-                    "isError": false,
+                    "isError": isError,
                 ])
             } catch ToolFailure.bridgeUnavailable {
                 return error(id: id, code: -32001, message: "Release Radar app is unavailable")
@@ -166,6 +167,15 @@ private struct MCPServer {
             throw ToolFailure.invalidRequest("Command envelope exceeds the transport limit")
         }
         return data
+    }
+
+    private static func isDomainError(_ response: Data) throws -> Bool {
+        guard response.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
+              let result = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
+              result["entityIDs"] is [Any]
+        else { throw ToolFailure.bridgeUnavailable }
+        guard let error = result["error"] else { return false }
+        return !(error is NSNull)
     }
 
     private static func commandCase(

@@ -31,19 +31,25 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     private var connection: NSXPCConnection?
     private var registeredHere = false
 
-    private init(dispatcher: AgentCommandDispatcher) {
+    private init(
+        dispatcher: AgentCommandDispatcher,
+        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void
+    ) {
         service = .agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
-        callback = AgentBridgeAppCallback(dispatcher: dispatcher)
+        callback = AgentBridgeAppCallback(dispatcher: dispatcher, beforeDispatch: beforeDispatch)
     }
 
-    static func start(databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL()) async throws -> AgentBridgeApplicationHost {
+    static func start(
+        databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(),
+        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in }
+    ) async throws -> AgentBridgeApplicationHost {
         let store = DeliveryStore(databaseURL: databaseURL)
         let projects = try await loadAuthorizedProjects(from: store)
         let dispatcher = AgentCommandDispatcher(
             store: store,
             projectRegistry: InMemoryAuthorizedProjectRegistry(projects: projects)
         )
-        let host = AgentBridgeApplicationHost(dispatcher: dispatcher)
+        let host = AgentBridgeApplicationHost(dispatcher: dispatcher, beforeDispatch: beforeDispatch)
         do {
             try host.registerIfNeeded()
             try await host.connect()
@@ -194,9 +200,14 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
 
 private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unchecked Sendable {
     private let dispatcher: AgentCommandDispatcher
+    private let beforeDispatch: @Sendable (AgentCommandEnvelope) async -> Void
 
-    init(dispatcher: AgentCommandDispatcher) {
+    init(
+        dispatcher: AgentCommandDispatcher,
+        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void
+    ) {
         self.dispatcher = dispatcher
+        self.beforeDispatch = beforeDispatch
     }
 
     func dispatch(
@@ -206,9 +217,11 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
         withReply reply: @escaping (Data) -> Void
     ) {
         let replyGate = AgentBridgeDataReply(reply)
+        let now = Date().timeIntervalSince1970
         guard version == ReleaseRadarBridgeTransport.version,
               data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
-              deadline > Date().timeIntervalSince1970,
+              deadline > now,
+              deadline - now <= ReleaseRadarBridgeTransport.maximumDeadlineInterval,
               ReleaseRadarBridgeTransport.envelopeVersion(in: data) == ReleaseRadarBridgeTransport.version,
               let envelope = try? JSONDecoder().decode(AgentCommandEnvelope.self, from: data)
         else {
@@ -222,6 +235,11 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
         }
 
         Task {
+            await beforeDispatch(envelope)
+            guard deadline > Date().timeIntervalSince1970 else {
+                replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
+                return
+            }
             let result = await dispatcher.dispatch(envelope)
             replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.appUnavailableResultData())
         }
