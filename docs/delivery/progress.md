@@ -26,10 +26,10 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-03 typed agent action bridge released by TPM and Delivery Manager.
-- Next eligible task: RR-03 typed agent action bridge.
-- Open product blockers: none.
-- Open operational risks: none.
+- Current task: RR-03 signed transport recovery; typed command/dispatcher core is implemented but the complete bridge is blocked.
+- Next eligible task: fresh RR-03 transport recovery only. RR-04 is not eligible.
+- Open product blockers: authenticated MCP stdio → bounded local bridge → running app transport has not passed from the packaged signed helper.
+- Open operational risks: the first signed configuration required a provisioning profile; the second signed packaged helper terminated with uncaught signal status 5 before returning an MCP response.
 
 ## Task ledger
 
@@ -69,3 +69,16 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 - TPM: GO; RR-02 is technically accepted with all Required findings closed, scope controlled, and the recorded stop-rule recovery complete.
 - Delivery Manager: GO; RR-02 commits, focused verification, signed build, independent reviews, and stop-rule evidence are durable; RR-03 is dependency-safe and released to one fresh Implementer with no concurrent writer.
+
+### RR-03 — Typed agent action bridge
+
+- Status: Implemented — dependency-safe command/dispatcher core only; signed transport blocked. Not accepted or released.
+- Commit: `6b7262c` (`feat: add typed agent delivery actions`).
+- Implemented scope: versioned typed envelopes/results/errors; approved bounded commands only; canonical authorized-root resolution seam; in-root evidence validation; durable exact request replay and differing-body rejection; atomic delivery/audit/request commits; structured rollback failures; explicit asserted thread attribution; schema version 2 support for blocker/review/completion/request state.
+- TDD: observed RED→GREEN cycles for initial transition/relaunch replay, the complete approved command set, empty identifiers, explicit thread attribution, and empty asserted-thread rejection. Detailed commands and logs are recorded in `.superpowers/sdd/2026-08-23-release-radar-mvp/task-3-report.md`.
+- Verification: 7/7 `AgentBridgeAcceptanceTests` and 15/15 `StoreAcceptanceTests` passed with 0 failures/skips; final Debug app build passed; strict deep code-sign verification reported the app valid on disk and satisfying its Designated Requirement; diff checks passed.
+- Stop-rule event: anonymous-endpoint/app-group transport failed signed provisioning and did not provide valid endpoint discovery; team-ID named XPC with signed-peer and same-user checks built/signed, but the packaged helper terminated with uncaught signal status 5 before any MCP response or store mutation. Work stopped after the second configuration, and all unproven transport/service/tool/entitlement/project changes were removed. No weaker fallback was retained.
+- Required blocker: prove one authenticated packaged MCP stdio → bounded local bridge → running app scenario, including rejection of a differently signed peer, before independent RR-03 review.
+- Reviews: not started; the complete slice is not ready while the required transport proof is absent.
+- Decisions/risks: preserve the app-only SQLite writer boundary. The production bookmark-backed project registry remains part of the blocked integration boundary; the committed in-memory registry is only the typed core seam and acceptance fixture.
+- Next eligible task: fresh RR-03 signed transport recovery. RR-04 remains closed.
