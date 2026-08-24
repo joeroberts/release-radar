@@ -26,9 +26,9 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-04 onboarding and first-phase creation is implemented; fresh independent code, QA, architecture, and security/privacy review remains required.
-- Next eligible task: RR-04 independent review only. RR-06 remains closed until RR-04 is accepted.
-- Open product blockers: no known implementation blocker; independent review remains required.
+- Current task: RR-04 is accepted and released; RR-06 recognizable local-first board is the active dependency-safe slice.
+- Next eligible task: RR-06 only, with one fresh Implementer and no concurrent writer.
+- Open product blockers: none known for RR-06.
 - Open operational risks: macOS may require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
 ## Task ledger
@@ -91,11 +91,17 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 ### RR-04 — Folder-backed project onboarding and first phase
 
-- Status: Implemented; not accepted or released pending fresh independent code, QA, architecture, and security/privacy review.
-- Commit: `0012372` (`feat: onboard folder-backed projects`).
+- Status: Accepted and released.
+- Commits: `0012372` (`feat: onboard folder-backed projects`), `af5dd0a` (`fix: harden project onboarding boundaries`), and `f545034` (`fix: reject denied bookmark scope access`).
 - Scope: Native folder selection, read-only security-scoped bookmark persistence, canonical component containment, Git-root/worktree discovery, separately authorized external worktrees, durable task exclusions, first-phase gating through the typed dispatcher, persisted unmatched-task review items, and `first_dashboard_opened = false`.
 - TDD: RED at `/tmp/rr04-red.log` established the missing onboarding/bookmark/worktree contracts. A second focused RED at `/tmp/rr04-red-authorize.log` established that external worktrees require an explicit authorization path. GREEN at `/tmp/rr04-green.log` covers root/descendant/contained-worktree inclusion, sibling-prefix/outside rejection, separately authorized worktrees, no-phase refusal, typed first-phase audit, durable exclusion after a recreated onboarding service, persisted review items, and notification ineligibility.
-- Verification: Fresh focused `OnboardingAcceptanceTests` and directly affected `StoreAcceptanceTests` passed 17/17 with 0 failures/skips at `/tmp/rr04-final-tests.log`. A normal signed Debug `ReleaseRadar` build passed at `/tmp/rr04-final-build.log` with the configured Apple Development identity. Final diff check is recorded with the implementation commit.
-- Reviews: Pending. Required/Optional/Out-of-scope classifications are not yet recorded.
-- Decisions/risks: The onboarding service never treats a path prefix as containment. A worktree outside the folder bookmark is rejected until the owner selects that exact discovered worktree. The app writes project metadata directly through its store-owned transaction; first-phase creation goes through the existing typed command dispatcher and is audited. No Codex live-observer, board, importer, or notification behavior is introduced.
-- Next eligible task: RR-04 independent review only; RR-06 remains closed.
+- Verification: Final focused `OnboardingAcceptanceTests` and directly affected `StoreAcceptanceTests` passed 20/20 with 0 failures/skips. Controller verification on 2026-08-24 repeated the 20/20 pass from `/tmp/rr04-controller-verify`; a normal signed Debug package built with the configured Apple Development identity and passed strict deep codesign verification.
+- Reviews: Final Code Reviewer ACCEPT, Required 0, Optional 0, Out of scope 0. Final QA ACCEPT, 20/20 focused cases, Required 0, Optional 0, Out of scope 0. Architect APPROVED, Required 0 and no ADR update required. Security/privacy PASS, Required 0, Optional 0, Out of scope 0.
+- Remediation evidence: The first review rejected manual phase impersonation, fail-open bookmark persistence, cross-project root transfer, non-durable editable exclusions, and an ineffective no-phase test. Fix round 1 replaced phase fabrication with an app-owned audited request/wait state, made stale/failed bookmarks unavailable under balanced scope access, rejected root ownership conflicts, reconciled exclusions, and exercised the prepared-but-phase-less gate. Fix round 2 closed the sole residual finding by rejecting denied security-scope starts before discovery or persistence. Both rounds remained within RR-04.
+- Decisions/risks: The onboarding service never treats a path prefix as containment. A worktree outside the folder bookmark is rejected until the owner selects that exact discovered worktree. Stale, failed, or denied bookmark access fails closed. The app writes project/request/review metadata only through store-owned audited transactions; only a real agent-originated typed bridge upsert can satisfy phase one. No Codex live-observer, board, importer, notification event, or notification sender behavior is introduced.
+- Next eligible task: RR-06 recognizable local-first board.
+
+### RR-06 release gate
+
+- TPM: GO; RR-04 is technically accepted with every Required onboarding, bookmark, ownership, phase-gate, exclusion, and notification-silence finding closed.
+- Delivery Manager: GO; RR-04 commits, 20-case controller verification, signed build, independent reviews, and both bounded remediation rounds are durable. RR-06 is dependency-safe and released to one fresh Implementer with no concurrent writer.
