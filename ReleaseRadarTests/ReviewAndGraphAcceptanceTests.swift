@@ -137,6 +137,74 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         }
     }
 
+    func testDependencyGraphExcludesCrossPhaseEdgesFromRelationshipsAndConnectors() async throws {
+        let store = try await seededStore()
+        try await store.transact(
+            actor: DeliveryActor(id: "rr07-test"),
+            reason: "Seed permitted cross-phase dependency bridge"
+        ) { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?)",
+                bindings: [
+                    .text("rr07-other-phase"),
+                    .text(DashboardSampleData.projectID.rawValue),
+                    .text("Later phase"),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",
+                bindings: [
+                    .text("CROSS-BRIDGE"),
+                    .text(DashboardSampleData.projectID.rawValue),
+                    .text("rr07-other-phase"),
+                    .text("Bridge work across phases"),
+                    .text(TicketLane.backlog.rawValue),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES (?, ?, ?, ?)",
+                bindings: [
+                    .text("rr07-cross-in"),
+                    .text(DashboardSampleData.projectID.rawValue),
+                    .text("CROSS-BRIDGE"),
+                    .text("VD2-06"),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES (?, ?, ?, ?)",
+                bindings: [
+                    .text("rr07-cross-out"),
+                    .text(DashboardSampleData.projectID.rawValue),
+                    .text("VD2-07"),
+                    .text("CROSS-BRIDGE"),
+                ]
+            )
+        }
+
+        let graph = try await DependencyGraphProjection.load(
+            from: store,
+            projectID: DashboardSampleData.projectID,
+            phaseID: DashboardSampleData.phaseID,
+            selectedTicketID: TicketID(rawValue: "VD2-08")
+        )
+        let nodeIDs = Set(graph.nodes.map(\.id))
+        let layout = DependencyGraphLayout.makeLayout(
+            graph: graph,
+            size: CGSize(width: 960, height: 520)
+        )
+
+        XCTAssertTrue(graph.edges.allSatisfy {
+            nodeIDs.contains($0.sourceID) && nodeIDs.contains($0.targetID)
+        })
+        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-06", "VD2-07"])
+        XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["VD2-03", "VD2-04", "VD2-05"])
+        XCTAssertEqual(graph.selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
+        XCTAssertEqual(layout.connectors.count, graph.edges.count)
+        XCTAssertTrue(layout.connectors.allSatisfy {
+            layout.frames[$0.sourceID] != nil && layout.frames[$0.targetID] != nil
+        })
+    }
+
     func testActivityCombinesPersistedSourcesAndKeepsRuntimeSeparateFromDeliveryLane() async throws {
         let store = try await seededStore()
         let registry = InMemoryAuthorizedProjectRegistry(projects: [

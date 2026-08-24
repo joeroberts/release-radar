@@ -77,12 +77,15 @@ struct DependencyGraphProjection: Equatable, Sendable {
                 "SELECT id, ticket_id, depends_on_ticket_id FROM ticket_dependencies WHERE project_id = ? ORDER BY rowid",
                 bindings: [.text(projectID.rawValue)]
             )
+            let nodeIDs = Set(nodes.map(\.id))
             let edges = try edgeRows.map { row in
                 DependencyGraphEdge(
                     id: TicketDependencyID(rawValue: try row.graphText("id")),
                     sourceID: TicketID(rawValue: try row.graphText("depends_on_ticket_id")),
                     targetID: TicketID(rawValue: try row.graphText("ticket_id"))
                 )
+            }.filter { edge in
+                nodeIDs.contains(edge.sourceID) && nodeIDs.contains(edge.targetID)
             }
             guard let selected = makeInspector(nodes: nodes, edges: edges, selectedTicketID: selectedTicketID) else {
                 throw DependencyGraphProjectionError.missingSelectedTicket(selectedTicketID.rawValue)
