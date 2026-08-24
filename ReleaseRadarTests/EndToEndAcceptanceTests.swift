@@ -187,6 +187,48 @@ final class EndToEndAcceptanceTests: XCTestCase {
         }
     }
 
+    func testVersionThreeCandidateWithCommentSpoofedDisabledTriggerFailsClosedWithoutMutation() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(store!)
+        store = nil
+        try makeVersionThreeAuditDrift(at: databaseURL)
+        let malformed = try SQLiteConnection(url: databaseURL)
+        try malformed.executeScript("""
+        DROP TRIGGER reject_phase_dependency_cycle_insert;
+        CREATE TRIGGER reject_phase_dependency_cycle_insert
+        BEFORE INSERT ON phase_dependencies
+        WHEN 0
+        BEGIN
+            /* with recursive dependency_path
+               from phase_dependencies as dependency
+               where dependency.project_id = new.project_id
+               where phase_id = new.phase_id
+               select raise(abort, 'phase dependency cycle') */
+            SELECT 1;
+        END;
+        """)
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+
+        guard case let .unavailable(recovery) = await relaunchedStore.availability else {
+            return XCTFail("Expected a comment-spoofed disabled trigger to make version three unavailable")
+        }
+        XCTAssertEqual(recovery.kind, .migration)
+        XCTAssertEqual(recovery.originalDatabaseURL, databaseURL)
+        let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
+        for connection in [try SQLiteConnection(url: databaseURL), try SQLiteConnection(url: snapshotURL)] {
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 3)
+            XCTAssertTrue(try XCTUnwrap(connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = 'reject_phase_dependency_cycle_insert'"
+            )).contains("WHEN 0"))
+            XCTAssertEqual(
+                try connection.scalarInt("SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'thread_attribution'"),
+                0
+            )
+        }
+    }
+
     func testCurrentSchemaWithWrongCriticalIndexFailsClosedWithoutMutation() async throws {
         let databaseURL = try makeDatabaseURL()
         var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)

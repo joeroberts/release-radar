@@ -182,10 +182,13 @@ enum StoreMigrations {
                 "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = ?",
                 bindings: [.text(trigger.name)]
             ) else { return false }
-            let normalized = sql.lowercased().split(whereSeparator: \Character.isWhitespace).joined(separator: " ")
-            guard trigger.fragments.allSatisfy({ normalized.contains($0) }) else { return false }
+            guard normalizedSQL(sql) == normalizedSQL(trigger.sql) else { return false }
         }
         return true
+    }
+
+    private static func normalizedSQL(_ sql: String) -> String {
+        sql.lowercased().split(whereSeparator: \Character.isWhitespace).joined(separator: " ")
     }
 
     private static func hasExpectedIndexes(
@@ -357,29 +360,87 @@ enum StoreMigrations {
         (6, "index", "notification_events_state_index"),
     ]
 
-    private static let criticalTriggers: [(version: Int64, name: String, fragments: [String])] = [
-        (1, "reject_phase_dependency_cycle_insert", [
-            "before insert on phase_dependencies", "with recursive dependency_path",
-            "from phase_dependencies as dependency", "where dependency.project_id = new.project_id",
-            "where phase_id = new.phase_id", "select raise(abort, 'phase dependency cycle')",
-        ]),
-        (1, "reject_phase_dependency_cycle_update", [
-            "before update of project_id, phase_id, depends_on_phase_id on phase_dependencies",
-            "with recursive dependency_path", "from phase_dependencies as dependency",
-            "dependency.id <> old.id", "where phase_id = new.phase_id",
-            "select raise(abort, 'phase dependency cycle')",
-        ]),
-        (1, "reject_ticket_dependency_cycle_insert", [
-            "before insert on ticket_dependencies", "with recursive dependency_path",
-            "from ticket_dependencies as dependency", "where dependency.project_id = new.project_id",
-            "where ticket_id = new.ticket_id", "select raise(abort, 'ticket dependency cycle')",
-        ]),
-        (1, "reject_ticket_dependency_cycle_update", [
-            "before update of project_id, ticket_id, depends_on_ticket_id on ticket_dependencies",
-            "with recursive dependency_path", "from ticket_dependencies as dependency",
-            "dependency.id <> old.id", "where ticket_id = new.ticket_id",
-            "select raise(abort, 'ticket dependency cycle')",
-        ]),
+    private static let phaseDependencyCycleInsertTrigger = """
+    CREATE TRIGGER reject_phase_dependency_cycle_insert
+    BEFORE INSERT ON phase_dependencies
+    WHEN EXISTS (
+        WITH RECURSIVE dependency_path(phase_id) AS (
+            SELECT NEW.depends_on_phase_id
+            UNION
+            SELECT dependency.depends_on_phase_id
+            FROM phase_dependencies AS dependency
+            JOIN dependency_path ON dependency.phase_id = dependency_path.phase_id
+            WHERE dependency.project_id = NEW.project_id
+        )
+        SELECT 1 FROM dependency_path WHERE phase_id = NEW.phase_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'phase dependency cycle');
+    END
+    """
+
+    private static let phaseDependencyCycleUpdateTrigger = """
+    CREATE TRIGGER reject_phase_dependency_cycle_update
+    BEFORE UPDATE OF project_id, phase_id, depends_on_phase_id ON phase_dependencies
+    WHEN EXISTS (
+        WITH RECURSIVE dependency_path(phase_id) AS (
+            SELECT NEW.depends_on_phase_id
+            UNION
+            SELECT dependency.depends_on_phase_id
+            FROM phase_dependencies AS dependency
+            JOIN dependency_path ON dependency.phase_id = dependency_path.phase_id
+            WHERE dependency.project_id = NEW.project_id AND dependency.id <> OLD.id
+        )
+        SELECT 1 FROM dependency_path WHERE phase_id = NEW.phase_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'phase dependency cycle');
+    END
+    """
+
+    private static let ticketDependencyCycleInsertTrigger = """
+    CREATE TRIGGER reject_ticket_dependency_cycle_insert
+    BEFORE INSERT ON ticket_dependencies
+    WHEN EXISTS (
+        WITH RECURSIVE dependency_path(ticket_id) AS (
+            SELECT NEW.depends_on_ticket_id
+            UNION
+            SELECT dependency.depends_on_ticket_id
+            FROM ticket_dependencies AS dependency
+            JOIN dependency_path ON dependency.ticket_id = dependency_path.ticket_id
+            WHERE dependency.project_id = NEW.project_id
+        )
+        SELECT 1 FROM dependency_path WHERE ticket_id = NEW.ticket_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket dependency cycle');
+    END
+    """
+
+    private static let ticketDependencyCycleUpdateTrigger = """
+    CREATE TRIGGER reject_ticket_dependency_cycle_update
+    BEFORE UPDATE OF project_id, ticket_id, depends_on_ticket_id ON ticket_dependencies
+    WHEN EXISTS (
+        WITH RECURSIVE dependency_path(ticket_id) AS (
+            SELECT NEW.depends_on_ticket_id
+            UNION
+            SELECT dependency.depends_on_ticket_id
+            FROM ticket_dependencies AS dependency
+            JOIN dependency_path ON dependency.ticket_id = dependency_path.ticket_id
+            WHERE dependency.project_id = NEW.project_id AND dependency.id <> OLD.id
+        )
+        SELECT 1 FROM dependency_path WHERE ticket_id = NEW.ticket_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket dependency cycle');
+    END
+    """
+
+    private static let criticalTriggers: [(version: Int64, name: String, sql: String)] = [
+        (1, "reject_phase_dependency_cycle_insert", phaseDependencyCycleInsertTrigger),
+        (1, "reject_phase_dependency_cycle_update", phaseDependencyCycleUpdateTrigger),
+        (1, "reject_ticket_dependency_cycle_insert", ticketDependencyCycleInsertTrigger),
+        (1, "reject_ticket_dependency_cycle_update", ticketDependencyCycleUpdateTrigger),
     ]
 
     private static let criticalIndexes: [(
@@ -495,38 +556,8 @@ enum StoreMigrations {
         FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id) ON DELETE CASCADE,
         FOREIGN KEY(project_id, depends_on_phase_id) REFERENCES phases(project_id, id) ON DELETE CASCADE
     );
-    CREATE TRIGGER reject_phase_dependency_cycle_insert
-    BEFORE INSERT ON phase_dependencies
-    WHEN EXISTS (
-        WITH RECURSIVE dependency_path(phase_id) AS (
-            SELECT NEW.depends_on_phase_id
-            UNION
-            SELECT dependency.depends_on_phase_id
-            FROM phase_dependencies AS dependency
-            JOIN dependency_path ON dependency.phase_id = dependency_path.phase_id
-            WHERE dependency.project_id = NEW.project_id
-        )
-        SELECT 1 FROM dependency_path WHERE phase_id = NEW.phase_id
-    )
-    BEGIN
-        SELECT RAISE(ABORT, 'phase dependency cycle');
-    END;
-    CREATE TRIGGER reject_phase_dependency_cycle_update
-    BEFORE UPDATE OF project_id, phase_id, depends_on_phase_id ON phase_dependencies
-    WHEN EXISTS (
-        WITH RECURSIVE dependency_path(phase_id) AS (
-            SELECT NEW.depends_on_phase_id
-            UNION
-            SELECT dependency.depends_on_phase_id
-            FROM phase_dependencies AS dependency
-            JOIN dependency_path ON dependency.phase_id = dependency_path.phase_id
-            WHERE dependency.project_id = NEW.project_id AND dependency.id <> OLD.id
-        )
-        SELECT 1 FROM dependency_path WHERE phase_id = NEW.phase_id
-    )
-    BEGIN
-        SELECT RAISE(ABORT, 'phase dependency cycle');
-    END;
+    \(phaseDependencyCycleInsertTrigger);
+    \(phaseDependencyCycleUpdateTrigger);
     CREATE TABLE ticket_dependencies (
         id TEXT PRIMARY KEY NOT NULL,
         project_id TEXT NOT NULL,
@@ -537,38 +568,8 @@ enum StoreMigrations {
         FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id) ON DELETE CASCADE,
         FOREIGN KEY(project_id, depends_on_ticket_id) REFERENCES tickets(project_id, id) ON DELETE CASCADE
     );
-    CREATE TRIGGER reject_ticket_dependency_cycle_insert
-    BEFORE INSERT ON ticket_dependencies
-    WHEN EXISTS (
-        WITH RECURSIVE dependency_path(ticket_id) AS (
-            SELECT NEW.depends_on_ticket_id
-            UNION
-            SELECT dependency.depends_on_ticket_id
-            FROM ticket_dependencies AS dependency
-            JOIN dependency_path ON dependency.ticket_id = dependency_path.ticket_id
-            WHERE dependency.project_id = NEW.project_id
-        )
-        SELECT 1 FROM dependency_path WHERE ticket_id = NEW.ticket_id
-    )
-    BEGIN
-        SELECT RAISE(ABORT, 'ticket dependency cycle');
-    END;
-    CREATE TRIGGER reject_ticket_dependency_cycle_update
-    BEFORE UPDATE OF project_id, ticket_id, depends_on_ticket_id ON ticket_dependencies
-    WHEN EXISTS (
-        WITH RECURSIVE dependency_path(ticket_id) AS (
-            SELECT NEW.depends_on_ticket_id
-            UNION
-            SELECT dependency.depends_on_ticket_id
-            FROM ticket_dependencies AS dependency
-            JOIN dependency_path ON dependency.ticket_id = dependency_path.ticket_id
-            WHERE dependency.project_id = NEW.project_id AND dependency.id <> OLD.id
-        )
-        SELECT 1 FROM dependency_path WHERE ticket_id = NEW.ticket_id
-    )
-    BEGIN
-        SELECT RAISE(ABORT, 'ticket dependency cycle');
-    END;
+    \(ticketDependencyCycleInsertTrigger);
+    \(ticketDependencyCycleUpdateTrigger);
     CREATE TABLE blockers (
         id TEXT PRIMARY KEY NOT NULL,
         project_id TEXT NOT NULL,
