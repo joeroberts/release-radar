@@ -26,14 +26,26 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-01 released after the planning commit.
-- Next eligible task: RR-01 standalone signed application foundation.
+- Current task: RR-01 accepted; RR-02 awaiting TPM/Delivery Manager release.
+- Next eligible task: RR-02 transactional local delivery store.
 - Open product blockers: none.
 - Open operational risks: none.
 
 ## Task ledger
 
 Each task entry records status, verification, reviews with Required/Optional/Out-of-scope classification, decisions, risks, stop-rule events, commit SHA, and the next eligible task before release.
+
+### RR-01 — Standalone signed application foundation
+
+- Status: Accepted.
+- Commits: `487647a` scaffold, `50dab32` evidence, `ca09ba8` focused-test fix, `c3e5f79` fix evidence.
+- Verification: normal configured Debug signing build passed; `build_and_run.sh --verify` launched the app; build-for-testing and strict codesign verification passed; focused `AppRouteTests` completed with 2 passed, 0 failed/skipped.
+- Code review: Approved; Required 0, Optional 0, Out of scope 0.
+- QA: Initial Required finding — main scheme prepared the empty UI runner and the focused unit test never completed. Addressed by keeping the UI target buildable while limiting the current TestAction to unit tests; scoped re-review accepted with no new Critical/Important breakage.
+- Architecture: Approved; standalone namespace, target boundaries, synchronized roots, sandbox/hardened signing, scenes, and ADR are structurally suitable for successors.
+- Stop-rule event: first implementer attempt produced no files within the foundation timebox and was interrupted; a fresh bounded implementer completed the slice without expanding scope.
+- Decisions/risks: UI acceptance execution remains assigned to the later seeded UI slice; no product risk in RR-01.
+- Next eligible task: RR-02 transactional local delivery store.
 
 ### RR-01 — Standalone signed application foundation
 
