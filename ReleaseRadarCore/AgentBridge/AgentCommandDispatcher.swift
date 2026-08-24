@@ -24,7 +24,7 @@ public actor AgentCommandDispatcher {
         if let error = validate(envelope) {
             return .init(entityIDs: [], auditEventID: nil, error: error)
         }
-        guard let project = projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
+        guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
             return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
         }
 

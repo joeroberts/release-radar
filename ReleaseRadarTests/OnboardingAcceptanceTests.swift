@@ -1,8 +1,140 @@
 import Foundation
 import XCTest
+@testable import ReleaseRadar
 @testable import ReleaseRadarCore
 
 final class OnboardingAcceptanceTests: XCTestCase {
+    func testRecognizedArtifactPreviewRequiresExplicitImportDecision() async throws {
+        let fixture = try FolderFixture()
+        try fixture.installRecognizedArtifact()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let importPreview = try XCTUnwrap(preview.recognizedArtifactPreview)
+        XCTAssertEqual(importPreview.phases.map(\.id.rawValue), ["phase-imported"])
+        XCTAssertEqual(importPreview.tickets.map(\.id.rawValue), ["TASK-IMPORTED"])
+        XCTAssertEqual(importPreview.reviewItems.map(\.sourceID), ["TASK-UNCERTAIN"])
+
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Fixture Project"
+        ))
+        let beforeOptIn = try await store.read { connection in
+            try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = ?", bindings: [.text(projectID.rawValue)])
+        }
+        XCTAssertEqual(beforeOptIn, 0)
+
+        _ = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Fixture Project",
+            importRecognizedArtifacts: true
+        ))
+        let imported = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'missing_outcome' AND status = 'open'", bindings: [.text(projectID.rawValue)])
+            )
+        }
+        XCTAssertEqual(imported.0, 1)
+        XCTAssertEqual(imported.1, 1)
+        XCTAssertEqual(imported.2, 1)
+    }
+
+    func testRunningDispatcherAuthorizesRootCommittedByOnboardingPrepare() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
+        )
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Fixture Project"
+        ))
+
+        let result = await dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(),
+            projectRoot: fixture.root.appendingPathComponent("..").appendingPathComponent("project").path,
+            reason: "Define the first phase without restarting the bridge",
+            command: .upsertPhase(phaseID: "phase-agent", name: "Agent phase")
+        ))
+
+        XCTAssertNil(result.error)
+        let hasFirstPhase = try await onboarding.hasFirstPhase(projectID: projectID)
+        XCTAssertTrue(hasFirstPhase)
+    }
+
+    func testPreparedProjectRemainsPendingUntilFirstPhaseAndFinish() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let decision = OnboardingDecision(preview: preview, projectName: "Fixture Project")
+        let projectID = try await onboarding.prepare(decision)
+
+        let pendingMarkerCount = try await store.read { connection in
+            try connection.scalarInt(
+                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending' AND status = 'open'",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        XCTAssertEqual(pendingMarkerCount, 1)
+        let preparedDashboard = try await DashboardProjection.load(from: store)
+        XCTAssertTrue(preparedDashboard.projects.isEmpty)
+        let relaunchedOnboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let resumedPreview = try await relaunchedOnboarding.inspect(folder: fixture.root)
+        XCTAssertEqual(resumedPreview.pendingProjectID, projectID)
+
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
+        )
+        let result = await dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(),
+            projectRoot: fixture.root.path,
+            reason: "Define first phase",
+            command: .upsertPhase(phaseID: "phase-first", name: "First phase")
+        ))
+        XCTAssertNil(result.error)
+        let phaseReadyDashboard = try await DashboardProjection.load(from: store)
+        XCTAssertTrue(phaseReadyDashboard.projects.isEmpty)
+
+        _ = try await onboarding.finish(decision)
+
+        let completed = try await DashboardProjection.load(from: store)
+        XCTAssertEqual(completed.projects.map(\.id), [projectID])
+        let finalState = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending'", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT first_dashboard_opened FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)])
+            )
+        }
+        XCTAssertEqual(finalState.0, 0)
+        XCTAssertEqual(finalState.1, 0)
+    }
+
     func testDeniedSecurityScopeDoesNotRunDiscoveryOrAuthorizeFolder() async throws {
         let fixture = try FolderFixture()
         let scopeAccess = DeniedScopeAccessRecorder()
@@ -180,7 +312,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         let beforeAgentPhase = try await store.read { connection in
             (
                 try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
-                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ?", bindings: [.text(projectID.rawValue)])
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind <> 'onboarding_pending'", bindings: [.text(projectID.rawValue)])
             )
         }
         XCTAssertEqual(beforeAgentPhase.0, 0)
@@ -297,6 +429,37 @@ private final class FolderFixture {
         try FileManager.default.createDirectory(at: sibling, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
         try FileManager.default.createSymbolicLink(at: symlinkedRoot, withDestinationURL: root)
+    }
+
+    func installRecognizedArtifact() throws {
+        let delivery = root.appendingPathComponent("docs/delivery", isDirectory: true)
+        try FileManager.default.createDirectory(at: delivery, withIntermediateDirectories: true)
+        let artifact = """
+        {
+          "schemaVersion": 1,
+          "activePhaseId": "phase-imported",
+          "phases": [
+            { "id": "phase-imported", "label": "Imported phase", "dependsOnPhaseIds": [] }
+          ],
+          "tasks": [
+            {
+              "id": "TASK-IMPORTED",
+              "title": "Imported outcome",
+              "status": "backlog",
+              "phaseId": "phase-imported",
+              "dependsOnTaskIds": []
+            },
+            {
+              "id": "TASK-UNCERTAIN",
+              "title": "   ",
+              "status": "backlog",
+              "phaseId": "phase-imported",
+              "dependsOnTaskIds": []
+            }
+          ]
+        }
+        """
+        try Data(artifact.utf8).write(to: delivery.appendingPathComponent("dashboard-status.json"))
     }
 
     deinit { try? FileManager.default.removeItem(at: directory) }

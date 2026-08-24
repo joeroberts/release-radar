@@ -8,6 +8,7 @@ struct OnboardingView: View {
     @State private var projectID: ProjectID?
     @State private var projectName = ""
     @State private var excludedTaskIDs: Set<String> = []
+    @State private var importRecognizedArtifacts = false
     @State private var hasFirstPhase = false
     @State private var statusMessage: String?
     @State private var failurePresentation: FailureStatePresentation?
@@ -57,8 +58,12 @@ struct OnboardingView: View {
                     }
                 }
 
+                if let importPreview = preview.recognizedArtifactPreview {
+                    recognizedArtifactPreview(importPreview)
+                }
+
                 HStack {
-                    Button("Ask agent to define first phase", action: requestFirstPhaseDefinition)
+                    Button(preparationButtonTitle, action: requestFirstPhaseDefinition)
                         .disabled(isWorking)
                     Button("Check for agent phase") {
                         Task { await refreshFirstPhaseAvailability() }
@@ -104,17 +109,35 @@ struct OnboardingView: View {
             defer { isWorking = false }
             do {
                 let result = try await onboarding.inspect(folder: folder)
+                let resumedProjectID = result.pendingProjectID
+                let resumedHasFirstPhase: Bool
+                if let resumedProjectID {
+                    resumedHasFirstPhase = try await onboarding.hasFirstPhase(projectID: resumedProjectID)
+                } else {
+                    resumedHasFirstPhase = false
+                }
                 preview = result
                 projectName = result.selectedFolder.lastPathComponent
-                projectID = nil
+                projectID = resumedProjectID
                 excludedTaskIDs = []
-                hasFirstPhase = false
-                statusMessage = result.includedTaskDescriptors.isEmpty
-                    ? nil
-                    : "Matching tasks are included; uncertain mappings will appear in Needs Review."
-                failurePresentation = result.includedTaskDescriptors.isEmpty
-                    ? .noDeliveryStructure
-                    : nil
+                importRecognizedArtifacts = false
+                hasFirstPhase = resumedHasFirstPhase
+                if resumedProjectID != nil {
+                    statusMessage = resumedHasFirstPhase
+                        ? "Pending onboarding has a persisted first phase and can be finished."
+                        : "Pending onboarding is waiting for an agent-defined first phase."
+                    failurePresentation = resumedHasFirstPhase ? nil : .firstPhaseRequired
+                } else {
+                    statusMessage = result.recognizedArtifactPreview == nil
+                        ? (result.includedTaskDescriptors.isEmpty
+                            ? nil
+                            : "Matching tasks are included; uncertain mappings will appear in Needs Review.")
+                        : "Review the recognized delivery records and choose whether to import them."
+                    failurePresentation = result.includedTaskDescriptors.isEmpty
+                        && result.recognizedArtifactPreview == nil
+                        ? .noDeliveryStructure
+                        : nil
+                }
             } catch {
                 failurePresentation = failure(for: error)
             }
@@ -129,11 +152,14 @@ struct OnboardingView: View {
             defer { isWorking = false }
             do {
                 let preparedID = try await onboarding.prepare(decision)
-                try await onboarding.requestFirstPhaseDefinition(projectID: preparedID)
                 projectID = preparedID
                 hasFirstPhase = try await onboarding.hasFirstPhase(projectID: preparedID)
+                if !hasFirstPhase {
+                    try await onboarding.requestFirstPhaseDefinition(projectID: preparedID)
+                    hasFirstPhase = try await onboarding.hasFirstPhase(projectID: preparedID)
+                }
                 statusMessage = hasFirstPhase
-                    ? "An agent-defined first phase is ready."
+                    ? "A persisted first phase is ready."
                     : nil
                 failurePresentation = hasFirstPhase ? nil : .firstPhaseRequired
             } catch {
@@ -197,7 +223,77 @@ struct OnboardingView: View {
             failurePresentation = .noDeliveryStructure
             return nil
         }
-        return .init(preview: preview, projectName: projectName, excludedTaskIDs: excludedTaskIDs)
+        return .init(
+            preview: preview,
+            projectName: projectName,
+            excludedTaskIDs: excludedTaskIDs,
+            importRecognizedArtifacts: importRecognizedArtifacts
+        )
+    }
+
+    private var preparationButtonTitle: String {
+        preview?.recognizedArtifactPreview != nil && importRecognizedArtifacts
+            ? "Import and prepare project"
+            : "Ask agent to define first phase"
+    }
+
+    @ViewBuilder
+    private func recognizedArtifactPreview(_ preview: ImportPreview) -> some View {
+        GroupBox("Recognized delivery artifact") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(preview.artifactURL.lastPathComponent)
+                    .font(.headline)
+                Text("\(preview.phases.count) phases · \(preview.tickets.count) tickets · \(preview.phaseDependencies.count + preview.ticketDependencies.count) dependencies · \(preview.evidence.count) evidence records · \(preview.reviewItems.count) Needs Review items")
+                    .foregroundStyle(.secondary)
+
+                DisclosureGroup("Review recognized records") {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            previewSection("Phases", rows: preview.phases.map {
+                                "\($0.id.rawValue) · \($0.name)"
+                            })
+                            previewSection("Tickets", rows: preview.tickets.map {
+                                "\($0.id.rawValue) · \($0.outcome) · \($0.lane.rawValue)"
+                            })
+                            previewSection("Dependencies", rows:
+                                preview.phaseDependencies.map {
+                                    "Phase \($0.phaseID.rawValue) requires \($0.dependsOnPhaseID.rawValue)"
+                                }
+                                + preview.ticketDependencies.map {
+                                    "Ticket \($0.ticketID.rawValue) requires \($0.dependsOnTicketID.rawValue)"
+                                }
+                            )
+                            previewSection("Evidence", rows: preview.evidence.map {
+                                "\($0.label) · \($0.path)"
+                            })
+                            previewSection("Needs Review", rows: preview.reviewItems.map(\.summary))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 240)
+                }
+
+                Toggle("Import these reviewed delivery records", isOn: $importRecognizedArtifacts)
+                    .accessibilityIdentifier("onboarding-import-recognized")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func previewSection(_ title: String, rows: [String]) -> some View {
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    Text(row)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
+        }
     }
 
     private func failure(for error: Error) -> FailureStatePresentation {

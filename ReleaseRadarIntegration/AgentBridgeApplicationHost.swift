@@ -53,10 +53,9 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
     ) async throws -> AgentBridgeApplicationHost {
         let store = DeliveryStore(databaseURL: databaseURL)
-        let projects = try await loadAuthorizedProjects(from: store)
         let dispatcher = AgentCommandDispatcher(
             store: store,
-            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: projects)
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
         )
         let host = AgentBridgeApplicationHost(
             dispatcher: dispatcher,
@@ -184,32 +183,6 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         }
     }
 
-    private static func loadAuthorizedProjects(from store: DeliveryStore) async throws -> [AuthorizedProject] {
-        try await store.read { connection in
-            var rootsByProject: [String: [URL]] = [:]
-            var offset: Int64 = 0
-            while let row = try connection.row(
-                "SELECT project_id, path FROM project_roots ORDER BY project_id, id LIMIT 1 OFFSET ?",
-                bindings: [.integer(offset)]
-            ) {
-                guard case let .text(projectID)? = row["project_id"],
-                      case let .text(path)? = row["path"]
-                else {
-                    throw AgentBridgeApplicationError.connectFailed("Invalid persisted project root")
-                }
-                rootsByProject[projectID, default: []].append(URL(fileURLWithPath: path))
-                offset += 1
-            }
-            return rootsByProject.compactMap { projectID, roots in
-                guard let canonicalRoot = roots.first else { return nil }
-                return AuthorizedProject(
-                    projectID: ProjectID(rawValue: projectID),
-                    canonicalRoot: canonicalRoot,
-                    authorizedRoots: roots
-                )
-            }
-        }
-    }
 }
 
 private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unchecked Sendable {

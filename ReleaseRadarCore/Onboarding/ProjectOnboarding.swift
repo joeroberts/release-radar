@@ -19,6 +19,8 @@ public struct OnboardingPreview: Equatable, Sendable {
     public let rejectedTaskDescriptors: [CodexTaskDescriptor]
     public let authorizedWorktreeURLs: [URL]
     public let worktreesRequiringAuthorization: [URL]
+    public let recognizedArtifactPreview: ImportPreview?
+    public let pendingProjectID: ProjectID?
 
     public init(
         selectedFolder: URL,
@@ -26,7 +28,9 @@ public struct OnboardingPreview: Equatable, Sendable {
         includedTaskDescriptors: [CodexTaskDescriptor],
         rejectedTaskDescriptors: [CodexTaskDescriptor],
         authorizedWorktreeURLs: [URL],
-        worktreesRequiringAuthorization: [URL]
+        worktreesRequiringAuthorization: [URL],
+        recognizedArtifactPreview: ImportPreview? = nil,
+        pendingProjectID: ProjectID? = nil
     ) {
         self.selectedFolder = selectedFolder
         self.gitRoot = gitRoot
@@ -34,6 +38,8 @@ public struct OnboardingPreview: Equatable, Sendable {
         self.rejectedTaskDescriptors = rejectedTaskDescriptors
         self.authorizedWorktreeURLs = authorizedWorktreeURLs
         self.worktreesRequiringAuthorization = worktreesRequiringAuthorization
+        self.recognizedArtifactPreview = recognizedArtifactPreview
+        self.pendingProjectID = pendingProjectID
     }
 }
 
@@ -41,11 +47,18 @@ public struct OnboardingDecision: Equatable, Sendable {
     public let preview: OnboardingPreview
     public let projectName: String
     public let excludedTaskIDs: Set<String>
+    public let importRecognizedArtifacts: Bool
 
-    public init(preview: OnboardingPreview, projectName: String, excludedTaskIDs: Set<String> = []) {
+    public init(
+        preview: OnboardingPreview,
+        projectName: String,
+        excludedTaskIDs: Set<String> = [],
+        importRecognizedArtifacts: Bool = false
+    ) {
         self.preview = preview
         self.projectName = projectName
         self.excludedTaskIDs = excludedTaskIDs
+        self.importRecognizedArtifacts = importRecognizedArtifacts
     }
 }
 
@@ -122,13 +135,26 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 let path = Self.canonical(descriptor.workingDirectory)
                 return !roots.contains(where: { Self.contains(path, within: $0) })
             }
+            let projectID = ProjectID(rawValue: Self.projectID(for: authorizedSelected))
+            let authorizedProject = AuthorizedProject(
+                projectID: projectID,
+                canonicalRoot: authorizedSelected,
+                authorizedRoots: roots
+            )
+            let recognizedArtifactPreview = try? RekonArtifactImporter(
+                store: store,
+                project: authorizedProject
+            ).preview(authorizedSelected)
+            let pendingProjectID = try await pendingProjectID(forRoot: authorizedSelected)
             return .init(
                 selectedFolder: authorizedSelected,
                 gitRoot: GitWorktreeDiscovery.discoverGitRoot(at: authorizedSelected) ?? worktrees.first,
                 includedTaskDescriptors: included,
                 rejectedTaskDescriptors: rejected,
                 authorizedWorktreeURLs: authorized,
-                worktreesRequiringAuthorization: outsideWorktrees
+                worktreesRequiringAuthorization: outsideWorktrees,
+                recognizedArtifactPreview: recognizedArtifactPreview,
+                pendingProjectID: pendingProjectID
             )
         }
     }
@@ -162,6 +188,10 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0) ON CONFLICT(id) DO UPDATE SET name = excluded.name",
                 bindings: [.text(projectID.rawValue), .text(decision.projectName)]
             )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, 'onboarding_pending', 'Project onboarding is awaiting owner completion', 'open') ON CONFLICT(id) DO UPDATE SET status = 'open'",
+                bindings: [.text("\(projectID.rawValue)-onboarding-pending"), .text(projectID.rawValue)]
+            )
             for (index, root) in roots.enumerated() {
                 let path = Self.canonical(root).path
                 try connection.execute(
@@ -179,6 +209,16 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                     bindings: [.text("\(projectID.rawValue)-excluded-\(taskID)"), .text(projectID.rawValue), .text(taskID), .text("Excluded during onboarding")]
                 )
             }
+        }
+        if decision.importRecognizedArtifacts,
+           let importPreview = decision.preview.recognizedArtifactPreview {
+            let authorizedProject = AuthorizedProject(
+                projectID: projectID,
+                canonicalRoot: decision.preview.selectedFolder,
+                authorizedRoots: roots
+            )
+            try await RekonArtifactImporter(store: store, project: authorizedProject)
+                .apply(importPreview, to: projectID)
         }
         return projectID
     }
@@ -203,6 +243,10 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         guard try await phaseCount(for: projectID) > 0 else { throw OnboardingError.noFirstPhase }
         let included = decision.preview.includedTaskDescriptors.filter { !decision.excludedTaskIDs.contains($0.id) }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding") { connection in
+            try connection.execute(
+                "DELETE FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending'",
+                bindings: [.text(projectID.rawValue)]
+            )
             try connection.execute(
                 "DELETE FROM thread_exclusions WHERE project_id = ? AND reason = 'Excluded during onboarding'",
                 bindings: [.text(projectID.rawValue)]
@@ -244,6 +288,17 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             guard let id = try connection.scalarText("SELECT project_id FROM project_roots WHERE path = ?", bindings: [.text(root.path)]) else { return nil }
             return .init(rawValue: id)
         }
+    }
+
+    private func pendingProjectID(forRoot root: URL) async throws -> ProjectID? {
+        guard let projectID = try await projectID(forRoot: root) else { return nil }
+        let isPending = try await store.read { connection in
+            try connection.scalarInt(
+                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending' AND status = 'open'",
+                bindings: [.text(projectID.rawValue)]
+            ) == 1
+        }
+        return isPending ? projectID : nil
     }
 
     private func persistedAuthorizedWorktreePaths(for selectedFolder: URL) async throws -> Set<String> {

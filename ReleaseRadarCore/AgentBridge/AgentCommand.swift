@@ -87,7 +87,7 @@ public struct AuthorizedProject: Equatable, Sendable {
 }
 
 public protocol AuthorizedProjectRegistry: Sendable {
-    func resolve(projectRoot: String) -> AuthorizedProject?
+    func resolve(projectRoot: String) async -> AuthorizedProject?
 }
 
 public struct InMemoryAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sendable {
@@ -97,10 +97,53 @@ public struct InMemoryAuthorizedProjectRegistry: AuthorizedProjectRegistry, Send
         self.projects = projects
     }
 
-    public func resolve(projectRoot: String) -> AuthorizedProject? {
+    public func resolve(projectRoot: String) async -> AuthorizedProject? {
         let supplied = AuthorizedProject.canonicalize(URL(fileURLWithPath: projectRoot))
         return projects.first { project in
             project.authorizedRoots.contains(supplied)
+        }
+    }
+}
+
+public struct PersistedAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sendable {
+    private let store: DeliveryStore
+
+    public init(store: DeliveryStore) {
+        self.store = store
+    }
+
+    public func resolve(projectRoot: String) async -> AuthorizedProject? {
+        let supplied = AuthorizedProject.canonicalize(URL(fileURLWithPath: projectRoot))
+        return try? await store.read { connection in
+            guard let projectID = try connection.scalarText(
+                """
+                SELECT project_roots.project_id
+                FROM project_roots
+                JOIN projects ON projects.id = project_roots.project_id
+                WHERE project_roots.path = ?
+                """,
+                bindings: [.text(supplied.path)]
+            ) else {
+                return nil
+            }
+
+            var roots: [URL] = []
+            var offset: Int64 = 0
+            while let path = try connection.scalarText(
+                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY id LIMIT 1 OFFSET ?",
+                bindings: [.text(projectID), .integer(offset)]
+            ) {
+                roots.append(AuthorizedProject.canonicalize(URL(fileURLWithPath: path)))
+                offset += 1
+            }
+            guard roots.contains(supplied), let canonicalRoot = roots.first else {
+                return nil
+            }
+            return AuthorizedProject(
+                projectID: ProjectID(rawValue: projectID),
+                canonicalRoot: canonicalRoot,
+                authorizedRoots: roots
+            )
         }
     }
 }

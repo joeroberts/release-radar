@@ -30,6 +30,13 @@ struct DashboardProjection: Equatable, Sendable {
                 SELECT projects.id, projects.name, project_active_phases.phase_id AS active_phase_id
                 FROM projects
                 LEFT JOIN project_active_phases ON project_active_phases.project_id = projects.id
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM review_items
+                    WHERE review_items.project_id = projects.id
+                      AND review_items.kind = 'onboarding_pending'
+                      AND review_items.status = 'open'
+                )
                 ORDER BY projects.name
                 """
             )
