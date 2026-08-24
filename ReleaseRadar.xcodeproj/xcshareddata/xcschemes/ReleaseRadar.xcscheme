@@ -53,15 +53,6 @@
                ReferencedContainer = "container:ReleaseRadar.xcodeproj">
             </BuildableReference>
          </TestableReference>
-         <TestableReference skipped = "NO" parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A20000000000000000000005"
-               BuildableName = "ReleaseRadarUITests.xctest"
-               BlueprintName = "ReleaseRadarUITests"
-               ReferencedContainer = "container:ReleaseRadar.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
