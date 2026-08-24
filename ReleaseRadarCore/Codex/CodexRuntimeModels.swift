@@ -18,6 +18,54 @@ public struct CodexObservationFreshness: Codable, Equatable, Sendable {
     }
 }
 
+public struct CodexObservationScope: Equatable, Sendable {
+    public let selectedRoot: URL
+    public let authorizedWorktreeRoots: [URL]
+    public let excludedThreadIDs: Set<String>
+
+    public init(
+        selectedRoot: URL,
+        authorizedWorktreeRoots: [URL] = [],
+        excludedThreadIDs: Set<String> = []
+    ) {
+        self.selectedRoot = Self.canonical(selectedRoot)
+        self.authorizedWorktreeRoots = authorizedWorktreeRoots.map(Self.canonical)
+        self.excludedThreadIDs = excludedThreadIDs
+    }
+
+    func canonicalWorkingDirectory(for thread: CodexThreadRuntime) -> URL? {
+        guard !excludedThreadIDs.contains(thread.id), thread.workingDirectory.isFileURL else {
+            return nil
+        }
+
+        let candidate = Self.canonical(thread.workingDirectory)
+        let roots = [selectedRoot] + authorizedWorktreeRoots
+        guard roots.contains(where: { Self.contains(candidate, within: $0) }) else {
+            return nil
+        }
+
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(
+            atPath: candidate.path,
+            isDirectory: &isDirectory
+        ), isDirectory.boolValue else {
+            return nil
+        }
+        return candidate
+    }
+
+    private static func canonical(_ url: URL) -> URL {
+        url.standardizedFileURL.resolvingSymlinksInPath()
+    }
+
+    private static func contains(_ candidate: URL, within root: URL) -> Bool {
+        let candidateComponents = candidate.pathComponents
+        let rootComponents = root.pathComponents
+        return candidateComponents.count >= rootComponents.count
+            && Array(candidateComponents.prefix(rootComponents.count)) == rootComponents
+    }
+}
+
 public enum CodexThreadRuntimeStatus: String, Codable, Equatable, Sendable {
     case active
     case paused
@@ -74,6 +122,18 @@ public struct CodexThreadRuntime: Codable, Equatable, Identifiable, Sendable {
         self.lastObservedAt = lastObservedAt
         self.goal = goal
     }
+
+    func withWorkingDirectory(_ workingDirectory: URL) -> CodexThreadRuntime {
+        CodexThreadRuntime(
+            id: id,
+            workingDirectory: workingDirectory,
+            status: status,
+            activeFlags: activeFlags,
+            waitingForInput: waitingForInput,
+            lastObservedAt: lastObservedAt,
+            goal: goal
+        )
+    }
 }
 
 public struct CodexSnapshot: Codable, Equatable, Sendable {
@@ -104,14 +164,14 @@ public struct CodexSnapshot: Codable, Equatable, Sendable {
         )
     }
 
-    func retainingAsStale(reason: String) -> CodexSnapshot {
-        let latestThreadObservation = threads.map(\.lastObservedAt).max()
+    func retainingAsStale(reason: String, threads scopedThreads: [CodexThreadRuntime]) -> CodexSnapshot {
+        let latestThreadObservation = scopedThreads.map(\.lastObservedAt).max()
         let lastObservedAt = freshness.lastObservedAt ?? latestThreadObservation ?? capturedAt
         return CodexSnapshot(
             schemaVersion: schemaVersion,
             capturedAt: capturedAt,
             freshness: .init(state: .stale, lastObservedAt: lastObservedAt, reason: reason),
-            threads: threads
+            threads: scopedThreads
         )
     }
 }
