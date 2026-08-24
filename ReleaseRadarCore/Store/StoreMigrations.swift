@@ -3,15 +3,22 @@ import Foundation
 enum StoreMigrations {
     static let currentVersion: Int64 = 7
 
+    static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
+        let version = try connection.scalarInt("PRAGMA user_version") ?? 0
+        if version != currentVersion { return true }
+        return try !hasExpectedCurrentSchema(connection)
+    }
+
     static func migrate(_ connection: SQLiteConnection) throws {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
         guard version <= currentVersion else {
             throw StoreError.unsupportedSchemaVersion(found: version, supported: currentVersion)
         }
-        guard version < currentVersion else { return }
+        if version == currentVersion, try hasExpectedCurrentSchema(connection) { return }
 
         try connection.execute("BEGIN EXCLUSIVE TRANSACTION")
         do {
+            try repairKnownSchemaDrift(connection, version: version)
             if version < 1 {
                 try connection.executeScript(schemaVersion1)
             }
@@ -33,6 +40,13 @@ enum StoreMigrations {
             if version < 7 {
                 try connection.executeScript(schemaVersion7)
             }
+            if version == currentVersion {
+                guard try hasExpectedCurrentSchema(connection) else {
+                    throw StoreError.unavailable(
+                        "Database schema version \(version) does not match a recognized Release Radar schema"
+                    )
+                }
+            }
             try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
         } catch {
@@ -40,6 +54,132 @@ enum StoreMigrations {
             throw error
         }
     }
+
+    private static func repairKnownSchemaDrift(
+        _ connection: SQLiteConnection,
+        version: Int64
+    ) throws {
+        if version == 3,
+           try hasTable(connection, name: "audit_events"),
+           try !hasColumn(connection, table: "audit_events", name: "thread_attribution") {
+            guard try isKnownVersionThreeAuditDrift(connection, version: version) else {
+                throw StoreError.unavailable(
+                    "Database schema version 3 does not match a recognized Release Radar schema"
+                )
+            }
+            try connection.executeScript(schemaVersionThreeAuditRepair)
+        }
+        if try isKnownVersionSevenOwnerDrift(connection, version: version) {
+            try connection.executeScript(schemaVersionSevenOwnerRepair)
+        }
+    }
+
+    private static func isKnownVersionThreeAuditDrift(
+        _ connection: SQLiteConnection,
+        version: Int64
+    ) throws -> Bool {
+        guard version == 3,
+              try hasColumns(connection, table: "audit_events", names: [
+                "id", "actor_id", "thread_id", "reason", "created_at",
+              ]),
+              try !hasColumn(connection, table: "audit_events", name: "thread_attribution"),
+              try !hasColumn(connection, table: "audit_events", name: "project_id"),
+              try hasColumn(connection, table: "projects", name: "first_dashboard_opened"),
+              try hasColumn(connection, table: "blockers", name: "resolved_at"),
+              try hasColumn(connection, table: "review_items", name: "status"),
+              try hasTable(connection, name: "completion_records"),
+              try hasTable(connection, name: "agent_command_requests"),
+              try hasTable(connection, name: "project_bookmarks"),
+              try !hasTable(connection, name: "project_active_phases")
+        else { return false }
+        return true
+    }
+
+    private static func isKnownVersionSevenOwnerDrift(
+        _ connection: SQLiteConnection,
+        version: Int64
+    ) throws -> Bool {
+        guard version == 7,
+              try hasColumn(connection, table: "audit_events", name: "thread_attribution"),
+              try !hasColumn(connection, table: "audit_events", name: "project_id"),
+              try !hasColumn(connection, table: "audit_events", name: "entity_type"),
+              try !hasColumn(connection, table: "audit_events", name: "entity_id"),
+              try hasColumn(connection, table: "projects", name: "active_phase_id"),
+              try !hasTable(connection, name: "project_active_phases"),
+              try hasColumn(connection, table: "notification_events", name: "failure_code"),
+              try hasTable(connection, name: "notification_occurrences")
+        else { return false }
+        return true
+    }
+
+    private static func hasExpectedCurrentSchema(_ connection: SQLiteConnection) throws -> Bool {
+        guard try hasColumns(connection, table: "audit_events", names: [
+            "thread_attribution", "project_id", "entity_type", "entity_id",
+        ]),
+        try hasTable(connection, name: "project_active_phases"),
+        try hasColumns(connection, table: "notification_events", names: [
+            "project_id", "event_kind", "subject_id", "occurrence", "title", "message",
+            "created_at", "attempt_count", "attempt_started_at", "completed_at", "failure_code",
+        ]),
+        try hasTable(connection, name: "notification_occurrences")
+        else { return false }
+        return true
+    }
+
+    private static func hasColumns(
+        _ connection: SQLiteConnection,
+        table: String,
+        names: [String]
+    ) throws -> Bool {
+        for name in names where try !hasColumn(connection, table: table, name: name) {
+            return false
+        }
+        return true
+    }
+
+    private static func hasColumn(
+        _ connection: SQLiteConnection,
+        table: String,
+        name: String
+    ) throws -> Bool {
+        try connection.scalarInt(
+            "SELECT COUNT(*) FROM pragma_table_info('\(table)') WHERE name = ?",
+            bindings: [.text(name)]
+        ) == 1
+    }
+
+    private static func hasTable(_ connection: SQLiteConnection, name: String) throws -> Bool {
+        try connection.scalarInt(
+            "SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name = ?",
+            bindings: [.text(name)]
+        ) == 1
+    }
+
+    private static let schemaVersionThreeAuditRepair = """
+    ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
+        CHECK (thread_attribution IN ('none', 'asserted', 'verified'));
+    """
+
+    private static let schemaVersionSevenOwnerRepair = """
+    ALTER TABLE audit_events ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE SET NULL;
+    ALTER TABLE audit_events ADD COLUMN entity_type TEXT;
+    ALTER TABLE audit_events ADD COLUMN entity_id TEXT;
+    CREATE INDEX audit_events_project_entity_index
+        ON audit_events(project_id, entity_type, entity_id, created_at);
+    CREATE TABLE project_active_phases (
+        project_id TEXT PRIMARY KEY NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        phase_id TEXT NOT NULL,
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
+    );
+    CREATE INDEX project_active_phases_phase_index ON project_active_phases(phase_id);
+    INSERT INTO project_active_phases (project_id, phase_id)
+    SELECT projects.id, projects.active_phase_id
+    FROM projects
+    JOIN phases
+      ON phases.project_id = projects.id
+     AND phases.id = projects.active_phase_id
+    WHERE projects.active_phase_id IS NOT NULL;
+    """
 
     private static let schemaVersion1 = """
     CREATE TABLE projects (

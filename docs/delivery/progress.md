@@ -216,3 +216,12 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 - TPM: GO; RR-09 is accepted with every Required durability, visibility, isolation, nonblocking, entitlement, and concurrency finding closed within the owner stop rule.
 - Delivery Manager: GO; RR-09 feature and remediation commits, controller verification, signed entitlement evidence, and four independent final acceptances are durable. RR-10 is dependency-safe and released to one Implementer with no concurrent writer.
+
+### RR-10 legacy-schema stop-rule recovery
+
+- Status: Recovery implementation complete and focused verification green; independent review remains required before this workstream is accepted or broader RR-10 work resumes.
+- Commit: `PENDING` (focused legacy-schema recovery).
+- Stop-rule handoff: The prior Implementer stopped after the same throwing `||` schema-validation expression failed to compile twice. A fresh recovery Implementer preserved the partial repair and replaced only that expression with sequential current-version validation; the recovery compiled and passed on its first attempt. No second correction or architecture change was needed.
+- Scope and safety: Existing databases are snapshotted before any migration or recognized repair. Repair is limited to the known version-3 missing `thread_attribution` signature and the observed version-7 missing structured audit scope/normalized active-phase signature. Both repairs are additive and run inside the store-owned exclusive migration transaction; active-phase backfill joins project and phase identity. Unknown shapes remain typed unavailable with rollback, original database, and pre-migration snapshot intact. No owner database was opened, inspected, reset, or modified; acceptance used UUID-scoped temporary fixtures only.
+- Verification: `/tmp/rr10-legacy-recovery-attempt1.log` passed 20/20 selected cases with zero failures/skips: the two `EndToEndAcceptanceTests` legacy-repair/relaunch scenarios plus all 18 `StoreAcceptanceTests`, including `testVersionFourMigrationBackfillsOnlyUnambiguousActivePhase`. The recovered stores accept post-relaunch structured audit writes, and both snapshots retain their pre-repair schemas.
+- Next eligible work: none until this focused recovery receives independent review; no other RR-10 implementation was performed.

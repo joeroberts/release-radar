@@ -81,8 +81,7 @@ public actor DeliveryStore {
         }
 
         do {
-            let schemaVersion = try openedConnection.scalarInt("PRAGMA user_version") ?? 0
-            if databaseExisted, schemaVersion != StoreMigrations.currentVersion {
+            if databaseExisted, try StoreMigrations.requiresMigrationOrRepair(openedConnection) {
                 try openedConnection.createSnapshot(at: snapshotURL)
             }
             try StoreMigrations.migrate(openedConnection)
