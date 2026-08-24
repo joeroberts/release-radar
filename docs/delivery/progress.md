@@ -29,7 +29,7 @@ Deliver the signed native macOS MVP described by
 - Current task: RR-10 and the Release Radar MVP are accepted and release-ready at product HEAD `271fcd4`.
 - Next eligible task: none. All RR-01 through RR-10 dependency gates are closed.
 - Open product blockers: none.
-- Nonblocking next-phase work: remove the Swift optional-`.none` and test actor-isolation warnings; attach live Codex state when a supported authenticated endpoint exists; and add Developer ID/notarized packaging if distribution expands beyond the owner Mac.
+- Nonblocking next-phase work: productionize the owner-approved V1 icon and wordmark recorded in `docs/brand/README.md`; remove the Swift optional-`.none` and test actor-isolation warnings; attach live Codex state when a supported authenticated endpoint exists; and add Developer ID/notarized packaging if distribution expands beyond the owner Mac.
 - Install note: macOS may require one-time owner approval for the packaged LaunchAgent in System Settings. Startup reports the required action and fails closed until enabled.
 
 ## Task ledger
@@ -249,3 +249,10 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 - Visual evidence: All seven primary surface screenshots plus `rr10-board-compact.png` were independently inspected and accepted. They cover Projects/Overview/Phase Board/detail, Needs Review, Dependencies, Activity/goal state, Notifications, onboarding/failure states, Settings, and compact responsive behavior.
 - Release artifact: `build/release-271fcd4/ReleaseRadar-271fcd4.zip`, SHA-256 `09aad61cec2b7aacb95232689a881a6b2c46844e1acef1848d42ec2c98656813`. The unpacked `ReleaseRadar.app` passes strict deep code-sign verification, is version 0.1.0 (1), arm64, targets macOS 14+, uses Apple Development team `2UA854NLX4`, and has hardened runtime. It is a local owner-install build, not a notarized general-distribution artifact.
 - Accepted limitation and next phase: Supported live Codex attachment remains unavailable, so the UI truthfully presents unavailable or authorized cached-stale context and never promotes it to formal delivery state. General notarization/distribution, the nonblocking Xcode warnings, and any supported authenticated Codex attachment are next-phase work, not MVP release blockers.
+
+### Next phase — V1 brand production
+
+- Status: Backlog; owner-approved direction persisted, production assets not yet created.
+- References: `docs/brand/release-radar-icon-v1.png`, `docs/brand/release-radar-lockup-v1.png`, and `docs/brand/README.md`.
+- Scope: deterministically recreate the selected icon and technical/architectural wordmark, export the complete macOS AppIcon set plus light/dark lockups, wire the asset catalog, and verify small-size readability and signed-app presentation.
+- Guardrail: generated raster drafts remain references only and must not be shipped directly or visually redesigned without owner review.
