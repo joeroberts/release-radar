@@ -11,6 +11,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+#if DEBUG
+        guard !ProcessInfo.processInfo.arguments.contains("--rr10-capture") else {
+            return
+        }
+#endif
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
             return
         }
@@ -65,10 +70,20 @@ struct ReleaseRadarApp: App {
 
     init() {
         let services = ReleaseRadarAppServices.shared
+#if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        let seedSampleData = !(
+            arguments.contains("--rr10-capture")
+                && arguments.contains("--rr10-empty-store")
+        )
+#else
+        let seedSampleData = true
+#endif
         _model = State(initialValue: AppModel(
             store: services.store,
             pushoverKeychain: services.keychain,
-            notificationCoordinator: services.notificationCoordinator
+            notificationCoordinator: services.notificationCoordinator,
+            seedSampleData: seedSampleData
         ))
     }
 

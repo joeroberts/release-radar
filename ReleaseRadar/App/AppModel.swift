@@ -27,6 +27,7 @@ final class AppModel {
     var pushoverSettingsMessage: String?
 
     private let store: DeliveryStore
+    private let seedSampleData: Bool
     private let codexObserver: any CodexObserver
     private let pushoverKeychain: PushoverKeychainStore
     private let notificationCoordinator: AppNotificationCoordinator
@@ -39,10 +40,12 @@ final class AppModel {
         store: DeliveryStore,
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
         pushoverKeychain: PushoverKeychainStore? = nil,
-        notificationCoordinator: AppNotificationCoordinator? = nil
+        notificationCoordinator: AppNotificationCoordinator? = nil,
+        seedSampleData: Bool = true
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
+        self.seedSampleData = seedSampleData
         self.codexObserver = codexObserver
         self.pushoverKeychain = resolvedKeychain
         self.notificationCoordinator = notificationCoordinator
@@ -94,7 +97,9 @@ final class AppModel {
             await notificationCoordinator.setActivityRefreshHandler { [weak self] projectID in
                 await self?.refreshNotificationActivity(for: projectID)
             }
-            try await DashboardSampleData.seedIfNeeded(in: store)
+            if seedSampleData {
+                try await DashboardSampleData.seedIfNeeded(in: store)
+            }
             let loadedDashboard = try await DashboardProjection.load(from: store)
             dashboard = loadedDashboard
             try await loadWorkspace(for: loadedDashboard)

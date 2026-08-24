@@ -4,6 +4,23 @@ import ReleaseRadarCore
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testCaptureOnlyEmptyStoreModeDoesNotSeedSampleDeliveryData() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-EmptyCapture-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            seedSampleData: false
+        )
+
+        await model.loadDashboard()
+
+        XCTAssertEqual(model.dashboard?.projects.count, 0)
+        XCTAssertEqual(model.selection, .projects)
+    }
+
+    @MainActor
     func testAppModelLoadsExplicitUnavailableCodexRuntimeState() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-CodexState-\(UUID().uuidString)", isDirectory: true)
