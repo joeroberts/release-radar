@@ -26,9 +26,9 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-03 complete implementation is ready for independent code, QA, architecture, and security/privacy review.
-- Next eligible task: RR-03 independent review only. RR-04 is not eligible until every Required RR-03 finding is closed and the release gate records acceptance.
-- Open product blockers: no implementation blocker; the RR-03 independent review gate remains open.
+- Current task: RR-03 fix round 1 is implemented; the two Required code-review contracts need scoped code/QA re-review before the remaining architecture and security/privacy gates.
+- Next eligible task: RR-03 scoped code/QA re-review only. RR-04 is not eligible until every Required RR-03 finding is closed and the release gate records acceptance.
+- Open product blockers: no known implementation blocker; independent confirmation of the two fixes remains open.
 - Open operational risks: macOS may require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
 ## Task ledger
@@ -72,13 +72,13 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 ### RR-03 — Typed agent action bridge
 
-- Status: Complete implementation; awaiting independent review. Not accepted or released.
-- Commits: `6b7262c` (`feat: add typed agent delivery actions`) and `fa8eea0` (`feat: add signed agent bridge transport`).
+- Status: Fix round 1 implemented; awaiting scoped code/QA re-review. Not accepted or released.
+- Commits: `6b7262c` (`feat: add typed agent delivery actions`), `fa8eea0` (`feat: add signed agent bridge transport`), and `abb92ef` (`fix: enforce agent bridge result contracts`).
 - Implemented scope: the committed typed command/dispatcher core plus a packaged MCP stdio tool, sandboxed LaunchAgent broker, application-hosted callback, exact version/size/deadline bounds, same-user and pinned team/identifier signing requirements on every XPC hop, app lifecycle registration, explicit unavailable/approval errors, and fail-closed disconnect behavior. The broker/tool do not link `ReleaseRadarCore` or SQLite and cannot open the authoritative store.
-- TDD: the transport scenario began RED with no application host, then proved registration/launch, signed-peer checks, valid commit/audit, durable replay, identity/version/envelope rejection, app-disconnect no-write behavior, production startup wiring, cleanup ownership, and typed MCP discovery through focused RED→GREEN cycles. Detailed commands and logs are recorded in `.superpowers/sdd/2026-08-23-release-radar-mvp/task-3-report.md`.
-- Verification: a fresh normal Debug app build passed. Strict deep signing plus explicit app/broker/tool requirements passed; the broker had exactly sandbox + the approved app group, the tool was unsandboxed with no app group, no embedded profile existed, and `otool` showed no Core/SQLite dependency in either executable. The final combined run exercised byte-identical normal-package broker/tool binaries and passed 23/23 transport/core/store tests with 0 failures/skips. Cleanup left no registered service or exact helper process; diff checks passed.
+- TDD: the transport scenario began RED with no application host, then proved registration/launch, signed-peer checks, valid commit/audit, durable replay, identity/version/envelope rejection, app-disconnect no-write behavior, production startup wiring, cleanup ownership, and typed MCP discovery. Fix round 1 separately observed RED for the missing pre-dispatch deadline contract and incorrect MCP domain-error flag, then GREEN after the minimal fixes. Detailed commands and logs are recorded in `.superpowers/sdd/2026-08-23-release-radar-mvp/task-3-report.md`.
+- Verification: a fresh normal Debug app build passed. Strict deep signing plus explicit app/broker/tool requirements passed; the broker had exactly sandbox + the approved app group, the tool was unsandboxed with no app group, no embedded profile existed, and `otool` showed no Core/SQLite dependency in either executable. The final fix-round combined run exercised byte-identical normal-package broker/tool binaries and passed 23/23 transport/core/store tests with 0 failures/skips, including a delayed callback that produced `appUnavailable` and no later delivery/audit/request write plus MCP success/error flag assertions. Cleanup left no registered service or exact helper process; diff checks passed.
 - Stop-rule recovery: the earlier anonymous-endpoint and app-owned listener attempts remain recorded as stopped and removed. The fresh recovery used the architect-approved minimal correction: a sandboxed broker with the same-team app group, an unsandboxed tool without the group, two team-prefixed Mach services, and no weaker fallback.
-- Required blocker: none in implementation. Independent RR-03 reviews are still required before acceptance or RR-04 release.
-- Reviews: not started for the complete slice; Required findings from code, QA, architecture, or security/privacy review will block acceptance.
+- Required blocker: code review identified two Important contracts: prevent post-timeout callback mutation and set MCP `isError` for structured domain failures. Both are implemented in `abb92ef`; scoped independent re-review is still required.
+- Reviews: initial code review Required 2, both addressed in fix round 1; QA's prior 23-case proof remained green but did not cover them. Scoped code/QA re-review and the remaining architecture/security/privacy reviews are pending.
 - Decisions/risks: preserve the app-only SQLite writer boundary. The app composes persisted authorized roots into the existing registry seam; the broker holds only the latest authenticated callback in memory. On machines where ServiceManagement returns `requiresApproval`, the app logs the explicit Login Items & Extensions owner action and does not weaken or bypass the gate.
-- Next eligible task: independent RR-03 code review, QA verification, architecture review, and security/privacy verification. RR-04 remains closed.
+- Next eligible task: scoped RR-03 code/QA re-review, followed by architecture and security/privacy verification if clean. RR-04 remains closed.
