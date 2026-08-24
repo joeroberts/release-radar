@@ -19,9 +19,12 @@ public struct SQLiteError: Error, LocalizedError, Equatable, Sendable {
 
 public final class SQLiteConnection: @unchecked Sendable {
     private var database: OpaquePointer?
-    private var isReadOnly = false
+    private let root: SQLiteConnection?
+    private let lease: SQLiteConnectionLease?
 
     init(url: URL) throws {
+        root = nil
+        lease = nil
         let result = sqlite3_open_v2(
             url.path,
             &database,
@@ -44,12 +47,21 @@ public final class SQLiteConnection: @unchecked Sendable {
         }
     }
 
+    private init(root: SQLiteConnection, access: SQLiteConnectionAccess) {
+        database = nil
+        self.root = root
+        lease = SQLiteConnectionLease(access: access)
+    }
+
     deinit {
-        sqlite3_close(database)
+        if root == nil {
+            sqlite3_close(database)
+        }
     }
 
     public func execute(_ sql: String, bindings: [SQLiteValue] = []) throws {
-        guard !isReadOnly else {
+        try validateLease()
+        guard lease?.access != .readOnly else {
             throw SQLiteError(code: SQLITE_READONLY, message: "Writes require DeliveryStore.transact")
         }
         let statement = try prepare(sql)
@@ -63,9 +75,10 @@ public final class SQLiteConnection: @unchecked Sendable {
         _ sql: String,
         bindings: [SQLiteValue] = []
     ) throws -> [String: SQLiteValue]? {
+        try validateLease()
         let statement = try prepare(sql)
         defer { sqlite3_finalize(statement) }
-        guard !isReadOnly || sqlite3_stmt_readonly(statement) != 0 else {
+        guard lease?.access != .readOnly || sqlite3_stmt_readonly(statement) != 0 else {
             throw SQLiteError(code: SQLITE_READONLY, message: "Writes require DeliveryStore.transact")
         }
         try bind(bindings, to: statement)
@@ -122,15 +135,28 @@ public final class SQLiteConnection: @unchecked Sendable {
         }
     }
 
-    func withReadOnlyAccess<T>(_ body: () throws -> T) rethrows -> T {
-        isReadOnly = true
-        defer { isReadOnly = false }
+    func makeScopedConnection(access: SQLiteConnectionAccess) -> SQLiteConnection {
+        SQLiteConnection(root: root ?? self, access: access)
+    }
+
+    func invalidate() {
+        lease?.invalidate()
+    }
+
+    func withTransactionCallbackRestrictions<T>(_ body: () throws -> T) throws -> T {
+        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreTransactionAuthorizer, nil)
+        guard result == SQLITE_OK else { throw currentError(code: result) }
+        defer { sqlite3_set_authorizer(databaseHandle, nil, nil) }
         return try body()
+    }
+
+    var isInTransaction: Bool {
+        sqlite3_get_autocommit(databaseHandle) == 0
     }
 
     private func prepare(_ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
-        let result = sqlite3_prepare_v2(database, sql, -1, &statement, nil)
+        let result = sqlite3_prepare_v2(databaseHandle, sql, -1, &statement, nil)
         guard result == SQLITE_OK, let statement else { throw currentError(code: result) }
         return statement
     }
@@ -171,6 +197,80 @@ public final class SQLiteConnection: @unchecked Sendable {
     }
 
     private func currentError(code: Int32) -> SQLiteError {
-        SQLiteError(code: code, message: database.map { String(cString: sqlite3_errmsg($0)) } ?? "Database is closed")
+        SQLiteError(code: code, message: databaseHandle.map { String(cString: sqlite3_errmsg($0)) } ?? "Database is closed")
+    }
+
+    private var databaseHandle: OpaquePointer? {
+        root?.database ?? database
+    }
+
+    private func validateLease() throws {
+        try lease?.validate()
+    }
+}
+
+private func deliveryStoreTransactionAuthorizer(
+    _: UnsafeMutableRawPointer?,
+    action: Int32,
+    firstArgument: UnsafePointer<CChar>?,
+    secondArgument: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?,
+    _: UnsafePointer<CChar>?
+) -> Int32 {
+    if action == SQLITE_TRANSACTION || action == SQLITE_SAVEPOINT {
+        return SQLITE_DENY
+    }
+
+    let protectedTable = "audit_events"
+    let firstName = firstArgument.map { String(cString: $0) }
+    let secondName = secondArgument.map { String(cString: $0) }
+    if firstName?.caseInsensitiveCompare(protectedTable) == .orderedSame
+        || secondName?.caseInsensitiveCompare(protectedTable) == .orderedSame {
+        return SQLITE_DENY
+    }
+
+    return SQLITE_OK
+}
+
+enum SQLiteConnectionAccess {
+    case transaction
+    case readOnly
+}
+
+private final class SQLiteConnectionLease: @unchecked Sendable {
+    let access: SQLiteConnectionAccess
+
+    private let lock = NSLock()
+    private let ownerThreadID: UInt64
+    private var isActive = true
+
+    init(access: SQLiteConnectionAccess) {
+        self.access = access
+        ownerThreadID = Self.currentThreadID()
+    }
+
+    func validate() throws {
+        lock.lock()
+        let isActive = self.isActive
+        lock.unlock()
+
+        guard isActive else {
+            throw SQLiteError(code: SQLITE_MISUSE, message: "SQLite callback scope has ended")
+        }
+        guard Self.currentThreadID() == ownerThreadID else {
+            throw SQLiteError(code: SQLITE_MISUSE, message: "SQLite callback connection cannot cross execution contexts")
+        }
+    }
+
+    func invalidate() {
+        lock.lock()
+        isActive = false
+        lock.unlock()
+    }
+
+    private static func currentThreadID() -> UInt64 {
+        var identifier: UInt64 = 0
+        pthread_threadid_np(nil, &identifier)
+        return identifier
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 
 public enum StoreError: Error, LocalizedError, Equatable, Sendable {
     case unavailable(String)
@@ -80,8 +81,15 @@ public actor DeliveryStore {
     ) throws -> T {
         let connection = try availableConnection()
         try connection.execute("BEGIN IMMEDIATE TRANSACTION")
+        let scopedConnection = connection.makeScopedConnection(access: .transaction)
+        defer { scopedConnection.invalidate() }
         do {
-            let result = try body(connection)
+            let result = try connection.withTransactionCallbackRestrictions {
+                try body(scopedConnection)
+            }
+            guard connection.isInTransaction else {
+                throw SQLiteError(code: SQLITE_MISUSE, message: "The transaction callback ended the store-owned transaction")
+            }
             try connection.execute(
                 "INSERT INTO audit_events (id, actor_id, thread_id, reason, created_at) VALUES (?, ?, ?, ?, ?)",
                 bindings: [
@@ -104,9 +112,9 @@ public actor DeliveryStore {
         _ body: @Sendable (SQLiteConnection) throws -> T
     ) throws -> T {
         let connection = try availableConnection()
-        return try connection.withReadOnlyAccess {
-            try body(connection)
-        }
+        let scopedConnection = connection.makeScopedConnection(access: .readOnly)
+        defer { scopedConnection.invalidate() }
+        return try body(scopedConnection)
     }
 
     public static func applicationSupportDatabaseURL(

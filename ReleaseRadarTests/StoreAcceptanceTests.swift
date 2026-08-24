@@ -182,6 +182,94 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.1, 1)
     }
 
+    func testConnectionReturnedFromTransactionCannotWriteAfterCallbackCompletes() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+
+        let escapedConnection = try await store.transact(
+            actor: .init(id: "agent-leak"),
+            reason: "Return transaction handle"
+        ) { connection in
+            connection
+        }
+
+        XCTAssertThrowsError(
+            try escapedConnection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+        )
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        XCTAssertEqual(state.0, TicketLane.backlog.rawValue)
+        XCTAssertEqual(state.1, 2)
+    }
+
+    func testConnectionReturnedFromReadCannotWriteAfterCallbackCompletes() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+
+        let escapedConnection = try await store.read { connection in
+            connection
+        }
+
+        XCTAssertThrowsError(
+            try escapedConnection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+        )
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        XCTAssertEqual(state.0, TicketLane.backlog.rawValue)
+        XCTAssertEqual(state.1, 1)
+    }
+
+    func testCallbackCommitCannotEscapeStoreOwnedTransaction() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "agent-commit"), reason: "Commit early") { connection in
+                try connection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+                try connection.execute("COMMIT")
+                throw CallbackFailure.expected
+            }
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        XCTAssertEqual(state.0, TicketLane.backlog.rawValue)
+        XCTAssertEqual(state.1, 1)
+    }
+
+    func testCallbackCannotMutateAuditEvents() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "agent-audit"), reason: "Delete audit history") { connection in
+                try connection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+                try connection.execute("DELETE FROM audit_events")
+            }
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        XCTAssertEqual(state.0, TicketLane.backlog.rawValue)
+        XCTAssertEqual(state.1, 1)
+    }
+
     func testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit() async throws {
         let databaseURL = try makeDatabaseURL()
         do {
@@ -296,4 +384,8 @@ final class StoreAcceptanceTests: XCTestCase {
             XCTFail("Expected expression to throw", file: file, line: line)
         } catch {}
     }
+}
+
+private enum CallbackFailure: Error {
+    case expected
 }
