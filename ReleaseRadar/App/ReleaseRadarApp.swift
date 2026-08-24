@@ -72,7 +72,7 @@ struct ReleaseRadarApp: App {
         }
 
         Settings {
-            SettingsPlaceholderView()
+            SettingsView(model: model)
         }
     }
 }

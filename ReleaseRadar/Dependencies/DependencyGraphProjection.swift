@@ -34,6 +34,19 @@ struct DependencyGraphProjection: Equatable, Sendable {
         nodes.first { $0.id == id }
     }
 
+    func selecting(_ ticketID: TicketID) -> DependencyGraphProjection? {
+        guard let inspector = Self.makeInspector(nodes: nodes, edges: edges, selectedTicketID: ticketID) else {
+            return nil
+        }
+        return DependencyGraphProjection(
+            projectID: projectID,
+            phaseID: phaseID,
+            nodes: nodes,
+            edges: edges,
+            selected: inspector
+        )
+    }
+
     static func load(
         from store: DeliveryStore,
         projectID: ProjectID,
@@ -71,22 +84,8 @@ struct DependencyGraphProjection: Equatable, Sendable {
                     targetID: TicketID(rawValue: try row.graphText("ticket_id"))
                 )
             }
-            guard let selectedTicket = nodes.first(where: { $0.id == selectedTicketID }) else {
+            guard let selected = makeInspector(nodes: nodes, edges: edges, selectedTicketID: selectedTicketID) else {
                 throw DependencyGraphProjectionError.missingSelectedTicket(selectedTicketID.rawValue)
-            }
-
-            let incomingIDs = edges.filter { $0.targetID == selectedTicketID }.map(\.sourceID)
-            let directIDs = incomingIDs.filter { candidate in
-                !incomingIDs.contains { other in
-                    other != candidate && reaches(from: candidate, to: other, edges: edges)
-                }
-            }
-            let allAncestorIDs = ancestors(of: selectedTicketID, edges: edges)
-            let indirectIDs = allAncestorIDs.subtracting(directIDs)
-            let unlockIDs = Set(edges.filter { $0.sourceID == selectedTicketID }.map(\.targetID))
-            func orderedNodes(_ ids: Set<TicketID>) -> [DependencyGraphNode] {
-                nodes.filter { ids.contains($0.id) }
-                    .sorted { $0.id.rawValue < $1.id.rawValue }
             }
 
             return DependencyGraphProjection(
@@ -94,14 +93,34 @@ struct DependencyGraphProjection: Equatable, Sendable {
                 phaseID: phaseID,
                 nodes: nodes,
                 edges: edges,
-                selected: DependencyInspectorProjection(
-                    ticket: selectedTicket,
-                    directRequires: orderedNodes(Set(directIDs)),
-                    indirectRequires: orderedNodes(indirectIDs),
-                    unlocks: orderedNodes(unlockIDs)
-                )
+                selected: selected
             )
         }
+    }
+
+    private static func makeInspector(
+        nodes: [DependencyGraphNode],
+        edges: [DependencyGraphEdge],
+        selectedTicketID: TicketID
+    ) -> DependencyInspectorProjection? {
+        guard let selectedTicket = nodes.first(where: { $0.id == selectedTicketID }) else { return nil }
+        let incomingIDs = edges.filter { $0.targetID == selectedTicketID }.map(\.sourceID)
+        let directIDs = incomingIDs.filter { candidate in
+            !incomingIDs.contains { other in
+                other != candidate && reaches(from: candidate, to: other, edges: edges)
+            }
+        }
+        let indirectIDs = ancestors(of: selectedTicketID, edges: edges).subtracting(directIDs)
+        let unlockIDs = Set(edges.filter { $0.sourceID == selectedTicketID }.map(\.targetID))
+        func orderedNodes(_ ids: Set<TicketID>) -> [DependencyGraphNode] {
+            nodes.filter { ids.contains($0.id) }.sorted { $0.id.rawValue < $1.id.rawValue }
+        }
+        return DependencyInspectorProjection(
+            ticket: selectedTicket,
+            directRequires: orderedNodes(Set(directIDs)),
+            indirectRequires: orderedNodes(indirectIDs),
+            unlocks: orderedNodes(unlockIDs)
+        )
     }
 
     private static func reaches(

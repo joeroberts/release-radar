@@ -2,6 +2,7 @@ import XCTest
 import ReleaseRadarCore
 @testable import ReleaseRadar
 
+@MainActor
 final class ReviewAndGraphAcceptanceTests: XCTestCase {
     private var databaseURL: URL!
     private var projectRoot: URL!
@@ -82,6 +83,25 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         ])
         XCTAssertTrue(inbox.completedItems.isEmpty)
         XCTAssertEqual(inbox.openItems.first?.summary, "Import mapping needs owner confirmation")
+    }
+
+    func testFreshSampleSeedSuppliesTheSupportedReviewInbox() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+
+        let inbox = try await ReviewInboxProjection.load(
+            from: store,
+            projectID: DashboardSampleData.projectID
+        )
+
+        XCTAssertEqual(inbox.openItems.map(\.kind), [
+            .uncertainImport,
+            .duplicate,
+            .unresolvedDependency,
+            .unmatchedTask,
+            .excludedTask,
+            .agentReviewRequest,
+        ])
     }
 
     func testDependencyGraphProjectsTransitiveDirectionAndPreciseMultiEdgeEndpoints() async throws {
@@ -193,6 +213,34 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertEqual(SidebarBadgePolicy.notificationBadgeSurfaceCount, 1)
     }
 
+    @MainActor
+    func testAppModelLoadsProjectWorkspaceAndSurfacesReviewActionFailure() async throws {
+        let store = try await seededStore()
+        let model = AppModel(store: store)
+
+        await model.loadDashboard()
+
+        XCTAssertEqual(model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.count, 6)
+        XCTAssertEqual(model.dependencyGraph(for: DashboardSampleData.projectID)?.selected.ticket.id.rawValue, "VD2-08")
+        XCTAssertFalse(model.activity(for: DashboardSampleData.projectID)?.items.isEmpty == true)
+
+        try await store.transact(
+            actor: DeliveryActor(id: "rr07-test"),
+            reason: "Remove root to exercise visible failure"
+        ) { connection in
+            try connection.execute(
+                "DELETE FROM project_roots WHERE project_id = ?",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+        let item = try XCTUnwrap(model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.first)
+        await model.performReviewDecision(.resolve, item: item)
+
+        XCTAssertTrue(model.reviewActionError?.localizedCaseInsensitiveContains("authorized project root") == true)
+        XCTAssertEqual(model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.count, 6)
+    }
+
+    @MainActor
     private func seededStore() async throws -> DeliveryStore {
         let store = DeliveryStore(databaseURL: databaseURL)
         try await DashboardSampleData.seedIfNeeded(in: store)
@@ -219,7 +267,7 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
             ]
             for review in reviews {
                 try connection.execute(
-                    "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open')",
+                    "INSERT OR IGNORE INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open')",
                     bindings: [
                         .text(review.0),
                         .text(DashboardSampleData.projectID.rawValue),
@@ -233,6 +281,7 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         return store
     }
 
+    @MainActor
     private func envelope(reason: String, command: AgentCommand) -> AgentCommandEnvelope {
         AgentCommandEnvelope(
             version: AgentCommandDispatcher.commandEnvelopeVersion,

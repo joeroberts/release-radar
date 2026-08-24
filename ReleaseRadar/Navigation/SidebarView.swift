@@ -174,6 +174,25 @@ struct SidebarView: View {
                 ProjectsView(projection: dashboard) { projectID in
                     model.openProject(projectID)
                 }
+            case .needsReview:
+                if let inbox = model.reviewInbox(for: model.currentProjectID) {
+                    NeedsReviewView(
+                        inbox: inbox,
+                        selectedItemID: $model.selectedReviewItemID,
+                        isPerformingAction: model.isPerformingReviewAction,
+                        actionError: model.reviewActionError
+                    ) { decision, item in
+                        await model.performReviewDecision(decision, item: item)
+                    }
+                } else {
+                    DetailUnavailableView(title: "Needs Review", image: "checkmark.bubble")
+                }
+            case .notifications:
+                if let activity = model.activity(for: model.currentProjectID) {
+                    NotificationHistoryView(activity: activity)
+                } else {
+                    DetailUnavailableView(title: "Notifications", image: "bell")
+                }
             case let .projectOverview(projectID):
                 if let board = dashboard.board(for: projectID) {
                     ProjectOverviewView(board: board) {
@@ -184,8 +203,29 @@ struct SidebarView: View {
                 if let board = dashboard.board(for: projectID) {
                     PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID)
                 }
-            default:
-                DetailPlaceholderView(route: model.selection)
+            case let .dependencies(projectID):
+                if let graph = model.dependencyGraph(for: projectID) {
+                    DependencyGraphView(
+                        graph: graph,
+                        selectedTicketID: $model.selectedTicketID,
+                        freshness: model.codexSnapshot.freshness
+                    )
+                } else {
+                    DetailUnavailableView(title: "Dependencies", image: "arrow.triangle.branch")
+                }
+            case let .activity(projectID):
+                if let activity = model.activity(for: projectID),
+                   let project = dashboard.projects.first(where: { $0.id == projectID }) {
+                    ActivityView(
+                        activity: activity,
+                        projectName: project.name,
+                        freshness: model.codexSnapshot.freshness
+                    )
+                } else {
+                    DetailUnavailableView(title: "Activity", image: "clock.arrow.circlepath")
+                }
+            case .settings:
+                DetailUnavailableView(title: "Settings", image: "gearshape")
             }
         } else {
             ProgressView("Loading local delivery data…")
@@ -194,16 +234,17 @@ struct SidebarView: View {
     }
 }
 
-private struct DetailPlaceholderView: View {
-    let route: AppRoute
+private struct DetailUnavailableView: View {
+    let title: String
+    let image: String
 
     var body: some View {
         ContentUnavailableView(
-            route.title,
-            systemImage: route.systemImage,
-            description: Text("This section is ready for its delivery slice.")
+            title,
+            systemImage: image,
+            description: Text("Persisted project data is unavailable for this section.")
         )
-        .navigationTitle(route.title)
+        .navigationTitle(title)
     }
 }
 

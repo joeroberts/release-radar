@@ -144,6 +144,36 @@ enum DashboardSampleData {
                     .text("VD2-07c"), .text("rr06-goal-vd2-07c"),
                 ]
             )
+            let reviewItems: [(String, String?, String, String)] = [
+                ("import-review", nil, "uncertain_import", "Import mapping needs owner confirmation"),
+                ("duplicate-review", "VD2-08", "duplicate", "Possible duplicate delivery item"),
+                ("dependency-review", "UX-D12", "unresolved_dependency", "Dependency target could not be resolved"),
+                ("unmatched-review", nil, "unmatched_task", "Task does not match this project"),
+                ("excluded-review", nil, "excluded_task", "Excluded task needs confirmation"),
+                ("agent-review", "VD2-07c", "agent_review_request", "Agent requested owner validation"),
+            ]
+            for review in reviewItems {
+                try connection.execute(
+                    "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open')",
+                    bindings: [
+                        .text(review.0),
+                        .text(projectID.rawValue),
+                        review.1.map(SQLiteValue.text) ?? .null,
+                        .text(review.2),
+                        .text(review.3),
+                    ]
+                )
+            }
+            try connection.execute(
+                "INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES (?, ?, ?, ?, ?)",
+                bindings: [
+                    .text("rr07-completion-ux-d10"),
+                    .text(projectID.rawValue),
+                    .text("UX-D10"),
+                    .text("Agent completed export confirmation and requested validation."),
+                    .text("2026-08-23T22:18:00Z"),
+                ]
+            )
         }
     }
 }
