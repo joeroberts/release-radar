@@ -89,10 +89,11 @@ struct ProjectActivityProjection: Equatable, Sendable {
                        notification_events.created_at, notification_events.failure_code
                 FROM notification_events
                 LEFT JOIN tickets ON tickets.id = notification_events.ticket_id
-                WHERE tickets.project_id = ?
+                WHERE notification_events.project_id = ?
+                   OR (notification_events.project_id IS NULL AND tickets.project_id = ?)
                 ORDER BY notification_events.rowid DESC
                 """,
-                bindings: [.text(projectID.rawValue)]
+                bindings: [.text(projectID.rawValue), .text(projectID.rawValue)]
             )
             let auditRows = try connection.activityRows(
                 """

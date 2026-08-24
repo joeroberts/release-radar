@@ -187,6 +187,7 @@ final class NotificationAcceptanceTests: XCTestCase {
             transport: transport
         )
 
+        await dispatcher.prepareForLaunch()
         await dispatcher.dispatchPending()
         await dispatcher.dispatchPending()
 
@@ -196,6 +197,173 @@ final class NotificationAcceptanceTests: XCTestCase {
             try connection.scalarText("SELECT state FROM notification_events LIMIT 1")
         }
         XCTAssertEqual(state, NotificationDeliveryState.unknown.rawValue)
+    }
+
+    func testOrdinaryDispatchDoesNotRecoverPreexistingAttemptAsIfItWereRelaunch() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await transition(.needsReview, requestID: "90909090-9090-4090-8090-909090909044", fixture: fixture)
+        try await fixture.store.transact(actor: .init(id: "notification-dispatcher"), reason: "Start notification attempt") { connection in
+            try connection.execute("UPDATE notification_events SET state = 'attempt_started', attempt_count = 1, attempt_started_at = '2026-08-24T10:00:00Z'")
+        }
+        let transport = CountingTransport()
+        let dispatcher = PushoverNotificationDispatcher(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            credentials: StaticPushoverCredentialsProvider(credentials: .init(appToken: "app-secret", userKey: "user-secret")),
+            transport: transport
+        )
+
+        await dispatcher.dispatchPending()
+
+        let sendCount = await transport.sendCount
+        XCTAssertEqual(sendCount, 0)
+        let state = try await fixture.store.read { connection in
+            try connection.scalarText("SELECT state FROM notification_events LIMIT 1")
+        }
+        XCTAssertEqual(state, NotificationDeliveryState.attemptStarted.rawValue)
+    }
+
+    func testConcurrentDispatchDoesNotReclassifyLiveAttemptAndSendsOnce() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await transition(.needsReview, requestID: "90909090-9090-4090-8090-909090909042", fixture: fixture)
+        let transport = BlockingCountingTransport()
+        let dispatcher = PushoverNotificationDispatcher(
+            store: fixture.store,
+            credentials: StaticPushoverCredentialsProvider(credentials: .init(appToken: "app-secret", userKey: "user-secret")),
+            transport: transport
+        )
+
+        let first = Task { await dispatcher.dispatchPending() }
+        await transport.waitUntilEntered()
+        let second = Task { await dispatcher.dispatchPending() }
+        await second.value
+        let stateWhileBlocked = try await fixture.store.read { connection in
+            try connection.scalarText("SELECT state FROM notification_events LIMIT 1")
+        }
+        XCTAssertEqual(stateWhileBlocked, NotificationDeliveryState.attemptStarted.rawValue)
+        await transport.release()
+        await first.value
+
+        let sendCount = await transport.sendCount
+        XCTAssertEqual(sendCount, 1)
+        let state = try await fixture.store.read { connection in
+            (
+                try connection.scalarText("SELECT state FROM notification_events LIMIT 1"),
+                try connection.scalarInt("SELECT attempt_count FROM notification_events LIMIT 1")
+            )
+        }
+        XCTAssertEqual(state.0, NotificationDeliveryState.sent.rawValue)
+        XCTAssertEqual(state.1, 1)
+    }
+
+    func testSuccessfulSendRemainsExactlyOneAcrossReplayAndRelaunch() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        let requestID = UUID(uuidString: "90909090-9090-4090-8090-909090909043")!
+        let envelope = AgentCommandEnvelope(
+            version: 1,
+            requestID: requestID,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Request owner review once",
+            command: .requestReview(id: "review-send-once", ticketID: "RR-09", kind: "agent_request", summary: "Review")
+        )
+        let firstResult = await fixture.dispatcher.dispatch(envelope)
+        XCTAssertNil(firstResult.error)
+        let transport = CountingTransport()
+        let firstDispatcher = PushoverNotificationDispatcher(
+            store: fixture.store,
+            credentials: StaticPushoverCredentialsProvider(credentials: .init(appToken: "app-secret", userKey: "user-secret")),
+            transport: transport
+        )
+
+        await firstDispatcher.dispatchPending()
+        let relaunchedStore = DeliveryStore(databaseURL: fixture.databaseURL)
+        let replay = await AgentCommandDispatcher(store: relaunchedStore, projectRegistry: fixture.registry).dispatch(envelope)
+        XCTAssertNil(replay.error)
+        let relaunchedDispatcher = PushoverNotificationDispatcher(
+            store: relaunchedStore,
+            credentials: StaticPushoverCredentialsProvider(credentials: .init(appToken: "app-secret", userKey: "user-secret")),
+            transport: transport
+        )
+        await relaunchedDispatcher.dispatchPending()
+
+        let sendCount = await transport.sendCount
+        XCTAssertEqual(sendCount, 1)
+        let state = try await relaunchedStore.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE fingerprint LIKE '%review-send-once%'"),
+                try connection.scalarInt("SELECT attempt_count FROM notification_events WHERE subject_id = 'review-send-once'"),
+                try connection.scalarText("SELECT state FROM notification_events WHERE subject_id = 'review-send-once'")
+            )
+        }
+        XCTAssertEqual(state.0, 1)
+        XCTAssertEqual(state.1, 1)
+        XCTAssertEqual(state.2, NotificationDeliveryState.sent.rawValue)
+    }
+
+    func testProjectScopedOccurrenceAllowsTheSameLogicalSubjectInTwoProjects() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-NotificationProjectScope-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+
+        let events = try await store.transact(actor: .init(id: "fixture"), reason: "Seed project-scoped notification occurrences") { connection in
+            try connection.execute("INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('project-1', 'One', 1)")
+            try connection.execute("INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('project-2', 'Two', 1)")
+            let first = try MeaningfulDeliveryEvent.enqueue(
+                projectID: .init(rawValue: "project-1"), kind: .importNeedsReview,
+                subjectID: "shared-review", ticketID: nil, goalID: nil, connection: connection
+            )
+            let second = try MeaningfulDeliveryEvent.enqueue(
+                projectID: .init(rawValue: "project-2"), kind: .importNeedsReview,
+                subjectID: "shared-review", ticketID: nil, goalID: nil, connection: connection
+            )
+            return [first, second]
+        }
+
+        XCTAssertNotNil(events[0])
+        XCTAssertNotNil(events[1])
+        XCTAssertNotEqual(events[0]?.fingerprint, events[1]?.fingerprint)
+        let projectCounts = try await store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE project_id = 'project-1'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE project_id = 'project-2'") ?? -1,
+            ]
+        }
+        XCTAssertEqual(projectCounts, [1, 1])
+    }
+
+    func testGoalObservationRejectsExistingGoalOwnedByAnotherProject() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-GoalProjectScope-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed project-scoped goals") { connection in
+            try connection.execute("INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('project-1', 'One', 1)")
+            try connection.execute("INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('project-2', 'Two', 1)")
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('thread-1', 'project-1', 'active', '2026-08-24T10:00:00Z')")
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('thread-2', 'project-2', 'active', '2026-08-24T10:00:00Z')")
+        }
+        let recorder = MeaningfulDeliveryEventRecorder(store: store)
+        try await recorder.recordGoalObservation(
+            projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "shared-goal",
+            status: .active, observedAt: Date(timeIntervalSince1970: 1)
+        )
+
+        do {
+            try await recorder.recordGoalObservation(
+                projectID: .init(rawValue: "project-2"), threadID: "thread-2", goalID: "shared-goal",
+                status: .blocked, observedAt: Date(timeIntervalSince1970: 2)
+            )
+            XCTFail("Expected cross-project goal ownership to be rejected")
+        } catch {
+            // The persisted project must remain the original owner regardless of the concrete error surface.
+        }
+
+        let projectID = try await store.read { connection in
+            try connection.scalarText("SELECT project_id FROM observed_goals WHERE id = 'shared-goal'")
+        }
+        XCTAssertEqual(projectID, "project-1")
     }
 
     func testKeychainItemsAreDeviceOnlyNonSynchronizingAndAppScoped() {
@@ -259,6 +427,36 @@ final class NotificationAcceptanceTests: XCTestCase {
         XCTAssertFalse(notification.title.contains("Transition"))
     }
 
+    func testNotificationHistoryIncludesTicketlessProjectEventAndFailure() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        let result = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909052")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Request project-level import review",
+            command: .requestReview(id: "ticketless-review", ticketID: nil, kind: "unmatched_import", summary: "Uncertain mapping")
+        ))
+        XCTAssertNil(result.error)
+        let dispatcher = PushoverNotificationDispatcher(
+            store: fixture.store,
+            credentials: StaticPushoverCredentialsProvider(credentials: nil),
+            transport: CountingTransport()
+        )
+        await dispatcher.dispatchPending()
+
+        let projection = try await ProjectActivityProjection.load(
+            from: fixture.store,
+            projectID: .init(rawValue: "project-1")
+        )
+        let notification = try XCTUnwrap(projection.items.first {
+            $0.source == .notification && $0.id.contains("notification-")
+        })
+        XCTAssertNil(notification.ticketID)
+        XCTAssertEqual(notification.title, "Delivery item needs review")
+        XCTAssertEqual(notification.notificationState, .failed)
+        XCTAssertEqual(notification.notificationStatusText, "Delivery failed · Credentials missing")
+    }
+
     private func transition(_ lane: TicketLane, requestID: String, fixture: Fixture) async throws {
         let result = await fixture.dispatcher.dispatch(.init(
             version: 1,
@@ -313,6 +511,36 @@ private actor CountingTransport: PushoverTransport {
 
     func send(_ message: PushoverMessage, credentials: PushoverCredentials) async throws -> PushoverProviderReceipt {
         sendCount += 1
+        return .init(requestID: "provider-request")
+    }
+}
+
+private actor BlockingCountingTransport: PushoverTransport {
+    private var enteredContinuation: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+    private var entered = false
+    private var released = false
+    private(set) var sendCount = 0
+
+    func waitUntilEntered() async {
+        guard !entered else { return }
+        await withCheckedContinuation { enteredContinuation = $0 }
+    }
+
+    func release() {
+        released = true
+        releaseContinuation?.resume()
+        releaseContinuation = nil
+    }
+
+    func send(_ message: PushoverMessage, credentials: PushoverCredentials) async throws -> PushoverProviderReceipt {
+        sendCount += 1
+        entered = true
+        enteredContinuation?.resume()
+        enteredContinuation = nil
+        if !released {
+            await withCheckedContinuation { releaseContinuation = $0 }
+        }
         return .init(requestID: "provider-request")
     }
 }

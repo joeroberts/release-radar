@@ -78,6 +78,12 @@ public actor MeaningfulDeliveryEventRecorder {
             ) == 1 else {
                 throw MeaningfulDeliveryEventError.unknownThread
             }
+            if let existingProjectID = try connection.scalarText(
+                "SELECT project_id FROM observed_goals WHERE id = ?",
+                bindings: [.text(goalID)]
+            ), existingProjectID != projectID.rawValue {
+                throw MeaningfulDeliveryEventError.crossProjectGoal
+            }
             try connection.execute(
                 """
                 INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at)
@@ -112,6 +118,7 @@ public actor MeaningfulDeliveryEventRecorder {
                 )
             } else {
                 try MeaningfulDeliveryEvent.deactivate(
+                    projectID: projectID,
                     kind: .goalBlocked,
                     subjectID: goalID,
                     connection: connection
@@ -136,6 +143,7 @@ public actor MeaningfulDeliveryEventRecorder {
 
 enum MeaningfulDeliveryEventError: Error {
     case unknownThread
+    case crossProjectGoal
 }
 
 extension MeaningfulDeliveryEvent {
@@ -153,7 +161,7 @@ extension MeaningfulDeliveryEvent {
             bindings: [.text(projectID.rawValue)]
         ) == 1 else { return nil }
 
-        let subjectKey = "\(kind.rawValue)|\(subjectID)"
+        let subjectKey = "\(projectID.rawValue)|\(kind.rawValue)|\(subjectID)"
         if try connection.scalarInt(
             "SELECT is_active FROM notification_occurrences WHERE subject_key = ?",
             bindings: [.text(subjectKey)]
@@ -165,7 +173,7 @@ extension MeaningfulDeliveryEvent {
             bindings: [.text(subjectKey)]
         ) ?? 0) + 1
         let eventID = NotificationEventID(rawValue: UUID().uuidString)
-        let fingerprint = "\(kind.rawValue):\(subjectID):\(occurrence)"
+        let fingerprint = "\(projectID.rawValue):\(kind.rawValue):\(subjectID):\(occurrence)"
         let copy = sanitizedCopy(kind: kind, ticketID: ticketID)
         let createdAt = ISO8601DateFormatter().string(from: Date())
 
@@ -215,13 +223,14 @@ extension MeaningfulDeliveryEvent {
     }
 
     static func deactivate(
+        projectID: ProjectID,
         kind: MeaningfulDeliveryEventKind,
         subjectID: String,
         connection: SQLiteConnection
     ) throws {
         try connection.execute(
             "UPDATE notification_occurrences SET is_active = 0 WHERE subject_key = ?",
-            bindings: [.text("\(kind.rawValue)|\(subjectID)")]
+            bindings: [.text("\(projectID.rawValue)|\(kind.rawValue)|\(subjectID)")]
         )
     }
 

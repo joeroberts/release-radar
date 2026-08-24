@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 6
+    static let currentVersion: Int64 = 7
 
     static func migrate(_ connection: SQLiteConnection) throws {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -29,6 +29,9 @@ enum StoreMigrations {
             }
             if version < 6 {
                 try connection.executeScript(schemaVersion6)
+            }
+            if version < 7 {
+                try connection.executeScript(schemaVersion7)
             }
             try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
@@ -307,5 +310,15 @@ enum StoreMigrations {
         ON notification_events(project_id, created_at DESC);
     CREATE INDEX notification_events_state_index
         ON notification_events(state, created_at);
+    """
+
+    private static let schemaVersion7 = """
+    UPDATE notification_occurrences
+    SET subject_key = project_id || '|' || subject_key
+    WHERE subject_key NOT LIKE project_id || '|%';
+    UPDATE notification_events
+    SET fingerprint = project_id || ':' || fingerprint
+    WHERE project_id IS NOT NULL
+      AND fingerprint NOT LIKE project_id || ':%';
     """
 }

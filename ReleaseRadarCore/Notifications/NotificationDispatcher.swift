@@ -8,6 +8,8 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
     private let store: DeliveryStore
     private let credentials: any PushoverCredentialsProvider
     private let transport: any PushoverTransport
+    private var didPrepareForLaunch = false
+    private var dispatchInProgress = false
 
     public init(
         store: DeliveryStore,
@@ -23,9 +25,17 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
         await dispatchPending()
     }
 
+    public func prepareForLaunch() async {
+        guard !didPrepareForLaunch else { return }
+        didPrepareForLaunch = true
+        try? await recoverAmbiguousAttempts()
+    }
+
     public func dispatchPending() async {
+        guard !dispatchInProgress else { return }
+        dispatchInProgress = true
+        defer { dispatchInProgress = false }
         do {
-            try await recoverAmbiguousAttempts()
             let ids = try await pendingEventIDs()
             for id in ids {
                 await dispatch(id: id)

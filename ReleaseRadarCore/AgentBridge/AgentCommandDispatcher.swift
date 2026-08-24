@@ -334,12 +334,12 @@ public actor AgentCommandDispatcher {
             )
         case let .resolveImportReview(reviewItemID):
             try updateReview(reviewItemID, status: "resolved", projectID: projectID, connection: connection)
-            try MeaningfulDeliveryEvent.deactivate(kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
-            try MeaningfulDeliveryEvent.deactivate(kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
         case let .dismissImportReview(reviewItemID):
             try updateReview(reviewItemID, status: "dismissed", projectID: projectID, connection: connection)
-            try MeaningfulDeliveryEvent.deactivate(kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
-            try MeaningfulDeliveryEvent.deactivate(kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
         }
     }
 
@@ -360,6 +360,7 @@ public actor AgentCommandDispatcher {
             )
         } else {
             try MeaningfulDeliveryEvent.deactivate(
+                projectID: projectID,
                 kind: .ticketNeedsReview,
                 subjectID: ticketID,
                 connection: connection
