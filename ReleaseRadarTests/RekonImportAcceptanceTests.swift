@@ -71,6 +71,31 @@ final class RekonImportAcceptanceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: fixture.artifactURL), sourceBytes)
     }
 
+    func testApplyAtomicallyEnqueuesOpenImportReviewsOnlyAfterDashboardOpened() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        try await store.transact(actor: .init(id: "owner"), reason: "Open imported project") { connection in
+            try connection.execute("UPDATE projects SET first_dashboard_opened = 1 WHERE id = 'project-import'")
+        }
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+        let preview = try importer.preview(fixture.root)
+
+        try await importer.apply(preview, to: fixture.projectID)
+        try await importer.apply(preview, to: fixture.projectID)
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = 'project-import' AND status = 'open'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE project_id = 'project-import' AND event_kind = 'import_needs_review'"),
+                try connection.scalarInt("SELECT COUNT(DISTINCT fingerprint) FROM notification_events WHERE project_id = 'project-import'")
+            )
+        }
+        XCTAssertEqual(state.0, 3)
+        XCTAssertEqual(state.1, 3)
+        XCTAssertEqual(state.2, 3)
+    }
+
     func testApplyPersistsConfidentActivePhaseInsteadOfEarlierHistoricalPhase() async throws {
         let fixture = try RekonImportFixture(testCase: self)
         let store = DeliveryStore(databaseURL: fixture.databaseURL)

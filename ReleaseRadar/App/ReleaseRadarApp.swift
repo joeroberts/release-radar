@@ -7,6 +7,7 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "AgentBridge")
     private var agentBridgeHost: AgentBridgeApplicationHost?
+    private var notificationDispatcher: PushoverNotificationDispatcher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -16,7 +17,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Task { [weak self] in
             do {
-                _ = try await self?.startAgentBridge()
+                let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
+                let dispatcher = PushoverNotificationDispatcher(
+                    store: DeliveryStore(databaseURL: databaseURL)
+                )
+                self?.notificationDispatcher = dispatcher
+                await dispatcher.dispatchPending()
+                _ = try await self?.startAgentBridge(
+                    databaseURL: databaseURL,
+                    afterDispatchBeforeReply: { _, result in
+                        guard result.error == nil else { return }
+                        await dispatcher.dispatchPending()
+                    }
+                )
             } catch {
                 self?.logger.error("Agent bridge startup failed: \(error.localizedDescription)")
             }
@@ -68,7 +81,7 @@ struct ReleaseRadarApp: App {
         }
 
         MenuBarExtra("Release Radar", systemImage: "dot.radiowaves.left.and.right") {
-            MenuBarContent()
+            MenuBarContent(model: model)
         }
 
         Settings {
@@ -79,11 +92,35 @@ struct ReleaseRadarApp: App {
 
 private struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
+    @Bindable var model: AppModel
+
+    private var recentNotifications: [ProjectActivityItem] {
+        model.activity(for: model.currentProjectID)?.items
+            .filter { $0.source == .notification }
+            .prefix(3)
+            .map { $0 } ?? []
+    }
 
     var body: some View {
         Button("Open Release Radar") {
             NSApp.activate(ignoringOtherApps: true)
             openWindow(id: "main")
+        }
+
+        if recentNotifications.isEmpty {
+            Text("No notification history")
+                .foregroundStyle(.secondary)
+        } else {
+            Divider()
+            ForEach(recentNotifications) { item in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.title).font(.headline)
+                    Text(item.notificationStatusText ?? "Persisted delivery status")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
         }
 
         SettingsLink {

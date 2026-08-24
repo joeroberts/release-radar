@@ -188,8 +188,9 @@ struct SidebarView: View {
                     DetailUnavailableView(title: "Needs Review", image: "checkmark.bubble")
                 }
             case .notifications:
-                if let activity = model.activity(for: model.currentProjectID) {
-                    NotificationHistoryView(activity: activity)
+                if let activity = model.activity(for: model.currentProjectID),
+                   let project = dashboard.projects.first(where: { $0.id == model.currentProjectID }) {
+                    NotificationsView(activity: activity, projectName: project.name)
                 } else {
                     DetailUnavailableView(title: "Notifications", image: "bell")
                 }

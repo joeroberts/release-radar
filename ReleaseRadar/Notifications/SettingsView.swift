@@ -49,6 +49,12 @@ struct SettingsView: View {
                 Text("Typed, authenticated delivery actions are handled by the app and audited locally.")
                     .foregroundStyle(.secondary)
             }
+            Section("Pushover") {
+                LabeledContent("Connection", value: model.isPushoverConfigured ? "Ready" : "Not configured")
+                Text("Credentials are stored in the app's device-only Keychain items.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
     }
@@ -56,8 +62,31 @@ struct SettingsView: View {
     private var notifications: some View {
         Form {
             Section("Pushover") {
-                LabeledContent("Status", value: "Not configured")
-                Text("Credential entry, test sends, alert rules, and network delivery arrive in RR-09.")
+                LabeledContent("Status", value: model.isPushoverConfigured ? "Ready" : "Not configured")
+                SecureField("Application token", text: $model.pushoverAppToken)
+                    .textContentType(.password)
+                SecureField("User key", text: $model.pushoverUserKey)
+                    .textContentType(.password)
+                HStack {
+                    Button("Save credentials") {
+                        Task { await model.savePushoverCredentials() }
+                    }
+                    Button("Remove", role: .destructive) {
+                        Task { await model.removePushoverCredentials() }
+                    }
+                    .disabled(!model.isPushoverConfigured)
+                }
+                if let message = model.pushoverSettingsMessage {
+                    Text(message).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Section("Alert rules") {
+                LabeledContent("Blocked linked goals", value: "On")
+                LabeledContent("Agent completion and review", value: "On")
+                LabeledContent("Needs Review entry", value: "On")
+                LabeledContent("Paused goals", value: "Off")
+                Text("Alerts are created only after the project's dashboard has been opened once.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }

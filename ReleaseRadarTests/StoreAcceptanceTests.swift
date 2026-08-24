@@ -403,6 +403,9 @@ final class StoreAcceptanceTests: XCTestCase {
             let legacy = try SQLiteConnection(url: databaseURL)
             try legacy.execute("CREATE TABLE projects (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, first_dashboard_opened INTEGER NOT NULL DEFAULT 0)")
             try legacy.execute("CREATE TABLE phases (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id), name TEXT NOT NULL, UNIQUE(project_id, id))")
+            try legacy.execute("CREATE TABLE tickets (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id))")
+            try legacy.execute("CREATE TABLE observed_goals (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id))")
+            try legacy.execute("CREATE TABLE notification_events (id TEXT PRIMARY KEY NOT NULL, fingerprint TEXT NOT NULL UNIQUE, state TEXT NOT NULL, ticket_id TEXT, goal_id TEXT, provider_receipt TEXT, acknowledged_at TEXT)")
             try legacy.execute("INSERT INTO projects (id, name) VALUES ('single', 'Single phase')")
             try legacy.execute("INSERT INTO projects (id, name) VALUES ('multiple', 'Multiple phases')")
             try legacy.execute("INSERT INTO phases (id, project_id, name) VALUES ('single-phase', 'single', 'Only')")
@@ -420,7 +423,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(state.0, "single-phase")
         XCTAssertNil(state.1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 5)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 6)
     }
 
     func testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit() async throws {
@@ -455,7 +458,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 5)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 6)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }

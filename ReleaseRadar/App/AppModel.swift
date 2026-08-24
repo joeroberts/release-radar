@@ -20,9 +20,15 @@ final class AppModel {
     var selectedReviewItemID: ReviewItemID?
     var reviewActionError: String?
     var isPerformingReviewAction = false
+    var pushoverAppToken = ""
+    var pushoverUserKey = ""
+    var isPushoverConfigured = false
+    var pushoverSettingsMessage: String?
 
     private let store: DeliveryStore
     private let codexObserver: any CodexObserver
+    private let pushoverKeychain: PushoverKeychainStore
+    private let notificationDispatcher: PushoverNotificationDispatcher
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
@@ -30,10 +36,16 @@ final class AppModel {
 
     init(
         store: DeliveryStore = DeliveryStore(),
-        codexObserver: any CodexObserver = UnavailableCodexObserver()
+        codexObserver: any CodexObserver = UnavailableCodexObserver(),
+        pushoverKeychain: PushoverKeychainStore = PushoverKeychainStore()
     ) {
         self.store = store
         self.codexObserver = codexObserver
+        self.pushoverKeychain = pushoverKeychain
+        notificationDispatcher = PushoverNotificationDispatcher(
+            store: store,
+            credentials: pushoverKeychain
+        )
     }
 
     var currentProjectID: ProjectID {
@@ -52,13 +64,15 @@ final class AppModel {
     }
 
     var notificationCount: Int {
-        dashboard?.board(for: currentProjectID)?.details.values
-            .reduce(0) { $0 + $1.notificationHistory.count } ?? 0
+        activity(for: currentProjectID)?.items.filter { $0.source == .notification }.count ?? 0
     }
 
     func openProject(_ projectID: ProjectID) {
         selectedProjectID = projectID
         selection = .projectOverview(projectID)
+        Task {
+            try? await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
+        }
     }
 
     func loadDashboard() async {
@@ -67,6 +81,9 @@ final class AppModel {
             let loadedDashboard = try await DashboardProjection.load(from: store)
             dashboard = loadedDashboard
             try await loadWorkspace(for: loadedDashboard)
+            await loadPushoverConfiguration()
+            await notificationDispatcher.dispatchPending()
+            try await refreshActivities(for: loadedDashboard)
             dashboardError = nil
         } catch {
             dashboardError = error.localizedDescription
@@ -144,6 +161,11 @@ final class AppModel {
                 projectID: item.projectID
             )
             selectedReviewItemID = reviewInboxes[item.projectID]?.openItems.first?.id
+            await notificationDispatcher.dispatchPending()
+            projectActivities[item.projectID] = try await ProjectActivityProjection.load(
+                from: store,
+                projectID: item.projectID
+            )
         } catch {
             reviewActionError = "Review action failed: \(error.localizedDescription)"
         }
@@ -166,6 +188,56 @@ final class AppModel {
             )
         }
         selectedReviewItemID = reviewInboxes[currentProjectID]?.openItems.first?.id
+    }
+
+    private func refreshActivities(for dashboard: DashboardProjection) async throws {
+        for project in dashboard.projects {
+            projectActivities[project.id] = try await ProjectActivityProjection.load(
+                from: store,
+                projectID: project.id
+            )
+        }
+    }
+
+    func loadPushoverConfiguration() async {
+        do {
+            isPushoverConfigured = try pushoverKeychain.loadCredentials() != nil
+            pushoverSettingsMessage = nil
+        } catch {
+            isPushoverConfigured = false
+            pushoverSettingsMessage = "Keychain access is unavailable."
+        }
+    }
+
+    func savePushoverCredentials() async {
+        let token = pushoverAppToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        let user = pushoverUserKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty, !user.isEmpty else {
+            pushoverSettingsMessage = "Enter both the application token and user key."
+            return
+        }
+        do {
+            try pushoverKeychain.save(.init(appToken: token, userKey: user))
+            pushoverAppToken = ""
+            pushoverUserKey = ""
+            isPushoverConfigured = true
+            pushoverSettingsMessage = "Credentials saved to this device."
+            await notificationDispatcher.dispatchPending()
+            if let dashboard { try await refreshActivities(for: dashboard) }
+        } catch {
+            isPushoverConfigured = false
+            pushoverSettingsMessage = "Credentials could not be saved to Keychain."
+        }
+    }
+
+    func removePushoverCredentials() async {
+        do {
+            try pushoverKeychain.deleteCredentials()
+            isPushoverConfigured = false
+            pushoverSettingsMessage = "Credentials removed from this device."
+        } catch {
+            pushoverSettingsMessage = "Credentials could not be removed from Keychain."
+        }
     }
 
     func loadCodexRuntime() async {

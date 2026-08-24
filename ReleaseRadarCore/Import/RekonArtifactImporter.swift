@@ -495,6 +495,19 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                         .text(review.summary),
                     ]
                 )
+                if try connection.scalarText(
+                    "SELECT status FROM review_items WHERE id = ? AND project_id = ?",
+                    bindings: [.text(id), .text(projectID)]
+                ) == "open" {
+                    _ = try MeaningfulDeliveryEvent.enqueue(
+                        projectID: ProjectID(rawValue: projectID),
+                        kind: .importNeedsReview,
+                        subjectID: id,
+                        ticketID: ticketID.map(TicketID.init(rawValue:)),
+                        goalID: nil,
+                        connection: connection
+                    )
+                }
             }
         }
     }

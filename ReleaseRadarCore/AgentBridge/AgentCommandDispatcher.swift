@@ -249,12 +249,14 @@ public actor AgentCommandDispatcher {
                 "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET phase_id = excluded.phase_id, outcome = excluded.outcome, lane = excluded.lane",
                 bindings: [.text(ticketID), .text(projectID.rawValue), .text(phaseID), .text(outcome), .text(lane.rawValue)]
             )
+            try updateNeedsReviewOccurrence(ticketID: ticketID, lane: lane, projectID: projectID, connection: connection)
         case let .transitionTicket(ticketID, lane):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             try connection.execute(
                 "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
                 bindings: [.text(lane.rawValue), .text(projectID.rawValue), .text(ticketID)]
             )
+            try updateNeedsReviewOccurrence(ticketID: ticketID, lane: lane, projectID: projectID, connection: connection)
         case let .setDependency(id, kind, subjectID, dependsOnID):
             let table = kind == .ticket ? "tickets" : "phases"
             try requireProjectEntity(subjectID, table: table, projectID: projectID, connection: connection)
@@ -307,6 +309,14 @@ public actor AgentCommandDispatcher {
                 "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open') ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, kind = excluded.kind, summary = excluded.summary, status = 'open'",
                 bindings: [.text(id), .text(projectID.rawValue), ticketID.map(SQLiteValue.text) ?? .null, .text(kind), .text(summary)]
             )
+            _ = try MeaningfulDeliveryEvent.enqueue(
+                projectID: projectID,
+                kind: .reviewRequested,
+                subjectID: id,
+                ticketID: ticketID.map(TicketID.init(rawValue:)),
+                goalID: nil,
+                connection: connection
+            )
         case let .recordCompletion(id, ticketID, summary):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "completion_records", projectID: projectID, connection: connection)
@@ -314,10 +324,46 @@ public actor AgentCommandDispatcher {
                 "INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, summary = excluded.summary",
                 bindings: [.text(id), .text(projectID.rawValue), .text(ticketID), .text(summary), .text(ISO8601DateFormatter().string(from: Date()))]
             )
+            _ = try MeaningfulDeliveryEvent.enqueue(
+                projectID: projectID,
+                kind: .agentCompleted,
+                subjectID: id,
+                ticketID: TicketID(rawValue: ticketID),
+                goalID: nil,
+                connection: connection
+            )
         case let .resolveImportReview(reviewItemID):
             try updateReview(reviewItemID, status: "resolved", projectID: projectID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
         case let .dismissImportReview(reviewItemID):
             try updateReview(reviewItemID, status: "dismissed", projectID: projectID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
+            try MeaningfulDeliveryEvent.deactivate(kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
+        }
+    }
+
+    private static func updateNeedsReviewOccurrence(
+        ticketID: String,
+        lane: TicketLane,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        if lane == .needsReview {
+            _ = try MeaningfulDeliveryEvent.enqueue(
+                projectID: projectID,
+                kind: .ticketNeedsReview,
+                subjectID: ticketID,
+                ticketID: TicketID(rawValue: ticketID),
+                goalID: nil,
+                connection: connection
+            )
+        } else {
+            try MeaningfulDeliveryEvent.deactivate(
+                kind: .ticketNeedsReview,
+                subjectID: ticketID,
+                connection: connection
+            )
         }
     }
 

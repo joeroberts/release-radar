@@ -90,36 +90,6 @@ struct ActivityView: View {
     }
 }
 
-struct NotificationHistoryView: View {
-    let activity: ProjectActivityProjection
-
-    var body: some View {
-        let notifications = activity.items.filter { $0.source == .notification }
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Notifications")
-                    .font(.largeTitle.weight(.semibold))
-                Text("Persisted notification history. Sending and provider configuration arrive in RR-09.")
-                    .foregroundStyle(.secondary)
-                ForEach(notifications) { item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.title).font(.headline)
-                        Text(item.detail).foregroundStyle(.secondary)
-                        if let ticketID = item.ticketID {
-                            Text(ticketID.rawValue).font(.system(.caption, design: .monospaced))
-                        }
-                    }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.background, in: RoundedRectangle(cornerRadius: 12))
-                }
-            }
-            .padding(24)
-        }
-        .accessibilityIdentifier("content-notifications")
-    }
-}
-
 private extension ActivitySource {
     var systemImage: String {
         switch self {

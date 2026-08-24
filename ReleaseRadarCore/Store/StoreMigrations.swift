@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 5
+    static let currentVersion: Int64 = 6
 
     static func migrate(_ connection: SQLiteConnection) throws {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -26,6 +26,9 @@ enum StoreMigrations {
             }
             if version < 5 {
                 try connection.executeScript(schemaVersion5)
+            }
+            if version < 6 {
+                try connection.executeScript(schemaVersion6)
             }
             try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
@@ -272,5 +275,37 @@ enum StoreMigrations {
     FROM projects
     JOIN phases ON phases.project_id = projects.id
     WHERE (SELECT COUNT(*) FROM phases AS candidate WHERE candidate.project_id = projects.id) = 1;
+    """
+
+    private static let schemaVersion6 = """
+    ALTER TABLE notification_events ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE CASCADE;
+    ALTER TABLE notification_events ADD COLUMN event_kind TEXT;
+    ALTER TABLE notification_events ADD COLUMN subject_id TEXT;
+    ALTER TABLE notification_events ADD COLUMN occurrence INTEGER;
+    ALTER TABLE notification_events ADD COLUMN title TEXT;
+    ALTER TABLE notification_events ADD COLUMN message TEXT;
+    ALTER TABLE notification_events ADD COLUMN created_at TEXT;
+    ALTER TABLE notification_events ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE notification_events ADD COLUMN attempt_started_at TEXT;
+    ALTER TABLE notification_events ADD COLUMN completed_at TEXT;
+    ALTER TABLE notification_events ADD COLUMN failure_code TEXT;
+    UPDATE notification_events
+    SET project_id = (SELECT project_id FROM tickets WHERE tickets.id = notification_events.ticket_id)
+    WHERE project_id IS NULL AND ticket_id IS NOT NULL;
+    UPDATE notification_events
+    SET project_id = (SELECT project_id FROM observed_goals WHERE observed_goals.id = notification_events.goal_id)
+    WHERE project_id IS NULL AND goal_id IS NOT NULL;
+    CREATE TABLE notification_occurrences (
+        subject_key TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        event_kind TEXT NOT NULL,
+        subject_id TEXT NOT NULL,
+        generation INTEGER NOT NULL,
+        is_active INTEGER NOT NULL CHECK (is_active IN (0, 1))
+    );
+    CREATE INDEX notification_events_project_created_index
+        ON notification_events(project_id, created_at DESC);
+    CREATE INDEX notification_events_state_index
+        ON notification_events(state, created_at);
     """
 }

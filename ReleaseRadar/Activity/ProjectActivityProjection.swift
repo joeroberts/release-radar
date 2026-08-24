@@ -33,6 +33,8 @@ struct ProjectActivityItem: Equatable, Identifiable, Sendable {
     let ticketID: TicketID?
     let deliveryLane: TicketLane?
     let runtimeState: RuntimeStateLanguage?
+    let notificationState: NotificationDeliveryState?
+    let notificationStatusText: String?
 
     var freshnessText: String? {
         observedAt.map { "Last seen \($0.formatted(date: .abbreviated, time: .shortened))" }
@@ -82,7 +84,9 @@ struct ProjectActivityProjection: Equatable, Sendable {
             let notificationRows = try connection.activityRows(
                 """
                 SELECT notification_events.id, notification_events.fingerprint,
-                       notification_events.state, notification_events.ticket_id
+                       notification_events.state, notification_events.ticket_id,
+                       notification_events.title, notification_events.message,
+                       notification_events.created_at, notification_events.failure_code
                 FROM notification_events
                 LEFT JOIN tickets ON tickets.id = notification_events.ticket_id
                 WHERE tickets.project_id = ?
@@ -145,7 +149,9 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     observedAt: formatter.date(from: try row.activityText("created_at")),
                     ticketID: ticketID,
                     deliveryLane: lane(for: ticketID),
-                    runtimeState: nil
+                    runtimeState: nil,
+                    notificationState: nil,
+                    notificationStatusText: nil
                 )
             }
             items += try runtimeRows.map { row in
@@ -159,7 +165,9 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     observedAt: formatter.date(from: try row.activityText("last_observed_at")),
                     ticketID: ticketID,
                     deliveryLane: lane(for: ticketID),
-                    runtimeState: state
+                    runtimeState: state,
+                    notificationState: nil,
+                    notificationStatusText: nil
                 )
             }
             items += try reviewRows.map { row in
@@ -173,7 +181,9 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     observedAt: reviewObservedAt[reviewID],
                     ticketID: ticketID,
                     deliveryLane: lane(for: ticketID),
-                    runtimeState: nil
+                    runtimeState: nil,
+                    notificationState: nil,
+                    notificationStatusText: nil
                 )
             }
             items += try completionRows.map { row in
@@ -186,20 +196,31 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     observedAt: formatter.date(from: try row.activityText("created_at")),
                     ticketID: ticketID,
                     deliveryLane: lane(for: ticketID),
-                    runtimeState: RuntimeStateLanguage(storedValue: "completed")
+                    runtimeState: RuntimeStateLanguage(storedValue: "completed"),
+                    notificationState: nil,
+                    notificationStatusText: nil
                 )
             }
             items += try notificationRows.map { row in
                 let ticketID = row.activityOptionalText("ticket_id").map(TicketID.init(rawValue:))
+                let rawState = try row.activityText("state")
+                let fallbackTitle = try row.activityText("fingerprint")
+                let state = NotificationDeliveryState(rawValue: rawState)
+                    ?? (rawState.lowercased() == "delivered" ? .sent : nil)
                 return ProjectActivityItem(
                     id: "notification-\(try row.activityText("id"))",
                     source: .notification,
-                    title: try row.activityText("fingerprint"),
-                    detail: try row.activityText("state"),
-                    observedAt: nil,
+                    title: row.activityOptionalText("title") ?? fallbackTitle,
+                    detail: row.activityOptionalText("message") ?? "Persisted notification delivery event.",
+                    observedAt: row.activityOptionalText("created_at").flatMap(formatter.date(from:)),
                     ticketID: ticketID,
                     deliveryLane: lane(for: ticketID),
-                    runtimeState: nil
+                    runtimeState: nil,
+                    notificationState: state,
+                    notificationStatusText: Self.notificationStatus(
+                        state: state,
+                        failureCode: row.activityOptionalText("failure_code")
+                    )
                 )
             }
             items.sort {
@@ -211,6 +232,26 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 }
             }
             return ProjectActivityProjection(projectID: projectID, items: items)
+        }
+    }
+
+    private static func notificationStatus(
+        state: NotificationDeliveryState?,
+        failureCode: String?
+    ) -> String {
+        switch state {
+        case .queued: "Queued"
+        case .attemptStarted: "Sending"
+        case .unknown: "Delivery unknown · Not retried automatically"
+        case .sent: "Pushover delivered"
+        case .failed:
+            switch failureCode {
+            case "credentials_missing": "Delivery failed · Credentials missing"
+            case "provider_rejected": "Delivery failed · Provider rejected"
+            case "invalid_provider_response": "Delivery failed · Invalid provider response"
+            default: "Delivery failed · Transport unavailable"
+            }
+        case nil: "Persisted delivery status"
         }
     }
 }
