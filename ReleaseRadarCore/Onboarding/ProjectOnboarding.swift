@@ -54,6 +54,7 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
     case invalidProjectName
     case noFirstPhase
     case projectNotPrepared
+    case rootAlreadyOwned
 
     public var errorDescription: String? {
         switch self {
@@ -61,6 +62,7 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
         case .invalidProjectName: "A project name is required."
         case .noFirstPhase: "Ask an agent to define the first phase before finishing onboarding."
         case .projectNotPrepared: "Prepare the project before requesting its first phase."
+        case .rootAlreadyOwned: "A selected root or worktree already belongs to another project."
         }
     }
 }
@@ -94,38 +96,41 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         guard FileManager.default.fileExists(atPath: selected.path) else {
             throw OnboardingError.invalidFolder
         }
-        let accessingSelectedFolder = selected.startAccessingSecurityScopedResource()
-        defer {
-            if accessingSelectedFolder {
-                selected.stopAccessingSecurityScopedResource()
+        let selectedBookmark = try bookmarkStore.makeBookmark(for: selected)
+        let separatelyAuthorizedPaths = separatelyAuthorizedWorktreePaths
+        return try await bookmarkStore.withSecurityScopedAccess(bookmark: selectedBookmark) { [self] resolved in
+            guard !resolved.isStale else { throw OnboardingError.invalidFolder }
+            let authorizedSelected = Self.canonical(resolved.url)
+            guard FileManager.default.fileExists(atPath: authorizedSelected.path) else {
+                throw OnboardingError.invalidFolder
             }
+            let worktrees = (try? worktreeDiscovery.discoverWorktrees(at: authorizedSelected)) ?? []
+            let persistedAuthorizedPaths = try await persistedAuthorizedWorktreePaths(for: authorizedSelected)
+            let authorized = worktrees.filter {
+                Self.contains($0, within: authorizedSelected)
+                    || separatelyAuthorizedPaths.contains(Self.canonical($0).path)
+                    || persistedAuthorizedPaths.contains(Self.canonical($0).path)
+            }
+            let outsideWorktrees = worktrees.filter { !authorized.contains(Self.canonical($0)) }
+            let roots = [authorizedSelected] + authorized
+            let excluded = try await excludedTaskIDs(for: authorizedSelected)
+            let included = codexTasks.filter { descriptor in
+                !excluded.contains(descriptor.id)
+                    && roots.contains(where: { Self.contains(Self.canonical(descriptor.workingDirectory), within: $0) })
+            }
+            let rejected = codexTasks.filter { descriptor in
+                let path = Self.canonical(descriptor.workingDirectory)
+                return !roots.contains(where: { Self.contains(path, within: $0) })
+            }
+            return .init(
+                selectedFolder: authorizedSelected,
+                gitRoot: GitWorktreeDiscovery.discoverGitRoot(at: authorizedSelected) ?? worktrees.first,
+                includedTaskDescriptors: included,
+                rejectedTaskDescriptors: rejected,
+                authorizedWorktreeURLs: authorized,
+                worktreesRequiringAuthorization: outsideWorktrees
+            )
         }
-        let worktrees = (try? worktreeDiscovery.discoverWorktrees(at: selected)) ?? []
-        let persistedAuthorizedPaths = try await persistedAuthorizedWorktreePaths(for: selected)
-        let authorized = worktrees.filter {
-            Self.contains($0, within: selected)
-                || separatelyAuthorizedWorktreePaths.contains(Self.canonical($0).path)
-                || persistedAuthorizedPaths.contains(Self.canonical($0).path)
-        }
-        let outsideWorktrees = worktrees.filter { !authorized.contains(Self.canonical($0)) }
-        let roots = [selected] + authorized
-        let excluded = try await excludedTaskIDs(for: selected)
-        let included = codexTasks.filter { descriptor in
-            !excluded.contains(descriptor.id)
-                && roots.contains(where: { Self.contains(Self.canonical(descriptor.workingDirectory), within: $0) })
-        }
-        let rejected = codexTasks.filter { descriptor in
-            let path = Self.canonical(descriptor.workingDirectory)
-            return !roots.contains(where: { Self.contains(path, within: $0) })
-        }
-        return .init(
-            selectedFolder: selected,
-            gitRoot: GitWorktreeDiscovery.discoverGitRoot(at: selected) ?? worktrees.first,
-            includedTaskDescriptors: included,
-            rejectedTaskDescriptors: rejected,
-            authorizedWorktreeURLs: authorized,
-            worktreesRequiringAuthorization: outsideWorktrees
-        )
     }
 
     public func authorizeWorktree(_ url: URL, for preview: OnboardingPreview) throws {
@@ -144,6 +149,15 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let roots = [decision.preview.selectedFolder] + decision.preview.authorizedWorktreeURLs
         let bookmarks = try roots.map { try bookmarkStore.makeBookmark(for: $0) }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Prepare folder-backed project onboarding") { connection in
+            for root in roots {
+                let path = Self.canonical(root).path
+                if let ownerID = try connection.scalarText(
+                    "SELECT project_id FROM project_roots WHERE path = ?",
+                    bindings: [.text(path)]
+                ), ownerID != projectID.rawValue {
+                    throw OnboardingError.rootAlreadyOwned
+                }
+            }
             try connection.execute(
                 "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0) ON CONFLICT(id) DO UPDATE SET name = excluded.name",
                 bindings: [.text(projectID.rawValue), .text(decision.projectName)]
@@ -151,7 +165,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             for (index, root) in roots.enumerated() {
                 let path = Self.canonical(root).path
                 try connection.execute(
-                    "INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?) ON CONFLICT(path) DO UPDATE SET project_id = excluded.project_id",
+                    "INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?) ON CONFLICT(path) DO NOTHING",
                     bindings: [.text("\(projectID.rawValue)-root-\(index)"), .text(projectID.rawValue), .text(path)]
                 )
                 try connection.execute(
@@ -169,29 +183,18 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         return projectID
     }
 
-    public func askAgentToDefineFirstPhase(
-        projectID: ProjectID,
-        phaseID: String,
-        name: String
-    ) async -> AgentCommandResult {
-        guard let root = try? await primaryRoot(for: projectID),
-              let authorizedRoots = try? await roots(for: projectID)
-        else {
-            return .init(entityIDs: [], auditEventID: nil, error: .appUnavailable)
+    public func requestFirstPhaseDefinition(projectID: ProjectID) async throws {
+        guard try await projectExists(projectID) else { throw OnboardingError.projectNotPrepared }
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Request agent-defined first phase") { connection in
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, 'onboarding_phase_request', 'Agent requested to define the first phase', 'open') ON CONFLICT(id) DO NOTHING",
+                bindings: [.text("\(projectID.rawValue)-first-phase-request"), .text(projectID.rawValue)]
+            )
         }
-        let dispatcher = AgentCommandDispatcher(
-            store: store,
-            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
-                .init(projectID: projectID, canonicalRoot: root, authorizedRoots: authorizedRoots)
-            ])
-        )
-        return await dispatcher.dispatch(.init(
-            version: AgentCommandDispatcher.commandEnvelopeVersion,
-            requestID: UUID(),
-            projectRoot: root.path,
-            reason: "Agent-defined first phase requested during onboarding",
-            command: .upsertPhase(phaseID: phaseID, name: name)
-        ))
+    }
+
+    public func hasFirstPhase(projectID: ProjectID) async throws -> Bool {
+        try await phaseCount(for: projectID) > 0
     }
 
     public func finish(_ decision: OnboardingDecision) async throws -> ProjectID {
@@ -200,6 +203,16 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         guard try await phaseCount(for: projectID) > 0 else { throw OnboardingError.noFirstPhase }
         let included = decision.preview.includedTaskDescriptors.filter { !decision.excludedTaskIDs.contains($0.id) }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding") { connection in
+            try connection.execute(
+                "DELETE FROM thread_exclusions WHERE project_id = ? AND reason = 'Excluded during onboarding'",
+                bindings: [.text(projectID.rawValue)]
+            )
+            for taskID in decision.excludedTaskIDs {
+                try connection.execute(
+                    "INSERT INTO thread_exclusions (id, project_id, thread_id, reason) VALUES (?, ?, ?, 'Excluded during onboarding') ON CONFLICT(project_id, thread_id) DO UPDATE SET reason = excluded.reason",
+                    bindings: [.text("\(projectID.rawValue)-excluded-\(taskID)"), .text(projectID.rawValue), .text(taskID)]
+                )
+            }
             for descriptor in included {
                 try connection.execute(
                     "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, 'unmatched_codex_task', ?, 'open') ON CONFLICT(id) DO NOTHING",
@@ -236,22 +249,43 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     private func persistedAuthorizedWorktreePaths(for selectedFolder: URL) async throws -> Set<String> {
         guard let projectID = try await projectID(forRoot: selectedFolder) else { return [] }
         let rows = try await store.read { connection in
-            var rows: [(String, Data)] = []
+            var rows: [(String, Data, Int64)] = []
             var offset: Int64 = 0
             while let row = try connection.row(
-                "SELECT path, bookmark_data FROM project_bookmarks WHERE project_id = ? ORDER BY path LIMIT 1 OFFSET ?",
+                "SELECT path, bookmark_data, is_stale FROM project_bookmarks WHERE project_id = ? ORDER BY path LIMIT 1 OFFSET ?",
                 bindings: [.text(projectID.rawValue), .integer(offset)]
             ) {
-                if case let .text(path)? = row["path"], case let .blob(bookmark)? = row["bookmark_data"] {
-                    rows.append((path, bookmark))
+                if case let .text(path)? = row["path"], case let .blob(bookmark)? = row["bookmark_data"], case let .integer(isStale)? = row["is_stale"] {
+                    rows.append((path, bookmark, isStale))
                 }
                 offset += 1
             }
             return rows
         }
-        return Set(rows.compactMap { path, bookmark in
-            (try? bookmarkStore.resolve(bookmark).url.path) ?? Self.canonical(URL(fileURLWithPath: path)).path
-        })
+        var authorizedPaths: Set<String> = []
+        for (path, bookmark, isMarkedStale) in rows {
+            guard isMarkedStale == 0 else { continue }
+            do {
+                let resolved = try await bookmarkStore.withSecurityScopedAccess(bookmark: bookmark) { resolved in resolved }
+                guard !resolved.isStale else {
+                    try await markBookmarkStale(projectID: projectID, path: path)
+                    continue
+                }
+                authorizedPaths.insert(Self.canonical(resolved.url).path)
+            } catch {
+                try await markBookmarkStale(projectID: projectID, path: path)
+            }
+        }
+        return authorizedPaths
+    }
+
+    private func markBookmarkStale(projectID: ProjectID, path: String) async throws {
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Mark unavailable project bookmark") { connection in
+            try connection.execute(
+                "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ? AND path = ?",
+                bindings: [.text(projectID.rawValue), .text(path)]
+            )
+        }
     }
 
     private func projectExists(_ projectID: ProjectID) async throws -> Bool {
@@ -266,27 +300,6 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         }
     }
 
-    private func primaryRoot(for projectID: ProjectID) async throws -> URL {
-        guard let path = try await store.read({ connection in
-            try connection.scalarText("SELECT path FROM project_roots WHERE project_id = ? ORDER BY id LIMIT 1", bindings: [.text(projectID.rawValue)])
-        }) else { throw OnboardingError.projectNotPrepared }
-        return URL(fileURLWithPath: path)
-    }
-
-    private func roots(for projectID: ProjectID) async throws -> [URL] {
-        try await store.read { connection in
-            var roots: [URL] = []
-            var offset: Int64 = 0
-            while let row = try connection.row(
-                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY id LIMIT 1 OFFSET ?",
-                bindings: [.text(projectID.rawValue), .integer(offset)]
-            ) {
-                if case let .text(path)? = row["path"] { roots.append(URL(fileURLWithPath: path)) }
-                offset += 1
-            }
-            return roots
-        }
-    }
 
     private static func projectID(for folder: URL) -> String {
         let digest = folder.path.utf8.reduce(UInt64(5381)) { ($0 << 5) &+ $0 &+ UInt64($1) }

@@ -7,9 +7,8 @@ struct OnboardingView: View {
     @State private var preview: OnboardingPreview?
     @State private var projectID: ProjectID?
     @State private var projectName = ""
-    @State private var phaseID = ""
-    @State private var phaseName = ""
     @State private var excludedTaskIDs: Set<String> = []
+    @State private var hasFirstPhase = false
     @State private var statusMessage: String?
     @State private var isWorking = false
 
@@ -27,8 +26,6 @@ struct OnboardingView: View {
             if let preview {
                 Form {
                     TextField("Project name", text: $projectName)
-                    TextField("First phase ID", text: $phaseID)
-                    TextField("First phase name", text: $phaseName)
                 }
                 .frame(maxWidth: 440)
 
@@ -56,10 +53,14 @@ struct OnboardingView: View {
                 }
 
                 HStack {
-                    Button("Ask agent to define first phase", action: askAgentToDefineFirstPhase)
-                        .disabled(isWorking || phaseID.isEmpty || phaseName.isEmpty)
-                    Button("Finish with review inbox", action: finish)
+                    Button("Ask agent to define first phase", action: requestFirstPhaseDefinition)
+                        .disabled(isWorking)
+                    Button("Check for agent phase") {
+                        Task { await refreshFirstPhaseAvailability() }
+                    }
                         .disabled(isWorking || projectID == nil)
+                    Button("Finish with review inbox", action: finish)
+                        .disabled(isWorking || projectID == nil || !hasFirstPhase)
                 }
             }
 
@@ -71,6 +72,13 @@ struct OnboardingView: View {
         }
         .padding(32)
         .navigationTitle("Projects")
+        .task(id: projectID) {
+            guard projectID != nil else { return }
+            while !Task.isCancelled && !hasFirstPhase {
+                await refreshFirstPhaseAvailability()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
     }
 
     private func chooseFolder() {
@@ -89,6 +97,7 @@ struct OnboardingView: View {
                 projectName = result.selectedFolder.lastPathComponent
                 projectID = nil
                 excludedTaskIDs = []
+                hasFirstPhase = false
                 statusMessage = result.includedTaskDescriptors.isEmpty
                     ? "No delivery structure found. Ask an agent to define the first phase."
                     : "Matching tasks are included; uncertain mappings will appear in Needs Review."
@@ -98,27 +107,34 @@ struct OnboardingView: View {
         }
     }
 
-    private func askAgentToDefineFirstPhase() {
+    private func requestFirstPhaseDefinition() {
         guard let decision = decision() else { return }
         isWorking = true
         Task {
             defer { isWorking = false }
             do {
                 let preparedID = try await onboarding.prepare(decision)
-                let result = await onboarding.askAgentToDefineFirstPhase(
-                    projectID: preparedID,
-                    phaseID: phaseID,
-                    name: phaseName
-                )
-                if let error = result.error {
-                    statusMessage = "Agent request failed: \(String(describing: error))"
-                } else {
-                    projectID = preparedID
-                    statusMessage = "The agent-defined first phase is ready. Finish onboarding when you are ready."
-                }
+                try await onboarding.requestFirstPhaseDefinition(projectID: preparedID)
+                projectID = preparedID
+                hasFirstPhase = try await onboarding.hasFirstPhase(projectID: preparedID)
+                statusMessage = hasFirstPhase
+                    ? "An agent-defined first phase is ready."
+                    : "The request is in Needs Review. Waiting for an agent-defined first phase."
             } catch {
                 statusMessage = error.localizedDescription
             }
+        }
+    }
+
+    private func refreshFirstPhaseAvailability() async {
+        guard let projectID else { return }
+        do {
+            hasFirstPhase = try await onboarding.hasFirstPhase(projectID: projectID)
+            if hasFirstPhase {
+                statusMessage = "An agent-defined first phase is ready."
+            }
+        } catch {
+            statusMessage = error.localizedDescription
         }
     }
 

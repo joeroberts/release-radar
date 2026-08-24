@@ -13,6 +13,10 @@ public struct ResolvedProjectBookmark: Equatable, Sendable {
 public protocol ProjectBookmarkStoring: Sendable {
     func makeBookmark(for url: URL) throws -> Data
     func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark
+    func withSecurityScopedAccess<T: Sendable>(
+        bookmark: Data,
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T
 }
 
 public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
@@ -37,10 +41,10 @@ public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
         return .init(url: url, isStale: isStale)
     }
 
-    public func withSecurityScopedAccess<T>(
+    public func withSecurityScopedAccess<T: Sendable>(
         bookmark: Data,
-        _ body: (ResolvedProjectBookmark) throws -> T
-    ) throws -> T {
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T {
         let resolved = try resolve(bookmark)
         let started = resolved.url.startAccessingSecurityScopedResource()
         defer {
@@ -48,6 +52,6 @@ public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
                 resolved.url.stopAccessingSecurityScopedResource()
             }
         }
-        return try body(resolved)
+        return try await body(resolved)
     }
 }
