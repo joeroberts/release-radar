@@ -269,7 +269,7 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: corruptURL), bytes)
     }
 
-    func testTransportDeadlineExpiresWhileQueuedForStoreWithoutWriting() async throws {
+    func testAdmissionDeadlineExpiresWhileQueuedForStoreThenIdenticalReplayWritesOnce() async throws {
         let fixture = try await makeFixture()
         let baseline = try await counts(fixture.store)
         let gate = StoreQueueGate()
@@ -292,7 +292,7 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
                     reason: "Reject after store queue deadline",
                     command: .transitionTicket(ticketID: "RR-03", lane: .inProgress)
                 ),
-                deadline: deadline
+                admissionDeadline: deadline
             )
         }
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
@@ -309,6 +309,23 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
             try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-03'")
         }
         XCTAssertEqual(lane, TicketLane.backlog.rawValue)
+
+        let replay = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "77777777-7777-4777-8777-777777777777")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Reject after store queue deadline",
+            command: .transitionTicket(ticketID: "RR-03", lane: .inProgress)
+        ))
+        XCTAssertNil(replay.error)
+        let replayState = try await fixture.store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Reject after store queue deadline'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '77777777-7777-4777-8777-777777777777'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE id = 'RR-03' AND lane = 'in_progress'") ?? -1,
+            ]
+        }
+        XCTAssertEqual(replayState, [1, 1, 1])
     }
 
     private struct Fixture {

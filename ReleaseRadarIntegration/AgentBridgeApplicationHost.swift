@@ -33,15 +33,21 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
 
     private init(
         dispatcher: AgentCommandDispatcher,
-        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void
+        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
     ) {
         service = .agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
-        callback = AgentBridgeAppCallback(dispatcher: dispatcher, beforeDispatch: beforeDispatch)
+        callback = AgentBridgeAppCallback(
+            dispatcher: dispatcher,
+            beforeDispatch: beforeDispatch,
+            afterDispatchBeforeReply: afterDispatchBeforeReply
+        )
     }
 
     static func start(
         databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(),
-        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in }
+        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in },
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
     ) async throws -> AgentBridgeApplicationHost {
         let store = DeliveryStore(databaseURL: databaseURL)
         let projects = try await loadAuthorizedProjects(from: store)
@@ -49,7 +55,11 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             store: store,
             projectRegistry: InMemoryAuthorizedProjectRegistry(projects: projects)
         )
-        let host = AgentBridgeApplicationHost(dispatcher: dispatcher, beforeDispatch: beforeDispatch)
+        let host = AgentBridgeApplicationHost(
+            dispatcher: dispatcher,
+            beforeDispatch: beforeDispatch,
+            afterDispatchBeforeReply: afterDispatchBeforeReply
+        )
         do {
             try host.registerIfNeeded()
             try await host.connect()
@@ -132,7 +142,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
 
         do {
             let returnedVersion = try await awaitRegistration(on: connection)
-            guard returnedVersion == ReleaseRadarBridgeTransport.version else {
+            guard returnedVersion == ReleaseRadarBridgeTransport.wireVersion else {
                 throw AgentBridgeApplicationError.connectFailed("Bridge version mismatch")
             }
         } catch {
@@ -164,7 +174,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
                 gate.resume(throwing: AgentBridgeApplicationError.connectFailed("Broker registration timed out"))
             }
-            proxy.registerApp(ReleaseRadarBridgeTransport.version) { version in
+            proxy.registerApp(ReleaseRadarBridgeTransport.wireVersion) { version in
                 gate.resume(returning: version)
             }
         }
@@ -201,32 +211,35 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
 private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unchecked Sendable {
     private let dispatcher: AgentCommandDispatcher
     private let beforeDispatch: @Sendable (AgentCommandEnvelope) async -> Void
+    private let afterDispatchBeforeReply: @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
 
     init(
         dispatcher: AgentCommandDispatcher,
-        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void
+        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
     ) {
         self.dispatcher = dispatcher
         self.beforeDispatch = beforeDispatch
+        self.afterDispatchBeforeReply = afterDispatchBeforeReply
     }
 
     func dispatch(
-        _ version: Int,
+        _ wireVersion: Int,
         envelope data: Data,
-        deadline: TimeInterval,
+        admissionDeadline: TimeInterval,
         withReply reply: @escaping (Data) -> Void
     ) {
         let replyGate = AgentBridgeDataReply(reply)
         let now = Date().timeIntervalSince1970
-        guard version == ReleaseRadarBridgeTransport.version,
+        guard wireVersion == ReleaseRadarBridgeTransport.wireVersion,
               data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
-              deadline > now,
-              deadline - now <= ReleaseRadarBridgeTransport.maximumDeadlineInterval,
-              ReleaseRadarBridgeTransport.envelopeVersion(in: data) == ReleaseRadarBridgeTransport.version,
+              admissionDeadline > now,
+              admissionDeadline - now <= ReleaseRadarBridgeTransport.maximumDeadlineInterval,
+              ReleaseRadarBridgeTransport.envelopeVersion(in: data) == ReleaseRadarBridgeTransport.commandEnvelopeVersion,
               let envelope = try? JSONDecoder().decode(AgentCommandEnvelope.self, from: data)
         else {
             if let found = ReleaseRadarBridgeTransport.envelopeVersion(in: data),
-               found != ReleaseRadarBridgeTransport.version {
+               found != ReleaseRadarBridgeTransport.commandEnvelopeVersion {
                 replyGate.send(ReleaseRadarBridgeTransport.unsupportedVersionResultData(found: found))
             } else {
                 replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
@@ -236,12 +249,13 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
 
         Task {
             await beforeDispatch(envelope)
-            guard deadline > Date().timeIntervalSince1970 else {
+            guard admissionDeadline > Date().timeIntervalSince1970 else {
                 replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
                 return
             }
-            let result = await dispatcher.dispatch(envelope, deadline: deadline)
-            replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.appUnavailableResultData())
+            let result = await dispatcher.dispatch(envelope, admissionDeadline: admissionDeadline)
+            await afterDispatchBeforeReply(envelope, result)
+            replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.outcomeUnknownResultData())
         }
     }
 }

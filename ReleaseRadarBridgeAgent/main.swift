@@ -20,15 +20,16 @@ private final class BridgeBrokerState: @unchecked Sendable {
     }
 
     func forward(
-        version: Int,
+        wireVersion: Int,
         envelope: Data,
-        deadline: TimeInterval,
+        admissionDeadline: TimeInterval,
         reply: @escaping (Data) -> Void
     ) {
-        guard version == ReleaseRadarBridgeTransport.version,
+        let now = Date().timeIntervalSince1970
+        guard wireVersion == ReleaseRadarBridgeTransport.wireVersion,
               envelope.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
-              deadline > Date().timeIntervalSince1970,
-              deadline - Date().timeIntervalSince1970 <= ReleaseRadarBridgeTransport.maximumDeadlineInterval
+              admissionDeadline > now,
+              admissionDeadline - now <= ReleaseRadarBridgeTransport.maximumDeadlineInterval
         else {
             reply(ReleaseRadarBridgeTransport.appUnavailableResultData())
             return
@@ -37,7 +38,7 @@ private final class BridgeBrokerState: @unchecked Sendable {
             reply(ReleaseRadarBridgeTransport.appUnavailableResultData())
             return
         }
-        guard envelopeVersion == ReleaseRadarBridgeTransport.version else {
+        guard envelopeVersion == ReleaseRadarBridgeTransport.commandEnvelopeVersion else {
             reply(ReleaseRadarBridgeTransport.unsupportedVersionResultData(found: envelopeVersion))
             return
         }
@@ -51,18 +52,26 @@ private final class BridgeBrokerState: @unchecked Sendable {
         }
 
         let once = BridgeReplyOnce(reply)
-        let delay = max(0, deadline - Date().timeIntervalSince1970)
+        let delay = max(0, admissionDeadline - Date().timeIntervalSince1970)
         DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
-            once.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
+            once.send(ReleaseRadarBridgeTransport.outcomeUnknownResultData())
         }
         guard let callback = connection.remoteObjectProxyWithErrorHandler({ _ in
-            once.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
+            once.send(ReleaseRadarBridgeTransport.outcomeUnknownResultData())
         }) as? ReleaseRadarAppCallbackXPC else {
             once.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
             return
         }
-        callback.dispatch(version, envelope: envelope, deadline: deadline) { data in
-            once.send(data)
+        callback.dispatch(
+            wireVersion,
+            envelope: envelope,
+            admissionDeadline: admissionDeadline
+        ) { data in
+            if admissionDeadline <= Date().timeIntervalSince1970 {
+                once.send(ReleaseRadarBridgeTransport.outcomeUnknownResultData())
+            } else {
+                once.send(data)
+            }
         }
     }
 }
@@ -75,16 +84,21 @@ private final class ToolsEndpoint: NSObject, ReleaseRadarToolsBrokerXPC, @unchec
     }
 
     func handshake(_ version: Int, withReply reply: @escaping (Int) -> Void) {
-        reply(version == ReleaseRadarBridgeTransport.version ? ReleaseRadarBridgeTransport.version : 0)
+        reply(version == ReleaseRadarBridgeTransport.wireVersion ? ReleaseRadarBridgeTransport.wireVersion : 0)
     }
 
     func forward(
-        _ version: Int,
+        _ wireVersion: Int,
         envelope: Data,
-        deadline: TimeInterval,
+        admissionDeadline: TimeInterval,
         withReply reply: @escaping (Data) -> Void
     ) {
-        state.forward(version: version, envelope: envelope, deadline: deadline, reply: reply)
+        state.forward(
+            wireVersion: wireVersion,
+            envelope: envelope,
+            admissionDeadline: admissionDeadline,
+            reply: reply
+        )
     }
 }
 
@@ -97,13 +111,13 @@ private final class AppEndpoint: NSObject, ReleaseRadarAppBrokerXPC, @unchecked 
         self.connection = connection
     }
 
-    func registerApp(_ version: Int, withReply reply: @escaping (Int) -> Void) {
-        guard version == ReleaseRadarBridgeTransport.version else {
+    func registerApp(_ wireVersion: Int, withReply reply: @escaping (Int) -> Void) {
+        guard wireVersion == ReleaseRadarBridgeTransport.wireVersion else {
             reply(0)
             return
         }
         state.registerApp(connection)
-        reply(ReleaseRadarBridgeTransport.version)
+        reply(ReleaseRadarBridgeTransport.wireVersion)
     }
 }
 

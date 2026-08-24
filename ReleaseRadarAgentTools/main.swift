@@ -2,29 +2,29 @@ import Foundation
 
 private enum ToolFailure: Error, LocalizedError {
     case invalidRequest(String)
-    case bridgeUnavailable
+    case appUnavailable
 
     var errorDescription: String? {
         switch self {
         case let .invalidRequest(message): message
-        case .bridgeUnavailable: "Release Radar app is unavailable"
+        case .appUnavailable: "Release Radar app is unavailable"
         }
     }
 }
 
 private final class BridgeClient: @unchecked Sendable {
     private let connection: NSXPCConnection
-    private let requestedVersion: Int
+    private let requestedWireVersion: Int
 
     init() throws {
         guard let brokerRequirement = ReleaseRadarBridgeTransport.brokerRequirement else {
-            throw ToolFailure.bridgeUnavailable
+            throw ToolFailure.appUnavailable
         }
 #if DEBUG
-        requestedVersion = ProcessInfo.processInfo.environment["RELEASE_RADAR_BRIDGE_VERSION"]
-            .flatMap(Int.init) ?? ReleaseRadarBridgeTransport.version
+        requestedWireVersion = ProcessInfo.processInfo.environment["RELEASE_RADAR_WIRE_VERSION"]
+            .flatMap(Int.init) ?? ReleaseRadarBridgeTransport.wireVersion
 #else
-        requestedVersion = ReleaseRadarBridgeTransport.version
+        requestedWireVersion = ReleaseRadarBridgeTransport.wireVersion
 #endif
         connection = NSXPCConnection(
             machServiceName: ReleaseRadarBridgeTransport.toolsMachService,
@@ -35,7 +35,7 @@ private final class BridgeClient: @unchecked Sendable {
         connection.resume()
         guard handshake() else {
             connection.invalidate()
-            throw ToolFailure.bridgeUnavailable
+            throw ToolFailure.appUnavailable
         }
     }
 
@@ -47,31 +47,34 @@ private final class BridgeClient: @unchecked Sendable {
         let semaphore = DispatchSemaphore(value: 0)
         let lock = NSLock()
         var response: Data?
-        var failed = false
         guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
             lock.lock()
-            failed = true
+            if response == nil {
+                response = ReleaseRadarBridgeTransport.outcomeUnknownResultData()
+            }
             lock.unlock()
             semaphore.signal()
         }) as? ReleaseRadarToolsBrokerXPC else {
-            throw ToolFailure.bridgeUnavailable
+            throw ToolFailure.appUnavailable
         }
         proxy.forward(
-            requestedVersion,
+            requestedWireVersion,
             envelope: envelope,
-            deadline: Date().addingTimeInterval(10).timeIntervalSince1970
+            admissionDeadline: Date().addingTimeInterval(10).timeIntervalSince1970
         ) { data in
             lock.lock()
-            response = data
+            if response == nil {
+                response = data
+            }
             lock.unlock()
             semaphore.signal()
         }
         guard semaphore.wait(timeout: .now() + 12) == .success else {
-            throw ToolFailure.bridgeUnavailable
+            return ReleaseRadarBridgeTransport.outcomeUnknownResultData()
         }
         lock.lock()
         defer { lock.unlock() }
-        guard !failed, let response else { throw ToolFailure.bridgeUnavailable }
+        guard let response else { return ReleaseRadarBridgeTransport.outcomeUnknownResultData() }
         return response
     }
 
@@ -86,7 +89,7 @@ private final class BridgeClient: @unchecked Sendable {
             lock.unlock()
             semaphore.signal()
         }) as? ReleaseRadarToolsBrokerXPC else { return false }
-        proxy.handshake(requestedVersion) { version in
+        proxy.handshake(requestedWireVersion) { version in
             lock.lock()
             returnedVersion = version
             lock.unlock()
@@ -95,7 +98,7 @@ private final class BridgeClient: @unchecked Sendable {
         guard semaphore.wait(timeout: .now() + 5) == .success else { return false }
         lock.lock()
         defer { lock.unlock() }
-        return !failed && returnedVersion == requestedVersion
+        return !failed && returnedVersion == requestedWireVersion
     }
 }
 
@@ -129,14 +132,17 @@ private struct MCPServer {
             else { return error(id: id, code: -32602, message: "Invalid tool arguments") }
             do {
                 let envelope = try Self.makeEnvelope(tool: name, arguments: arguments)
-                let response = try BridgeClient().forward(envelope)
+                let response: Data
+                do {
+                    response = try BridgeClient().forward(envelope)
+                } catch ToolFailure.appUnavailable {
+                    response = ReleaseRadarBridgeTransport.appUnavailableResultData()
+                }
                 let isError = try Self.isDomainError(response)
                 return success(id: id, result: [
                     "content": [["type": "text", "text": String(decoding: response, as: UTF8.self)]],
                     "isError": isError,
                 ])
-            } catch ToolFailure.bridgeUnavailable {
-                return error(id: id, code: -32001, message: "Release Radar app is unavailable")
             } catch {
                 return self.error(id: id, code: -32602, message: error.localizedDescription)
             }
@@ -159,7 +165,7 @@ private struct MCPServer {
             "reason": try string("reason", in: arguments),
             "command": [command.0: command.1],
         ]
-        if let threadID = arguments["assertedThreadID"] as? String {
+        if let threadID = try optionalString("assertedThreadID", in: arguments) {
             envelope["assertedThreadID"] = threadID
         }
         let data = try JSONSerialization.data(withJSONObject: envelope)
@@ -173,7 +179,7 @@ private struct MCPServer {
         guard response.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
               let result = try? JSONSerialization.jsonObject(with: response) as? [String: Any],
               result["entityIDs"] is [Any]
-        else { throw ToolFailure.bridgeUnavailable }
+        else { throw ToolFailure.appUnavailable }
         guard let error = result["error"] else { return false }
         return !(error is NSNull)
     }
@@ -217,7 +223,7 @@ private struct MCPServer {
                 "id": try string("id", in: arguments),
                 "path": try string("path", in: arguments),
             ]
-            if let ticketID = arguments["ticketID"] as? String { value["ticketID"] = ticketID }
+            if let ticketID = try optionalString("ticketID", in: arguments) { value["ticketID"] = ticketID }
             return ("addEvidence", value)
         case "release_radar_link_thread":
             return ("linkThread", [
@@ -231,7 +237,7 @@ private struct MCPServer {
                 "kind": try string("kind", in: arguments),
                 "summary": try string("summary", in: arguments),
             ]
-            if let ticketID = arguments["ticketID"] as? String { value["ticketID"] = ticketID }
+            if let ticketID = try optionalString("ticketID", in: arguments) { value["ticketID"] = ticketID }
             return ("requestReview", value)
         case "release_radar_record_completion":
             return ("recordCompletion", [
@@ -255,11 +261,19 @@ private struct MCPServer {
         return value
     }
 
-    private static func integer(_ key: String, in arguments: [String: Any]) throws -> Int {
-        guard let value = arguments[key] as? NSNumber else {
-            throw ToolFailure.invalidRequest("Missing integer argument: \(key)")
+    private static func optionalString(_ key: String, in arguments: [String: Any]) throws -> String? {
+        guard let rawValue = arguments[key] else { return nil }
+        guard let value = rawValue as? String else {
+            throw ToolFailure.invalidRequest("Argument must be a string when present: \(key)")
         }
-        return value.intValue
+        return value
+    }
+
+    private static func integer(_ key: String, in arguments: [String: Any]) throws -> Int {
+        guard let value = ReleaseRadarBridgeTransport.exactJSONInteger(arguments[key]) else {
+            throw ToolFailure.invalidRequest("Argument must be an exactly representable integer: \(key)")
+        }
+        return value
     }
 
     private func success(id: Any, result: Any) -> [String: Any] {
@@ -343,7 +357,7 @@ private struct MCPServer {
         fields: [String: [String: Any]]
     ) -> [String: Any] {
         var properties: [String: Any] = [
-            "version": ["type": "integer", "const": ReleaseRadarBridgeTransport.version],
+            "version": ["type": "integer", "const": ReleaseRadarBridgeTransport.commandEnvelopeVersion],
             "requestID": ["type": "string", "format": "uuid"],
             "projectRoot": ["type": "string", "minLength": 1],
             "assertedThreadID": ["type": "string", "minLength": 1],

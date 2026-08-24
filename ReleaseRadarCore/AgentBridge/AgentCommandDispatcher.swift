@@ -1,7 +1,7 @@
 import Foundation
 
 public actor AgentCommandDispatcher {
-    public static let supportedVersion = 1
+    public static let commandEnvelopeVersion = 1
 
     private let store: DeliveryStore
     private let projectRegistry: any AuthorizedProjectRegistry
@@ -13,7 +13,7 @@ public actor AgentCommandDispatcher {
 
     public func dispatch(
         _ envelope: AgentCommandEnvelope,
-        deadline: TimeInterval? = nil
+        admissionDeadline: TimeInterval? = nil
     ) async -> AgentCommandResult {
         if let error = validate(envelope) {
             return .init(entityIDs: [], auditEventID: nil, error: error)
@@ -39,7 +39,8 @@ public actor AgentCommandDispatcher {
                     reason: envelope.reason,
                     auditEventID: auditEventID
                 ) { connection in
-                    if let deadline, deadline <= Date().timeIntervalSince1970 {
+                    if let admissionDeadline,
+                       admissionDeadline <= Date().timeIntervalSince1970 {
                         throw DispatchControl.expired
                     }
                     if let prior = try connection.row(
@@ -87,8 +88,8 @@ public actor AgentCommandDispatcher {
     }
 
     private func validate(_ envelope: AgentCommandEnvelope) -> AgentCommandError? {
-        guard envelope.version == Self.supportedVersion else {
-            return .unsupportedVersion(found: envelope.version, supported: Self.supportedVersion)
+        guard envelope.version == Self.commandEnvelopeVersion else {
+            return .unsupportedVersion(found: envelope.version, supported: Self.commandEnvelopeVersion)
         }
         guard !envelope.projectRoot.isEmpty, envelope.projectRoot.utf8.count <= 4_096 else {
             return .invalidEnvelope("projectRoot must contain 1...4096 UTF-8 bytes")

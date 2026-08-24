@@ -54,6 +54,7 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case dependencyCycle(String)
     case requestIDReused
     case appUnavailable
+    case outcomeUnknown
     case internalFailure(String)
 }
 

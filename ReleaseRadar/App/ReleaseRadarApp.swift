@@ -30,14 +30,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func startAgentBridge(
         databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(),
-        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in }
+        beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in },
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
     ) async throws -> AgentBridgeApplicationHost {
         if let agentBridgeHost {
             return agentBridgeHost
         }
         let host = try await AgentBridgeApplicationHost.start(
             databaseURL: databaseURL,
-            beforeDispatch: beforeDispatch
+            beforeDispatch: beforeDispatch,
+            afterDispatchBeforeReply: afterDispatchBeforeReply
         )
         agentBridgeHost = host
         return host

@@ -6,14 +6,107 @@ import XCTest
 
 @MainActor
 final class AgentBridgeTransportAcceptanceTests: XCTestCase {
+    private final class OneShotRequestGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var requestIDs: Set<UUID> = []
+
+        func take(_ requestID: UUID) -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return requestIDs.insert(requestID).inserted
+        }
+    }
+
+    private final class AsyncSignal: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Void, Never>?
+        private var signaled = false
+
+        func wait() async {
+            await withCheckedContinuation { continuation in
+                lock.lock()
+                if signaled {
+                    signaled = false
+                    lock.unlock()
+                    continuation.resume()
+                } else {
+                    self.continuation = continuation
+                    lock.unlock()
+                }
+            }
+        }
+
+        func signal() {
+            lock.lock()
+            let continuation = continuation
+            self.continuation = nil
+            if continuation == nil {
+                signaled = true
+            }
+            lock.unlock()
+            continuation?.resume()
+        }
+    }
+
+    private final class CallbackInvalidationGate: @unchecked Sendable {
+        let entered = AsyncSignal()
+        let release = AsyncSignal()
+    }
+
+    private final class ResultCapture: @unchecked Sendable {
+        private let lock = NSLock()
+        private var captured: AgentCommandResult?
+
+        func set(_ result: AgentCommandResult) {
+            lock.lock()
+            captured = result
+            lock.unlock()
+        }
+
+        func get() -> AgentCommandResult? {
+            lock.lock()
+            defer { lock.unlock() }
+            return captured
+        }
+    }
+
+    private final class DataCapture: @unchecked Sendable {
+        private let lock = NSLock()
+        private var result: Result<Data, Error>?
+
+        func set(_ result: Result<Data, Error>) {
+            lock.lock()
+            self.result = result
+            lock.unlock()
+        }
+
+        func get() throws -> Data {
+            lock.lock()
+            defer { lock.unlock() }
+            return try XCTUnwrap(result).get()
+        }
+    }
+
     func testPackagedSignedToolUsesRegisteredBrokerAndFailsClosedWithoutTheApp() async throws {
         let fixture = try await makeTransportFixture()
-        let delayedRequestID = UUID(uuidString: "99999999-9999-4999-8999-999999999999")!
+        let delayedRequestID = UUID(uuidString: "99999999-9999-4999-8999-999999999991")!
+        let committedReplyLostRequestID = UUID(uuidString: "99999999-9999-4999-8999-999999999992")!
+        let oneShotDelay = OneShotRequestGate()
+        let committedResult = ResultCapture()
         let appDelegate = AppDelegate()
         let host = try await appDelegate.startAgentBridge(
             databaseURL: fixture.databaseURL,
             beforeDispatch: { envelope in
-                guard envelope.requestID == delayedRequestID else { return }
+                guard envelope.requestID == delayedRequestID,
+                      oneShotDelay.take(envelope.requestID)
+                else { return }
+                try? await Task.sleep(for: .milliseconds(10_500))
+            },
+            afterDispatchBeforeReply: { envelope, result in
+                guard envelope.requestID == committedReplyLostRequestID,
+                      oneShotDelay.take(envelope.requestID)
+                else { return }
+                committedResult.set(result)
                 try? await Task.sleep(for: .milliseconds(10_500))
             }
         )
@@ -40,45 +133,47 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             "lane": "in_progress",
         ]
 
-        let first = try runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: arguments)
+        let first = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: arguments)
         let firstResult = try decodeCommandResult(first)
         XCTAssertNil(firstResult.error)
         XCTAssertNotNil(firstResult.auditEventID)
         XCTAssertEqual(mcpIsError(first), false)
 
-        let replay = try runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: arguments)
+        let replay = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: arguments)
         XCTAssertEqual(try decodeCommandResult(replay), firstResult)
         var counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
-        let rejectedPeer = try runTool(wrongTool, tool: "release_radar_transition_ticket", arguments: arguments)
-        XCTAssertEqual(jsonRPCErrorCode(rejectedPeer), -32001)
+        let rejectedPeer = try Self.runTool(wrongTool, tool: "release_radar_transition_ticket", arguments: arguments)
+        XCTAssertEqual(try decodeCommandResult(rejectedPeer).error, .appUnavailable)
+        XCTAssertEqual(mcpIsError(rejectedPeer), true)
         counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
-        let wrongBridge = try runTool(
+        let wrongBridge = try Self.runTool(
             packagedTool,
             tool: "release_radar_transition_ticket",
             arguments: arguments,
-            environment: ["RELEASE_RADAR_BRIDGE_VERSION": "999"]
+            environment: ["RELEASE_RADAR_WIRE_VERSION": "999"]
         )
-        XCTAssertEqual(jsonRPCErrorCode(wrongBridge), -32001)
+        XCTAssertEqual(try decodeCommandResult(wrongBridge).error, .appUnavailable)
+        XCTAssertEqual(mcpIsError(wrongBridge), true)
         counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
         var wrongEnvelopeArguments = arguments
         wrongEnvelopeArguments["version"] = 999
-        let wrongEnvelope = try runTool(
+        let wrongEnvelope = try Self.runTool(
             packagedTool,
             tool: "release_radar_transition_ticket",
             arguments: wrongEnvelopeArguments
         )
         let wrongEnvelopeResult = try decodeCommandResult(wrongEnvelope)
-        XCTAssertEqual(wrongEnvelopeResult.error, .unsupportedVersion(found: 999, supported: 1))
+        XCTAssertEqual(wrongEnvelopeResult.error, AgentCommandError.unsupportedVersion(found: 999, supported: 1))
         counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
-        let expired = try runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
+        let expired = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
             "version": 1,
             "requestID": delayedRequestID.uuidString,
             "projectRoot": fixture.projectRoot.path,
@@ -86,13 +181,61 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             "ticketID": "RR-03",
             "lane": "blocked",
         ])
-        XCTAssertEqual(try decodeCommandResult(expired).error, .appUnavailable)
+        XCTAssertEqual(try decodeCommandResult(expired).error, .outcomeUnknown)
+        XCTAssertEqual(mcpIsError(expired), true)
         try await Task.sleep(for: .seconds(1))
         let expiredCounts = try await expiredRequestCounts(fixture.store)
         XCTAssertEqual(expiredCounts, [0, 0, 0])
 
+        let delayedReplay = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
+            "version": 1,
+            "requestID": delayedRequestID.uuidString,
+            "projectRoot": fixture.projectRoot.path,
+            "reason": "Do not persist after the transport deadline",
+            "ticketID": "RR-03",
+            "lane": "blocked",
+        ])
+        let delayedReplayResult = try decodeCommandResult(delayedReplay)
+        XCTAssertNil(delayedReplayResult.error)
+        XCTAssertEqual(mcpIsError(delayedReplay), false)
+        let delayedReplayCounts = try await requestCounts(
+            fixture.store,
+            requestID: delayedRequestID,
+            reason: "Do not persist after the transport deadline"
+        )
+        XCTAssertEqual(delayedReplayCounts, [1, 1])
+
+        let replyLostArguments: [String: Any] = [
+            "version": 1,
+            "requestID": committedReplyLostRequestID.uuidString,
+            "projectRoot": fixture.projectRoot.path,
+            "reason": "Commit before the transport reply is lost",
+            "ticketID": "RR-03",
+            "lane": "needs_review",
+        ]
+        let replyLost = try Self.runTool(
+            packagedTool,
+            tool: "release_radar_transition_ticket",
+            arguments: replyLostArguments
+        )
+        XCTAssertEqual(try decodeCommandResult(replyLost).error, .outcomeUnknown)
+        XCTAssertEqual(mcpIsError(replyLost), true)
+        let originalCommittedResult = try XCTUnwrap(committedResult.get())
+        let replyLostReplay = try Self.runTool(
+            packagedTool,
+            tool: "release_radar_transition_ticket",
+            arguments: replyLostArguments
+        )
+        XCTAssertEqual(try decodeCommandResult(replyLostReplay), originalCommittedResult)
+        let replyLostCounts = try await requestCounts(
+            fixture.store,
+            requestID: committedReplyLostRequestID,
+            reason: "Commit before the transport reply is lost"
+        )
+        XCTAssertEqual(replyLostCounts, [1, 1])
+
         host.disconnectCallback()
-        let unavailable = try runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
+        let unavailable = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
             "version": 1,
             "requestID": "88888888-8888-4888-8888-888888888888",
             "projectRoot": fixture.projectRoot.path,
@@ -112,6 +255,103 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         default:
             XCTFail("Explicit cleanup left the bridge registered")
         }
+    }
+
+    func testCallbackInvalidationAfterHandoffReturnsOutcomeUnknownAndReplayWritesOnce() async throws {
+        let fixture = try await makeTransportFixture()
+        let requestID = UUID(uuidString: "99999999-9999-4999-8999-999999999993")!
+        let invalidation = CallbackInvalidationGate()
+        let appDelegate = AppDelegate()
+        let host = try await appDelegate.startAgentBridge(
+            databaseURL: fixture.databaseURL,
+            beforeDispatch: { envelope in
+                guard envelope.requestID == requestID else { return }
+                invalidation.entered.signal()
+                await invalidation.release.wait()
+            }
+        )
+        defer {
+            host.disconnectCallback()
+            try? host.unregister()
+        }
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let projectRoot = fixture.projectRoot.path
+        let pending = DataCapture()
+        let pendingFinished = AsyncSignal()
+        DispatchQueue.global().async {
+            pending.set(Result {
+                try Self.runToolData(packagedTool, tool: "release_radar_transition_ticket", arguments: [
+                    "version": 1,
+                    "requestID": requestID.uuidString,
+                    "projectRoot": projectRoot,
+                    "reason": "Invalidate the callback after broker handoff",
+                    "ticketID": "RR-03",
+                    "lane": "accepted",
+                ])
+            })
+            pendingFinished.signal()
+        }
+        await invalidation.entered.wait()
+        host.disconnectCallback()
+        invalidation.release.signal()
+
+        await pendingFinished.wait()
+        let uncertain = try Self.decodeToolResponseData(pending.get())
+        XCTAssertEqual(try decodeCommandResult(uncertain).error, .outcomeUnknown)
+        XCTAssertEqual(mcpIsError(uncertain), true)
+        try await Task.sleep(for: .milliseconds(500))
+
+        let reconnectDelegate = AppDelegate()
+        let reconnect = try await reconnectDelegate.startAgentBridge(databaseURL: fixture.databaseURL)
+        defer { reconnect.disconnectCallback() }
+        let replay = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: [
+            "version": 1,
+            "requestID": requestID.uuidString,
+            "projectRoot": projectRoot,
+            "reason": "Invalidate the callback after broker handoff",
+            "ticketID": "RR-03",
+            "lane": "accepted",
+        ])
+        XCTAssertNil(try decodeCommandResult(replay).error)
+        let replayCounts = try await requestCounts(
+            fixture.store,
+            requestID: requestID,
+            reason: "Invalidate the callback after broker handoff"
+        )
+        XCTAssertEqual(replayCounts, [1, 1])
+    }
+
+    func testMalformedNumbersAndPresentNonStringOptionalsRejectBeforeTransportOrWrite() async throws {
+        let fixture = try await makeTransportFixture()
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let base: [String: Any] = [
+            "version": 1,
+            "requestID": "99999999-9999-4999-8999-999999999994",
+            "projectRoot": fixture.projectRoot.path,
+            "reason": "Reject malformed tool input",
+            "ticketID": "RR-03",
+            "lane": "blocked",
+        ]
+        let cases: [(String, String, [String: Any])] = [
+            ("Boolean version", "release_radar_transition_ticket", base.merging(["version": true]) { _, new in new }),
+            ("fractional version", "release_radar_transition_ticket", base.merging(["version": 1.5]) { _, new in new }),
+            ("out-of-Int version", "release_radar_transition_ticket", base.merging(["version": NSNumber(value: UInt64.max)]) { _, new in new }),
+            ("null assertedThreadID", "release_radar_transition_ticket", base.merging(["assertedThreadID": NSNull()]) { _, new in new }),
+            ("Boolean evidence ticketID", "release_radar_add_evidence", base.merging(["id": "evidence-invalid", "path": fixture.projectRoot.path, "ticketID": true]) { _, new in new }),
+            ("array evidence ticketID", "release_radar_add_evidence", base.merging(["id": "evidence-invalid", "path": fixture.projectRoot.path, "ticketID": []]) { _, new in new }),
+            ("number review ticketID", "release_radar_request_review", base.merging(["id": "review-invalid", "kind": "agent_request", "summary": "Invalid", "ticketID": 42]) { _, new in new }),
+            ("object review ticketID", "release_radar_request_review", base.merging(["id": "review-invalid", "kind": "agent_request", "summary": "Invalid", "ticketID": ["bad": "type"]]) { _, new in new }),
+            ("null review ticketID", "release_radar_request_review", base.merging(["id": "review-invalid", "kind": "agent_request", "summary": "Invalid", "ticketID": NSNull()]) { _, new in new }),
+        ]
+
+        for (name, tool, arguments) in cases {
+            let response = try Self.runTool(packagedTool, tool: tool, arguments: arguments)
+            XCTAssertEqual(jsonRPCErrorCode(response), -32602, name)
+        }
+        let counts = try await malformedInputCounts(fixture.store)
+        XCTAssertEqual(counts, [0, 0, 0, 0])
     }
 
     private struct TransportFixture {
@@ -139,7 +379,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         return .init(databaseURL: databaseURL, projectRoot: projectRoot, store: store)
     }
 
-    private func runTool(
+    nonisolated private static func runTool(
         _ executableURL: URL,
         tool: String,
         arguments: [String: Any],
@@ -199,7 +439,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             return object
         }
         guard let listResponse = responses.first(where: { ($0["id"] as? NSNumber)?.intValue == 1 }),
-              hasTypedToolSchema(listResponse),
+              Self.hasTypedToolSchema(listResponse),
               let callResponse = responses.first(where: { ($0["id"] as? NSNumber)?.intValue == 2 })
         else {
             throw TransportTestError.invalidResponse(String(decoding: responseData, as: UTF8.self))
@@ -207,7 +447,28 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         return callResponse
     }
 
-    private func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
+    nonisolated private static func runToolData(
+        _ executableURL: URL,
+        tool: String,
+        arguments: [String: Any],
+        environment: [String: String] = [:]
+    ) throws -> Data {
+        try JSONSerialization.data(withJSONObject: runTool(
+            executableURL,
+            tool: tool,
+            arguments: arguments,
+            environment: environment
+        ))
+    }
+
+    private static func decodeToolResponseData(_ data: Data) throws -> [String: Any] {
+        guard let response = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw TransportTestError.invalidResponse(String(decoding: data, as: UTF8.self))
+        }
+        return response
+    }
+
+    nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
               tools.count == 12,
@@ -255,6 +516,33 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE id = 'RR-03' AND lane = 'blocked'") ?? -1,
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Do not persist after the transport deadline'") ?? -1,
                 try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '99999999-9999-4999-8999-999999999999'") ?? -1,
+            ]
+        }
+    }
+
+    private func requestCounts(
+        _ store: DeliveryStore,
+        requestID: UUID,
+        reason: String
+    ) async throws -> [Int64] {
+        try await store.read { connection in
+            [
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM audit_events WHERE reason = ?",
+                    bindings: [.text(reason)]
+                ) ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = ?", bindings: [.text(requestID.uuidString)]) ?? -1,
+            ]
+        }
+    }
+
+    private func malformedInputCounts(_ store: DeliveryStore) async throws -> [Int64] {
+        try await store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Reject malformed tool input'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '99999999-9999-4999-8999-999999999994'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM evidence WHERE id = 'evidence-invalid'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE id = 'review-invalid'") ?? -1,
             ]
         }
     }

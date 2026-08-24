@@ -2,7 +2,8 @@ import Foundation
 import Security
 
 enum ReleaseRadarBridgeTransport {
-    static let version = 1
+    static let wireVersion = 2
+    static let commandEnvelopeVersion = 1
     static let maximumEnvelopeBytes = 131_072
     static let maximumLineBytes = 196_608
     static let maximumDeadlineInterval: TimeInterval = 15
@@ -24,18 +25,42 @@ enum ReleaseRadarBridgeTransport {
     static func envelopeVersion(in data: Data) -> Int? {
         guard data.count <= maximumEnvelopeBytes,
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let number = object["version"] as? NSNumber
+              let version = exactJSONInteger(object["version"])
         else { return nil }
-        return number.intValue
+        return version
+    }
+
+    static func exactJSONInteger(_ value: Any?) -> Int? {
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID(),
+              number.doubleValue.isFinite,
+              var decimal = Decimal(
+                string: number.stringValue,
+                locale: Locale(identifier: "en_US_POSIX")
+              ),
+              !NSDecimalIsNotANumber(&decimal)
+        else { return nil }
+
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &decimal, 0, .plain)
+        guard rounded == decimal else { return nil }
+
+        let int64 = number.int64Value
+        guard Decimal(int64) == decimal else { return nil }
+        return Int(exactly: int64)
     }
 
     static func appUnavailableResultData() -> Data {
         resultData(error: ["appUnavailable": [:]])
     }
 
+    static func outcomeUnknownResultData() -> Data {
+        resultData(error: ["outcomeUnknown": [:]])
+    }
+
     static func unsupportedVersionResultData(found: Int) -> Data {
         resultData(error: [
-            "unsupportedVersion": ["found": found, "supported": version],
+            "unsupportedVersion": ["found": found, "supported": commandEnvelopeVersion],
         ])
     }
 
@@ -59,24 +84,24 @@ enum ReleaseRadarBridgeTransport {
 protocol ReleaseRadarToolsBrokerXPC {
     func handshake(_ version: Int, withReply reply: @escaping (Int) -> Void)
     func forward(
-        _ version: Int,
+        _ wireVersion: Int,
         envelope: Data,
-        deadline: TimeInterval,
+        admissionDeadline: TimeInterval,
         withReply reply: @escaping (Data) -> Void
     )
 }
 
 @objc(ReleaseRadarAppBrokerXPC)
 protocol ReleaseRadarAppBrokerXPC {
-    func registerApp(_ version: Int, withReply reply: @escaping (Int) -> Void)
+    func registerApp(_ wireVersion: Int, withReply reply: @escaping (Int) -> Void)
 }
 
 @objc(ReleaseRadarAppCallbackXPC)
 protocol ReleaseRadarAppCallbackXPC {
     func dispatch(
-        _ version: Int,
+        _ wireVersion: Int,
         envelope: Data,
-        deadline: TimeInterval,
+        admissionDeadline: TimeInterval,
         withReply reply: @escaping (Data) -> Void
     )
 }
