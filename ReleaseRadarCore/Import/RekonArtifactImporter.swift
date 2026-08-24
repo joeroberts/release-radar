@@ -345,6 +345,11 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                 availableTicketIDs.insert(ticket.id)
             }
 
+            var phaseDependencyAdjacency = try Self.loadDependencyAdjacency(
+                from: connection,
+                projectID: projectID,
+                sql: "SELECT phase_id AS source_id, depends_on_phase_id AS dependency_id FROM phase_dependencies WHERE project_id = ? ORDER BY phase_id, depends_on_phase_id LIMIT 1 OFFSET ?"
+            )
             for dependency in preview.phaseDependencies {
                 guard availablePhaseIDs.contains(dependency.phaseID),
                       availablePhaseIDs.contains(dependency.dependsOnPhaseID) else {
@@ -354,19 +359,23 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     ))
                     continue
                 }
-                if try connection.scalarText(
-                    "SELECT id FROM phase_dependencies WHERE project_id = ? AND phase_id = ? AND depends_on_phase_id = ?",
-                    bindings: [
-                        .text(projectID),
-                        .text(dependency.phaseID.rawValue),
-                        .text(dependency.dependsOnPhaseID.rawValue),
-                    ]
-                ) != nil { continue }
+                let sourceID = dependency.phaseID.rawValue
+                let dependsOnID = dependency.dependsOnPhaseID.rawValue
+                if phaseDependencyAdjacency[sourceID]?.contains(dependsOnID) == true { continue }
+                if Self.hasPath(from: dependsOnID, to: sourceID, adjacency: phaseDependencyAdjacency) {
+                    reviews.append(.init(
+                        sourceID: "\(sourceID)→\(dependsOnID)",
+                        ticketID: nil,
+                        kind: .unresolvedDependency,
+                        summary: "Phase dependency would create a cycle"
+                    ))
+                    continue
+                }
                 let id = Self.stableID(
                     "phase-dependency",
                     projectID,
-                    dependency.phaseID.rawValue,
-                    dependency.dependsOnPhaseID.rawValue
+                    sourceID,
+                    dependsOnID
                 )
                 guard try connection.scalarText("SELECT id FROM phase_dependencies WHERE id = ?", bindings: [.text(id)]) == nil else {
                     reviews.append(.conflict(sourceID: id, summary: "Phase dependency identifier conflicts with an existing record"))
@@ -377,12 +386,18 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     bindings: [
                         .text(id),
                         .text(projectID),
-                        .text(dependency.phaseID.rawValue),
-                        .text(dependency.dependsOnPhaseID.rawValue),
+                        .text(sourceID),
+                        .text(dependsOnID),
                     ]
                 )
+                phaseDependencyAdjacency[sourceID, default: []].insert(dependsOnID)
             }
 
+            var ticketDependencyAdjacency = try Self.loadDependencyAdjacency(
+                from: connection,
+                projectID: projectID,
+                sql: "SELECT ticket_id AS source_id, depends_on_ticket_id AS dependency_id FROM ticket_dependencies WHERE project_id = ? ORDER BY ticket_id, depends_on_ticket_id LIMIT 1 OFFSET ?"
+            )
             for dependency in preview.ticketDependencies {
                 guard availableTicketIDs.contains(dependency.ticketID),
                       availableTicketIDs.contains(dependency.dependsOnTicketID) else {
@@ -392,19 +407,23 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     ))
                     continue
                 }
-                if try connection.scalarText(
-                    "SELECT id FROM ticket_dependencies WHERE project_id = ? AND ticket_id = ? AND depends_on_ticket_id = ?",
-                    bindings: [
-                        .text(projectID),
-                        .text(dependency.ticketID.rawValue),
-                        .text(dependency.dependsOnTicketID.rawValue),
-                    ]
-                ) != nil { continue }
+                let sourceID = dependency.ticketID.rawValue
+                let dependsOnID = dependency.dependsOnTicketID.rawValue
+                if ticketDependencyAdjacency[sourceID]?.contains(dependsOnID) == true { continue }
+                if Self.hasPath(from: dependsOnID, to: sourceID, adjacency: ticketDependencyAdjacency) {
+                    reviews.append(.init(
+                        sourceID: "\(sourceID)→\(dependsOnID)",
+                        ticketID: dependency.ticketID,
+                        kind: .unresolvedDependency,
+                        summary: "Task dependency would create a cycle"
+                    ))
+                    continue
+                }
                 let id = Self.stableID(
                     "ticket-dependency",
                     projectID,
-                    dependency.ticketID.rawValue,
-                    dependency.dependsOnTicketID.rawValue
+                    sourceID,
+                    dependsOnID
                 )
                 guard try connection.scalarText("SELECT id FROM ticket_dependencies WHERE id = ?", bindings: [.text(id)]) == nil else {
                     reviews.append(.conflict(sourceID: id, summary: "Task dependency identifier conflicts with an existing record"))
@@ -415,10 +434,11 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     bindings: [
                         .text(id),
                         .text(projectID),
-                        .text(dependency.ticketID.rawValue),
-                        .text(dependency.dependsOnTicketID.rawValue),
+                        .text(sourceID),
+                        .text(dependsOnID),
                     ]
                 )
+                ticketDependencyAdjacency[sourceID, default: []].insert(dependsOnID)
             }
 
             try connection.execute(
@@ -760,6 +780,27 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
             pending.append(contentsOf: (adjacency[current] ?? []).sorted(by: >))
         }
         return false
+    }
+
+    private static func loadDependencyAdjacency(
+        from connection: SQLiteConnection,
+        projectID: String,
+        sql: String
+    ) throws -> [String: Set<String>] {
+        var adjacency: [String: Set<String>] = [:]
+        var offset: Int64 = 0
+        while let row = try connection.row(
+            sql,
+            bindings: [.text(projectID), .integer(offset)]
+        ) {
+            guard case let .text(sourceID)? = row["source_id"],
+                  case let .text(dependencyID)? = row["dependency_id"] else {
+                throw StoreError.unavailable("A persisted dependency graph contains an invalid edge")
+            }
+            adjacency[sourceID, default: []].insert(dependencyID)
+            offset += 1
+        }
+        return adjacency
     }
 }
 

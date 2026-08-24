@@ -266,6 +266,46 @@ final class RekonImportAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.4, 3)
     }
 
+    func testApplyRoutesDependenciesThatCycleWithPersistedGraphsToReviewWithoutRollback() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        try await store.transact(actor: .init(id: "test-seed"), reason: "Seed persisted dependency graphs") { connection in
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-main', 'project-import', 'Main delivery')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-next', 'project-import', 'Next delivery')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('TASK-A', 'project-import', 'phase-main', 'Build foundation', 'accepted')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('TASK-B', 'project-import', 'phase-main', 'Integrate workflow', 'in_progress')")
+            try connection.execute("INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('persisted-phase-edge', 'project-import', 'phase-main', 'phase-next')")
+            try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('persisted-ticket-edge', 'project-import', 'TASK-A', 'TASK-B')")
+        }
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+
+        try await importer.apply(try importer.preview(fixture.root), to: fixture.projectID)
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_dependencies WHERE project_id = 'project-import' AND phase_id = 'phase-main' AND depends_on_phase_id = 'phase-next'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_dependencies WHERE project_id = 'project-import' AND phase_id = 'phase-next' AND depends_on_phase_id = 'phase-main'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_dependencies WHERE project_id = 'project-import' AND ticket_id = 'TASK-A' AND depends_on_ticket_id = 'TASK-B'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_dependencies WHERE project_id = 'project-import' AND ticket_id = 'TASK-B' AND depends_on_ticket_id = 'TASK-A'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE id = 'import-review:project-import:unresolved_dependency:phase-next→phase-main' AND status = 'open'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE id = 'import-review:project-import:unresolved_dependency:TASK-B→TASK-A' AND status = 'open'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events")
+            )
+        }
+        XCTAssertEqual(state.0, 2)
+        XCTAssertEqual(state.1, 3)
+        XCTAssertEqual(state.2, 1)
+        XCTAssertEqual(state.3, 0)
+        XCTAssertEqual(state.4, 1)
+        XCTAssertEqual(state.5, 0)
+        XCTAssertEqual(state.6, 1)
+        XCTAssertEqual(state.7, 1)
+        XCTAssertEqual(state.8, 0)
+    }
+
     func testPreviewRejectsArtifactSymlinkThatEscapesAuthorizedRoot() throws {
         let fixture = try RekonImportFixture(testCase: self)
         let importer = RekonArtifactImporter(
