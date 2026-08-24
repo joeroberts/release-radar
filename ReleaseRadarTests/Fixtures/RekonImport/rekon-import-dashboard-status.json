@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "activePhaseId": "phase-main",
+  "activeTaskId": "TASK-B",
+  "nextEligibleTaskId": null,
+  "phases": [
+    {
+      "id": "phase-main",
+      "label": "Main delivery",
+      "lifecycle": "active",
+      "dependsOnPhaseIds": []
+    },
+    {
+      "id": "phase-next",
+      "label": "Next delivery",
+      "lifecycle": "planned",
+      "dependsOnPhaseIds": ["phase-main"]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "TASK-A",
+      "title": "Build foundation",
+      "status": "accepted",
+      "phaseId": "phase-main",
+      "dependsOnTaskIds": [],
+      "evidence": { "label": "Task brief", "href": "../task-briefs/TASK-A.md" }
+    },
+    {
+      "id": "TASK-B",
+      "title": "Integrate workflow",
+      "status": "in_progress",
+      "phaseId": "phase-main",
+      "dependsOnTaskIds": ["TASK-A"],
+      "evidence": { "label": "Roadmap", "href": "../roadmap.md" }
+    },
+    {
+      "id": "TASK-C",
+      "title": "Blocked by missing work",
+      "status": "blocked",
+      "phaseId": "phase-main",
+      "dependsOnTaskIds": ["TASK-MISSING"]
+    },
+    {
+      "id": "DUP",
+      "title": "First duplicate",
+      "status": "backlog",
+      "phaseId": "phase-main"
+    },
+    {
+      "id": "DUP",
+      "title": "Second duplicate",
+      "status": "accepted",
+      "phaseId": "phase-main"
+    },
+    {
+      "id": "NO-TITLE",
+      "title": "   ",
+      "status": "backlog",
+      "phaseId": "phase-main"
+    }
+  ]
+}
