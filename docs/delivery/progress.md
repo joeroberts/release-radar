@@ -26,10 +26,10 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-04 is accepted and released; RR-06 recognizable local-first board is the active dependency-safe slice.
-- Next eligible task: RR-06 only, with one fresh Implementer and no concurrent writer.
-- Open product blockers: none known for RR-06.
-- Open operational risks: macOS may require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
+- Current task: RR-06 recognizable local-first board is implemented but unaccepted; independent code, QA, architecture, and security/privacy review remain pending.
+- Next eligible task: none. RR-05 remains closed until RR-06 is independently accepted and released.
+- Open product blockers: none known in the RR-06 implementation.
+- Open operational risks: the existing owner sandbox database reports schema version 3 while its `audit_events` table lacks `thread_attribution`, so the normal bundle launches into the existing typed unavailable state; RR-06 did not modify or reset that authoritative database. macOS may also require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
 ## Task ledger
 
@@ -105,3 +105,16 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 - TPM: GO; RR-04 is technically accepted with every Required onboarding, bookmark, ownership, phase-gate, exclusion, and notification-silence finding closed.
 - Delivery Manager: GO; RR-04 commits, 20-case controller verification, signed build, independent reviews, and both bounded remediation rounds are durable. RR-06 is dependency-safe and released to one fresh Implementer with no concurrent writer.
+
+### RR-06 — Recognizable local-first board
+
+- Status: Implemented, unaccepted. Independent review and release gates remain open.
+- Commit: `baeb390` (`feat: add persisted phase dashboard`).
+- Scope: Idempotent audited sample persistence for the approved Rekon Pursuit project, Post-MVP refinement phase, 31 tickets, dependencies, blockers, evidence, observed goal/thread link, audit event, and notification history; Projects, Project Overview, and an adaptive five-lane Phase Board; read-only selected-ticket context; a fixed 220-point/96-point navigation rail; and unchanged placeholders for later screens and settings. No live observer, importer, Pushover sender, schema migration, or dependency was added.
+- TDD: Initial focused RED at `/tmp/rr06-red.log` failed to compile because `DashboardSampleData`, `DashboardProjection`, and `DashboardLayout` did not exist. Projection GREEN at `/tmp/rr06-projection-green-attempt.log` passed 4/4. Final focused verification at `/tmp/rr06-final-focused-tests.log` passed 6/6 across `DashboardProjectionTests` and `AppRouteTests`, with 0 failures/skips. Coverage proves the ordered counts `[9, 1, 2, 1, 18]`, 31 unique single-lane ticket memberships, seeded `VD2-08` dependency counts, complete read-only `VD2-07c` context and relationship direction, relaunch persistence/idempotence, and the wide/compact presentation thresholds.
+- Build/launch evidence: `./script/build_and_run.sh --verify` completed a normal configured Debug build, signed and launched `DerivedData/Build/Products/Debug/ReleaseRadar.app`, and fresh strict deep codesign verification passed; evidence is in `/tmp/rr06-final-build-run.log` and `/tmp/rr06-final-codesign.log`. The running normal bundle truthfully surfaces the pre-existing database recovery condition described below.
+- Seeded UI evidence: An otherwise identical configured Debug build used the temporary capture-only bundle identifier `com.rekonlabs.ReleaseRadar.RR06Capture` to obtain a fresh sandbox without touching owner data; `/tmp/rr06-capture-build-final.log` records the successful build and strict deep codesign verification passed. `docs/delivery/evidence/rr06-owner-wide.png` shows the 220-point rail, full outcome cards, all five lanes, readable counts/signals, and side inspector. `docs/delivery/evidence/rr06-owner-narrow.png` shows the persistent 96-point rail, contained highlights and badges, all five compact ID-only lanes, and the inspector below. The wide capture retains a macOS background-item banner at the extreme top-right after one bounded dismissal attempt; no product remediation was made for OS chrome.
+- Reviews: Pending fresh Code Reviewer, QA/test, Architect, and Security/privacy verification. This entry does not mark RR-06 accepted or released.
+- Decisions/risks: Lane membership is the sole ticket state projection. Cards remain selection-only; the inspector exposes outcome, verified/last-known goal context, dependency direction, owner attention, evidence, audit, and notification histories without manual state controls. The existing owner database at `~/Library/Containers/com.rekonlabs.ReleaseRadar/Data/Library/Application Support/com.rekonlabs.ReleaseRadar/release-radar.sqlite` has `PRAGMA user_version = 3` but a legacy `audit_events` shape without `thread_attribution`. It was inspected read-only and left intact; recovery/repair belongs to the later failure-state work rather than RR-06.
+- Stop-rule evidence: A narrow-layout lane-width defect was corrected within the second bounded compile/remediation attempt. Work on the unrelated persistent macOS capture banner stopped after one dismissal attempt.
+- Next eligible task: none. RR-05 remains closed pending independent RR-06 acceptance and release.
