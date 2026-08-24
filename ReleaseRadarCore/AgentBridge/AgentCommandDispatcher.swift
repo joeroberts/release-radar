@@ -277,9 +277,9 @@ public actor AgentCommandDispatcher {
                 bindings: [.text(id), .text(projectID.rawValue), .text(ticketID), .text(summary), .text(ISO8601DateFormatter().string(from: Date()))]
             )
         case let .resolveImportReview(reviewItemID):
-            try updateImportReview(reviewItemID, status: "resolved", projectID: projectID, connection: connection)
+            try updateReview(reviewItemID, status: "resolved", projectID: projectID, connection: connection)
         case let .dismissImportReview(reviewItemID):
-            try updateImportReview(reviewItemID, status: "dismissed", projectID: projectID, connection: connection)
+            try updateReview(reviewItemID, status: "dismissed", projectID: projectID, connection: connection)
         }
     }
 
@@ -335,19 +335,13 @@ public actor AgentCommandDispatcher {
             && Array(candidateComponents.prefix(rootComponents.count)) == rootComponents
     }
 
-    private static func updateImportReview(
+    private static func updateReview(
         _ id: String,
         status: String,
         projectID: ProjectID,
         connection: SQLiteConnection
     ) throws {
         try requireProjectEntity(id, table: "review_items", projectID: projectID, connection: connection)
-        guard try connection.scalarText(
-            "SELECT kind FROM review_items WHERE id = ?",
-            bindings: [.text(id)]
-        ) == "import" else {
-            throw CommandValidation.invalidReference("Review item \(id) is not an import review")
-        }
         try connection.execute(
             "UPDATE review_items SET status = ? WHERE id = ? AND project_id = ?",
             bindings: [.text(status), .text(id), .text(projectID.rawValue)]
