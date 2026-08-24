@@ -62,6 +62,28 @@ public struct OnboardingDecision: Equatable, Sendable {
     }
 }
 
+public enum OnboardingReviewMarkerKind: String, CaseIterable, Sendable {
+    case pending = "onboarding_pending"
+    case phaseRequest = "onboarding_phase_request"
+
+    public func reviewItemID(for projectID: ProjectID) -> String {
+        switch self {
+        case .pending:
+            "\(projectID.rawValue)-onboarding-pending"
+        case .phaseRequest:
+            "\(projectID.rawValue)-first-phase-request"
+        }
+    }
+
+    public static func isReserved(kind: String) -> Bool {
+        allCases.contains { $0.rawValue == kind }
+    }
+
+    public static func isReserved(id: String, projectID: ProjectID) -> Bool {
+        allCases.contains { $0.reviewItemID(for: projectID) == id }
+    }
+}
+
 public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
     case invalidFolder
     case invalidProjectName
@@ -189,8 +211,12 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 bindings: [.text(projectID.rawValue), .text(decision.projectName)]
             )
             try connection.execute(
-                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, 'onboarding_pending', 'Project onboarding is awaiting owner completion', 'open') ON CONFLICT(id) DO UPDATE SET status = 'open'",
-                bindings: [.text("\(projectID.rawValue)-onboarding-pending"), .text(projectID.rawValue)]
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, ?, 'Project onboarding is awaiting owner completion', 'open') ON CONFLICT(id) DO UPDATE SET status = 'open'",
+                bindings: [
+                    .text(OnboardingReviewMarkerKind.pending.reviewItemID(for: projectID)),
+                    .text(projectID.rawValue),
+                    .text(OnboardingReviewMarkerKind.pending.rawValue),
+                ]
             )
             for (index, root) in roots.enumerated() {
                 let path = Self.canonical(root).path
@@ -227,8 +253,12 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         guard try await projectExists(projectID) else { throw OnboardingError.projectNotPrepared }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Request agent-defined first phase") { connection in
             try connection.execute(
-                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, 'onboarding_phase_request', 'Agent requested to define the first phase', 'open') ON CONFLICT(id) DO NOTHING",
-                bindings: [.text("\(projectID.rawValue)-first-phase-request"), .text(projectID.rawValue)]
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, ?, 'Agent requested to define the first phase', 'open') ON CONFLICT(id) DO NOTHING",
+                bindings: [
+                    .text(OnboardingReviewMarkerKind.phaseRequest.reviewItemID(for: projectID)),
+                    .text(projectID.rawValue),
+                    .text(OnboardingReviewMarkerKind.phaseRequest.rawValue),
+                ]
             )
         }
     }
@@ -244,8 +274,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let included = decision.preview.includedTaskDescriptors.filter { !decision.excludedTaskIDs.contains($0.id) }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding") { connection in
             try connection.execute(
-                "DELETE FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending'",
-                bindings: [.text(projectID.rawValue)]
+                "DELETE FROM review_items WHERE project_id = ? AND (kind IN (?, ?) OR id IN (?, ?))",
+                bindings: [
+                    .text(projectID.rawValue),
+                    .text(OnboardingReviewMarkerKind.pending.rawValue),
+                    .text(OnboardingReviewMarkerKind.phaseRequest.rawValue),
+                    .text(OnboardingReviewMarkerKind.pending.reviewItemID(for: projectID)),
+                    .text(OnboardingReviewMarkerKind.phaseRequest.reviewItemID(for: projectID)),
+                ]
             )
             try connection.execute(
                 "DELETE FROM thread_exclusions WHERE project_id = ? AND reason = 'Excluded during onboarding'",
@@ -294,8 +330,8 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         guard let projectID = try await projectID(forRoot: root) else { return nil }
         let isPending = try await store.read { connection in
             try connection.scalarInt(
-                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending' AND status = 'open'",
-                bindings: [.text(projectID.rawValue)]
+                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = ? AND status = 'open'",
+                bindings: [.text(projectID.rawValue), .text(OnboardingReviewMarkerKind.pending.rawValue)]
             ) == 1
         }
         return isPending ? projectID : nil

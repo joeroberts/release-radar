@@ -105,6 +105,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         )
         let resumedPreview = try await relaunchedOnboarding.inspect(folder: fixture.root)
         XCTAssertEqual(resumedPreview.pendingProjectID, projectID)
+        try await onboarding.requestFirstPhaseDefinition(projectID: projectID)
 
         let dispatcher = AgentCommandDispatcher(
             store: store,
@@ -125,9 +126,14 @@ final class OnboardingAcceptanceTests: XCTestCase {
 
         let completed = try await DashboardProjection.load(from: store)
         XCTAssertEqual(completed.projects.map(\.id), [projectID])
+        let inbox = try await ReviewInboxProjection.load(from: store, projectID: projectID)
+        XCTAssertTrue(inbox.openItems.isEmpty)
         let finalState = try await store.read { connection in
             (
-                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending'", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind IN ('onboarding_pending', 'onboarding_phase_request') AND status = 'open'",
+                    bindings: [.text(projectID.rawValue)]
+                ),
                 try connection.scalarInt("SELECT first_dashboard_opened FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)])
             )
         }

@@ -108,6 +108,52 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.9, "dismissed")
     }
 
+    func testReviewCommandsCannotCreateOverwriteResolveOrDismissOnboardingMarkers() async throws {
+        let fixture = try await makeFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed onboarding markers") { connection in
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, kind, summary, status) VALUES ('project-1-onboarding-pending', 'project-1', 'onboarding_pending', 'Pending', 'open')"
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, kind, summary, status) VALUES ('project-1-first-phase-request', 'project-1', 'onboarding_phase_request', 'Phase request', 'open')"
+            )
+        }
+
+        let commands: [AgentCommand] = [
+            .requestReview(id: "agent-reserved-create", ticketID: nil, kind: "onboarding_pending", summary: "Create reserved marker"),
+            .requestReview(id: "agent-reserved-phase-create", ticketID: nil, kind: "onboarding_phase_request", summary: "Create reserved phase marker"),
+            .requestReview(id: "project-1-onboarding-pending", ticketID: nil, kind: "agent_request", summary: "Overwrite reserved marker"),
+            .resolveImportReview(reviewItemID: "project-1-onboarding-pending"),
+            .dismissImportReview(reviewItemID: "project-1-first-phase-request"),
+        ]
+
+        for (index, command) in commands.enumerated() {
+            let result = await fixture.dispatcher.dispatch(.init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: UUID(uuidString: String(format: "24242424-2424-4242-8242-%012d", index + 1))!,
+                projectRoot: fixture.projectRoot.path,
+                reason: "Reject onboarding marker mutation \(index + 1)",
+                command: command
+            ))
+            guard case .invalidReference? = result.error else {
+                return XCTFail("Expected invalidReference for command \(index + 1), got \(String(describing: result.error))")
+            }
+        }
+
+        let state = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE id IN ('agent-reserved-create', 'agent-reserved-phase-create')"),
+                try connection.scalarText("SELECT kind || '|' || summary || '|' || status FROM review_items WHERE id = 'project-1-onboarding-pending'"),
+                try connection.scalarText("SELECT kind || '|' || summary || '|' || status FROM review_items WHERE id = 'project-1-first-phase-request'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id LIKE '24242424-2424-4242-8242-%'")
+            )
+        }
+        XCTAssertEqual(state.0, 0)
+        XCTAssertEqual(state.1, "onboarding_pending|Pending|open")
+        XCTAssertEqual(state.2, "onboarding_phase_request|Phase request|open")
+        XCTAssertEqual(state.3, 0)
+    }
+
     func testFirstAgentPhaseBecomesActiveOnlyWhileItIsTheSolePhase() async throws {
         let fixture = try await makeFixture(seedDelivery: false)
         let first = await fixture.dispatcher.dispatch(.init(

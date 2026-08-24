@@ -305,6 +305,7 @@ public actor AgentCommandDispatcher {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             }
             try requireWritableID(id, table: "review_items", projectID: projectID, connection: connection)
+            try requireAgentWritableReview(id: id, kind: kind, projectID: projectID, connection: connection)
             try connection.execute(
                 "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open') ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, kind = excluded.kind, summary = excluded.summary, status = 'open'",
                 bindings: [.text(id), .text(projectID.rawValue), ticketID.map(SQLiteValue.text) ?? .null, .text(kind), .text(summary)]
@@ -427,10 +428,37 @@ public actor AgentCommandDispatcher {
         connection: SQLiteConnection
     ) throws {
         try requireProjectEntity(id, table: "review_items", projectID: projectID, connection: connection)
+        let kind = try connection.scalarText(
+            "SELECT kind FROM review_items WHERE id = ? AND project_id = ?",
+            bindings: [.text(id), .text(projectID.rawValue)]
+        )
+        guard !OnboardingReviewMarkerKind.isReserved(id: id, projectID: projectID),
+              kind.map({ !OnboardingReviewMarkerKind.isReserved(kind: $0) }) == true
+        else {
+            throw CommandValidation.invalidReference("Onboarding review markers are reserved for the owner onboarding flow")
+        }
         try connection.execute(
             "UPDATE review_items SET status = ? WHERE id = ? AND project_id = ?",
             bindings: [.text(status), .text(id), .text(projectID.rawValue)]
         )
+    }
+
+    private static func requireAgentWritableReview(
+        id: String,
+        kind: String,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        let existingKind = try connection.scalarText(
+            "SELECT kind FROM review_items WHERE id = ? AND project_id = ?",
+            bindings: [.text(id), .text(projectID.rawValue)]
+        )
+        guard !OnboardingReviewMarkerKind.isReserved(kind: kind),
+              !OnboardingReviewMarkerKind.isReserved(id: id, projectID: projectID),
+              existingKind.map({ !OnboardingReviewMarkerKind.isReserved(kind: $0) }) ?? true
+        else {
+            throw CommandValidation.invalidReference("Onboarding review markers are reserved for the owner onboarding flow")
+        }
     }
 
     private static func map(_ error: Error) -> AgentCommandError {

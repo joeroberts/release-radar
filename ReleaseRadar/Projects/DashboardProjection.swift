@@ -34,11 +34,12 @@ struct DashboardProjection: Equatable, Sendable {
                     SELECT 1
                     FROM review_items
                     WHERE review_items.project_id = projects.id
-                      AND review_items.kind = 'onboarding_pending'
+                      AND review_items.kind = ?
                       AND review_items.status = 'open'
                 )
                 ORDER BY projects.name
-                """
+                """,
+                bindings: [.text(OnboardingReviewMarkerKind.pending.rawValue)]
             )
             var projects: [ProjectDashboardProjection] = []
             var boards: [ProjectID: PhaseBoardProjection] = [:]
