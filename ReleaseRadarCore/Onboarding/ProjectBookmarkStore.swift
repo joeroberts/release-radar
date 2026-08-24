@@ -10,6 +10,14 @@ public struct ResolvedProjectBookmark: Equatable, Sendable {
     }
 }
 
+public enum ProjectBookmarkError: Error, LocalizedError, Equatable, Sendable {
+    case securityScopeAccessDenied
+
+    public var errorDescription: String? {
+        "Release Radar cannot access this folder. Select it again to reauthorize access."
+    }
+}
+
 public protocol ProjectBookmarkStoring: Sendable {
     func makeBookmark(for url: URL) throws -> Data
     func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark
@@ -20,7 +28,25 @@ public protocol ProjectBookmarkStoring: Sendable {
 }
 
 public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
-    public init() {}
+    private let bookmarkResolver: @Sendable (Data) throws -> ResolvedProjectBookmark
+    private let startAccessing: @Sendable (URL) -> Bool
+    private let stopAccessing: @Sendable (URL) -> Void
+
+    public init() {
+        bookmarkResolver = Self.resolveBookmark
+        startAccessing = { $0.startAccessingSecurityScopedResource() }
+        stopAccessing = { $0.stopAccessingSecurityScopedResource() }
+    }
+
+    init(
+        resolver: @escaping @Sendable (Data) throws -> ResolvedProjectBookmark,
+        startAccessing: @escaping @Sendable (URL) -> Bool,
+        stopAccessing: @escaping @Sendable (URL) -> Void
+    ) {
+        bookmarkResolver = resolver
+        self.startAccessing = startAccessing
+        self.stopAccessing = stopAccessing
+    }
 
     public func makeBookmark(for url: URL) throws -> Data {
         try url.standardizedFileURL.resolvingSymlinksInPath().bookmarkData(
@@ -31,6 +57,10 @@ public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
     }
 
     public func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        try bookmarkResolver(bookmark)
+    }
+
+    private static func resolveBookmark(_ bookmark: Data) throws -> ResolvedProjectBookmark {
         var isStale = false
         let url = try URL(
             resolvingBookmarkData: bookmark,
@@ -46,12 +76,8 @@ public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
         _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
     ) async throws -> T {
         let resolved = try resolve(bookmark)
-        let started = resolved.url.startAccessingSecurityScopedResource()
-        defer {
-            if started {
-                resolved.url.stopAccessingSecurityScopedResource()
-            }
-        }
+        guard startAccessing(resolved.url) else { throw ProjectBookmarkError.securityScopeAccessDenied }
+        defer { stopAccessing(resolved.url) }
         return try await body(resolved)
     }
 }

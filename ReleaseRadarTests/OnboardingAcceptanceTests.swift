@@ -3,6 +3,39 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class OnboardingAcceptanceTests: XCTestCase {
+    func testDeniedSecurityScopeDoesNotRunDiscoveryOrAuthorizeFolder() async throws {
+        let fixture = try FolderFixture()
+        let scopeAccess = DeniedScopeAccessRecorder()
+        let discovery = CountingWorktreeDiscovery()
+        let root = fixture.root
+        let bookmarkStore = ProjectBookmarkStore(
+            resolver: { _ in .init(url: root, isStale: false) },
+            startAccessing: { scopeAccess.start($0) },
+            stopAccessing: { scopeAccess.stop($0) }
+        )
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: bookmarkStore,
+            worktreeDiscovery: discovery
+        )
+
+        do {
+            _ = try await onboarding.inspect(folder: fixture.root)
+            XCTFail("Expected denied security-scoped access")
+        } catch let error as ProjectBookmarkError {
+            XCTAssertEqual(error, .securityScopeAccessDenied)
+        }
+
+        XCTAssertEqual(scopeAccess.startCount, 1)
+        XCTAssertEqual(scopeAccess.stopCount, 0)
+        XCTAssertEqual(discovery.callCount, 0)
+        let persistedAuthorizationCount = try await store.read { connection in
+            try connection.scalarInt("SELECT COUNT(*) FROM project_roots")
+        }
+        XCTAssertEqual(persistedAuthorizationCount, 0)
+    }
+
     func testPreviewContainsOnlySelectedRootDescendantsAndAuthorizedWorktrees() async throws {
         let fixture = try FolderFixture()
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
@@ -305,6 +338,36 @@ private final class TestBookmarkStore: @unchecked Sendable, ProjectBookmarkStori
 
     func failResolution(for url: URL) {
         _ = lock.withLock { failedPaths.insert(url.path) }
+    }
+}
+
+private final class DeniedScopeAccessRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var starts = 0
+    private var stops = 0
+
+    var startCount: Int { lock.withLock { starts } }
+    var stopCount: Int { lock.withLock { stops } }
+
+    func start(_ url: URL) -> Bool {
+        lock.withLock { starts += 1 }
+        return false
+    }
+
+    func stop(_ url: URL) {
+        lock.withLock { stops += 1 }
+    }
+}
+
+private final class CountingWorktreeDiscovery: @unchecked Sendable, GitWorktreeDiscovering {
+    private let lock = NSLock()
+    private var calls = 0
+
+    var callCount: Int { lock.withLock { calls } }
+
+    func discoverWorktrees(at folder: URL) throws -> [URL] {
+        lock.withLock { calls += 1 }
+        return []
     }
 }
 
