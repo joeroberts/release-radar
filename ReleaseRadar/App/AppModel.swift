@@ -15,9 +15,15 @@ final class AppModel {
     var dashboard: DashboardProjection?
     var selectedTicketID = TicketID(rawValue: "VD2-07c")
     var dashboardError: String?
+    var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
 
     private let store = DeliveryStore()
+    private let codexObserver: any CodexObserver
     private(set) var selectedProjectID: ProjectID?
+
+    init(codexObserver: any CodexObserver = UnavailableCodexObserver()) {
+        self.codexObserver = codexObserver
+    }
 
     var currentProjectID: ProjectID {
         selection.projectID
@@ -51,6 +57,14 @@ final class AppModel {
             dashboardError = nil
         } catch {
             dashboardError = error.localizedDescription
+        }
+    }
+
+    func loadCodexRuntime() async {
+        do {
+            codexSnapshot = try await codexObserver.snapshot()
+        } catch {
+            codexSnapshot = .unavailable(reason: error.localizedDescription)
         }
     }
 }

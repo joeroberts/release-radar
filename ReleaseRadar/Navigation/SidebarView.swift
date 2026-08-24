@@ -17,6 +17,7 @@ struct SidebarView: View {
                 .background(Color(nsColor: .windowBackgroundColor))
         }
         .task {
+            await model.loadCodexRuntime()
             if model.dashboard == nil {
                 await model.loadDashboard()
             }

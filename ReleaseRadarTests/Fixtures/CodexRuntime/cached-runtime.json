@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-24T07:45:00Z",
+  "freshness": {
+    "state": "live",
+    "lastObservedAt": "2026-08-24T07:45:00Z",
+    "reason": null
+  },
+  "threads": [
+    {
+      "id": "thread-active",
+      "workingDirectory": "file:///fixture/project",
+      "status": "active",
+      "activeFlags": ["waitingOnApproval"],
+      "waitingForInput": false,
+      "lastObservedAt": "2026-08-24T07:45:00Z",
+      "goal": {
+        "objective": "Finish the observer contract",
+        "status": "active",
+        "lastObservedAt": "2026-08-24T07:45:00Z"
+      }
+    },
+    {
+      "id": "thread-paused",
+      "workingDirectory": "file:///fixture/project/subfolder",
+      "status": "paused",
+      "activeFlags": [],
+      "waitingForInput": false,
+      "lastObservedAt": "2026-08-24T07:44:00Z",
+      "goal": {
+        "objective": "Wait for a dependency",
+        "status": "paused",
+        "lastObservedAt": "2026-08-24T07:44:00Z"
+      }
+    },
+    {
+      "id": "thread-blocked",
+      "workingDirectory": "file:///fixture/project/.worktrees/feature",
+      "status": "blocked",
+      "activeFlags": [],
+      "waitingForInput": false,
+      "lastObservedAt": "2026-08-24T07:43:00Z",
+      "goal": {
+        "objective": "Resolve the supported transport",
+        "status": "blocked",
+        "lastObservedAt": "2026-08-24T07:43:00Z"
+      }
+    },
+    {
+      "id": "thread-awaiting",
+      "workingDirectory": "file:///fixture/project",
+      "status": "awaiting_input",
+      "activeFlags": [],
+      "waitingForInput": true,
+      "lastObservedAt": "2026-08-24T07:42:00Z",
+      "goal": {
+        "objective": "Confirm the delivery",
+        "status": "active",
+        "lastObservedAt": "2026-08-24T07:42:00Z"
+      }
+    },
+    {
+      "id": "thread-completed",
+      "workingDirectory": "file:///fixture/project",
+      "status": "completed_ready_for_review",
+      "activeFlags": [],
+      "waitingForInput": false,
+      "lastObservedAt": "2026-08-24T07:41:00Z",
+      "goal": null
+    }
+  ]
+}

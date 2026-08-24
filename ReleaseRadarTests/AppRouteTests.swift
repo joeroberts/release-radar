@@ -3,6 +3,18 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class AppRouteTests: XCTestCase {
+    @MainActor
+    func testAppModelLoadsExplicitUnavailableCodexRuntimeState() async {
+        let observer = UnavailableCodexObserver(reason: "Shared desktop observation unavailable")
+        let model = AppModel(codexObserver: observer)
+
+        await model.loadCodexRuntime()
+
+        XCTAssertEqual(model.codexSnapshot.freshness.state, .unavailable)
+        XCTAssertEqual(model.codexSnapshot.freshness.reason, "Shared desktop observation unavailable")
+        XCTAssertTrue(model.codexSnapshot.threads.isEmpty)
+    }
+
     func testPrimaryRoutesExposeTheExpectedAccessibleLabelsAndSymbols() {
         let routes = AppRoute.primaryRoutes
 
