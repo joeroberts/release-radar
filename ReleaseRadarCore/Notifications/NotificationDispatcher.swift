@@ -8,8 +8,11 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
     private let store: DeliveryStore
     private let credentials: any PushoverCredentialsProvider
     private let transport: any PushoverTransport
+    private let beforeLaunchRecovery: @Sendable () async -> Void
     private var didPrepareForLaunch = false
-    private var dispatchInProgress = false
+    private var workInProgress = false
+    private var launchRecoveryRequested = false
+    private var dispatchRequested = false
 
     public init(
         store: DeliveryStore,
@@ -19,6 +22,19 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
         self.store = store
         self.credentials = credentials
         self.transport = transport
+        beforeLaunchRecovery = {}
+    }
+
+    init(
+        store: DeliveryStore,
+        credentials: any PushoverCredentialsProvider,
+        transport: any PushoverTransport,
+        beforeLaunchRecovery: @escaping @Sendable () async -> Void
+    ) {
+        self.store = store
+        self.credentials = credentials
+        self.transport = transport
+        self.beforeLaunchRecovery = beforeLaunchRecovery
     }
 
     public func enqueue(_ event: MeaningfulDeliveryEvent) async {
@@ -28,20 +44,39 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
     public func prepareForLaunch() async {
         guard !didPrepareForLaunch else { return }
         didPrepareForLaunch = true
-        try? await recoverAmbiguousAttempts()
+        launchRecoveryRequested = true
+        await runRequestedWork()
     }
 
     public func dispatchPending() async {
-        guard !dispatchInProgress else { return }
-        dispatchInProgress = true
-        defer { dispatchInProgress = false }
-        do {
-            let ids = try await pendingEventIDs()
-            for id in ids {
-                await dispatch(id: id)
+        dispatchRequested = true
+        await runRequestedWork()
+    }
+
+    private func runRequestedWork() async {
+        guard !workInProgress else { return }
+        workInProgress = true
+        defer { workInProgress = false }
+
+        while launchRecoveryRequested || dispatchRequested {
+            if launchRecoveryRequested {
+                launchRecoveryRequested = false
+                try? await recoverAmbiguousAttempts()
             }
-        } catch {
+            if dispatchRequested {
+                dispatchRequested = false
+                await dispatchPendingBatch()
+            }
+        }
+    }
+
+    private func dispatchPendingBatch() async {
+        guard let ids = try? await pendingEventIDs() else {
             // Store unavailability is already surfaced by the app and must not block dashboard use.
+            return
+        }
+        for id in ids {
+            await dispatch(id: id)
         }
     }
 
@@ -50,6 +85,7 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
             try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE state = 'attempt_started'") ?? 0
         }
         guard count > 0 else { return }
+        await beforeLaunchRecovery()
         try await store.transact(
             actor: .init(id: "notification-dispatcher"),
             reason: "Mark interrupted notification attempts unknown"

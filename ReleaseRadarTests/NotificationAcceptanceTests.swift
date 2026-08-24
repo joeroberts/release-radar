@@ -255,6 +255,109 @@ final class NotificationAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.1, 1)
     }
 
+    func testLaunchRecoverySerializesWithDispatchThatStartsDuringRecovery() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed recovery overlap") { connection in
+            let interrupted = try XCTUnwrap(MeaningfulDeliveryEvent.enqueue(
+                projectID: .init(rawValue: "project-1"), kind: .reviewRequested,
+                subjectID: "interrupted-review", ticketID: .init(rawValue: "RR-09"), goalID: nil,
+                connection: connection
+            ))
+            _ = try XCTUnwrap(MeaningfulDeliveryEvent.enqueue(
+                projectID: .init(rawValue: "project-1"), kind: .reviewRequested,
+                subjectID: "new-review", ticketID: .init(rawValue: "RR-09"), goalID: nil,
+                connection: connection
+            ))
+            try connection.execute(
+                "UPDATE notification_events SET state = 'attempt_started', attempt_count = 1 WHERE id = ?",
+                bindings: [.text(interrupted.id.rawValue)]
+            )
+        }
+        let recoveryGate = AsyncTestGate()
+        let firstOutcome = FirstDispatchOutcomeGate()
+        let transport = SignalingBlockingTransport(firstOutcome: firstOutcome)
+        let dispatcher = PushoverNotificationDispatcher(
+            store: fixture.store,
+            credentials: StaticPushoverCredentialsProvider(credentials: .init(appToken: "app-secret", userKey: "user-secret")),
+            transport: transport,
+            beforeLaunchRecovery: { await recoveryGate.enterAndWait() }
+        )
+
+        let preparation = Task { await dispatcher.prepareForLaunch() }
+        await recoveryGate.waitUntilEntered()
+        let ordinaryDispatch = Task {
+            await dispatcher.dispatchPending()
+            await firstOutcome.signal(.dispatchReturned)
+        }
+        let overlapOutcome = await firstOutcome.wait()
+        await recoveryGate.release()
+
+        if overlapOutcome == .dispatchReturned {
+            await transport.waitUntilEntered()
+        } else {
+            await preparation.value
+        }
+        let overlappingStates = try await fixture.store.read { connection in
+            (
+                try connection.scalarText("SELECT state FROM notification_events WHERE subject_id = 'interrupted-review'"),
+                try connection.scalarText("SELECT state FROM notification_events WHERE subject_id = 'new-review'")
+            )
+        }
+        XCTAssertEqual(overlappingStates.0, NotificationDeliveryState.unknown.rawValue)
+        XCTAssertEqual(overlappingStates.1, NotificationDeliveryState.attemptStarted.rawValue)
+
+        await transport.release()
+        await preparation.value
+        await ordinaryDispatch.value
+        let finalNewState = try await fixture.store.read { connection in
+            (
+                try connection.scalarText("SELECT state FROM notification_events WHERE subject_id = 'new-review'"),
+                try connection.scalarInt("SELECT attempt_count FROM notification_events WHERE subject_id = 'new-review'")
+            )
+        }
+        XCTAssertEqual(finalNewState.0, NotificationDeliveryState.sent.rawValue)
+        XCTAssertEqual(finalNewState.1, 1)
+    }
+
+    func testDispatchRequestDuringBlockedSendDrainsNewlyQueuedEventWithoutAnotherTrigger() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await transition(.needsReview, requestID: "90909090-9090-4090-8090-909090909045", fixture: fixture)
+        let transport = BlockingCountingTransport()
+        let dispatcher = PushoverNotificationDispatcher(
+            store: fixture.store,
+            credentials: StaticPushoverCredentialsProvider(credentials: .init(appToken: "app-secret", userKey: "user-secret")),
+            transport: transport
+        )
+
+        let firstDispatch = Task { await dispatcher.dispatchPending() }
+        await transport.waitUntilEntered()
+        let secondResult = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909046")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Queue a distinct review while delivery is blocked",
+            command: .requestReview(
+                id: "review-queued-during-send", ticketID: "RR-09",
+                kind: "agent_request", summary: "Review"
+            )
+        ))
+        XCTAssertNil(secondResult.error)
+        await dispatcher.dispatchPending()
+        await transport.release()
+        await firstDispatch.value
+
+        let sendCount = await transport.sendCount
+        let states = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE state = 'sent' AND attempt_count = 1"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE state = 'queued'")
+            )
+        }
+        XCTAssertEqual(sendCount, 2)
+        XCTAssertEqual(states.0, 2)
+        XCTAssertEqual(states.1, 0)
+    }
+
     func testSuccessfulSendRemainsExactlyOneAcrossReplayAndRelaunch() async throws {
         let fixture = try await makeFixture(firstDashboardOpened: true)
         let requestID = UUID(uuidString: "90909090-9090-4090-8090-909090909043")!
@@ -572,6 +675,88 @@ private actor BlockingCountingTransport: PushoverTransport {
         entered = true
         enteredContinuation?.resume()
         enteredContinuation = nil
+        if !released {
+            await withCheckedContinuation { releaseContinuation = $0 }
+        }
+        return .init(requestID: "provider-request")
+    }
+}
+
+private actor AsyncTestGate {
+    private var enteredContinuation: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+    private var entered = false
+    private var released = false
+
+    func enterAndWait() async {
+        entered = true
+        enteredContinuation?.resume()
+        enteredContinuation = nil
+        guard !released else { return }
+        await withCheckedContinuation { releaseContinuation = $0 }
+    }
+
+    func waitUntilEntered() async {
+        guard !entered else { return }
+        await withCheckedContinuation { enteredContinuation = $0 }
+    }
+
+    func release() {
+        released = true
+        releaseContinuation?.resume()
+        releaseContinuation = nil
+    }
+}
+
+private enum FirstDispatchOutcome: Equatable, Sendable {
+    case dispatchReturned
+    case transportEntered
+}
+
+private actor FirstDispatchOutcomeGate {
+    private var outcome: FirstDispatchOutcome?
+    private var continuation: CheckedContinuation<FirstDispatchOutcome, Never>?
+
+    func signal(_ value: FirstDispatchOutcome) {
+        guard outcome == nil else { return }
+        outcome = value
+        continuation?.resume(returning: value)
+        continuation = nil
+    }
+
+    func wait() async -> FirstDispatchOutcome {
+        if let outcome { return outcome }
+        return await withCheckedContinuation { continuation = $0 }
+    }
+}
+
+private actor SignalingBlockingTransport: PushoverTransport {
+    private let firstOutcome: FirstDispatchOutcomeGate
+    private var enteredContinuation: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+    private var entered = false
+    private var released = false
+
+    init(firstOutcome: FirstDispatchOutcomeGate) {
+        self.firstOutcome = firstOutcome
+    }
+
+    func waitUntilEntered() async {
+        guard !entered else { return }
+        await withCheckedContinuation { enteredContinuation = $0 }
+    }
+
+    func release() {
+        released = true
+        releaseContinuation?.resume()
+        releaseContinuation = nil
+    }
+
+    func send(_ message: PushoverMessage, credentials: PushoverCredentials) async throws -> PushoverProviderReceipt {
+        entered = true
+        enteredContinuation?.resume()
+        enteredContinuation = nil
+        await firstOutcome.signal(.transportEntered)
         if !released {
             await withCheckedContinuation { releaseContinuation = $0 }
         }
