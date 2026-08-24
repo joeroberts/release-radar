@@ -67,20 +67,31 @@ public enum OnboardingReviewMarkerKind: String, CaseIterable, Sendable {
     case phaseRequest = "onboarding_phase_request"
 
     public func reviewItemID(for projectID: ProjectID) -> String {
-        switch self {
-        case .pending:
-            "\(projectID.rawValue)-onboarding-pending"
-        case .phaseRequest:
-            "\(projectID.rawValue)-first-phase-request"
-        }
+        "\(projectID.rawValue)\(reviewItemIDSuffix)"
     }
 
     public static func isReserved(kind: String) -> Bool {
         allCases.contains { $0.rawValue == kind }
     }
 
-    public static func isReserved(id: String, projectID: ProjectID) -> Bool {
-        allCases.contains { $0.reviewItemID(for: projectID) == id }
+    public static func isReserved(id: String) -> Bool {
+        allCases.contains { kind in
+            id.count > kind.reviewItemIDSuffix.count && id.hasSuffix(kind.reviewItemIDSuffix)
+        }
+    }
+
+    fileprivate var summary: String {
+        switch self {
+        case .pending: "Project onboarding is awaiting owner completion"
+        case .phaseRequest: "Agent requested to define the first phase"
+        }
+    }
+
+    private var reviewItemIDSuffix: String {
+        switch self {
+        case .pending: "-onboarding-pending"
+        case .phaseRequest: "-first-phase-request"
+        }
     }
 }
 
@@ -90,6 +101,7 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
     case noFirstPhase
     case projectNotPrepared
     case rootAlreadyOwned
+    case reviewMarkerConflict
 
     public var errorDescription: String? {
         switch self {
@@ -98,6 +110,7 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
         case .noFirstPhase: "Ask an agent to define the first phase before finishing onboarding."
         case .projectNotPrepared: "Prepare the project before requesting its first phase."
         case .rootAlreadyOwned: "A selected root or worktree already belongs to another project."
+        case .reviewMarkerConflict: "A reserved onboarding review marker conflicts with persisted project state."
         }
     }
 }
@@ -210,13 +223,10 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0) ON CONFLICT(id) DO UPDATE SET name = excluded.name",
                 bindings: [.text(projectID.rawValue), .text(decision.projectName)]
             )
-            try connection.execute(
-                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, ?, 'Project onboarding is awaiting owner completion', 'open') ON CONFLICT(id) DO UPDATE SET status = 'open'",
-                bindings: [
-                    .text(OnboardingReviewMarkerKind.pending.reviewItemID(for: projectID)),
-                    .text(projectID.rawValue),
-                    .text(OnboardingReviewMarkerKind.pending.rawValue),
-                ]
+            try Self.ensureOnboardingReviewMarker(
+                kind: .pending,
+                projectID: projectID,
+                connection: connection
             )
             for (index, root) in roots.enumerated() {
                 let path = Self.canonical(root).path
@@ -252,13 +262,10 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     public func requestFirstPhaseDefinition(projectID: ProjectID) async throws {
         guard try await projectExists(projectID) else { throw OnboardingError.projectNotPrepared }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Request agent-defined first phase") { connection in
-            try connection.execute(
-                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, ?, 'Agent requested to define the first phase', 'open') ON CONFLICT(id) DO NOTHING",
-                bindings: [
-                    .text(OnboardingReviewMarkerKind.phaseRequest.reviewItemID(for: projectID)),
-                    .text(projectID.rawValue),
-                    .text(OnboardingReviewMarkerKind.phaseRequest.rawValue),
-                ]
+            try Self.ensureOnboardingReviewMarker(
+                kind: .phaseRequest,
+                projectID: projectID,
+                connection: connection
             )
         }
     }
@@ -317,6 +324,35 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             }
             return ids
         }
+    }
+
+    private static func ensureOnboardingReviewMarker(
+        kind: OnboardingReviewMarkerKind,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        let id = kind.reviewItemID(for: projectID)
+        let existingCount = try connection.scalarInt(
+            "SELECT COUNT(*) FROM review_items WHERE id = ?",
+            bindings: [.text(id)]
+        ) ?? 0
+        if existingCount == 0 {
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, ?, ?, 'open')",
+                bindings: [.text(id), .text(projectID.rawValue), .text(kind.rawValue), .text(kind.summary)]
+            )
+            return
+        }
+
+        let exactMatchCount = try connection.scalarInt(
+            "SELECT COUNT(*) FROM review_items WHERE id = ? AND project_id = ? AND ticket_id IS NULL AND kind = ? AND summary = ?",
+            bindings: [.text(id), .text(projectID.rawValue), .text(kind.rawValue), .text(kind.summary)]
+        ) ?? 0
+        guard exactMatchCount == 1 else { throw OnboardingError.reviewMarkerConflict }
+        try connection.execute(
+            "UPDATE review_items SET status = 'open' WHERE id = ?",
+            bindings: [.text(id)]
+        )
     }
 
     private func projectID(forRoot root: URL) async throws -> ProjectID? {

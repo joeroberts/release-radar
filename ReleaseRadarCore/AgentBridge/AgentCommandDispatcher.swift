@@ -432,7 +432,7 @@ public actor AgentCommandDispatcher {
             "SELECT kind FROM review_items WHERE id = ? AND project_id = ?",
             bindings: [.text(id), .text(projectID.rawValue)]
         )
-        guard !OnboardingReviewMarkerKind.isReserved(id: id, projectID: projectID),
+        guard !OnboardingReviewMarkerKind.isReserved(id: id),
               kind.map({ !OnboardingReviewMarkerKind.isReserved(kind: $0) }) == true
         else {
             throw CommandValidation.invalidReference("Onboarding review markers are reserved for the owner onboarding flow")
@@ -454,7 +454,7 @@ public actor AgentCommandDispatcher {
             bindings: [.text(id), .text(projectID.rawValue)]
         )
         guard !OnboardingReviewMarkerKind.isReserved(kind: kind),
-              !OnboardingReviewMarkerKind.isReserved(id: id, projectID: projectID),
+              !OnboardingReviewMarkerKind.isReserved(id: id),
               existingKind.map({ !OnboardingReviewMarkerKind.isReserved(kind: $0) }) ?? true
         else {
             throw CommandValidation.invalidReference("Onboarding review markers are reserved for the owner onboarding flow")

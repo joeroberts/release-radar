@@ -286,6 +286,49 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.2, 1)
     }
 
+    func testPrepareRejectsWrongKindMarkerCollisionWithoutRepairOrPartialUpdate() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Original Project"
+        ))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed wrong-kind marker collision") { connection in
+            try connection.execute(
+                "UPDATE review_items SET kind = 'agent_request' WHERE id = ?",
+                bindings: [.text("\(projectID.rawValue)-onboarding-pending")]
+            )
+        }
+
+        do {
+            _ = try await onboarding.prepare(.init(
+                preview: preview,
+                projectName: "Renamed Project"
+            ))
+            XCTFail("Expected the marker collision to fail onboarding prepare")
+        } catch let error as OnboardingError {
+            XCTAssertEqual(error, .reviewMarkerConflict)
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT name FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarText("SELECT project_id || '|' || kind || '|' || summary || '|' || status FROM review_items WHERE id = ?", bindings: [.text("\(projectID.rawValue)-onboarding-pending")])
+            )
+        }
+        XCTAssertEqual(state.0, "Original Project")
+        XCTAssertEqual(
+            state.1,
+            "\(projectID.rawValue)|agent_request|Project onboarding is awaiting owner completion|open"
+        )
+    }
+
     func testFinishWaitsForTypedAgentPhaseAndReconcilesEditableExclusions() async throws {
         let fixture = try FolderFixture()
         let store = DeliveryStore(databaseURL: fixture.databaseURL)

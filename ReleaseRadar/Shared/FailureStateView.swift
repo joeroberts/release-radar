@@ -106,6 +106,14 @@ struct FailureStatePresentation: Equatable, Sendable {
                 tone: .warning,
                 accessibilityID: "failure-project-owner"
             )
+        case .reviewMarkerConflict:
+            self.init(
+                title: "Onboarding state conflict",
+                detail: onboardingError.localizedDescription,
+                systemImage: "exclamationmark.triangle",
+                tone: .warning,
+                accessibilityID: "failure-onboarding-marker-conflict"
+            )
         }
     }
 

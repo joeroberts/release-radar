@@ -154,6 +154,38 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.3, 0)
     }
 
+    func testAgentCannotPreclaimAnotherProjectsOnboardingMarkerID() async throws {
+        let fixture = try await makeFixture()
+        let requestID = UUID(uuidString: "25252525-2525-4252-8252-252525252525")!
+
+        let result = await fixture.dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: requestID,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Reject cross-project onboarding marker preclaim",
+            command: .requestReview(
+                id: "project-2-onboarding-pending",
+                ticketID: nil,
+                kind: "agent_request",
+                summary: "Preclaim another project's marker"
+            )
+        ))
+
+        guard case .invalidReference? = result.error else {
+            return XCTFail("Expected invalidReference, got \(String(describing: result.error))")
+        }
+        let state = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE id = 'project-2-onboarding-pending'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = ?", bindings: [.text(requestID.uuidString)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Reject cross-project onboarding marker preclaim'")
+            )
+        }
+        XCTAssertEqual(state.0, 0)
+        XCTAssertEqual(state.1, 0)
+        XCTAssertEqual(state.2, 0)
+    }
+
     func testFirstAgentPhaseBecomesActiveOnlyWhileItIsTheSolePhase() async throws {
         let fixture = try await makeFixture(seedDelivery: false)
         let first = await fixture.dispatcher.dispatch(.init(
