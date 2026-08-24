@@ -40,12 +40,10 @@ enum StoreMigrations {
             if version < 7 {
                 try connection.executeScript(schemaVersion7)
             }
-            if version == currentVersion {
-                guard try hasExpectedCurrentSchema(connection) else {
-                    throw StoreError.unavailable(
-                        "Database schema version \(version) does not match a recognized Release Radar schema"
-                    )
-                }
+            guard try hasExpectedCurrentSchema(connection) else {
+                throw StoreError.unavailable(
+                    "Database schema version \(version) does not match a recognized Release Radar schema"
+                )
             }
             try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
@@ -79,20 +77,15 @@ enum StoreMigrations {
         version: Int64
     ) throws -> Bool {
         guard version == 3,
-              try hasColumns(connection, table: "audit_events", names: [
-                "id", "actor_id", "thread_id", "reason", "created_at",
-              ]),
               try !hasColumn(connection, table: "audit_events", name: "thread_attribution"),
               try !hasColumn(connection, table: "audit_events", name: "project_id"),
-              try hasColumn(connection, table: "projects", name: "first_dashboard_opened"),
-              try hasColumn(connection, table: "blockers", name: "resolved_at"),
-              try hasColumn(connection, table: "review_items", name: "status"),
-              try hasTable(connection, name: "completion_records"),
-              try hasTable(connection, name: "agent_command_requests"),
-              try hasTable(connection, name: "project_bookmarks"),
               try !hasTable(connection, name: "project_active_phases")
         else { return false }
-        return true
+        return try hasRequiredSchema(
+            connection,
+            throughVersion: 3,
+            missingColumns: ["audit_events.thread_attribution"]
+        )
     }
 
     private static func isKnownVersionSevenOwnerDrift(
@@ -105,36 +98,82 @@ enum StoreMigrations {
               try !hasColumn(connection, table: "audit_events", name: "entity_type"),
               try !hasColumn(connection, table: "audit_events", name: "entity_id"),
               try hasColumn(connection, table: "projects", name: "active_phase_id"),
-              try !hasTable(connection, name: "project_active_phases"),
-              try hasColumn(connection, table: "notification_events", name: "failure_code"),
-              try hasTable(connection, name: "notification_occurrences")
+              try !hasTable(connection, name: "project_active_phases")
         else { return false }
-        return true
+        return try hasRequiredSchema(
+            connection,
+            throughVersion: currentVersion,
+            missingTables: ["project_active_phases"],
+            missingColumns: [
+                "audit_events.project_id",
+                "audit_events.entity_type",
+                "audit_events.entity_id",
+            ],
+            missingObjects: [
+                "audit_events_project_entity_index",
+                "project_active_phases_phase_index",
+            ]
+        )
     }
 
     private static func hasExpectedCurrentSchema(_ connection: SQLiteConnection) throws -> Bool {
-        guard try hasColumns(connection, table: "audit_events", names: [
-            "thread_attribution", "project_id", "entity_type", "entity_id",
-        ]),
-        try hasTable(connection, name: "project_active_phases"),
-        try hasColumns(connection, table: "notification_events", names: [
-            "project_id", "event_kind", "subject_id", "occurrence", "title", "message",
-            "created_at", "attempt_count", "attempt_started_at", "completed_at", "failure_code",
-        ]),
-        try hasTable(connection, name: "notification_occurrences")
-        else { return false }
-        return true
+        try hasRequiredSchema(connection, throughVersion: currentVersion)
     }
 
-    private static func hasColumns(
+    private static func hasRequiredSchema(
         _ connection: SQLiteConnection,
-        table: String,
-        names: [String]
+        throughVersion version: Int64,
+        missingTables: Set<String> = [],
+        missingColumns: Set<String> = [],
+        missingObjects: Set<String> = []
     ) throws -> Bool {
-        for name in names where try !hasColumn(connection, table: table, name: name) {
-            return false
+        var tables: [(name: String, columns: [String])] = baseTables
+        for table in addedTables where table.version <= version {
+            tables.append((table.name, table.columns))
         }
-        return true
+
+        for table in tables {
+            if missingTables.contains(table.name) {
+                guard try !hasTable(connection, name: table.name) else { return false }
+                continue
+            }
+            guard try hasTable(connection, name: table.name) else { return false }
+            var expected = table.columns
+            for column in addedColumns where column.version <= version && column.table == table.name {
+                expected.append(column.name)
+            }
+            expected.removeAll { missingColumns.contains("\(table.name).\($0)") }
+            let allowedExtras: Set<String> = table.name == "projects" ? ["active_phase_id"] : []
+            let actual = try columnNames(connection, table: table.name)
+            guard actual.filter({ !allowedExtras.contains($0) }) == expected else { return false }
+        }
+
+        for futureTable in addedTables where futureTable.version > version {
+            guard try !hasTable(connection, name: futureTable.name) else { return false }
+        }
+        for object in criticalObjects {
+            let shouldExist = object.version <= version && !missingObjects.contains(object.name)
+            guard try hasObject(connection, type: object.type, name: object.name) == shouldExist else {
+                return false
+            }
+        }
+        return try connection.row("PRAGMA foreign_key_check") == nil
+    }
+
+    private static func columnNames(
+        _ connection: SQLiteConnection,
+        table: String
+    ) throws -> [String] {
+        var names: [String] = []
+        var offset: Int64 = 0
+        while let name = try connection.scalarText(
+            "SELECT name FROM pragma_table_info('\(table)') ORDER BY cid LIMIT 1 OFFSET ?",
+            bindings: [.integer(offset)]
+        ) {
+            names.append(name)
+            offset += 1
+        }
+        return names
     }
 
     private static func hasColumn(
@@ -155,6 +194,79 @@ enum StoreMigrations {
         ) == 1
     }
 
+    private static func hasObject(
+        _ connection: SQLiteConnection,
+        type: String,
+        name: String
+    ) throws -> Bool {
+        try connection.scalarInt(
+            "SELECT COUNT(*) FROM sqlite_schema WHERE type = ? AND name = ?",
+            bindings: [.text(type), .text(name)]
+        ) == 1
+    }
+
+    private static let baseTables: [(name: String, columns: [String])] = [
+        ("projects", ["id", "name"]),
+        ("project_roots", ["id", "project_id", "path"]),
+        ("phases", ["id", "project_id", "name"]),
+        ("tickets", ["id", "project_id", "phase_id", "outcome", "lane"]),
+        ("phase_dependencies", ["id", "project_id", "phase_id", "depends_on_phase_id"]),
+        ("ticket_dependencies", ["id", "project_id", "ticket_id", "depends_on_ticket_id"]),
+        ("blockers", ["id", "project_id", "ticket_id", "summary"]),
+        ("evidence", ["id", "project_id", "ticket_id", "path", "is_available"]),
+        ("thread_exclusions", ["id", "project_id", "thread_id", "reason"]),
+        ("observed_threads", ["id", "project_id", "status", "last_observed_at"]),
+        ("observed_goals", ["id", "project_id", "thread_id", "status", "text", "last_observed_at"]),
+        ("thread_links", ["id", "project_id", "ticket_id", "thread_id"]),
+        ("review_items", ["id", "project_id", "ticket_id", "kind", "summary"]),
+        ("audit_events", ["id", "actor_id", "thread_id", "reason", "created_at"]),
+        ("notification_events", [
+            "id", "fingerprint", "state", "ticket_id", "goal_id",
+            "provider_receipt", "acknowledged_at",
+        ]),
+    ]
+
+    private static let addedTables: [(version: Int64, name: String, columns: [String])] = [
+        (2, "completion_records", ["id", "project_id", "ticket_id", "summary", "created_at"]),
+        (2, "agent_command_requests", ["request_id", "request_body", "result_data", "created_at"]),
+        (3, "project_bookmarks", ["project_id", "path", "bookmark_data", "is_stale"]),
+        (5, "project_active_phases", ["project_id", "phase_id"]),
+        (6, "notification_occurrences", [
+            "subject_key", "project_id", "event_kind", "subject_id", "generation", "is_active",
+        ]),
+    ]
+
+    private static let addedColumns: [(version: Int64, table: String, name: String)] = [
+        (2, "audit_events", "thread_attribution"),
+        (2, "blockers", "resolved_at"),
+        (2, "review_items", "status"),
+        (3, "projects", "first_dashboard_opened"),
+        (4, "audit_events", "project_id"),
+        (4, "audit_events", "entity_type"),
+        (4, "audit_events", "entity_id"),
+        (6, "notification_events", "project_id"),
+        (6, "notification_events", "event_kind"),
+        (6, "notification_events", "subject_id"),
+        (6, "notification_events", "occurrence"),
+        (6, "notification_events", "title"),
+        (6, "notification_events", "message"),
+        (6, "notification_events", "created_at"),
+        (6, "notification_events", "attempt_count"),
+        (6, "notification_events", "attempt_started_at"),
+        (6, "notification_events", "completed_at"),
+        (6, "notification_events", "failure_code"),
+    ]
+
+    private static let criticalObjects: [(version: Int64, type: String, name: String)] = [
+        (1, "trigger", "reject_phase_dependency_cycle_insert"),
+        (1, "trigger", "reject_phase_dependency_cycle_update"),
+        (1, "trigger", "reject_ticket_dependency_cycle_insert"),
+        (1, "trigger", "reject_ticket_dependency_cycle_update"),
+        (4, "index", "audit_events_project_entity_index"),
+        (5, "index", "project_active_phases_phase_index"),
+        (6, "index", "notification_events_project_created_index"),
+        (6, "index", "notification_events_state_index"),
+    ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
         CHECK (thread_attribution IN ('none', 'asserted', 'verified'));

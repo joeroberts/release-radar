@@ -81,6 +81,78 @@ final class EndToEndAcceptanceTests: XCTestCase {
         )
     }
 
+    func testVersionThreeCandidateMissingCoreTableFailsClosedWithoutMutation() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(store!)
+        store = nil
+        try makeVersionThreeAuditDrift(at: databaseURL)
+        let malformed = try SQLiteConnection(url: databaseURL)
+        try malformed.execute("DROP TABLE ticket_dependencies")
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+
+        guard case let .unavailable(recovery) = await relaunchedStore.availability else {
+            return XCTFail("Expected an incomplete version three schema to be unavailable")
+        }
+        XCTAssertEqual(recovery.kind, .migration)
+        XCTAssertEqual(recovery.originalDatabaseURL, databaseURL)
+        let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
+        let original = try SQLiteConnection(url: databaseURL)
+        let snapshot = try SQLiteConnection(url: snapshotURL)
+        for connection in [original, snapshot] {
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 3)
+            XCTAssertEqual(
+                try connection.scalarText("SELECT outcome FROM tickets WHERE id = 'RR-10'"),
+                "Final integration"
+            )
+            XCTAssertEqual(
+                try connection.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name = 'ticket_dependencies'"),
+                0
+            )
+            XCTAssertEqual(
+                try connection.scalarInt("SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'thread_attribution'"),
+                0
+            )
+        }
+    }
+
+    func testVersionSevenCandidateMissingCoreTableFailsClosedWithoutMutation() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(store!)
+        store = nil
+        try makeObservedVersionSevenDrift(at: databaseURL)
+        let malformed = try SQLiteConnection(url: databaseURL)
+        try malformed.execute("DROP TABLE phase_dependencies")
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+
+        guard case let .unavailable(recovery) = await relaunchedStore.availability else {
+            return XCTFail("Expected an incomplete version seven schema to be unavailable")
+        }
+        XCTAssertEqual(recovery.kind, .migration)
+        XCTAssertEqual(recovery.originalDatabaseURL, databaseURL)
+        let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
+        let original = try SQLiteConnection(url: databaseURL)
+        let snapshot = try SQLiteConnection(url: snapshotURL)
+        for connection in [original, snapshot] {
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 7)
+            XCTAssertEqual(
+                try connection.scalarText("SELECT outcome FROM tickets WHERE id = 'RR-10'"),
+                "Final integration"
+            )
+            XCTAssertEqual(
+                try connection.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name = 'phase_dependencies'"),
+                0
+            )
+            XCTAssertEqual(
+                try connection.scalarInt("SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'project_id'"),
+                0
+            )
+        }
+    }
+
     private func seedProject(_ store: DeliveryStore) async throws {
         try await store.transact(actor: .init(id: "rr10-seed"), reason: "Seed recovery fixture") { connection in
             try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'Release Radar')")

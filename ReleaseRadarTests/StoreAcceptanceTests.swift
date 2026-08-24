@@ -399,20 +399,36 @@ final class StoreAcceptanceTests: XCTestCase {
 
     func testVersionFourMigrationBackfillsOnlyUnambiguousActivePhase() async throws {
         let databaseURL = try makeDatabaseURL()
-        do {
-            let legacy = try SQLiteConnection(url: databaseURL)
-            try legacy.execute("CREATE TABLE projects (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, first_dashboard_opened INTEGER NOT NULL DEFAULT 0)")
-            try legacy.execute("CREATE TABLE phases (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id), name TEXT NOT NULL, UNIQUE(project_id, id))")
-            try legacy.execute("CREATE TABLE tickets (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id))")
-            try legacy.execute("CREATE TABLE observed_goals (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id))")
-            try legacy.execute("CREATE TABLE notification_events (id TEXT PRIMARY KEY NOT NULL, fingerprint TEXT NOT NULL UNIQUE, state TEXT NOT NULL, ticket_id TEXT, goal_id TEXT, provider_receipt TEXT, acknowledged_at TEXT)")
-            try legacy.execute("INSERT INTO projects (id, name) VALUES ('single', 'Single phase')")
-            try legacy.execute("INSERT INTO projects (id, name) VALUES ('multiple', 'Multiple phases')")
-            try legacy.execute("INSERT INTO phases (id, project_id, name) VALUES ('single-phase', 'single', 'Only')")
-            try legacy.execute("INSERT INTO phases (id, project_id, name) VALUES ('multiple-a', 'multiple', 'Earlier')")
-            try legacy.execute("INSERT INTO phases (id, project_id, name) VALUES ('multiple-b', 'multiple', 'Later')")
-            try legacy.execute("PRAGMA user_version = 4")
+        var currentStore: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await currentStore!.transact(actor: .init(id: "seed"), reason: "Seed version four migration") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('single', 'Single phase')")
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('multiple', 'Multiple phases')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('single-phase', 'single', 'Only')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('multiple-a', 'multiple', 'Earlier')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('multiple-b', 'multiple', 'Later')")
         }
+        currentStore = nil
+
+        let legacy = try SQLiteConnection(url: databaseURL)
+        try legacy.executeScript("""
+        DROP INDEX notification_events_project_created_index;
+        DROP INDEX notification_events_state_index;
+        DROP TABLE notification_occurrences;
+        ALTER TABLE notification_events DROP COLUMN failure_code;
+        ALTER TABLE notification_events DROP COLUMN completed_at;
+        ALTER TABLE notification_events DROP COLUMN attempt_started_at;
+        ALTER TABLE notification_events DROP COLUMN attempt_count;
+        ALTER TABLE notification_events DROP COLUMN created_at;
+        ALTER TABLE notification_events DROP COLUMN message;
+        ALTER TABLE notification_events DROP COLUMN title;
+        ALTER TABLE notification_events DROP COLUMN occurrence;
+        ALTER TABLE notification_events DROP COLUMN subject_id;
+        ALTER TABLE notification_events DROP COLUMN event_kind;
+        ALTER TABLE notification_events DROP COLUMN project_id;
+        DROP INDEX project_active_phases_phase_index;
+        DROP TABLE project_active_phases;
+        PRAGMA user_version = 4;
+        """)
 
         let store = DeliveryStore(databaseURL: databaseURL)
         let state = try await store.read { connection in
