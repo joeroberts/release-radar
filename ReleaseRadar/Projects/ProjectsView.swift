@@ -2,21 +2,34 @@ import SwiftUI
 import ReleaseRadarCore
 
 struct ProjectsView: View {
+    @State private var isAddingProject = false
     let projection: DashboardProjection
     let onboardingStore: DeliveryStore
     let openProject: (ProjectID) -> Void
+    let onboardingFinished: @MainActor () async -> Void
 
     var body: some View {
         if projection.projects.isEmpty {
-            OnboardingView(store: onboardingStore)
+            OnboardingView(store: onboardingStore) { _ in
+                await onboardingFinished()
+            }
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Projects")
-                            .font(.largeTitle.weight(.semibold))
-                        Text("Local delivery structure and owner attention at a glance")
-                            .foregroundStyle(.secondary)
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Projects")
+                                .font(.largeTitle.weight(.semibold))
+                            Text("Local delivery structure and owner attention at a glance")
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Button("Add Project…") {
+                            isAddingProject = true
+                        }
+                        .accessibilityIdentifier("projects-add")
                     }
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
@@ -72,6 +85,13 @@ struct ProjectsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .navigationTitle("Projects")
+            .sheet(isPresented: $isAddingProject) {
+                OnboardingView(store: onboardingStore) { _ in
+                    await onboardingFinished()
+                    isAddingProject = false
+                }
+                .frame(minWidth: 720, minHeight: 560)
+            }
         }
     }
 

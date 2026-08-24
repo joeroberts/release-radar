@@ -12,9 +12,11 @@ struct OnboardingView: View {
     @State private var statusMessage: String?
     @State private var failurePresentation: FailureStatePresentation?
     @State private var isWorking = false
+    let onFinished: @MainActor (ProjectID) async -> Void
 
-    init(store: DeliveryStore) {
+    init(store: DeliveryStore, onFinished: @escaping @MainActor (ProjectID) async -> Void) {
         _onboarding = State(initialValue: FolderProjectOnboarding(store: store))
+        self.onFinished = onFinished
     }
 
     var body: some View {
@@ -182,8 +184,8 @@ struct OnboardingView: View {
         Task {
             defer { isWorking = false }
             do {
-                _ = try await onboarding.finish(decision)
-                statusMessage = "Project onboarded. Uncertain tasks are in Needs Review."
+                let finishedProjectID = try await onboarding.finish(decision)
+                await onFinished(finishedProjectID)
             } catch {
                 failurePresentation = failure(for: error)
             }

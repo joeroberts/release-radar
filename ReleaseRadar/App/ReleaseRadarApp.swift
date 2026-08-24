@@ -3,6 +3,14 @@ import OSLog
 import ReleaseRadarCore
 import SwiftUI
 
+enum AppLaunchConfiguration {
+    static func shouldSeedSampleData(arguments: [String], isDebugBuild: Bool) -> Bool {
+        isDebugBuild
+            && arguments.contains("--rr10-capture")
+            && !arguments.contains("--rr10-empty-store")
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "AgentBridge")
@@ -71,14 +79,14 @@ struct ReleaseRadarApp: App {
     init() {
         let services = ReleaseRadarAppServices.shared
 #if DEBUG
-        let arguments = ProcessInfo.processInfo.arguments
-        let seedSampleData = !(
-            arguments.contains("--rr10-capture")
-                && arguments.contains("--rr10-empty-store")
-        )
+        let isDebugBuild = true
 #else
-        let seedSampleData = true
+        let isDebugBuild = false
 #endif
+        let seedSampleData = AppLaunchConfiguration.shouldSeedSampleData(
+            arguments: ProcessInfo.processInfo.arguments,
+            isDebugBuild: isDebugBuild
+        )
         _model = State(initialValue: AppModel(
             store: services.store,
             pushoverKeychain: services.keychain,

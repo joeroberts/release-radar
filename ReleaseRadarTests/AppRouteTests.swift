@@ -3,20 +3,67 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class AppRouteTests: XCTestCase {
+    func testSampleLaunchPolicyRequiresExplicitNonEmptyDebugCapture() {
+        XCTAssertFalse(AppLaunchConfiguration.shouldSeedSampleData(arguments: [], isDebugBuild: true))
+        XCTAssertFalse(AppLaunchConfiguration.shouldSeedSampleData(
+            arguments: ["--rr10-capture", "--rr10-empty-store"],
+            isDebugBuild: true
+        ))
+        XCTAssertFalse(AppLaunchConfiguration.shouldSeedSampleData(
+            arguments: ["--rr10-capture"],
+            isDebugBuild: false
+        ))
+        XCTAssertTrue(AppLaunchConfiguration.shouldSeedSampleData(
+            arguments: ["--rr10-capture"],
+            isDebugBuild: true
+        ))
+    }
+
     @MainActor
-    func testCaptureOnlyEmptyStoreModeDoesNotSeedSampleDeliveryData() async throws {
+    func testNormalModelStartupDoesNotSeedSampleDeliveryData() async throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ReleaseRadar-EmptyCapture-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("ReleaseRadar-NormalStartup-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        let model = AppModel(
-            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
-            seedSampleData: false
-        )
+        let model = AppModel(store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")))
 
         await model.loadDashboard()
 
         XCTAssertEqual(model.dashboard?.projects.count, 0)
+        XCTAssertEqual(model.selection, .projects)
+    }
+
+    @MainActor
+    func testExplicitCaptureModelSeedsSampleDeliveryData() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SeededCapture-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            seedSampleData: true
+        )
+
+        await model.loadDashboard()
+
+        XCTAssertEqual(model.dashboard?.projects.map(\.id), [DashboardSampleData.projectID])
+    }
+
+    @MainActor
+    func testOnboardingCompletionReloadsPersistedProjectAndReturnsToProjects() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-OnboardingCompletion-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let model = AppModel(store: store)
+        await model.loadDashboard()
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        model.selection = .phaseBoard(DashboardSampleData.projectID)
+
+        await model.reloadAfterOnboarding()
+
+        XCTAssertEqual(model.dashboard?.projects.map(\.id), [DashboardSampleData.projectID])
         XCTAssertEqual(model.selection, .projects)
     }
 

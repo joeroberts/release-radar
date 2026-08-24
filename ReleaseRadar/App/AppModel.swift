@@ -41,7 +41,7 @@ final class AppModel {
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
         pushoverKeychain: PushoverKeychainStore? = nil,
         notificationCoordinator: AppNotificationCoordinator? = nil,
-        seedSampleData: Bool = true
+        seedSampleData: Bool = false
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
@@ -110,6 +110,11 @@ final class AppModel {
         } catch {
             dashboardError = error.localizedDescription
         }
+    }
+
+    func reloadAfterOnboarding() async {
+        selection = .projects
+        await loadDashboard()
     }
 
     func reviewInbox(for projectID: ProjectID) -> ReviewInboxProjection? {

@@ -176,9 +176,16 @@ struct SidebarView: View {
         } else if let dashboard = model.dashboard {
             switch model.selection {
             case .projects:
-                ProjectsView(projection: dashboard, onboardingStore: model.onboardingStore) { projectID in
-                    Task { await model.openProject(projectID) }
-                }
+                ProjectsView(
+                    projection: dashboard,
+                    onboardingStore: model.onboardingStore,
+                    openProject: { projectID in
+                        Task { await model.openProject(projectID) }
+                    },
+                    onboardingFinished: {
+                        await model.reloadAfterOnboarding()
+                    }
+                )
             case .needsReview:
                 if let inbox = model.reviewInbox(for: model.currentProjectID) {
                     NeedsReviewView(
