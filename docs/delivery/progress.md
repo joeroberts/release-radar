@@ -26,8 +26,8 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-02 released by TPM and Delivery Manager.
-- Next eligible task: RR-02 transactional local delivery store.
+- Current task: RR-02 implemented; independent code, QA, architecture, and security/privacy reviews pending.
+- Next eligible task: None until RR-02 review gates accept the slice and TPM/Delivery Manager record release.
 - Open product blockers: none.
 - Open operational risks: none.
 
@@ -51,6 +51,19 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 - TPM: GO; RR-01 technically accepted and RR-02 dependency-safe.
 - Delivery Manager: GO; no remaining Required blocker.
+
+### RR-02 — Transactional local delivery store
+
+- Status: Implemented; independent reviews pending. Not accepted or released.
+- Scope: Stable typed delivery records; app-owned SQLite connection and actor; versioned transactional migration; distinct delivery/runtime/audit/notification tables; attributed audit writes; read-only projections; foreign-key, uniqueness, project-boundary, and recursive phase/ticket acyclicity enforcement; explicit corruption/migration recovery state with an intact original and pre-migration snapshot.
+- Commits: `6126178` (`feat: add transactional delivery store`), `7362903` (`fix: enforce phase dependency acyclicity`).
+- TDD: Observed RED→GREEN cycles for successful audited commit, rollback on invalid/cross-project/cyclic writes, migration/relaunch persistence, corruption/migration recovery, and prevention of unaudited writes through read projections. Full command/results are recorded in `.superpowers/sdd/2026-08-23-release-radar-mvp/task-2-report.md`.
+- Verification: `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -only-testing:ReleaseRadarTests/StoreAcceptanceTests` passed 9 of 9 with 0 failures/skips; `xcodebuild -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -configuration Debug build` passed.
+- Reviews: Code Reviewer pending; QA pending; Architect pending; Security/privacy pending. No findings classified yet.
+- Decisions: The app remains the sole SQLite writer; all writes enter `DeliveryStore.transact` and receive an audit event; read projections are write-protected; migrations are exclusive/atomic; a consistent snapshot is preserved before changing an existing non-current database; failure produces typed unavailable/recovery state without resetting authoritative data.
+- Risks: Review gates remain open. Later bridge/tool slices must preserve the app-only writer boundary and must not expose `SQLiteConnection` or database paths to agents.
+- Stop-rule events: None.
+- Next eligible task: None until independent RR-02 reviews are recorded and TPM/Delivery Manager release the next dependency-safe task.
 
 ### RR-01 — Standalone signed application foundation
 
