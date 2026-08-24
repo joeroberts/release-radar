@@ -457,6 +457,40 @@ final class NotificationAcceptanceTests: XCTestCase {
         XCTAssertEqual(notification.notificationStatusText, "Delivery failed · Credentials missing")
     }
 
+    func testCoordinatorRefreshesVisibleNotificationCountAndFailureAfterBridgeCommit() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        let dispatcher = PushoverNotificationDispatcher(
+            store: fixture.store,
+            credentials: StaticPushoverCredentialsProvider(credentials: nil),
+            transport: CountingTransport()
+        )
+        let coordinator = AppNotificationCoordinator(store: fixture.store, dispatcher: dispatcher)
+        let model = await AppModel(store: fixture.store, notificationCoordinator: coordinator)
+        await model.loadDashboard()
+        await model.navigate(to: .projectOverview(.init(rawValue: "project-1")))
+        let initialCount = await model.notificationCount
+        let envelope = AgentCommandEnvelope(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909053")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Request owner review and refresh",
+            command: .requestReview(id: "reactive-review", ticketID: nil, kind: "agent_request", summary: "Review")
+        )
+        let result = await fixture.dispatcher.dispatch(envelope)
+        XCTAssertNil(result.error)
+
+        await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+
+        let updatedCount = await model.notificationCount
+        let activity = await model.activity(for: .init(rawValue: "project-1"))
+        XCTAssertEqual(updatedCount, initialCount + 1)
+        let notification = try XCTUnwrap(activity?.items.first {
+            $0.source == .notification && $0.title == "Delivery item needs review"
+        })
+        XCTAssertEqual(notification.notificationState, .failed)
+        XCTAssertEqual(notification.notificationStatusText, "Delivery failed · Credentials missing")
+    }
+
     private func transition(_ lane: TicketLane, requestID: String, fixture: Fixture) async throws {
         let result = await fixture.dispatcher.dispatch(.init(
             version: 1,

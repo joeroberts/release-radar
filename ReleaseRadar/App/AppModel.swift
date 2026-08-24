@@ -28,24 +28,27 @@ final class AppModel {
     private let store: DeliveryStore
     private let codexObserver: any CodexObserver
     private let pushoverKeychain: PushoverKeychainStore
-    private let notificationDispatcher: PushoverNotificationDispatcher
+    private let notificationCoordinator: AppNotificationCoordinator
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
     private var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
 
     init(
-        store: DeliveryStore = DeliveryStore(),
+        store: DeliveryStore,
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
-        pushoverKeychain: PushoverKeychainStore = PushoverKeychainStore()
+        pushoverKeychain: PushoverKeychainStore? = nil,
+        notificationCoordinator: AppNotificationCoordinator? = nil
     ) {
+        let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
         self.codexObserver = codexObserver
-        self.pushoverKeychain = pushoverKeychain
-        notificationDispatcher = PushoverNotificationDispatcher(
-            store: store,
-            credentials: pushoverKeychain
-        )
+        self.pushoverKeychain = resolvedKeychain
+        self.notificationCoordinator = notificationCoordinator
+            ?? AppNotificationCoordinator(
+                store: store,
+                dispatcher: PushoverNotificationDispatcher(store: store, credentials: resolvedKeychain)
+            )
     }
 
     var currentProjectID: ProjectID {
@@ -67,22 +70,33 @@ final class AppModel {
         activity(for: currentProjectID)?.items.filter { $0.source == .notification }.count ?? 0
     }
 
-    func openProject(_ projectID: ProjectID) {
-        selectedProjectID = projectID
-        selection = .projectOverview(projectID)
-        Task {
-            try? await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
+    func openProject(_ projectID: ProjectID) async {
+        await navigate(to: .projectOverview(projectID))
+    }
+
+    func navigate(to route: AppRoute) async {
+        if let projectID = route.projectID {
+            do {
+                try await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
+            } catch {
+                dashboardError = error.localizedDescription
+                return
+            }
         }
+        selection = route
     }
 
     func loadDashboard() async {
         do {
+            await notificationCoordinator.setActivityRefreshHandler { [weak self] projectID in
+                await self?.refreshNotificationActivity(for: projectID)
+            }
             try await DashboardSampleData.seedIfNeeded(in: store)
             let loadedDashboard = try await DashboardProjection.load(from: store)
             dashboard = loadedDashboard
             try await loadWorkspace(for: loadedDashboard)
             await loadPushoverConfiguration()
-            await notificationDispatcher.dispatchPending()
+            await notificationCoordinator.dispatchPending()
             try await refreshActivities(for: loadedDashboard)
             dashboardError = nil
         } catch {
@@ -161,11 +175,7 @@ final class AppModel {
                 projectID: item.projectID
             )
             selectedReviewItemID = reviewInboxes[item.projectID]?.openItems.first?.id
-            await notificationDispatcher.dispatchPending()
-            projectActivities[item.projectID] = try await ProjectActivityProjection.load(
-                from: store,
-                projectID: item.projectID
-            )
+            await notificationCoordinator.dispatchPending()
         } catch {
             reviewActionError = "Review action failed: \(error.localizedDescription)"
         }
@@ -199,6 +209,17 @@ final class AppModel {
         }
     }
 
+    private func refreshNotificationActivity(for projectID: ProjectID) async {
+        do {
+            projectActivities[projectID] = try await ProjectActivityProjection.load(
+                from: store,
+                projectID: projectID
+            )
+        } catch {
+            dashboardError = error.localizedDescription
+        }
+    }
+
     func loadPushoverConfiguration() async {
         do {
             isPushoverConfigured = try pushoverKeychain.loadCredentials() != nil
@@ -222,8 +243,7 @@ final class AppModel {
             pushoverUserKey = ""
             isPushoverConfigured = true
             pushoverSettingsMessage = "Credentials saved to this device."
-            await notificationDispatcher.dispatchPending()
-            if let dashboard { try await refreshActivities(for: dashboard) }
+            await notificationCoordinator.dispatchPending()
         } catch {
             isPushoverConfigured = false
             pushoverSettingsMessage = "Credentials could not be saved to Keychain."

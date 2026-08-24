@@ -322,6 +322,52 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         XCTAssertEqual(replayCounts, [1, 1])
     }
 
+    func testAfterReplyWorkCannotDelayCommittedToolResult() async throws {
+        let fixture = try await makeTransportFixture()
+        let afterReplyGate = CallbackInvalidationGate()
+        let appDelegate = AppDelegate()
+        let host = try await appDelegate.startAgentBridge(
+            databaseURL: fixture.databaseURL,
+            afterReply: { _, result in
+                guard result.error == nil else { return }
+                afterReplyGate.entered.signal()
+                await afterReplyGate.release.wait()
+            }
+        )
+        defer {
+            afterReplyGate.release.signal()
+            host.disconnectCallback()
+            try? host.unregister()
+        }
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let projectRoot = fixture.projectRoot.path
+        let responseTask = Task.detached { @Sendable in
+            try Self.runToolData(packagedTool, tool: "release_radar_transition_ticket", arguments: [
+                "version": 1,
+                "requestID": "99999999-9999-4999-8999-999999999995",
+                "projectRoot": projectRoot,
+                "reason": "Return before notification dispatch",
+                "ticketID": "RR-03",
+                "lane": "needs_review",
+            ])
+        }
+
+        await afterReplyGate.entered.wait()
+        let responseData = try await withThrowingTaskGroup(of: Data.self) { group in
+            group.addTask { try await responseTask.value }
+            group.addTask {
+                try await Task.sleep(for: .seconds(2))
+                throw TransportTestError.timedOut
+            }
+            defer { group.cancelAll() }
+            return try await group.next()!
+        }
+        let toolResponse = try Self.decodeToolResponseData(responseData)
+        XCTAssertNil(try decodeCommandResult(toolResponse).error)
+        XCTAssertEqual(mcpIsError(toolResponse), false)
+    }
+
     func testMalformedNumbersAndPresentNonStringOptionalsRejectBeforeTransportOrWrite() async throws {
         let fixture = try await makeTransportFixture()
         let packagedTool = Bundle.main.bundleURL
@@ -550,4 +596,5 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
 
 private enum TransportTestError: Error {
     case invalidResponse(String)
+    case timedOut
 }

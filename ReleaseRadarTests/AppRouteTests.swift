@@ -4,9 +4,16 @@ import ReleaseRadarCore
 
 final class AppRouteTests: XCTestCase {
     @MainActor
-    func testAppModelLoadsExplicitUnavailableCodexRuntimeState() async {
+    func testAppModelLoadsExplicitUnavailableCodexRuntimeState() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-CodexState-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let observer = UnavailableCodexObserver(reason: "Shared desktop observation unavailable")
-        let model = AppModel(codexObserver: observer)
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            codexObserver: observer
+        )
 
         await model.loadCodexRuntime()
 
@@ -57,7 +64,16 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
-    func testOpeningNonFirstProjectKeepsEveryProjectRouteInThatContext() {
+    func testOpeningNonFirstProjectKeepsEveryProjectRouteInThatContext() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ProjectRoutes-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed route projects") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-a', 'Alpha')")
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-b', 'Beta')")
+        }
         let first = ProjectDashboardProjection(
             id: ProjectID(rawValue: "project-a"),
             name: "Alpha",
@@ -84,12 +100,12 @@ final class AppRouteTests: XCTestCase {
             currentWorkCount: 2,
             attentionCount: 1
         )
-        let model = AppModel()
+        let model = AppModel(store: store)
         model.dashboard = DashboardProjection(projects: [first, second], boards: [:])
 
         XCTAssertEqual(model.currentProjectID, first.id)
 
-        model.openProject(second.id)
+        await model.openProject(second.id)
 
         XCTAssertEqual(model.currentProjectID, second.id)
         XCTAssertEqual(model.currentProject?.name, "Beta")
@@ -112,5 +128,58 @@ final class AppRouteTests: XCTestCase {
 
         model.selection = .projects
         XCTAssertEqual(model.currentProjectID, second.id)
+    }
+
+    @MainActor
+    func testDirectProjectRoutePersistsDashboardOpenBeforeNotificationEligibility() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-DirectRoute-\(UUID().uuidString)", isDirectory: true)
+        let projectRoot = directory.appendingPathComponent("project", isDirectory: true)
+        try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "project-direct")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed direct-route project") { connection in
+            try connection.execute("INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('project-direct', 'Direct', 0)")
+            try connection.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('root-direct', 'project-direct', ?)", bindings: [.text(projectRoot.path)])
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-direct', 'project-direct', 'MVP')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('DIRECT-1', 'project-direct', 'phase-direct', 'Direct navigation', 'in_progress')")
+        }
+        let notificationDispatcher = PushoverNotificationDispatcher(
+            store: store,
+            credentials: StaticPushoverCredentialsProvider(credentials: nil),
+            transport: RouteCountingTransport()
+        )
+        let coordinator = AppNotificationCoordinator(store: store, dispatcher: notificationDispatcher)
+        let model = AppModel(store: store, notificationCoordinator: coordinator)
+
+        await model.navigate(to: .phaseBoard(projectID))
+        let registry = InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: projectID, canonicalRoot: projectRoot, authorizedRoots: [projectRoot]),
+        ])
+        let result = await AgentCommandDispatcher(store: store, projectRegistry: registry).dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "91919191-9191-4191-8191-919191919191")!,
+            projectRoot: projectRoot.path,
+            reason: "Request review after direct navigation",
+            command: .requestReview(id: "direct-review", ticketID: "DIRECT-1", kind: "agent_request", summary: "Review")
+        ))
+        XCTAssertNil(result.error)
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT first_dashboard_opened FROM projects WHERE id = 'project-direct'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE project_id = 'project-direct'")
+            )
+        }
+        XCTAssertEqual(state.0, 1)
+        XCTAssertEqual(state.1, 1)
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+    }
+}
+
+private actor RouteCountingTransport: PushoverTransport {
+    func send(_ message: PushoverMessage, credentials: PushoverCredentials) async throws -> PushoverProviderReceipt {
+        .init(requestID: "unused")
     }
 }

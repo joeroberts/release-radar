@@ -7,7 +7,6 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "AgentBridge")
     private var agentBridgeHost: AgentBridgeApplicationHost?
-    private var notificationDispatcher: PushoverNotificationDispatcher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -17,17 +16,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Task { [weak self] in
             do {
-                let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
-                let dispatcher = PushoverNotificationDispatcher(
-                    store: DeliveryStore(databaseURL: databaseURL)
-                )
-                self?.notificationDispatcher = dispatcher
-                await dispatcher.dispatchPending()
+                let services = ReleaseRadarAppServices.shared
+                await services.notificationCoordinator.initializeForLaunch()
                 _ = try await self?.startAgentBridge(
-                    databaseURL: databaseURL,
-                    afterDispatchBeforeReply: { _, result in
-                        guard result.error == nil else { return }
-                        await dispatcher.dispatchPending()
+                    databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
+                    afterReply: { envelope, result in
+                        await services.notificationCoordinator.dispatchAfterCommittedCommand(
+                            envelope,
+                            result: result
+                        )
                     }
                 )
             } catch {
@@ -44,7 +41,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func startAgentBridge(
         databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(),
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in },
-        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in },
+        afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
     ) async throws -> AgentBridgeApplicationHost {
         if let agentBridgeHost {
             return agentBridgeHost
@@ -52,7 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let host = try await AgentBridgeApplicationHost.start(
             databaseURL: databaseURL,
             beforeDispatch: beforeDispatch,
-            afterDispatchBeforeReply: afterDispatchBeforeReply
+            afterDispatchBeforeReply: afterDispatchBeforeReply,
+            afterReply: afterReply
         )
         agentBridgeHost = host
         return host
@@ -62,7 +61,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct ReleaseRadarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var model = AppModel()
+    @State private var model: AppModel
+
+    init() {
+        let services = ReleaseRadarAppServices.shared
+        _model = State(initialValue: AppModel(
+            store: services.store,
+            pushoverKeychain: services.keychain,
+            notificationCoordinator: services.notificationCoordinator
+        ))
+    }
 
     var body: some Scene {
         WindowGroup("Release Radar", id: "main") {

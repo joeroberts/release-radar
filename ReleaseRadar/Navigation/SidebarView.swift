@@ -64,7 +64,7 @@ struct SidebarView: View {
                         }
                     } else {
                         sidebarButton(route: route, count: primaryCount(for: route)) {
-                            model.selection = route
+                            Task { await model.navigate(to: route) }
                         }
                     }
                 }
@@ -85,7 +85,7 @@ struct SidebarView: View {
             VStack(spacing: 4) {
                 ForEach(AppRoute.projectRoutes(for: model.currentProjectID), id: \.self) { route in
                     sidebarButton(route: route, count: nil) {
-                        model.selection = route
+                        Task { await model.navigate(to: route) }
                     }
                 }
             }
@@ -172,7 +172,7 @@ struct SidebarView: View {
             switch model.selection {
             case .projects:
                 ProjectsView(projection: dashboard) { projectID in
-                    model.openProject(projectID)
+                    Task { await model.openProject(projectID) }
                 }
             case .needsReview:
                 if let inbox = model.reviewInbox(for: model.currentProjectID) {
@@ -197,7 +197,7 @@ struct SidebarView: View {
             case let .projectOverview(projectID):
                 if let board = dashboard.board(for: projectID) {
                     ProjectOverviewView(board: board) {
-                        model.selection = .phaseBoard(projectID)
+                        Task { await model.navigate(to: .phaseBoard(projectID)) }
                     }
                 }
             case let .phaseBoard(projectID):

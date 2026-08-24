@@ -34,20 +34,23 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     private init(
         dispatcher: AgentCommandDispatcher,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
-        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void,
+        afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
     ) {
         service = .agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
         callback = AgentBridgeAppCallback(
             dispatcher: dispatcher,
             beforeDispatch: beforeDispatch,
-            afterDispatchBeforeReply: afterDispatchBeforeReply
+            afterDispatchBeforeReply: afterDispatchBeforeReply,
+            afterReply: afterReply
         )
     }
 
     static func start(
         databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(),
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in },
-        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in },
+        afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
     ) async throws -> AgentBridgeApplicationHost {
         let store = DeliveryStore(databaseURL: databaseURL)
         let projects = try await loadAuthorizedProjects(from: store)
@@ -58,7 +61,8 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         let host = AgentBridgeApplicationHost(
             dispatcher: dispatcher,
             beforeDispatch: beforeDispatch,
-            afterDispatchBeforeReply: afterDispatchBeforeReply
+            afterDispatchBeforeReply: afterDispatchBeforeReply,
+            afterReply: afterReply
         )
         do {
             try host.registerIfNeeded()
@@ -212,15 +216,18 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
     private let dispatcher: AgentCommandDispatcher
     private let beforeDispatch: @Sendable (AgentCommandEnvelope) async -> Void
     private let afterDispatchBeforeReply: @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
+    private let afterReply: @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
 
     init(
         dispatcher: AgentCommandDispatcher,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
-        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
+        afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void,
+        afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
     ) {
         self.dispatcher = dispatcher
         self.beforeDispatch = beforeDispatch
         self.afterDispatchBeforeReply = afterDispatchBeforeReply
+        self.afterReply = afterReply
     }
 
     func dispatch(
@@ -256,6 +263,9 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
             let result = await dispatcher.dispatch(envelope, admissionDeadline: admissionDeadline)
             await afterDispatchBeforeReply(envelope, result)
             replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.outcomeUnknownResultData())
+            Task {
+                await afterReply(envelope, result)
+            }
         }
     }
 }
