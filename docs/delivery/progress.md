@@ -47,5 +47,5 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 - Reviews: Implementer self-review found no required correctness or scope issues. Independent Code Reviewer, QA, and Architect checks remain required before RR-01 acceptance.
 - Risks: No app icon yet (foundation only). Runtime integrations and persistence intentionally remain for later tasks.
 - Stop-rule events: Hosted XCTest execution was stopped rather than expanding test infrastructure.
-- Commit: To be recorded by the follow-up ledger evidence commit.
+- Commit: `487647a` (`feat: scaffold Release Radar macOS app`).
 - Next eligible task: None until independent RR-01 review gates accept this slice.
