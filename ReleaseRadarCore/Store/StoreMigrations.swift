@@ -56,6 +56,38 @@ enum StoreMigrations {
         FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id) ON DELETE CASCADE,
         FOREIGN KEY(project_id, depends_on_phase_id) REFERENCES phases(project_id, id) ON DELETE CASCADE
     );
+    CREATE TRIGGER reject_phase_dependency_cycle_insert
+    BEFORE INSERT ON phase_dependencies
+    WHEN EXISTS (
+        WITH RECURSIVE dependency_path(phase_id) AS (
+            SELECT NEW.depends_on_phase_id
+            UNION
+            SELECT dependency.depends_on_phase_id
+            FROM phase_dependencies AS dependency
+            JOIN dependency_path ON dependency.phase_id = dependency_path.phase_id
+            WHERE dependency.project_id = NEW.project_id
+        )
+        SELECT 1 FROM dependency_path WHERE phase_id = NEW.phase_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'phase dependency cycle');
+    END;
+    CREATE TRIGGER reject_phase_dependency_cycle_update
+    BEFORE UPDATE OF project_id, phase_id, depends_on_phase_id ON phase_dependencies
+    WHEN EXISTS (
+        WITH RECURSIVE dependency_path(phase_id) AS (
+            SELECT NEW.depends_on_phase_id
+            UNION
+            SELECT dependency.depends_on_phase_id
+            FROM phase_dependencies AS dependency
+            JOIN dependency_path ON dependency.phase_id = dependency_path.phase_id
+            WHERE dependency.project_id = NEW.project_id AND dependency.id <> OLD.id
+        )
+        SELECT 1 FROM dependency_path WHERE phase_id = NEW.phase_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'phase dependency cycle');
+    END;
     CREATE TABLE ticket_dependencies (
         id TEXT PRIMARY KEY NOT NULL,
         project_id TEXT NOT NULL,

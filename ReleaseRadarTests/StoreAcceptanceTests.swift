@@ -135,6 +135,33 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.2, 2)
     }
 
+    func testPhaseDependencyCycleRollsBackDeliveryAndAuditWrites() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await seedProject(store)
+        try await store.transact(actor: .init(id: "agent-seed"), reason: "Seed phase dependency") { connection in
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-2', 'project-1', 'Launch')")
+            try connection.execute("INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('phase-dependency-1', 'project-1', 'phase-2', 'phase-1')")
+        }
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "agent-cycle"), reason: "Add cyclic phase dependency") { connection in
+                try connection.execute("UPDATE tickets SET lane = 'blocked' WHERE id = 'RR-02'")
+                try connection.execute("INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('phase-dependency-2', 'project-1', 'phase-1', 'phase-2')")
+            }
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_dependencies"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        XCTAssertEqual(state.0, TicketLane.backlog.rawValue)
+        XCTAssertEqual(state.1, 1)
+        XCTAssertEqual(state.2, 2)
+    }
+
     func testReadProjectionCannotBypassAuditedTransactions() async throws {
         let store = DeliveryStore(databaseURL: try makeDatabaseURL())
         try await seedProject(store)
