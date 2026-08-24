@@ -36,11 +36,13 @@ struct SettingsView: View {
     }
 
     private var connections: some View {
-        let codex = CodexConnectionPresentation(freshness: model.codexSnapshot.freshness)
         return Form {
             Section("Codex") {
-                LabeledContent("Observation", value: codex.status)
-                Text(codex.detail).foregroundStyle(.secondary)
+                if let codexFailure = FailureStatePresentation(freshness: model.codexSnapshot.freshness) {
+                    FailureStateView(presentation: codexFailure, style: .compact)
+                } else {
+                    LabeledContent("Observation", value: "Available")
+                }
                 Text("No supported live attachment is configured. Cached observations are shown only as stale.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

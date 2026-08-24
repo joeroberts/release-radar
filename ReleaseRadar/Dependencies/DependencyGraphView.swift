@@ -126,7 +126,6 @@ struct DependencyGraphView: View {
 
     private var inspector: some View {
         let selection = selectedGraph.selected
-        let connection = CodexConnectionPresentation(freshness: freshness)
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Selected ticket")
@@ -138,12 +137,10 @@ struct DependencyGraphView: View {
                 Text(selection.ticket.outcome)
                     .foregroundStyle(.secondary)
                 LabeledContent("Delivery lane", value: selection.ticket.lane.dashboardTitle)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Runtime · \(connection.status)")
-                        .font(.subheadline.weight(.medium))
-                    Text(connection.detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if let codexFailure = FailureStatePresentation(freshness: freshness) {
+                    FailureStateView(presentation: codexFailure, style: .compact)
+                } else {
+                    LabeledContent("Runtime", value: "Available")
                 }
                 relationshipSection("Directly requires", nodes: selection.directRequires)
                 relationshipSection("Indirectly requires", nodes: selection.indirectRequires)

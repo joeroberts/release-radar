@@ -7,24 +7,17 @@ struct ActivityView: View {
     let freshness: CodexObservationFreshness
 
     var body: some View {
-        let connection = CodexConnectionPresentation(freshness: freshness)
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Activity")
-                            .font(.largeTitle.weight(.semibold))
-                        Text("Persisted delivery history for \(projectName)")
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 3) {
-                        Text("Codex \(connection.status)")
-                            .font(.subheadline.weight(.medium))
-                        Text(connection.detail)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Activity")
+                        .font(.largeTitle.weight(.semibold))
+                    Text("Persisted delivery history for \(projectName)")
+                        .foregroundStyle(.secondary)
+                }
+
+                if let codexFailure = FailureStatePresentation(freshness: freshness) {
+                    FailureStateView(presentation: codexFailure)
                 }
 
                 Text("Runtime state is last-observed context. Delivery lane remains the persisted formal state.")

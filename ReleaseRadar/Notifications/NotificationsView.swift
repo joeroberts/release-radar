@@ -59,9 +59,16 @@ struct NotificationsView: View {
                     }
                 }
                 Text(item.detail).foregroundStyle(.secondary)
-                Text(item.notificationStatusText ?? "Persisted delivery status")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(statusColor(item.notificationState))
+                if let failure = FailureStatePresentation(
+                    notificationState: item.notificationState,
+                    statusText: item.notificationStatusText
+                ) {
+                    FailureStateView(presentation: failure, style: .compact)
+                } else {
+                    Text(item.notificationStatusText ?? "Persisted delivery status")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(statusColor(item.notificationState))
+                }
             }
         }
         .padding(16)

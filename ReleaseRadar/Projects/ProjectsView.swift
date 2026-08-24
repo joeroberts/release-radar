@@ -3,64 +3,76 @@ import ReleaseRadarCore
 
 struct ProjectsView: View {
     let projection: DashboardProjection
+    let onboardingStore: DeliveryStore
     let openProject: (ProjectID) -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Projects")
-                        .font(.largeTitle.weight(.semibold))
-                    Text("Local delivery structure and owner attention at a glance")
-                        .foregroundStyle(.secondary)
-                }
+        if projection.projects.isEmpty {
+            OnboardingView(store: onboardingStore)
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Projects")
+                            .font(.largeTitle.weight(.semibold))
+                        Text("Local delivery structure and owner attention at a glance")
+                            .foregroundStyle(.secondary)
+                    }
 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
-                    ForEach(projection.projects) { project in
-                        Button {
-                            openProject(project.id)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 18) {
-                                HStack(alignment: .top) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(project.name)
-                                            .font(.title3.weight(.semibold))
-                                        Text("Active phase")
-                                            .font(.caption)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
+                        ForEach(projection.projects) { project in
+                            Button {
+                                openProject(project.id)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 18) {
+                                    HStack(alignment: .top) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(project.name)
+                                                .font(.title3.weight(.semibold))
+                                            Text("Active phase")
+                                                .font(.caption)
+                                                .foregroundStyle(.tertiary)
+                                            if project.activePhaseName == "No active phase" {
+                                                FailureStateView(
+                                                    presentation: .firstPhaseRequired,
+                                                    style: .compact
+                                                )
+                                            } else {
+                                                Text(project.activePhaseName)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 14, weight: .light))
                                             .foregroundStyle(.tertiary)
-                                        Text(project.activePhaseName)
-                                            .foregroundStyle(.secondary)
                                     }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 14, weight: .light))
-                                        .foregroundStyle(.tertiary)
+
+                                    ProjectGoalSummaryView(context: project.goalContext)
+
+                                    HStack(spacing: 26) {
+                                        projectMetric(value: project.currentWorkCount, label: "Current work")
+                                        projectMetric(value: project.attentionCount, label: "Needs attention")
+                                    }
                                 }
-
-                                ProjectGoalSummaryView(context: project.goalContext)
-
-                                HStack(spacing: 26) {
-                                    projectMetric(value: project.currentWorkCount, label: "Current work")
-                                    projectMetric(value: project.attentionCount, label: "Needs attention")
+                                .padding(20)
+                                .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
+                                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
                                 }
                             }
-                            .padding(20)
-                            .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
-                            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
-                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("project-\(project.id.rawValue)")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("project-\(project.id.rawValue)")
                     }
                 }
+                .padding(28)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(28)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .navigationTitle("Projects")
         }
-        .navigationTitle("Projects")
     }
 
     private func projectMetric(value: Int, label: String) -> some View {

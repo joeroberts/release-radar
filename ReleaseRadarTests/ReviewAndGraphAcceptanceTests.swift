@@ -399,6 +399,8 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         await model.performReviewDecision(.resolve, item: item)
 
         XCTAssertTrue(model.reviewActionError?.localizedCaseInsensitiveContains("authorized project root") == true)
+        XCTAssertEqual(model.reviewActionFailure?.title, "Action rejected")
+        XCTAssertTrue(model.reviewActionFailure?.detail.contains("No delivery state changed") == true)
         XCTAssertEqual(model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.count, 6)
     }
 

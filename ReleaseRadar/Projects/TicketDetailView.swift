@@ -58,9 +58,16 @@ struct TicketDetailView: View {
                                 Text(evidence.path)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Label(evidence.isAvailable ? "Available" : "Unavailable", systemImage: evidence.isAvailable ? "checkmark.circle" : "questionmark.circle")
-                                    .font(.caption)
-                                    .foregroundStyle(evidence.isAvailable ? Color.green : Color.secondary)
+                                if let failure = FailureStatePresentation(
+                                    evidenceLabel: evidence.label,
+                                    isAvailable: evidence.isAvailable
+                                ) {
+                                    FailureStateView(presentation: failure, style: .compact)
+                                } else {
+                                    Label("Available", systemImage: "checkmark.circle")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.green)
+                                }
                             }
                         }
                     }

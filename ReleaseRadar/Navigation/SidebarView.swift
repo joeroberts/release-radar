@@ -163,15 +163,20 @@ struct SidebarView: View {
     @ViewBuilder
     private var detail: some View {
         if let error = model.dashboardError {
-            ContentUnavailableView(
-                "Delivery data unavailable",
-                systemImage: "externaldrive.badge.exclamationmark",
-                description: Text(error)
+            FailureStateView(
+                presentation: .init(
+                    title: "Delivery data unavailable",
+                    detail: error,
+                    systemImage: "externaldrive.badge.exclamationmark",
+                    tone: .error,
+                    accessibilityID: "failure-delivery-data"
+                ),
+                style: .full
             )
         } else if let dashboard = model.dashboard {
             switch model.selection {
             case .projects:
-                ProjectsView(projection: dashboard) { projectID in
+                ProjectsView(projection: dashboard, onboardingStore: model.onboardingStore) { projectID in
                     Task { await model.openProject(projectID) }
                 }
             case .needsReview:
@@ -180,7 +185,7 @@ struct SidebarView: View {
                         inbox: inbox,
                         selectedItemID: $model.selectedReviewItemID,
                         isPerformingAction: model.isPerformingReviewAction,
-                        actionError: model.reviewActionError
+                        actionFailure: model.reviewActionFailure
                     ) { decision, item in
                         await model.performReviewDecision(decision, item: item)
                     }
@@ -199,10 +204,14 @@ struct SidebarView: View {
                     ProjectOverviewView(board: board) {
                         Task { await model.navigate(to: .phaseBoard(projectID)) }
                     }
+                } else {
+                    FailureStateView(presentation: .firstPhaseRequired, style: .full)
                 }
             case let .phaseBoard(projectID):
                 if let board = dashboard.board(for: projectID) {
                     PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID)
+                } else {
+                    FailureStateView(presentation: .firstPhaseRequired, style: .full)
                 }
             case let .dependencies(projectID):
                 if let graph = model.dependencyGraph(for: projectID) {

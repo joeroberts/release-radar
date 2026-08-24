@@ -19,6 +19,7 @@ final class AppModel {
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
     var selectedReviewItemID: ReviewItemID?
     var reviewActionError: String?
+    var reviewActionFailure: FailureStatePresentation?
     var isPerformingReviewAction = false
     var pushoverAppToken = ""
     var pushoverUserKey = ""
@@ -61,6 +62,8 @@ final class AppModel {
     var currentProject: ProjectDashboardProjection? {
         dashboard?.projects.first { $0.id == currentProjectID }
     }
+
+    var onboardingStore: DeliveryStore { store }
 
     var needsReviewCount: Int {
         reviewInbox(for: currentProjectID)?.openItems.count ?? 0
@@ -119,6 +122,7 @@ final class AppModel {
     func performReviewDecision(_ decision: ReviewDecision, item: ReviewItemProjection) async {
         isPerformingReviewAction = true
         reviewActionError = nil
+        reviewActionFailure = nil
         defer { isPerformingReviewAction = false }
         do {
             let rootPaths = try await store.read { connection in
@@ -135,6 +139,7 @@ final class AppModel {
             }
             guard let selectedRootPath = rootPaths.first else {
                 reviewActionError = "Review action failed: no authorized project root is available."
+                reviewActionFailure = FailureStatePresentation(agentError: .unauthorizedProjectRoot)
                 return
             }
             let selectedRoot = URL(fileURLWithPath: selectedRootPath)
@@ -164,6 +169,7 @@ final class AppModel {
             )
             if let error = result.error {
                 reviewActionError = "Review action failed: \(String(describing: error))"
+                reviewActionFailure = FailureStatePresentation(agentError: error)
                 return
             }
             reviewInboxes[item.projectID] = try await ReviewInboxProjection.load(
@@ -178,6 +184,9 @@ final class AppModel {
             await notificationCoordinator.dispatchPending()
         } catch {
             reviewActionError = "Review action failed: \(error.localizedDescription)"
+            reviewActionFailure = FailureStatePresentation(
+                agentError: .internalFailure(error.localizedDescription)
+            )
         }
     }
 

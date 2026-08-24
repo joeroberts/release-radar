@@ -5,7 +5,7 @@ struct NeedsReviewView: View {
     let inbox: ReviewInboxProjection
     @Binding var selectedItemID: ReviewItemID?
     let isPerformingAction: Bool
-    let actionError: String?
+    let actionFailure: FailureStatePresentation?
     let onDecision: (ReviewDecision, ReviewItemProjection) async -> Void
 
     private var selectedItem: ReviewItemProjection? {
@@ -94,16 +94,16 @@ struct NeedsReviewView: View {
                     }
                     Text(item.summary)
                         .font(.body)
-                    Text("This decision updates the persisted review record through the typed agent-action boundary. It does not change a ticket lane.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                    if let importState = FailureStatePresentation(reviewItem: item) {
+                        FailureStateView(presentation: importState)
+                    } else {
+                        Text("This decision updates the persisted review record through the typed agent-action boundary. It does not change a ticket lane.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
 
-                    if let actionError {
-                        Label(actionError, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                    if let actionFailure {
+                        FailureStateView(presentation: actionFailure)
                             .accessibilityIdentifier("review-action-error")
                     }
 

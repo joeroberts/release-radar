@@ -3,22 +3,25 @@ import ReleaseRadarCore
 import SwiftUI
 
 struct OnboardingView: View {
-    @State private var onboarding = FolderProjectOnboarding(store: DeliveryStore())
+    @State private var onboarding: FolderProjectOnboarding
     @State private var preview: OnboardingPreview?
     @State private var projectID: ProjectID?
     @State private var projectName = ""
     @State private var excludedTaskIDs: Set<String> = []
     @State private var hasFirstPhase = false
     @State private var statusMessage: String?
+    @State private var failurePresentation: FailureStatePresentation?
     @State private var isWorking = false
+
+    init(store: DeliveryStore) {
+        _onboarding = State(initialValue: FolderProjectOnboarding(store: store))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            ContentUnavailableView(
-                "Add a folder-backed project",
-                systemImage: "folder.badge.plus",
-                description: Text("Release Radar stores a read-only bookmark to the folder you select.")
-            )
+            if preview == nil {
+                FailureStateView(presentation: .noDeliveryStructure, style: .full)
+            }
 
             Button("Choose Project Folder…", action: chooseFolder)
                 .disabled(isWorking)
@@ -69,6 +72,10 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
                     .accessibilityLabel(statusMessage)
             }
+
+            if let failurePresentation {
+                FailureStateView(presentation: failurePresentation)
+            }
         }
         .padding(32)
         .navigationTitle("Projects")
@@ -89,6 +96,8 @@ struct OnboardingView: View {
         panel.prompt = "Choose Project"
         guard panel.runModal() == .OK, let folder = panel.url else { return }
         isWorking = true
+        failurePresentation = nil
+        statusMessage = nil
         Task {
             defer { isWorking = false }
             do {
@@ -99,10 +108,13 @@ struct OnboardingView: View {
                 excludedTaskIDs = []
                 hasFirstPhase = false
                 statusMessage = result.includedTaskDescriptors.isEmpty
-                    ? "No delivery structure found. Ask an agent to define the first phase."
+                    ? nil
                     : "Matching tasks are included; uncertain mappings will appear in Needs Review."
+                failurePresentation = result.includedTaskDescriptors.isEmpty
+                    ? .noDeliveryStructure
+                    : nil
             } catch {
-                statusMessage = error.localizedDescription
+                failurePresentation = failure(for: error)
             }
         }
     }
@@ -110,6 +122,7 @@ struct OnboardingView: View {
     private func requestFirstPhaseDefinition() {
         guard let decision = decision() else { return }
         isWorking = true
+        failurePresentation = nil
         Task {
             defer { isWorking = false }
             do {
@@ -119,9 +132,10 @@ struct OnboardingView: View {
                 hasFirstPhase = try await onboarding.hasFirstPhase(projectID: preparedID)
                 statusMessage = hasFirstPhase
                     ? "An agent-defined first phase is ready."
-                    : "The request is in Needs Review. Waiting for an agent-defined first phase."
+                    : nil
+                failurePresentation = hasFirstPhase ? nil : .firstPhaseRequired
             } catch {
-                statusMessage = error.localizedDescription
+                failurePresentation = failure(for: error)
             }
         }
     }
@@ -132,9 +146,10 @@ struct OnboardingView: View {
             hasFirstPhase = try await onboarding.hasFirstPhase(projectID: projectID)
             if hasFirstPhase {
                 statusMessage = "An agent-defined first phase is ready."
+                failurePresentation = nil
             }
         } catch {
-            statusMessage = error.localizedDescription
+            failurePresentation = failure(for: error)
         }
     }
 
@@ -147,6 +162,7 @@ struct OnboardingView: View {
         panel.prompt = "Authorize Worktree"
         guard panel.runModal() == .OK, let folder = panel.url else { return }
         isWorking = true
+        failurePresentation = nil
         Task {
             defer { isWorking = false }
             do {
@@ -154,7 +170,7 @@ struct OnboardingView: View {
                 self.preview = try await onboarding.inspect(folder: preview.selectedFolder)
                 statusMessage = "The separately selected worktree is authorized for this project."
             } catch {
-                statusMessage = "Choose one of the discovered worktrees to authorize it."
+                failurePresentation = failure(for: error)
             }
         }
     }
@@ -162,22 +178,46 @@ struct OnboardingView: View {
     private func finish() {
         guard let decision = decision() else { return }
         isWorking = true
+        failurePresentation = nil
         Task {
             defer { isWorking = false }
             do {
                 _ = try await onboarding.finish(decision)
                 statusMessage = "Project onboarded. Uncertain tasks are in Needs Review."
             } catch {
-                statusMessage = error.localizedDescription
+                failurePresentation = failure(for: error)
             }
         }
     }
 
     private func decision() -> OnboardingDecision? {
         guard let preview else {
-            statusMessage = "Choose a project folder first."
+            failurePresentation = .noDeliveryStructure
             return nil
         }
         return .init(preview: preview, projectName: projectName, excludedTaskIDs: excludedTaskIDs)
+    }
+
+    private func failure(for error: Error) -> FailureStatePresentation {
+        if let onboardingError = error as? OnboardingError,
+           let presentation = FailureStatePresentation(onboardingError: onboardingError) {
+            return presentation
+        }
+        if error is ProjectBookmarkError {
+            return FailureStatePresentation(
+                title: "Project folder unavailable",
+                detail: error.localizedDescription,
+                systemImage: "folder.badge.questionmark",
+                tone: .warning,
+                accessibilityID: "failure-project-folder"
+            )
+        }
+        return FailureStatePresentation(
+            title: "Project setup unavailable",
+            detail: error.localizedDescription,
+            systemImage: "exclamationmark.triangle",
+            tone: .error,
+            accessibilityID: "failure-project-setup"
+        )
     }
 }
