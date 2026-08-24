@@ -11,7 +11,10 @@ public actor AgentCommandDispatcher {
         self.projectRegistry = projectRegistry
     }
 
-    public func dispatch(_ envelope: AgentCommandEnvelope) async -> AgentCommandResult {
+    public func dispatch(
+        _ envelope: AgentCommandEnvelope,
+        deadline: TimeInterval? = nil
+    ) async -> AgentCommandResult {
         if let error = validate(envelope) {
             return .init(entityIDs: [], auditEventID: nil, error: error)
         }
@@ -36,6 +39,9 @@ public actor AgentCommandDispatcher {
                     reason: envelope.reason,
                     auditEventID: auditEventID
                 ) { connection in
+                    if let deadline, deadline <= Date().timeIntervalSince1970 {
+                        throw DispatchControl.expired
+                    }
                     if let prior = try connection.row(
                         "SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?",
                         bindings: [.text(envelope.requestID.uuidString)]
@@ -64,6 +70,8 @@ public actor AgentCommandDispatcher {
             } catch let control as DispatchControl {
                 switch control {
                 case let .replay(result): return result
+                case .expired:
+                    return .init(entityIDs: [], auditEventID: nil, error: .appUnavailable)
                 case .requestIDReused:
                     return .init(entityIDs: [], auditEventID: nil, error: .requestIDReused)
                 }
@@ -366,6 +374,7 @@ public actor AgentCommandDispatcher {
 }
 
 private enum DispatchControl: Error, Sendable {
+    case expired
     case replay(AgentCommandResult)
     case requestIDReused
 }

@@ -240,7 +240,7 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
                 replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
                 return
             }
-            let result = await dispatcher.dispatch(envelope)
+            let result = await dispatcher.dispatch(envelope, deadline: deadline)
             replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.appUnavailableResultData())
         }
     }

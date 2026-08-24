@@ -3,6 +3,11 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class AgentBridgeAcceptanceTests: XCTestCase {
+    private final class StoreQueueGate: @unchecked Sendable {
+        let entered = DispatchSemaphore(value: 0)
+        let release = DispatchSemaphore(value: 0)
+    }
+
     func testValidTransitionCommitsAuditAndDurableReplayReturnsOriginalResult() async throws {
         let fixture = try await makeFixture()
         let requestID = UUID(uuidString: "11111111-1111-4111-8111-111111111111")!
@@ -262,6 +267,48 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
 
         XCTAssertEqual(result.error, .appUnavailable)
         XCTAssertEqual(try Data(contentsOf: corruptURL), bytes)
+    }
+
+    func testTransportDeadlineExpiresWhileQueuedForStoreWithoutWriting() async throws {
+        let fixture = try await makeFixture()
+        let baseline = try await counts(fixture.store)
+        let gate = StoreQueueGate()
+        let store = fixture.store
+        let blocker = Task.detached {
+            try await store.read { _ in
+                gate.entered.signal()
+                gate.release.wait()
+            }
+        }
+        XCTAssertEqual(gate.entered.wait(timeout: .now() + 2), .success)
+
+        let deadline = Date().addingTimeInterval(0.1).timeIntervalSince1970
+        let dispatch = Task {
+            await fixture.dispatcher.dispatch(
+                .init(
+                    version: 1,
+                    requestID: UUID(uuidString: "77777777-7777-4777-8777-777777777777")!,
+                    projectRoot: fixture.projectRoot.path,
+                    reason: "Reject after store queue deadline",
+                    command: .transitionTicket(ticketID: "RR-03", lane: .inProgress)
+                ),
+                deadline: deadline
+            )
+        }
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
+            gate.release.signal()
+        }
+
+        let result = await dispatch.value
+        try await blocker.value
+
+        XCTAssertEqual(result.error, .appUnavailable)
+        let after = try await counts(fixture.store)
+        XCTAssertEqual(after, baseline)
+        let lane = try await fixture.store.read { connection in
+            try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-03'")
+        }
+        XCTAssertEqual(lane, TicketLane.backlog.rawValue)
     }
 
     private struct Fixture {
