@@ -26,10 +26,10 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-03 signed transport recovery; typed command/dispatcher core is implemented but the complete bridge is blocked.
-- Next eligible task: fresh RR-03 transport recovery only. RR-04 is not eligible.
-- Open product blockers: authenticated MCP stdio → bounded local bridge → running app transport has not passed from the packaged signed helper.
-- Open operational risks: the first signed configuration required a provisioning profile; the second signed packaged helper terminated with uncaught signal status 5 before returning an MCP response.
+- Current task: RR-03 complete implementation is ready for independent code, QA, architecture, and security/privacy review.
+- Next eligible task: RR-03 independent review only. RR-04 is not eligible until every Required RR-03 finding is closed and the release gate records acceptance.
+- Open product blockers: no implementation blocker; the RR-03 independent review gate remains open.
+- Open operational risks: macOS may require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
 ## Task ledger
 
@@ -72,13 +72,13 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 ### RR-03 — Typed agent action bridge
 
-- Status: Implemented — dependency-safe command/dispatcher core only; signed transport blocked. Not accepted or released.
-- Commit: `6b7262c` (`feat: add typed agent delivery actions`).
-- Implemented scope: versioned typed envelopes/results/errors; approved bounded commands only; canonical authorized-root resolution seam; in-root evidence validation; durable exact request replay and differing-body rejection; atomic delivery/audit/request commits; structured rollback failures; explicit asserted thread attribution; schema version 2 support for blocker/review/completion/request state.
-- TDD: observed RED→GREEN cycles for initial transition/relaunch replay, the complete approved command set, empty identifiers, explicit thread attribution, and empty asserted-thread rejection. Detailed commands and logs are recorded in `.superpowers/sdd/2026-08-23-release-radar-mvp/task-3-report.md`.
-- Verification: 7/7 `AgentBridgeAcceptanceTests` and 15/15 `StoreAcceptanceTests` passed with 0 failures/skips; final Debug app build passed; strict deep code-sign verification reported the app valid on disk and satisfying its Designated Requirement; diff checks passed.
-- Stop-rule event: anonymous-endpoint/app-group transport failed signed provisioning and did not provide valid endpoint discovery; team-ID named XPC with signed-peer and same-user checks built/signed, but the packaged helper terminated with uncaught signal status 5 before any MCP response or store mutation. Work stopped after the second configuration, and all unproven transport/service/tool/entitlement/project changes were removed. No weaker fallback was retained.
-- Required blocker: prove one authenticated packaged MCP stdio → bounded local bridge → running app scenario, including rejection of a differently signed peer, before independent RR-03 review.
-- Reviews: not started; the complete slice is not ready while the required transport proof is absent.
-- Decisions/risks: preserve the app-only SQLite writer boundary. The production bookmark-backed project registry remains part of the blocked integration boundary; the committed in-memory registry is only the typed core seam and acceptance fixture.
-- Next eligible task: fresh RR-03 signed transport recovery. RR-04 remains closed.
+- Status: Complete implementation; awaiting independent review. Not accepted or released.
+- Commits: `6b7262c` (`feat: add typed agent delivery actions`) and `fa8eea0` (`feat: add signed agent bridge transport`).
+- Implemented scope: the committed typed command/dispatcher core plus a packaged MCP stdio tool, sandboxed LaunchAgent broker, application-hosted callback, exact version/size/deadline bounds, same-user and pinned team/identifier signing requirements on every XPC hop, app lifecycle registration, explicit unavailable/approval errors, and fail-closed disconnect behavior. The broker/tool do not link `ReleaseRadarCore` or SQLite and cannot open the authoritative store.
+- TDD: the transport scenario began RED with no application host, then proved registration/launch, signed-peer checks, valid commit/audit, durable replay, identity/version/envelope rejection, app-disconnect no-write behavior, production startup wiring, cleanup ownership, and typed MCP discovery through focused RED→GREEN cycles. Detailed commands and logs are recorded in `.superpowers/sdd/2026-08-23-release-radar-mvp/task-3-report.md`.
+- Verification: a fresh normal Debug app build passed. Strict deep signing plus explicit app/broker/tool requirements passed; the broker had exactly sandbox + the approved app group, the tool was unsandboxed with no app group, no embedded profile existed, and `otool` showed no Core/SQLite dependency in either executable. The final combined run exercised byte-identical normal-package broker/tool binaries and passed 23/23 transport/core/store tests with 0 failures/skips. Cleanup left no registered service or exact helper process; diff checks passed.
+- Stop-rule recovery: the earlier anonymous-endpoint and app-owned listener attempts remain recorded as stopped and removed. The fresh recovery used the architect-approved minimal correction: a sandboxed broker with the same-team app group, an unsandboxed tool without the group, two team-prefixed Mach services, and no weaker fallback.
+- Required blocker: none in implementation. Independent RR-03 reviews are still required before acceptance or RR-04 release.
+- Reviews: not started for the complete slice; Required findings from code, QA, architecture, or security/privacy review will block acceptance.
+- Decisions/risks: preserve the app-only SQLite writer boundary. The app composes persisted authorized roots into the existing registry seam; the broker holds only the latest authenticated callback in memory. On machines where ServiceManagement returns `requiresApproval`, the app logs the explicit Login Items & Extensions owner action and does not weaken or bypass the gate.
+- Next eligible task: independent RR-03 code review, QA verification, architecture review, and security/privacy verification. RR-04 remains closed.
