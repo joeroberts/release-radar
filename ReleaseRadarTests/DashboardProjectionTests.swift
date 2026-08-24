@@ -100,6 +100,9 @@ final class DashboardProjectionTests: XCTestCase {
                 "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?)",
                 bindings: [.text("no-goal-phase"), .text("project-without-goal"), .text("Planning")]
             )
+            try connection.execute(
+                "INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-without-goal', 'no-goal-phase')"
+            )
         }
 
         let projection = try await DashboardProjection.load(from: store)
@@ -112,6 +115,42 @@ final class DashboardProjectionTests: XCTestCase {
         XCTAssertNil(project.goalContext.status)
         XCTAssertNil(project.goalContext.text)
         XCTAssertNil(project.goalContext.lastObservedAt)
+        XCTAssertEqual(project.currentWorkCount, 0)
+        XCTAssertEqual(project.attentionCount, 0)
+    }
+
+    func testExplicitActivePhaseOverridesEarlierHistoricalPhase() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "dashboard-test"), reason: "Seed explicit active phase") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-explicit', 'Explicit')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-history', 'project-explicit', 'Historical')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-active', 'project-explicit', 'Current delivery')")
+            try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-explicit', 'phase-active')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ACTIVE-1', 'project-explicit', 'phase-active', 'Current work', 'in_progress')")
+        }
+
+        let projection = try await DashboardProjection.load(from: store)
+        let project = try XCTUnwrap(projection.projects.first { $0.id.rawValue == "project-explicit" })
+        let board = try XCTUnwrap(projection.board(for: project.id))
+
+        XCTAssertEqual(project.activePhaseName, "Current delivery")
+        XCTAssertEqual(board.phaseID.rawValue, "phase-active")
+        XCTAssertEqual(board.lane(.inProgress)?.cards.map(\.id.rawValue), ["ACTIVE-1"])
+    }
+
+    func testProjectWithMultiplePhasesAndNoExplicitActivePhaseHasNoGuessedBoard() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "dashboard-test"), reason: "Seed ambiguous project") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-ambiguous', 'Ambiguous')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-a', 'project-ambiguous', 'Historical')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-b', 'project-ambiguous', 'Planned')")
+        }
+
+        let projection = try await DashboardProjection.load(from: store)
+        let project = try XCTUnwrap(projection.projects.first { $0.id.rawValue == "project-ambiguous" })
+
+        XCTAssertEqual(project.activePhaseName, "No active phase")
+        XCTAssertNil(projection.board(for: project.id))
         XCTAssertEqual(project.currentWorkCount, 0)
         XCTAssertEqual(project.attentionCount, 0)
     }

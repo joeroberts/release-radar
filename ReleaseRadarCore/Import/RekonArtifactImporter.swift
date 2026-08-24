@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
     private static let artifactPath = "docs/delivery/dashboard-status.json"
@@ -28,29 +29,8 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         guard project.authorizedRoots.contains(root) else {
             throw RekonImportError.unauthorizedFolder
         }
-        let requestedArtifactURL = root.appendingPathComponent(Self.artifactPath)
-        guard FileManager.default.fileExists(atPath: requestedArtifactURL.path) else {
-            throw RekonImportError.missingArtifact
-        }
-        let artifactURL = AuthorizedProject.canonicalize(requestedArtifactURL)
-        let artifactValues = try artifactURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
-        guard Self.contains(artifactURL, within: root), artifactValues.isRegularFile == true else {
-            throw RekonImportError.invalidPath(requestedArtifactURL.path)
-        }
-        guard let artifactSize = artifactValues.fileSize,
-              artifactSize <= Self.maximumArtifactBytes else {
-            throw RekonImportError.inputTooLarge
-        }
-        let artifactHandle = try FileHandle(forReadingFrom: artifactURL)
-        let data: Data
-        do {
-            data = try artifactHandle.read(upToCount: Self.maximumArtifactBytes + 1) ?? Data()
-            try artifactHandle.close()
-        } catch {
-            try? artifactHandle.close()
-            throw error
-        }
-        guard data.count <= Self.maximumArtifactBytes else { throw RekonImportError.inputTooLarge }
+        let artifactURL = root.appendingPathComponent(Self.artifactPath).standardizedFileURL
+        let data = try Self.readArtifactData(under: root, artifactURL: artifactURL)
         let artifact: RekonArtifact
         do {
             artifact = try JSONDecoder().decode(RekonArtifact.self, from: data)
@@ -258,9 +238,9 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         let currentPreview = try self.preview(preview.sourceRoot)
         guard preview == currentPreview,
               preview.sourceRoot == self.project.canonicalRoot || self.project.authorizedRoots.contains(preview.sourceRoot),
-              preview.artifactURL == AuthorizedProject.canonicalize(
-                preview.sourceRoot.appendingPathComponent(Self.artifactPath)
-              ) else {
+              preview.artifactURL == preview.sourceRoot
+                .appendingPathComponent(Self.artifactPath)
+                .standardizedFileURL else {
             throw RekonImportError.malformedArtifact
         }
 
@@ -304,6 +284,17 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     bindings: [.text(phase.id.rawValue), .text(projectID), .text(phase.name)]
                 )
                 availablePhaseIDs.insert(phase.id)
+            }
+
+            if let activePhaseID = preview.activePhaseID,
+               availablePhaseIDs.contains(activePhaseID) {
+                try connection.execute(
+                    """
+                    INSERT INTO project_active_phases (project_id, phase_id) VALUES (?, ?)
+                    ON CONFLICT(project_id) DO UPDATE SET phase_id = excluded.phase_id
+                    """,
+                    bindings: [.text(projectID), .text(activePhaseID.rawValue)]
+                )
             }
 
             var availableTicketIDs = Set<TicketID>()
@@ -702,6 +693,71 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
             throw RekonImportError.limitExceeded("Evidence discovery exceeds 1024 records")
         }
         records[evidence.path] = evidence
+    }
+
+    private static func readArtifactData(under root: URL, artifactURL: URL) throws -> Data {
+        let directoryFlags = O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+        let rootDescriptor = root.path.withCString { Darwin.open($0, directoryFlags) }
+        guard rootDescriptor >= 0 else {
+            throw RekonImportError.invalidPath(root.path)
+        }
+        defer { _ = Darwin.close(rootDescriptor) }
+
+        let docsDescriptor = "docs".withCString { Darwin.openat(rootDescriptor, $0, directoryFlags) }
+        guard docsDescriptor >= 0 else {
+            throw artifactOpenError(path: artifactURL.path, code: errno)
+        }
+        defer { _ = Darwin.close(docsDescriptor) }
+
+        let deliveryDescriptor = "delivery".withCString { Darwin.openat(docsDescriptor, $0, directoryFlags) }
+        guard deliveryDescriptor >= 0 else {
+            throw artifactOpenError(path: artifactURL.path, code: errno)
+        }
+        defer { _ = Darwin.close(deliveryDescriptor) }
+
+        let fileFlags = O_RDONLY | O_NOFOLLOW | O_CLOEXEC
+        let artifactDescriptor = "dashboard-status.json".withCString {
+            Darwin.openat(deliveryDescriptor, $0, fileFlags)
+        }
+        guard artifactDescriptor >= 0 else {
+            throw artifactOpenError(path: artifactURL.path, code: errno)
+        }
+        defer { _ = Darwin.close(artifactDescriptor) }
+
+        var fileStatus = stat()
+        guard Darwin.fstat(artifactDescriptor, &fileStatus) == 0 else {
+            throw RekonImportError.invalidPath(artifactURL.path)
+        }
+        guard fileStatus.st_mode & S_IFMT == S_IFREG else {
+            throw RekonImportError.invalidPath(artifactURL.path)
+        }
+        guard fileStatus.st_size >= 0,
+              fileStatus.st_size <= off_t(maximumArtifactBytes) else {
+            throw RekonImportError.inputTooLarge
+        }
+
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 64 * 1_024)
+        while data.count <= maximumArtifactBytes {
+            let requestedCount = min(buffer.count, maximumArtifactBytes + 1 - data.count)
+            let readCount = buffer.withUnsafeMutableBytes { bytes in
+                Darwin.read(artifactDescriptor, bytes.baseAddress, requestedCount)
+            }
+            if readCount < 0, errno == EINTR { continue }
+            guard readCount >= 0 else {
+                throw RekonImportError.invalidPath(artifactURL.path)
+            }
+            guard readCount > 0 else { break }
+            data.append(contentsOf: buffer.prefix(readCount))
+        }
+        guard data.count <= maximumArtifactBytes else {
+            throw RekonImportError.inputTooLarge
+        }
+        return data
+    }
+
+    private static func artifactOpenError(path: String, code: Int32) -> RekonImportError {
+        code == ENOENT ? .missingArtifact : .invalidPath(path)
     }
 
     private static func contains(_ candidate: URL, within root: URL) -> Bool {

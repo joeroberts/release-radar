@@ -26,17 +26,35 @@ struct DashboardProjection: Equatable, Sendable {
     static func load(from store: DeliveryStore) async throws -> DashboardProjection {
         try await store.read { connection in
             let projectRows = try connection.dashboardRows(
-                "SELECT id, name FROM projects ORDER BY name"
+                """
+                SELECT projects.id, projects.name, project_active_phases.phase_id AS active_phase_id
+                FROM projects
+                LEFT JOIN project_active_phases ON project_active_phases.project_id = projects.id
+                ORDER BY projects.name
+                """
             )
             var projects: [ProjectDashboardProjection] = []
             var boards: [ProjectID: PhaseBoardProjection] = [:]
 
             for projectRow in projectRows {
                 let projectID = ProjectID(rawValue: try projectRow.text("id"))
-                guard let phaseRow = try connection.row(
-                    "SELECT id, name FROM phases WHERE project_id = ? ORDER BY rowid LIMIT 1",
-                    bindings: [.text(projectID.rawValue)]
-                ) else { continue }
+                let projectName = try projectRow.text("name")
+                let goalContext = try connection.projectGoalContext(projectID: projectID)
+                guard let activePhaseID = try projectRow.nullableText("active_phase_id"),
+                      let phaseRow = try connection.row(
+                        "SELECT id, name FROM phases WHERE project_id = ? AND id = ?",
+                        bindings: [.text(projectID.rawValue), .text(activePhaseID)]
+                      ) else {
+                    projects.append(.init(
+                        id: projectID,
+                        name: projectName,
+                        activePhaseName: "No active phase",
+                        goalContext: goalContext,
+                        currentWorkCount: 0,
+                        attentionCount: 0
+                    ))
+                    continue
+                }
 
                 let phaseID = PhaseID(rawValue: try phaseRow.text("id"))
                 let ticketRows = try connection.dashboardRows(
@@ -83,10 +101,9 @@ struct DashboardProjection: Equatable, Sendable {
                 let attentionCount = lanes
                     .filter { $0.lane == .needsReview || $0.lane == .blocked }
                     .reduce(0) { $0 + $1.count }
-                let goalContext = try connection.projectGoalContext(projectID: projectID)
                 let project = ProjectDashboardProjection(
                     id: projectID,
-                    name: try projectRow.text("name"),
+                    name: projectName,
                     activePhaseName: try phaseRow.text("name"),
                     goalContext: goalContext,
                     currentWorkCount: currentWorkCount,
@@ -338,6 +355,13 @@ private extension SQLiteConnection {
 }
 
 private extension Dictionary where Key == String, Value == SQLiteValue {
+    func nullableText(_ column: String) throws -> String? {
+        guard let value = self[column] else { throw DashboardProjectionError.missingColumn(column) }
+        if case .null = value { return nil }
+        guard case let .text(text) = value else { throw DashboardProjectionError.invalidColumn(column) }
+        return text
+    }
+
     func text(_ column: String) throws -> String {
         guard let value = self[column] else { throw DashboardProjectionError.missingColumn(column) }
         guard case let .text(text) = value else { throw DashboardProjectionError.invalidColumn(column) }

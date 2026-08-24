@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 4
+    static let currentVersion: Int64 = 5
 
     static func migrate(_ connection: SQLiteConnection) throws {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -23,6 +23,9 @@ enum StoreMigrations {
             }
             if version < 4 {
                 try connection.executeScript(schemaVersion4)
+            }
+            if version < 5 {
+                try connection.executeScript(schemaVersion5)
             }
             try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
@@ -255,5 +258,19 @@ enum StoreMigrations {
     ALTER TABLE audit_events ADD COLUMN entity_id TEXT;
     CREATE INDEX audit_events_project_entity_index
         ON audit_events(project_id, entity_type, entity_id, created_at);
+    """
+
+    private static let schemaVersion5 = """
+    CREATE TABLE project_active_phases (
+        project_id TEXT PRIMARY KEY NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        phase_id TEXT NOT NULL,
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
+    );
+    CREATE INDEX project_active_phases_phase_index ON project_active_phases(phase_id);
+    INSERT INTO project_active_phases (project_id, phase_id)
+    SELECT projects.id, phases.id
+    FROM projects
+    JOIN phases ON phases.project_id = projects.id
+    WHERE (SELECT COUNT(*) FROM phases AS candidate WHERE candidate.project_id = projects.id) = 1;
     """
 }

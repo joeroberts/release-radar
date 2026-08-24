@@ -71,6 +71,52 @@ final class RekonImportAcceptanceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: fixture.artifactURL), sourceBytes)
     }
 
+    func testApplyPersistsConfidentActivePhaseInsteadOfEarlierHistoricalPhase() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        try await store.transact(actor: .init(id: "test-seed"), reason: "Seed historical phase") { connection in
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-history', 'project-import', 'Historical')")
+        }
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+
+        try await importer.apply(try importer.preview(fixture.root), to: fixture.projectID)
+
+        let activePhaseID = try await store.read { connection in
+            try connection.scalarText("SELECT phase_id FROM project_active_phases WHERE project_id = 'project-import'")
+        }
+        XCTAssertEqual(activePhaseID, "phase-main")
+    }
+
+    func testMissingActivePhaseCreatesReviewAndLeavesAmbiguousProjectUnset() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: fixture.artifactURL)) as? [String: Any]
+        )
+        object["activePhaseId"] = NSNull()
+        try JSONSerialization.data(withJSONObject: object).write(to: fixture.artifactURL)
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+
+        let preview = try importer.preview(fixture.root)
+        XCTAssertTrue(preview.reviewItems.contains {
+            $0.sourceID == "activePhaseId" && $0.kind == .missingOutcome
+        })
+        try await importer.apply(preview, to: fixture.projectID)
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT phase_id FROM project_active_phases WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = 'project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE id = 'import-review:project-import:missing_outcome:activePhaseId' AND status = 'open'")
+            )
+        }
+        XCTAssertNil(state.0)
+        XCTAssertEqual(state.1, 2)
+        XCTAssertEqual(state.2, 1)
+    }
+
     func testReimportMarksMissingEvidenceUnavailableWithoutDeletingDeliveryOrReopeningReview() async throws {
         let fixture = try RekonImportFixture(testCase: self)
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
@@ -324,6 +370,43 @@ final class RekonImportAcceptanceTests: XCTestCase {
         XCTAssertThrowsError(try importer.preview(fixture.root)) { error in
             guard case .invalidPath = error as? RekonImportError else {
                 return XCTFail("Expected escaped artifact rejection, got \(error)")
+            }
+        }
+        XCTAssertFalse(importer.canImport(fixture.root))
+    }
+
+    func testPreviewRejectsFinalArtifactSymlinkWithinAuthorizedRoot() throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let importer = RekonArtifactImporter(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            project: fixture.authorizedProject
+        )
+        let realArtifact = fixture.root.appendingPathComponent("dashboard-status-real.json")
+        try FileManager.default.moveItem(at: fixture.artifactURL, to: realArtifact)
+        try FileManager.default.createSymbolicLink(at: fixture.artifactURL, withDestinationURL: realArtifact)
+
+        XCTAssertThrowsError(try importer.preview(fixture.root)) { error in
+            guard case .invalidPath = error as? RekonImportError else {
+                return XCTFail("Expected final artifact symlink rejection, got \(error)")
+            }
+        }
+        XCTAssertFalse(importer.canImport(fixture.root))
+    }
+
+    func testPreviewRejectsDeliveryDirectorySymlinkWithinAuthorizedRoot() throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let importer = RekonArtifactImporter(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            project: fixture.authorizedProject
+        )
+        let deliveryDirectory = fixture.root.appendingPathComponent("docs/delivery", isDirectory: true)
+        let realDeliveryDirectory = fixture.root.appendingPathComponent("docs/actual-delivery", isDirectory: true)
+        try FileManager.default.moveItem(at: deliveryDirectory, to: realDeliveryDirectory)
+        try FileManager.default.createSymbolicLink(at: deliveryDirectory, withDestinationURL: realDeliveryDirectory)
+
+        XCTAssertThrowsError(try importer.preview(fixture.root)) { error in
+            guard case .invalidPath = error as? RekonImportError else {
+                return XCTFail("Expected delivery directory symlink rejection, got \(error)")
             }
         }
         XCTAssertFalse(importer.canImport(fixture.root))

@@ -233,6 +233,15 @@ public actor AgentCommandDispatcher {
                 "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name",
                 bindings: [.text(phaseID), .text(projectID.rawValue), .text(name)]
             )
+            try connection.execute(
+                """
+                INSERT INTO project_active_phases (project_id, phase_id)
+                SELECT ?, ?
+                WHERE NOT EXISTS (SELECT 1 FROM project_active_phases WHERE project_id = ?)
+                  AND (SELECT COUNT(*) FROM phases WHERE project_id = ?) = 1
+                """,
+                bindings: [.text(projectID.rawValue), .text(phaseID), .text(projectID.rawValue), .text(projectID.rawValue)]
+            )
         case let .upsertTicket(ticketID, phaseID, outcome, lane):
             try requireProjectEntity(phaseID, table: "phases", projectID: projectID, connection: connection)
             try requireWritableID(ticketID, table: "tickets", projectID: projectID, connection: connection)

@@ -80,6 +80,10 @@ enum DashboardSampleData {
                 "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?)",
                 bindings: [.text(phaseID.rawValue), .text(projectID.rawValue), .text("Post-MVP refinement")]
             )
+            try connection.execute(
+                "INSERT INTO project_active_phases (phase_id, project_id) VALUES (?, ?)",
+                bindings: [.text(phaseID.rawValue), .text(projectID.rawValue)]
+            )
             for ticket in tickets {
                 try connection.execute(
                     "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",

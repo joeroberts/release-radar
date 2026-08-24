@@ -108,6 +108,31 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.9, "dismissed")
     }
 
+    func testFirstAgentPhaseBecomesActiveOnlyWhileItIsTheSolePhase() async throws {
+        let fixture = try await makeFixture(seedDelivery: false)
+        let first = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "23232323-2323-4232-8232-232323232321")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Define first phase",
+            command: .upsertPhase(phaseID: "phase-first", name: "First")
+        ))
+        let second = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "23232323-2323-4232-8232-232323232322")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Define later phase",
+            command: .upsertPhase(phaseID: "phase-later", name: "Later")
+        ))
+
+        XCTAssertNil(first.error)
+        XCTAssertNil(second.error)
+        let activePhaseID = try await fixture.store.read { connection in
+            try connection.scalarText("SELECT phase_id FROM project_active_phases WHERE project_id = 'project-1'")
+        }
+        XCTAssertEqual(activePhaseID, "phase-first")
+    }
+
     func testEmptyCommandIdentifierIsRejectedBeforeAnyWrite() async throws {
         let fixture = try await makeFixture()
         let before = try await counts(fixture.store)
@@ -342,7 +367,7 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         let dispatcher: AgentCommandDispatcher
     }
 
-    private func makeFixture() async throws -> Fixture {
+    private func makeFixture(seedDelivery: Bool = true) async throws -> Fixture {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-AgentBridgeTests-\(UUID().uuidString)", isDirectory: true)
         let projectRoot = temporaryDirectory.appendingPathComponent("project", isDirectory: true)
@@ -352,8 +377,10 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         try await store.transact(actor: .init(id: "fixture"), reason: "Seed bridge fixture") { connection in
             try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'Release Radar')")
             try connection.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('root-1', 'project-1', ?)", bindings: [.text(projectRoot.path)])
-            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
-            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-03', 'project-1', 'phase-1', 'Typed bridge', 'backlog')")
+            if seedDelivery {
+                try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
+                try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-03', 'project-1', 'phase-1', 'Typed bridge', 'backlog')")
+            }
             try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('verified-thread', 'project-1', 'running', '2026-08-23T12:00:00Z')")
             try connection.execute("INSERT INTO review_items (id, project_id, kind, summary) VALUES ('import-review-resolve', 'project-1', 'import', 'Resolve me')")
             try connection.execute("INSERT INTO review_items (id, project_id, kind, summary) VALUES ('import-review-dismiss', 'project-1', 'import', 'Dismiss me')")

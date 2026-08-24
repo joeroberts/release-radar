@@ -375,6 +375,54 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.1, 1)
     }
 
+    func testActivePhaseMustBelongToTheSameProject() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await store.transact(actor: .init(id: "seed"), reason: "Seed active phase integrity") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'One')")
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-2', 'Two')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'One active')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-2', 'project-2', 'Two active')")
+            try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-1', 'phase-1')")
+        }
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "invalid"), reason: "Reject cross-project active phase") { connection in
+                try connection.execute("UPDATE project_active_phases SET phase_id = 'phase-2' WHERE project_id = 'project-1'")
+            }
+        }
+
+        let activePhaseID = try await store.read { connection in
+            try connection.scalarText("SELECT phase_id FROM project_active_phases WHERE project_id = 'project-1'")
+        }
+        XCTAssertEqual(activePhaseID, "phase-1")
+    }
+
+    func testVersionFourMigrationBackfillsOnlyUnambiguousActivePhase() async throws {
+        let databaseURL = try makeDatabaseURL()
+        do {
+            let legacy = try SQLiteConnection(url: databaseURL)
+            try legacy.execute("CREATE TABLE projects (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, first_dashboard_opened INTEGER NOT NULL DEFAULT 0)")
+            try legacy.execute("CREATE TABLE phases (id TEXT PRIMARY KEY NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id), name TEXT NOT NULL, UNIQUE(project_id, id))")
+            try legacy.execute("INSERT INTO projects (id, name) VALUES ('single', 'Single phase')")
+            try legacy.execute("INSERT INTO projects (id, name) VALUES ('multiple', 'Multiple phases')")
+            try legacy.execute("INSERT INTO phases (id, project_id, name) VALUES ('single-phase', 'single', 'Only')")
+            try legacy.execute("INSERT INTO phases (id, project_id, name) VALUES ('multiple-a', 'multiple', 'Earlier')")
+            try legacy.execute("INSERT INTO phases (id, project_id, name) VALUES ('multiple-b', 'multiple', 'Later')")
+            try legacy.execute("PRAGMA user_version = 4")
+        }
+
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT phase_id FROM project_active_phases WHERE project_id = 'single'"),
+                try connection.scalarText("SELECT phase_id FROM project_active_phases WHERE project_id = 'multiple'")
+            )
+        }
+        XCTAssertEqual(state.0, "single-phase")
+        XCTAssertNil(state.1)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 5)
+    }
+
     func testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit() async throws {
         let databaseURL = try makeDatabaseURL()
         do {
@@ -407,7 +455,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 4)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 5)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }
