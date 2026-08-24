@@ -153,6 +153,105 @@ final class EndToEndAcceptanceTests: XCTestCase {
         }
     }
 
+    func testVersionThreeCandidateWithCounterfeitCycleTriggerFailsClosedWithoutMutation() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(store!)
+        store = nil
+        try makeVersionThreeAuditDrift(at: databaseURL)
+        let malformed = try SQLiteConnection(url: databaseURL)
+        try malformed.executeScript("""
+        DROP TRIGGER reject_phase_dependency_cycle_insert;
+        CREATE TRIGGER reject_phase_dependency_cycle_insert
+        AFTER INSERT ON phase_dependencies
+        BEGIN
+            SELECT 1;
+        END;
+        """)
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+
+        guard case let .unavailable(recovery) = await relaunchedStore.availability else {
+            return XCTFail("Expected a counterfeit dependency trigger to make version three unavailable")
+        }
+        let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
+        for connection in [try SQLiteConnection(url: databaseURL), try SQLiteConnection(url: snapshotURL)] {
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 3)
+            XCTAssertTrue(try XCTUnwrap(connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = 'reject_phase_dependency_cycle_insert'"
+            )).contains("SELECT 1"))
+            XCTAssertEqual(
+                try connection.scalarInt("SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'thread_attribution'"),
+                0
+            )
+        }
+    }
+
+    func testCurrentSchemaWithWrongCriticalIndexFailsClosedWithoutMutation() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(store!)
+        store = nil
+        let malformed = try SQLiteConnection(url: databaseURL)
+        try malformed.executeScript("""
+        DROP INDEX audit_events_project_entity_index;
+        CREATE INDEX audit_events_project_entity_index ON audit_events(actor_id);
+        """)
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+
+        guard case let .unavailable(recovery) = await relaunchedStore.availability else {
+            return XCTFail("Expected a wrong-column critical index to make the current schema unavailable")
+        }
+        let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
+        for connection in [try SQLiteConnection(url: databaseURL), try SQLiteConnection(url: snapshotURL)] {
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 7)
+            XCTAssertEqual(
+                try connection.scalarText("SELECT name FROM pragma_index_info('audit_events_project_entity_index') ORDER BY seqno LIMIT 1"),
+                "actor_id"
+            )
+        }
+    }
+
+    func testCurrentSchemaMissingCriticalForeignKeyFailsClosedWithoutMutation() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(store!)
+        store = nil
+        let malformed = try SQLiteConnection(url: databaseURL)
+        try malformed.executeScript("""
+        PRAGMA foreign_keys = OFF;
+        DROP INDEX project_active_phases_phase_index;
+        ALTER TABLE project_active_phases RENAME TO malformed_active_phases;
+        CREATE TABLE project_active_phases (
+            project_id TEXT PRIMARY KEY NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            phase_id TEXT NOT NULL
+        );
+        INSERT INTO project_active_phases SELECT project_id, phase_id FROM malformed_active_phases;
+        DROP TABLE malformed_active_phases;
+        CREATE INDEX project_active_phases_phase_index ON project_active_phases(phase_id);
+        PRAGMA foreign_keys = ON;
+        """)
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+
+        guard case let .unavailable(recovery) = await relaunchedStore.availability else {
+            return XCTFail("Expected a missing project-boundary foreign key to make the current schema unavailable")
+        }
+        let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
+        for connection in [try SQLiteConnection(url: databaseURL), try SQLiteConnection(url: snapshotURL)] {
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 7)
+            XCTAssertEqual(
+                try connection.scalarInt("SELECT COUNT(*) FROM pragma_foreign_key_list('project_active_phases') WHERE \"table\" = 'phases'"),
+                0
+            )
+            XCTAssertEqual(
+                try connection.scalarText("SELECT phase_id FROM project_active_phases WHERE project_id = 'project-1'"),
+                "phase-1"
+            )
+        }
+    }
+
     private func seedProject(_ store: DeliveryStore) async throws {
         try await store.transact(actor: .init(id: "rr10-seed"), reason: "Seed recovery fixture") { connection in
             try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'Release Radar')")

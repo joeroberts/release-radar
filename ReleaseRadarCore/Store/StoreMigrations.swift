@@ -157,7 +157,96 @@ enum StoreMigrations {
                 return false
             }
         }
+        guard try hasExpectedTriggerSemantics(connection, throughVersion: version),
+              try hasExpectedIndexes(
+                connection,
+                throughVersion: version,
+                missingObjects: missingObjects
+              ),
+              try hasExpectedForeignKeys(
+                connection,
+                throughVersion: version,
+                missingTables: missingTables,
+                missingColumns: missingColumns
+              )
+        else { return false }
         return try connection.row("PRAGMA foreign_key_check") == nil
+    }
+
+    private static func hasExpectedTriggerSemantics(
+        _ connection: SQLiteConnection,
+        throughVersion version: Int64
+    ) throws -> Bool {
+        for trigger in criticalTriggers where trigger.version <= version {
+            guard let sql = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = ?",
+                bindings: [.text(trigger.name)]
+            ) else { return false }
+            let normalized = sql.lowercased().split(whereSeparator: \Character.isWhitespace).joined(separator: " ")
+            guard trigger.fragments.allSatisfy({ normalized.contains($0) }) else { return false }
+        }
+        return true
+    }
+
+    private static func hasExpectedIndexes(
+        _ connection: SQLiteConnection,
+        throughVersion version: Int64,
+        missingObjects: Set<String>
+    ) throws -> Bool {
+        for index in criticalIndexes where index.version <= version && !missingObjects.contains(index.name) {
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM pragma_index_list('\(index.table)') WHERE name = ? AND \"unique\" = ?",
+                bindings: [.text(index.name), .integer(index.isUnique ? 1 : 0)]
+            ) == 1,
+            try connection.scalarInt(
+                "SELECT COUNT(*) FROM pragma_index_xinfo('\(index.name)') WHERE key = 1"
+            ) == Int64(index.columns.count)
+            else { return false }
+            for (offset, column) in index.columns.enumerated() {
+                guard try connection.scalarText(
+                    "SELECT name FROM pragma_index_xinfo('\(index.name)') WHERE key = 1 AND seqno = ?",
+                    bindings: [.integer(Int64(offset))]
+                ) == column.name,
+                try connection.scalarInt(
+                    "SELECT desc FROM pragma_index_xinfo('\(index.name)') WHERE key = 1 AND seqno = ?",
+                    bindings: [.integer(Int64(offset))]
+                ) == (column.descending ? 1 : 0)
+                else { return false }
+            }
+        }
+        return true
+    }
+
+    private static func hasExpectedForeignKeys(
+        _ connection: SQLiteConnection,
+        throughVersion version: Int64,
+        missingTables: Set<String>,
+        missingColumns: Set<String>
+    ) throws -> Bool {
+        for foreignKey in requiredForeignKeys where foreignKey.version <= version {
+            guard !missingTables.contains(foreignKey.table),
+                  foreignKey.source.split(separator: ",").allSatisfy({
+                    !missingColumns.contains("\(foreignKey.table).\($0)")
+                  })
+            else { continue }
+            let sql = """
+            SELECT COUNT(*) FROM (
+                SELECT id, \"table\" AS target_table, on_delete,
+                       group_concat(\"from\", ',') AS source_columns,
+                       group_concat(\"to\", ',') AS target_columns
+                FROM (SELECT * FROM pragma_foreign_key_list('\(foreignKey.table)') ORDER BY id, seq)
+                GROUP BY id
+            )
+            WHERE target_table = ? AND source_columns = ? AND target_columns = ? AND on_delete = ?
+            """
+            guard try connection.scalarInt(sql, bindings: [
+                .text(foreignKey.targetTable),
+                .text(foreignKey.source),
+                .text(foreignKey.target),
+                .text(foreignKey.onDelete),
+            ]) == 1 else { return false }
+        }
+        return true
     }
 
     private static func columnNames(
@@ -266,6 +355,84 @@ enum StoreMigrations {
         (5, "index", "project_active_phases_phase_index"),
         (6, "index", "notification_events_project_created_index"),
         (6, "index", "notification_events_state_index"),
+    ]
+
+    private static let criticalTriggers: [(version: Int64, name: String, fragments: [String])] = [
+        (1, "reject_phase_dependency_cycle_insert", [
+            "before insert on phase_dependencies", "with recursive dependency_path",
+            "from phase_dependencies as dependency", "where dependency.project_id = new.project_id",
+            "where phase_id = new.phase_id", "select raise(abort, 'phase dependency cycle')",
+        ]),
+        (1, "reject_phase_dependency_cycle_update", [
+            "before update of project_id, phase_id, depends_on_phase_id on phase_dependencies",
+            "with recursive dependency_path", "from phase_dependencies as dependency",
+            "dependency.id <> old.id", "where phase_id = new.phase_id",
+            "select raise(abort, 'phase dependency cycle')",
+        ]),
+        (1, "reject_ticket_dependency_cycle_insert", [
+            "before insert on ticket_dependencies", "with recursive dependency_path",
+            "from ticket_dependencies as dependency", "where dependency.project_id = new.project_id",
+            "where ticket_id = new.ticket_id", "select raise(abort, 'ticket dependency cycle')",
+        ]),
+        (1, "reject_ticket_dependency_cycle_update", [
+            "before update of project_id, ticket_id, depends_on_ticket_id on ticket_dependencies",
+            "with recursive dependency_path", "from ticket_dependencies as dependency",
+            "dependency.id <> old.id", "where ticket_id = new.ticket_id",
+            "select raise(abort, 'ticket dependency cycle')",
+        ]),
+    ]
+
+    private static let criticalIndexes: [(
+        version: Int64,
+        name: String,
+        table: String,
+        isUnique: Bool,
+        columns: [(name: String, descending: Bool)]
+    )] = [
+        (4, "audit_events_project_entity_index", "audit_events", false,
+         [("project_id", false), ("entity_type", false), ("entity_id", false), ("created_at", false)]),
+        (5, "project_active_phases_phase_index", "project_active_phases", false, [("phase_id", false)]),
+        (6, "notification_events_project_created_index", "notification_events", false,
+         [("project_id", false), ("created_at", true)]),
+        (6, "notification_events_state_index", "notification_events", false,
+         [("state", false), ("created_at", false)]),
+    ]
+
+    private static let requiredForeignKeys: [(
+        version: Int64,
+        table: String,
+        source: String,
+        targetTable: String,
+        target: String,
+        onDelete: String
+    )] = [
+        (1, "project_roots", "project_id", "projects", "id", "CASCADE"),
+        (1, "phases", "project_id", "projects", "id", "CASCADE"),
+        (1, "tickets", "project_id", "projects", "id", "CASCADE"),
+        (1, "tickets", "project_id,phase_id", "phases", "project_id,id", "NO ACTION"),
+        (1, "phase_dependencies", "project_id,phase_id", "phases", "project_id,id", "CASCADE"),
+        (1, "phase_dependencies", "project_id,depends_on_phase_id", "phases", "project_id,id", "CASCADE"),
+        (1, "ticket_dependencies", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (1, "ticket_dependencies", "project_id,depends_on_ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (1, "blockers", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (1, "evidence", "project_id", "projects", "id", "CASCADE"),
+        (1, "evidence", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (1, "thread_exclusions", "project_id", "projects", "id", "CASCADE"),
+        (1, "observed_threads", "project_id", "projects", "id", "CASCADE"),
+        (1, "observed_goals", "project_id,thread_id", "observed_threads", "project_id,id", "CASCADE"),
+        (1, "thread_links", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (1, "thread_links", "project_id,thread_id", "observed_threads", "project_id,id", "CASCADE"),
+        (1, "review_items", "project_id", "projects", "id", "CASCADE"),
+        (1, "review_items", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (1, "notification_events", "ticket_id", "tickets", "id", "SET NULL"),
+        (1, "notification_events", "goal_id", "observed_goals", "id", "SET NULL"),
+        (2, "completion_records", "project_id,ticket_id", "tickets", "project_id,id", "CASCADE"),
+        (3, "project_bookmarks", "project_id", "projects", "id", "CASCADE"),
+        (4, "audit_events", "project_id", "projects", "id", "SET NULL"),
+        (5, "project_active_phases", "project_id", "projects", "id", "CASCADE"),
+        (5, "project_active_phases", "project_id,phase_id", "phases", "project_id,id", "NO ACTION"),
+        (6, "notification_events", "project_id", "projects", "id", "CASCADE"),
+        (6, "notification_occurrences", "project_id", "projects", "id", "CASCADE"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
