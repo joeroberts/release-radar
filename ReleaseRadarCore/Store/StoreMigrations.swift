@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 2
+    static let currentVersion: Int64 = 3
 
     static func migrate(_ connection: SQLiteConnection) throws {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -17,6 +17,9 @@ enum StoreMigrations {
             }
             if version < 2 {
                 try connection.executeScript(schemaVersion2)
+            }
+            if version < 3 {
+                try connection.executeScript(schemaVersion3)
             }
             try connection.execute("PRAGMA user_version = \(currentVersion)")
             try connection.execute("COMMIT")
@@ -228,6 +231,18 @@ enum StoreMigrations {
         request_body BLOB NOT NULL,
         result_data BLOB NOT NULL,
         created_at TEXT NOT NULL
+    );
+    """
+
+    private static let schemaVersion3 = """
+    ALTER TABLE projects ADD COLUMN first_dashboard_opened INTEGER NOT NULL DEFAULT 0
+        CHECK (first_dashboard_opened IN (0, 1));
+    CREATE TABLE project_bookmarks (
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        path TEXT NOT NULL,
+        bookmark_data BLOB NOT NULL,
+        is_stale INTEGER NOT NULL DEFAULT 0 CHECK (is_stale IN (0, 1)),
+        PRIMARY KEY(project_id, path)
     );
     """
 }

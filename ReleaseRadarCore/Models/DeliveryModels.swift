@@ -49,7 +49,17 @@ public struct DeliveryActor: Codable, Equatable, Sendable {
     }
 }
 
-public struct ProjectRecord: Codable, Equatable, Sendable { public let id: ProjectID; public let name: String }
+public struct ProjectRecord: Codable, Equatable, Sendable {
+    public let id: ProjectID
+    public let name: String
+    public let firstDashboardOpened: Bool
+
+    public init(id: ProjectID, name: String, firstDashboardOpened: Bool = false) {
+        self.id = id
+        self.name = name
+        self.firstDashboardOpened = firstDashboardOpened
+    }
+}
 public struct ProjectRootRecord: Codable, Equatable, Sendable { public let id: ProjectRootID; public let projectID: ProjectID; public let path: String }
 public struct PhaseRecord: Codable, Equatable, Sendable { public let id: PhaseID; public let projectID: ProjectID; public let name: String }
 public struct TicketRecord: Codable, Equatable, Sendable { public let id: TicketID; public let projectID: ProjectID; public let phaseID: PhaseID; public let outcome: String; public let lane: TicketLane }

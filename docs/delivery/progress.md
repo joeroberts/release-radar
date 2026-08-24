@@ -26,9 +26,9 @@ Deliver the signed native macOS MVP described by
 
 ## Current gate
 
-- Current task: RR-03 is accepted and released; RR-04 onboarding and first-phase creation is the active dependency-safe slice.
-- Next eligible task: RR-04 only, with one fresh Implementer and no concurrent writer.
-- Open product blockers: none known for RR-04.
+- Current task: RR-04 onboarding and first-phase creation is implemented; fresh independent code, QA, architecture, and security/privacy review remains required.
+- Next eligible task: RR-04 independent review only. RR-06 remains closed until RR-04 is accepted.
+- Open product blockers: no known implementation blocker; independent review remains required.
 - Open operational risks: macOS may require owner approval for the packaged LaunchAgent on another machine; startup reports the required System Settings action explicitly and fails closed until enabled.
 
 ## Task ledger
@@ -88,3 +88,13 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 
 - TPM: GO; RR-03 is technically accepted with all Required findings closed, truthful outcome/replay semantics verified, and scope controlled through the recorded stop-rule recovery.
 - Delivery Manager: GO; RR-03 commits, 26-case focused verification, signed-package boundaries, cleanup, and all four independent reviews are durable. RR-04 is dependency-safe and released to one fresh Implementer with no concurrent writer.
+
+### RR-04 — Folder-backed project onboarding and first phase
+
+- Status: Implemented; not accepted or released pending fresh independent code, QA, architecture, and security/privacy review.
+- Scope: Native folder selection, read-only security-scoped bookmark persistence, canonical component containment, Git-root/worktree discovery, separately authorized external worktrees, durable task exclusions, first-phase gating through the typed dispatcher, persisted unmatched-task review items, and `first_dashboard_opened = false`.
+- TDD: RED at `/tmp/rr04-red.log` established the missing onboarding/bookmark/worktree contracts. A second focused RED at `/tmp/rr04-red-authorize.log` established that external worktrees require an explicit authorization path. GREEN at `/tmp/rr04-green.log` covers root/descendant/contained-worktree inclusion, sibling-prefix/outside rejection, separately authorized worktrees, no-phase refusal, typed first-phase audit, durable exclusion after a recreated onboarding service, persisted review items, and notification ineligibility.
+- Verification: Fresh focused `OnboardingAcceptanceTests` and directly affected `StoreAcceptanceTests` passed 17/17 with 0 failures/skips at `/tmp/rr04-final-tests.log`. A normal signed Debug `ReleaseRadar` build passed at `/tmp/rr04-final-build.log` with the configured Apple Development identity. Final diff check is recorded with the implementation commit.
+- Reviews: Pending. Required/Optional/Out-of-scope classifications are not yet recorded.
+- Decisions/risks: The onboarding service never treats a path prefix as containment. A worktree outside the folder bookmark is rejected until the owner selects that exact discovered worktree. The app writes project metadata directly through its store-owned transaction; first-phase creation goes through the existing typed command dispatcher and is audited. No Codex live-observer, board, importer, or notification behavior is introduced.
+- Next eligible task: RR-04 independent review only; RR-06 remains closed.

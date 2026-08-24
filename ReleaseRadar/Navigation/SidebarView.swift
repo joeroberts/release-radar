@@ -78,11 +78,15 @@ private struct DetailPlaceholderView: View {
     let route: AppRoute
 
     var body: some View {
+        if route == .projects {
+            OnboardingView()
+        } else {
         ContentUnavailableView(
             route.title,
             systemImage: route.systemImage,
             description: Text("This section is ready for its delivery slice.")
         )
         .navigationTitle(route.title)
+        }
     }
 }
