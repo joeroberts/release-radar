@@ -1,23 +1,82 @@
 import ReleaseRadarCore
 import SwiftUI
 
+enum BoardDensity: String, CaseIterable, Identifiable {
+    case fullOutcomes
+    case compact
+
+    var id: Self { self }
+
+    var displayName: String {
+        switch self {
+        case .fullOutcomes: "Full outcomes"
+        case .compact: "Compact density"
+        }
+    }
+
+    func presentation(forLaneWidth laneWidth: CGFloat) -> DashboardCardPresentation {
+        guard self == .fullOutcomes, laneWidth > 180 else { return .compactID }
+        return .fullOutcome
+    }
+
+    func accessibilityValue(forLaneWidth laneWidth: CGFloat) -> String {
+        if self == .fullOutcomes, presentation(forLaneWidth: laneWidth) == .compactID {
+            return "Full outcomes requested; showing Compact density at the current width"
+        }
+        return displayName
+    }
+
+    func accessibilityOptionLabel(isSelected: Bool, forLaneWidth laneWidth: CGFloat) -> String {
+        isSelected ? accessibilityValue(forLaneWidth: laneWidth) : displayName
+    }
+
+    func accessibilityHelp(forLaneWidth laneWidth: CGFloat) -> String {
+        if self == .fullOutcomes, presentation(forLaneWidth: laneWidth) == .compactID {
+            return "Full outcomes remains selected and restores automatically when the window is wide enough."
+        }
+        return "Choose whether cards show full outcomes or use compact density."
+    }
+}
+
+enum PhaseBoardLayout {
+    private static let sideInspectorMinimumWidth: CGFloat = 1_260
+
+    static func usesVerticallyScrollableStack(forWidth width: CGFloat) -> Bool {
+        width < sideInspectorMinimumWidth
+    }
+}
+
 struct PhaseBoardView: View {
     let board: PhaseBoardProjection
     @Binding var selectedTicketID: TicketID
+    @State private var density: BoardDensity = .fullOutcomes
+
+    private let minimumLaneWidth: CGFloat = 112
+    private let laneSpacing: CGFloat = 8
 
     var body: some View {
         GeometryReader { geometry in
-            let showsSideInspector = geometry.size.width >= 1_260
+            let showsSideInspector = !PhaseBoardLayout.usesVerticallyScrollableStack(
+                forWidth: geometry.size.width
+            )
             let boardWidth = geometry.size.width - (showsSideInspector ? 346 : 0) - 48
-            let laneWidth = max(112, (boardWidth - 32) / 5)
-            let presentation = DashboardLayout.presentation(forLaneWidth: laneWidth)
+            let requiredLaneWidth = minimumLaneWidth * 5 + laneSpacing * 4
+            let needsHorizontalRecovery = boardWidth < requiredLaneWidth
+            let laneWidth = needsHorizontalRecovery
+                ? minimumLaneWidth
+                : (boardWidth - laneSpacing * 4) / 5
+            let presentation = density.presentation(forLaneWidth: laneWidth)
 
             VStack(alignment: .leading, spacing: 16) {
-                boardHeader(presentation: presentation)
+                boardHeader(laneWidth: laneWidth)
 
                 if showsSideInspector {
                     HStack(alignment: .top, spacing: 16) {
-                        lanes(presentation: presentation, laneWidth: laneWidth)
+                        laneWorkspace(
+                            presentation: presentation,
+                            laneWidth: laneWidth,
+                            needsHorizontalRecovery: needsHorizontalRecovery
+                        )
 
                         Divider()
 
@@ -25,15 +84,23 @@ struct PhaseBoardView: View {
                             .frame(width: 314)
                     }
                 } else {
-                    VStack(spacing: 12) {
-                        lanes(presentation: presentation, laneWidth: laneWidth)
-                            .frame(minHeight: 390)
+                    ScrollView(.vertical) {
+                        VStack(spacing: 12) {
+                            laneWorkspace(
+                                presentation: presentation,
+                                laneWidth: laneWidth,
+                                needsHorizontalRecovery: needsHorizontalRecovery
+                            )
+                                .frame(height: 390)
 
-                        Divider()
+                            Divider()
 
-                        detail
-                            .frame(maxHeight: 260)
+                            detail
+                                .frame(height: 260)
+                        }
                     }
+                    .scrollIndicators(.automatic)
+                    .accessibilityIdentifier("phase-board-vertical-recovery")
                 }
             }
             .padding(24)
@@ -42,7 +109,7 @@ struct PhaseBoardView: View {
         .accessibilityIdentifier("phase-board")
     }
 
-    private func boardHeader(presentation: DashboardCardPresentation) -> some View {
+    private func boardHeader(laneWidth: CGFloat) -> some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(board.project.name)
@@ -57,13 +124,40 @@ struct PhaseBoardView: View {
 
             Spacer()
 
-            Text(presentation == .fullOutcome ? "Full outcomes" : "Compact IDs")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(.quaternary, in: Capsule())
-                .accessibilityIdentifier("board-presentation")
+            Picker("Card density", selection: $density) {
+                ForEach(BoardDensity.allCases) { option in
+                    Text(option.displayName)
+                        .accessibilityLabel(
+                            option.accessibilityOptionLabel(
+                                isSelected: density == option,
+                                forLaneWidth: laneWidth
+                            )
+                        )
+                        .tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .fixedSize()
+            .accessibilityIdentifier("board-density")
+            .accessibilityValue(density.accessibilityValue(forLaneWidth: laneWidth))
+            .accessibilityHint(density.accessibilityHelp(forLaneWidth: laneWidth))
+        }
+    }
+
+    @ViewBuilder
+    private func laneWorkspace(
+        presentation: DashboardCardPresentation,
+        laneWidth: CGFloat,
+        needsHorizontalRecovery: Bool
+    ) -> some View {
+        if needsHorizontalRecovery {
+            ScrollView(.horizontal) {
+                lanes(presentation: presentation, laneWidth: laneWidth)
+            }
+            .scrollIndicators(.automatic)
+            .accessibilityLabel("Phase board lanes; scroll horizontally for all five lanes")
+        } else {
+            lanes(presentation: presentation, laneWidth: laneWidth)
         }
     }
 
@@ -71,7 +165,7 @@ struct PhaseBoardView: View {
         presentation: DashboardCardPresentation,
         laneWidth: CGFloat
     ) -> some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: laneSpacing) {
             ForEach(board.lanes) { lane in
                 VStack(alignment: .leading, spacing: 8) {
                     ViewThatFits(in: .horizontal) {

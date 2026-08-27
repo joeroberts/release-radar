@@ -78,11 +78,21 @@ final class RekonImportAcceptanceTests: XCTestCase {
         try await store.transact(actor: .init(id: "owner"), reason: "Open imported project") { connection in
             try connection.execute("UPDATE projects SET first_dashboard_opened = 1 WHERE id = 'project-import'")
         }
+        let rules = AlertRuleStore(store: store)
+        _ = try await rules.set(.needsReviewEntry, enabled: false)
         let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
         let preview = try importer.preview(fixture.root)
 
         try await importer.apply(preview, to: fixture.projectID)
+        _ = try await rules.set(.needsReviewEntry, enabled: true)
         try await importer.apply(preview, to: fixture.projectID)
+
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: fixture.artifactURL)) as? [String: Any]
+        )
+        object["activePhaseId"] = NSNull()
+        try JSONSerialization.data(withJSONObject: object).write(to: fixture.artifactURL)
+        try await importer.apply(try importer.preview(fixture.root), to: fixture.projectID)
 
         let state = try await store.read { connection in
             (
@@ -91,9 +101,9 @@ final class RekonImportAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(DISTINCT fingerprint) FROM notification_events WHERE project_id = 'project-import'")
             )
         }
-        XCTAssertEqual(state.0, 3)
-        XCTAssertEqual(state.1, 3)
-        XCTAssertEqual(state.2, 3)
+        XCTAssertEqual(state.0, 4)
+        XCTAssertEqual(state.1, 1)
+        XCTAssertEqual(state.2, 1)
     }
 
     func testApplyPersistsConfidentActivePhaseInsteadOfEarlierHistoricalPhase() async throws {

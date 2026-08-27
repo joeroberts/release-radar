@@ -2,7 +2,7 @@ import SwiftUI
 import ReleaseRadarCore
 
 struct ProjectsView: View {
-    @State private var isAddingProject = false
+    @Environment(\.openWindow) private var openWindow
     let projection: DashboardProjection
     let onboardingStore: DeliveryStore
     let openProject: (ProjectID) -> Void
@@ -10,7 +10,10 @@ struct ProjectsView: View {
 
     var body: some View {
         if projection.projects.isEmpty {
-            OnboardingView(store: onboardingStore) { _ in
+            OnboardingView(
+                store: onboardingStore,
+                onOpenExisting: openProject
+            ) { _ in
                 await onboardingFinished()
             }
         } else {
@@ -27,7 +30,7 @@ struct ProjectsView: View {
                         Spacer()
 
                         Button("Add Project…") {
-                            isAddingProject = true
+                            openWindow(id: "add-project")
                         }
                         .accessibilityIdentifier("projects-add")
                     }
@@ -85,13 +88,6 @@ struct ProjectsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .navigationTitle("Projects")
-            .sheet(isPresented: $isAddingProject) {
-                OnboardingView(store: onboardingStore) { _ in
-                    await onboardingFinished()
-                    isAddingProject = false
-                }
-                .frame(minWidth: 720, minHeight: 560)
-            }
         }
     }
 

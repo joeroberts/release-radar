@@ -1,5 +1,5 @@
-import SwiftUI
 import ReleaseRadarCore
+import SwiftUI
 
 struct DependencyGraphView: View {
     let graph: DependencyGraphProjection
@@ -11,104 +11,209 @@ struct DependencyGraphView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            Divider()
-            HSplitView {
-                graphWorkspace
-                    .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
-                inspector
-                    .frame(minWidth: 250, idealWidth: 290, maxWidth: 340, maxHeight: .infinity)
+        GeometryReader { geometry in
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                Divider()
+
+                if geometry.size.width >= 980 {
+                    HStack(spacing: 0) {
+                        graphWorkspace
+                            .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
+                        Divider()
+                        inspector
+                            .frame(width: 300)
+                            .frame(maxHeight: .infinity)
+                    }
+                } else {
+                    ScrollView(.vertical) {
+                        VStack(spacing: 0) {
+                            graphWorkspace
+                                .frame(height: max(480, geometry.size.height * 0.72))
+                            Divider()
+                            inspector
+                                .frame(minHeight: 390)
+                        }
+                    }
+                }
             }
         }
         .accessibilityIdentifier("content-dependencies")
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Phase dependency map")
-                    .font(.largeTitle.weight(.semibold))
-                Text("Selected path for \(selectedGraph.selected.ticket.id.rawValue) · direct and indirect relationships")
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            laneLegend
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Phase dependency map")
+                .font(.largeTitle.weight(.semibold))
+            Text("Selected path for \(selectedGraph.selected.ticket.id.rawValue) · direct and indirect relationships across the phase")
+                .foregroundStyle(.secondary)
         }
         .padding(24)
     }
 
-    private var laneLegend: some View {
-        HStack(spacing: 10) {
-            ForEach(TicketLane.allCases, id: \.self) { lane in
-                HStack(spacing: 4) {
-                    Circle().fill(lane.graphColor).frame(width: 7, height: 7)
-                    Text(lane.dashboardTitle).font(.caption)
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Delivery lane color legend")
-    }
-
     private var graphWorkspace: some View {
         GeometryReader { proxy in
-            let canvasSize = CGSize(width: max(proxy.size.width, 1_080), height: max(proxy.size.height, 620))
+            let canvasSize = CGSize(
+                width: max(proxy.size.width, 820),
+                height: max(proxy.size.height - 136, 400)
+            )
             let layout = DependencyGraphLayout.makeLayout(graph: selectedGraph, size: canvasSize)
-            ScrollView([.horizontal, .vertical]) {
-                ZStack(alignment: .topLeading) {
-                    Canvas { context, _ in
-                        for connector in layout.connectors {
-                            var path = Path()
-                            path.move(to: connector.start)
-                            let middle = (connector.start.x + connector.end.x) / 2
-                            path.addCurve(
-                                to: connector.end,
-                                control1: CGPoint(x: middle, y: connector.start.y),
-                                control2: CGPoint(x: middle, y: connector.end.y)
-                            )
-                            let isBlocking = selectedGraph.node(id: connector.sourceID)?.lane == .blocked
-                            context.stroke(
-                                path,
-                                with: .color(isBlocking ? .red.opacity(0.72) : .secondary.opacity(0.55)),
-                                style: StrokeStyle(lineWidth: isBlocking ? 2 : 1.2)
-                            )
-                            context.fill(
-                                Path(ellipseIn: CGRect(x: connector.end.x - 3, y: connector.end.y - 3, width: 6, height: 6)),
-                                with: .color(isBlocking ? .red : .secondary)
-                            )
-                        }
-                    }
-                    ForEach(selectedGraph.nodes) { node in
-                        if let frame = layout.frames[node.id] {
-                            graphNode(node)
-                                .frame(width: frame.width, height: frame.height)
-                                .position(x: frame.midX, y: frame.midY)
-                        }
-                    }
+
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("\(layout.frames.count) of \(selectedGraph.nodes.count) phase tickets shown")
+                        .font(.subheadline.weight(.medium))
+                        .monospacedDigit()
+                    laneLegend
                 }
-                .frame(width: canvasSize.width, height: canvasSize.height)
-                .padding(10)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+
+                Divider()
+
+                ScrollView([.horizontal, .vertical]) {
+                    VStack(spacing: 0) {
+                        columnHeaders(layout.columns, canvasWidth: canvasSize.width)
+                        Divider()
+                        dependencyCanvas(layout: layout, canvasSize: canvasSize)
+                    }
+                    .frame(width: canvasSize.width)
+                }
+                .scrollIndicators(.automatic)
             }
+            .background(Color(nsColor: .underPageBackgroundColor).opacity(0.38))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Selected dependency path; \(layout.frames.count) of \(selectedGraph.nodes.count) phase tickets shown")
         }
-        .background(Color(nsColor: .underPageBackgroundColor).opacity(0.38))
         .accessibilityIdentifier("dependency-graph")
     }
 
-    private func graphNode(_ node: DependencyGraphNode) -> some View {
-        Button {
+    private var laneLegend: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 105), spacing: 12)],
+            alignment: .leading,
+            spacing: 7
+        ) {
+            ForEach(TicketLane.allCases, id: \.self) { lane in
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(lane.graphColor)
+                        .frame(width: 12, height: 12)
+                    Text(lane.dashboardTitle)
+                        .font(.caption)
+                }
+                .accessibilityElement(children: .combine)
+            }
+            Label("Dependency", systemImage: "arrow.right")
+                .font(.caption)
+                .accessibilityLabel("Dependency connector")
+            Label("Blocking path", systemImage: "arrow.right")
+                .font(.caption)
+                .foregroundStyle(.red)
+                .accessibilityLabel("Blocking path connector")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Delivery lane and relationship legend")
+    }
+
+    private func columnHeaders(
+        _ columns: [DependencyGraphColumn],
+        canvasWidth: CGFloat
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(columns) { column in
+                Text(column.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(column.role == .selectedTicket ? Color.accentColor : .secondary)
+                    .frame(width: column.frame.width, height: 43)
+                    .position(x: column.frame.midX, y: 21.5)
+                    .accessibilityAddTraits(.isHeader)
+            }
+        }
+        .frame(width: canvasWidth, height: 43)
+    }
+
+    private func dependencyCanvas(
+        layout: DependencyGraphLayoutResult,
+        canvasSize: CGSize
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            Canvas { context, _ in
+                for column in layout.columns.dropLast() {
+                    var separator = Path()
+                    separator.move(to: CGPoint(x: column.frame.maxX, y: 0))
+                    separator.addLine(to: CGPoint(x: column.frame.maxX, y: canvasSize.height))
+                    context.stroke(
+                        separator,
+                        with: .color(.secondary.opacity(0.28)),
+                        style: StrokeStyle(lineWidth: 1, dash: [5, 6])
+                    )
+                }
+
+                for connector in layout.connectors {
+                    let color = connector.isBlocking ? Color.red : Color.secondary
+                    var path = Path()
+                    path.move(to: connector.start)
+                    let middle = (connector.start.x + connector.end.x) / 2
+                    path.addCurve(
+                        to: connector.end,
+                        control1: CGPoint(x: middle, y: connector.start.y),
+                        control2: CGPoint(x: middle, y: connector.end.y)
+                    )
+                    context.stroke(
+                        path,
+                        with: .color(color.opacity(connector.isBlocking ? 0.9 : 0.68)),
+                        style: StrokeStyle(lineWidth: connector.isBlocking ? 2.4 : 1.4)
+                    )
+
+                    let backward: CGFloat = connector.end.x >= connector.start.x ? -8 : 8
+                    var arrowhead = Path()
+                    arrowhead.move(to: connector.end)
+                    arrowhead.addLine(to: CGPoint(x: connector.end.x + backward, y: connector.end.y - 5))
+                    arrowhead.addLine(to: CGPoint(x: connector.end.x + backward, y: connector.end.y + 5))
+                    arrowhead.closeSubpath()
+                    context.fill(arrowhead, with: .color(color))
+                }
+            }
+            .accessibilityHidden(true)
+
+            ForEach(selectedGraph.nodes) { node in
+                if let frame = layout.frames[node.id], let role = layout.role(for: node.id) {
+                    graphNode(node, role: role)
+                        .frame(width: frame.width, height: frame.height)
+                        .position(x: frame.midX, y: frame.midY)
+                }
+            }
+        }
+        .frame(width: canvasSize.width, height: canvasSize.height)
+    }
+
+    private func graphNode(
+        _ node: DependencyGraphNode,
+        role: DependencyGraphColumnRole
+    ) -> some View {
+        let isSelected = node.id == selectedTicketID
+        return Button {
             selectedTicketID = node.id
         } label: {
             ZStack(alignment: .topTrailing) {
-                Text(node.id.rawValue)
-                    .font(.system(.subheadline, design: .monospaced, weight: .semibold))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(node.lane.graphColor.opacity(node.id == selectedTicketID ? 0.28 : 0.15))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(node.id == selectedTicketID ? Color.accentColor : node.lane.graphColor, lineWidth: node.id == selectedTicketID ? 2 : 1)
+                VStack(spacing: 4) {
+                    Text(node.id.rawValue)
+                        .font(.system(.subheadline, design: .monospaced, weight: .semibold))
+                        .lineLimit(1)
+                    if node.lane == .blocked {
+                        Label("Blocked", systemImage: "exclamationmark.octagon.fill")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.red)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(node.lane.graphColor.opacity(isSelected ? 0.28 : 0.15))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isSelected ? Color.accentColor : node.lane.graphColor, lineWidth: isSelected ? 2.5 : 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
                 if node.blockerCount > 0 {
                     Text("\(node.blockerCount)")
                         .font(.caption2.weight(.medium))
@@ -116,56 +221,97 @@ struct DependencyGraphView: View {
                         .frame(width: 21, height: 21)
                         .background(.red, in: Circle())
                         .offset(x: 7, y: -7)
-                        .accessibilityLabel("\(node.blockerCount) blocker\(node.blockerCount == 1 ? "" : "s")")
+                        .accessibilityHidden(true)
                 }
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(node.id.rawValue), \(node.lane.dashboardTitle), \(node.blockerCount) blockers")
+        .accessibilityLabel(
+            "\(node.id.rawValue), \(node.lane.dashboardTitle), \(node.blockerCount) "
+                + "blocker\(node.blockerCount == 1 ? "" : "s"), \(role.title)"
+                + (isSelected ? ", selected" : "")
+        )
+        .accessibilityHint("Select to show this ticket's dependency path")
     }
 
     private var inspector: some View {
         let selection = selectedGraph.selected
         return ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 16) {
                 Text("Selected ticket")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
+                    .accessibilityAddTraits(.isHeader)
                 Text(selection.ticket.id.rawValue)
                     .font(.system(.title2, design: .monospaced, weight: .semibold))
-                Text(selection.ticket.outcome)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Outcome")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(selection.ticket.outcome)
+                }
                 LabeledContent("Delivery lane", value: selection.ticket.lane.dashboardTitle)
+                LabeledContent("Runtime", value: freshness.state.rawValue.capitalized)
+                LabeledContent("Freshness", value: freshnessDescription)
                 if let codexFailure = FailureStatePresentation(freshness: freshness) {
                     FailureStateView(presentation: codexFailure, style: .compact)
-                } else {
-                    LabeledContent("Runtime", value: "Available")
                 }
+
+                Divider()
                 relationshipSection("Directly requires", nodes: selection.directRequires)
+                Divider()
                 relationshipSection("Indirectly requires", nodes: selection.indirectRequires)
+                Divider()
                 relationshipSection("Unlocks", nodes: selection.unlocks)
             }
-            .padding(22)
+            .padding(20)
         }
         .accessibilityIdentifier("dependency-inspector")
     }
 
     private func relationshipSection(_ title: String, nodes: [DependencyGraphNode]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 7) {
             Text("\(title) · \(nodes.count)")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
+                .accessibilityAddTraits(.isHeader)
             if nodes.isEmpty {
                 Text("None").foregroundStyle(.tertiary)
             } else {
                 ForEach(nodes) { node in
-                    Text("\(node.id.rawValue) · \(node.lane.dashboardTitle)")
-                        .font(.subheadline)
+                    Button {
+                        selectedTicketID = node.id
+                    } label: {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(node.lane.graphColor)
+                                .frame(width: 8, height: 8)
+                            Text(node.id.rawValue)
+                                .font(.system(.subheadline, design: .monospaced))
+                            Spacer(minLength: 8)
+                            Text(node.lane.dashboardTitle)
+                                .font(.caption)
+                                .foregroundStyle(node.lane == .blocked ? .red : .secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(node.id.rawValue), \(node.lane.dashboardTitle)")
+                    .accessibilityHint("Select to show this ticket's dependency path")
                 }
             }
         }
+    }
+
+    private var freshnessDescription: String {
+        guard let lastObservedAt = freshness.lastObservedAt else {
+            return freshness.reason ?? "No observation available"
+        }
+        return "Last observed \(lastObservedAt.formatted(date: .abbreviated, time: .shortened))"
     }
 }
 

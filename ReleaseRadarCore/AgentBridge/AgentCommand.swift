@@ -34,6 +34,7 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case resolveBlocker(blockerID: String)
     case addEvidence(id: String, ticketID: String?, path: String)
     case linkThread(id: String, ticketID: String, threadID: String)
+    case linkGoal(id: String, ticketID: String, goalID: String)
     case requestReview(id: String, ticketID: String?, kind: String, summary: String)
     case recordCompletion(id: String, ticketID: String, summary: String)
     case resolveImportReview(reviewItemID: String)

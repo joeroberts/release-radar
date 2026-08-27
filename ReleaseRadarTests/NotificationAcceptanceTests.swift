@@ -101,7 +101,7 @@ final class NotificationAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.3, "An agent recorded completed delivery work in Release Radar.")
     }
 
-    func testLinkedGoalBlockedEntryAlertsOncePausedSuppressesAndReentryAlertsAgain() async throws {
+    func testLinkedGoalBlockedAndPausedOccurrencesAreReciprocalAcrossSuppressedTransitions() async throws {
         let fixture = try await makeFixture(firstDashboardOpened: true)
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed linked runtime") { connection in
             try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('thread-1', 'project-1', 'active', '2026-08-24T10:00:00Z')")
@@ -109,22 +109,192 @@ final class NotificationAcceptanceTests: XCTestCase {
         }
         let recorder = MeaningfulDeliveryEventRecorder(store: fixture.store)
 
-        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .paused, observedAt: Date(timeIntervalSince1970: 1))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .active, observedAt: Date(timeIntervalSince1970: 1))
+        let linkResult = await fixture.dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909017")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Approve linked goal",
+            command: .linkGoal(id: "goal-link-1", ticketID: "RR-09", goalID: "goal-1")
+        ))
+        XCTAssertNil(linkResult.error)
+        let rules = AlertRuleStore(store: fixture.store)
+        _ = try await rules.set(.blockedLinkedGoals, enabled: false)
         try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .blocked, observedAt: Date(timeIntervalSince1970: 2))
-        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .blocked, observedAt: Date(timeIntervalSince1970: 3))
-        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .active, observedAt: Date(timeIntervalSince1970: 4))
-        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .blocked, observedAt: Date(timeIntervalSince1970: 5))
+        _ = try await rules.set(.blockedLinkedGoals, enabled: true)
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .blocked, observedAt: Date(timeIntervalSince1970: 2.5))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .active, observedAt: Date(timeIntervalSince1970: 3))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .blocked, observedAt: Date(timeIntervalSince1970: 4))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .paused, observedAt: Date(timeIntervalSince1970: 5))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .blocked, observedAt: Date(timeIntervalSince1970: 6))
+        _ = try await rules.set(.pausedGoals, enabled: true)
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .paused, observedAt: Date(timeIntervalSince1970: 7))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-1", goalID: "goal-1", status: .blocked, observedAt: Date(timeIntervalSince1970: 8))
 
         let state = try await fixture.store.read { connection in
             (
                 try connection.scalarText("SELECT status FROM observed_goals WHERE id = 'goal-1'"),
                 try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE event_kind = 'goal_blocked'"),
-                try connection.scalarInt("SELECT MAX(occurrence) FROM notification_events WHERE event_kind = 'goal_blocked'")
+                try connection.scalarInt("SELECT MAX(occurrence) FROM notification_events WHERE event_kind = 'goal_blocked'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE event_kind = 'goal_paused'"),
+                try connection.scalarInt("SELECT is_active FROM notification_occurrences WHERE event_kind = 'goal_blocked'"),
+                try connection.scalarInt("SELECT is_active FROM notification_occurrences WHERE event_kind = 'goal_paused'")
             )
         }
         XCTAssertEqual(state.0, "blocked")
-        XCTAssertEqual(state.1, 2)
-        XCTAssertEqual(state.2, 2)
+        XCTAssertEqual(state.1, 3)
+        XCTAssertEqual(state.2, 3)
+        XCTAssertEqual(state.3, 1)
+        XCTAssertEqual(state.4, 1)
+        XCTAssertEqual(state.5, 0)
+    }
+
+    func testDisabledEntriesDoNotAlertAfterReenableUntilStableBridgeRecordsEnterAgain() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        let rules = AlertRuleStore(store: fixture.store)
+        _ = try await rules.set(.agentCompletionAndReview, enabled: false)
+        _ = try await rules.set(.needsReviewEntry, enabled: false)
+
+        let review = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909061")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Suppressed review still commits",
+            command: .requestReview(id: "suppressed-review", ticketID: "RR-09", kind: "agent_request", summary: "Review")
+        ))
+        let completion = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909062")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Suppressed completion still commits",
+            command: .recordCompletion(id: "suppressed-completion", ticketID: "RR-09", summary: "Done")
+        ))
+        XCTAssertNil(review.error)
+        XCTAssertNil(completion.error)
+        try await transition(.needsReview, requestID: "90909090-9090-4090-8090-909090909063", fixture: fixture)
+
+        let suppressed = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE id = 'suppressed-review' AND status = 'open'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM completion_records WHERE id = 'suppressed-completion'"),
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-09'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason LIKE 'Suppressed % still commits' OR reason LIKE 'Transition RR-09 %'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_occurrences"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events")
+            )
+        }
+        XCTAssertEqual(suppressed.0, 1)
+        XCTAssertEqual(suppressed.1, 1)
+        XCTAssertEqual(suppressed.2, TicketLane.needsReview.rawValue)
+        XCTAssertEqual(suppressed.3, 3)
+        XCTAssertEqual(suppressed.4, 0)
+        XCTAssertEqual(suppressed.5, 0)
+        let activity = try await ProjectActivityProjection.load(from: fixture.store, projectID: .init(rawValue: "project-1"))
+        XCTAssertFalse(activity.items.contains { $0.source == .notification })
+
+        _ = try await rules.set(.agentCompletionAndReview, enabled: true)
+        _ = try await rules.set(.needsReviewEntry, enabled: true)
+        let stableReview = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909064")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Observe the same open review",
+            command: .requestReview(id: "suppressed-review", ticketID: "RR-09", kind: "agent_request", summary: "Review again")
+        ))
+        let stableCompletion = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909065")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Observe the same completion",
+            command: .recordCompletion(id: "suppressed-completion", ticketID: "RR-09", summary: "Still done")
+        ))
+        XCTAssertNil(stableReview.error)
+        XCTAssertNil(stableCompletion.error)
+        try await transition(.needsReview, requestID: "90909090-9090-4090-8090-909090909066", fixture: fixture)
+        let retroactiveCount = try await fixture.store.read { connection in
+            try connection.scalarInt("SELECT COUNT(*) FROM notification_events")
+        }
+        XCTAssertEqual(retroactiveCount, 0)
+
+        let resolved = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909067")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Resolve review before a later request",
+            command: .resolveImportReview(reviewItemID: "suppressed-review")
+        ))
+        let reenteredReview = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909068")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Request review after resolution",
+            command: .requestReview(id: "suppressed-review", ticketID: "RR-09", kind: "agent_request", summary: "Review after resolution")
+        ))
+        let laterCompletion = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909069")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Record a later completion",
+            command: .recordCompletion(id: "later-completion", ticketID: "RR-09", summary: "Later work done")
+        ))
+        XCTAssertNil(resolved.error)
+        XCTAssertNil(reenteredReview.error)
+        XCTAssertNil(laterCompletion.error)
+        try await transition(.inProgress, requestID: "90909090-9090-4090-8090-909090909070", fixture: fixture)
+        try await transition(.needsReview, requestID: "90909090-9090-4090-8090-909090909071", fixture: fixture)
+
+        let laterEntries = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE event_kind = 'review_requested'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE event_kind = 'agent_completed'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE event_kind = 'ticket_needs_review'")
+            )
+        }
+        XCTAssertEqual(laterEntries.0, 1)
+        XCTAssertEqual(laterEntries.1, 1)
+        XCTAssertEqual(laterEntries.2, 1)
+
+        XCTAssertEqual(MeaningfulDeliveryEventKind.goalBlocked.alertRuleKind, .blockedLinkedGoals)
+        XCTAssertEqual(MeaningfulDeliveryEventKind.goalPaused.alertRuleKind, .pausedGoals)
+        XCTAssertEqual(MeaningfulDeliveryEventKind.agentCompleted.alertRuleKind, .agentCompletionAndReview)
+        XCTAssertEqual(MeaningfulDeliveryEventKind.reviewRequested.alertRuleKind, .agentCompletionAndReview)
+        XCTAssertEqual(MeaningfulDeliveryEventKind.ticketNeedsReview.alertRuleKind, .needsReviewEntry)
+        XCTAssertEqual(MeaningfulDeliveryEventKind.importNeedsReview.alertRuleKind, .needsReviewEntry)
+    }
+
+    func testNewerGoalOnLinkedThreadCannotStealApprovedGoalBlockedAlert() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed linked runtime") { connection in
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('thread-identity', 'project-1', 'active', '2026-08-25T10:00:00Z')")
+            try connection.execute("INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES ('thread-link-identity', 'project-1', 'RR-09', 'thread-identity')")
+        }
+        let recorder = MeaningfulDeliveryEventRecorder(store: fixture.store)
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-identity", goalID: "goal-approved", status: .active, observedAt: Date(timeIntervalSince1970: 1))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-identity", goalID: "goal-newer", status: .active, observedAt: Date(timeIntervalSince1970: 2))
+        let linkResult = await fixture.dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909018")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Approve older goal identity",
+            command: .linkGoal(id: "goal-link-approved", ticketID: "RR-09", goalID: "goal-approved")
+        ))
+        XCTAssertNil(linkResult.error)
+
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-identity", goalID: "goal-approved", status: .blocked, observedAt: Date(timeIntervalSince1970: 3))
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread-identity", goalID: "goal-newer", status: .blocked, observedAt: Date(timeIntervalSince1970: 4))
+
+        let state = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE event_kind = 'goal_blocked'"),
+                try connection.scalarText("SELECT ticket_id FROM notification_events WHERE event_kind = 'goal_blocked'"),
+                try connection.scalarText("SELECT goal_id FROM notification_events WHERE event_kind = 'goal_blocked'"),
+                try connection.scalarText("SELECT subject_id FROM notification_events WHERE event_kind = 'goal_blocked'")
+            )
+        }
+        XCTAssertEqual(state.0, 1)
+        XCTAssertEqual(state.1, "RR-09")
+        XCTAssertEqual(state.2, "goal-approved")
+        XCTAssertEqual(state.3, "goal-approved")
     }
 
     func testPreFirstDashboardOpenSuppressesOnboardingAndImportStyleReviewAlerts() async throws {

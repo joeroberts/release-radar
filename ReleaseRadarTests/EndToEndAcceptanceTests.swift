@@ -29,7 +29,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             try repairedConnection.scalarInt("SELECT COUNT(*) FROM pragma_table_info('audit_events') WHERE name = 'thread_attribution'"),
             try repairedConnection.scalarText("SELECT thread_attribution FROM audit_events WHERE reason = 'Verify repaired version three schema'")
         )
-        XCTAssertEqual(repaired.0, 7)
+        XCTAssertEqual(repaired.0, 9)
         XCTAssertEqual(repaired.1, 1)
         XCTAssertEqual(repaired.2, "asserted")
 
@@ -247,7 +247,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         }
         let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
         for connection in [try SQLiteConnection(url: databaseURL), try SQLiteConnection(url: snapshotURL)] {
-            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 7)
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 9)
             XCTAssertEqual(
                 try connection.scalarText("SELECT name FROM pragma_index_info('audit_events_project_entity_index') ORDER BY seqno LIMIT 1"),
                 "actor_id"
@@ -282,7 +282,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         }
         let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
         for connection in [try SQLiteConnection(url: databaseURL), try SQLiteConnection(url: snapshotURL)] {
-            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 7)
+            XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 9)
             XCTAssertEqual(
                 try connection.scalarInt("SELECT COUNT(*) FROM pragma_foreign_key_list('project_active_phases') WHERE \"table\" = 'phases'"),
                 0
@@ -306,6 +306,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
     private func makeVersionThreeAuditDrift(at databaseURL: URL) throws {
         let connection = try SQLiteConnection(url: databaseURL)
         try connection.executeScript("""
+        DROP TABLE alert_rules;
+        DROP TABLE ticket_goal_links;
+        DROP INDEX observed_goals_project_identity_unique;
         DROP INDEX notification_events_project_created_index;
         DROP INDEX notification_events_state_index;
         DROP TABLE notification_occurrences;
@@ -334,6 +337,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
     private func makeObservedVersionSevenDrift(at databaseURL: URL) throws {
         let connection = try SQLiteConnection(url: databaseURL)
         try connection.executeScript("""
+        DROP TABLE alert_rules;
+        DROP TABLE ticket_goal_links;
+        DROP INDEX observed_goals_project_identity_unique;
         ALTER TABLE projects ADD COLUMN active_phase_id TEXT;
         UPDATE projects SET active_phase_id = 'phase-1' WHERE id = 'project-1';
         DROP INDEX project_active_phases_phase_index;

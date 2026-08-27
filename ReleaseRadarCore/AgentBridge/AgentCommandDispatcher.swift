@@ -145,6 +145,10 @@ public actor AgentCommandDispatcher {
             commandFieldsAreValid = valid(id, maximum: 256)
                 && valid(ticketID, maximum: 256)
                 && valid(threadID, maximum: 1_024)
+        case let .linkGoal(id, ticketID, goalID):
+            commandFieldsAreValid = valid(id, maximum: 256)
+                && valid(ticketID, maximum: 256)
+                && valid(goalID, maximum: 256)
         case let .requestReview(id, ticketID, kind, summary):
             commandFieldsAreValid = valid(id, maximum: 256)
                 && ticketID.map { valid($0, maximum: 256) } != false
@@ -193,6 +197,7 @@ public actor AgentCommandDispatcher {
              let .recordBlocker(id, _, _),
              let .addEvidence(id, _, _),
              let .linkThread(id, _, _),
+             let .linkGoal(id, _, _),
              let .requestReview(id, _, _, _),
              let .recordCompletion(id, _, _):
             return .init(entityIDs: [id], auditEventID: auditEventID, error: nil)
@@ -212,6 +217,7 @@ public actor AgentCommandDispatcher {
         case let .recordBlocker(id, _, _), let .resolveBlocker(id): (.blocker, id)
         case let .addEvidence(id, _, _): (.evidence, id)
         case let .linkThread(id, _, _): (.threadLink, id)
+        case let .linkGoal(_, ticketID, _): (.ticket, ticketID)
         case let .requestReview(id, _, _, _),
              let .resolveImportReview(id),
              let .dismissImportReview(id): (.reviewItem, id)
@@ -245,18 +251,38 @@ public actor AgentCommandDispatcher {
         case let .upsertTicket(ticketID, phaseID, outcome, lane):
             try requireProjectEntity(phaseID, table: "phases", projectID: projectID, connection: connection)
             try requireWritableID(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            let previousLane = try connection.scalarText(
+                "SELECT lane FROM tickets WHERE id = ? AND project_id = ?",
+                bindings: [.text(ticketID), .text(projectID.rawValue)]
+            )
             try connection.execute(
                 "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET phase_id = excluded.phase_id, outcome = excluded.outcome, lane = excluded.lane",
                 bindings: [.text(ticketID), .text(projectID.rawValue), .text(phaseID), .text(outcome), .text(lane.rawValue)]
             )
-            try updateNeedsReviewOccurrence(ticketID: ticketID, lane: lane, projectID: projectID, connection: connection)
+            try updateNeedsReviewOccurrence(
+                ticketID: ticketID,
+                lane: lane,
+                enteredNeedsReview: previousLane != TicketLane.needsReview.rawValue,
+                projectID: projectID,
+                connection: connection
+            )
         case let .transitionTicket(ticketID, lane):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            let previousLane = try connection.scalarText(
+                "SELECT lane FROM tickets WHERE id = ? AND project_id = ?",
+                bindings: [.text(ticketID), .text(projectID.rawValue)]
+            )
             try connection.execute(
                 "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
                 bindings: [.text(lane.rawValue), .text(projectID.rawValue), .text(ticketID)]
             )
-            try updateNeedsReviewOccurrence(ticketID: ticketID, lane: lane, projectID: projectID, connection: connection)
+            try updateNeedsReviewOccurrence(
+                ticketID: ticketID,
+                lane: lane,
+                enteredNeedsReview: previousLane != TicketLane.needsReview.rawValue,
+                projectID: projectID,
+                connection: connection
+            )
         case let .setDependency(id, kind, subjectID, dependsOnID):
             let table = kind == .ticket ? "tickets" : "phases"
             try requireProjectEntity(subjectID, table: table, projectID: projectID, connection: connection)
@@ -300,39 +326,89 @@ public actor AgentCommandDispatcher {
                 "INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, thread_id = excluded.thread_id",
                 bindings: [.text(id), .text(projectID.rawValue), .text(ticketID), .text(threadID)]
             )
+        case let .linkGoal(id, ticketID, goalID):
+            try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try requireProjectEntity(goalID, table: "observed_goals", projectID: projectID, connection: connection)
+            try requireWritableID(id, table: "ticket_goal_links", projectID: projectID, connection: connection)
+            if let existingTicketID = try connection.scalarText(
+                "SELECT ticket_id FROM ticket_goal_links WHERE project_id = ? AND id = ?",
+                bindings: [.text(projectID.rawValue), .text(id)]
+            ), existingTicketID != ticketID {
+                throw CommandValidation.invalidReference("Goal link \(id) belongs to ticket \(existingTicketID)")
+            }
+            guard let threadID = try connection.scalarText(
+                "SELECT thread_id FROM observed_goals WHERE project_id = ? AND id = ?",
+                bindings: [.text(projectID.rawValue), .text(goalID)]
+            ) else {
+                throw CommandValidation.invalidReference("Unknown observed_goals record \(goalID)")
+            }
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM thread_links WHERE project_id = ? AND ticket_id = ? AND thread_id = ?",
+                bindings: [.text(projectID.rawValue), .text(ticketID), .text(threadID)]
+            ) == 1 else {
+                throw CommandValidation.invalidReference("Goal \(goalID) does not belong to a thread linked to ticket \(ticketID)")
+            }
+            if let existingID = try connection.scalarText(
+                "SELECT id FROM ticket_goal_links WHERE project_id = ? AND ticket_id = ?",
+                bindings: [.text(projectID.rawValue), .text(ticketID)]
+            ), existingID != id {
+                throw CommandValidation.invalidReference("Ticket \(ticketID) already has an approved goal")
+            }
+            if let existingTicketID = try connection.scalarText(
+                "SELECT ticket_id FROM ticket_goal_links WHERE project_id = ? AND goal_id = ?",
+                bindings: [.text(projectID.rawValue), .text(goalID)]
+            ), existingTicketID != ticketID {
+                throw CommandValidation.invalidReference("Goal \(goalID) is already approved for another ticket")
+            }
+            try connection.execute(
+                "INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, thread_id = excluded.thread_id, goal_id = excluded.goal_id",
+                bindings: [.text(id), .text(projectID.rawValue), .text(ticketID), .text(threadID), .text(goalID)]
+            )
         case let .requestReview(id, ticketID, kind, summary):
             if let ticketID {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             }
             try requireWritableID(id, table: "review_items", projectID: projectID, connection: connection)
             try requireAgentWritableReview(id: id, kind: kind, projectID: projectID, connection: connection)
+            let previousStatus = try connection.scalarText(
+                "SELECT status FROM review_items WHERE id = ? AND project_id = ?",
+                bindings: [.text(id), .text(projectID.rawValue)]
+            )
             try connection.execute(
                 "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open') ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, kind = excluded.kind, summary = excluded.summary, status = 'open'",
                 bindings: [.text(id), .text(projectID.rawValue), ticketID.map(SQLiteValue.text) ?? .null, .text(kind), .text(summary)]
             )
-            _ = try MeaningfulDeliveryEvent.enqueue(
-                projectID: projectID,
-                kind: .reviewRequested,
-                subjectID: id,
-                ticketID: ticketID.map(TicketID.init(rawValue:)),
-                goalID: nil,
-                connection: connection
-            )
+            if previousStatus != "open" {
+                _ = try MeaningfulDeliveryEvent.enqueue(
+                    projectID: projectID,
+                    kind: .reviewRequested,
+                    subjectID: id,
+                    ticketID: ticketID.map(TicketID.init(rawValue:)),
+                    goalID: nil,
+                    connection: connection
+                )
+            }
         case let .recordCompletion(id, ticketID, summary):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "completion_records", projectID: projectID, connection: connection)
+            let isNewCompletion = try connection.scalarText(
+                "SELECT id FROM completion_records WHERE id = ? AND project_id = ?",
+                bindings: [.text(id), .text(projectID.rawValue)]
+            ) == nil
             try connection.execute(
                 "INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, summary = excluded.summary",
                 bindings: [.text(id), .text(projectID.rawValue), .text(ticketID), .text(summary), .text(ISO8601DateFormatter().string(from: Date()))]
             )
-            _ = try MeaningfulDeliveryEvent.enqueue(
-                projectID: projectID,
-                kind: .agentCompleted,
-                subjectID: id,
-                ticketID: TicketID(rawValue: ticketID),
-                goalID: nil,
-                connection: connection
-            )
+            if isNewCompletion {
+                _ = try MeaningfulDeliveryEvent.enqueue(
+                    projectID: projectID,
+                    kind: .agentCompleted,
+                    subjectID: id,
+                    ticketID: TicketID(rawValue: ticketID),
+                    goalID: nil,
+                    connection: connection
+                )
+            }
         case let .resolveImportReview(reviewItemID):
             try updateReview(reviewItemID, status: "resolved", projectID: projectID, connection: connection)
             try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
@@ -347,10 +423,11 @@ public actor AgentCommandDispatcher {
     private static func updateNeedsReviewOccurrence(
         ticketID: String,
         lane: TicketLane,
+        enteredNeedsReview: Bool,
         projectID: ProjectID,
         connection: SQLiteConnection
     ) throws {
-        if lane == .needsReview {
+        if lane == .needsReview, enteredNeedsReview {
             _ = try MeaningfulDeliveryEvent.enqueue(
                 projectID: projectID,
                 kind: .ticketNeedsReview,
@@ -359,7 +436,7 @@ public actor AgentCommandDispatcher {
                 goalID: nil,
                 connection: connection
             )
-        } else {
+        } else if lane != .needsReview {
             try MeaningfulDeliveryEvent.deactivate(
                 projectID: projectID,
                 kind: .ticketNeedsReview,

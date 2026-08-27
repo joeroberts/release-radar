@@ -71,11 +71,12 @@ struct ProjectActivityProjection: Equatable, Sendable {
             let runtimeRows = try connection.activityRows(
                 """
                 SELECT observed_goals.id, observed_goals.status, observed_goals.text,
-                       observed_goals.last_observed_at, thread_links.ticket_id
+                       observed_goals.last_observed_at, ticket_goal_links.ticket_id
                 FROM observed_goals
-                LEFT JOIN thread_links
-                  ON thread_links.project_id = observed_goals.project_id
-                 AND thread_links.thread_id = observed_goals.thread_id
+                LEFT JOIN ticket_goal_links
+                  ON ticket_goal_links.project_id = observed_goals.project_id
+                 AND ticket_goal_links.goal_id = observed_goals.id
+                 AND ticket_goal_links.thread_id = observed_goals.thread_id
                 WHERE observed_goals.project_id = ?
                 ORDER BY observed_goals.last_observed_at DESC
                 """,

@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 7
+    static let currentVersion: Int64 = 9
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -39,6 +39,12 @@ enum StoreMigrations {
             }
             if version < 7 {
                 try connection.executeScript(schemaVersion7)
+            }
+            if version < 8 {
+                try connection.executeScript(schemaVersion8)
+            }
+            if version < 9 {
+                try connection.executeScript(schemaVersion9)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -102,7 +108,7 @@ enum StoreMigrations {
         else { return false }
         return try hasRequiredSchema(
             connection,
-            throughVersion: currentVersion,
+            throughVersion: 7,
             missingTables: ["project_active_phases"],
             missingColumns: [
                 "audit_events.project_id",
@@ -170,6 +176,12 @@ enum StoreMigrations {
                 missingColumns: missingColumns
               )
         else { return false }
+        if version >= 9 {
+            guard let alertRulesSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'alert_rules'"
+            ), normalizedSQL(alertRulesSQL) == normalizedSQL(alertRulesTableSQL)
+            else { return false }
+        }
         return try connection.row("PRAGMA foreign_key_check") == nil
     }
 
@@ -326,6 +338,8 @@ enum StoreMigrations {
         (6, "notification_occurrences", [
             "subject_key", "project_id", "event_kind", "subject_id", "generation", "is_active",
         ]),
+        (8, "ticket_goal_links", ["id", "project_id", "ticket_id", "thread_id", "goal_id"]),
+        (9, "alert_rules", ["kind", "is_enabled"]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -457,6 +471,12 @@ enum StoreMigrations {
          [("project_id", false), ("created_at", true)]),
         (6, "notification_events_state_index", "notification_events", false,
          [("state", false), ("created_at", false)]),
+        (8, "observed_goals_project_identity_unique", "observed_goals", true,
+         [("project_id", false), ("id", false), ("thread_id", false)]),
+        (8, "ticket_goal_links_project_ticket_unique", "ticket_goal_links", true,
+         [("project_id", false), ("ticket_id", false)]),
+        (8, "ticket_goal_links_project_goal_unique", "ticket_goal_links", true,
+         [("project_id", false), ("goal_id", false)]),
     ]
 
     private static let requiredForeignKeys: [(
@@ -494,6 +514,8 @@ enum StoreMigrations {
         (5, "project_active_phases", "project_id,phase_id", "phases", "project_id,id", "NO ACTION"),
         (6, "notification_events", "project_id", "projects", "id", "CASCADE"),
         (6, "notification_occurrences", "project_id", "projects", "id", "CASCADE"),
+        (8, "ticket_goal_links", "project_id,ticket_id,thread_id", "thread_links", "project_id,ticket_id,thread_id", "CASCADE"),
+        (8, "ticket_goal_links", "project_id,goal_id,thread_id", "observed_goals", "project_id,id,thread_id", "CASCADE"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -740,5 +762,70 @@ enum StoreMigrations {
     SET fingerprint = project_id || ':' || fingerprint
     WHERE project_id IS NOT NULL
       AND fingerprint NOT LIKE project_id || ':%';
+    """
+
+    private static let schemaVersion8 = """
+    CREATE UNIQUE INDEX observed_goals_project_identity_unique
+        ON observed_goals(project_id, id, thread_id);
+    CREATE TABLE ticket_goal_links (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        thread_id TEXT NOT NULL,
+        goal_id TEXT NOT NULL,
+        FOREIGN KEY(project_id, ticket_id, thread_id)
+            REFERENCES thread_links(project_id, ticket_id, thread_id) ON DELETE CASCADE,
+        FOREIGN KEY(project_id, goal_id, thread_id)
+            REFERENCES observed_goals(project_id, id, thread_id) ON DELETE CASCADE
+    );
+    CREATE UNIQUE INDEX ticket_goal_links_project_ticket_unique
+        ON ticket_goal_links(project_id, ticket_id);
+    CREATE UNIQUE INDEX ticket_goal_links_project_goal_unique
+        ON ticket_goal_links(project_id, goal_id);
+    INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id)
+    SELECT 'v8-' || thread_links.id,
+           thread_links.project_id,
+           thread_links.ticket_id,
+           thread_links.thread_id,
+           observed_goals.id
+    FROM thread_links
+    JOIN observed_goals
+      ON observed_goals.project_id = thread_links.project_id
+     AND observed_goals.thread_id = thread_links.thread_id
+    WHERE (
+        SELECT COUNT(*)
+        FROM thread_links AS ticket_candidate
+        WHERE ticket_candidate.project_id = thread_links.project_id
+          AND ticket_candidate.ticket_id = thread_links.ticket_id
+    ) = 1
+      AND (
+        SELECT COUNT(*)
+        FROM observed_goals AS goal_candidate
+        WHERE goal_candidate.project_id = thread_links.project_id
+          AND goal_candidate.thread_id = thread_links.thread_id
+      ) = 1
+      AND (
+        SELECT COUNT(*)
+        FROM thread_links AS ticket_candidate
+        WHERE ticket_candidate.project_id = observed_goals.project_id
+          AND ticket_candidate.thread_id = observed_goals.thread_id
+      ) = 1;
+    """
+
+    private static let alertRulesTableSQL = """
+    CREATE TABLE alert_rules (
+        kind TEXT PRIMARY KEY NOT NULL
+            CHECK (kind IN ('blocked_linked_goals', 'agent_completion_and_review', 'needs_review_entry', 'paused_goals')),
+        is_enabled INTEGER NOT NULL CHECK (is_enabled IN (0, 1))
+    )
+    """
+
+    private static let schemaVersion9 = """
+    \(alertRulesTableSQL);
+    INSERT INTO alert_rules (kind, is_enabled) VALUES
+        ('blocked_linked_goals', 1),
+        ('agent_completion_and_review', 1),
+        ('needs_review_entry', 1),
+        ('paused_goals', 0);
     """
 }

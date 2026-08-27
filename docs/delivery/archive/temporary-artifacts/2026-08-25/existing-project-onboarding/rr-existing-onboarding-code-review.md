@@ -1,0 +1,10 @@
+**Required**
+- `NO-GO`: blocked portable import is still exposed and executable from Add Project. [`ReleaseRadarCore/Onboarding/ProjectOnboarding.swift`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/ReleaseRadarCore/Onboarding/ProjectOnboarding.swift:231) creates a `recognizedArtifactPreview` from the partial `RekonArtifactImporter`, [`ProjectOnboarding.swift`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/ReleaseRadarCore/Onboarding/ProjectOnboarding.swift:486) applies that import during onboarding, and [`OnboardingView.swift`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/ReleaseRadar/Projects/OnboardingView.swift:206), [`OnboardingView.swift`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/ReleaseRadar/Projects/OnboardingView.swift:560), [`OnboardingView.swift`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/ReleaseRadar/Projects/OnboardingView.swift:600) surface the preview and opt-in UI. That contradicts the current gate in [`progress.md`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/docs/delivery/progress.md:394) that portable importer/UI stays blocked with “no placeholder import control,” and the boundary in [`ADR-001-release-radar-boundaries.md`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/docs/architecture/ADR-001-release-radar-boundaries.md:81) that Rekon JSON is not a portable complete-project archive. Supporting evidence: [`OnboardingAcceptanceTests.swift`](/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/ReleaseRadarTests/OnboardingAcceptanceTests.swift:7) still treats this blocked path as expected behavior.
+
+**Optional**
+- None.
+
+**Out of scope**
+- None.
+
+Focused and full tests passing do not clear the blocked import-path regression above. Verdict: **NO-GO**.

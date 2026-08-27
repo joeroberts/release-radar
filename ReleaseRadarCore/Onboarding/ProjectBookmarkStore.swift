@@ -11,10 +11,19 @@ public struct ResolvedProjectBookmark: Equatable, Sendable {
 }
 
 public enum ProjectBookmarkError: Error, LocalizedError, Equatable, Sendable {
+    case bookmarkCreationFailed
+    case bookmarkResolutionFailed
     case securityScopeAccessDenied
 
     public var errorDescription: String? {
-        "Release Radar cannot access this folder. Select it again to reauthorize access."
+        switch self {
+        case .bookmarkCreationFailed:
+            "Release Radar could not save access to this folder. Select it again and retry."
+        case .bookmarkResolutionFailed:
+            "Release Radar could not restore access to this folder. Select it again to reauthorize access."
+        case .securityScopeAccessDenied:
+            "Release Radar cannot access this folder. Select it again to reauthorize access."
+        }
     }
 }
 
@@ -49,15 +58,25 @@ public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
     }
 
     public func makeBookmark(for url: URL) throws -> Data {
-        try url.standardizedFileURL.resolvingSymlinksInPath().bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
+        do {
+            return try url.standardizedFileURL.resolvingSymlinksInPath().bookmarkData(
+                options: [.withSecurityScope],
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+        } catch {
+            throw ProjectBookmarkError.bookmarkCreationFailed
+        }
     }
 
     public func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
-        try bookmarkResolver(bookmark)
+        do {
+            return try bookmarkResolver(bookmark)
+        } catch let error as ProjectBookmarkError {
+            throw error
+        } catch {
+            throw ProjectBookmarkError.bookmarkResolutionFailed
+        }
     }
 
     private static func resolveBookmark(_ bookmark: Data) throws -> ResolvedProjectBookmark {

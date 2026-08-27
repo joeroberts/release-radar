@@ -70,22 +70,24 @@ struct SidebarView: View {
                 }
             }
 
-            Divider()
-                .padding(.horizontal, 12)
+            if let currentProject = model.currentProject {
+                Divider()
+                    .padding(.horizontal, 12)
 
-            if !model.isSidebarCompact {
-                Text(model.currentProject?.name ?? "Current project")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .lineLimit(1)
-                    .padding(.horizontal, 18)
-            }
+                if !model.isSidebarCompact {
+                    Text(currentProject.name)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .lineLimit(1)
+                        .padding(.horizontal, 18)
+                }
 
-            VStack(spacing: 4) {
-                ForEach(AppRoute.projectRoutes(for: model.currentProjectID), id: \.self) { route in
-                    sidebarButton(route: route, count: nil) {
-                        Task { await model.navigate(to: route) }
+                VStack(spacing: 4) {
+                    ForEach(AppRoute.projectRoutes(for: currentProject.id), id: \.self) { route in
+                        sidebarButton(route: route, count: nil) {
+                            Task { await model.navigate(to: route) }
+                        }
                     }
                 }
             }
@@ -191,11 +193,17 @@ struct SidebarView: View {
                     NeedsReviewView(
                         inbox: inbox,
                         selectedItemID: $model.selectedReviewItemID,
-                        isPerformingAction: model.isPerformingReviewAction,
-                        actionFailure: model.reviewActionFailure
-                    ) { decision, item in
-                        await model.performReviewDecision(decision, item: item)
-                    }
+                        isPerformingAction: model.scopedIsPerformingReviewAction(for: inbox.projectID),
+                        actionFailure: model.scopedReviewActionFailure(for: inbox.projectID),
+                        projectName: model.currentProject?.name ?? "this project",
+                        authorizationRecovery: model.scopedReviewAuthorizationRecovery(for: inbox.projectID),
+                        onDecision: { decision, item in
+                            await model.performReviewDecision(decision, item: item)
+                        },
+                        onRecoverAuthorization: { folder, projectID in
+                            await model.recoverReviewAuthorization(at: folder, for: projectID)
+                        }
+                    )
                 } else {
                     DetailUnavailableView(title: "Needs Review", image: "checkmark.bubble")
                 }

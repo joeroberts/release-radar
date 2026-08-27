@@ -23,19 +23,27 @@ struct FailureStatePresentation: Equatable, Sendable {
     let accessibilityID: String
 
     static let noDeliveryStructure = FailureStatePresentation(
-        title: "No delivery structure yet",
-        detail: "Choose a folder-backed project, then ask an agent to define the first phase.",
+        title: "Project tracking not initialized",
+        detail: "Choose Initialize Project Tracking to save this folder locally, then use the Codex prompt to define its current tracking state.",
         systemImage: "folder.badge.plus",
         tone: .neutral,
         accessibilityID: "failure-no-structure"
     )
 
     static let firstPhaseRequired = FailureStatePresentation(
-        title: "First phase required",
-        detail: "Ask an agent to define the first phase before opening the delivery dashboard.",
+        title: "Tracking state required",
+        detail: "Use the Codex prompt to define the current tracking state, then choose Check Tracking Status before opening the delivery dashboard.",
         systemImage: "flag.badge.ellipsis",
         tone: .warning,
         accessibilityID: "failure-first-phase"
+    )
+
+    static let trackingStateRequired = FailureStatePresentation(
+        title: "Tracking state required",
+        detail: "Use the Codex prompt to define the current tracking state, then choose Check Tracking Status before finishing initialization.",
+        systemImage: "flag.badge.ellipsis",
+        tone: .warning,
+        accessibilityID: "failure-tracking-state"
     )
 
     init(
@@ -89,7 +97,7 @@ struct FailureStatePresentation: Equatable, Sendable {
                 accessibilityID: "failure-project-folder"
             )
         case .noFirstPhase, .projectNotPrepared:
-            self = .firstPhaseRequired
+            self = .trackingStateRequired
         case .invalidProjectName:
             self.init(
                 title: "Project name required",
@@ -245,6 +253,24 @@ struct FailureStatePresentation: Equatable, Sendable {
             )
         }
     }
+
+    init(projectAuthorizationError: ProjectAuthorizationError) {
+        let recoverable: Bool = switch projectAuthorizationError {
+        case .projectRootMissing, .bookmarkMissing, .bookmarkStale,
+             .bookmarkResolutionFailed, .securityScopeAccessDenied, .bookmarkRootMismatch:
+            true
+        case .projectNotFound, .projectRootAlreadyAssociated, .projectRootMismatch,
+             .rootAlreadyOwned, .invalidFolder:
+            false
+        }
+        self.init(
+            title: recoverable ? "Project folder authorization required" : "Project folder not accepted",
+            detail: "\(projectAuthorizationError.localizedDescription) The review remains open; retry Resolve or Dismiss only after access is restored.",
+            systemImage: "folder.badge.questionmark",
+            tone: recoverable ? .warning : .error,
+            accessibilityID: recoverable ? "review-locate-authorization" : "review-folder-authorization-error"
+        )
+    }
 }
 
 enum FailureStateViewStyle: Sendable {
@@ -256,6 +282,8 @@ enum FailureStateViewStyle: Sendable {
 struct FailureStateView: View {
     let presentation: FailureStatePresentation
     var style: FailureStateViewStyle = .inline
+    var actionTitle: String? = nil
+    var action: (() -> Void)? = nil
 
     var body: some View {
         Group {
@@ -285,7 +313,7 @@ struct FailureStateView: View {
                 }
             }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: action == nil ? .combine : .contain)
         .accessibilityIdentifier(presentation.accessibilityID)
     }
 
@@ -304,6 +332,13 @@ struct FailureStateView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("\(presentation.accessibilityID)-action")
+            }
         }
     }
 }

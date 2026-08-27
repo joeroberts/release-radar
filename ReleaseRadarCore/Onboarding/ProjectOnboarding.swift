@@ -21,6 +21,7 @@ public struct OnboardingPreview: Equatable, Sendable {
     public let worktreesRequiringAuthorization: [URL]
     public let recognizedArtifactPreview: ImportPreview?
     public let pendingProjectID: ProjectID?
+    public let completedProjectID: ProjectID?
 
     public init(
         selectedFolder: URL,
@@ -30,7 +31,8 @@ public struct OnboardingPreview: Equatable, Sendable {
         authorizedWorktreeURLs: [URL],
         worktreesRequiringAuthorization: [URL],
         recognizedArtifactPreview: ImportPreview? = nil,
-        pendingProjectID: ProjectID? = nil
+        pendingProjectID: ProjectID? = nil,
+        completedProjectID: ProjectID? = nil
     ) {
         self.selectedFolder = selectedFolder
         self.gitRoot = gitRoot
@@ -40,6 +42,7 @@ public struct OnboardingPreview: Equatable, Sendable {
         self.worktreesRequiringAuthorization = worktreesRequiringAuthorization
         self.recognizedArtifactPreview = recognizedArtifactPreview
         self.pendingProjectID = pendingProjectID
+        self.completedProjectID = completedProjectID
     }
 }
 
@@ -115,6 +118,66 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
     }
 }
 
+public enum OnboardingPreparationError: Error, LocalizedError, Equatable, Sendable {
+    case seedApplicationFailedAfterSave(ProjectID)
+
+    public var errorDescription: String? {
+        switch self {
+        case .seedApplicationFailedAfterSave:
+            "Project tracking was initialized, but the recognized seed could not be applied. Resume setup and try again."
+        }
+    }
+}
+
+public enum ProjectAuthorizationError: Error, LocalizedError, Equatable, Sendable {
+    case projectNotFound
+    case projectRootMissing
+    case projectRootAlreadyAssociated
+    case bookmarkMissing
+    case bookmarkStale
+    case bookmarkResolutionFailed
+    case securityScopeAccessDenied
+    case bookmarkRootMismatch
+    case projectRootMismatch
+    case rootAlreadyOwned
+    case invalidFolder
+
+    public var errorDescription: String? {
+        switch self {
+        case .projectNotFound:
+            "The project no longer exists. Refresh Release Radar before retrying."
+        case .projectRootMissing:
+            "This project has no associated folder. Associate its project folder before retrying."
+        case .projectRootAlreadyAssociated:
+            "This project already has an associated folder. Reauthorize that same folder instead."
+        case .bookmarkMissing:
+            "Folder authorization is missing. Select the project folder again before retrying."
+        case .bookmarkStale:
+            "Folder authorization has expired. Select the project folder again before retrying."
+        case .bookmarkResolutionFailed:
+            "Folder authorization could not be restored. Select the project folder again before retrying."
+        case .securityScopeAccessDenied:
+            "macOS denied access to the project folder. Select it again before retrying."
+        case .bookmarkRootMismatch:
+            "Saved folder authorization does not match this project. Select the project folder again."
+        case .projectRootMismatch:
+            "The selected folder is not this project's saved folder. Choose the original project folder."
+        case .rootAlreadyOwned:
+            "The selected folder already belongs to another project."
+        case .invalidFolder:
+            "The selected folder is unavailable."
+        }
+    }
+}
+
+private struct PersistedProjectAuthorization: Sendable {
+    let projectExists: Bool
+    let rootPath: String?
+    let bookmarkData: Data?
+    let bookmarkIsStale: Bool
+    let bookmarkCount: Int64
+}
+
 public protocol ProjectOnboarding: Sendable {
     func inspect(folder: URL) async throws -> OnboardingPreview
     func finish(_ decision: OnboardingDecision) async throws -> ProjectID
@@ -180,7 +243,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 store: store,
                 project: authorizedProject
             ).preview(authorizedSelected)
-            let pendingProjectID = try await pendingProjectID(forRoot: authorizedSelected)
+            let projectIdentity = try await projectIdentity(forRoot: authorizedSelected)
             return .init(
                 selectedFolder: authorizedSelected,
                 gitRoot: GitWorktreeDiscovery.discoverGitRoot(at: authorizedSelected) ?? worktrees.first,
@@ -189,7 +252,8 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 authorizedWorktreeURLs: authorized,
                 worktreesRequiringAuthorization: outsideWorktrees,
                 recognizedArtifactPreview: recognizedArtifactPreview,
-                pendingProjectID: pendingProjectID
+                pendingProjectID: projectIdentity.pending,
+                completedProjectID: projectIdentity.completed
             )
         }
     }
@@ -200,6 +264,190 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             throw OnboardingError.invalidFolder
         }
         separatelyAuthorizedWorktreePaths.insert(candidate.path)
+    }
+
+    public func withAuthorizedProject<T: Sendable>(
+        projectID: ProjectID,
+        _ body: @Sendable (AuthorizedProject) async throws -> T
+    ) async throws -> T {
+        let authorization = try await persistedProjectAuthorization(for: projectID)
+        guard authorization.projectExists else { throw ProjectAuthorizationError.projectNotFound }
+        guard let rootPath = authorization.rootPath else {
+            throw authorization.bookmarkCount == 0
+                ? ProjectAuthorizationError.projectRootMissing
+                : ProjectAuthorizationError.bookmarkMissing
+        }
+        guard let bookmark = authorization.bookmarkData else {
+            throw ProjectAuthorizationError.bookmarkMissing
+        }
+        guard !authorization.bookmarkIsStale else {
+            throw ProjectAuthorizationError.bookmarkStale
+        }
+
+        let persistedRoot = Self.canonical(URL(fileURLWithPath: rootPath))
+        let resolved: ResolvedProjectBookmark
+        do {
+            resolved = try bookmarkStore.resolve(bookmark)
+        } catch {
+            try await markReviewBookmarkStale(projectID: projectID, path: rootPath)
+            throw ProjectAuthorizationError.bookmarkResolutionFailed
+        }
+        guard !resolved.isStale else {
+            try await markReviewBookmarkStale(projectID: projectID, path: rootPath)
+            throw ProjectAuthorizationError.bookmarkStale
+        }
+        guard Self.canonical(resolved.url) == persistedRoot else {
+            try await markReviewBookmarkStale(projectID: projectID, path: rootPath)
+            throw ProjectAuthorizationError.bookmarkRootMismatch
+        }
+
+        do {
+            return try await bookmarkStore.withSecurityScopedAccess(bookmark: bookmark) { activeBookmark in
+                guard !activeBookmark.isStale else {
+                    throw ProjectAuthorizationError.bookmarkStale
+                }
+                let activeRoot = Self.canonical(activeBookmark.url)
+                guard activeRoot == persistedRoot else {
+                    throw ProjectAuthorizationError.bookmarkRootMismatch
+                }
+                return try await body(AuthorizedProject(
+                    projectID: projectID,
+                    canonicalRoot: activeRoot,
+                    authorizedRoots: [activeRoot]
+                ))
+            }
+        } catch let error as ProjectAuthorizationError {
+            if error == .bookmarkStale || error == .bookmarkRootMismatch {
+                try await markReviewBookmarkStale(projectID: projectID, path: rootPath)
+            }
+            throw error
+        } catch let error as ProjectBookmarkError {
+            try await markReviewBookmarkStale(projectID: projectID, path: rootPath)
+            switch error {
+            case .securityScopeAccessDenied:
+                throw ProjectAuthorizationError.securityScopeAccessDenied
+            case .bookmarkCreationFailed, .bookmarkResolutionFailed:
+                throw ProjectAuthorizationError.bookmarkResolutionFailed
+            }
+        }
+    }
+
+    public func reauthorizeProjectRoot(_ folder: URL, for projectID: ProjectID) async throws {
+        let authorization = try await persistedProjectAuthorization(for: projectID)
+        guard authorization.projectExists else { throw ProjectAuthorizationError.projectNotFound }
+        guard let rootPath = authorization.rootPath else { throw ProjectAuthorizationError.projectRootMissing }
+        let persistedRoot = Self.canonical(URL(fileURLWithPath: rootPath))
+        let candidate = Self.canonical(folder)
+        guard candidate == persistedRoot else { throw ProjectAuthorizationError.projectRootMismatch }
+        let bookmark = try await validatedBookmark(for: candidate)
+
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"),
+            reason: "Reauthorize project folder access",
+            auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
+        ) { connection in
+            guard try connection.scalarText(
+                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY rowid LIMIT 1",
+                bindings: [.text(projectID.rawValue)]
+            ) == rootPath else {
+                throw ProjectAuthorizationError.projectRootMismatch
+            }
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0) ON CONFLICT(project_id, path) DO UPDATE SET bookmark_data = excluded.bookmark_data, is_stale = 0",
+                bindings: [.text(projectID.rawValue), .text(rootPath), .blob(bookmark)]
+            )
+        }
+    }
+
+    public func associateFirstProjectRoot(_ folder: URL, for projectID: ProjectID) async throws {
+        let candidate = Self.canonical(folder)
+        guard Self.isDirectory(candidate) else { throw ProjectAuthorizationError.invalidFolder }
+        let state = try await projectRootAssociationState(projectID: projectID, candidatePath: candidate.path)
+        guard state.projectExists else { throw ProjectAuthorizationError.projectNotFound }
+        guard state.rootCount == 0, state.bookmarkCount == 0 else {
+            throw ProjectAuthorizationError.projectRootAlreadyAssociated
+        }
+        guard !state.isOwned else { throw ProjectAuthorizationError.rootAlreadyOwned }
+        let bookmark = try await validatedBookmark(for: candidate)
+
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"),
+            reason: "Associate first project folder authorization",
+            auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
+        ) { connection in
+            let rootCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_roots WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ) ?? 0
+            let bookmarkCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ) ?? 0
+            guard rootCount == 0, bookmarkCount == 0 else {
+                throw ProjectAuthorizationError.projectRootAlreadyAssociated
+            }
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_roots WHERE path = ?",
+                bindings: [.text(candidate.path)]
+            ) == 0 else {
+                throw ProjectAuthorizationError.rootAlreadyOwned
+            }
+            try connection.execute(
+                "INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?)",
+                bindings: [.text("\(projectID.rawValue)-root-0"), .text(projectID.rawValue), .text(candidate.path)]
+            )
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0)",
+                bindings: [.text(projectID.rawValue), .text(candidate.path), .blob(bookmark)]
+            )
+        }
+    }
+
+    public func eligibleProjectsForFirstRootAssociation() async throws -> [ProjectRecord] {
+        try await store.read { connection in
+            var projects: [ProjectRecord] = []
+            var offset: Int64 = 0
+            while let row = try connection.row(
+                """
+                SELECT projects.id, projects.name, projects.first_dashboard_opened
+                FROM projects
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM project_roots
+                    WHERE project_roots.project_id = projects.id
+                )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM project_bookmarks
+                    WHERE project_bookmarks.project_id = projects.id
+                )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM review_items
+                    WHERE review_items.project_id = projects.id
+                      AND review_items.kind IN (?, ?)
+                      AND review_items.status = 'open'
+                )
+                ORDER BY projects.name COLLATE NOCASE, projects.id
+                LIMIT 1 OFFSET ?
+                """,
+                bindings: [
+                    .text(OnboardingReviewMarkerKind.pending.rawValue),
+                    .text(OnboardingReviewMarkerKind.phaseRequest.rawValue),
+                    .integer(offset),
+                ]
+            ) {
+                guard
+                    case let .text(id)? = row["id"],
+                    case let .text(name)? = row["name"],
+                    case let .integer(firstDashboardOpened)? = row["first_dashboard_opened"]
+                else { throw SQLiteError(code: 20, message: "Invalid eligible project row") }
+                projects.append(ProjectRecord(
+                    id: ProjectID(rawValue: id),
+                    name: name,
+                    firstDashboardOpened: firstDashboardOpened != 0
+                ))
+                offset += 1
+            }
+            return projects
+        }
     }
 
     public func prepare(_ decision: OnboardingDecision) async throws -> ProjectID {
@@ -253,8 +501,12 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 canonicalRoot: decision.preview.selectedFolder,
                 authorizedRoots: roots
             )
-            try await RekonArtifactImporter(store: store, project: authorizedProject)
-                .apply(importPreview, to: projectID)
+            do {
+                try await RekonArtifactImporter(store: store, project: authorizedProject)
+                    .apply(importPreview, to: projectID)
+            } catch {
+                throw OnboardingPreparationError.seedApplicationFailedAfterSave(projectID)
+            }
         }
         return projectID
     }
@@ -326,6 +578,128 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         }
     }
 
+    private func persistedProjectAuthorization(
+        for projectID: ProjectID
+    ) async throws -> PersistedProjectAuthorization {
+        try await store.read { connection in
+            let projectExists = try connection.scalarInt(
+                "SELECT COUNT(*) FROM projects WHERE id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ) == 1
+            let rootPath = try connection.scalarText(
+                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY rowid LIMIT 1",
+                bindings: [.text(projectID.rawValue)]
+            )
+            let bookmarkCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ) ?? 0
+            guard let rootPath,
+                  let bookmarkRow = try connection.row(
+                      "SELECT bookmark_data, is_stale FROM project_bookmarks WHERE project_id = ? AND path = ?",
+                      bindings: [.text(projectID.rawValue), .text(rootPath)]
+                  ) else {
+                return .init(
+                    projectExists: projectExists,
+                    rootPath: rootPath,
+                    bookmarkData: nil,
+                    bookmarkIsStale: false,
+                    bookmarkCount: bookmarkCount
+                )
+            }
+            let bookmarkData: Data?
+            if case let .blob(data)? = bookmarkRow["bookmark_data"] { bookmarkData = data }
+            else { bookmarkData = nil }
+            let bookmarkIsStale: Bool
+            if case let .integer(value)? = bookmarkRow["is_stale"] { bookmarkIsStale = value != 0 }
+            else { bookmarkIsStale = true }
+            return .init(
+                projectExists: projectExists,
+                rootPath: rootPath,
+                bookmarkData: bookmarkData,
+                bookmarkIsStale: bookmarkIsStale,
+                bookmarkCount: bookmarkCount
+            )
+        }
+    }
+
+    private func projectRootAssociationState(
+        projectID: ProjectID,
+        candidatePath: String
+    ) async throws -> (projectExists: Bool, rootCount: Int64, bookmarkCount: Int64, isOwned: Bool) {
+        try await store.read { connection in
+            (
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM projects WHERE id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ) == 1,
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_roots WHERE project_id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ) ?? 0,
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ) ?? 0,
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_roots WHERE path = ?",
+                    bindings: [.text(candidatePath)]
+                ) != 0
+            )
+        }
+    }
+
+    private func validatedBookmark(for folder: URL) async throws -> Data {
+        guard Self.isDirectory(folder) else { throw ProjectAuthorizationError.invalidFolder }
+        let bookmark: Data
+        do {
+            bookmark = try bookmarkStore.makeBookmark(for: folder)
+        } catch {
+            throw ProjectAuthorizationError.bookmarkResolutionFailed
+        }
+        let resolved: ResolvedProjectBookmark
+        do {
+            resolved = try bookmarkStore.resolve(bookmark)
+        } catch {
+            throw ProjectAuthorizationError.bookmarkResolutionFailed
+        }
+        guard !resolved.isStale else { throw ProjectAuthorizationError.bookmarkStale }
+        guard Self.canonical(resolved.url) == folder else {
+            throw ProjectAuthorizationError.bookmarkRootMismatch
+        }
+        do {
+            try await bookmarkStore.withSecurityScopedAccess(bookmark: bookmark) { activeBookmark in
+                guard !activeBookmark.isStale else { throw ProjectAuthorizationError.bookmarkStale }
+                guard Self.canonical(activeBookmark.url) == folder else {
+                    throw ProjectAuthorizationError.bookmarkRootMismatch
+                }
+            }
+        } catch let error as ProjectAuthorizationError {
+            throw error
+        } catch let error as ProjectBookmarkError {
+            switch error {
+            case .securityScopeAccessDenied:
+                throw ProjectAuthorizationError.securityScopeAccessDenied
+            case .bookmarkCreationFailed, .bookmarkResolutionFailed:
+                throw ProjectAuthorizationError.bookmarkResolutionFailed
+            }
+        }
+        return bookmark
+    }
+
+    private func markReviewBookmarkStale(projectID: ProjectID, path: String) async throws {
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"),
+            reason: "Mark project folder authorization stale",
+            auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
+        ) { connection in
+            try connection.execute(
+                "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ? AND path = ?",
+                bindings: [.text(projectID.rawValue), .text(path)]
+            )
+        }
+    }
+
     private static func ensureOnboardingReviewMarker(
         kind: OnboardingReviewMarkerKind,
         projectID: ProjectID,
@@ -362,15 +736,44 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         }
     }
 
-    private func pendingProjectID(forRoot root: URL) async throws -> ProjectID? {
-        guard let projectID = try await projectID(forRoot: root) else { return nil }
-        let isPending = try await store.read { connection in
-            try connection.scalarInt(
+    private func projectIdentity(forRoot root: URL) async throws -> (pending: ProjectID?, completed: ProjectID?) {
+        try await store.read { connection in
+            let ownerCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_roots WHERE path = ?",
+                bindings: [.text(root.path)]
+            ) ?? 0
+            guard ownerCount == 1,
+                  let ownerID = try connection.scalarText(
+                      "SELECT project_id FROM project_roots WHERE path = ?",
+                      bindings: [.text(root.path)]
+                  ) else {
+                return (nil, nil)
+            }
+            let projectID = ProjectID(rawValue: ownerID)
+            let pendingMarkerCount = try connection.scalarInt(
                 "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = ? AND status = 'open'",
-                bindings: [.text(projectID.rawValue), .text(OnboardingReviewMarkerKind.pending.rawValue)]
-            ) == 1
+                bindings: [.text(ownerID), .text(OnboardingReviewMarkerKind.pending.rawValue)]
+            ) ?? 0
+            if pendingMarkerCount == 1 {
+                return (projectID, nil)
+            }
+            let openOnboardingMarkerCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind IN (?, ?) AND status = 'open'",
+                bindings: [
+                    .text(ownerID),
+                    .text(OnboardingReviewMarkerKind.pending.rawValue),
+                    .text(OnboardingReviewMarkerKind.phaseRequest.rawValue),
+                ]
+            ) ?? 0
+            let phaseCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM phases WHERE project_id = ?",
+                bindings: [.text(ownerID)]
+            ) ?? 0
+            guard openOnboardingMarkerCount == 0, phaseCount > 0 else {
+                return (nil, nil)
+            }
+            return (nil, projectID)
         }
-        return isPending ? projectID : nil
     }
 
     private func persistedAuthorizedWorktreePaths(for selectedFolder: URL) async throws -> Set<String> {
@@ -435,6 +838,12 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
 
     private static func canonical(_ url: URL) -> URL {
         url.standardizedFileURL.resolvingSymlinksInPath()
+    }
+
+    private static func isDirectory(_ url: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
     }
 
     private static func contains(_ candidate: URL, within root: URL) -> Bool {

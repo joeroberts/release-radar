@@ -375,6 +375,146 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.1, 1)
     }
 
+    func testCallbackAuditMutationMatrixRemainsDeniedAndRollsBackSiblingWrites() async throws {
+        let mutations = [
+            "INSERT INTO audit_events (id, actor_id, reason, created_at) VALUES ('forbidden-insert', 'forbidden', 'Forbidden insert', '2026-08-25T12:00:00Z')",
+            "UPDATE audit_events SET reason = 'Forbidden update'",
+            "DELETE FROM audit_events",
+        ]
+
+        for mutation in mutations {
+            let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+            try await seedProject(store)
+
+            let caughtError: Error
+            do {
+                try await store.transact(actor: .init(id: "agent-audit-matrix"), reason: "Forbidden audit callback mutation") { connection in
+                    try connection.execute("UPDATE tickets SET lane = 'accepted' WHERE id = 'RR-02'")
+                    try connection.execute(mutation)
+                }
+                XCTFail("Expected callback audit mutation to be denied: \(mutation)")
+                continue
+            } catch {
+                caughtError = error
+            }
+
+            let sqliteError = try XCTUnwrap(caughtError as? SQLiteError)
+            XCTAssertEqual(sqliteError.code, 23)
+            let state = try await store.read { connection in
+                (
+                    try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-02'"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'agent-audit-matrix'")
+                )
+            }
+            XCTAssertEqual(state.0, TicketLane.backlog.rawValue)
+            XCTAssertEqual(state.1, 1)
+            XCTAssertEqual(state.2, 0)
+        }
+    }
+
+    func testCallbackProjectDeleteCannotIndirectlyMutateScopedAuditEvent() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let projectID = ProjectID(rawValue: "project-scoped-audit")
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Seed scoped audit fixture",
+            auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
+        ) { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-scoped-audit', 'Scoped audit project')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-scoped-audit', 'project-scoped-audit', 'Scoped phase')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('SCOPED-01', 'project-scoped-audit', 'phase-scoped-audit', 'Scoped child', 'backlog')")
+        }
+        let before = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id = 'project-scoped-audit'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE id = 'SCOPED-01'"),
+                try connection.row("SELECT project_id, entity_type, entity_id FROM audit_events WHERE reason = 'Seed scoped audit fixture'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        let foreignKeyCheckBefore = try SQLiteConnection(url: databaseURL)
+            .scalarInt("SELECT COUNT(*) FROM pragma_foreign_key_check")
+
+        let caughtError: Error
+        do {
+            try await store.transact(actor: .init(id: "agent-delete"), reason: "Delete scoped audit project") { connection in
+                try connection.execute("DELETE FROM projects WHERE id = 'project-scoped-audit'")
+            }
+            XCTFail("Expected foreign-key audit set-null mutation to be denied")
+            return
+        } catch {
+            caughtError = error
+        }
+
+        let sqliteError = try XCTUnwrap(caughtError as? SQLiteError)
+        XCTAssertEqual(sqliteError.code, 23)
+        let after = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id = 'project-scoped-audit'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE id = 'SCOPED-01'"),
+                try connection.row("SELECT project_id, entity_type, entity_id FROM audit_events WHERE reason = 'Seed scoped audit fixture'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        let foreignKeyCheckAfter = try SQLiteConnection(url: databaseURL)
+            .scalarInt("SELECT COUNT(*) FROM pragma_foreign_key_check")
+        XCTAssertEqual(after.0, before.0)
+        XCTAssertEqual(after.1, before.1)
+        XCTAssertEqual(after.2, before.2)
+        XCTAssertEqual(after.3, before.3)
+        XCTAssertEqual(foreignKeyCheckBefore, 0)
+        XCTAssertEqual(foreignKeyCheckAfter, 0)
+    }
+
+    func testSQLiteDiagnosticsAllowlistAuthorizerAndPrepareFailureFields() async throws {
+        SQLiteDiagnostics.resetForTesting()
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "diagnostic-project-id")
+        try await store.transact(
+            actor: .init(id: "diagnostic-owner-id"),
+            reason: "diagnostic-secret-reason",
+            auditScope: .init(projectID: projectID, entityType: .project, entityID: "diagnostic-entity-id")
+        ) { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('diagnostic-project-id', 'diagnostic-project-name')")
+        }
+        SQLiteDiagnostics.resetForTesting()
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "diagnostic-owner-id"), reason: "diagnostic-secret-reason") { connection in
+                try connection.execute("UPDATE audit_events SET project_id = 'diagnostic-project-id' WHERE reason = 'diagnostic-secret-reason'")
+            }
+        }
+
+        let payloads = SQLiteDiagnostics.recentPayloadsForTesting()
+        let authorizerPayload = try XCTUnwrap(payloads.first { $0.contains("event=release_radar_sqlite_authorizer_denied") })
+        let preparePayload = try XCTUnwrap(payloads.first { $0.contains("event=release_radar_sqlite_failure stage=prepare") })
+        XCTAssertTrue(authorizerPayload.contains("primary_result=23"))
+        XCTAssertTrue(authorizerPayload.contains("authorizer_action=23"))
+        XCTAssertTrue(authorizerPayload.contains("authorizer_action_name=SQLITE_UPDATE"))
+        XCTAssertTrue(authorizerPayload.contains("protected_table=audit_events"))
+        XCTAssertTrue(authorizerPayload.contains("protected_column=project_id"))
+        XCTAssertTrue(authorizerPayload.contains("in_transaction=true"))
+        XCTAssertTrue(preparePayload.contains("primary_result=23"))
+        XCTAssertTrue(preparePayload.contains("authorizer_action=none"))
+        XCTAssertTrue(preparePayload.contains("protected_table=none"))
+        XCTAssertTrue(preparePayload.contains("protected_column=none"))
+        XCTAssertTrue(preparePayload.contains("in_transaction=true"))
+
+        let combinedPayloads = payloads.joined(separator: "\n")
+        for prohibitedValue in [
+            "diagnostic-owner-id",
+            "diagnostic-secret-reason",
+            "diagnostic-project-id",
+            "diagnostic-entity-id",
+            "diagnostic-project-name",
+            "UPDATE audit_events",
+        ] {
+            XCTAssertFalse(combinedPayloads.contains(prohibitedValue))
+        }
+    }
+
     func testActivePhaseMustBelongToTheSameProject() async throws {
         let store = DeliveryStore(databaseURL: try makeDatabaseURL())
         try await store.transact(actor: .init(id: "seed"), reason: "Seed active phase integrity") { connection in
@@ -411,6 +551,9 @@ final class StoreAcceptanceTests: XCTestCase {
 
         let legacy = try SQLiteConnection(url: databaseURL)
         try legacy.executeScript("""
+        DROP TABLE alert_rules;
+        DROP TABLE ticket_goal_links;
+        DROP INDEX observed_goals_project_identity_unique;
         DROP INDEX notification_events_project_created_index;
         DROP INDEX notification_events_state_index;
         DROP TABLE notification_occurrences;
@@ -439,7 +582,253 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(state.0, "single-phase")
         XCTAssertNil(state.1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 7)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 9)
+    }
+
+    func testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity() async throws {
+        let databaseURL = try makeDatabaseURL()
+        do {
+            let store = DeliveryStore(databaseURL: databaseURL)
+            try await store.transact(actor: .init(id: "fixture"), reason: "Seed version seven ticket-goal migration") { connection in
+                try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'Release Radar')")
+                try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
+                try connection.execute("""
+                INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES
+                    ('ONE', 'project-1', 'phase-1', 'Owner-authored unambiguous outcome', 'backlog'),
+                    ('MULTI-THREAD', 'project-1', 'phase-1', 'Owner-authored multi-thread outcome', 'backlog'),
+                    ('MULTI-GOAL', 'project-1', 'phase-1', 'Owner-authored multi-goal outcome', 'backlog'),
+                    ('SHARED-A', 'project-1', 'phase-1', 'Owner-authored shared outcome A', 'backlog'),
+                    ('SHARED-B', 'project-1', 'phase-1', 'Owner-authored shared outcome B', 'backlog')
+                """)
+                try connection.execute("""
+                INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES
+                    ('thread-one', 'project-1', 'active', '2026-08-25T10:00:00Z'),
+                    ('thread-multi-a', 'project-1', 'active', '2026-08-25T10:00:00Z'),
+                    ('thread-multi-b', 'project-1', 'active', '2026-08-25T10:00:00Z'),
+                    ('thread-goals', 'project-1', 'active', '2026-08-25T10:00:00Z'),
+                    ('thread-shared', 'project-1', 'active', '2026-08-25T10:00:00Z')
+                """)
+                try connection.execute("""
+                INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES
+                    ('goal-one', 'project-1', 'thread-one', 'active', 'Approved candidate', '2026-08-25T10:00:00Z'),
+                    ('goal-multi-a', 'project-1', 'thread-multi-a', 'active', 'First thread candidate', '2026-08-25T10:00:00Z'),
+                    ('goal-multi-b', 'project-1', 'thread-multi-b', 'active', 'Second thread candidate', '2026-08-25T10:00:00Z'),
+                    ('goal-goals-a', 'project-1', 'thread-goals', 'active', 'Earlier candidate', '2026-08-25T10:00:00Z'),
+                    ('goal-goals-b', 'project-1', 'thread-goals', 'active', 'Later candidate', '2026-08-25T11:00:00Z'),
+                    ('goal-shared', 'project-1', 'thread-shared', 'active', 'Shared candidate', '2026-08-25T10:00:00Z')
+                """)
+                try connection.execute("""
+                INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES
+                    ('link-one', 'project-1', 'ONE', 'thread-one'),
+                    ('link-multi-a', 'project-1', 'MULTI-THREAD', 'thread-multi-a'),
+                    ('link-multi-b', 'project-1', 'MULTI-THREAD', 'thread-multi-b'),
+                    ('link-goals', 'project-1', 'MULTI-GOAL', 'thread-goals'),
+                    ('link-shared-a', 'project-1', 'SHARED-A', 'thread-shared'),
+                    ('link-shared-b', 'project-1', 'SHARED-B', 'thread-shared')
+                """)
+            }
+        }
+
+        let legacy = try SQLiteConnection(url: databaseURL)
+        try legacy.executeScript("""
+        DROP TABLE alert_rules;
+        DROP TABLE IF EXISTS ticket_goal_links;
+        DROP INDEX IF EXISTS observed_goals_project_identity_unique;
+        PRAGMA user_version = 7;
+        """)
+
+        do {
+            let migratedStore = DeliveryStore(databaseURL: databaseURL)
+            let state = try await migratedStore.read { connection in
+                (
+                    try connection.scalarInt("SELECT COUNT(*) FROM tickets"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM observed_goals"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM thread_links"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM ticket_goal_links"),
+                    try connection.scalarText("SELECT project_id || '|' || ticket_id || '|' || thread_id || '|' || goal_id FROM ticket_goal_links"),
+                    try connection.scalarText("SELECT outcome FROM tickets WHERE id = 'ONE'")
+                )
+            }
+            XCTAssertEqual(state.0, 5)
+            XCTAssertEqual(state.1, 6)
+            XCTAssertEqual(state.2, 6)
+            XCTAssertEqual(state.3, 1)
+            XCTAssertEqual(state.4, "project-1|ONE|thread-one|goal-one")
+            XCTAssertEqual(state.5, "Owner-authored unambiguous outcome")
+            XCTAssertNil(try SQLiteConnection(url: databaseURL).row("PRAGMA foreign_key_check"))
+        }
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+        let relaunchedLinkCount = try await relaunchedStore.read { connection in
+            try connection.scalarInt("SELECT COUNT(*) FROM ticket_goal_links")
+        }
+        let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL))
+        XCTAssertEqual(relaunchedLinkCount, 1)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 9)
+        XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 7)
+        XCTAssertNil(try snapshot.scalarText("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'ticket_goal_links'"))
+        XCTAssertEqual(try snapshot.scalarText("SELECT outcome FROM tickets WHERE id = 'ONE'"), "Owner-authored unambiguous outcome")
+    }
+
+    func testVersionEightSchemaEnforcesExactTicketAndGoalIdentity() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed ticket-goal integrity") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'Release Radar')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
+            try connection.execute("""
+            INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES
+                ('RR-1', 'project-1', 'phase-1', 'First', 'backlog'),
+                ('RR-2', 'project-1', 'phase-1', 'Second', 'backlog')
+            """)
+            try connection.execute("""
+            INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES
+                ('thread-1', 'project-1', 'active', '2026-08-25T10:00:00Z'),
+                ('thread-2', 'project-1', 'active', '2026-08-25T10:00:00Z')
+            """)
+            try connection.execute("""
+            INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES
+                ('goal-1', 'project-1', 'thread-1', 'active', 'First goal', '2026-08-25T10:00:00Z'),
+                ('goal-2', 'project-1', 'thread-2', 'active', 'Second goal', '2026-08-25T10:00:00Z')
+            """)
+            try connection.execute("""
+            INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES
+                ('thread-link-1', 'project-1', 'RR-1', 'thread-1'),
+                ('thread-link-2', 'project-1', 'RR-2', 'thread-2'),
+                ('thread-link-2-goal', 'project-1', 'RR-2', 'thread-1')
+            """)
+            try connection.execute("INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES ('goal-link-1', 'project-1', 'RR-1', 'thread-1', 'goal-1')")
+        }
+
+        let manifestConnection = try SQLiteConnection(url: databaseURL)
+        let manifest = (
+            try manifestConnection.scalarInt("SELECT COUNT(*) FROM pragma_index_list('observed_goals') WHERE name = 'observed_goals_project_identity_unique' AND \"unique\" = 1"),
+            try manifestConnection.scalarInt("SELECT COUNT(*) FROM pragma_index_list('ticket_goal_links') WHERE name = 'ticket_goal_links_project_ticket_unique' AND \"unique\" = 1"),
+            try manifestConnection.scalarInt("SELECT COUNT(*) FROM pragma_index_list('ticket_goal_links') WHERE name = 'ticket_goal_links_project_goal_unique' AND \"unique\" = 1"),
+            try Self.exactForeignKeyCount(manifestConnection, table: "ticket_goal_links", source: "project_id,ticket_id,thread_id", targetTable: "thread_links", target: "project_id,ticket_id,thread_id"),
+            try Self.exactForeignKeyCount(manifestConnection, table: "ticket_goal_links", source: "project_id,goal_id,thread_id", targetTable: "observed_goals", target: "project_id,id,thread_id")
+        )
+        XCTAssertEqual(manifest.0, 1)
+        XCTAssertEqual(manifest.1, 1)
+        XCTAssertEqual(manifest.2, 1)
+        XCTAssertEqual(manifest.3, 1)
+        XCTAssertEqual(manifest.4, 1)
+        XCTAssertNil(try SQLiteConnection(url: databaseURL).row("PRAGMA foreign_key_check"))
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "fixture"), reason: "Reject duplicate ticket identity") { connection in
+                try connection.execute("INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES ('duplicate-ticket', 'project-1', 'RR-1', 'thread-1', 'goal-1')")
+            }
+        }
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "fixture"), reason: "Reject duplicate goal identity") { connection in
+                try connection.execute("INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES ('duplicate-goal', 'project-1', 'RR-2', 'thread-1', 'goal-1')")
+            }
+        }
+        let linkCount = try await store.read { connection in
+            try connection.scalarInt("SELECT COUNT(*) FROM ticket_goal_links")
+        }
+        XCTAssertEqual(linkCount, 1)
+    }
+
+    func testVersionNineAlertRulesMigrateExactlyAndOwnerChangesAuditOnce() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var legacyStore: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        _ = legacyStore
+        legacyStore = nil
+        let legacy = try SQLiteConnection(url: databaseURL)
+        try legacy.executeScript("""
+        DROP TABLE IF EXISTS alert_rules;
+        PRAGMA user_version = 8;
+        """)
+
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let ruleStore = AlertRuleStore(store: store)
+        let initial = try await ruleStore.load()
+        XCTAssertTrue(initial[.blockedLinkedGoals])
+        XCTAssertTrue(initial[.agentCompletionAndReview])
+        XCTAssertTrue(initial[.needsReviewEntry])
+        XCTAssertFalse(initial[.pausedGoals])
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 9)
+
+        let schema = try SQLiteConnection(url: databaseURL)
+        XCTAssertThrowsError(try schema.execute("INSERT INTO alert_rules (kind, is_enabled) VALUES ('unknown', 1)"))
+        XCTAssertThrowsError(try schema.execute("UPDATE alert_rules SET is_enabled = 2 WHERE kind = 'paused_goals'"))
+
+        let changed = try await ruleStore.set(.pausedGoals, enabled: true)
+        _ = try await ruleStore.set(.pausedGoals, enabled: true)
+        XCTAssertTrue(changed[.pausedGoals])
+        let audit = try await store.read { connection in
+            try connection.row(
+                """
+                SELECT actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id, reason
+                FROM audit_events
+                WHERE reason LIKE 'Set global alert rule %'
+                """
+            )
+        }
+        XCTAssertEqual(audit?["actor_id"], .text("release-radar-owner"))
+        XCTAssertEqual(audit?["thread_id"], .null)
+        XCTAssertEqual(audit?["thread_attribution"], .text("none"))
+        XCTAssertEqual(audit?["project_id"], .null)
+        XCTAssertEqual(audit?["entity_type"], .null)
+        XCTAssertEqual(audit?["entity_id"], .null)
+        XCTAssertEqual(audit?["reason"], .text("Set global alert rule paused_goals enabled"))
+        let changeAuditCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason LIKE 'Set global alert rule %'")
+        }
+        XCTAssertEqual(changeAuditCount, 1)
+
+        try await store.transact(actor: .init(id: "fixture"), reason: "Break alert rule fixture") { connection in
+            try connection.execute("DELETE FROM alert_rules WHERE kind = 'needs_review_entry'")
+        }
+        await XCTAssertThrowsErrorAsync { _ = try await ruleStore.load() }
+        await XCTAssertThrowsErrorAsync { _ = try await ruleStore.set(.blockedLinkedGoals, enabled: false) }
+        let auditCountAfterFailures = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason LIKE 'Set global alert rule %'")
+        }
+        XCTAssertEqual(auditCountAfterFailures, 1)
+    }
+
+    func testLinkedGoalThreadReassignmentRollsBackObservedGoalAndLink() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed linked goal") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'Release Radar')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-1', 'project-1', 'phase-1', 'Keep identity', 'backlog')")
+            try connection.execute("""
+            INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES
+                ('thread-1', 'project-1', 'active', '2026-08-25T10:00:00Z'),
+                ('thread-2', 'project-1', 'active', '2026-08-25T10:00:00Z')
+            """)
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('goal-1', 'project-1', 'thread-1', 'active', 'Original goal', '2026-08-25T10:00:00Z')")
+            try connection.execute("INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES ('thread-link-1', 'project-1', 'RR-1', 'thread-1')")
+            try connection.execute("INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES ('goal-link-1', 'project-1', 'RR-1', 'thread-1', 'goal-1')")
+        }
+        let auditCountBefore = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
+
+        await XCTAssertThrowsErrorAsync {
+            try await MeaningfulDeliveryEventRecorder(store: store).recordGoalObservation(
+                projectID: .init(rawValue: "project-1"),
+                threadID: "thread-2",
+                goalID: "goal-1",
+                status: .blocked,
+                observedAt: Date(timeIntervalSince1970: 2)
+            )
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT thread_id || '|' || status || '|' || text FROM observed_goals WHERE id = 'goal-1'"),
+                try connection.scalarText("SELECT thread_id || '|' || goal_id FROM ticket_goal_links WHERE id = 'goal-link-1'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events")
+            )
+        }
+        XCTAssertEqual(state.0, "thread-1|active|Original goal")
+        XCTAssertEqual(state.1, "thread-1|goal-1")
+        XCTAssertEqual(state.2, auditCountBefore)
+        XCTAssertNil(try SQLiteConnection(url: databaseURL).row("PRAGMA foreign_key_check"))
     }
 
     func testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit() async throws {
@@ -474,7 +863,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 7)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 9)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }
@@ -534,6 +923,28 @@ final class StoreAcceptanceTests: XCTestCase {
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-02', 'project-1', 'phase-1', 'Store', 'backlog')")
         }
+    }
+
+    private static func exactForeignKeyCount(
+        _ connection: SQLiteConnection,
+        table: String,
+        source: String,
+        targetTable: String,
+        target: String
+    ) throws -> Int64? {
+        try connection.scalarInt(
+            """
+            SELECT COUNT(*) FROM (
+                SELECT id, \"table\" AS target_table,
+                       group_concat(\"from\", ',') AS source_columns,
+                       group_concat(\"to\", ',') AS target_columns
+                FROM (SELECT * FROM pragma_foreign_key_list('\(table)') ORDER BY id, seq)
+                GROUP BY id
+            )
+            WHERE target_table = ? AND source_columns = ? AND target_columns = ?
+            """,
+            bindings: [.text(targetTable), .text(source), .text(target)]
+        )
     }
 
     private func makeDatabaseURL() throws -> URL {

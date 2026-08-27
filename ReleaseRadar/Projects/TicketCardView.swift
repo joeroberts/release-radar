@@ -53,7 +53,10 @@ struct TicketCardView: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(card.id.rawValue), \(card.outcome)")
+        .accessibilityLabel(
+            "\(card.id.rawValue), \(card.outcome), \(card.dependencyCount) dependencies, "
+                + "\(card.blockerCount) blockers\(isSelected ? ", selected" : "")"
+        )
         .accessibilityIdentifier("ticket-\(card.id.rawValue)")
     }
 

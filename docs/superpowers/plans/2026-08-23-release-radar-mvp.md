@@ -1,5 +1,12 @@
 # Release Radar By Rekon Labs MVP Implementation Plan
 
+> **Historical plan — do not execute as an open backlog.** RR-01 through RR-10
+> are accepted and the MVP is release-ready. The unchecked boxes below preserve
+> the original implementation sequence; they do not describe current work.
+> `docs/delivery/progress.md` is authoritative for current status and eligibility.
+> Later accepted remediation, onboarding, authorization, observation, and
+> owner-data isolation decisions supersede any conflicting instruction here.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a signed native macOS application that gives one owner an agent-driven, local-first view of delivery state for any folder-backed project.

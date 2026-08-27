@@ -51,3 +51,37 @@ struct CodexConnectionPresentation: Equatable, Sendable {
         }
     }
 }
+
+enum AlertRulesRetryAction: Equatable, Sendable {
+    case load
+    case update(AlertRuleKind, enabled: Bool)
+}
+
+struct AlertRulesFailureState: Equatable, Sendable {
+    let presentation: FailureStatePresentation
+    let retry: AlertRulesRetryAction
+
+    static let load = AlertRulesFailureState(
+        presentation: .init(
+            title: "Alert settings unavailable",
+            detail: "Release Radar could not load the saved alert rules. Retry to restore the controls; the rest of the dashboard remains available.",
+            systemImage: "bell.badge.slash",
+            tone: .error,
+            accessibilityID: "alert-rules-failure"
+        ),
+        retry: .load
+    )
+
+    static func update(_ kind: AlertRuleKind, enabled: Bool) -> AlertRulesFailureState {
+        AlertRulesFailureState(
+            presentation: .init(
+                title: "Alert setting not saved",
+                detail: "The saved value did not change. Retry this alert rule update.",
+                systemImage: "exclamationmark.arrow.triangle.2.circlepath",
+                tone: .error,
+                accessibilityID: "alert-rules-failure"
+            ),
+            retry: .update(kind, enabled: enabled)
+        )
+    }
+}

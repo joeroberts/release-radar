@@ -65,7 +65,13 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
 
     func testAppReviewDecisionAuditsOwnerOriginWithoutThreadAttribution() async throws {
         let store = try await seededStore()
-        let model = AppModel(store: store)
+        let model = AppModel(
+            store: store,
+            projectOnboarding: FolderProjectOnboarding(
+                store: store,
+                bookmarkStore: ReviewBookmarkStore()
+            )
+        )
         await model.loadDashboard()
         let item = try XCTUnwrap(
             model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.first {
@@ -161,7 +167,7 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
             graph: graph,
             size: CGSize(width: 960, height: 520)
         )
-        XCTAssertEqual(layout.connectors.count, graph.edges.count)
+        XCTAssertEqual(layout.connectors.count, 11)
         let selectedConnectors = layout.connectors.filter { $0.targetID == selectedID }
         XCTAssertEqual(selectedConnectors.count, 4)
         XCTAssertEqual(Set(selectedConnectors.map(\.sourceID.rawValue)), ["VD2-03", "VD2-04", "VD2-06", "VD2-07"])
@@ -171,6 +177,95 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
             XCTAssertEqual(connector.start, CGPoint(x: sourceFrame.maxX, y: sourceFrame.midY))
             XCTAssertEqual(connector.end, CGPoint(x: targetFrame.minX, y: targetFrame.midY))
         }
+    }
+
+    func testDependencyGraphLayoutShowsOnlyTheSelectedPathInStableSemanticColumns() throws {
+        func node(_ id: String, lane: TicketLane, blockers: Int = 0) -> DependencyGraphNode {
+            DependencyGraphNode(
+                id: TicketID(rawValue: id),
+                outcome: "Outcome for \(id)",
+                lane: lane,
+                blockerCount: blockers
+            )
+        }
+        func edge(_ id: String, _ source: String, _ target: String) -> DependencyGraphEdge {
+            DependencyGraphEdge(
+                id: TicketDependencyID(rawValue: id),
+                sourceID: TicketID(rawValue: source),
+                targetID: TicketID(rawValue: target)
+            )
+        }
+
+        let nodes = [
+            node("FOUND-3", lane: .accepted),
+            node("DIRECT-B", lane: .blocked, blockers: 1),
+            node("UNLOCK-B", lane: .backlog),
+            node("UNRELATED-B", lane: .backlog),
+            node("FOUND-1", lane: .accepted),
+            node("SELECTED", lane: .inProgress),
+            node("DIRECT-A", lane: .accepted),
+            node("UNLOCK-A", lane: .needsReview),
+            node("FOUND-2", lane: .accepted),
+            node("UNRELATED-A", lane: .backlog),
+        ]
+        let edges = [
+            edge("path-1", "FOUND-1", "DIRECT-A"),
+            edge("path-2", "FOUND-2", "DIRECT-A"),
+            edge("path-3", "FOUND-3", "DIRECT-B"),
+            edge("path-4", "DIRECT-A", "SELECTED"),
+            edge("path-5", "DIRECT-B", "SELECTED"),
+            edge("path-6", "SELECTED", "UNLOCK-A"),
+            edge("path-7", "SELECTED", "UNLOCK-B"),
+            edge("unrelated", "UNRELATED-A", "UNRELATED-B"),
+        ]
+        let base = DependencyGraphProjection(
+            projectID: ProjectID(rawValue: "layout-project"),
+            phaseID: PhaseID(rawValue: "layout-phase"),
+            nodes: nodes,
+            edges: edges,
+            selected: DependencyInspectorProjection(
+                ticket: nodes[0],
+                directRequires: [],
+                indirectRequires: [],
+                unlocks: []
+            )
+        )
+        let graph = try XCTUnwrap(base.selecting(TicketID(rawValue: "SELECTED")))
+
+        let first = DependencyGraphLayout.makeLayout(
+            graph: graph,
+            size: CGSize(width: 960, height: 520)
+        )
+        let second = DependencyGraphLayout.makeLayout(
+            graph: graph,
+            size: CGSize(width: 960, height: 520)
+        )
+
+        XCTAssertEqual(first.columns.map(\.title), [
+            "Foundations", "Accepted work", "Selected ticket", "Unlocks next",
+        ])
+        XCTAssertEqual(first.columns.map { $0.ticketIDs.map(\.rawValue) }, [
+            ["FOUND-1", "FOUND-2", "FOUND-3"],
+            ["DIRECT-A", "DIRECT-B"],
+            ["SELECTED"],
+            ["UNLOCK-A", "UNLOCK-B"],
+        ])
+        XCTAssertEqual(Set(first.frames.keys.map(\.rawValue)), [
+            "DIRECT-A", "DIRECT-B", "FOUND-1", "FOUND-2", "FOUND-3",
+            "SELECTED", "UNLOCK-A", "UNLOCK-B",
+        ])
+        XCTAssertNil(first.frames[TicketID(rawValue: "UNRELATED-A")])
+        XCTAssertNil(first.frames[TicketID(rawValue: "UNRELATED-B")])
+        XCTAssertEqual(first.connectors.count, 7)
+        XCTAssertFalse(first.connectors.contains { $0.id.rawValue == "unrelated" })
+        XCTAssertTrue(first.connectors.allSatisfy {
+            first.frames[$0.sourceID] != nil && first.frames[$0.targetID] != nil
+        })
+        XCTAssertEqual(
+            first.connectors.filter(\.isBlocking).map(\.id.rawValue),
+            ["path-5"]
+        )
+        XCTAssertEqual(first, second)
     }
 
     func testDependencyGraphExcludesCrossPhaseEdgesFromRelationshipsAndConnectors() async throws {
@@ -235,7 +330,7 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-06", "VD2-07"])
         XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["VD2-03", "VD2-04", "VD2-05"])
         XCTAssertEqual(graph.selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
-        XCTAssertEqual(layout.connectors.count, graph.edges.count)
+        XCTAssertEqual(layout.connectors.count, 11)
         XCTAssertTrue(layout.connectors.allSatisfy {
             layout.frames[$0.sourceID] != nil && layout.frames[$0.targetID] != nil
         })
@@ -378,7 +473,13 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
     @MainActor
     func testAppModelLoadsProjectWorkspaceAndSurfacesReviewActionFailure() async throws {
         let store = try await seededStore()
-        let model = AppModel(store: store)
+        let model = AppModel(
+            store: store,
+            projectOnboarding: FolderProjectOnboarding(
+                store: store,
+                bookmarkStore: ReviewBookmarkStore()
+            )
+        )
 
         await model.loadDashboard()
 
@@ -398,9 +499,9 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         let item = try XCTUnwrap(model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.first)
         await model.performReviewDecision(.resolve, item: item)
 
-        XCTAssertTrue(model.reviewActionError?.localizedCaseInsensitiveContains("authorized project root") == true)
-        XCTAssertEqual(model.reviewActionFailure?.title, "Action rejected")
-        XCTAssertTrue(model.reviewActionFailure?.detail.contains("No delivery state changed") == true)
+        XCTAssertTrue(model.reviewActionError?.localizedCaseInsensitiveContains("authorization") == true)
+        XCTAssertEqual(model.reviewActionFailure?.title, "Project folder authorization required")
+        XCTAssertEqual(model.reviewActionFailure?.accessibilityID, "review-locate-authorization")
         XCTAssertEqual(model.reviewInbox(for: DashboardSampleData.projectID)?.openItems.count, 6)
     }
 
@@ -419,6 +520,14 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
                     .text("rr07-test-root"),
                     .text(DashboardSampleData.projectID.rawValue),
                     .text(rootPath),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0)",
+                bindings: [
+                    .text(DashboardSampleData.projectID.rawValue),
+                    .text(rootPath),
+                    .blob(Data(rootPath.utf8)),
                 ]
             )
             let reviews: [(String, String?, String, String)] = [
@@ -455,5 +564,22 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
             reason: reason,
             command: command
         )
+    }
+}
+
+private struct ReviewBookmarkStore: ProjectBookmarkStoring {
+    func makeBookmark(for url: URL) throws -> Data {
+        Data(url.standardizedFileURL.resolvingSymlinksInPath().path.utf8)
+    }
+
+    func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        .init(url: URL(fileURLWithPath: String(decoding: bookmark, as: UTF8.self)), isStale: false)
+    }
+
+    func withSecurityScopedAccess<T: Sendable>(
+        bookmark: Data,
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T {
+        try await body(resolve(bookmark))
     }
 }

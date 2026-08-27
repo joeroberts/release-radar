@@ -46,9 +46,14 @@ final class DashboardProjectionTests: XCTestCase {
 
         let inProgress = try XCTUnwrap(board.lane(.inProgress)?.cards.first)
         XCTAssertEqual(inProgress.id.rawValue, "VD2-08")
-        XCTAssertEqual(inProgress.outcome, "Visual QA and accessibility acceptance")
+        XCTAssertEqual(inProgress.outcome, "Verifies the dashboard’s visual fidelity and accessibility before release.")
         XCTAssertEqual(inProgress.dependencyCount, 4)
         XCTAssertEqual(inProgress.blockerCount, 0)
+        XCTAssertTrue(
+            board.lanes.flatMap(\.cards).allSatisfy {
+                $0.outcome.split(whereSeparator: \.isWhitespace).count >= 5 && $0.outcome.hasSuffix(".")
+            }
+        )
     }
 
     func testSelectedTicketProjectsReadOnlyContextAndRelationshipDirection() async throws {
@@ -61,7 +66,7 @@ final class DashboardProjectionTests: XCTestCase {
                 .detail(for: TicketID(rawValue: "VD2-07c"))
         )
 
-        XCTAssertEqual(detail.outcome, "Activity and AI areas")
+        XCTAssertEqual(detail.outcome, "Makes delivery activity and AI context understandable to the owner.")
         XCTAssertEqual(detail.goalContext.linkQuality, .verified)
         XCTAssertEqual(detail.goalContext.status, "Blocked")
         XCTAssertEqual(detail.requires.map(\.id.rawValue), ["VD2-03", "VD2-04", "VD2-05"])
@@ -70,6 +75,64 @@ final class DashboardProjectionTests: XCTestCase {
         XCTAssertEqual(detail.evidence.map(\.label), ["Activity areas decision record"])
         XCTAssertTrue(detail.auditHistory.contains { $0.contains("VD2-07c") })
         XCTAssertEqual(detail.notificationHistory, ["Blocked alert · Delivered"])
+    }
+
+    func testApprovedOlderGoalRemainsTheOnlyTicketAttributedRuntimeIdentity() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "dashboard-test"), reason: "Observe a newer unapproved goal") { connection in
+            try connection.execute(
+                "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('newer-unapproved-goal', 'rekon-pursuit', 'rr06-thread-vd2-07c', 'active', 'Newer unapproved goal', '2026-08-25T12:00:00Z')"
+            )
+        }
+
+        let projection = try await DashboardProjection.load(from: store)
+        let detail = try XCTUnwrap(
+            projection.board(for: DashboardSampleData.projectID)?
+                .detail(for: TicketID(rawValue: "VD2-07c"))
+        )
+        let activity = try await ProjectActivityProjection.load(from: store, projectID: DashboardSampleData.projectID)
+        let approvedRuntime = try XCTUnwrap(activity.items.first { $0.ticketID?.rawValue == "VD2-07c" && $0.source == .runtime })
+        let newerRuntime = try XCTUnwrap(activity.items.first { $0.id == "runtime-newer-unapproved-goal" })
+
+        XCTAssertEqual(detail.goalContext.text, "Resolve the policy boundary for Activity and AI areas.")
+        XCTAssertEqual(detail.goalContext.status, "Blocked")
+        XCTAssertEqual(approvedRuntime.id, "runtime-rr06-goal-vd2-07c")
+        XCTAssertEqual(approvedRuntime.detail, "Resolve the policy boundary for Activity and AI areas.")
+        XCTAssertNil(newerRuntime.ticketID)
+    }
+
+    func testFreshSampleOutcomeRemainsEditableThroughTicketUpsert() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let root = databaseURL.deletingLastPathComponent()
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(projectID: DashboardSampleData.projectID, canonicalRoot: root, authorizedRoots: [root]),
+            ])
+        )
+
+        let result = await dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(uuidString: "14141414-1414-4414-8414-141414141414")!,
+            projectRoot: root.path,
+            reason: "Clarify VD2-07c outcome",
+            command: .upsertTicket(
+                ticketID: "VD2-07c",
+                phaseID: DashboardSampleData.phaseID.rawValue,
+                outcome: "Explains the approved Activity policy boundary and next delivery step.",
+                lane: .blocked
+            )
+        ))
+        let projection = try await DashboardProjection.load(from: store)
+        let detail = try XCTUnwrap(
+            projection.board(for: DashboardSampleData.projectID)?
+                .detail(for: TicketID(rawValue: "VD2-07c"))
+        )
+
+        XCTAssertNil(result.error)
+        XCTAssertEqual(detail.outcome, "Explains the approved Activity policy boundary and next delivery step.")
     }
 
     func testSeedIsIdempotentAndPersistsAcrossStoreRelaunch() async throws {
@@ -155,9 +218,28 @@ final class DashboardProjectionTests: XCTestCase {
         XCTAssertEqual(project.attentionCount, 0)
     }
 
-    func testResponsivePresentationUsesFullOutcomesWideAndIDsOnlyCompact() {
-        XCTAssertEqual(DashboardLayout.presentation(forLaneWidth: 181), .fullOutcome)
-        XCTAssertEqual(DashboardLayout.presentation(forLaneWidth: 180), .compactID)
+    func testRequestedBoardDensityUsesCompactCardsAtOrBelowTheLaneWidthBoundary() {
+        XCTAssertEqual(BoardDensity.fullOutcomes.displayName, "Full outcomes")
+        XCTAssertEqual(BoardDensity.compact.displayName, "Compact density")
+        XCTAssertEqual(BoardDensity.fullOutcomes.presentation(forLaneWidth: 181), .fullOutcome)
+        XCTAssertEqual(BoardDensity.fullOutcomes.presentation(forLaneWidth: 180), .compactID)
+        XCTAssertEqual(BoardDensity.compact.presentation(forLaneWidth: 181), .compactID)
+        XCTAssertEqual(BoardDensity.compact.presentation(forLaneWidth: 180), .compactID)
+        XCTAssertEqual(
+            BoardDensity.fullOutcomes.accessibilityOptionLabel(isSelected: true, forLaneWidth: 180),
+            "Full outcomes requested; showing Compact density at the current width"
+        )
+        XCTAssertEqual(
+            BoardDensity.fullOutcomes.accessibilityHelp(forLaneWidth: 180),
+            "Full outcomes remains selected and restores automatically when the window is wide enough."
+        )
+        XCTAssertEqual(
+            BoardDensity.compact.accessibilityOptionLabel(isSelected: true, forLaneWidth: 180),
+            "Compact density"
+        )
+        XCTAssertTrue(PhaseBoardLayout.usesVerticallyScrollableStack(forWidth: 760))
+        XCTAssertTrue(PhaseBoardLayout.usesVerticallyScrollableStack(forWidth: 900))
+        XCTAssertFalse(PhaseBoardLayout.usesVerticallyScrollableStack(forWidth: 1_260))
         XCTAssertEqual(DashboardLayout.sidebarWidth(isCompact: false), 220)
         XCTAssertEqual(DashboardLayout.sidebarWidth(isCompact: true), 96)
     }

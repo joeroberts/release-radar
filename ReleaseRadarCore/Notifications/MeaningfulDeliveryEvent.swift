@@ -2,10 +2,20 @@ import Foundation
 
 public enum MeaningfulDeliveryEventKind: String, Codable, Equatable, Sendable {
     case goalBlocked = "goal_blocked"
+    case goalPaused = "goal_paused"
     case agentCompleted = "agent_completed"
     case reviewRequested = "review_requested"
     case ticketNeedsReview = "ticket_needs_review"
     case importNeedsReview = "import_needs_review"
+
+    public var alertRuleKind: AlertRuleKind {
+        switch self {
+        case .goalBlocked: .blockedLinkedGoals
+        case .goalPaused: .pausedGoals
+        case .agentCompleted, .reviewRequested: .agentCompletionAndReview
+        case .ticketNeedsReview, .importNeedsReview: .needsReviewEntry
+        }
+    }
 }
 
 public enum NotificationDeliveryState: String, Codable, Equatable, Sendable {
@@ -84,6 +94,10 @@ public actor MeaningfulDeliveryEventRecorder {
             ), existingProjectID != projectID.rawValue {
                 throw MeaningfulDeliveryEventError.crossProjectGoal
             }
+            let previousStatus = try connection.scalarText(
+                "SELECT status FROM observed_goals WHERE id = ? AND project_id = ?",
+                bindings: [.text(goalID), .text(projectID.rawValue)]
+            )
             try connection.execute(
                 """
                 INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at)
@@ -104,22 +118,54 @@ public actor MeaningfulDeliveryEventRecorder {
                 ]
             )
             let ticketID = try connection.scalarText(
-                "SELECT ticket_id FROM thread_links WHERE project_id = ? AND thread_id = ? ORDER BY rowid LIMIT 1",
-                bindings: [.text(projectID.rawValue), .text(threadID)]
+                "SELECT ticket_id FROM ticket_goal_links WHERE project_id = ? AND goal_id = ? AND thread_id = ?",
+                bindings: [.text(projectID.rawValue), .text(goalID), .text(threadID)]
             )
-            if status == .blocked, let ticketID {
-                _ = try MeaningfulDeliveryEvent.enqueue(
+            switch status {
+            case .blocked:
+                try MeaningfulDeliveryEvent.deactivate(
                     projectID: projectID,
-                    kind: .goalBlocked,
+                    kind: .goalPaused,
                     subjectID: goalID,
-                    ticketID: TicketID(rawValue: ticketID),
-                    goalID: ObservedGoalID(rawValue: goalID),
                     connection: connection
                 )
-            } else {
+                if previousStatus != status.rawValue, let ticketID {
+                    _ = try MeaningfulDeliveryEvent.enqueue(
+                        projectID: projectID,
+                        kind: .goalBlocked,
+                        subjectID: goalID,
+                        ticketID: TicketID(rawValue: ticketID),
+                        goalID: ObservedGoalID(rawValue: goalID),
+                        connection: connection
+                    )
+                }
+            case .paused:
                 try MeaningfulDeliveryEvent.deactivate(
                     projectID: projectID,
                     kind: .goalBlocked,
+                    subjectID: goalID,
+                    connection: connection
+                )
+                if previousStatus != status.rawValue, let ticketID {
+                    _ = try MeaningfulDeliveryEvent.enqueue(
+                        projectID: projectID,
+                        kind: .goalPaused,
+                        subjectID: goalID,
+                        ticketID: TicketID(rawValue: ticketID),
+                        goalID: ObservedGoalID(rawValue: goalID),
+                        connection: connection
+                    )
+                }
+            case .active, .completed, .unknown:
+                try MeaningfulDeliveryEvent.deactivate(
+                    projectID: projectID,
+                    kind: .goalBlocked,
+                    subjectID: goalID,
+                    connection: connection
+                )
+                try MeaningfulDeliveryEvent.deactivate(
+                    projectID: projectID,
+                    kind: .goalPaused,
                     subjectID: goalID,
                     connection: connection
                 )
@@ -156,6 +202,8 @@ extension MeaningfulDeliveryEvent {
         goalID: ObservedGoalID?,
         connection: SQLiteConnection
     ) throws -> MeaningfulDeliveryEvent? {
+        let rules = try AlertRuleSnapshot.load(from: connection)
+        guard rules[kind.alertRuleKind] else { return nil }
         guard try connection.scalarInt(
             "SELECT first_dashboard_opened FROM projects WHERE id = ?",
             bindings: [.text(projectID.rawValue)]
@@ -242,6 +290,8 @@ extension MeaningfulDeliveryEvent {
         switch kind {
         case .goalBlocked:
             return ("\(identifier) is blocked", "A linked goal is blocked in Release Radar.")
+        case .goalPaused:
+            return ("\(identifier) is paused", "A linked goal is paused in Release Radar.")
         case .agentCompleted:
             return ("\(identifier) completed", "An agent recorded completed delivery work in Release Radar.")
         case .reviewRequested:

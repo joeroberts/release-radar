@@ -18,7 +18,9 @@ state and links back to project documents as evidence.
   into a phase-level Kanban board.
 - Make every ticket understandable in board view: its outcome, delivery state,
   goal state, dependencies, attention required, and evidence must be visible.
-- Observe live Codex thread and goal state without agent-authored duplication.
+- Present live Codex thread and goal state only when a supported authenticated
+  observation transport exists; otherwise show truthful unavailable or
+  persisted-last-known stale context without agent-authored duplication.
 - Let agents manage phases, tickets, dependencies, delivery status, outcome
   text, evidence, and review requests through structured local app actions.
 - Send Pushover notifications from the app for blocks, task completion, and
@@ -41,8 +43,10 @@ state and links back to project documents as evidence.
 The app is a menu-bar-capable SwiftUI macOS application with a local SQLite
 database. It has two integrations:
 
-1. A Codex App Server reader lists and reads linked threads, goals, runtime
-   statuses, and streamed changes.
+1. A bounded read-only Codex observer may list and read linked threads, goals,
+   runtime statuses, and streamed changes only after a supported authenticated
+   transport is proven. The current configured observer reports unavailable;
+   injected persisted observations are explicitly stale.
 2. A local agent tool interface exposes narrow, structured commands to create
    and update delivery records. The app remains the sole database writer.
 
@@ -52,7 +56,7 @@ not submit raw HTTP requests or handle credentials.
 ```mermaid
 flowchart LR
   Folder["Project folder"] --> App["Native delivery app\nlocal SQLite"]
-  Codex["Codex App Server\nthreads, goals, runtime state"] --> App
+  Codex["Supported Codex observer\nwhen available"] --> App
   Tools["Local agent delivery tools"] --> App
   App --> UI["Project overview\nand phase Kanban"]
   App --> Push["Pushover"]
@@ -99,20 +103,67 @@ normal Codex conversation.
 
 ## Onboarding
 
+Add Project presents distinct, clearly labelled choices. **Attach Folder to
+Existing Project** selects an eligible persisted rootless project first, then a
+folder, and names both in confirmation. It preserves the project's complete
+delivery history and uses the minimum explicit owner decision; it never runs
+new-project preparation or import.
+
+**Import Existing Project** is complete-project restoration from the approved
+versioned portable Release Radar archive. It shows a validation preview before
+writing, creates a new project atomically, rejects collisions instead of
+overwriting or remapping, and creates fresh local folder authorization.
+Release Radar's Markdown delivery records and the Rekon seed JSON are not that
+archive. The import workflow remains unavailable until an authoritative
+exporter and exporter-produced fixture exist.
+
+New folder-backed projects use **Initialize Project Tracking**. Folder
+selection and discovery are preview-only. Before the durable write, the app
+names the project and folder and explains that initialization saves local
+Release Radar state and folder authorization without modifying repository
+files. After the write, closing preserves resumable pending setup.
+
+If no usable delivery structure is found, the app presents a truthful
+owner-mediated Codex handoff. It shows the exact prompt below with an
+icon-only overlapping-squares copy control labelled **Copy Codex prompt**,
+confirms the copy visibly and through accessibility, and does not launch,
+contact, paste into, or submit to Codex. Only the prompt is copied; it contains
+no folder path or project content.
+
+> Define the current Release Radar tracking state for this project. Through
+> Release Radar's existing typed inbound bridge, create or update the active
+> phase and the work currently in scope. Record truthful ticket outcomes,
+> lanes, dependencies, blockers, evidence, and Codex links only when known. Do
+> not create or edit repository dashboard files, do not infer canonical state
+> from arbitrary Markdown, and send uncertain items to Needs Review instead
+> of guessing.
+
+Portable Import remains hidden until its exporter/archive gate opens. The
+owner-approved future Help section is deferred and is not part of onboarding
+initialization.
+
+For new folder-backed project onboarding:
+
 1. The owner selects a local project folder. The app retains a local
    security-scoped bookmark and discovers the Git root and worktrees.
-2. It discovers Codex threads whose working directory is that folder or a
-   subfolder, including matching worktrees. New matching threads are included
-   automatically; explicit exclusions are durable.
-3. The app recognizes known delivery artifacts and offers an import preview.
-   Rekon gets a one-time importer for its existing dashboard JSON, roadmap,
-   task briefs, handoffs, and ledger. These imports seed local records and
-   preserve evidence links; they do not establish an ongoing synchronization.
+2. If a supported observer exists, it may discover Codex threads whose working
+   directory is that folder or a subfolder, including matching worktrees. With
+   no supported observer, discovery is unavailable rather than inferred from
+   private state. Explicit exclusions remain durable when observations exist.
+3. The app recognizes only explicitly supported seed artifacts and offers a
+   seed preview. The current one-time Rekon seed importer reads its supported
+   schema-version-1 dashboard JSON; Markdown roadmaps, task briefs, handoffs,
+   and ledgers remain evidence rather than import authority. Seed import does
+   not restore a complete portable project or establish ongoing synchronization.
 4. Confidently mapped phases/tickets/dependencies are imported. Ambiguous
    items, possible duplicates, unmatched threads, and missing outcome text go
    to a Needs review inbox instead of blocking onboarding.
-5. If no usable delivery structure is found, onboarding cannot finish until an
-   agent has defined the first phase. The app never invents a default phase.
+5. If no usable delivery structure is found, initialization remains saved and
+   resumable until the owner uses the displayed Codex prompt to establish the
+   project's current tracking state. Completion still requires a persisted
+   active phase, but the owner-facing workflow does not call it the "first
+   phase." The app never invents a default phase or claims an agent was
+   contacted.
 6. The app creates no Pushover alert during onboarding. It may notify about
    outstanding review items only after the owner has opened that project's
    dashboard once.
@@ -121,9 +172,10 @@ normal Codex conversation.
 
 ### Project overview
 
-The home screen lists projects with their active phase, live goal state,
-current work count, and attention count. A project is always represented by a
-folder-backed record; there are no folderless planning projects.
+The home screen lists projects with their active phase, verified persisted or
+truthfully unavailable/stale goal context, current work count, and attention
+count. A project is always represented by a folder-backed record; there are no
+folderless planning projects.
 
 ### Phase board
 
@@ -152,10 +204,11 @@ ID and counts. Lane position communicates delivery state, so cards do not
 repeat it.
 
 Selecting a card opens a read-only detail view with full outcome, dependency
-graph and direction, linked Codex task/goal and live state, owner-attention
-reason, latest meaningful update, evidence, audit history, and notification
-delivery history. It can open the linked Codex task but contains no manual
-delivery editing controls.
+graph and direction, linked Codex task/goal and verified persisted or
+truthfully unavailable/stale state, owner-attention reason, latest meaningful
+update, evidence, audit history, and notification delivery history. Opening a
+linked Codex task is available only after a separate supported handoff is
+proven; the detail contains no manual delivery editing controls.
 
 ## Notification policy
 
@@ -183,11 +236,41 @@ Paused goals are shown explicitly but do not alert by default.
 - Pushover problems create an audit/notification failure record without
   exposing credentials.
 
+## Visual reference status — 2026-08-26
+
+The accepted wide mockup vocabulary remains:
+
+- `docs/design/mockups/phase_board.png`
+- `docs/design/mockups/dependencies.png`
+- `docs/design/mockups/needs_review.png`
+- `docs/design/mockups/alerts.png`
+- `docs/design/mockups/settings.png`
+
+`docs/design/mockups/activity.png` remains a historical supported-observer
+concept. Its live/synced wording is not authority for current behavior; ADR-001
+requires unavailable or persisted-last-known stale context until a supported
+authenticated attachment exists.
+
+`docs/design/mockups/onboarding_state.png` is superseded visual evidence. Its
+“Ask agent to define first phase” action and Portable Import implication do not
+match the accepted **Initialize Project Tracking** copied-not-sent handoff or
+the exporter/archive gate above. Preserve the image for history, but do not use
+its copy as a current product requirement.
+
+Completed Projects/Overview, selected-ticket detail, and compact-board behavior
+are covered by durable runtime evidence under `docs/delivery/evidence/`; they
+are not missing-work mockup candidates. Goals, all-phase Work Board, History,
+and their compact/state/flow images remain proposal evidence only. Their
+current classification and decision gates are recorded exclusively in
+`docs/delivery/progress.md`.
+
 ## Acceptance criteria
 
-1. Onboarding any local folder discovers matching Codex threads and worktrees,
-   remembers exclusions, and requires an agent-defined first phase when no
-   usable structure exists.
+1. Onboarding any local folder preserves a resumable **Initialize Project
+   Tracking** state, discovers matching Codex threads/worktrees only when a
+   supported observer exists, remembers exclusions, and requires persisted
+   current tracking state before completion without owner-facing “first phase”
+   or false automatic-agent language.
 2. Rekon's importer produces local phases/tickets/dependencies/evidence links
    from its existing delivery records, routing uncertain mappings to Needs
    review rather than silently guessing.
@@ -196,8 +279,10 @@ Paused goals are shown explicitly but do not alert by default.
    count; narrow cards show ID and counts; the selected read-only detail view
    communicates goal state, dependency direction, attention, activity, and
    evidence.
-4. Codex runtime updates refresh the live goal display and show a last-sync
-   timestamp without silently changing formal delivery lanes.
+4. When supported Codex observation exists, runtime updates refresh the live
+   goal display and show a last-sync timestamp without silently changing formal
+   delivery lanes. Otherwise the UI truthfully presents unavailable or
+   persisted-last-known stale context.
 5. Agent delivery actions are atomic, audited, attributed, and reject invalid
    references/cycles without partial state.
 6. Block, completion/review, and Needs review events create one deduplicated

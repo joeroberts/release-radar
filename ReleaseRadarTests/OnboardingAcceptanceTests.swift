@@ -4,6 +4,424 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class OnboardingAcceptanceTests: XCTestCase {
+    func testInitializeProjectTrackingAllowsLegacyForeignKeyAuditReadWithoutAllowingAuditMutation() async throws {
+        let fixture = try FolderFixture()
+        let sentinelURL = fixture.root.appendingPathComponent("owner-sentinel.txt")
+        let sentinel = Data("synthetic repository content".utf8)
+        try sentinel.write(to: sentinelURL)
+        let listingBefore = try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted()
+        let unrelatedProjectID = ProjectID(rawValue: "existing-project")
+
+        do {
+            let initialStore = DeliveryStore(databaseURL: fixture.databaseURL)
+            let initialAvailability = await initialStore.availability
+            XCTAssertEqual(initialAvailability, .available)
+            try await initialStore.transact(
+                actor: .init(id: "fixture-existing"),
+                reason: "Seed existing durable state",
+                auditScope: .init(
+                    projectID: unrelatedProjectID,
+                    entityType: .project,
+                    entityID: unrelatedProjectID.rawValue
+                )
+            ) { connection in
+                try connection.execute("INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('existing-project', 'Existing Project', 1)")
+                try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('existing-phase', 'existing-project', 'Existing Phase')")
+                try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('existing-project', 'existing-phase')")
+                try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('EXISTING-01', 'existing-project', 'existing-phase', 'Existing ticket', 'in_progress')")
+                try connection.execute("INSERT INTO blockers (id, project_id, ticket_id, summary) VALUES ('existing-blocker', 'existing-project', 'EXISTING-01', 'Existing child')")
+            }
+        }
+        var legacyConnection: SQLiteConnection? = try SQLiteConnection(url: fixture.databaseURL)
+        try legacyConnection?.executeScript("""
+        ALTER TABLE projects ADD COLUMN active_phase_id TEXT;
+        CREATE INDEX projects_active_phase_index ON projects(active_phase_id);
+        CREATE TRIGGER validate_project_active_phase_insert
+        BEFORE INSERT ON projects
+        WHEN NEW.active_phase_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM phases
+            WHERE phases.id = NEW.active_phase_id AND phases.project_id = NEW.id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'active phase must belong to project');
+        END;
+        CREATE TRIGGER validate_project_active_phase_update
+        BEFORE UPDATE OF id, active_phase_id ON projects
+        WHEN NEW.active_phase_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM phases
+            WHERE phases.id = NEW.active_phase_id AND phases.project_id = NEW.id
+        )
+        BEGIN
+            SELECT RAISE(ABORT, 'active phase must belong to project');
+        END;
+        UPDATE projects SET active_phase_id = 'existing-phase' WHERE id = 'existing-project';
+        """)
+        legacyConnection = nil
+
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let availability = await store.availability
+        XCTAssertEqual(availability, .available)
+        let version = try SQLiteConnection(url: fixture.databaseURL).scalarInt("PRAGMA user_version")
+        XCTAssertEqual(version, 9)
+        let populatedBefore = try await populatedLegacyFixtureSnapshot(store: store)
+        XCTAssertEqual(populatedBefore["project"]?["name"], .text("Existing Project"))
+        XCTAssertEqual(populatedBefore["project"]?["active_phase_id"], .text("existing-phase"))
+        XCTAssertEqual(populatedBefore["phase"]?["name"], .text("Existing Phase"))
+        XCTAssertEqual(populatedBefore["activePhase"]?["phase_id"], .text("existing-phase"))
+        XCTAssertEqual(populatedBefore["ticket"]?["lane"], .text("in_progress"))
+        XCTAssertEqual(populatedBefore["blocker"]?["summary"], .text("Existing child"))
+        XCTAssertEqual(populatedBefore["audit"]?["project_id"], .text(unrelatedProjectID.rawValue))
+        XCTAssertEqual(populatedBefore["counts"]?["projects"], .integer(1))
+        XCTAssertEqual(populatedBefore["counts"]?["audit_events"], .integer(1))
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Fixture Project"
+        ))
+        let rootPath = fixture.root.path
+        let persisted = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_roots WHERE project_id = ? AND path = ?", bindings: [.text(projectID.rawValue), .text(rootPath)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ? AND path = ? AND is_stale = 0", bindings: [.text(projectID.rawValue), .text(rootPath)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending' AND status = 'open'", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-onboarding' AND reason = 'Prepare folder-backed project onboarding'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_phase_request'", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_occurrences"),
+                try connection.row(
+                    "SELECT actor_id, reason, project_id, entity_type, entity_id FROM audit_events WHERE actor_id = 'release-radar-onboarding' AND reason = 'Prepare folder-backed project onboarding'"
+                )
+            )
+        }
+        let rawConnection = try SQLiteConnection(url: fixture.databaseURL)
+        let foreignKeys = try rawConnection.scalarInt("PRAGMA foreign_keys")
+        let foreignKeyCheck = try rawConnection.scalarInt("SELECT COUNT(*) FROM pragma_foreign_key_check")
+        XCTAssertEqual(persisted.0, 1)
+        XCTAssertEqual(persisted.1, 1)
+        XCTAssertEqual(persisted.2, 1)
+        XCTAssertEqual(persisted.3, 1)
+        XCTAssertEqual(persisted.4, 1)
+        XCTAssertEqual(persisted.5, 0)
+        XCTAssertEqual(persisted.6, 0)
+        XCTAssertEqual(persisted.7, 0)
+        XCTAssertEqual(persisted.8, 0)
+        XCTAssertEqual(persisted.9, 0)
+        XCTAssertEqual(persisted.10?["actor_id"], .text("release-radar-onboarding"))
+        XCTAssertEqual(persisted.10?["reason"], .text("Prepare folder-backed project onboarding"))
+        XCTAssertEqual(foreignKeys, 1)
+        XCTAssertEqual(foreignKeyCheck, 0)
+        let populatedAfter = try await populatedLegacyFixtureSnapshot(store: store)
+        var preexistingRows = populatedBefore
+        let countsBefore = try XCTUnwrap(preexistingRows.removeValue(forKey: "counts"))
+        var preservedRows = populatedAfter
+        let countsAfter = try XCTUnwrap(preservedRows.removeValue(forKey: "counts"))
+        XCTAssertEqual(preservedRows, preexistingRows)
+        guard case let .integer(projectsBefore)? = countsBefore["projects"],
+              case let .integer(auditsBefore)? = countsBefore["audit_events"]
+        else {
+            return XCTFail("Synthetic populated fixture counts were not integers")
+        }
+        XCTAssertEqual(countsAfter["projects"], .integer(projectsBefore + 1))
+        XCTAssertEqual(countsAfter["audit_events"], .integer(auditsBefore + 1))
+        XCTAssertEqual(countsAfter["phases"], countsBefore["phases"])
+        XCTAssertEqual(countsAfter["project_active_phases"], countsBefore["project_active_phases"])
+        XCTAssertEqual(countsAfter["tickets"], countsBefore["tickets"])
+        XCTAssertEqual(countsAfter["blockers"], countsBefore["blockers"])
+        XCTAssertEqual(try Data(contentsOf: sentinelURL), sentinel)
+        XCTAssertEqual(try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted(), listingBefore)
+
+        let relaunched = FolderProjectOnboarding(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let resumed = try await relaunched.inspect(folder: fixture.root)
+        XCTAssertEqual(resumed.pendingProjectID, projectID)
+        XCTAssertNil(resumed.completedProjectID)
+        let authorizedRoot = try await relaunched.withAuthorizedProject(projectID: projectID) { project in
+            project.canonicalRoot
+        }
+        XCTAssertEqual(authorizedRoot, fixture.root)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    private func populatedLegacyFixtureSnapshot(
+        store: DeliveryStore
+    ) async throws -> [String: [String: SQLiteValue]] {
+        try await store.read { connection in
+            guard
+                let project = try connection.row("SELECT id, name, first_dashboard_opened, active_phase_id FROM projects WHERE id = 'existing-project'"),
+                let phase = try connection.row("SELECT * FROM phases WHERE id = 'existing-phase'"),
+                let activePhase = try connection.row("SELECT project_id, phase_id FROM project_active_phases WHERE project_id = 'existing-project'"),
+                let ticket = try connection.row("SELECT id, project_id, phase_id, outcome, lane FROM tickets WHERE id = 'EXISTING-01'"),
+                let blocker = try connection.row("SELECT * FROM blockers WHERE id = 'existing-blocker'"),
+                let audit = try connection.row("SELECT * FROM audit_events WHERE project_id = 'existing-project'")
+            else {
+                throw SQLiteError(code: 1, message: "Synthetic populated legacy fixture was not seeded")
+            }
+            return [
+                "project": project,
+                "phase": phase,
+                "activePhase": activePhase,
+                "ticket": ticket,
+                "blocker": blocker,
+                "audit": audit,
+                "counts": [
+                    "projects": .integer(try connection.scalarInt("SELECT COUNT(*) FROM projects") ?? -1),
+                    "phases": .integer(try connection.scalarInt("SELECT COUNT(*) FROM phases") ?? -1),
+                    "project_active_phases": .integer(try connection.scalarInt("SELECT COUNT(*) FROM project_active_phases") ?? -1),
+                    "tickets": .integer(try connection.scalarInt("SELECT COUNT(*) FROM tickets") ?? -1),
+                    "blockers": .integer(try connection.scalarInt("SELECT COUNT(*) FROM blockers") ?? -1),
+                    "audit_events": .integer(try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1),
+                ],
+            ]
+        }
+    }
+
+    func testInitializePreviewAbandonedBeforeConfirmationLeavesStoreAndRepositoryUnchanged() async throws {
+        let fixture = try FolderFixture()
+        let sentinelURL = fixture.root.appendingPathComponent("owner-sentinel.txt")
+        let sentinel = Data("owner repository content".utf8)
+        try sentinel.write(to: sentinelURL)
+        let listingBefore = try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let before = try await attachmentDatabaseSnapshot(store: store)
+
+        let preview = try await onboarding.inspect(folder: fixture.root)
+
+        XCTAssertEqual(preview.selectedFolder, fixture.root)
+        XCTAssertNil(preview.pendingProjectID)
+        XCTAssertNil(preview.completedProjectID)
+        let afterPreview = try await attachmentDatabaseSnapshot(store: store)
+        XCTAssertEqual(afterPreview, before)
+        XCTAssertEqual(try Data(contentsOf: sentinelURL), sentinel)
+        XCTAssertEqual(try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted(), listingBefore)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testInitializeProjectTrackingPersistsOnlyResumableBaseStateWithoutChangingRepository() async throws {
+        let fixture = try FolderFixture()
+        let sentinelURL = fixture.root.appendingPathComponent("owner-sentinel.txt")
+        let sentinel = Data("owner repository content".utf8)
+        try sentinel.write(to: sentinelURL)
+        let listingBefore = try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Fixture Project"
+        ))
+        let rootPath = fixture.root.path
+
+        let persisted = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_roots WHERE project_id = ? AND path = ?", bindings: [.text(projectID.rawValue), .text(rootPath)]),
+                try connection.row("SELECT bookmark_data, is_stale FROM project_bookmarks WHERE project_id = ? AND path = ?", bindings: [.text(projectID.rawValue), .text(rootPath)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending' AND status = 'open'", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_phase_request'", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_occurrences"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-onboarding' AND reason = 'Prepare folder-backed project onboarding'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Request agent-defined first phase'")
+            )
+        }
+        XCTAssertEqual(persisted.0, 1)
+        XCTAssertEqual(persisted.1, 1)
+        XCTAssertEqual(persisted.2?["bookmark_data"], .blob(Data(fixture.root.path.utf8)))
+        XCTAssertEqual(persisted.2?["is_stale"], .integer(0))
+        XCTAssertEqual(persisted.3, 1)
+        XCTAssertEqual(persisted.4, 0)
+        XCTAssertEqual(persisted.5, 0)
+        XCTAssertEqual(persisted.6, 0)
+        XCTAssertEqual(persisted.7, 0)
+        XCTAssertEqual(persisted.8, 0)
+        XCTAssertEqual(persisted.9, 1)
+        XCTAssertEqual(persisted.10, 0)
+        XCTAssertEqual(try Data(contentsOf: sentinelURL), sentinel)
+        XCTAssertEqual(try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted(), listingBefore)
+
+        let relaunchedStore = DeliveryStore(databaseURL: fixture.databaseURL)
+        let relaunched = FolderProjectOnboarding(
+            store: relaunchedStore,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let resumedPreview = try await relaunched.inspect(folder: fixture.root)
+        XCTAssertEqual(resumedPreview.pendingProjectID, projectID)
+        XCTAssertNil(resumedPreview.completedProjectID)
+        let resumedCounts = try await relaunchedStore.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Prepare folder-backed project onboarding'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE kind = 'onboarding_phase_request'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests")
+            )
+        }
+        XCTAssertEqual(resumedCounts.0, 1)
+        XCTAssertEqual(resumedCounts.1, 1)
+        XCTAssertEqual(resumedCounts.2, 0)
+        XCTAssertEqual(resumedCounts.3, 0)
+        XCTAssertFalse(CodexPromptHandoff.prompt.isEmpty)
+        let authorizedRoot = try await relaunched.withAuthorizedProject(projectID: projectID) { project in
+            project.canonicalRoot
+        }
+        XCTAssertEqual(authorizedRoot, fixture.root)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testRecognizedSeedRevalidationFailureReportsSavedIncompleteWithoutPartialImport() async throws {
+        let fixture = try FolderFixture()
+        try fixture.installRecognizedArtifact()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        XCTAssertNotNil(preview.recognizedArtifactPreview)
+        try fixture.changeRecognizedArtifactAfterPreview()
+
+        let savedProjectID: ProjectID
+        do {
+            _ = try await onboarding.prepare(.init(
+                preview: preview,
+                projectName: "Fixture Project",
+                importRecognizedArtifacts: true
+            ))
+            XCTFail("Expected recognized seed revalidation to report saved-incomplete state")
+            return
+        } catch let error as OnboardingPreparationError {
+            guard case let .seedApplicationFailedAfterSave(projectID) = error else {
+                XCTFail("Expected typed saved-incomplete state, received \(error)")
+                return
+            }
+            savedProjectID = projectID
+        }
+
+        let persisted = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_roots WHERE project_id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ? AND is_stale = 0", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending' AND status = 'open'", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind <> 'onboarding_pending'", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_active_phases WHERE project_id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE project_id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_dependencies WHERE project_id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_dependencies WHERE project_id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM evidence WHERE project_id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_events"),
+                try connection.scalarInt("SELECT COUNT(*) FROM notification_occurrences"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Prepare folder-backed project onboarding'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Import recognized Rekon delivery records'")
+            )
+        }
+        XCTAssertEqual(persisted.0, 1)
+        XCTAssertEqual(persisted.1, 1)
+        XCTAssertEqual(persisted.2, 1)
+        XCTAssertEqual(persisted.3, 1)
+        XCTAssertEqual(persisted.4, 0)
+        XCTAssertEqual(persisted.5, 0)
+        XCTAssertEqual(persisted.6, 0)
+        XCTAssertEqual(persisted.7, 0)
+        XCTAssertEqual(persisted.8, 0)
+        XCTAssertEqual(persisted.9, 0)
+        XCTAssertEqual(persisted.10, 0)
+        XCTAssertEqual(persisted.11, 0)
+        XCTAssertEqual(persisted.12, 0)
+        XCTAssertEqual(persisted.13, 0)
+        XCTAssertEqual(persisted.14, 1)
+        XCTAssertEqual(persisted.15, 0)
+
+        let relaunched = FolderProjectOnboarding(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let resumed = try await relaunched.inspect(folder: fixture.root)
+        XCTAssertEqual(resumed.pendingProjectID, savedProjectID)
+        let resumedCounts = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id = ?", bindings: [.text(savedProjectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Prepare folder-backed project onboarding'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Import recognized Rekon delivery records'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE kind = 'onboarding_phase_request'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests")
+            )
+        }
+        XCTAssertEqual(resumedCounts.0, 1)
+        XCTAssertEqual(resumedCounts.1, 1)
+        XCTAssertEqual(resumedCounts.2, 0)
+        XCTAssertEqual(resumedCounts.3, 0)
+        XCTAssertEqual(resumedCounts.4, 0)
+        XCTAssertFalse(CodexPromptHandoff.prompt.isEmpty)
+        let authorizedRoot = try await relaunched.withAuthorizedProject(projectID: savedProjectID) { project in
+            project.canonicalRoot
+        }
+        XCTAssertEqual(authorizedRoot, fixture.root)
+    }
+
+    func testBookmarkFailureBeforeBaseCommitLeavesStoreAndRepositoryUnchanged() async throws {
+        let fixture = try FolderFixture()
+        let sentinelURL = fixture.root.appendingPathComponent("owner-sentinel.txt")
+        let sentinel = Data("owner repository content".utf8)
+        try sentinel.write(to: sentinelURL)
+        let listingBefore = try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: RejectingBookmarkStore(),
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = OnboardingPreview(
+            selectedFolder: fixture.root,
+            gitRoot: nil,
+            includedTaskDescriptors: [],
+            rejectedTaskDescriptors: [],
+            authorizedWorktreeURLs: [],
+            worktreesRequiringAuthorization: []
+        )
+        let before = try await attachmentDatabaseSnapshot(store: store)
+
+        do {
+            _ = try await onboarding.prepare(.init(preview: preview, projectName: "Fixture Project"))
+            XCTFail("Expected bookmark creation to fail before the base transaction")
+        } catch let error as ProjectBookmarkError {
+            XCTAssertEqual(error, .bookmarkCreationFailed)
+        }
+
+        let after = try await attachmentDatabaseSnapshot(store: store)
+        XCTAssertEqual(after, before)
+        XCTAssertEqual(try Data(contentsOf: sentinelURL), sentinel)
+        XCTAssertEqual(try FileManager.default.subpathsOfDirectory(atPath: fixture.root.path).sorted(), listingBefore)
+    }
+
     func testRecognizedArtifactPreviewRequiresExplicitImportDecision() async throws {
         let fixture = try FolderFixture()
         try fixture.installRecognizedArtifact()
@@ -105,6 +523,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         )
         let resumedPreview = try await relaunchedOnboarding.inspect(folder: fixture.root)
         XCTAssertEqual(resumedPreview.pendingProjectID, projectID)
+        XCTAssertNil(resumedPreview.completedProjectID)
         try await onboarding.requestFirstPhaseDefinition(projectID: projectID)
 
         let dispatcher = AgentCommandDispatcher(
@@ -139,6 +558,126 @@ final class OnboardingAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(finalState.0, 0)
         XCTAssertEqual(finalState.1, 0)
+    }
+
+    func testCheckTrackingStatusIsReadOnlyAndFinishRechecksPersistedPhase() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let decision = OnboardingDecision(preview: preview, projectName: "Fixture Project")
+        let projectID = try await onboarding.prepare(decision)
+        let beforeCheck = try await attachmentDatabaseSnapshot(store: store)
+
+        let hasPhaseBeforeAgentUpdate = try await onboarding.hasFirstPhase(projectID: projectID)
+        let afterCheck = try await attachmentDatabaseSnapshot(store: store)
+        XCTAssertFalse(hasPhaseBeforeAgentUpdate)
+        XCTAssertEqual(afterCheck, beforeCheck)
+        do {
+            _ = try await onboarding.finish(decision)
+            XCTFail("Expected Finish Initialization to remain phase-gated")
+        } catch let error as OnboardingError {
+            XCTAssertEqual(error, .noFirstPhase)
+        }
+
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
+        )
+        let result = await dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(),
+            projectRoot: fixture.root.path,
+            reason: "Define tracking phase",
+            command: .upsertPhase(phaseID: "phase-current", name: "Current tracking")
+        ))
+        XCTAssertNil(result.error)
+
+        let hasPhaseAfterAgentUpdate = try await onboarding.hasFirstPhase(projectID: projectID)
+        let finishedProjectID = try await onboarding.finish(decision)
+        XCTAssertTrue(hasPhaseAfterAgentUpdate)
+        XCTAssertEqual(finishedProjectID, projectID)
+        let completed = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending' AND status = 'open'", bindings: [.text(projectID.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE kind = 'onboarding_phase_request'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests")
+            )
+        }
+        XCTAssertEqual(completed.0, 0)
+        XCTAssertEqual(completed.1, 0)
+        XCTAssertEqual(completed.2, 1)
+    }
+
+    func testFinishedProjectRootIsReportedAsCompletedWithoutCreatingDuplicateState() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let decision = OnboardingDecision(preview: preview, projectName: "Fixture Project")
+        let projectID = try await onboarding.prepare(decision)
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
+        )
+        let phaseResult = await dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(),
+            projectRoot: fixture.root.path,
+            reason: "Define first phase",
+            command: .upsertPhase(phaseID: "phase-first", name: "First phase")
+        ))
+        XCTAssertNil(phaseResult.error)
+        _ = try await onboarding.finish(decision)
+
+        let completedPreview = try await onboarding.inspect(folder: fixture.symlinkedRoot)
+
+        XCTAssertEqual(completedPreview.completedProjectID, projectID)
+        XCTAssertNil(completedPreview.pendingProjectID)
+        let durableCounts = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects"),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_roots"),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_bookmarks")
+            )
+        }
+        XCTAssertEqual(durableCounts.0, 1)
+        XCTAssertEqual(durableCounts.1, 1)
+        XCTAssertEqual(durableCounts.2, 1)
+    }
+
+    func testMarkerlessRootWithoutPhaseIsNotReportedAsCompleted() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Fixture Project"
+        ))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed markerless incomplete project") { connection in
+            try connection.execute(
+                "DELETE FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending'",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        let incompletePreview = try await onboarding.inspect(folder: fixture.symlinkedRoot)
+
+        XCTAssertNil(incompletePreview.pendingProjectID)
+        XCTAssertNil(incompletePreview.completedProjectID)
     }
 
     func testDeniedSecurityScopeDoesNotRunDiscoveryOrAuthorizeFolder() async throws {
@@ -239,6 +778,379 @@ final class OnboardingAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(staleBookmarkCount, 2)
         XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testReviewDecisionFailsClosedForStaleBookmarkWithoutDecisionAudit() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let (onboarding, projectID) = try await preparedReviewProject(fixture: fixture, store: store)
+        fixture.bookmarks.markStale(fixture.root)
+
+        do {
+            _ = try await resolveReview(
+                onboarding: onboarding,
+                store: store,
+                projectID: projectID
+            )
+            XCTFail("Expected stale bookmark authorization to fail")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .bookmarkStale)
+        }
+
+        let state = try await reviewDecisionState(store: store, projectID: projectID)
+        XCTAssertEqual(state.status, "open")
+        XCTAssertEqual(state.decisionAudits, 0)
+        XCTAssertEqual(state.commandRows, 0)
+        XCTAssertEqual(state.staleBookmarks, 1)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testReviewDecisionFailsClosedForBookmarkResolverFailureWithoutDecisionAudit() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let (onboarding, projectID) = try await preparedReviewProject(fixture: fixture, store: store)
+        fixture.bookmarks.failResolution(for: fixture.root)
+
+        do {
+            _ = try await resolveReview(
+                onboarding: onboarding,
+                store: store,
+                projectID: projectID
+            )
+            XCTFail("Expected bookmark resolution to fail")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .bookmarkResolutionFailed)
+        }
+
+        let state = try await reviewDecisionState(store: store, projectID: projectID)
+        XCTAssertEqual(state.status, "open")
+        XCTAssertEqual(state.decisionAudits, 0)
+        XCTAssertEqual(state.commandRows, 0)
+        XCTAssertEqual(state.staleBookmarks, 1)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testReviewDecisionFailsClosedForDeniedScopeWithoutDecisionAudit() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let (onboarding, projectID) = try await preparedReviewProject(fixture: fixture, store: store)
+        fixture.bookmarks.denyAccess(to: fixture.root)
+
+        do {
+            _ = try await resolveReview(
+                onboarding: onboarding,
+                store: store,
+                projectID: projectID
+            )
+            XCTFail("Expected security scope access to be denied")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .securityScopeAccessDenied)
+        }
+
+        let state = try await reviewDecisionState(store: store, projectID: projectID)
+        XCTAssertEqual(state.status, "open")
+        XCTAssertEqual(state.decisionAudits, 0)
+        XCTAssertEqual(state.commandRows, 0)
+        XCTAssertEqual(state.staleBookmarks, 1)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testSameRootReauthorizationRejectsMismatchAndResetsOnlySelectedBookmark() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root, fixture.externalWorktree])
+        )
+        let initial = try await onboarding.inspect(folder: fixture.root)
+        try await onboarding.authorizeWorktree(fixture.externalWorktree, for: initial)
+        let authorized = try await onboarding.inspect(folder: fixture.root)
+        let projectID = try await onboarding.prepare(.init(
+            preview: authorized,
+            projectName: "Fixture Project"
+        ))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed stale authorization fixtures") { connection in
+            try connection.execute(
+                "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+
+        do {
+            try await onboarding.reauthorizeProjectRoot(fixture.sibling, for: projectID)
+            XCTFail("Expected a different root to be rejected")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .projectRootMismatch)
+        }
+        try await onboarding.reauthorizeProjectRoot(fixture.symlinkedRoot, for: projectID)
+
+        let rootPath = fixture.root.path
+        let externalWorktreePath = fixture.externalWorktree.path
+        let state = try await store.read { connection in
+            (
+                try connection.scalarInt(
+                    "SELECT is_stale FROM project_bookmarks WHERE project_id = ? AND path = ?",
+                    bindings: [.text(projectID.rawValue), .text(rootPath)]
+                ),
+                try connection.scalarInt(
+                    "SELECT is_stale FROM project_bookmarks WHERE project_id = ? AND path = ?",
+                    bindings: [.text(projectID.rawValue), .text(externalWorktreePath)]
+                ),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-owner' AND reason = 'Reauthorize project folder access' AND project_id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM audit_events WHERE reason LIKE '%' || ? || '%'",
+                    bindings: [.text(rootPath)]
+                )
+            )
+        }
+        XCTAssertEqual(state.0, 0)
+        XCTAssertEqual(state.1, 1)
+        XCTAssertEqual(state.2, 1)
+        XCTAssertEqual(state.3, 0)
+    }
+
+    func testRootlessLegacyProjectAssociatesOneUnownedRootOnly() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(store: store, bookmarkStore: fixture.bookmarks)
+        let projectID = ProjectID(rawValue: "legacy-rootless")
+        let siblingPath = fixture.sibling.path
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed rootless legacy review") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('legacy-rootless', 'Legacy Project')")
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('other-project', 'Other Project')")
+            try connection.execute(
+                "INSERT INTO project_roots (id, project_id, path) VALUES ('other-root', 'other-project', ?)",
+                bindings: [.text(siblingPath)]
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('rr-r2-review', 'legacy-rootless', NULL, 'uncertain_import', 'Review fixture', 'open')"
+            )
+        }
+
+        do {
+            _ = try await resolveReview(onboarding: onboarding, store: store, projectID: projectID)
+            XCTFail("Expected a rootless project to require owner association")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .projectRootMissing)
+        }
+        do {
+            try await onboarding.associateFirstProjectRoot(fixture.sibling, for: projectID)
+            XCTFail("Expected an owned root to be rejected")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .rootAlreadyOwned)
+        }
+        try await onboarding.associateFirstProjectRoot(fixture.root, for: projectID)
+        do {
+            try await onboarding.associateFirstProjectRoot(fixture.outside, for: projectID)
+            XCTFail("Expected a second root association to be rejected")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .projectRootAlreadyAssociated)
+        }
+
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT status FROM review_items WHERE id = 'rr-r2-review'"),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM audit_events WHERE reason = 'Resolve review rr-r2-review'"
+                ),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_roots WHERE project_id = 'legacy-rootless'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_bookmarks WHERE project_id = 'legacy-rootless'"),
+                try connection.scalarText("SELECT path FROM project_roots WHERE project_id = 'legacy-rootless'"),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-owner' AND reason = 'Associate first project folder authorization' AND project_id = 'legacy-rootless'"
+                )
+            )
+        }
+        XCTAssertEqual(state.0, "open")
+        XCTAssertEqual(state.1, 0)
+        XCTAssertEqual(state.2, 1)
+        XCTAssertEqual(state.3, 1)
+        XCTAssertEqual(state.4, fixture.root.path)
+        XCTAssertEqual(state.5, 1)
+    }
+
+    func testEligibleAttachmentProjectsExcludeOpenOnboardingAndAnyAuthorization() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(store: store, bookmarkStore: fixture.bookmarks)
+        let rootedPath = fixture.sibling.path
+        let bookmarkedPath = fixture.outside.path
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed attachment eligibility") { connection in
+            for (id, name) in [
+                ("eligible-zulu", "Zulu"),
+                ("eligible-alpha", "Alpha"),
+                ("closed-marker", "Closed Marker"),
+                ("pending", "Pending"),
+                ("phase-request", "Phase Request"),
+                ("rooted", "Rooted"),
+                ("bookmarked", "Bookmarked"),
+            ] {
+                try connection.execute(
+                    "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0)",
+                    bindings: [.text(id), .text(name)]
+                )
+            }
+            try connection.execute(
+                "INSERT INTO project_roots (id, project_id, path) VALUES ('rooted-root', 'rooted', ?)",
+                bindings: [.text(rootedPath)]
+            )
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES ('bookmarked', ?, ?, 0)",
+                bindings: [.text(bookmarkedPath), .blob(Data(bookmarkedPath.utf8))]
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('pending-marker', 'pending', NULL, ?, 'Pending', 'open')",
+                bindings: [.text(OnboardingReviewMarkerKind.pending.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('phase-request-marker', 'phase-request', NULL, ?, 'Requested', 'open')",
+                bindings: [.text(OnboardingReviewMarkerKind.phaseRequest.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('closed-marker-row', 'closed-marker', NULL, ?, 'Completed', 'resolved')",
+                bindings: [.text(OnboardingReviewMarkerKind.pending.rawValue)]
+            )
+        }
+
+        let eligible = try await onboarding.eligibleProjectsForFirstRootAssociation()
+
+        XCTAssertEqual(eligible.map(\.id.rawValue), ["eligible-alpha", "closed-marker", "eligible-zulu"])
+        XCTAssertEqual(eligible.map(\.name), ["Alpha", "Closed Marker", "Zulu"])
+    }
+
+    func testAttachFolderPreservesExistingProjectGraphAndAddsOnlyAuthorization() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await seedPopulatedRootlessAttachmentProject(store: store, fixture: fixture)
+        let onboarding = FolderProjectOnboarding(store: store, bookmarkStore: fixture.bookmarks)
+        let before = try await attachmentDatabaseSnapshot(store: store)
+
+        try await onboarding.associateFirstProjectRoot(fixture.symlinkedRoot, for: DashboardSampleData.projectID)
+
+        let after = try await attachmentDatabaseSnapshot(store: store)
+        for table in attachmentSnapshotTables where !["project_roots", "project_bookmarks", "audit_events"].contains(table) {
+            XCTAssertEqual(after[table], before[table], "Unexpected mutation in \(table)")
+        }
+        let priorAudits = try XCTUnwrap(before["audit_events"])
+        let currentAudits = try XCTUnwrap(after["audit_events"])
+        let associationAudits = currentAudits.filter {
+            $0["reason"] == .text("Associate first project folder authorization")
+        }
+        XCTAssertEqual(associationAudits.count, 1)
+        XCTAssertEqual(
+            currentAudits.filter { $0["reason"] != .text("Associate first project folder authorization") },
+            priorAudits
+        )
+        let associationAudit = try XCTUnwrap(associationAudits.first)
+        XCTAssertEqual(associationAudit["actor_id"], .text("release-radar-owner"))
+        XCTAssertEqual(associationAudit["project_id"], .text(DashboardSampleData.projectID.rawValue))
+        XCTAssertEqual(associationAudit["entity_type"], .text(AuditEntityType.project.rawValue))
+        XCTAssertEqual(associationAudit["entity_id"], .text(DashboardSampleData.projectID.rawValue))
+        XCTAssertFalse(associationAudit.values.contains(.text(fixture.root.path)))
+        XCTAssertFalse(associationAudit.values.contains { if case .blob = $0 { true } else { false } })
+
+        let authorization = try await store.read { connection in
+            (
+                try connection.row(
+                    "SELECT id, project_id, path FROM project_roots WHERE project_id = ?",
+                    bindings: [.text(DashboardSampleData.projectID.rawValue)]
+                ),
+                try connection.row(
+                    "SELECT project_id, path, bookmark_data, is_stale FROM project_bookmarks WHERE project_id = ?",
+                    bindings: [.text(DashboardSampleData.projectID.rawValue)]
+                )
+            )
+        }
+        XCTAssertEqual(authorization.0?["id"], .text("\(DashboardSampleData.projectID.rawValue)-root-0"))
+        XCTAssertEqual(authorization.0?["path"], .text(fixture.root.path))
+        XCTAssertEqual(authorization.1?["path"], .text(fixture.root.path))
+        XCTAssertEqual(authorization.1?["bookmark_data"], .blob(Data(fixture.root.path.utf8)))
+        XCTAssertEqual(authorization.1?["is_stale"], .integer(0))
+
+        let relaunchedStore = DeliveryStore(databaseURL: fixture.databaseURL)
+        let relaunched = FolderProjectOnboarding(store: relaunchedStore, bookmarkStore: fixture.bookmarks)
+        let authorizedRoot = try await relaunched.withAuthorizedProject(projectID: DashboardSampleData.projectID) {
+            $0.canonicalRoot
+        }
+        XCTAssertEqual(authorizedRoot, fixture.root)
+        let relaunchedSnapshot = try await attachmentDatabaseSnapshot(store: relaunchedStore)
+        XCTAssertEqual(relaunchedSnapshot, after)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testAttachFolderOwnedSymlinkConflictRollsBackPopulatedGraph() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await seedPopulatedRootlessAttachmentProject(
+            store: store,
+            fixture: fixture,
+            ownedPath: fixture.root.path
+        )
+        let onboarding = FolderProjectOnboarding(store: store, bookmarkStore: fixture.bookmarks)
+        let before = try await attachmentDatabaseSnapshot(store: store)
+        let accessStartsBefore = fixture.bookmarks.accessStarts
+        let accessStopsBefore = fixture.bookmarks.accessStops
+
+        do {
+            try await onboarding.associateFirstProjectRoot(fixture.symlinkedRoot, for: DashboardSampleData.projectID)
+            XCTFail("Expected a symlink-equivalent owned root to be rejected")
+        } catch let error as ProjectAuthorizationError {
+            XCTAssertEqual(error, .rootAlreadyOwned)
+        }
+
+        let after = try await attachmentDatabaseSnapshot(store: store)
+        XCTAssertEqual(after, before)
+        XCTAssertEqual(fixture.bookmarks.accessStarts, accessStartsBefore)
+        XCTAssertEqual(fixture.bookmarks.accessStops, accessStopsBefore)
+    }
+
+    func testAttachFolderRejectsRootOnlyBookmarkOnlyAndPairedAuthorizationWithoutRepair() async throws {
+        for (label, hasRoot, hasBookmark) in [
+            ("root-only", true, false),
+            ("bookmark-only", false, true),
+            ("paired", true, true),
+        ] {
+            let fixture = try FolderFixture()
+            let store = DeliveryStore(databaseURL: fixture.databaseURL)
+            let projectID = ProjectID(rawValue: "attachment-\(label)")
+            let persistedPath = fixture.sibling.path
+            try await store.transact(actor: .init(id: "fixture"), reason: "Seed inconsistent authorization") { connection in
+                try connection.execute(
+                    "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0)",
+                    bindings: [.text(projectID.rawValue), .text(label)]
+                )
+                if hasRoot {
+                    try connection.execute(
+                        "INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?)",
+                        bindings: [.text("\(projectID.rawValue)-root-0"), .text(projectID.rawValue), .text(persistedPath)]
+                    )
+                }
+                if hasBookmark {
+                    try connection.execute(
+                        "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0)",
+                        bindings: [.text(projectID.rawValue), .text(persistedPath), .blob(Data(persistedPath.utf8))]
+                    )
+                }
+            }
+            let onboarding = FolderProjectOnboarding(store: store, bookmarkStore: fixture.bookmarks)
+            let before = try await attachmentDatabaseSnapshot(store: store)
+
+            do {
+                try await onboarding.associateFirstProjectRoot(fixture.root, for: projectID)
+                XCTFail("Expected \(label) authorization to require recovery")
+            } catch let error as ProjectAuthorizationError {
+                XCTAssertEqual(error, .projectRootAlreadyAssociated, label)
+            }
+
+            let after = try await attachmentDatabaseSnapshot(store: store)
+            XCTAssertEqual(after, before, label)
+            XCTAssertEqual(fixture.bookmarks.accessStarts, 0, label)
+            XCTAssertEqual(fixture.bookmarks.accessStops, 0, label)
+        }
     }
 
     func testPrepareRejectsRootAlreadyOwnedByAnotherProject() async throws {
@@ -447,6 +1359,145 @@ final class OnboardingAcceptanceTests: XCTestCase {
         ).inspect(folder: fixture.root)
         XCTAssertEqual(reExcluded.includedTaskDescriptors.map(\.id), ["included"])
     }
+
+    private func preparedReviewProject(
+        fixture: FolderFixture,
+        store: DeliveryStore
+    ) async throws -> (FolderProjectOnboarding, ProjectID) {
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Fixture Project"
+        ))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed RR-R2 review fixture") { connection in
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES ('rr-r2-review', ?, NULL, 'uncertain_import', 'Review fixture', 'open')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        return (onboarding, projectID)
+    }
+
+    private func resolveReview(
+        onboarding: FolderProjectOnboarding,
+        store: DeliveryStore,
+        projectID: ProjectID
+    ) async throws -> AgentCommandResult {
+        try await onboarding.withAuthorizedProject(projectID: projectID) { project in
+            await AgentCommandDispatcher(
+                store: store,
+                projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+            ).dispatch(
+                .init(
+                    version: AgentCommandDispatcher.commandEnvelopeVersion,
+                    requestID: UUID(),
+                    projectRoot: project.canonicalRoot.path,
+                    reason: "Resolve review rr-r2-review",
+                    command: .resolveImportReview(reviewItemID: "rr-r2-review")
+                ),
+                origin: .ownerApp
+            )
+        }
+    }
+
+    private func reviewDecisionState(
+        store: DeliveryStore,
+        projectID: ProjectID
+    ) async throws -> (status: String?, decisionAudits: Int64?, commandRows: Int64?, staleBookmarks: Int64?) {
+        try await store.read { connection in
+            (
+                try connection.scalarText("SELECT status FROM review_items WHERE id = 'rr-r2-review'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Resolve review rr-r2-review'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ? AND is_stale = 1",
+                    bindings: [.text(projectID.rawValue)]
+                )
+            )
+        }
+    }
+
+    private var attachmentSnapshotTables: [String] {
+        [
+            "projects", "project_active_phases", "project_roots", "project_bookmarks",
+            "phases", "phase_dependencies", "tickets", "ticket_dependencies", "blockers",
+            "evidence", "thread_exclusions", "observed_threads", "observed_goals",
+            "thread_links", "ticket_goal_links", "review_items", "completion_records",
+            "notification_events", "notification_occurrences", "audit_events",
+            "agent_command_requests", "alert_rules",
+        ]
+    }
+
+    private func attachmentDatabaseSnapshot(
+        store: DeliveryStore
+    ) async throws -> [String: [[String: SQLiteValue]]] {
+        let tables = attachmentSnapshotTables
+        return try await store.read { connection in
+            var snapshot: [String: [[String: SQLiteValue]]] = [:]
+            for table in tables {
+                var rows: [[String: SQLiteValue]] = []
+                var offset: Int64 = 0
+                while let row = try connection.row(
+                    "SELECT * FROM \(table) ORDER BY rowid LIMIT 1 OFFSET ?",
+                    bindings: [.integer(offset)]
+                ) {
+                    rows.append(row)
+                    offset += 1
+                }
+                snapshot[table] = rows
+            }
+            return snapshot
+        }
+    }
+
+    private func seedPopulatedRootlessAttachmentProject(
+        store: DeliveryStore,
+        fixture: FolderFixture,
+        ownedPath: String? = nil
+    ) async throws {
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let unrelatedRootPath = ownedPath ?? fixture.sibling.path
+        try await store.transact(actor: .init(id: "fixture"), reason: "Populate attachment graph") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('attachment-prerequisite', ?, 'Prerequisite')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('attachment-phase-dependency', ?, ?, 'attachment-prerequisite')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue), .text(DashboardSampleData.phaseID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO thread_exclusions (id, project_id, thread_id, reason) VALUES ('attachment-exclusion', ?, 'excluded-thread', 'Owner excluded this thread')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO notification_occurrences (subject_key, project_id, event_kind, subject_id, generation, is_active) VALUES ('attachment-occurrence', ?, 'blocked_linked_goal', 'VD2-07c', 2, 1)",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES ('attachment-command', ?, ?, '2026-08-25T12:00:00Z')",
+                bindings: [.blob(Data("request".utf8)), .blob(Data("result".utf8))]
+            )
+            try connection.execute(
+                "INSERT INTO projects (id, name, first_dashboard_opened) VALUES ('attachment-unrelated', 'Unrelated Project', 0)"
+            )
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES ('attachment-unrelated-phase', 'attachment-unrelated', 'Unrelated Phase')"
+            )
+            try connection.execute(
+                "INSERT INTO project_active_phases (project_id, phase_id) VALUES ('attachment-unrelated', 'attachment-unrelated-phase')"
+            )
+            try connection.execute(
+                "INSERT INTO project_roots (id, project_id, path) VALUES ('attachment-unrelated-root', 'attachment-unrelated', ?)",
+                bindings: [.text(unrelatedRootPath)]
+            )
+        }
+    }
 }
 
 private final class FolderFixture {
@@ -511,20 +1562,52 @@ private final class FolderFixture {
         try Data(artifact.utf8).write(to: delivery.appendingPathComponent("dashboard-status.json"))
     }
 
+    func changeRecognizedArtifactAfterPreview() throws {
+        let artifactURL = root.appendingPathComponent("docs/delivery/dashboard-status.json")
+        let original = try String(contentsOf: artifactURL, encoding: .utf8)
+        let changed = original.replacingOccurrences(of: "Imported phase", with: "Changed after preview")
+        try Data(changed.utf8).write(to: artifactURL)
+    }
+
     deinit { try? FileManager.default.removeItem(at: directory) }
+}
+
+private struct RejectingBookmarkStore: ProjectBookmarkStoring {
+    func makeBookmark(for url: URL) throws -> Data {
+        throw ProjectBookmarkError.bookmarkCreationFailed
+    }
+
+    func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        throw ProjectBookmarkError.bookmarkResolutionFailed
+    }
+
+    func withSecurityScopedAccess<T: Sendable>(
+        bookmark: Data,
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T {
+        throw ProjectBookmarkError.securityScopeAccessDenied
+    }
 }
 
 private final class TestBookmarkStore: @unchecked Sendable, ProjectBookmarkStoring {
     private let lock = NSLock()
     private var stalePaths: Set<String> = []
     private var failedPaths: Set<String> = []
+    private var deniedPaths: Set<String> = []
     private var starts = 0
     private var stops = 0
 
     var accessStarts: Int { lock.withLock { starts } }
     var accessStops: Int { lock.withLock { stops } }
 
-    func makeBookmark(for url: URL) throws -> Data { Data(url.path.utf8) }
+    func makeBookmark(for url: URL) throws -> Data {
+        lock.withLock {
+            stalePaths.remove(url.path)
+            failedPaths.remove(url.path)
+            deniedPaths.remove(url.path)
+        }
+        return Data(url.path.utf8)
+    }
 
     func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
         let path = String(decoding: bookmark, as: UTF8.self)
@@ -539,6 +1622,9 @@ private final class TestBookmarkStore: @unchecked Sendable, ProjectBookmarkStori
         _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
     ) async throws -> T {
         let resolved = try resolve(bookmark)
+        if lock.withLock({ deniedPaths.contains(resolved.url.path) }) {
+            throw ProjectBookmarkError.securityScopeAccessDenied
+        }
         lock.withLock { starts += 1 }
         defer { lock.withLock { stops += 1 } }
         return try await body(resolved)
@@ -550,6 +1636,10 @@ private final class TestBookmarkStore: @unchecked Sendable, ProjectBookmarkStori
 
     func failResolution(for url: URL) {
         _ = lock.withLock { failedPaths.insert(url.path) }
+    }
+
+    func denyAccess(to url: URL) {
+        _ = lock.withLock { deniedPaths.insert(url.path) }
     }
 }
 

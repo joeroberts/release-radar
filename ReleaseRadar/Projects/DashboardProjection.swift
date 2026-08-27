@@ -298,10 +298,12 @@ private extension SQLiteConnection {
         let goalRow = try row(
             """
             SELECT observed_goals.text, observed_goals.status, observed_goals.last_observed_at
-            FROM thread_links
-            JOIN observed_goals ON observed_goals.thread_id = thread_links.thread_id
-            WHERE thread_links.project_id = ? AND thread_links.ticket_id = ?
-            ORDER BY observed_goals.last_observed_at DESC LIMIT 1
+            FROM ticket_goal_links
+            JOIN observed_goals
+              ON observed_goals.project_id = ticket_goal_links.project_id
+             AND observed_goals.id = ticket_goal_links.goal_id
+             AND observed_goals.thread_id = ticket_goal_links.thread_id
+            WHERE ticket_goal_links.project_id = ? AND ticket_goal_links.ticket_id = ?
             """,
             bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
         )

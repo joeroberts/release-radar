@@ -4,9 +4,12 @@ import ReleaseRadarCore
 import SwiftUI
 
 enum AppLaunchConfiguration {
+    static func externalServicesSuppressed(arguments: [String], isDebugBuild: Bool) -> Bool {
+        isDebugBuild && arguments.contains("--rr10-capture")
+    }
+
     static func shouldSeedSampleData(arguments: [String], isDebugBuild: Bool) -> Bool {
-        isDebugBuild
-            && arguments.contains("--rr10-capture")
+        externalServicesSuppressed(arguments: arguments, isDebugBuild: isDebugBuild)
             && !arguments.contains("--rr10-empty-store")
     }
 }
@@ -20,7 +23,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
 #if DEBUG
-        guard !ProcessInfo.processInfo.arguments.contains("--rr10-capture") else {
+        guard !AppLaunchConfiguration.externalServicesSuppressed(
+            arguments: ProcessInfo.processInfo.arguments,
+            isDebugBuild: true
+        ) else {
             return
         }
 #endif
@@ -83,14 +89,20 @@ struct ReleaseRadarApp: App {
 #else
         let isDebugBuild = false
 #endif
+        let arguments = ProcessInfo.processInfo.arguments
+        let externalServicesSuppressed = AppLaunchConfiguration.externalServicesSuppressed(
+            arguments: arguments,
+            isDebugBuild: isDebugBuild
+        )
         let seedSampleData = AppLaunchConfiguration.shouldSeedSampleData(
-            arguments: ProcessInfo.processInfo.arguments,
+            arguments: arguments,
             isDebugBuild: isDebugBuild
         )
         _model = State(initialValue: AppModel(
             store: services.store,
             pushoverKeychain: services.keychain,
             notificationCoordinator: services.notificationCoordinator,
+            externalServicesSuppressed: externalServicesSuppressed,
             seedSampleData: seedSampleData
         ))
     }
@@ -110,6 +122,13 @@ struct ReleaseRadarApp: App {
                 }
             }
         }
+
+        Window("Add Project", id: "add-project") {
+            AddProjectWindowView(model: model)
+                .frame(minWidth: 680, minHeight: 500)
+        }
+        .defaultSize(width: 760, height: 560)
+        .windowResizability(.contentMinSize)
 
         MenuBarExtra("Release Radar", systemImage: "dot.radiowaves.left.and.right") {
             MenuBarContent(model: model)

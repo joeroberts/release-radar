@@ -1,6 +1,7 @@
 import Foundation
 import SQLite3
 import Darwin
+import OSLog
 
 public enum SQLiteValue: Equatable, Sendable {
     case integer(Int64)
@@ -68,7 +69,10 @@ public final class SQLiteConnection: @unchecked Sendable {
         defer { sqlite3_finalize(statement) }
         try bind(bindings, to: statement)
         let result = sqlite3_step(statement)
-        guard result == SQLITE_DONE else { throw currentError(code: result) }
+        guard result == SQLITE_DONE else {
+            recordSQLiteFailure(stage: .step, code: result)
+            throw currentError(code: result)
+        }
     }
 
     public func row(
@@ -84,7 +88,10 @@ public final class SQLiteConnection: @unchecked Sendable {
         try bind(bindings, to: statement)
         let result = sqlite3_step(statement)
         if result == SQLITE_DONE { return nil }
-        guard result == SQLITE_ROW else { throw currentError(code: result) }
+        guard result == SQLITE_ROW else {
+            recordSQLiteFailure(stage: .step, code: result)
+            throw currentError(code: result)
+        }
 
         var resultRow: [String: SQLiteValue] = [:]
         for index in 0..<sqlite3_column_count(statement) {
@@ -144,17 +151,21 @@ public final class SQLiteConnection: @unchecked Sendable {
     }
 
     func withTransactionCallbackRestrictions<T>(_ body: () throws -> T) throws -> T {
-        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreTransactionAuthorizer, nil)
+        let authorizerContext = SQLiteAuthorizerContext(isInTransaction: isInTransaction)
+        let context = Unmanaged.passUnretained(authorizerContext).toOpaque()
+        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreTransactionAuthorizer, context)
         guard result == SQLITE_OK else { throw currentError(code: result) }
         defer { sqlite3_set_authorizer(databaseHandle, nil, nil) }
-        return try body()
+        return try withExtendedLifetime(authorizerContext) { try body() }
     }
 
     func withReadCallbackRestrictions<T>(_ body: () throws -> T) throws -> T {
-        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreReadAuthorizer, nil)
+        let authorizerContext = SQLiteAuthorizerContext(isInTransaction: isInTransaction)
+        let context = Unmanaged.passUnretained(authorizerContext).toOpaque()
+        let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreReadAuthorizer, context)
         guard result == SQLITE_OK else { throw currentError(code: result) }
         defer { sqlite3_set_authorizer(databaseHandle, nil, nil) }
-        return try body()
+        return try withExtendedLifetime(authorizerContext) { try body() }
     }
 
     var isInTransaction: Bool {
@@ -164,7 +175,10 @@ public final class SQLiteConnection: @unchecked Sendable {
     private func prepare(_ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
         let result = sqlite3_prepare_v2(databaseHandle, sql, -1, &statement, nil)
-        guard result == SQLITE_OK, let statement else { throw currentError(code: result) }
+        guard result == SQLITE_OK, let statement else {
+            recordSQLiteFailure(stage: .prepare, code: result)
+            throw currentError(code: result)
+        }
         return statement
     }
 
@@ -207,12 +221,35 @@ public final class SQLiteConnection: @unchecked Sendable {
         SQLiteError(code: code, message: databaseHandle.map { String(cString: sqlite3_errmsg($0)) } ?? "Database is closed")
     }
 
+    private func recordSQLiteFailure(stage: SQLiteDiagnosticStage, code: Int32) {
+        let extendedCode: Int32
+        if let databaseHandle {
+            extendedCode = sqlite3_extended_errcode(databaseHandle)
+        } else {
+            extendedCode = code
+        }
+        SQLiteDiagnostics.recordFailure(
+            stage: stage,
+            code: code,
+            extendedCode: extendedCode,
+            isInTransaction: isInTransaction
+        )
+    }
+
     private var databaseHandle: OpaquePointer? {
         root?.database ?? database
     }
 
     private func validateLease() throws {
         try lease?.validate()
+    }
+}
+
+private final class SQLiteAuthorizerContext {
+    let isInTransaction: Bool
+
+    init(isInTransaction: Bool) {
+        self.isInTransaction = isInTransaction
     }
 }
 
@@ -233,6 +270,12 @@ private func deliveryStoreTransactionAuthorizer(
         triggerName
     )
     guard transactionControlResult == SQLITE_OK else {
+        recordAuthorizerDenial(
+            context: context,
+            action: action,
+            protectedTable: "none",
+            protectedColumn: "none"
+        )
         return transactionControlResult
     }
 
@@ -241,6 +284,15 @@ private func deliveryStoreTransactionAuthorizer(
     let secondName = secondArgument.map { String(cString: $0) }
     if firstName?.caseInsensitiveCompare(protectedTable) == .orderedSame
         || secondName?.caseInsensitiveCompare(protectedTable) == .orderedSame {
+        if action == SQLITE_READ {
+            return SQLITE_OK
+        }
+        recordAuthorizerDenial(
+            context: context,
+            action: action,
+            protectedTable: protectedTable,
+            protectedColumn: sanitizedProtectedColumn(firstName, secondName)
+        )
         return SQLITE_DENY
     }
 
@@ -259,7 +311,7 @@ private func deliveryStoreTransactionControlAuthorizer(
 }
 
 private func deliveryStoreReadAuthorizer(
-    _: UnsafeMutableRawPointer?,
+    context: UnsafeMutableRawPointer?,
     action: Int32,
     _: UnsafePointer<CChar>?,
     _: UnsafePointer<CChar>?,
@@ -268,9 +320,180 @@ private func deliveryStoreReadAuthorizer(
 ) -> Int32 {
     switch action {
     case SQLITE_SELECT, SQLITE_READ, SQLITE_FUNCTION:
-        SQLITE_OK
+        return SQLITE_OK
     default:
-        SQLITE_DENY
+        recordAuthorizerDenial(
+            context: context,
+            action: action,
+            protectedTable: "none",
+            protectedColumn: "none"
+        )
+        return SQLITE_DENY
+    }
+}
+
+private func recordAuthorizerDenial(
+    context: UnsafeMutableRawPointer?,
+    action: Int32,
+    protectedTable: String,
+    protectedColumn: String
+) {
+    let isInTransaction = context.map {
+        Unmanaged<SQLiteAuthorizerContext>.fromOpaque($0).takeUnretainedValue().isInTransaction
+    } ?? false
+    SQLiteDiagnostics.recordAuthorizerDenial(
+        action: action,
+        protectedTable: protectedTable,
+        protectedColumn: protectedColumn,
+        isInTransaction: isInTransaction
+    )
+}
+
+private func sanitizedProtectedColumn(_ firstName: String?, _ secondName: String?) -> String {
+    [firstName, secondName].contains {
+        $0?.caseInsensitiveCompare("project_id") == .orderedSame
+    } ? "project_id" : "none"
+}
+
+enum SQLiteDiagnosticStage: String {
+    case authorizer
+    case prepare
+    case step
+}
+
+enum SQLiteDiagnostics {
+    private static let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "SQLite")
+    private static let capture = SQLiteDiagnosticCapture()
+
+    static func resetForTesting() {
+        capture.reset()
+    }
+
+    static func recentPayloadsForTesting() -> [String] {
+        capture.snapshot()
+    }
+
+    static func recordAuthorizerDenial(
+        action: Int32,
+        protectedTable: String,
+        protectedColumn: String,
+        isInTransaction: Bool
+    ) {
+        record(
+            event: "release_radar_sqlite_authorizer_denied",
+            stage: .authorizer,
+            code: SQLITE_AUTH,
+            extendedCode: SQLITE_AUTH,
+            authorizerAction: action,
+            protectedTable: protectedTable,
+            protectedColumn: protectedColumn,
+            isInTransaction: isInTransaction
+        )
+    }
+
+    static func recordFailure(
+        stage: SQLiteDiagnosticStage,
+        code: Int32,
+        extendedCode: Int32,
+        isInTransaction: Bool
+    ) {
+        record(
+            event: "release_radar_sqlite_failure",
+            stage: stage,
+            code: code,
+            extendedCode: extendedCode,
+            authorizerAction: nil,
+            protectedTable: "none",
+            protectedColumn: "none",
+            isInTransaction: isInTransaction
+        )
+    }
+
+    private static func record(
+        event: String,
+        stage: SQLiteDiagnosticStage,
+        code: Int32,
+        extendedCode: Int32,
+        authorizerAction: Int32?,
+        protectedTable: String,
+        protectedColumn: String,
+        isInTransaction: Bool
+    ) {
+        let primaryCode = code & 0xFF
+        let payload = [
+            "event=\(event)",
+            "stage=\(stage.rawValue)",
+            "primary_result=\(primaryCode)",
+            "extended_result=\(extendedCode)",
+            "authorizer_action=\(authorizerAction.map(String.init) ?? "none")",
+            "authorizer_action_name=\(authorizerAction.map(authorizerActionName) ?? "none")",
+            "protected_table=\(protectedTable)",
+            "protected_column=\(protectedColumn)",
+            "in_transaction=\(isInTransaction)",
+        ].joined(separator: " ")
+        logger.error("\(payload, privacy: .public)")
+        capture.append(payload)
+    }
+
+    private static func authorizerActionName(_ action: Int32) -> String {
+        switch action {
+        case SQLITE_CREATE_INDEX: "SQLITE_CREATE_INDEX"
+        case SQLITE_CREATE_TABLE: "SQLITE_CREATE_TABLE"
+        case SQLITE_CREATE_TEMP_INDEX: "SQLITE_CREATE_TEMP_INDEX"
+        case SQLITE_CREATE_TEMP_TABLE: "SQLITE_CREATE_TEMP_TABLE"
+        case SQLITE_CREATE_TEMP_TRIGGER: "SQLITE_CREATE_TEMP_TRIGGER"
+        case SQLITE_CREATE_TEMP_VIEW: "SQLITE_CREATE_TEMP_VIEW"
+        case SQLITE_CREATE_TRIGGER: "SQLITE_CREATE_TRIGGER"
+        case SQLITE_CREATE_VIEW: "SQLITE_CREATE_VIEW"
+        case SQLITE_DELETE: "SQLITE_DELETE"
+        case SQLITE_DROP_INDEX: "SQLITE_DROP_INDEX"
+        case SQLITE_DROP_TABLE: "SQLITE_DROP_TABLE"
+        case SQLITE_DROP_TEMP_INDEX: "SQLITE_DROP_TEMP_INDEX"
+        case SQLITE_DROP_TEMP_TABLE: "SQLITE_DROP_TEMP_TABLE"
+        case SQLITE_DROP_TEMP_TRIGGER: "SQLITE_DROP_TEMP_TRIGGER"
+        case SQLITE_DROP_TEMP_VIEW: "SQLITE_DROP_TEMP_VIEW"
+        case SQLITE_DROP_TRIGGER: "SQLITE_DROP_TRIGGER"
+        case SQLITE_DROP_VIEW: "SQLITE_DROP_VIEW"
+        case SQLITE_INSERT: "SQLITE_INSERT"
+        case SQLITE_PRAGMA: "SQLITE_PRAGMA"
+        case SQLITE_READ: "SQLITE_READ"
+        case SQLITE_SELECT: "SQLITE_SELECT"
+        case SQLITE_TRANSACTION: "SQLITE_TRANSACTION"
+        case SQLITE_UPDATE: "SQLITE_UPDATE"
+        case SQLITE_ATTACH: "SQLITE_ATTACH"
+        case SQLITE_DETACH: "SQLITE_DETACH"
+        case SQLITE_ALTER_TABLE: "SQLITE_ALTER_TABLE"
+        case SQLITE_REINDEX: "SQLITE_REINDEX"
+        case SQLITE_ANALYZE: "SQLITE_ANALYZE"
+        case SQLITE_CREATE_VTABLE: "SQLITE_CREATE_VTABLE"
+        case SQLITE_DROP_VTABLE: "SQLITE_DROP_VTABLE"
+        case SQLITE_FUNCTION: "SQLITE_FUNCTION"
+        case SQLITE_SAVEPOINT: "SQLITE_SAVEPOINT"
+        case SQLITE_RECURSIVE: "SQLITE_RECURSIVE"
+        default: "SQLITE_OTHER"
+        }
+    }
+}
+
+private final class SQLiteDiagnosticCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var payloads: [String] = []
+
+    func reset() {
+        lock.withLock { payloads.removeAll() }
+    }
+
+    func append(_ payload: String) {
+        lock.withLock {
+            payloads.append(payload)
+            if payloads.count > 32 {
+                payloads.removeFirst(payloads.count - 32)
+            }
+        }
+    }
+
+    func snapshot() -> [String] {
+        lock.withLock { payloads }
     }
 }
 

@@ -12,37 +12,37 @@ enum DashboardSampleData {
     }
 
     private static let tickets: [TicketSeed] = [
-        .init(id: "DESIGN-V2", outcome: "Cohesive visual language", lane: .backlog),
-        .init(id: "VD2-09", outcome: "Release-readiness package", lane: .backlog),
-        .init(id: "UX-D12", outcome: "Search semantics", lane: .backlog),
-        .init(id: "P2A-1", outcome: "Phase two agent handoff", lane: .backlog),
-        .init(id: "QA-11", outcome: "Regression confidence", lane: .backlog),
-        .init(id: "SEC-10", outcome: "Local privacy review", lane: .backlog),
-        .init(id: "DOC-09", outcome: "Owner operating notes", lane: .backlog),
-        .init(id: "PERF-08", outcome: "Board rendering budget", lane: .backlog),
-        .init(id: "REL-07", outcome: "Signed release candidate", lane: .backlog),
-        .init(id: "VD2-08", outcome: "Visual QA and accessibility acceptance", lane: .inProgress),
-        .init(id: "UX-D10", outcome: "Export confirmation", lane: .needsReview),
-        .init(id: "VD2-07d", outcome: "Precise local search", lane: .needsReview),
-        .init(id: "VD2-07c", outcome: "Activity and AI areas", lane: .blocked),
-        .init(id: "VD2-07", outcome: "Settings architecture", lane: .accepted),
-        .init(id: "VD2-06", outcome: "Contacts workflow", lane: .accepted),
-        .init(id: "VD2-05", outcome: "Pipeline movement", lane: .accepted),
-        .init(id: "VD2-04", outcome: "Project onboarding", lane: .accepted),
-        .init(id: "VD2-03", outcome: "Agent action bridge", lane: .accepted),
-        .init(id: "RR-04", outcome: "Folder-backed project setup", lane: .accepted),
-        .init(id: "RR-03", outcome: "Typed delivery actions", lane: .accepted),
-        .init(id: "RR-02", outcome: "Transactional local store", lane: .accepted),
-        .init(id: "RR-01", outcome: "Signed application foundation", lane: .accepted),
-        .init(id: "UX-D09", outcome: "Navigation hierarchy", lane: .accepted),
-        .init(id: "UX-D08", outcome: "Readable status language", lane: .accepted),
-        .init(id: "UX-D07", outcome: "Owner attention states", lane: .accepted),
-        .init(id: "CORE-06", outcome: "Audit attribution", lane: .accepted),
-        .init(id: "CORE-05", outcome: "Evidence persistence", lane: .accepted),
-        .init(id: "CORE-04", outcome: "Blocker records", lane: .accepted),
-        .init(id: "CORE-03", outcome: "Ticket dependency graph", lane: .accepted),
-        .init(id: "CORE-02", outcome: "Five-lane vocabulary", lane: .accepted),
-        .init(id: "CORE-01", outcome: "Project and phase records", lane: .accepted),
+        .init(id: "DESIGN-V2", outcome: "Defines one cohesive visual language across the dashboard.", lane: .backlog),
+        .init(id: "VD2-09", outcome: "Packages verified release evidence for owner sign-off.", lane: .backlog),
+        .init(id: "UX-D12", outcome: "Makes local search intent and results predictable.", lane: .backlog),
+        .init(id: "P2A-1", outcome: "Hands phase-two delivery to agents with explicit context.", lane: .backlog),
+        .init(id: "QA-11", outcome: "Confirms critical workflows remain stable before release.", lane: .backlog),
+        .init(id: "SEC-10", outcome: "Confirms local delivery data stays private and bounded.", lane: .backlog),
+        .init(id: "DOC-09", outcome: "Explains daily owner operations and recovery paths.", lane: .backlog),
+        .init(id: "PERF-08", outcome: "Keeps phase-board rendering within the approved performance budget.", lane: .backlog),
+        .init(id: "REL-07", outcome: "Produces a signed release candidate ready for validation.", lane: .backlog),
+        .init(id: "VD2-08", outcome: "Verifies the dashboard’s visual fidelity and accessibility before release.", lane: .inProgress),
+        .init(id: "UX-D10", outcome: "Confirms exported delivery records before they leave the app.", lane: .needsReview),
+        .init(id: "VD2-07d", outcome: "Finds local delivery records with precise matching.", lane: .needsReview),
+        .init(id: "VD2-07c", outcome: "Makes delivery activity and AI context understandable to the owner.", lane: .blocked),
+        .init(id: "VD2-07", outcome: "Separates settings concerns into a maintainable app architecture.", lane: .accepted),
+        .init(id: "VD2-06", outcome: "Makes project contacts clear and actionable.", lane: .accepted),
+        .init(id: "VD2-05", outcome: "Moves delivery records safely through the approved pipeline.", lane: .accepted),
+        .init(id: "VD2-04", outcome: "Onboards folder-backed projects with recoverable authorization.", lane: .accepted),
+        .init(id: "VD2-03", outcome: "Exposes bounded agent actions through the typed bridge.", lane: .accepted),
+        .init(id: "RR-04", outcome: "Authorizes project folders and preserves recoverable access.", lane: .accepted),
+        .init(id: "RR-03", outcome: "Lets agents update delivery through validated typed actions.", lane: .accepted),
+        .init(id: "RR-02", outcome: "Persists delivery state transactionally in the local store.", lane: .accepted),
+        .init(id: "RR-01", outcome: "Establishes the signed and sandboxed application foundation.", lane: .accepted),
+        .init(id: "UX-D09", outcome: "Keeps project navigation clear at every depth.", lane: .accepted),
+        .init(id: "UX-D08", outcome: "Translates runtime and delivery states into readable language.", lane: .accepted),
+        .init(id: "UX-D07", outcome: "Makes owner attention requests visible and actionable.", lane: .accepted),
+        .init(id: "CORE-06", outcome: "Attributes every consequential delivery update to its actor.", lane: .accepted),
+        .init(id: "CORE-05", outcome: "Keeps delivery evidence available and visibly recoverable.", lane: .accepted),
+        .init(id: "CORE-04", outcome: "Records blockers without hiding their resolution history.", lane: .accepted),
+        .init(id: "CORE-03", outcome: "Preserves acyclic ticket dependencies and their direction.", lane: .accepted),
+        .init(id: "CORE-02", outcome: "Uses exactly five persisted delivery lanes everywhere.", lane: .accepted),
+        .init(id: "CORE-01", outcome: "Persists project and phase identity without guessing.", lane: .accepted),
     ]
 
     private static let dependencies: [(String, String)] = [
@@ -140,6 +140,13 @@ enum DashboardSampleData {
                 "INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES (?, ?, ?, ?)",
                 bindings: [
                     .text("rr06-link-vd2-07c"), .text(projectID.rawValue), .text("VD2-07c"), .text("rr06-thread-vd2-07c"),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES (?, ?, ?, ?, ?)",
+                bindings: [
+                    .text("rr06-goal-link-vd2-07c"), .text(projectID.rawValue), .text("VD2-07c"),
+                    .text("rr06-thread-vd2-07c"), .text("rr06-goal-vd2-07c"),
                 ]
             )
             try connection.execute(

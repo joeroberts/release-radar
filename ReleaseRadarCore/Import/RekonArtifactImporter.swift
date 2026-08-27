@@ -485,6 +485,10 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                 ), owner != projectID {
                     continue
                 }
+                let isNewReview = try connection.scalarText(
+                    "SELECT id FROM review_items WHERE id = ? AND project_id = ?",
+                    bindings: [.text(id), .text(projectID)]
+                ) == nil
                 try connection.execute(
                     "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open') ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, kind = excluded.kind, summary = excluded.summary WHERE review_items.project_id = excluded.project_id",
                     bindings: [
@@ -495,10 +499,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                         .text(review.summary),
                     ]
                 )
-                if try connection.scalarText(
-                    "SELECT status FROM review_items WHERE id = ? AND project_id = ?",
-                    bindings: [.text(id), .text(projectID)]
-                ) == "open" {
+                if isNewReview {
                     _ = try MeaningfulDeliveryEvent.enqueue(
                         projectID: ProjectID(rawValue: projectID),
                         kind: .importNeedsReview,

@@ -52,6 +52,142 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.6, "RR-03")
     }
 
+    func testLinkGoalPersistsTicketScopedAuditAndDurableReplay() async throws {
+        let fixture = try await makeFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed approved goal candidate") { connection in
+            try connection.execute(
+                "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('goal-approved', 'project-1', 'verified-thread', 'active', 'Ship the approved identity', '2026-08-25T10:00:00Z')"
+            )
+            try connection.execute(
+                "INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES ('thread-link-approved', 'project-1', 'RR-03', 'verified-thread')"
+            )
+        }
+        let envelope = AgentCommandEnvelope(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(uuidString: "12121212-1212-4212-8212-121212121212")!,
+            projectRoot: fixture.projectRoot.path,
+            assertedThreadID: "verified-thread",
+            reason: "Approve RR-03 goal identity",
+            command: .linkGoal(id: "goal-link-approved", ticketID: "RR-03", goalID: "goal-approved")
+        )
+
+        let first = await fixture.dispatcher.dispatch(envelope)
+        let replay = await AgentCommandDispatcher(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            projectRegistry: fixture.registry
+        ).dispatch(envelope)
+
+        XCTAssertNil(first.error)
+        XCTAssertEqual(first.entityIDs, ["goal-link-approved"])
+        XCTAssertEqual(replay, first)
+        let state = try await fixture.store.read { connection in
+            (
+                try connection.scalarText("SELECT project_id || '|' || ticket_id || '|' || thread_id || '|' || goal_id FROM ticket_goal_links WHERE id = 'goal-link-approved'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Approve RR-03 goal identity'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '12121212-1212-4212-8212-121212121212'"),
+                try connection.scalarText("SELECT entity_type FROM audit_events WHERE reason = 'Approve RR-03 goal identity'"),
+                try connection.scalarText("SELECT entity_id FROM audit_events WHERE reason = 'Approve RR-03 goal identity'"),
+                try connection.scalarText("SELECT thread_id FROM audit_events WHERE reason = 'Approve RR-03 goal identity'"),
+                try connection.scalarText("SELECT thread_attribution FROM audit_events WHERE reason = 'Approve RR-03 goal identity'")
+            )
+        }
+        XCTAssertEqual(state.0, "project-1|RR-03|verified-thread|goal-approved")
+        XCTAssertEqual(state.1, 1)
+        XCTAssertEqual(state.2, 1)
+        XCTAssertEqual(state.3, AuditEntityType.ticket.rawValue)
+        XCTAssertEqual(state.4, "RR-03")
+        XCTAssertEqual(state.5, "verified-thread")
+        XCTAssertEqual(state.6, ThreadAttribution.asserted.rawValue)
+    }
+
+    func testLinkGoalRejectsMissingCrossProjectWrongThreadAndCrossTicketReuseWithoutWrites() async throws {
+        let fixture = try await makeFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed goal validation boundaries") { connection in
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-04', 'project-1', 'phase-1', 'Second ticket', 'backlog')")
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('local-other-thread', 'project-1', 'active', '2026-08-25T10:00:00Z')")
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('goal-approved', 'project-1', 'verified-thread', 'active', 'Approved goal', '2026-08-25T10:00:00Z')")
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('goal-unused', 'project-1', 'verified-thread', 'active', 'Unused valid goal', '2026-08-25T10:00:00Z')")
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('goal-wrong-thread', 'project-1', 'local-other-thread', 'active', 'Wrong thread goal', '2026-08-25T10:00:00Z')")
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('goal-other-project', 'project-2', 'other-thread', 'active', 'Other project goal', '2026-08-25T10:00:00Z')")
+            try connection.execute("INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES ('thread-link-3', 'project-1', 'RR-03', 'verified-thread')")
+            try connection.execute("INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES ('thread-link-4', 'project-1', 'RR-04', 'verified-thread')")
+        }
+        let approved = await fixture.dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(uuidString: "13131313-1313-4313-8313-131313131310")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Approve first ticket goal",
+            command: .linkGoal(id: "goal-link-approved", ticketID: "RR-03", goalID: "goal-approved")
+        ))
+        XCTAssertNil(approved.error)
+        let baseline = try await fixture.store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_goal_links") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
+            ]
+        }
+
+        let cases: [(String, String, AgentCommand, (AgentCommandError) -> Bool)] = [
+            (
+                "13131313-1313-4313-8313-131313131311",
+                "Reject missing goal",
+                .linkGoal(id: "goal-link-missing", ticketID: "RR-03", goalID: "missing-goal"),
+                { if case .invalidReference = $0 { return true }; return false }
+            ),
+            (
+                "13131313-1313-4313-8313-131313131312",
+                "Reject cross-project goal",
+                .linkGoal(id: "goal-link-cross-project", ticketID: "RR-03", goalID: "goal-other-project"),
+                { if case .crossProjectReference = $0 { return true }; return false }
+            ),
+            (
+                "13131313-1313-4313-8313-131313131313",
+                "Reject wrong-thread goal",
+                .linkGoal(id: "goal-link-wrong-thread", ticketID: "RR-03", goalID: "goal-wrong-thread"),
+                { if case .invalidReference = $0 { return true }; return false }
+            ),
+            (
+                "13131313-1313-4313-8313-131313131314",
+                "Reject cross-ticket goal reuse",
+                .linkGoal(id: "goal-link-reused", ticketID: "RR-04", goalID: "goal-approved"),
+                { if case .invalidReference = $0 { return true }; return false }
+            ),
+            (
+                "13131313-1313-4313-8313-131313131315",
+                "Reject cross-ticket link ID reassignment",
+                .linkGoal(id: "goal-link-approved", ticketID: "RR-04", goalID: "goal-unused"),
+                { if case .invalidReference = $0 { return true }; return false }
+            ),
+        ]
+
+        for (requestID, reason, command, matches) in cases {
+            let result = await fixture.dispatcher.dispatch(.init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: UUID(uuidString: requestID)!,
+                projectRoot: fixture.projectRoot.path,
+                reason: reason,
+                command: command
+            ))
+            guard let error = result.error, matches(error) else {
+                return XCTFail("Unexpected linkGoal validation result for \(reason): \(result)")
+            }
+            let state = try await fixture.store.read { connection in
+                [
+                    try connection.scalarInt("SELECT COUNT(*) FROM ticket_goal_links") ?? -1,
+                    try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1,
+                    try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
+                ]
+            }
+            XCTAssertEqual(state, baseline)
+        }
+
+        let persisted = try await fixture.store.read { connection in
+            try connection.scalarText("SELECT ticket_id || '|' || goal_id FROM ticket_goal_links WHERE id = 'goal-link-approved'")
+        }
+        XCTAssertEqual(persisted, "RR-03|goal-approved")
+    }
+
     func testApprovedCommandsPersistOnlyTheirBoundedDeliveryRecords() async throws {
         let fixture = try await makeFixture()
         let evidenceURL = fixture.projectRoot.appendingPathComponent("evidence.txt")
@@ -336,6 +472,9 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
                 if case .invalidEnvelope = $0 { return true }; return false
             }),
             (.init(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path, assertedThreadID: "", reason: "Empty asserted thread", command: .transitionTicket(ticketID: "RR-03", lane: .blocked)), {
+                if case .invalidEnvelope = $0 { return true }; return false
+            }),
+            (.init(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path, reason: "Invalid goal link", command: .linkGoal(id: " ", ticketID: "RR-03", goalID: "goal")), {
                 if case .invalidEnvelope = $0 { return true }; return false
             }),
             (.init(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.deletingLastPathComponent().path, reason: "Outside root", command: .transitionTicket(ticketID: "RR-03", lane: .blocked)), {

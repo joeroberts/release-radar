@@ -1,3 +1,4 @@
+import ReleaseRadarCore
 import SwiftUI
 
 struct SettingsView: View {
@@ -83,16 +84,68 @@ struct SettingsView: View {
                 }
             }
             Section("Alert rules") {
-                LabeledContent("Blocked linked goals", value: "On")
-                LabeledContent("Agent completion and review", value: "On")
-                LabeledContent("Needs Review entry", value: "On")
-                LabeledContent("Paused goals", value: "Off")
+                if let rules = model.alertRules {
+                    alertRuleToggle(
+                        "Blocked linked goals",
+                        kind: .blockedLinkedGoals,
+                        accessibilityID: "alert-blocked-goals",
+                        rules: rules
+                    )
+                    alertRuleToggle(
+                        "Agent completion and review",
+                        kind: .agentCompletionAndReview,
+                        accessibilityID: "alert-agent-completion-review",
+                        rules: rules
+                    )
+                    alertRuleToggle(
+                        "Needs Review entry",
+                        kind: .needsReviewEntry,
+                        accessibilityID: "alert-needs-review",
+                        rules: rules
+                    )
+                    alertRuleToggle(
+                        "Paused goals",
+                        kind: .pausedGoals,
+                        accessibilityID: "alert-paused-goals",
+                        rules: rules
+                    )
+                }
+                if let failure = model.alertRulesFailure {
+                    FailureStateView(presentation: failure, style: .compact)
+                    Button("Retry") {
+                        Task { await model.retryAlertRules() }
+                    }
+                    .accessibilityIdentifier("alert-rules-retry")
+                } else if model.alertRules == nil {
+                    ProgressView("Loading saved alert rules…")
+                        .controlSize(.small)
+                        .accessibilityIdentifier("alert-rules-loading")
+                }
                 Text("Alerts are created only after the project's dashboard has been opened once.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
+    }
+
+    private func alertRuleToggle(
+        _ title: String,
+        kind: AlertRuleKind,
+        accessibilityID: String,
+        rules: AlertRuleSnapshot
+    ) -> some View {
+        Toggle(
+            title,
+            isOn: Binding(
+                get: { rules[kind] },
+                set: { enabled in
+                    Task { await model.setAlertRule(kind, enabled: enabled) }
+                }
+            )
+        )
+        .disabled(model.alertRuleControlsDisabled)
+        .accessibilityIdentifier(accessibilityID)
     }
 
     private var projects: some View {

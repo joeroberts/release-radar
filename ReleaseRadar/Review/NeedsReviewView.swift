@@ -1,12 +1,18 @@
-import SwiftUI
+import AppKit
 import ReleaseRadarCore
+import SwiftUI
 
 struct NeedsReviewView: View {
     let inbox: ReviewInboxProjection
     @Binding var selectedItemID: ReviewItemID?
     let isPerformingAction: Bool
     let actionFailure: FailureStatePresentation?
+    let projectName: String
+    let authorizationRecovery: ReviewAuthorizationRecovery?
     let onDecision: (ReviewDecision, ReviewItemProjection) async -> Void
+    let onRecoverAuthorization: (URL, ProjectID) async -> Void
+    @State private var pendingAssociationFolder: URL?
+    @State private var isConfirmingAssociation = false
 
     private var selectedItem: ReviewItemProjection? {
         inbox.openItems.first { $0.id == selectedItemID } ?? inbox.openItems.first
@@ -26,6 +32,24 @@ struct NeedsReviewView: View {
         .accessibilityIdentifier("content-needs-review")
         .onAppear {
             selectedItemID = selectedItem?.id
+        }
+        .confirmationDialog(
+            "Associate folder with \(projectName)?",
+            isPresented: $isConfirmingAssociation,
+            titleVisibility: .visible
+        ) {
+            Button("Associate project folder") {
+                guard let pendingAssociationFolder else { return }
+                self.pendingAssociationFolder = nil
+                Task {
+                    await onRecoverAuthorization(pendingAssociationFolder, inbox.projectID)
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                pendingAssociationFolder = nil
+            }
+        } message: {
+            Text("Release Radar will associate the selected folder with \(projectName). This does not resolve or dismiss the review item.")
         }
     }
 
@@ -83,7 +107,7 @@ struct NeedsReviewView: View {
     @ViewBuilder
     private var detail: some View {
         if let item = selectedItem {
-            ScrollView {
+            ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 20) {
                     Label(item.kind.title, systemImage: item.kind.systemImage)
                         .font(.title2.weight(.semibold))
@@ -103,7 +127,11 @@ struct NeedsReviewView: View {
                     }
 
                     if let actionFailure {
-                        FailureStateView(presentation: actionFailure)
+                        FailureStateView(
+                            presentation: actionFailure,
+                            actionTitle: authorizationRecovery?.actionTitle,
+                            action: recoveryAction
+                        )
                             .accessibilityIdentifier("review-action-error")
                     }
 
@@ -120,7 +148,7 @@ struct NeedsReviewView: View {
                         .buttonStyle(.bordered)
                         .accessibilityIdentifier("review-dismiss")
                     }
-                    .disabled(isPerformingAction)
+                    .disabled(isPerformingAction || authorizationRecovery != nil)
                 }
                 .frame(maxWidth: 620, alignment: .leading)
                 .padding(28)
@@ -131,6 +159,30 @@ struct NeedsReviewView: View {
                 systemImage: "checkmark.circle",
                 description: Text("No review decisions are waiting for this project.")
             )
+        }
+    }
+
+    private var recoveryAction: (() -> Void)? {
+        guard authorizationRecovery != nil else { return nil }
+        return { chooseAuthorizationFolder() }
+    }
+
+    private func chooseAuthorizationFolder() {
+        guard let authorizationRecovery else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = authorizationRecovery == .reauthorizeProjectRoot
+            ? "Reauthorize"
+            : "Choose Project Folder"
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        switch authorizationRecovery {
+        case .reauthorizeProjectRoot:
+            Task { await onRecoverAuthorization(folder, inbox.projectID) }
+        case .associateFirstProjectRoot:
+            pendingAssociationFolder = folder
+            isConfirmingAssociation = true
         }
     }
 }

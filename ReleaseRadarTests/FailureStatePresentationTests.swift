@@ -3,13 +3,25 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class FailureStatePresentationTests: XCTestCase {
-    func testOnboardingStatesKeepNoStructureFirstPhaseAndFolderFailuresDistinct() {
-        XCTAssertEqual(FailureStatePresentation.noDeliveryStructure.title, "No delivery structure yet")
-        XCTAssertTrue(FailureStatePresentation.noDeliveryStructure.detail.contains("folder-backed project"))
+    func testOnboardingStatesUseInitializationAndTrackingStateTerminology() throws {
+        let noStructure = FailureStatePresentation.noDeliveryStructure
+        XCTAssertEqual(noStructure.title, "Project tracking not initialized")
+        XCTAssertTrue(noStructure.detail.contains("Initialize Project Tracking"))
+        XCTAssertTrue(noStructure.detail.localizedCaseInsensitiveContains("tracking state"))
 
-        let firstPhase = FailureStatePresentation(onboardingError: .noFirstPhase)
-        XCTAssertEqual(firstPhase?.title, "First phase required")
-        XCTAssertTrue(firstPhase?.detail.contains("agent") == true)
+        let activePresentations = [
+            FailureStatePresentation.firstPhaseRequired,
+            FailureStatePresentation.trackingStateRequired,
+            try XCTUnwrap(FailureStatePresentation(onboardingError: .noFirstPhase)),
+            try XCTUnwrap(FailureStatePresentation(onboardingError: .projectNotPrepared)),
+        ]
+        for presentation in activePresentations {
+            XCTAssertEqual(presentation.title, "Tracking state required")
+            XCTAssertTrue(presentation.detail.localizedCaseInsensitiveContains("tracking state"))
+            XCTAssertFalse(presentation.title.localizedCaseInsensitiveContains("first phase"))
+            XCTAssertFalse(presentation.detail.localizedCaseInsensitiveContains("first phase"))
+            XCTAssertFalse(presentation.detail.localizedCaseInsensitiveContains("ask an agent"))
+        }
 
         let inaccessible = FailureStatePresentation(onboardingError: .invalidFolder)
         XCTAssertEqual(inaccessible?.title, "Project folder unavailable")

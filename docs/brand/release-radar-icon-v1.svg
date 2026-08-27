@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="background" x1="128" y1="96" x2="896" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#20294F"/>
+      <stop offset="0.22" stop-color="#111832"/>
+      <stop offset="0.78" stop-color="#111832"/>
+      <stop offset="1" stop-color="#20294F"/>
+    </linearGradient>
+    <linearGradient id="scan" x1="512" y1="512" x2="714" y2="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7C5CFA"/>
+      <stop offset="1" stop-color="#47F2FF"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="56" y="56" width="912" height="912" rx="208" fill="url(#background)" stroke="#20294F" stroke-width="12"/>
+
+  <path d="M512 512 L660 258 L770 358 Z" fill="url(#scan)" opacity="0.48"/>
+
+  <circle cx="512" cy="512" r="270" fill="none" stroke="#7C5CFA" stroke-width="38"
+          stroke-linecap="round" stroke-dasharray="240 99.292" stroke-dashoffset="-35"
+          transform="rotate(-90 512 512)"/>
+
+  <circle cx="512" cy="512" r="31" fill="#111832" stroke="#7C5CFA" stroke-width="15"/>
+  <circle cx="512" cy="512" r="9" fill="#8365F7"/>
+
+  <rect id="tile-upper-left" x="256" y="266" width="120" height="120" rx="28"
+        fill="#2D2869" stroke="#8365F7" stroke-width="14"/>
+  <rect id="tile-active" x="648" y="266" width="120" height="120" rx="28"
+        fill="#16CDE8" stroke="#47F2FF" stroke-width="14"/>
+  <rect id="tile-lower-right" x="684" y="590" width="120" height="120" rx="28"
+        fill="#2D2869" stroke="#8365F7" stroke-width="14"/>
+  <rect id="tile-bottom" x="452" y="700" width="120" height="120" rx="28"
+        fill="#2D2869" stroke="#8365F7" stroke-width="14"/>
+  <rect id="tile-lower-left" x="220" y="590" width="120" height="120" rx="28"
+        fill="#2D2869" stroke="#8365F7" stroke-width="14"/>
+</svg>
