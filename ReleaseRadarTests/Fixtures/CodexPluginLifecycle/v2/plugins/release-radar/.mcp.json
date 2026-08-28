@@ -1,0 +1,6 @@
+{
+  "release_radar": {
+    "command": "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools",
+    "args": []
+  }
+}

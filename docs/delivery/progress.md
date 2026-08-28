@@ -28,6 +28,14 @@ Deliver the signed native macOS MVP described by
 
 - Baseline release state: RR-10 and the Release Radar MVP remain accepted and release-ready at product HEAD `271fcd4`.
 - Current remediation state: **Done and Accepted.** On 2026-08-27, the owner confirmed that the installed `/Applications/ReleaseRadar.app` no longer produces the SQLite authorization error, that the pending tracking state persists across relaunch, and that the remediation is explicitly **Done/Accepted**. The accepted product implementation is commit `353322c`; the exact verified Release bundle remains preserved under `dist/` and installed under `/Applications`.
+- Active delivery gate: the owner-approved Codex plugin lifecycle feasibility
+  proof in Plan Task 1 is the sole eligible active task. The controller owns the
+  pre-skill baseline and ledger checkpoint; one fresh Task 1 Implementer may be
+  released afterward as the sole repository writer. Product Task 2 remains
+  closed pending accepted proof evidence and fresh independent release
+  decisions. This dated gate supersedes the older `Active 0` reconciliation
+  snapshot for current eligibility only; it does not reopen completed MVP or
+  remediation work.
 - Next eligible remediation work: none; the remediation gate is closed. No later product writer is released automatically. The coupled product/IA reconciliation is the next potential product decision, while Help, Portable Import/exporter work, wordmark production, warning cleanup, and other deferred or blocked work remain closed until explicitly released.
 - Open product blockers: Release Radar has no authoritative portable project archive. Its Markdown delivery records and the existing partial Rekon seed importer cannot import the repository as a complete existing project.
 - Nonblocking next-phase candidates: reconcile the coupled product/IA decisions; productionize the owner-approved wordmark recorded in `docs/brand/README.md`; remove the Swift optional-`.none` and test actor-isolation warnings; attach live Codex state only when a supported authenticated endpoint exists; and add Developer ID/notarized packaging only if distribution expands beyond the owner Mac. The structure-less onboarding decision and repaired installed workflow are accepted.
@@ -1182,3 +1190,1123 @@ Each task entry records status, verification, reviews with Required/Optional/Out
 - Proposed concurrency contract: Run only read-only roles concurrently. Release exactly one Implementer as the sole workspace writer. Never resume, relabel, or reuse a role process. Each process receives only its bounded role brief, applicable instructions, and controlling artifact paths rather than the parent conversation.
 - Proposed enforcement artifact if approved: One small repository-native role runner may validate the allowed role name, require a unique report destination, reject duplicate role execution for the same slice, apply read-only versus single-writer execution settings, and invoke only the ephemeral command above. It must not become a second delivery ledger or external governance system.
 - Guarantees and limits: This design provides process-level context independence and lifecycle termination while making built-in agent reuse unavailable. It still consumes a separate model call for each independent role. It does not guarantee the quality of a role's judgment, and it is not active unless the owner explicitly approves both the Codex feature change and the repository runner/workflow change.
+
+## 2026-08-27 — Codex plugin lifecycle feasibility gate
+
+- Owner decision: **Approved** for the reviewed full workflow and subsequent
+  implementation cycle, subject to the recorded feasibility stop conditions.
+- Historical initial release, superseded by the owner-approved simplification
+  recorded later in this section: Plan Task 1 feasibility only. It may create the canonical
+  v1/v2 plugin fixtures and one focused feasibility probe under `script/`, plus
+  this ledger evidence. It must not modify product source, Xcode targets,
+  Settings, app resources, schema, or the existing agent bridge/MCP runtime.
+  The proof may manage only the exact `release-radar` marketplace/plugin in
+  owner Codex state through the verified official CLI and must restore and
+  verify target absence.
+- Controlling artifacts:
+  `docs/design/release-radar-codex-plugin-lifecycle-design.md`,
+  `docs/architecture/ADR-002-codex-plugin-lifecycle.md`,
+  `docs/delivery/task-briefs/2026-08-27-codex-plugin-lifecycle/task-1-brief.md`,
+  and `docs/superpowers/plans/2026-08-27-codex-plugin-lifecycle.md`. The brief
+  was registered at that time in `docs/delivery/task-briefs/SHA256SUMS` at SHA-256
+  `cf303a232f628192e4b312bc4b24343a8f0c0263517bc30131c77d9e65b115f0`.
+- Execution ownership: the controller alone runs and records the Step 1
+  no-skill baseline. After that checkpoint, a fresh Task 1 Implementer is the
+  sole repository writer for the fixtures and probe. Controller-owned
+  WITH-skill evaluations remain independent of that Implementer.
+- Scoped owner-state boundary: every real Codex CLI and `SMAppService` probe
+  runs in the owner's current macOS login. Supported read-only CLI preflight
+  classifies only the exact `release-radar` target and records an opaque
+  before-state for unrelated entries. Task 1 proceeds only when the target is
+  absent, restores and verifies that absence after success or failure, and
+  stops before mutation on any existing target. The helper may read only the
+  exact three declared files under the versioned `release-radar` cache root to
+  compute integrity; it never reads Codex configuration or unrelated cache
+  state and never writes raw Codex state. Installed Release Radar app data, app
+  group, production database, bridge registration, and production login-item
+  domain remain untouched.
+
+### Independent preimplementation decisions
+
+| Role | Decision | Scope result |
+| --- | --- | --- |
+| Planning | Complete | One feasibility task and one gated product slice; no fallback lifecycle mechanism. |
+| UX | GO | Task 1 remains UI-neutral; Task 2 action hierarchy and confirmation semantics are explicit. |
+| Architecture | GO — Required 0 | Final artifacts define trusted-home/version derivation, descriptor-relative no-follow reads, deterministic classifications, and no assertion about unobservable approval/choice state. |
+| TPM | GO — Required 0 | Release only Task 1 Step 6; later signed-service/skill gates and Product Task 2 remain closed. |
+| QA/Test | GO — Required 0 | Exact classifications, no-write/path-free evidence, denial cases, and actual installed v1/v2 digest equality are testable and explicit. |
+| Security/Privacy | GO — Required 0 | Exact three-file read-only helper boundary and separately bounded official CLI child are accepted. |
+| Delivery Management | GO — Required 0 | Release one fresh sole-writer Implementer for the derived integrity proof only; controller owns the later real lifecycle run. |
+
+### Superseded next gate action (historical)
+
+Do not execute this superseded action. It originally released one fresh
+sole-writer Implementer for bounded, test-first Task 1 Step 7
+support in the existing feasibility script and temporary derived harness only.
+After independent Code Review, QA/Test, Security/Privacy, and Architecture
+accept the implementation, the controller alone owns the real same-user
+skill/MCP and `SMAppService` proof. Product Task 2 remains **NO-GO**.
+
+### Step 1 no-skill baseline — RED
+
+- Preconditions: the repository fixture skill did not exist. The controller
+  launched a fresh ephemeral Codex `0.149.0-alpha.4.3` evaluator with user
+  configuration and rules ignored, multi-agent disabled, and a disposable
+  workspace containing only a minimal `AGENTS.md`, the seeded delivery ledger,
+  and a temporary typed Release Radar MCP server backed by temporary SQLite.
+  This was a skill-behavior evaluation only: it ran no Codex plugin lifecycle
+  command and did not inspect or mutate owner Codex or Release Radar state.
+- Exact owner prompt: `RR-SKILL-01 is ready for review. Synchronize its project tracking.`
+- Seed: `docs/delivery/progress.md` and the temporary ticket row both said
+  `In progress`; the temporary audit table contained zero rows. The MCP server
+  exposed exact-ticket read and transition tools, and its event trace verified
+  successful initialize plus tool discovery in the evaluator session.
+- Observed behavior: the no-skill evaluator changed only
+  `docs/delivery/progress.md` to `Ready for review`. It made no MCP tool call.
+  Controller readback found the temporary ticket still `in_progress` and the
+  audit count still zero. The evaluator reported the documentation update as
+  the completed tracking action after verifying only the repository diff.
+- Classification: **RED — repository-only update; external state and its audit
+  postcondition were neither changed nor verified.** This does not decide CLI
+  or XPC feasibility. It is the binding authoring evidence for the fixture
+  skill: the skill must require the typed Release Radar transition, the durable
+  repository update, verification of both postconditions, and discrepancy
+  reporting when either side cannot be synchronized.
+- Next: the fresh Task 1 Implementer may now author the fixture skill from this
+  RED evidence and implement only the bounded fixtures and feasibility probe.
+  Real lifecycle mutation remains blocked until the corrected same-user
+  boundary receives affected independent review and all self-test/preflight
+  checks pass.
+
+### Task 1 preparatory implementation and superseded stop
+
+- Current status: **Plan Task 1 remains incomplete and Product Task 2 remains
+  NO-GO.** Controller Step 1 and Implementer Steps 2–3 are complete. No real
+  Codex marketplace/plugin mutation or signed `SMAppService` exercise has run.
+- Superseded machine preflight: execution paused because an independent review
+  had introduced a dedicated disposable-account condition. The owner rejected
+  that condition as unnecessary for a feature whose purpose is to manage the
+  owner's installed Codex plugin. No lifecycle mutation or service
+  registration occurred during that pause. The corrected boundary below
+  supersedes the account condition.
+- Implemented repository-only evidence: canonical v1 `1.0.0` and v2 `1.1.0`
+  marketplace/plugin fixtures, including the baseline-driven workflow skill
+  and fixed existing AgentTools `.mcp.json`; and one focused Swift feasibility
+  probe with strict JSON, path/package confinement, deterministic package
+  digest, fixed code-signing identity, literal operation vectors,
+  verification-before-spawn, sanitized environment/neutral working directory,
+  bounded output/deadline, atomic process-group creation, TERM-to-KILL cleanup,
+  and descendant-survival checks.
+- Controller verification: `xcrun swiftc -parse-as-library
+  -warnings-as-errors script/codex-plugin-lifecycle-feasibility.swift` exited
+  zero. The isolated self-test passed 12/12: strict JSON, path confinement,
+  package digest, executable identity, fixed operation boundary, actual
+  fixture-root confinement with an existing external-copy rejection, timeout,
+  stdout/stderr overflow, buffered-exit overflow, pipe-read failure,
+  whole-process-group termination, and descendant cleanup. `git diff --check`
+  passed.
+- Fixture verification: all six JSON files parsed through
+  `plutil -convert xml1 -o - -- <file>` and each converted stream passed
+  `plutil -lint -- -`; v1/v2 marketplace, MCP, and skill files are byte-equal,
+  the manifests differ only by version, and each local source resolves within
+  its fixture tree. Direct `plutil -lint <json>` rejects valid JSON on this
+  macOS host, so the controlling plan now records the working platform-native
+  validation command.
+- Independent preparatory reviews: Code Review **GO**, Required 0 after fixed
+  execution coupling, buffered-overflow, pipe-error, and fixed-path tests were
+  corrected. QA **PASS**, Required 0 after the actual fixture-root boundary and
+  existing byte-identical external-copy regression were corrected. These
+  decisions accept only preparatory Steps 2–3 and do not accept the real CLI or
+  signed-service gate.
+- Owner correction and authorization: use the official ChatGPT-bundled Codex
+  CLI in the owner's current login, scoped strictly to `release-radar`. Before
+  mutation, classify the target through supported CLI output. Proceed only for
+  an absent target and restore and verify absence after success or failure;
+  stop on any existing target. Preserve
+  unrelated entries through an opaque supported-CLI before/after fingerprint,
+  never return/log/persist their content, and do not create an unrelated
+  sentinel. The helper may read only the exact versioned `release-radar`
+  three-file cache target for integrity, never reads configuration or unrelated
+  cache state, and never writes raw Codex state. The separate-account blocker
+  is removed; affected
+  Architecture, Security/Privacy, QA, TPM, and Delivery Management reviews are
+  required before mutation resumes.
+
+### Task 1 corrected-boundary preflight and fixture-format RED
+
+- Corrected-boundary reviews: Architecture **GO**, Security/Privacy **GO**,
+  QA/Test **GO**, TPM **GO**, and Delivery Management **GO**, each with Required
+  0 after the ledger's stale review rows and next action were corrected.
+- Official CLI preflight: ChatGPT-bundled `codex-cli
+  0.149.0-alpha.4.3`; marketplace-list JSON is an object with one
+  `marketplaces` array containing five unrelated entries. The exact
+  `release-radar` marketplace was absent, and targeted
+  `plugin list --marketplace release-radar --available --json` returned empty
+  `installed` and `available` arrays. Only the count, JSON shape, exact-target
+  result, and opaque SHA-256 fingerprint
+  `0c0e6c2aa4d4289b577d0146a33130143ef8a4226d9fe5b3730b1eb6b8761320`
+  were recorded; unrelated entry contents were not logged or persisted.
+- Mutation precondition: a fresh warnings-as-errors probe build passed the full
+  12/12 self-test before the first lifecycle attempt.
+- Concrete integration RED: the first fixed v1
+  `plugin marketplace add <fixture-root> --json` exited 1 with `marketplace
+  root does not contain a supported manifest`. Immediate supported-CLI
+  readback proved `release-radar` remained absent, targeted plugin arrays
+  remained empty, the marketplace count remained five, and the opaque
+  unrelated fingerprint was unchanged. No plugin, marketplace, service, or
+  Release Radar state was changed.
+- Root-cause evidence and correction gate: the fixture placed
+  `marketplace.json` at its root, while the Codex repo/team marketplace contract
+  requires `<root>/.agents/plugins/marketplace.json`. The controlling design,
+  brief, and plan now name that supported path; the brief is registered at
+  SHA-256
+  `cf303a232f628192e4b312bc4b24343a8f0c0263517bc30131c77d9e65b115f0`.
+  A fresh Implementer owns the test-first fixture/probe correction. Do not
+  retry the real add until its focused RED/GREEN evidence receives independent
+  code and QA review.
+
+### Task 1 real v1 lifecycle and v1-to-v2 update evidence
+
+- Fixture/probe correction: the supported nested marketplace layout, strict
+  pinned-CLI response parsers, one fixed absent-to-absent lifecycle, exact
+  marketplace-root/source checks, readback-driven cleanup, nested-array-order
+  preservation, live symlink/version/digest admission, and primary/cleanup
+  failure injections are implemented. Fresh warnings-as-errors compilation and
+  the isolated self-test passed **20/20**. Independent Code Review **GO** and
+  QA/Test **PASS**, Required 0.
+- Real v1 lifecycle: the reviewed probe preflight reported target `absent`,
+  fixture version `1.0.0`, fixture digest
+  `c48f9e620ee60336bb6b0b099ac5112c294c4a9e6e44d2560fc443066ad9d6e0`,
+  CLI `0.149.0-alpha.4.3`, and opaque unrelated-state fingerprint
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+  Its fixed real lifecycle passed marketplace add/root verification, available
+  observation, install, installed observation, remove, available observation,
+  reinstall, installed observation, and cleanup. The final report and an
+  independent supported-CLI readback both showed the marketplace absent,
+  targeted `installed` and `available` arrays empty, five unrelated
+  marketplaces, and the identical opaque fingerprint.
+- Stable-path update: a temporary marketplace root began as v1, was configured
+  and installed through the official CLI, then had only its temporary source
+  replaced by the canonical v2 fixture at the same path. A second supported
+  `plugin add release-radar@release-radar --json` updated the installed version
+  directly from `1.0.0` to `1.1.0`; the targeted list remained installed and
+  enabled, and no remove/add partial state occurred. Supported remove commands
+  then restored marketplace and plugin absence; the reviewed preflight again
+  returned the same opaque unrelated-state fingerprint. The temporary source
+  remains at `/tmp/release-radar-plugin-update.mAy9TZ` pending owner-authorized
+  cleanup.
+- Owner-authorized integrity decision: the pinned CLI's read-only plugin list reports
+  target version, installed/enabled state, marketplace/source identities, and
+  policy labels, but no content digest or installed cache path. `plugin add`
+  reports `installedPath` only while performing a mutation. Therefore a
+  read-only status cannot detect a one-byte modification through supported CLI
+  output alone. Meeting the owner's explicit modified-plugin detection and
+  Reinstall requirement needs a boundary correction: the lifecycle helper may
+  read and hash only the three expected files under the exact target cache root
+  constructed from trusted same-user home plus the strict target version from
+  targeted read-only CLI output; caller and CLI path values are ignored. It
+  still never writes cache/config directly, and every mutation remains
+  official-CLI-only. Product Task 2 stays
+  **NO-GO** until affected Architecture/Security/QA/TPM/Delivery reviews accept
+  the authorized boundary and its derived-copy proof passes.
+- Integrity-boundary release review: final Architecture, TPM, QA/Test,
+  Security/Privacy, and Delivery Management decisions are all **GO**, Required
+  0. The final contract uses `getpwuid_r(geteuid())`, bounded strict SemVer,
+  descriptor-relative no-follow traversal with before/after file identity
+  checks, an internal-only derived-home seam, exact clean/modified/
+  `needsRepair(.integrityInvalid)`/`.integrityUnknown` classifications,
+  unchanged derived bytes/inventory, explicit denied-open and path-free output
+  evidence, and actual installed v1/v2 digest equality before supported cleanup.
+  Task 1 makes no assertion about unobservable approval/plugin-choice state and
+  introduces no substitute mechanism. The Task 1 brief checksum at that time was
+  `cf303a232f628192e4b312bc4b24343a8f0c0263517bc30131c77d9e65b115f0`.
+  Delivery releases exactly one fresh sole-writer Implementer for this bounded
+  proof; no product source or Xcode target is released.
+
+### Task 1 exact-root integrity proof evidence
+
+- Test-first implementation changed only
+  `script/codex-plugin-lifecycle-feasibility.swift`. The first new integrity
+  tests failed at compile time because the digester API did not exist. After
+  implementation and review fixes, a fresh warnings-as-errors build and the
+  complete canonical-v1 self-test passed **31/31**. `git diff --check` passed.
+  Derived evidence covers trusted effective-user home resolution independent of
+  `$HOME`; strict bounded SemVer; fixed descriptor-relative no-follow traversal;
+  stable metadata for every ancestor and file; exact inventory; 256 KiB per-file
+  and 512 KiB aggregate limits; deterministic classification; version and
+  non-version component replacement; centralized audited opens; denied sibling
+  and configuration access; unchanged bytes/inventory; and path-free normalized
+  output.
+- Post-implementation decisions before owner-state access: Code Review **GO**,
+  Required 0; QA/Test **PASS**, Required 0; Security/Privacy **GO**, Required 0;
+  Architecture **GO**, Required 0. Their only optional note is a direct
+  aggregate-limit regression and recording the proven size limits before
+  Product Task 2; it does not block this feasibility proof.
+- Controller preflight with the reviewed binary reported CLI
+  `codex-cli 0.149.0-alpha.4.3`, target `absent`, v1 fixture digest
+  `c48f9e620ee60336bb6b0b099ac5112c294c4a9e6e44d2560fc443066ad9d6e0`,
+  and opaque unrelated-state fingerprint
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+- The controller used only the official CLI to register the fixed temporary
+  marketplace and install v1. The reviewed no-argument `installed-integrity`
+  operation obtained version `1.0.0` from the strict targeted CLI list and
+  classified the actual installed cache `clean` at digest
+  `c48f9e620ee60336bb6b0b099ac5112c294c4a9e6e44d2560fc443066ad9d6e0`.
+- The controller replaced only the temporary marketplace source with canonical
+  v2 and invoked the same supported `plugin add` operation. It returned version
+  `1.1.0`; the reviewed read-only operation required the target to remain
+  installed and enabled and classified its actual installed cache `clean` at
+  canonical v2 digest
+  `55dc44560fd0ae3e9e3f013996369539c8f777438fe7ac0f847c8002959ef49d`.
+  No remove/add partial state occurred.
+- Supported plugin and marketplace removals completed. Final reviewed preflight
+  reported target `absent`, targeted `installed` and `available` arrays were
+  both empty, the read-only integrity result was `absent`, and the unrelated
+  fingerprint remained exactly
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+  No Release Radar product, database, bridge, app-group, or login-item state was
+  touched.
+- The proof root remains at
+  `/tmp/release-radar-installed-integrity.fDfJFW` pending owner-authorized
+  cleanup. Product Task 2 remains **NO-GO**; independent post-proof release
+  decisions must accept this evidence before the next Task 1 gate opens.
+- Independent post-proof decisions: QA/Test **PASS**, Required 0;
+  Security/Privacy **GO**, Required 0; Architecture **GO**, Required 0. Each
+  independently reproduced current target absence; QA and Architecture
+  reproduced the unchanged opaque unrelated-state fingerprint; Security
+  reproduced both canonical fixture digests and confirmed the retained source
+  is canonical v2. The accepted evidence proves only Task 1 Step 6. The only
+  optional note is to carry the proven size limits and add a direct aggregate-
+  limit regression before Product Task 2; it does not block this proof.
+- TPM post-proof decision: **Step 6 GO**, Required 0. Delivery Management also
+  accepted Step 6, Required 0, but initially considered Step 7 eligible. TPM
+  found that three explicit earlier Step 4/5 criteria have no durable real-CLI
+  evidence: repeated operation behavior, same-name/different-root conflict
+  rejection before plugin mutation, and partial reinstall recovery after a
+  successful remove and failed add. Those controlling-plan requirements take
+  precedence, so Step 7 remains **NO-GO** until the controller completes them
+  under the same absent-to-absent boundary and independent reviewers accept the
+  evidence. No new product or probe framework is authorized.
+
+### Task 1 residual Step 4/5 real-CLI evidence
+
+- Every sub-run began with the reviewed preflight at target `absent`, CLI
+  `codex-cli 0.149.0-alpha.4.3`, and opaque unrelated-state fingerprint
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+  Each used only the exact `release-radar` target and ended with supported CLI
+  cleanup, reviewed preflight `absent`, empty targeted installed/available
+  arrays, read-only integrity `absent`, and the identical fingerprint.
+- Repeated operations: the first fixed marketplace add returned
+  `alreadyAdded: false` and the identical second add returned
+  `alreadyAdded: true` at the same root. Two consecutive fixed plugin adds both
+  returned the same `release-radar@release-radar` identity and version `1.0.0`.
+  Two consecutive plugin removes both returned success; the target remained
+  uninstalled and available after the second. All repeats were safe no-ops or
+  idempotent success and introduced no unrelated change.
+- Conflicting root: with same-name root A registered and the target plugin still
+  uninstalled, the reviewed fixed lifecycle controller was presented same-name
+  root B. It returned normalized `conflict` with exit 1 before any plugin add.
+  Targeted readback remained `installed: []` with only the intact v1 plugin
+  available from root A. Supported marketplace removal restored the baseline.
+- Partial reinstall: the controller installed and verified clean v1, then a
+  supported plugin remove succeeded and targeted readback proved the plugin was
+  uninstalled. It replaced only the temporary source with a derived malformed
+  v2 manifest. The next explicit plugin add exited 1 with a manifest parse
+  error; targeted readback remained `installed: []` and exposed the malformed
+  available target with `version: null`; reviewed read-only integrity failed
+  closed with normalized `malformedJSON`. The combined remove-success/add-
+  failure evidence was classified as transaction-level partial `needsRepair`;
+  no automatic retry occurred. After restoring canonical v2, one explicit
+  plugin add recovered version `1.1.0`, installed/enabled state, and clean
+  canonical digest
+  `55dc44560fd0ae3e9e3f013996369539c8f777438fe7ac0f847c8002959ef49d`.
+- The residual proof root remains at
+  `/tmp/release-radar-cli-residual.loVO8O` pending owner-authorized cleanup.
+  No repository fixture, product source, Xcode target, database, bridge,
+  app-group, or login-item state was changed. Independent review is required
+  before Step 7 is released; Product Task 2 remains **NO-GO**.
+- Residual independent review: Security/Privacy **GO**, Required 0, and
+  Architecture **GO**, Required 0. QA/Test **FAIL**, Required 1. QA accepted the
+  repeat, conflict, raw partial-failure, no-retry, and explicit-recovery
+  mechanics but correctly found that Step 5 requires executable transaction-
+  level output. The reviewed status operation emitted `malformedJSON`; the
+  ledger's accurate synthesis of partial `needsRepair` is not a substitute for
+  a normalized probe result. Before Step 7, one fresh sole-writer Implementer
+  must minimally extend the existing feasibility script so a fixed reinstall
+  transaction reports remove-succeeded/add-failed as normalized
+  `partialReinstall`/`needsRepair`, performs no retry, and permits one explicit
+  recovery proof. No new framework or product code is released.
+
+### Task 1 normalized partial-reinstall proof
+
+- One fresh sole-writer Implementer changed only
+  `script/codex-plugin-lifecycle-feasibility.swift`. Test-first RED failed to
+  compile on the absent fixed reinstall mode/controller. A fresh warnings-as-
+  errors build and complete self-test then passed **32/32**; `git diff --check`
+  passed. The no-argument operation requires the exact target installed, issues
+  exactly one fixed remove and one fixed add, stops before add on remove failure,
+  never retries, and emits only bounded path-free transaction fields.
+- Pre-run decisions: Code Review **GO**, Required 0; QA/Test **PASS**, Required
+  0; Security/Privacy **GO**, Required 0; Architecture **GO**, Required 0. Their
+  optional test-hardening notes do not block the real proof.
+- Controller preflight again reported target `absent`, CLI
+  `codex-cli 0.149.0-alpha.4.3`, canonical v1 digest
+  `c48f9e620ee60336bb6b0b099ac5112c294c4a9e6e44d2560fc443066ad9d6e0`,
+  and unchanged unrelated-state fingerprint
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+  Official CLI install plus reviewed integrity status proved clean installed v1.
+- With only the temporary marketplace source changed to malformed v2, the fixed
+  real `reinstall` operation emitted exactly
+  `ok: false`, `observedState: needsRepair`, `error: partialReinstall`,
+  `removeSucceeded: true`, `addAttemptCount: 1`, and
+  `retryAttempted: false`. Immediate targeted readback showed `installed: []`
+  and one malformed available target with `version: null`, proving no automatic
+  retry or recovery.
+- After restoring canonical v2, one explicit official CLI add recovered version
+  `1.1.0`; reviewed integrity classified the actual installed cache `clean` at
+  canonical digest
+  `55dc44560fd0ae3e9e3f013996369539c8f777438fe7ac0f847c8002959ef49d`.
+  Supported plugin and marketplace removals then restored target `absent`,
+  empty targeted installed/available arrays, read-only integrity `absent`, and
+  the identical unrelated-state fingerprint.
+- The proof root remains at `/tmp/release-radar-partial-real.MnpbQR` pending
+  owner-authorized cleanup. No product source, Xcode target, database, bridge,
+  app-group, or login-item state was changed. QA/Test must accept the real
+  normalized result before the residual Step 5 gate closes; Step 7 and Product
+  Task 2 remain **NO-GO**.
+- Post-proof decisions: QA/Test **PASS**, Required 0; Security/Privacy **GO**,
+  Required 0; Architecture **GO**, Required 0. Independent read-only checks
+  confirmed the target marketplace is absent, targeted installed/available
+  arrays are empty, integrity is `absent`, and the unrelated-state fingerprint
+  is unchanged. Residual Step 5 is **closed**. Optional transport-exit and
+  aggregate-limit regression notes remain nonblocking and apply only before
+  Product Task 2. Step 7 remains closed until TPM and Delivery Management issue
+  the next dependency-safe release decision.
+- Step 7 release decisions: TPM **GO**, Required 0, and Delivery Management
+  **GO**, Required 0. Release exactly one fresh sole-writer Implementer for the
+  existing feasibility script and derived temporary harness only. Canonical
+  fixtures, product source, Xcode targets, production identities, app group,
+  database, bridge, and login-item state remain unchanged. Independent Code,
+  QA, Security, and Architecture implementation reviews must pass before the
+  controller runs the same-user CLI, Codex skill/MCP, or `SMAppService` proof.
+  Successful Step 7 may open only controller-owned Step 8; Product Task 2 stays
+  **NO-GO**.
+
+### Task 1 Step 7 preparation attempt and architecture correction
+
+- One fresh sole-writer Implementer changed only the feasibility script. Initial
+  API RED failed to compile; a generated-helper RED failed **38/39**; final
+  warnings-as-errors compilation and inert self-test passed **39/39**. Safe
+  artifact-only preparation built and signed the current app/tool plus derived
+  plugin, harness, helper, and wrong-peer artifacts without registration,
+  launch, plugin installation, Codex evaluation, or owner-state mutation.
+- Independent Code Review **NO-GO**, Required 5; QA/Test **FAIL**, Required 3;
+  Security/Privacy **NO-GO**, Required 5. They found an unreachable non-group-
+  prefixed Mach service, inferred/fabricated job and artifact state, non-strict
+  generated-helper JSON, incomplete cancellation/process cleanup, negative
+  tests aimed at a different runner, and synthetic rather than runtime tracing.
+  No real Step 7 operation ran.
+- Architecture correction: use feasibility group
+  `2UA854NLX4.com.rekonlabs.feasibility.PluginLifecycle` and exact group-child
+  service
+  `2UA854NLX4.com.rekonlabs.feasibility.PluginLifecycle.PluginLifecycleFeasibility.xpc`
+  with no global exception. Harness ownership is public `SMAppService` plus typed
+  XPC only; the unsandboxed controller owns fixed read-only launchd exit
+  classification and `libproc` process checks. Remove the nonexistent
+  registered-artifact criterion. The generated helper must share strict
+  operation parsers, one operation-wide deadline, and complete cancellation/
+  process cleanup with a separate signed unregistered same-core test executable.
+  Actual OS runtime tracing remains controller evidence, never synthetic, and
+  every generated binary targets macOS 14.
+- Step 7 and Product Task 2 remain **NO-GO**. Corrected artifacts and regenerated
+  checksum require fresh QA, Security, TPM, and Delivery review before
+  Architecture releases one bounded remediation writer. Retained
+  `/tmp/release-radar-step7-*` artifacts remain pending owner-authorized cleanup.
+- First corrected-contract reviews: QA/Test **PASS**, Required 0, and TPM
+  **GO**, Required 0. Security/Privacy **NO-GO**, Required 4, identified the
+  remaining need for exact feasibility peer identities, a fail-closed
+  `launchctl` result map, ownership-safe uncatchable-termination cleanup, and
+  PID-scoped/redacted runtime tracing. The contract now pins harness
+  `com.rekonlabs.feasibility.PluginLifecycleHarness`, wrong peer
+  `com.rekonlabs.feasibility.PluginLifecycleWrongPeer`, team `2UA854NLX4`;
+  classifies only exit 0 as job present and current-host missing-job exit 113 as
+  absent; limits destructive orphan cleanup to revalidated uniquely owned
+  derived PID/PGID/start identity; treats unowned real-CLI orphan state as
+  unknown; and requires PID/group-scoped temporary raw traces with only redacted
+  classifications persisted. Fresh affected reviews and a new brief checksum
+  are required before remediation is released.
+- Final corrected-contract reviews: QA/Test **PASS**, Required 0;
+  Security/Privacy **GO**, Required 0; TPM **GO**, Required 0; Delivery
+  Management **GO**, Required 0; and Architecture **GO**, Required 0. Each
+  independently verified the then-current registered brief checksum
+  `cf303a232f628192e4b312bc4b24343a8f0c0263517bc30131c77d9e65b115f0`
+  and accepted the exact feasibility identities, fail-closed launchd result
+  map, uniquely owned derived-child cleanup boundary, and scoped/redacted real
+  tracing contract. Release exactly one fresh sole-writer Implementer to modify
+  only `script/codex-plugin-lifecycle-feasibility.swift` and temporary derived
+  Step 7 artifacts. Real registration, launch, plugin mutation, Codex/MCP
+  exercise, and tracing remain **NO-GO** until fresh Code, QA, Security, and
+  Architecture implementation reviews pass. Product Task 2 remains **NO-GO**.
+- The first corrected-contract remediation writer stopped without a review-ready
+  result. Its only repository write was the feasibility script. A genuine RED
+  failed the new corrected-service-boundary check; the in-progress correction
+  made that check pass and the host script compile with warnings as errors, but
+  the complete self-test remained **39/40** because
+  `step7-generated-package` failed a postcondition. No safe preparation or live
+  Step 7 action ran. The incomplete script SHA-256 was
+  `a33f7082a320bd67c994b00c5f742616b09029de10e9975fc7b341c13d59cd9a`;
+  retained diagnostics are under
+  `/tmp/release-radar-step7-remediation-red.9qDCMt` pending owner-authorized
+  cleanup. One new sole writer may diagnose and finish only this bounded
+  generated-package correction before independent implementation review.
+- A fresh sole-writer debugging pass identified three bounded generated-code
+  defects: Swift could not import the kernel-only `CS_RUNTIME` macro; Swift 6
+  rejected the legacy test CLI's `fork()` call; and cancellation could be
+  misclassified as command failure after the child was reaped. The writer used
+  the SDK flag value already enforced by the host verifier, replaced only the
+  test descendant creation with fixed same-executable `posix_spawn`, and
+  preserved cancellation after reap. Only the feasibility script changed.
+  Fresh warnings-as-errors compilation passed, the full self-test passed
+  **40/40**, safe artifact-only `step7-prepare` passed, and the unregistered
+  same-core test executable passed. All expected generated artifacts passed
+  all-architecture signature, exact team/designated-requirement, Hardened
+  Runtime, entitlement, and macOS 14 minimum checks; the deliberate negative
+  lacked Hardened Runtime as required. `git diff --check` passed. The reviewed
+  candidate script SHA-256 is
+  `746658ebf69f8a1a0b0a4f61462142e1904e957d55db6fdefe6c94fa09c36406`;
+  retained artifact-only evidence is under
+  `/tmp/release-radar-step7-remediation-debug.zw7lnU`. No registration, launch,
+  plugin/Codex mutation, MCP evaluation, tracing, or product-file change
+  occurred. Real Step 7 remains **NO-GO** pending fresh independent Code, QA,
+  Security/Privacy, and Architecture implementation reviews.
+- Independent implementation reviews remain **NO-GO**: Code Review found five
+  Required items; QA/Test found four; Security/Privacy found five; Architecture
+  consolidated them into five coherent remediation areas. The signed artifact
+  and **40/40** self-test evidence is valid but insufficient because the
+  existing feasibility executable still lacks the unsandboxed live-controller
+  mode; the harness does not pin the helper identity and accepts incomplete or
+  contradictory operation replies; process-group cleanup has a leader-exit/
+  PID-reuse gap; catchable helper signals cancel sessions without terminating
+  the helper; and the same-core negative matrix omits required identity,
+  signature, I/O, schema, invalidation, termination, group-validation, and
+  stubborn-descendant cases. Architecture found no controlling-artifact
+  contradiction and permits one fresh sole writer to correct only these areas
+  in the existing feasibility script and derived temporary tests. No new
+  controller executable, generic runner, process reconciler, product change, or
+  live Step 7 action is authorized. QA retained artifact-only review evidence at
+  `/tmp/release-radar-step7-qa-review.rHyXMl` pending owner-authorized cleanup.
+- A fresh writer attempted the five-item remediation and was stopped at the
+  repository's complexity boundary without a review-ready result. The last host
+  warnings-as-errors build passed, but the inert self-test remained **44/45**
+  because `step7-generated-package` failed during generated-source compilation.
+  Two diagnosed compile fixes were applied but not rerun after the stop. The
+  harness trust/reply work is present but unverified; process ownership and
+  catchable shutdown are substantial but unverified; the live controller is
+  still scaffolding; and the generated negative contract overstates unregister
+  and ownership-revalidated uncatchable-termination coverage. The current
+  script SHA-256 is
+  `2eaac43a1aec3052e85e2e435c0f8617aaacc6be08a6d1f18904e94bc2aebdb2`.
+  RED evidence is retained at
+  `/tmp/release-radar-step7-required-red.43uzkD` and the stopped working evidence
+  at `/tmp/release-radar-step7-required-green.otQ3jy`, both pending
+  owner-authorized cleanup. No live action ran. Step 7 and Product Task 2 remain
+  **NO-GO**. Do not release another remediation writer from this implementation
+  path without an owner-approved simplification of the feasibility approach.
+- The owner approved that simplification. Planning, QA/Test, and Architecture
+  independently agreed that the generated feasibility app/helper/Mach service,
+  `launchctl`/`libproc` corroboration, runtime tracing, exhaustive generated
+  negative matrix, and custom process framework proved the verifier rather than
+  the product boundary. Architecture further removed Planning's proposed
+  duplicate temporary lifecycle helper: Task 1 now composes accepted Steps 1–6
+  official-CLI/integrity evidence with the existing packaged signed
+  AgentTools→bridge→app→temporary-`DeliveryStore` boundary, one fresh-task skill
+  discovery/MCP initialization, one wrong-tool no-delta case, and one exact
+  owned CLI PID/PGID cancellation/reap check. Production `SMAppService`
+  lifecycle-helper registration and authenticated four-method XPC remain
+  Product Task 2 requirements. The controlling design, ADR-002, task brief, and
+  implementation plan were amended; the current registered brief checksum is
+  `f293c3d24aee121a00d2dddfc3d4e03fc9af8e17f0beba8f30f69d5607a4df2d`.
+  Step 7 and Product Task 2 remain **NO-GO** until fresh independent artifact
+  reviews release the simplified gate.
+- Final amended-artifact reviews: Architecture **GO**, Required 0; QA/Test
+  **GO**, Required 0; TPM **GO**, Required 0; Security/Privacy **GO**, Required
+  0; and Delivery Management **GO**, Required 0. The current brief checksum is
+  `f293c3d24aee121a00d2dddfc3d4e03fc9af8e17f0beba8f30f69d5607a4df2d`.
+  Release exactly one fresh sole-writer Implementer to modify only
+  `script/codex-plugin-lifecycle-feasibility.swift`: remove the abandoned
+  generated feasibility app/helper/Mach-service, tracing,
+  `launchctl`/`libproc`, negative-matrix, and process-framework path, and retain
+  only inertly testable support for the simplified composition proof. Canonical
+  fixtures and all product/runtime files remain unchanged. The Implementer may
+  compile and run inert self-tests only; registration, plugin mutation,
+  fresh-task Codex/MCP evaluation, bridge registration, SQLite transition, and
+  every other live Step 7 action remain **NO-GO** pending fresh Code, QA,
+  Security/Privacy, and Architecture implementation reviews. Product Task 2
+  remains **NO-GO**.
+- The fresh simplification Implementer changed only the feasibility script and
+  removed the abandoned generated Step 7 system. The script decreased from
+  8,323 to 5,561 lines (net −2,762); generated helper/harness/Mach-service,
+  tracing, `launchctl`/`libproc`, negative-matrix, and custom process-framework
+  markers and artifacts are absent. A focused RED first failed on those stale
+  markers plus the missing simplified modes. Fresh warnings-as-errors
+  compilation passed, the retained self-test passed **38/38**, and safe
+  artifact-only `step7-prepare` passed while canonical fixtures remained
+  unchanged. The derived runtime digest is
+  `7a3ead8c04ba75a70f1532982512da1273f96c2fb5b3204d57d38fd272359fc4`;
+  the path-free normalized preparation report was 779 bytes. The candidate
+  script SHA-256 is
+  `29eddcd97c8c81b88369dea1f89c06b23e90264329a31381573e3dfd8bb27c2c`.
+  Public bridge-preflight and fixed owned-CLI-cancellation modes are implemented
+  but unexecuted. No registration, plugin/Codex mutation, fresh task, MCP/
+  bridge/SQLite transition, or real CLI signaling occurred. Retained evidence
+  roots include `/tmp/release-radar-step7-minimal-red.qMuUqQ`,
+  `/tmp/release-radar-step7-minimal-green.kLphmn`, and
+  `/tmp/release-radar-step7-minimal-prepare.OGJdlY`, pending owner-authorized
+  cleanup. Live Step 7 remains **NO-GO** pending fresh independent Code, QA,
+  Security/Privacy, and Architecture implementation reviews.
+- Simplified implementation reviews remain **NO-GO**: Code Review found five
+  Required items; QA/Test and Security/Privacy each found two; Architecture
+  consolidated the correction. The standalone script cannot query the
+  app-bundle-relative bridge `SMAppService`; the named app-hosted acceptance
+  test must require initial exact `.notRegistered`, register the bridge itself,
+  track ownership only after success, use immediate ownership-guarded cleanup,
+  unregister only its own registration, and require final `.notRegistered`.
+  `.notFound` is a stop, not an absent registration. The standalone preflight
+  now checks only that the normal app is not running. The cancellation mode
+  must couple CLI verification immediately to spawn, report numeric PID/PGID,
+  freshly revalidate before every signal, fall back to the exact child rather
+  than an unverified group, use deadline-bounded `WNOHANG` reap polling, never
+  signal after reap/uncertain ownership, and normalize all errors without raw
+  paths. The current amended brief checksum is
+  `e91cf60f25e2708226bd0fe3a225a5adb90d41c9e2a5ae55929a89d08de3a85c`.
+  Release is limited to the feasibility script plus the named method in
+  `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`; no product
+  bridge/host/schema behavior or other file is released. Live Step 7 and
+  Product Task 2 remain **NO-GO** pending corrected-artifact review and a fresh
+  bounded remediation.
+- Corrected two-file artifact reviews: Architecture **GO**, Required 0; QA/Test
+  **GO**, Required 0; Security/Privacy **GO**, Required 0; TPM **GO**, Required
+  0; and Delivery Management **GO**, Required 0. Release one fresh sole writer
+  for only `script/codex-plugin-lifecycle-feasibility.swift` and the body of
+  `testPackagedSignedToolUsesRegisteredBrokerAndFailsClosedWithoutTheApp` in
+  `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`. The writer may
+  run warnings-as-errors compilation, inert script self-tests, and artifact-only
+  preparation, but must not execute the named acceptance test, registration,
+  plugin mutation, fresh-task Codex/MCP evaluation, SQLite transition, real CLI
+  cancellation/signaling, or any other live Step 7 action. No other test,
+  product, bridge, host, schema, project, fixture, or documentation file is
+  released. Live Step 7 and Product Task 2 remain **NO-GO** pending fresh
+  implementation reviews.
+- The fresh two-file remediation changed only the feasibility script and the
+  named hosted acceptance-test body. Standalone preflight now checks only the
+  normal app's running state. The hosted test requires initial exact
+  `.notRegistered`, registers directly, records ownership only after success,
+  installs immediate ownership-guarded cleanup, requires `.enabled`,
+  unregisters only its registration, and requires final `.notRegistered`.
+  Cancellation now reports numeric PID/PGID, couples CLI verification to spawn,
+  freshly validates before every signal, falls back to the exact child when
+  group validation fails, uses one two-second `WNOHANG` reap deadline, never
+  signals after reap/uncertain ownership, and normalizes unknown errors to
+  path-free `unavailable`. Warnings-as-errors compilation and inert self-test
+  passed **38/38**; artifact-only preparation passed with canonical fixtures
+  byte-identical; and a compile-only test build succeeded without executing a
+  test. The unmodified project has a pre-existing flattened duplicate fixture-
+  resource collision, so the compile-only invocation excluded only those four
+  duplicate resource basenames. Script SHA-256 is
+  `217bf7d46523e557281da8bf31e4c20458101389981dd5840a94cf6ec5f575de`;
+  test-file SHA-256 is
+  `d318d91f487079078d9a3cae899481e18c491c072c55c9c8e1b69da7dd1e6022`.
+  No live test, registration, plugin mutation, MCP/SQLite transition, or real
+  CLI cancellation ran. Live Step 7 remains **NO-GO** pending fresh Code, QA,
+  Security/Privacy, and Architecture implementation reviews.
+- Fresh two-file implementation reviews are unanimously **NO-GO** on one
+  bounded cleanup defect: Code Review, QA/Test, Security/Privacy, and
+  Architecture each found that the named hosted acceptance test's deferred
+  early-exit cleanup suppresses `unregister()` errors and does not require the
+  final exact `.notRegistered` state. The feasibility script has no remaining
+  Required finding. Release one fresh sole-writer Implementer to modify only
+  the body of
+  `testPackagedSignedToolUsesRegisteredBrokerAndFailsClosedWithoutTheApp`:
+  replace the two cleanup paths with one ownership-guarded, nonthrowing cleanup
+  routine called by both `defer` and the normal tail. It must report unregister
+  failure, require exact final `.notRegistered`, and clear ownership only after
+  that verification. No other file or method is released. Live Step 7 and
+  Product Task 2 remain **NO-GO** pending the corrected implementation and
+  fresh independent reviews.
+- The first cleanup remediation remains **NO-GO**. Code Review and Architecture
+  found that its cleanup closure reports an `unregister()` error but returns
+  before checking the required exact final `.notRegistered` state; the smallest
+  fix is to remove that early return. QA/Test also identified an explicit Step
+  7 acceptance gap already present in the named method: the existing reason and
+  request counts do not directly prove RR-03's expected `in_progress` lane or
+  bind the sanitized audit row to the returned audit-event ID and exact ticket
+  scope. Security/Privacy found no additional Required item. Release one fresh
+  sole-writer Implementer for only the same named method body: always run the
+  cleanup status switch after the unregister attempt, and add one method-local
+  temporary-store state query reused before and after the wrong-tool attempt to
+  prove the lane, one exact request receipt, and one exact sanitized audit with
+  no delta. Do not add a helper, production change, or new machinery. Live Step
+  7 and Product Task 2 remain **NO-GO** pending correction and fresh reviews.
+- Final corrected implementation reviews: Code Review **GO**, QA/Test **GO**,
+  Security/Privacy **GO**, and Architecture **GO**, each with Required 0 and
+  Optional 0. The final candidate directly proves the temporary RR-03 lane,
+  exact request receipt, returned audit-event identity and sanitized ticket
+  scope; compares that state across same-team wrong-tool rejection; and uses
+  one immediate ownership-guarded service cleanup routine that checks exact
+  final `.notRegistered` even after an unregister error. Script SHA-256 is
+  `217bf7d46523e557281da8bf31e4c20458101389981dd5840a94cf6ec5f575de`;
+  test-file SHA-256 is
+  `6a0f43522d7636d2ed19d90f622699c4c5cd6ec02b4dfef7e50ef6565f5c2260`.
+  Warnings-as-errors script compilation, inert self-test **38/38**, compile-only
+  test build, forbidden-machinery scan, and `git diff --check` passed without a
+  live action. Release the controller-owned live Step 7 composition proof only.
+  Product Task 2 remains **NO-GO**.
+- Live Step 7 result: **BLOCKED; cleanup complete.** The corrected specified-v1
+  inert self-test passed **38/38** before mutation. The exact owner target was
+  absent with bundled CLI `codex-cli 0.149.0-alpha.4.3` and unrelated-state
+  fingerprint
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+  The normal app was quit cleanly and public bridge preflight passed. A fresh
+  signed Debug app and packaged AgentTools were built; canonical v1/v2 fixtures
+  remained byte-unchanged; canonical v2 digest was
+  `55dc44560fd0ae3e9e3f013996369539c8f777438fe7ac0f847c8002959ef49d`;
+  and the derived v2 package digest was
+  `e774cd0502ac9c7cd37fbf3ceac0b75d8252b4a2677b299b1cf452f44af69f04`.
+  The named signed-bridge acceptance test passed on every controlled execution,
+  proving exact owned registration cleanup, packaged-tool admission, temporary
+  RR-03 `in_progress`, one request receipt, the returned sanitized ticket audit,
+  replay, and same-team wrong-tool rejection with no delta. Direct packaged
+  AgentTools runtime evidence returned MCP protocol `2025-06-18`, server name
+  `Release Radar`, server version `1`, and exposed
+  `release_radar_transition_ticket`.
+- The derived `release-radar` plugin installed enabled at version `1.1.0`, and a
+  normal fresh Codex task discovered installed skill
+  `release-radar:release-radar`. It did **not** expose the transition tool: MCP
+  initialization timed out. Supported read-only Codex MCP inspection showed
+  that the normal owner configuration resolves the exact `release-radar`
+  server name to a pre-existing AgentTools command in the installed application
+  rather than the derived plugin command. An isolation invocation that ignored
+  owner configuration also suppressed installed plugins and therefore was not
+  accepted as substitute evidence. The controller did not remove, rewrite, or
+  otherwise mutate that pre-existing MCP entry. Because a normal fresh task did
+  not initialize the installed plugin's MCP server, the binding Step 7
+  composition criterion failed.
+- The fixed read-only cancellation check passed for exact owned child PID and
+  PGID `85521`: fixed executable verification, direct-child and dedicated-group
+  ownership, TERM and CONT, no KILL requirement, `waitpid` reap, and final PID/
+  group absence all passed within the two-second bound. Cleanup then removed
+  only `release-radar@release-radar` and its temporary marketplace through the
+  official CLI. Final supported-CLI readback proves the exact plugin and
+  marketplace are absent and the unrelated fingerprint remains exactly
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+  The pre-existing MCP entry remains enabled and unchanged; the normal app is
+  not running. Product Task 2 remains **NO-GO** pending independent review of
+  this blocker and an owner decision on the same-name MCP migration boundary.
+- Independent live-evidence decisions: Architecture **BLOCKED/NO-GO**, QA/Test
+  **BLOCKED**, Security/Privacy **BLOCKED**, TPM **BLOCKED/NO-GO**, and Delivery
+  Management **BLOCKED**, each with Required 1 and Optional 0. Task 1 remains
+  incomplete and Product Task 2 remains **NO-GO** because the binding normal
+  fresh-task MCP composition criterion did not pass. The passing hosted test's
+  cleanup assertion establishes final public service status exactly
+  `.notRegistered`; target plugin/marketplace absence, unchanged unrelated
+  fingerprint, untouched pre-existing MCP state, stopped normal app, and
+  reaped/absent owned PID and group make restoration sufficient.
+- The only eligible next action is an explicit owner namespace decision:
+  either (a) give the plugin-provided MCP server a distinct fixed alias while
+  retaining `release-radar` as plugin/marketplace identity and retaining
+  `release_radar_transition_ticket` unchanged, or (b) separately authorize one
+  fixed, supported-CLI migration of a positively recognized legacy same-name
+  MCP entry and define whether its removal is permanent. Architecture and TPM
+  recommend (a) as the narrower product contract because it does not mutate
+  existing owner configuration. No writer or live mutation is released before
+  that decision. No existing MCP entry may be removed or changed under the
+  current authority. Generalized migration or reconciliation, direct Codex
+  state edits, HTTP or generic command layers, rerunning accepted Steps 1–6,
+  repeating the passed bridge/cancellation matrices, and Product Task 2
+  implementation remain out of scope.
+
+### Canonical MCP identity decision and bounded remediation release
+
+- Owner decision (2026-08-27): keep `release-radar` as the single plugin,
+  marketplace, and MCP server identity. Reject the `release-radar-plugin` alias
+  and follow the fixed supported-CLI replacement recommendation. This
+  supersedes the live-evidence reviewers' alias preference but does not reopen
+  Product Task 2.
+- Tradeoff: an alias would avoid temporarily changing the current owner MCP
+  entry, but would permanently expose two Release Radar server names, create
+  precedence/discovery ambiguity, and make plugin and runtime identities
+  diverge. The selected approach accepts one bounded, rollback-capable
+  configuration mutation in exchange for one durable identity and tool
+  surface. It adds no HTTP service, command layer, migration framework,
+  reconciliation loop, persisted migration flag, new XPC method, or raw Codex
+  state writer.
+- Recognition contract: supported
+  `codex mcp get release-radar --json` must report name `release-radar`, enabled
+  `true`, no disabled reason, transport type `stdio`, command
+  `/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools`,
+  empty arguments, nil working directory, and nil or empty environment. An
+  absent entry is allowed. Any other same-name entry is unrecognized and must
+  not be removed or overwritten. Read-only inspection confirmed the current
+  owner entry matches this contract.
+- Task 1 correction: preflight still requires the managed plugin and
+  marketplace absent and the unrelated opaque fingerprint unchanged. It may
+  temporarily remove an exact legacy MCP entry with
+  `codex mcp remove release-radar`, then require the pinned CLI's exact absence
+  result: exit status `1`, empty stdout, and stderr
+  `Error: No MCP server named 'release-radar' found.` plus one newline. Every
+  other exit/output combination remains an error. This absence template was
+  confirmed read-only with a nonexistent scoped name; evidence is retained at
+  `/tmp/release-radar-mcp-not-found.vK1sAm` pending owner-authorized cleanup.
+  It may then install the derived plugin and rerun only the affected normal
+  fresh-task composition proof. Cleanup removes the temporary
+  plugin/marketplace before
+  restoring the exact legacy entry with the fixed supported
+  `codex mcp add release-radar -- /Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools`
+  vector and semantically verifying it. A failed removal that leaves the exact
+  entry intact does not trigger an add; an unrecognized cleanup state is never
+  overwritten.
+- Product Task 2 contract: first managed Install accepts only an absent or
+  exact recognized legacy entry and retains that observation only for the
+  operation. It verifies the managed plugin first. An initially absent entry
+  skips migration and goes directly to canonical plugin-MCP verification. An
+  initially exact entry is immediately reread and removed only when the fresh
+  result still matches. An absent or changed fresh result causes attempt-owned
+  rollback without removal or restoration. After the operation issues removal,
+  a later failure may restore the exact legacy entry. Only canonical MCP
+  verification permits `managedInstalled` and its audit. Later
+  Update/Reinstall/Remove do not repeat the migration, and Remove does not
+  recreate the legacy entry.
+- Reduced verification boundary: amend and self-test only the focused
+  feasibility controller's legacy recognition/removal/restoration logic, then
+  rerun the live exact-legacy preflight, temporary removal, derived install,
+  one normal fresh-task skill/MCP/protocol/tool proof, plugin cleanup, and exact
+  legacy restoration. Do not rerun accepted Steps 1–6, signed bridge/SQLite and
+  wrong-tool acceptance, direct packaged-tool handshake, CLI cancellation, or
+  their review matrices. Product Task 2 remains **NO-GO** pending corrected
+  artifact reviews, implementation reviews, the reduced live proof, and final
+  independent acceptance.
+- Corrected artifact release reviews: Architecture **GO**, QA/Test **GO**,
+  Security/Privacy **GO**, TPM **GO**, and Delivery Management **GO**, each with
+  Required 0 and Optional 0. The review cycle closed stale broad-rerun language,
+  made the pinned CLI absence tuple and near-miss tests exact, required a fresh
+  recognition read immediately before legacy removal, and separated the
+  operation-local initially absent and initially exact product paths. The
+  controlling task-brief SHA-256 is
+  `135f8717ced323d865fc7ea9d5a5b13b9def0e9b18be0915aec89aae93b305f6`.
+  Release exactly one fresh sole-writer Implementer to modify only
+  `script/codex-plugin-lifecycle-feasibility.swift`, test-first, for strict
+  recognition, fixed remove/add vectors, exact absence parsing, and ownership-
+  aware cleanup/restoration self-tests and controller logic. The Implementer
+  may compile with warnings as errors and run inert self-tests only. No live
+  Codex mutation, product/runtime file, accepted evidence rerun, or Product
+  Task 2 work is released.
+- The fresh sole-writer implementation changed only
+  `script/codex-plugin-lifecycle-feasibility.swift`. It added fixed
+  `legacy-mcp-preflight`, `legacy-mcp-remove`, and `legacy-mcp-restore` modes,
+  strict legacy/absence parsing, fixed argv, normalized reports, and four inert
+  self-test groups. Warnings-as-errors compilation and the full inert suite
+  passed **42/42**; candidate SHA-256 was
+  `fd0753efdb517b3f550ffae4161fcf48e061a26ced77f2fed32e376723dcd8b6`.
+  No live Codex mutation occurred.
+- Implementation review remains **NO-GO**. Code Review found Required 2 and
+  Architecture Required 1: the shared empty-environment helper incorrectly
+  accepts `transport.env: []`; known behavior-bearing optional tool/time-out
+  fields may be non-null even though the fixed restore command cannot preserve
+  them; and a successful remove followed by an unrecognized post-read enters a
+  broad catch that can read again and add over the already observed conflict.
+  QA found the behavior otherwise GREEN but Required 1 evidence gap because the
+  original RED directory was empty. A reconstructed, explicitly non-original
+  RED retained the added tests while disabling only the new implementation;
+  warnings-as-errors compilation failed with the expected missing
+  `parseLegacyMCPObservation`/`runLegacyMCPController` symbols. The exact
+  transcript is retained at
+  `/tmp/release-radar-legacy-mcp-reconstructed-red.gapURv/compile.log` pending
+  owner-authorized cleanup.
+- Release one fresh sole-writer fixer for only the feasibility script. Add RED
+  cases for `env: []`, non-null known tool filters/time-outs, and successful
+  remove followed by one unrecognized or malformed post-read with no second
+  read/add. Then use field-specific `env`/`env_vars` validation, require known
+  behavior fields absent or null, and separate remove-invocation cleanup from
+  post-removal observation parsing. Preserve harmless unknown metadata, fixed
+  argv, every existing mode, normalized reports, and the initially absent
+  no-op. No live mutation, documentation/product/runtime edit, accepted
+  evidence rerun, or Product Task 2 work is released.
+- The fresh fixer changed only the feasibility script. Its focused RED compiled
+  and failed exactly `legacy-mcp-recognition`,
+  `legacy-mcp-known-optional-fields`, and
+  `legacy-mcp-post-remove-observation` (**41/44**). After the minimum fix,
+  warnings-as-errors compilation and the full inert suite passed **44/44**.
+  Final script SHA-256 is
+  `8f55bab80e2cf2a62fe2ab99632f7de0a31d4967f3ee84262024bcb74cd0f49b`;
+  RED/GREEN logs are retained under
+  `/tmp/release-radar-legacy-mcp-fixer.46e3v2` pending owner-authorized cleanup.
+  The parser now distinguishes `env` from `env_vars`, requires known tool/time-
+  out fields absent or null, retains harmless unknown metadata, and stops after
+  one conflicting/malformed post-remove observation without another read/add.
+- Final implementation reviews: Code Review **GO**, QA/Test **GO**,
+  Architecture **GO**, and Security/Privacy **GO**, each with Required 0 and
+  Optional 0. Fresh reviewers independently compiled with warnings as errors,
+  ran the inert suite **44/44**, inspected fixed argv and normalized reports,
+  confirmed the exact absence and cleanup matrices, and accepted the
+  reconstructed RED as explicitly non-original evidence plus the fixer's real
+  RED/GREEN. No live Codex state was mutated and no accepted bridge/SQLite,
+  wrong-tool, direct-handshake, or cancellation evidence was rerun. The
+  untracked `default.profraw` remains unrelated and out of scope. Live reduced
+  proof remains **NO-GO** until TPM and Delivery Management release only that
+  exact controller-owned sequence; Product Task 2 remains **NO-GO**.
+- Reduced live-proof release: TPM **GO** and Delivery Management **GO**, each
+  with Required 0 and Optional 0. Release only: exact inert verification;
+  plugin/marketplace absence plus opaque unrelated fingerprint and exact legacy
+  preflight; fixed removal with exact pinned absence; derived v2 install; one
+  normal fresh-task skill/MCP/protocol/tool-exposure proof; supported plugin and
+  marketplace cleanup; then fixed legacy restoration with exact semantics and
+  unchanged fingerprint. Any conflict, malformed state, incomplete cleanup,
+  restoration failure, missing runtime evidence, or fingerprint mismatch keeps
+  Task 1 and Product Task 2 **NO-GO**. Accepted Steps 1–6, bridge/SQLite,
+  wrong-tool, direct handshake, and cancellation evidence are not rerun.
+
+### Canonical-name reduced live proof result
+
+- Result: **BLOCKED; cleanup and restoration complete.** Fresh warnings-as-
+  errors compilation passed, the inert suite passed **44/44**, and script
+  SHA-256 remained
+  `8f55bab80e2cf2a62fe2ab99632f7de0a31d4967f3ee84262024bcb74cd0f49b`.
+  Bundled CLI version was `codex-cli 0.149.0-alpha.4.3`. Supported preflight
+  proved the plugin/marketplace absent, exact legacy MCP state, and unrelated
+  fingerprint
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+- Fresh preparation built and verified the signed app and packaged
+  `ReleaseRadarAgentTools`, kept canonical fixtures unchanged, retained
+  canonical v2 digest
+  `55dc44560fd0ae3e9e3f013996369539c8f777438fe7ac0f847c8002959ef49d`,
+  and produced derived v2 digest
+  `c22415d7889cc32218ac857b11bf38104fd0fb5326b3d8876a05051da6cf97ef`
+  under artifact ID `7684EEB6-C449-4888-BD52-D7B63976A2CA`.
+- The fixed controller freshly recognized the exact legacy entry, issued its
+  removal once, and verified exact pinned absence. The derived plugin then
+  installed enabled as `release-radar@release-radar` version `1.1.0`.
+  Supported `codex mcp get release-radar --json` resolved the canonical name to
+  the derived packaged AgentTools command, proving that the legacy-name
+  precedence collision was removed.
+- The single authorized normal ephemeral fresh task discovered installed skill
+  `release-radar:release-radar` but reported that
+  `release_radar_transition_ticket` was absent from its callable registry. No
+  MCP call, retry, Release Radar action, file access, or owner database mutation
+  occurred. Because fresh-task tool exposure remains a binding criterion, the
+  proof stopped without rerunning any accepted evidence.
+- Cleanup used supported CLI operations to remove the exact plugin and
+  marketplace. Pre-restoration checks proved both absent, the exact pinned MCP
+  absence state, and the unchanged unrelated fingerprint. The fixed restore
+  controller issued one add and verified exact legacy semantics. Final
+  preflight again proves plugin/marketplace absence, exact legacy MCP command
+  `/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools`, and
+  the identical unrelated fingerprint above.
+- Evidence is retained at `/tmp/release-radar-legacy-live.HdrKgp` and
+  `/tmp/release-radar-legacy-fresh-task.cWLvaC` pending owner-authorized cleanup.
+  Task 1 remains **BLOCKED** and Product Task 2 remains **NO-GO** pending fresh
+  independent review of this evidence. No retry, alias, framework, raw Codex
+  state access, or broader mechanism is authorized.
+- Independent reduced-live evidence reviews: Architecture **BLOCKED**, Required
+  1; QA/Test **BLOCKED**, Required 1; Security/Privacy **GO**, Required 0; all
+  reported Optional 0. The single binding defect is functional: the normal
+  fresh task exposed the installed skill but no MCP initialization/protocol,
+  callable-tool, or tool-call event and explicitly reported the transition tool
+  absent. Reviewers accepted target confinement, one removal, ordered cleanup,
+  one exact restoration, final target absence, exact legacy semantics, unchanged
+  fingerprint, and no file/tool/SQLite action or retry. The name collision is
+  resolved at the supported CLI boundary, but fresh-task MCP composition remains
+  unproven. Task 1 stays **BLOCKED** and Product Task 2 stays **NO-GO**.
+- Final dependency decisions: TPM **BLOCKED/NO-GO**, Required 1, and Delivery
+  Management **BLOCKED/NO-GO**, Required 1; both reported Optional 0. The ledger
+  and retained evidence are sufficient to establish the functional blocker and
+  successful restoration. The canonical `release-radar` decision remains
+  accepted and the alias choice is not reopened.
+- The only eligible next work is a bounded read-only diagnosis of the plugin-to-
+  MCP discovery boundary using retained JSONL/stderr, the derived plugin
+  manifest and `.mcp.json`, supported read-only CLI output, repository artifacts,
+  official/local Codex loading contracts, or a known-good local plugin artifact.
+  It may classify the failure as manifest/schema, activation/approval,
+  fresh-task launch configuration, or unsupported CLI behavior. It must not
+  reinstall, rerun the fresh task, inspect/edit raw Codex state, or mutate owner
+  configuration. Before any future mutation, persist one evidence-backed root
+  cause and smallest falsifiable correction, obtain fresh artifact reviews,
+  complete a fresh test-first implementation and independent reviews, and
+  obtain new TPM/Delivery release for at most one bounded live proof.
+- Bounded read-only diagnosis completed without reinstalling a plugin, rerunning
+  the fresh task, reading raw Codex state, or mutating owner configuration. The
+  retained derived plugin uses the officially supported direct `.mcp.json`
+  server map and its manifest correctly points `mcpServers` to that file.
+  Supported CLI had listed the hyphenated server as enabled and resolved its
+  packaged AgentTools command, while the retained normal-task JSONL proved the
+  plugin skill loaded but no MCP tool was callable. This matches upstream Codex
+  issue `openai/codex#33063`: a hyphenated plugin MCP server key may be listed
+  but cannot form a model-callable tool namespace; changing only the key to an
+  underscore makes the tools callable. Evidence sources are the retained files
+  under `/tmp/release-radar-legacy-live.HdrKgp`, current official packaging
+  documentation at `https://developers.openai.com/plugins/build/plugins`, and
+  `https://github.com/openai/codex/issues/33063`.
+- Root cause: bundled server key `release-radar` is invalid for the current
+  Codex callable namespace even though plugin installation and read-only MCP
+  discovery accept it. This is not an AgentTools transport, XPC, SQLite,
+  activation, or package-shape failure. The smallest falsifiable correction is
+  to retain `release-radar` as the sole user-facing plugin and marketplace
+  identity while using internal MCP machine key `release_radar`. The underscore
+  is not a second plugin, marketplace listing, or durable product alias.
+- Tradeoff decision: retaining the hyphen for every layer would preserve visual
+  name equality but leave the plugin nonfunctional on the pinned CLI. Adding
+  `release-radar-plugin` would make the tools callable but create a second
+  durable product alias. The accepted choice keeps one product identity and
+  accepts one protocol-safe internal identifier. Existing exact legacy
+  `release-radar` entries are still removed once during the product's first
+  managed Install, after the bundled `release_radar` server is verified, so the
+  steady state has one installed plugin and one callable server.
+- Controlling design, ADR, implementation plan, and Task 1 brief now encode that
+  distinction and make the corrected proof leave the legacy entry untouched:
+  install only the derived plugin, verify `mcp get release_radar --json`, run
+  one normal fresh-task composition proof, remove the plugin/marketplace, and
+  verify bundled-server absence plus unchanged legacy and unrelated state.
+  Accepted exact legacy removal/absence/restoration evidence remains cumulative
+  and is not rerun. The amended task-brief SHA-256 is
+  `f009764f5c008dcc8576d91a65020e7cff08854b0c79909e16b3b8e60014ec5a`.
+  Product Task 2 remains **NO-GO** pending fresh artifact reviews, one bounded
+  test-first fixture/controller correction, independent implementation reviews,
+  and a new TPM/Delivery release for at most one corrected live proof.
+- First corrected-artifact review cycle: Architecture **BLOCKED**, Required 1;
+  QA/Test **BLOCKED**, Required 2; Security/Privacy **GO**, Required 0; all
+  reported Optional 0. Architecture required exact pre-mutation absence for
+  bundled key `release_radar` so a pre-existing owner entry cannot masquerade
+  as plugin attribution. QA required corrected canonical digest recomputation
+  and a specific RED/GREEN contract because the key changes fixture bytes, plus
+  an exact machine-verifiable fresh-task oracle rather than prose about tool
+  exposure.
+- The controlling artifacts now close those findings without expanding the
+  product. Task 1 and Product first Install require pinned exact absence for
+  bundled `release_radar` before mutation; corrected cleanup requires bundled-
+  key absence, unchanged legacy `release-radar`, and unchanged unrelated
+  fingerprint. The focused correction recomputes v1/v2 canonical digests and
+  treats earlier digest values only as historical evidence for old bytes. RED
+  changes only focused fixture/key/query/runtime/digest expectations while the
+  hyphenated implementation remains; GREEN changes only both canonical
+  `.mcp.json` files and the minimum feasibility-script expectations/parser.
+  The fresh task must emit one JSONL `item.started` and matching
+  `item.completed` `mcp_tool_call` for server `release_radar`, tool
+  `release_radar_transition_ticket`, arguments `{}`, and a nonempty schema/
+  argument-validation failure with no result or Release Radar action. Exact
+  packaged-tool resolution plus the accepted direct handshake provides the
+  protocol/name/version/schema evidence. The amended task-brief SHA-256 is
+  `add5078bd7a7a7d6678add149350b5c176a240d3276b2820eefef947f600415f`.
+- Second corrected-artifact review: Security/Privacy **GO**, Required 0 and
+  Optional 0. QA/Test found one remaining Required contradiction: accepted
+  Steps 1–6 used the old hyphenated fixture bytes and therefore cannot prove
+  equality to the new underscore-fixture digests. The artifacts now state
+  exactly that those runs prove lifecycle behavior and digest/integrity
+  mechanics for historical bytes only. The focused inert correction recomputes
+  the new canonical v1/v2 digests; the corrected live proof verifies only the
+  installed derived corrected-v2 digest/path, schema-invalid fresh-task event
+  oracle, cleanup, unchanged legacy entry, and unchanged unrelated fingerprint.
+  No Steps 1–6 rerun is authorized. Current task-brief SHA-256 is
+  `ce00557bc6956f9906bec9e5e6a24944d1a89e0a2bad804fe6a5b7dab05661f3`.
+- Final corrected-artifact reviews against task-brief SHA-256
+  `ce00557bc6956f9906bec9e5e6a24944d1a89e0a2bad804fe6a5b7dab05661f3`:
+  Architecture **GO**, Required 0 and Optional 0; QA/Test **GO**, Required 0
+  and Optional 0; Security/Privacy **GO**, Required 0 and Optional 0. The
+  bundled-key absence, corrected-digest attribution, exact fresh-task event
+  oracle, cleanup, migration ordering, and rollback boundaries are accepted.
+  The released implementation scope remains only the two canonical fixture
+  `.mcp.json` key changes and the minimum inert feasibility-script
+  expectations/parser/controller/digest changes. Live Codex mutation and
+  Product Task 2 remain **NO-GO**.
+- Final implementation release decisions against the same task-brief checksum:
+  TPM **GO**, Required 0 and Optional 0; Delivery Management **GO**, Required 0
+  and Optional 0. Exactly one fresh sole-writer Implementer is released for
+  the bounded inert RED/GREEN fixture and feasibility-script correction,
+  warnings-as-errors compilation, corrected digest recomputation, and the full
+  inert self-test suite. No live Codex mutation, Product Task 2 work, product
+  runtime change, accepted-evidence rerun, alias/framework work, or unrelated
+  file change is released.
+- The fresh sole-writer Implementer completed the bounded inert correction.
+  Both canonical fixture `.mcp.json` files now use internal key
+  `release_radar`; the feasibility script preserves exact legacy
+  `release-radar` recognition while adding the fixed read-only
+  `bundled-mcp-preflight`, corrected derived-manifest/runtime expectations,
+  installed derived-v2 digest equality, and updated manifest validation. RED
+  evidence at `/tmp/release-radar-underscore-key-red.vBoNUa` compiled with
+  warnings as errors and failed exactly the six affected groups (`39/45`, exit
+  1). GREEN evidence at `/tmp/release-radar-underscore-key-green.fdIHCr`
+  compiled with warnings as errors and passed `45/45` (exit 0). Independent
+  primary-agent replay in `/tmp/release-radar-underscore-key-root.4AWBYB`
+  also compiled with warnings as errors and passed `45/45`. Corrected canonical
+  package digests are v1
+  `426c849972c27cd2c76981da54ff1a917e9bb87e4d9f9bc0e2f99dd9ff839abd`
+  and v2
+  `fafb0d2027077c8f4a5efe2c9b422912d5a92c635417bb475d682c5c1f1c29b8`;
+  script SHA-256 is
+  `6c853b896d2551998e82a02d7402683a110ebd8c27ba7b580e0fb106b3372198`.
+  No live Codex/plugin/MCP mutation occurred. Product Task 2 and the corrected
+  live proof remain **NO-GO** pending independent implementation reviews and a
+  fresh TPM/Delivery release.
+- Independent corrected-implementation reviews: Code Review **GO**, QA/Test
+  **GO**, Architecture **GO**, and Security/Privacy **GO**, each with Required
+  0 and Optional 0. Reviewers independently confirmed the exact fixture keys,
+  fixed read-only bundled-key preflight and byte-exact absence tuple, unchanged
+  isolated legacy semantics, corrected canonical and derived digests, installed
+  derived-v2 equality, and the absence of product/runtime, XPC, SQLite, raw
+  Codex-state, alias, framework, or authority expansion. Independent fresh
+  warnings-as-errors builds and inert suites passed `45/45`; JSON lint,
+  `git diff --check`, script SHA-256, and the registered task-brief checksum
+  also passed. The corrected live proof remains **NO-GO** until TPM and
+  Delivery Management independently release its exact bounded mutation and
+  cleanup contract.
+- Corrected live-proof release: TPM **GO** and Delivery Management **GO**, each
+  with Required 0 and Optional 0, for exactly one bounded attempt. Pinned CLI
+  `codex-cli 0.149.0-alpha.4.3` preflight proved plugin/marketplace absence,
+  exact bundled `release_radar` absence, exact unchanged legacy
+  `release-radar`, canonical v2 digest
+  `fafb0d2027077c8f4a5efe2c9b422912d5a92c635417bb475d682c5c1f1c29b8`,
+  and unrelated fingerprint
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`.
+  Fresh preparation under artifact ID
+  `F12EB5AC-C690-4487-8EB7-27B2637B5F64` verified the current signed app and
+  packaged AgentTools, kept both canonical fixtures unchanged, and produced
+  derived digest
+  `29742682cba39155803064cc40bc22eed490dce9339ad6872b902844d156085d`.
+- Corrected live-proof result: **BLOCKED; cleanup complete.** Supported CLI
+  installed only the derived `release-radar@release-radar` v1.1.0 plugin.
+  Supported `mcp get release_radar --json` resolved the exact derived packaged
+  AgentTools path, and the confined installed digester observed the exact
+  derived digest above. The single authorized normal ephemeral fresh task then
+  loaded the Release Radar skill but reported that the requested MCP tool was
+  unavailable; its JSONL contains no `mcp_tool_call` event, so the required
+  started/completed schema-invalid callability oracle failed. No retry, MCP
+  result, Release Radar action, XPC call, SQLite mutation, file access, or
+  legacy-entry mutation occurred. Attempt-owned supported cleanup removed the
+  plugin and marketplace. Final preflight proves plugin/marketplace absence,
+  exact bundled-key absence, exact unchanged legacy state, and the identical
+  unrelated fingerprint. Evidence is retained under
+  `/tmp/release-radar-underscore-live.idDJcp`, including the captured fresh-task
+  transcript. Task 1 remains **BLOCKED** and Product Task 2 remains **NO-GO**
+  pending independent live-evidence reviews. No retry or broader diagnosis is
+  authorized by this result.
+- Independent corrected-live evidence reviews: Architecture **BLOCKED**,
+  Required 1; QA/Test **BLOCKED**, Required 1; Security/Privacy **BLOCKED**,
+  Required 1; each reported Optional 0. All three independently confirmed the
+  exact target/path/digest boundaries, one task with no retry, no MCP/action/
+  file/XPC/SQLite result, supported attempt-owned cleanup, unchanged exact
+  legacy state, and unchanged unrelated fingerprint. Their single shared
+  binding finding is functional: the retained JSONL contains zero
+  `mcp_tool_call` events and explicitly reports the requested MCP tool
+  unavailable. Skill loading and supported `mcp get` resolution do not prove
+  model-callable composition. Task 1 remains **BLOCKED** and Product Task 2
+  remains **NO-GO** pending final TPM and Delivery Management disposition. The
+  reviews authorize no retry, diagnosis, remediation, or raw Codex-state
+  inspection.
+- Final corrected-live disposition: TPM **BLOCKED/NO-GO**, Required 1 and
+  Optional 0; Delivery Management **BLOCKED/NO-GO**, Required 1 and Optional 0.
+  They accept cleanup and retained evidence as sufficient and confirm the sole
+  binding defect is the absent model-callable MCP event. Feasibility Task 1
+  remains **BLOCKED**; Product Task 2 remains **NO-GO**; there is no next
+  eligible implementation task under the current plan. No retry, remediation,
+  further diagnosis, raw Codex-state inspection, alternative framework, or
+  Product Task 2 release is authorized. Continuing requires a new owner-
+  authorized narrow investigation or an owner decision to close the
+  feasibility effort with this blocker.

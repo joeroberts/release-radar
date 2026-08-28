@@ -1,0 +1,14 @@
+{
+  "name": "release-radar",
+  "version": "1.0.0",
+  "description": "Keep durable Release Radar tracking and typed delivery state consistent.",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Release Radar",
+    "shortDescription": "Track delivery with Release Radar",
+    "developerName": "Rekon Labs",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"]
+  }
+}

@@ -88,6 +88,73 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     }
 
     func testPackagedSignedToolUsesRegisteredBrokerAndFailsClosedWithoutTheApp() async throws {
+        let bridgeService = SMAppService.agent(
+            plistName: ReleaseRadarBridgeTransport.launchAgentPlistName
+        )
+        switch bridgeService.status {
+        case .notRegistered:
+            break
+        case .notFound:
+            XCTFail("The packaged bridge service was not found")
+            return
+        case .enabled:
+            XCTFail("The packaged bridge service was already registered")
+            return
+        case .requiresApproval:
+            XCTFail("The packaged bridge service requires approval")
+            return
+        @unknown default:
+            XCTFail("The packaged bridge service has an unknown registration status")
+            return
+        }
+
+        do {
+            try bridgeService.register()
+        } catch {
+            XCTFail("Could not register the packaged bridge service")
+            return
+        }
+        var registrationOwned = true
+        let cleanupOwnedBridgeService: () -> Void = {
+            guard registrationOwned else { return }
+            do {
+                try bridgeService.unregister()
+            } catch {
+                XCTFail("Could not unregister the owned packaged bridge service")
+            }
+            switch bridgeService.status {
+            case .notRegistered:
+                registrationOwned = false
+            case .notFound:
+                XCTFail("The owned packaged bridge service disappeared during cleanup")
+            case .enabled:
+                XCTFail("Explicit cleanup left the owned bridge service registered")
+            case .requiresApproval:
+                XCTFail("The owned bridge service requires approval after cleanup")
+            @unknown default:
+                XCTFail("The owned bridge service has an unknown cleanup status")
+            }
+        }
+        defer {
+            cleanupOwnedBridgeService()
+        }
+        switch bridgeService.status {
+        case .enabled:
+            break
+        case .notRegistered:
+            XCTFail("The packaged bridge service remained unregistered")
+            return
+        case .notFound:
+            XCTFail("The packaged bridge service disappeared after registration")
+            return
+        case .requiresApproval:
+            XCTFail("The packaged bridge service requires approval after registration")
+            return
+        @unknown default:
+            XCTFail("The packaged bridge service has an unknown post-registration status")
+            return
+        }
+
         let fixture = try await makeTransportFixture()
         let delayedRequestID = UUID(uuidString: "99999999-9999-4999-8999-999999999991")!
         let committedReplyLostRequestID = UUID(uuidString: "99999999-9999-4999-8999-999999999992")!
@@ -112,7 +179,6 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         )
         defer {
             host.disconnectCallback()
-            try? host.unregister()
         }
 
         let packagedTool = Bundle.main.bundleURL
@@ -136,19 +202,53 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let first = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: arguments)
         let firstResult = try decodeCommandResult(first)
         XCTAssertNil(firstResult.error)
-        XCTAssertNotNil(firstResult.auditEventID)
+        let firstAuditEventID = try XCTUnwrap(firstResult.auditEventID)
         XCTAssertEqual(mcpIsError(first), false)
+
+        let exactPersistedState: () async throws -> [SQLiteValue] = {
+            try await fixture.store.read { connection in
+                [
+                    .text(try connection.scalarText(
+                        "SELECT lane FROM tickets WHERE id = 'RR-03' AND project_id = 'project-1'"
+                    ) ?? "missing"),
+                    .integer(try connection.scalarInt(
+                        "SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '77777777-7777-4777-8777-777777777777'"
+                    ) ?? -1),
+                    .integer(try connection.scalarInt(
+                        "SELECT COUNT(*) FROM audit_events WHERE reason = 'Prove the packaged signed transport'"
+                    ) ?? -1),
+                    .integer(try connection.scalarInt(
+                        """
+                        SELECT COUNT(*) FROM audit_events
+                        WHERE id = ?
+                          AND actor_id = 'release-radar-agent'
+                          AND thread_id IS NULL
+                          AND thread_attribution = 'none'
+                          AND project_id = 'project-1'
+                          AND entity_type = 'ticket'
+                          AND entity_id = 'RR-03'
+                          AND reason = 'Prove the packaged signed transport'
+                          AND created_at <> ''
+                        """,
+                        bindings: [.text(firstAuditEventID.rawValue)]
+                    ) ?? -1),
+                ]
+            }
+        }
 
         let replay = try Self.runTool(packagedTool, tool: "release_radar_transition_ticket", arguments: arguments)
         XCTAssertEqual(try decodeCommandResult(replay), firstResult)
-        var counts = try await transportCounts(fixture.store)
-        XCTAssertEqual(counts, [1, 1])
+        let persistedStateBeforeRejectedPeer = try await exactPersistedState()
+        XCTAssertEqual(
+            persistedStateBeforeRejectedPeer,
+            [.text("in_progress"), .integer(1), .integer(1), .integer(1)]
+        )
 
         let rejectedPeer = try Self.runTool(wrongTool, tool: "release_radar_transition_ticket", arguments: arguments)
         XCTAssertEqual(try decodeCommandResult(rejectedPeer).error, .appUnavailable)
         XCTAssertEqual(mcpIsError(rejectedPeer), true)
-        counts = try await transportCounts(fixture.store)
-        XCTAssertEqual(counts, [1, 1])
+        let persistedStateAfterRejectedPeer = try await exactPersistedState()
+        XCTAssertEqual(persistedStateAfterRejectedPeer, persistedStateBeforeRejectedPeer)
 
         let wrongBridge = try Self.runTool(
             packagedTool,
@@ -158,7 +258,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         )
         XCTAssertEqual(try decodeCommandResult(wrongBridge).error, .appUnavailable)
         XCTAssertEqual(mcpIsError(wrongBridge), true)
-        counts = try await transportCounts(fixture.store)
+        var counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
         var wrongEnvelopeArguments = arguments
@@ -248,13 +348,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         counts = try await transportCounts(fixture.store)
         XCTAssertEqual(counts, [1, 1])
 
-        try host.unregister()
-        switch SMAppService.agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName).status {
-        case .notRegistered, .notFound:
-            break
-        default:
-            XCTFail("Explicit cleanup left the bridge registered")
-        }
+        cleanupOwnedBridgeService()
     }
 
     func testCallbackInvalidationAfterHandoffReturnsOutcomeUnknownAndReplayWritesOnce() async throws {

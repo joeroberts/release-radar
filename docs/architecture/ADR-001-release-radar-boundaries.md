@@ -115,6 +115,22 @@ rewrites owner content.
 
 Later integrations must prove a supported sandbox-compatible transport before implementation. Unavailable observation remains explicit and stale rather than silently becoming authoritative. All delivery mutations are app-validated, transactional, and audited.
 
+## Codex plugin lifecycle boundary — 2026-08-27
+
+ADR-002 authorizes one separately signed, same-user, fixed-purpose helper for
+the lifecycle of the single app-shipped `release-radar` Codex plugin. The
+helper is not part of the agent runtime path: it cannot access SQLite, the app
+group, project folders, credentials, networking, arbitrary commands, or ticket
+mutations. The app remains sandboxed and Codex remains the owner of its plugin
+configuration and cache.
+
+This authorization is conditional on a signed, isolated feasibility gate that
+proves the supported Codex CLI can perform confined marketplace and plugin
+lifecycle operations, verify their postconditions, and distinguish a clean
+managed install from modified or inconsistent content. Direct Codex
+config/cache writes, HTTP, generic command execution, or expansion of the
+existing mutation bridge remain prohibited.
+
 ## RR-05 feasibility outcome — 2026-08-24
 
 Codex CLI `0.147.0` documentation and command help describe app-server clients
