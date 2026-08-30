@@ -190,19 +190,46 @@ Expected negative result: the selected test fails at `XCTUnwrap` because
 `RR_SCHEMA_V10_FIXTURE_OUTPUT` is absent, and no fixture file is created. This
 proves generator gating; it is not represented as substantive product TDD.
 
+This negative precondition check completed once on 2026-08-30 with the expected
+result and must not be repeated by the successor Implementer. The first GREEN
+attempt also failed safely at the same `XCTUnwrap`: this hosted XCTest target
+does not propagate an arbitrary parent-shell variable into the test process.
+It produced no fixture, the temporary generator was removed, and the worktree
+retained no product or test-source change. Do not retry that shell-environment
+form.
+
 ### GREEN generation command
 
-Run exactly:
+Use Xcode's generated test-run specification to cross the hosted-test
+environment boundary. Build without running tests, identify exactly one
+generated Release Radar `.xctestrun`, copy it under `/tmp`, insert the fixture
+variable into its documented `EnvironmentVariables` dictionary, and run only
+the generator once with parallel testing disabled. Run exactly:
 
 ```bash
-RR_SCHEMA_V10_FIXTURE_OUTPUT="$PWD/ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite" \
-xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -destination 'platform=macOS' \
-  -derivedDataPath /tmp/release-radar-rr-r10-v10-fixture \
+set -euo pipefail
+RR_TASK1A_DERIVED=/tmp/release-radar-rr-r10-v10-fixture
+xcodebuild build-for-testing -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' -derivedDataPath "$RR_TASK1A_DERIVED"
+RR_TASK1A_XCTESTRUN="$(rg --files --hidden --no-ignore "$RR_TASK1A_DERIVED/Build/Products" \
+  | rg '/ReleaseRadar_ReleaseRadar_.*\.xctestrun$')"
+test -n "$RR_TASK1A_XCTESTRUN"
+test "$(printf '%s\n' "$RR_TASK1A_XCTESTRUN" | wc -l | tr -d ' ')" = "1"
+RR_TASK1A_CONFIGURED="$RR_TASK1A_DERIVED/Build/Products/ReleaseRadar_Task1A.xctestrun"
+cp "$RR_TASK1A_XCTESTRUN" "$RR_TASK1A_CONFIGURED"
+plutil -insert \
+  TestConfigurations.0.TestTargets.0.EnvironmentVariables.RR_SCHEMA_V10_FIXTURE_OUTPUT \
+  -string "$PWD/ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite" \
+  "$RR_TASK1A_CONFIGURED"
+xcodebuild test-without-building -xctestrun "$RR_TASK1A_CONFIGURED" \
+  -destination 'platform=macOS' -parallel-testing-enabled NO \
   -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionTenFixture
 ```
 
 Expected GREEN: the selected test passes, the target is created once, and
-direct inspection reports schema version 10.
+direct inspection reports schema version 10. The configured `.xctestrun` and
+all build products remain temporary under `/tmp`; do not persist a scheme,
+project, or test-plan environment change.
 
 After removing the generator, create the fixture-local checksum from the
 fixture directory so its manifest contains only the filename:

@@ -222,12 +222,56 @@ Deliver the signed native macOS MVP described by
   verdicts close the circular checkpoint, complete fixture inventory, and
   late-migration rollback findings. Task 1A is released only through its
   planning-only Git checkpoint; Task 1B is not released.
-- Next eligible RR-R10 work: **Create and remotely verify the exact planning-
-  only Git checkpoint.** Stage only `.gitignore`, the split plan, both exact
-  briefs, `docs/delivery/task-briefs/SHA256SUMS`, and this planning/review
-  ledger evidence. The generator remains closed until local/remote SHA equality
-  and ahead/behind `0/0` are proven. No product implementation, installed
-  repair, or ticket mutation is authorized at this checkpoint.
+- RR-R10 split-planning Git checkpoint: commit
+  `def687a084ddf074c9e914dd127c820ea563669e` contains exactly `.gitignore`,
+  the split plan, both registered Task 1 briefs, the task-brief checksum index,
+  and canonical planning/review evidence. It was pushed to
+  `origin/codex/release-radar-mvp`; fresh `git ls-remote` verification returned
+  the exact same SHA with ahead/behind `0/0`. The worktree was clean,
+  `default.profraw` was ignored, `StoreMigrations.currentVersion` remained 10,
+  and no fixture, product file, app/board/ticket, owner-data, or external state
+  existed or changed at this checkpoint.
+- RR-R10 Task 1A first execution evidence: the approved negative generator
+  precondition check failed once at `XCTUnwrap` as expected with no fixture.
+  The first GREEN command then failed safely at the same boundary because the
+  Release Radar hosted XCTest process did not inherit the arbitrary parent-
+  shell `RR_SCHEMA_V10_FIXTURE_OUTPUT` variable. It returned `xcodebuild` exit
+  65, created no fixture, and made no production or durable test-source change;
+  the temporary generator was removed. Systematic diagnosis confirmed that
+  `xcodebuild build-for-testing` emits one editable `.xctestrun` whose test-
+  target `EnvironmentVariables` dictionary is honored by
+  `test-without-building`. The corrected controlling command therefore copies
+  that specification under `/tmp`, injects only the fixture path there, and
+  runs only the generator once with parallel testing disabled. The correction
+  is fixed at plan SHA-256
+  `b0bf2116a7c1cd0a51e2e31666c94bc249151caffae51280afb2ef63d2d961ac`
+  and registered Task 1A brief SHA-256
+  `c81d2fd2d432c8f4fc5c3355a1c4dec52a0e95d4ef8638a613a343f240cd3938`.
+  Task 1B remains unchanged at
+  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`.
+  The correction
+  requires fresh exact-hash Architecture, QA/Test, Security/Privacy, TPM, and
+  Delivery Management GO before any successor Implementer retry; no ticket,
+  board, goal, owner data, or external state changed.
+- RR-R10 Task 1A execution-command correction closure: against exact plan
+  `b0bf2116a7c1cd0a51e2e31666c94bc249151caffae51280afb2ef63d2d961ac`
+  and registered Task 1A brief
+  `c81d2fd2d432c8f4fc5c3355a1c4dec52a0e95d4ef8638a613a343f240cd3938`,
+  independent Architecture, QA/Test, Security/Privacy, TPM, and Delivery
+  Management each returned **GO, Required 0, Optional 0, Out-of-scope 0**.
+  They confirmed that the supported `build-for-testing`/temporary
+  `.xctestrun`/`test-without-building` flow crosses only the hosted-test
+  environment boundary, remains fail-closed and single-run, preserves the
+  complete fixture assertions and Task 1B dependency block, and changes no
+  persistent scheme, project, product, owner data, board, ticket, or goal.
+  The correction must be committed, pushed, and remotely verified exactly
+  before a fresh successor Implementer may run it.
+- Next eligible RR-R10 work: **Release one fresh Task 1A Implementer to generate
+  and prove the genuine schema-v10 fixture.** The Implementer may temporarily
+  edit only `StoreAcceptanceTests.swift` and must remove that edit; the only
+  durable implementation outputs are the fixture and its local checksum. Task
+  1B and every product edit remain dependency-blocked until Task 1A passes all
+  postimplementation reviews and its exact commit is remotely verified.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`

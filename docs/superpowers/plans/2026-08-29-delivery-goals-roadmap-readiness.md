@@ -139,12 +139,30 @@ func testGenerateExactVersionTenFixture() throws {
     XCTAssertEqual(try SQLiteConnection(url: url).scalarInt("PRAGMA user_version"), 10)
 }
 ```
-Run only that test with:
+The initial shell-environment form was proven invalid on this hosted XCTest
+target: `xcodebuild test` did not propagate the arbitrary parent variable into
+the test host. Use Xcode's generated test-run specification instead. Build once
+without running tests, copy the single generated `.xctestrun` under `/tmp`, add
+the fixture variable to its documented `EnvironmentVariables` dictionary, and
+run only the generator once with parallel testing disabled:
 
 ```bash
-RR_SCHEMA_V10_FIXTURE_OUTPUT="$PWD/ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite" \
-xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -destination 'platform=macOS' \
-  -derivedDataPath /tmp/release-radar-rr-r10-v10-fixture \
+set -euo pipefail
+RR_TASK1A_DERIVED=/tmp/release-radar-rr-r10-v10-fixture
+xcodebuild build-for-testing -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' -derivedDataPath "$RR_TASK1A_DERIVED"
+RR_TASK1A_XCTESTRUN="$(rg --files --hidden --no-ignore "$RR_TASK1A_DERIVED/Build/Products" \
+  | rg '/ReleaseRadar_ReleaseRadar_.*\.xctestrun$')"
+test -n "$RR_TASK1A_XCTESTRUN"
+test "$(printf '%s\n' "$RR_TASK1A_XCTESTRUN" | wc -l | tr -d ' ')" = "1"
+RR_TASK1A_CONFIGURED="$RR_TASK1A_DERIVED/Build/Products/ReleaseRadar_Task1A.xctestrun"
+cp "$RR_TASK1A_XCTESTRUN" "$RR_TASK1A_CONFIGURED"
+plutil -insert \
+  TestConfigurations.0.TestTargets.0.EnvironmentVariables.RR_SCHEMA_V10_FIXTURE_OUTPUT \
+  -string "$PWD/ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite" \
+  "$RR_TASK1A_CONFIGURED"
+xcodebuild test-without-building -xctestrun "$RR_TASK1A_CONFIGURED" \
+  -destination 'platform=macOS' -parallel-testing-enabled NO \
   -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionTenFixture
 ```
 
