@@ -317,14 +317,62 @@ Deliver the signed native macOS MVP described by
   sandbox, stale-instruction, release-gate, and test-run-format findings. The
   generator remains closed until this four-file planning correction is pushed
   and remotely exact at ahead/behind `0/0`.
+- RR-R10 Task 1A attachment-correction checkpoint: commit
+  `1e0011bc4d7f6f580929740c4e42d571057249d7` contains exactly the final plan,
+  registered Task 1A brief and checksum index, and canonical failure/review
+  evidence. It was pushed to `origin/codex/release-radar-mvp`; fresh remote-ref
+  readback returned that exact SHA with ahead/behind `0/0`. The actual-run
+  DerivedData, result, attachment-export, fixture, and checksum paths remain
+  absent, so one fresh Task 1A Implementer is now released for the attachment
+  generator only. Task 1B remains blocked.
+- RR-R10 Task 1A passing-result/export evidence: the fresh Implementer ran the
+  final attachment generator exactly once. The explicit result reports 1 total,
+  1 passed, 0 failed, 0 skipped, and 0 expected failures, and the temporary
+  generator source was removed immediately. `xcresulttool export attachments`
+  then produced exactly one nonfailure attachment for the selected test, but
+  Xcode rendered its suggested name as
+  `release-radar-v10_0_D88C301A-B66A-4624-9EC6-A2B7A33B343A.sqlite` rather than
+  the brief's exact base-name expectation, so validation stopped before the
+  repository directory/copy/checksum. No fixture, checksum, product diff, or
+  durable test-source diff exists. Read-only inspection of exported basename
+  `78312C8A-9AEF-471D-8BB6-0C89884440FF` reports a SQLite database at user
+  version 10, integrity `ok`, 34 non-internal schema objects, and SHA-256
+  `9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559`.
+  The corrected contract accepts only the observed base/index/uppercase-UUID/
+  `.sqlite` pattern plus all existing exact manifest and safe-export checks.
+  Recovery must consume this passing result and existing export without
+  rerunning either the generator or attachment export, and remains blocked on
+  fresh exact-hash review plus a pushed/remotely exact planning checkpoint.
+  The correction is fixed at plan SHA-256
+  `2cdf2e7c67319077b27e7bf9f4f0889f0015c59708835a290cca16c482204328`
+  and registered Task 1A brief SHA-256
+  `d9e77073932c3f46a4fba210f9c6ab0f150fdcb11b089529dcc87010d492cded`;
+  Task 1B remains unchanged at
+  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`.
+- RR-R10 Task 1A preserved-result recovery closure: against exact plan
+  `2cdf2e7c67319077b27e7bf9f4f0889f0015c59708835a290cca16c482204328`
+  and registered Task 1A brief
+  `d9e77073932c3f46a4fba210f9c6ab0f150fdcb11b089529dcc87010d492cded`,
+  Architecture, QA/Test, Security/Privacy, TPM, and Delivery Management each
+  returned **GO, Required 0, Optional 0, Out-of-scope 0**. They verified the
+  preserved 1/1 passing result, exact one nonfailure manifest attachment,
+  strict uppercase UUID name validation, safe basename, pinned exported-byte
+  SHA, v10/integrity/privacy provenance, absent destination, no source/product
+  diff, and no generator/export rerun. The planning correction must be pushed
+  and remotely exact before one fresh recovery Implementer validates and copies
+  the preserved bytes, creates the checksum, and runs the complete assertions
+  and regressions.
 - Next eligible RR-R10 work: **Close Architecture, QA/Test, Security/Privacy,
   TPM, and Delivery Management on the exact attachment-correction hashes, then
   commit/push that planning correction and verify exact local/remote SHA with
   ahead/behind `0/0`.** Only after that remote checkpoint may one fresh Task 1A
-  Implementer temporarily edit `StoreAcceptanceTests.swift`, remove that edit,
-  and leave only the fixture and local checksum. Task 1B and every product edit
-  remain dependency-blocked until Task 1A passes all postimplementation reviews
-  and its exact commit is remotely verified.
+  recovery Implementer run only the exact preserved-result validation, copy,
+  checksum, complete SQLite assertions, source-removal proof, and regression
+  sequence. That Implementer must not edit `StoreAcceptanceTests.swift`, rerun
+  the generator, or rerun attachment export, and may leave only the fixture and
+  local checksum. Task 1B and every product edit remain dependency-blocked until
+  Task 1A passes all postimplementation reviews and its exact commit is remotely
+  verified.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`

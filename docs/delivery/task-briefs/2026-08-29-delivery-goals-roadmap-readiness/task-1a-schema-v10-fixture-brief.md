@@ -303,8 +303,20 @@ if plutil -extract 1.testIdentifier raw "$RR_TASK1A_MANIFEST" >/dev/null 2>&1; t
   exit 1
 fi
 test "$(plutil -extract 0.attachments raw -expect array "$RR_TASK1A_MANIFEST")" = "1"
-test "$(plutil -extract 0.attachments.0.suggestedHumanReadableName raw "$RR_TASK1A_MANIFEST")" = \
-  'release-radar-v10.sqlite'
+RR_TASK1A_SUGGESTED_NAME="$(plutil -extract \
+  0.attachments.0.suggestedHumanReadableName raw "$RR_TASK1A_MANIFEST")"
+case "$RR_TASK1A_SUGGESTED_NAME" in
+  release-radar-v10_0_????????-????-????-????-????????????.sqlite) ;;
+  *) exit 1 ;;
+esac
+RR_TASK1A_SUGGESTED_UUID="${RR_TASK1A_SUGGESTED_NAME#release-radar-v10_0_}"
+RR_TASK1A_SUGGESTED_UUID="${RR_TASK1A_SUGGESTED_UUID%.sqlite}"
+test "${#RR_TASK1A_SUGGESTED_UUID}" = "36"
+RR_TASK1A_SUGGESTED_HEX="$(printf '%s' "$RR_TASK1A_SUGGESTED_UUID" | tr -d '-')"
+test "${#RR_TASK1A_SUGGESTED_HEX}" = "32"
+case "$RR_TASK1A_SUGGESTED_HEX" in
+  *[!0-9A-F]*) exit 1 ;;
+esac
 test "$(plutil -extract 0.attachments.0.isAssociatedWithFailure raw "$RR_TASK1A_MANIFEST")" = \
   'false'
 RR_TASK1A_EXPORTED_NAME="$(plutil -extract \
@@ -321,10 +333,98 @@ mkdir -p "$RR_TASK1A_FIXTURE_DIR"
 cp "$RR_TASK1A_EXPORTED" "$RR_TASK1A_FIXTURE"
 ```
 
-Expected export: exactly one passing-test attachment named
-`release-radar-v10.sqlite`; no failure attachment or second manifest entry; the
-parent process creates the repository directory and copies only the captured
-database bytes. The test host never gains repository write access.
+Expected export: exactly one passing-test attachment whose Xcode-generated
+suggested name preserves the attachment base and appends index `0` plus an
+uppercase UUID before `.sqlite`; no failure attachment or second manifest
+entry. The parent process creates the repository directory and copies only the
+captured database bytes. The test host never gains repository write access.
+
+### Current passing-result recovery — do not rerun the generator or export
+
+The single attachment generator has already passed once with 1 test, 1 passed,
+0 failed, 0 skipped, and 0 expected failures at:
+
+`/tmp/release-radar-rr-r10-v10-attachment-result.xcresult`
+
+The exact attachment export also completed before the obsolete exact-name
+check stopped the command. Resume only from:
+
+`/tmp/release-radar-rr-r10-v10-attachment-export`
+
+Its manifest contains one passing attachment for the exact selected test,
+suggested name
+`release-radar-v10_0_D88C301A-B66A-4624-9EC6-A2B7A33B343A.sqlite`, and exported
+basename `78312C8A-9AEF-471D-8BB6-0C89884440FF`. Read-only diagnosis reports
+SQLite user version 10, integrity `ok`, 34 non-internal schema objects, and
+SHA-256 `9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559`.
+After the corrected contract is independently approved, committed, pushed,
+and remotely verified, a fresh successor Implementer must run exactly this
+recovery command. It validates the preserved result, exact manifest, Xcode
+name pattern, safe exported basename, and diagnosed byte SHA before copying;
+it does not run `build-for-testing`, `test-without-building`, or
+`xcresulttool export`:
+
+```bash
+set -euo pipefail
+RR_TASK1A_RESULT=/tmp/release-radar-rr-r10-v10-attachment-result.xcresult
+RR_TASK1A_ATTACHMENTS=/tmp/release-radar-rr-r10-v10-attachment-export
+RR_TASK1A_SUMMARY=/tmp/release-radar-rr-r10-v10-attachment-summary.json
+RR_TASK1A_MANIFEST="$RR_TASK1A_ATTACHMENTS/manifest.json"
+test -d "$RR_TASK1A_RESULT"
+test -d "$RR_TASK1A_ATTACHMENTS"
+test -f "$RR_TASK1A_MANIFEST"
+test ! -e "$RR_TASK1A_SUMMARY"
+git diff --exit-code -- ReleaseRadarTests/StoreAcceptanceTests.swift
+xcrun xcresulttool get test-results summary \
+  --path "$RR_TASK1A_RESULT" --compact > "$RR_TASK1A_SUMMARY"
+test "$(plutil -extract result raw "$RR_TASK1A_SUMMARY")" = "Passed"
+test "$(plutil -extract totalTestCount raw "$RR_TASK1A_SUMMARY")" = "1"
+test "$(plutil -extract passedTests raw "$RR_TASK1A_SUMMARY")" = "1"
+test "$(plutil -extract failedTests raw "$RR_TASK1A_SUMMARY")" = "0"
+test "$(plutil -extract skippedTests raw "$RR_TASK1A_SUMMARY")" = "0"
+test "$(plutil -extract expectedFailures raw "$RR_TASK1A_SUMMARY")" = "0"
+test "$(plutil -extract 0.testIdentifier raw "$RR_TASK1A_MANIFEST")" = \
+  'StoreAcceptanceTests/testGenerateExactVersionTenFixtureAttachment()'
+if plutil -extract 1.testIdentifier raw "$RR_TASK1A_MANIFEST" >/dev/null 2>&1; then
+  exit 1
+fi
+test "$(plutil -extract 0.attachments raw -expect array "$RR_TASK1A_MANIFEST")" = "1"
+RR_TASK1A_SUGGESTED_NAME="$(plutil -extract \
+  0.attachments.0.suggestedHumanReadableName raw "$RR_TASK1A_MANIFEST")"
+case "$RR_TASK1A_SUGGESTED_NAME" in
+  release-radar-v10_0_????????-????-????-????-????????????.sqlite) ;;
+  *) exit 1 ;;
+esac
+RR_TASK1A_SUGGESTED_UUID="${RR_TASK1A_SUGGESTED_NAME#release-radar-v10_0_}"
+RR_TASK1A_SUGGESTED_UUID="${RR_TASK1A_SUGGESTED_UUID%.sqlite}"
+test "${#RR_TASK1A_SUGGESTED_UUID}" = "36"
+RR_TASK1A_SUGGESTED_HEX="$(printf '%s' "$RR_TASK1A_SUGGESTED_UUID" | tr -d '-')"
+test "${#RR_TASK1A_SUGGESTED_HEX}" = "32"
+case "$RR_TASK1A_SUGGESTED_HEX" in
+  *[!0-9A-F]*) exit 1 ;;
+esac
+test "$(plutil -extract 0.attachments.0.isAssociatedWithFailure raw \
+  "$RR_TASK1A_MANIFEST")" = "false"
+RR_TASK1A_EXPORTED_NAME="$(plutil -extract \
+  0.attachments.0.exportedFileName raw "$RR_TASK1A_MANIFEST")"
+case "$RR_TASK1A_EXPORTED_NAME" in
+  ''|'.'|'..'|*/*) exit 1 ;;
+esac
+RR_TASK1A_EXPORTED="$RR_TASK1A_ATTACHMENTS/$RR_TASK1A_EXPORTED_NAME"
+RR_TASK1A_FIXTURE_DIR="$PWD/ReleaseRadarTests/Fixtures/SchemaV10"
+RR_TASK1A_FIXTURE="$RR_TASK1A_FIXTURE_DIR/release-radar-v10.sqlite"
+test -f "$RR_TASK1A_EXPORTED"
+test "$(shasum -a 256 "$RR_TASK1A_EXPORTED" | awk '{print $1}')" = \
+  "9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559"
+test ! -e "$RR_TASK1A_FIXTURE"
+mkdir -p "$RR_TASK1A_FIXTURE_DIR"
+cp "$RR_TASK1A_EXPORTED" "$RR_TASK1A_FIXTURE"
+```
+
+Then continue with checksum creation, complete SQLite assertions,
+source-removal proof, and the regression suite already defined below.
+
+Any mismatch stops recovery without changing the repository fixture path.
 
 After removing the generator, create the fixture-local checksum from the
 fixture directory so its manifest contains only the filename:
@@ -513,7 +613,9 @@ remote-SHA equality recorded by Delivery Management.
       output variable and no fixture; neither retired command was repeated.
 - [ ] The exact attachment GREEN command passed once with
       `RR_SCHEMA_V10_FIXTURE_EXPORT=1`, retained exactly one passing attachment,
-      and the parent exported/copied it into the absent durable fixture path.
+      and the parent exported it exactly once; the successor copied only that
+      validated retained export into the absent durable fixture path without a
+      generator or export rerun.
 - [ ] Direct inspection proves schema version 10, expected empty/default-row
       inventory, no v11 table/column/index/trigger, and no foreign-key error.
 - [ ] `ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS` contains the exact

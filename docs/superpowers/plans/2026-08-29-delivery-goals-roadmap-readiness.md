@@ -208,13 +208,19 @@ xcodebuild test-without-building -xctestrun "$RR_TASK1A_CONFIGURED" \
 
 After removing the generator, export only that test's attachments to a new
 `/tmp` directory. Require exactly one manifest entry and one nonfailure
-attachment named `release-radar-v10.sqlite`, reject unsafe exported names, and
-copy those bytes from the result bundle to the still-absent repository fixture
-path. Verify the fixture directly reports schema 10 and contains no v11 table,
-column, index, or trigger, then write its SHA-256 to
+attachment whose Xcode-suggested name matches
+`release-radar-v10_0_<uppercase UUID>.sqlite`, reject unsafe exported names,
+and copy those bytes from the result bundle to the still-absent repository
+fixture path. Verify the fixture directly reports schema 10 and contains no v11
+table, column, index, or trigger, then write its SHA-256 to
 `ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS`. The fixture and digest are
 durable test inputs; the removed generator, result bundle, and attachment export
 are temporary evidence, not deliverables.
+
+For the current Task 1A execution, the generator and attachment export have
+already each completed once. Resume only from their preserved passing result
+and exported bytes after the corrected manifest-name contract is independently
+approved and remotely checkpointed; do not rerun either operation.
 Require fresh postimplementation Code Review and QA plus Architecture,
 Security/Privacy, TPM, and Delivery Management GO with Required 0. Update the
 ledger, stage only the two fixture artifacts and `docs/delivery/progress.md`,
