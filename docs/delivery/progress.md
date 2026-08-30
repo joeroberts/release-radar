@@ -508,13 +508,43 @@ Deliver the signed native macOS MVP described by
   no owner attention, nine unchanged Accepted tickets, and both new audit
   reasons. No task plan was created or inferred, and no product file,
   installation, owner-data backup, or SQLite access occurred.
-- Next eligible RR-R10 work: **Start one fresh Codex session, create the same
-  unfinished RR-R10 delivery goal in that session, and have one fresh Planning
-  agent produce the complete Task 2A brief.** Architecture, TPM, QA/Test, and
-  Delivery Management must independently return GO with Required 0 on the
-  brief's exact hash before any Task 2A RED test or product edit. Task 2A is
-  “Generate and verify the genuine schema-v11 fixture”; every later task remains
-  dependency-blocked.
+- RR-R10 Task 2A planning: fresh Planning agent `/root/task2a_planning`
+  produced the complete durable brief at
+  `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md`.
+  Its first draft at SHA-256
+  `0ec1411608c890287291a1487a6be55cf55bbfd35cb0bb93529ef78989e2a1f0`
+  received Architecture GO with Required 0, QA/Test NO-GO with Required 4,
+  and Security/Privacy NO-GO with Required 3. The same Planning agent
+  incorporated every required correction before release. The corrected brief
+  is SHA-256
+  `86f26e874cf95c795c1ac75d7b71b62492b90e87b936f202fd7181198d084820`;
+  it is registered exactly once, and all 17 entries in the root task-brief
+  checksum registry verify.
+- RR-R10 Task 2A exact-hash preimplementation gate: independent Architecture
+  agent `/root/task2a_arch_review`, QA/Test agent
+  `/root/task2a_qa_review`, Security/Privacy agent
+  `/root/task2a_security_review`, TPM agent `/root/task2a_tpm_review`, and
+  replacement Delivery Management agent
+  `/root/task2a_delivery_review_replacement` each reviewed the complete
+  corrected brief and returned **GO with Required 0, Optional 0, and
+  Out-of-scope 0**. The first Delivery Management reviewer was interrupted
+  after it did not return a verdict and made no repository change; the
+  replacement performed the complete independent read-only review. The gate
+  verified the three accepted controlling hashes, immutable Task 1A and Task
+  1B dependencies, the accepted schema-v10 fixture digest, all five Task 1B
+  paths byte-identical to their accepted commit, a wholly absent `SchemaV11`
+  fixture directory, and a planning-only worktree. No RED test, product edit,
+  fixture generation, build, app launch, installation, owner-data access, or
+  Release Radar mutation occurred. RR-R10 remains authoritatively recorded In
+  progress with zero blockers and no live Ticket Tasks plan; Task 2B and every
+  later task remain dependency-blocked.
+- Next eligible RR-R10 work: **Commit and push only this planning ledger entry,
+  the root task-brief checksum registry, and the exact Task 2A brief, then prove
+  live remote equality and ahead/behind `0/0`.** Only after that checkpoint may
+  one fresh serialized Implementer begin Task 2A “Generate and verify the
+  genuine schema-v11 fixture” with the brief's fail-closed RED/GREEN workflow.
+  Task 2B remains closed until Task 2A implementation is independently accepted,
+  committed, pushed, and remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
