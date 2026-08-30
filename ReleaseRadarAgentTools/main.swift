@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 private enum ToolFailure: Error, LocalizedError {
     case invalidRequest(String)
@@ -203,6 +204,10 @@ private struct MCPServer {
                 "ticketID": try string("ticketID", in: arguments),
                 "lane": try string("lane", in: arguments),
             ])
+        case "release_radar_set_active_phase":
+            return ("setActivePhase", [
+                "phaseID": try string("phaseID", in: arguments),
+            ])
         case "release_radar_set_dependency":
             return ("setDependency", [
                 "id": try string("id", in: arguments),
@@ -303,6 +308,11 @@ private struct MCPServer {
                 fields: ["ticketID": string, "lane": lane]
             ),
             definition(
+                "release_radar_set_active_phase",
+                required: ["phaseID"],
+                fields: ["phaseID": string]
+            ),
+            definition(
                 "release_radar_set_dependency",
                 required: ["id", "kind", "subjectID", "dependsOnID"],
                 fields: [
@@ -385,8 +395,24 @@ private func writeResponse(_ response: [String: Any]) {
 
 private var server = MCPServer()
 private var buffer = Data()
-while let chunk = try? FileHandle.standardInput.read(upToCount: 4_096), !chunk.isEmpty {
-    buffer.append(chunk)
+private var inputBytes = [UInt8](repeating: 0, count: 4_096)
+while true {
+    let bytesRead = inputBytes.withUnsafeMutableBytes { bytes in
+        Darwin.read(STDIN_FILENO, bytes.baseAddress, bytes.count)
+    }
+    if bytesRead == 0 {
+        break
+    }
+    if bytesRead < 0 {
+        if errno == EINTR {
+            continue
+        }
+        let message = "Failed to read stdin: \(String(cString: strerror(errno)))\n"
+        FileHandle.standardError.write(Data(message.utf8))
+        exit(74)
+    }
+
+    buffer.append(contentsOf: inputBytes.prefix(Int(bytesRead)))
     if buffer.count > ReleaseRadarBridgeTransport.maximumLineBytes,
        !buffer.contains(0x0A) {
         writeResponse(["jsonrpc": "2.0", "id": NSNull(), "error": ["code": -32600, "message": "JSON-RPC line exceeds limit"]])

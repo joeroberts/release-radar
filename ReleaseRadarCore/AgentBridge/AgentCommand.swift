@@ -29,6 +29,7 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case upsertPhase(phaseID: String, name: String)
     case upsertTicket(ticketID: String, phaseID: String, outcome: String, lane: TicketLane)
     case transitionTicket(ticketID: String, lane: TicketLane)
+    case setActivePhase(phaseID: String)
     case setDependency(id: String, kind: DependencyKind, subjectID: String, dependsOnID: String)
     case recordBlocker(id: String, ticketID: String, summary: String)
     case resolveBlocker(blockerID: String)

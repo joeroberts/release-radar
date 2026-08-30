@@ -153,8 +153,9 @@ fallback writer.
    `release-radar` and emit `item.started` plus `item.completed` JSONL for one
    `mcp_tool_call` with server `release_radar`, tool
    `release_radar_transition_ticket`, and arguments `{}`. Completion must be
-   `failed` with a nonempty schema/argument-validation error, no result, and no
-   Release Radar action. Together with exact packaged-tool resolution and the
+   `failed` with either a nonempty schema/argument-validation error or a Codex
+   approval-policy rejection that prevents server execution, with no result and
+   no Release Radar action. Together with exact packaged-tool resolution and the
    accepted direct handshake's protocol `2025-06-18`, server name
    `Release Radar`, server version `1`, and tool schema, this is the machine-
    verifiable composition oracle. Agent prose alone is not evidence.
@@ -384,8 +385,16 @@ use `mcp_servers`, not `mcpServers`.
   `attentionRequired`, preserve the last verified receipt fields, and append
   one sanitized observation audit only when the persisted intent actually
   changes. Failures and repeated identical observations do not create audits.
-- First Install requires bundled key `release_radar` exactly absent and records
-  an operation-local initial legacy MCP observation that is absent or exact
+- First Install accepts bundled key `release_radar` only when absent or when it
+  is the exact enabled STDIO entry with no disabled reason, the packaged
+  AgentTools command, empty arguments, null working directory, and empty or null
+  environment fields. Contradictory fields fail closed. Classify both direct
+  and legacy entries before any mutation. Freshly reread and remove only that
+  exact direct entry through the fixed supported CLI, then verify absence before
+  plugin installation. Changed or unrecognized direct state fails closed.
+  Rollback restores the direct entry
+  only if this attempt removed it and the key remains absent. Separately record
+  an operation-local legacy `release-radar` observation that is absent or exact
   recognized legacy. Install, digest, and bundled
   `release_radar` MCP postconditions pass first. An initially absent legacy
   entry proceeds directly to the final bundled-server postcondition. For an
@@ -397,8 +406,8 @@ use `mcp_servers`, not `mcpServers`.
   recognized legacy entry when absent. The final `release_radar` MCP
   postcondition must pass after migration before persisting
   `managedInstalled` or its audit. Do not overwrite an unrecognized entry.
-  Update, Reinstall, and Remove do not repeat the migration, and Remove does
-  not recreate the legacy entry.
+  Update, Reinstall, and Remove do not repeat either migration, and Remove does
+  not recreate the legacy or direct entry.
 - Change the verified receipt only after the helper reports success and a fresh
   status proves the exact expected postcondition. Reinstall remove success plus
   add failure is `needsRepair`; it must not be recorded as installed or retried
@@ -596,7 +605,7 @@ delivery mutation audits and notification history must remain unchanged.
   no-delta, direct packaged-tool handshake, exact legacy removal/restoration,
   and owned CLI PID/PGID evidence remain valid and are not rerun. The simplified
   remaining proof leaves the legacy entry untouched while a fresh task
-  discovers the installed skill and emits the exact schema-invalid
+  discovers the installed skill and emits the exact failed pre-action
   `mcp_tool_call` event pair for the packaged MCP tool under bundled server key
   `release_radar`.
 - The signed app contains only the approved marketplace/plugin files, manifest

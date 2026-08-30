@@ -130,13 +130,19 @@ confirms the copy visibly and through accessibility, and does not launch,
 contact, paste into, or submit to Codex. Only the prompt is copied; it contains
 no folder path or project content.
 
-> Define the current Release Radar tracking state for this project. Through
-> Release Radar's existing typed inbound bridge, create or update the active
-> phase and the work currently in scope. Record truthful ticket outcomes,
-> lanes, dependencies, blockers, evidence, and Codex links only when known. Do
-> not create or edit repository dashboard files, do not infer canonical state
-> from arbitrary Markdown, and send uncertain items to Needs Review instead
-> of guessing.
+> In this Codex task rooted at the selected repository, explicitly invoke and
+> follow the installed `$release-radar:release-radar` skill. You are authorizing this task to
+> create or update only the Release Radar managed guidance block in the
+> selected repository's root AGENTS.md, and to create
+> docs/delivery/progress.md only if it is absent, while preserving every other
+> instruction and all existing delivery content. Follow the skill's repository
+> handoff: write and read back the permitted repository guidance first, record
+> that exact `AGENTS.md` with the existing ticketless Release Radar evidence
+> mutation, preserve the complete request across uncertain outcomes, and report
+> any pending audit or discrepancy instead of guessing.
+> Do not invent an MCP repository-read operation, access Release Radar SQLite,
+> infer canonical state from arbitrary Markdown, or guess; send uncertain items
+> to Needs Review.
 
 Portable Import remains hidden until its exporter/archive gate opens. The
 owner-approved future Help section is deferred and is not part of onboarding
@@ -159,11 +165,15 @@ For new folder-backed project onboarding:
    items, possible duplicates, unmatched threads, and missing outcome text go
    to a Needs review inbox instead of blocking onboarding.
 5. If no usable delivery structure is found, initialization remains saved and
-   resumable until the owner uses the displayed Codex prompt to establish the
-   project's current tracking state. Completion still requires a persisted
+   resumable until the owner uses the displayed prompt in the current task
+   already rooted at the selected folder to invoke the installed skill,
+   preserve or create the applicable repository guidance and
+   minimum delivery ledger, and establish the project's current tracking state
+   through audited ticketless evidence. Completion still requires a persisted
    active phase, but the owner-facing workflow does not call it the "first
-   phase." The app never invents a default phase or claims an agent was
-   contacted.
+   phase." The app never invents a default phase, claims an agent was
+   contacted, writes repository files, or treats missing desktop observation as
+   Codex unavailability.
 6. The app creates no Pushover alert during onboarding. It may notify about
    outstanding review items only after the owner has opened that project's
    dashboard once.
@@ -270,7 +280,12 @@ current classification and decision gates are recorded exclusively in
    Tracking** state, discovers matching Codex threads/worktrees only when a
    supported observer exists, remembers exclusions, and requires persisted
    current tracking state before completion without owner-facing “first phase”
-   or false automatic-agent language.
+   or false automatic-agent language. Its copied prompt operates in the current
+   task rooted at the selected folder and explicitly invokes
+   `$release-radar:release-radar`; owner-requested initialization preserves or
+   creates applicable repository guidance and the minimum pending-audit ledger,
+   reads it back, then records the actual `AGENTS.md` with existing ticketless
+   evidence without an invented MCP API.
 2. Rekon's importer produces local phases/tickets/dependencies/evidence links
    from its existing delivery records, routing uncertain mappings to Needs
    review rather than silently guessing.

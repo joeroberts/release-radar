@@ -28,13 +28,14 @@ final class FailureStatePresentationTests: XCTestCase {
         XCTAssertTrue(inaccessible?.detail.contains("moved") == true)
     }
 
-    func testCodexUnavailableAndCachedStateNeverClaimLiveObservation() throws {
+    func testDesktopObservationUnavailableAndCachedStateNeverClaimLiveObservation() throws {
         let unavailable = try XCTUnwrap(FailureStatePresentation(freshness: .init(
             state: .unavailable,
             lastObservedAt: nil,
             reason: "No supported attachment"
         )))
-        XCTAssertEqual(unavailable.title, "Codex unavailable")
+        XCTAssertEqual(unavailable.title, "Codex desktop observation unavailable")
+        XCTAssertFalse(unavailable.title.localizedCaseInsensitiveContains("codex unavailable"))
         XCTAssertEqual(unavailable.detail, "No supported attachment")
 
         let lastSeen = Date(timeIntervalSince1970: 1_700_000_000)

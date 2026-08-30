@@ -20,6 +20,7 @@ public struct OnboardingPreview: Equatable, Sendable {
     public let authorizedWorktreeURLs: [URL]
     public let worktreesRequiringAuthorization: [URL]
     public let recognizedArtifactPreview: ImportPreview?
+    public let projectGuidanceState: ProjectGuidanceState
     public let pendingProjectID: ProjectID?
     public let completedProjectID: ProjectID?
 
@@ -31,6 +32,7 @@ public struct OnboardingPreview: Equatable, Sendable {
         authorizedWorktreeURLs: [URL],
         worktreesRequiringAuthorization: [URL],
         recognizedArtifactPreview: ImportPreview? = nil,
+        projectGuidanceState: ProjectGuidanceState = .missing,
         pendingProjectID: ProjectID? = nil,
         completedProjectID: ProjectID? = nil
     ) {
@@ -41,6 +43,7 @@ public struct OnboardingPreview: Equatable, Sendable {
         self.authorizedWorktreeURLs = authorizedWorktreeURLs
         self.worktreesRequiringAuthorization = worktreesRequiringAuthorization
         self.recognizedArtifactPreview = recognizedArtifactPreview
+        self.projectGuidanceState = projectGuidanceState
         self.pendingProjectID = pendingProjectID
         self.completedProjectID = completedProjectID
     }
@@ -243,6 +246,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 store: store,
                 project: authorizedProject
             ).preview(authorizedSelected)
+            let hasAuditedHandoff = try await hasAuditedGuidanceHandoff(
+                projectID: projectID,
+                rootURL: authorizedSelected
+            )
+            let projectGuidanceState = ProjectGuidanceInspection.inspect(
+                rootURL: authorizedSelected,
+                hasAuditedHandoff: hasAuditedHandoff
+            )
             let projectIdentity = try await projectIdentity(forRoot: authorizedSelected)
             return .init(
                 selectedFolder: authorizedSelected,
@@ -252,6 +263,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 authorizedWorktreeURLs: authorized,
                 worktreesRequiringAuthorization: outsideWorktrees,
                 recognizedArtifactPreview: recognizedArtifactPreview,
+                projectGuidanceState: projectGuidanceState,
                 pendingProjectID: projectIdentity.pending,
                 completedProjectID: projectIdentity.completed
             )
@@ -329,6 +341,57 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             case .bookmarkCreationFailed, .bookmarkResolutionFailed:
                 throw ProjectAuthorizationError.bookmarkResolutionFailed
             }
+        }
+    }
+
+    public func observeProjectGuidance(projectID: ProjectID) async -> ProjectGuidanceState {
+        await observeProjectGuidanceContext(projectID: projectID).state
+    }
+
+    public func observeProjectGuidanceContext(projectID: ProjectID) async -> ProjectGuidanceObservation {
+        do {
+            return try await withAuthorizedProject(projectID: projectID) { [self] project in
+                let hasAuditedHandoff = try await hasAuditedGuidanceHandoff(
+                    projectID: project.projectID,
+                    rootURL: project.canonicalRoot
+                )
+                return ProjectGuidanceObservation(
+                    projectRoot: project.canonicalRoot,
+                    state: ProjectGuidanceInspection.inspect(
+                        rootURL: project.canonicalRoot,
+                        hasAuditedHandoff: hasAuditedHandoff
+                    )
+                )
+            }
+        } catch {
+            return ProjectGuidanceObservation(projectRoot: nil, state: .unavailable)
+        }
+    }
+
+    private func hasAuditedGuidanceHandoff(
+        projectID: ProjectID,
+        rootURL: URL
+    ) async throws -> Bool {
+        let agentsPath = Self.canonical(rootURL)
+            .appendingPathComponent("AGENTS.md", isDirectory: false)
+            .path
+        return try await store.read { connection in
+            try connection.scalarInt(
+                """
+                SELECT COUNT(*)
+                FROM evidence
+                WHERE project_id = ?
+                  AND ticket_id IS NULL
+                  AND path = ?
+                  AND is_available = 1
+                  AND id LIKE ?
+                """,
+                bindings: [
+                    .text(projectID.rawValue),
+                    .text(agentsPath),
+                    .text(ProjectGuidanceInspection.handoffEvidenceIDPrefix + "%"),
+                ]
+            ) == 1
         }
     }
 

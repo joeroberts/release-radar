@@ -48,6 +48,15 @@ struct DashboardProjection: Equatable, Sendable {
                 let projectID = ProjectID(rawValue: try projectRow.text("id"))
                 let projectName = try projectRow.text("name")
                 let goalContext = try connection.projectGoalContext(projectID: projectID)
+                let phases = try connection.dashboardRows(
+                    "SELECT id, name FROM phases WHERE project_id = ? ORDER BY name COLLATE NOCASE, id",
+                    bindings: [.text(projectID.rawValue)]
+                ).map {
+                    ProjectPhaseProjection(
+                        id: PhaseID(rawValue: try $0.text("id")),
+                        name: try $0.text("name")
+                    )
+                }
                 guard let activePhaseID = try projectRow.nullableText("active_phase_id"),
                       let phaseRow = try connection.row(
                         "SELECT id, name FROM phases WHERE project_id = ? AND id = ?",
@@ -56,7 +65,9 @@ struct DashboardProjection: Equatable, Sendable {
                     projects.append(.init(
                         id: projectID,
                         name: projectName,
+                        activePhaseID: nil,
                         activePhaseName: "No active phase",
+                        phases: phases,
                         goalContext: goalContext,
                         currentWorkCount: 0,
                         attentionCount: 0
@@ -112,7 +123,9 @@ struct DashboardProjection: Equatable, Sendable {
                 let project = ProjectDashboardProjection(
                     id: projectID,
                     name: projectName,
+                    activePhaseID: phaseID,
                     activePhaseName: try phaseRow.text("name"),
+                    phases: phases,
                     goalContext: goalContext,
                     currentWorkCount: currentWorkCount,
                     attentionCount: attentionCount
@@ -131,13 +144,40 @@ struct DashboardProjection: Equatable, Sendable {
     }
 }
 
+struct ProjectPhaseProjection: Equatable, Sendable, Identifiable {
+    let id: PhaseID
+    let name: String
+}
+
 struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
     let id: ProjectID
     let name: String
+    let activePhaseID: PhaseID?
     let activePhaseName: String
+    let phases: [ProjectPhaseProjection]
     let goalContext: GoalContextProjection
     let currentWorkCount: Int
     let attentionCount: Int
+
+    init(
+        id: ProjectID,
+        name: String,
+        activePhaseID: PhaseID? = nil,
+        activePhaseName: String,
+        phases: [ProjectPhaseProjection] = [],
+        goalContext: GoalContextProjection,
+        currentWorkCount: Int,
+        attentionCount: Int
+    ) {
+        self.id = id
+        self.name = name
+        self.activePhaseID = activePhaseID
+        self.activePhaseName = activePhaseName
+        self.phases = phases
+        self.goalContext = goalContext
+        self.currentWorkCount = currentWorkCount
+        self.attentionCount = attentionCount
+    }
 }
 
 struct PhaseBoardProjection: Equatable, Sendable {

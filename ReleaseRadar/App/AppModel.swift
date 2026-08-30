@@ -7,6 +7,36 @@ enum AttachFolderOutcome: Equatable, Sendable {
     case attachedNeedsReload
 }
 
+enum ActivePhaseSelectionStatus: Equatable, Sendable {
+    case idle
+    case saving(PhaseID)
+    case mutationFailed(FailureStatePresentation, canReauthorize: Bool)
+    case savedNeedsReload(PhaseID, String)
+}
+
+private enum ProjectionReloadOutcome: Equatable, Sendable {
+    case published
+    case failed
+    case superseded
+}
+
+private enum ProjectionReloadContext: Equatable, Sendable {
+    case ordinary
+    case ownerActivePhaseCommitted(ProjectID, PhaseID, String)
+    case agentCommandCommitted
+}
+
+private struct PreparedProjectProjections: Sendable {
+    let dashboard: DashboardProjection
+    let reviewInboxes: [ProjectID: ReviewInboxProjection]
+    let dependencyGraphs: [ProjectID: DependencyGraphProjection]
+    let projectActivities: [ProjectID: ProjectActivityProjection]
+    let projectGuidanceStates: [ProjectID: ProjectGuidanceState]
+    let projectRoots: [ProjectID: URL]
+    let selectedTicketID: TicketID
+    let selectedReviewItemID: ReviewItemID?
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -22,6 +52,10 @@ final class AppModel {
     var selectedTicketID = TicketID(rawValue: "VD2-08")
     var dashboardError: String?
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
+    var codexPluginState: CodexPluginPresentationState = .checking
+    var codexPluginOperation: CodexPluginOperation?
+    var codexPluginSettingsMessage: String?
+    var codexPluginAnnouncement: String?
     var selectedReviewItemID: ReviewItemID?
     var pushoverAppToken = ""
     var pushoverUserKey = ""
@@ -34,22 +68,37 @@ final class AppModel {
     private let seedSampleData: Bool
     private let externalServicesSuppressed: Bool
     private let codexObserver: any CodexObserver
+    private let codexPluginCoordinator: CodexPluginLifecycleCoordinator?
+    let codexPluginShippedVersion: String
     private let pushoverKeychain: PushoverKeychainStore
     private let notificationCoordinator: AppNotificationCoordinator
     private let projectOnboarding: FolderProjectOnboarding
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
     private let dashboardLoader: @Sendable (DeliveryStore) async throws -> DashboardProjection
+    private let requestIDGenerator: () -> UUID
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
     private var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
+    private var projectGuidanceStates: [ProjectID: ProjectGuidanceState] = [:]
+    private var projectRoots: [ProjectID: URL] = [:]
     private var reviewActionStates: [ProjectID: ReviewActionState] = [:]
+    private var activePhaseSelectionStatuses: [ProjectID: ActivePhaseSelectionStatus] = [:]
     private var performingReviewActionProjectIDs: Set<ProjectID> = []
     private var alertRulesFailureState: AlertRulesFailureState?
+    private var didInitializeCodexPluginLifecycle = false
+    private var projectionReloadGeneration: UInt64 = 0
+#if DEBUG
+    private var rr9ActivePhaseCaptureScenario: RR9ActivePhaseCaptureScenario?
+    private var rr9ActivePhaseCaptureRootDirectory: URL?
+    private var rr9SavedRefreshFailureConsumed = false
+#endif
 
     init(
         store: DeliveryStore,
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
+        codexPluginCoordinator: CodexPluginLifecycleCoordinator? = nil,
+        codexPluginShippedVersion: String = "0.1.0",
         pushoverKeychain: PushoverKeychainStore? = nil,
         notificationCoordinator: AppNotificationCoordinator? = nil,
         projectOnboarding: FolderProjectOnboarding? = nil,
@@ -59,6 +108,7 @@ final class AppModel {
         dashboardLoader: @escaping @Sendable (DeliveryStore) async throws -> DashboardProjection = {
             try await DashboardProjection.load(from: $0)
         },
+        requestIDGenerator: @escaping () -> UUID = { UUID() },
         externalServicesSuppressed: Bool = false,
         seedSampleData: Bool = false
     ) {
@@ -67,16 +117,59 @@ final class AppModel {
         self.seedSampleData = seedSampleData
         self.externalServicesSuppressed = externalServicesSuppressed
         self.codexObserver = codexObserver
+        self.codexPluginCoordinator = codexPluginCoordinator
+        self.codexPluginShippedVersion = codexPluginShippedVersion
         self.pushoverKeychain = resolvedKeychain
         self.projectOnboarding = projectOnboarding ?? FolderProjectOnboarding(store: store)
         self.reviewInboxLoader = reviewInboxLoader
         self.dashboardLoader = dashboardLoader
+        self.requestIDGenerator = requestIDGenerator
         self.notificationCoordinator = notificationCoordinator
             ?? AppNotificationCoordinator(
                 store: store,
                 dispatcher: PushoverNotificationDispatcher(store: store, credentials: resolvedKeychain)
             )
     }
+
+#if DEBUG
+    convenience init(
+        store: DeliveryStore,
+        codexObserver: any CodexObserver = UnavailableCodexObserver(),
+        codexPluginCoordinator: CodexPluginLifecycleCoordinator? = nil,
+        codexPluginShippedVersion: String = "0.1.0",
+        pushoverKeychain: PushoverKeychainStore? = nil,
+        notificationCoordinator: AppNotificationCoordinator? = nil,
+        projectOnboarding: FolderProjectOnboarding? = nil,
+        reviewInboxLoader: @escaping @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection = {
+            try await ReviewInboxProjection.load(from: $0, projectID: $1)
+        },
+        dashboardLoader: @escaping @Sendable (DeliveryStore) async throws -> DashboardProjection = {
+            try await DashboardProjection.load(from: $0)
+        },
+        requestIDGenerator: @escaping () -> UUID = { UUID() },
+        externalServicesSuppressed: Bool = false,
+        seedSampleData: Bool = false,
+        rr9ActivePhaseCaptureScenario: RR9ActivePhaseCaptureScenario?,
+        rr9ActivePhaseCaptureRootDirectory: URL? = nil
+    ) {
+        self.init(
+            store: store,
+            codexObserver: codexObserver,
+            codexPluginCoordinator: codexPluginCoordinator,
+            codexPluginShippedVersion: codexPluginShippedVersion,
+            pushoverKeychain: pushoverKeychain,
+            notificationCoordinator: notificationCoordinator,
+            projectOnboarding: projectOnboarding,
+            reviewInboxLoader: reviewInboxLoader,
+            dashboardLoader: dashboardLoader,
+            requestIDGenerator: requestIDGenerator,
+            externalServicesSuppressed: externalServicesSuppressed,
+            seedSampleData: seedSampleData
+        )
+        self.rr9ActivePhaseCaptureScenario = rr9ActivePhaseCaptureScenario
+        self.rr9ActivePhaseCaptureRootDirectory = rr9ActivePhaseCaptureRootDirectory
+    }
+#endif
 
     var currentProjectID: ProjectID {
         selection.projectID
@@ -145,22 +238,39 @@ final class AppModel {
 
     func loadDashboard() async {
         await loadAlertRules()
+        await notificationCoordinator.setActivityRefreshHandler { [weak self] projectID in
+            await self?.refreshNotificationActivity(for: projectID)
+        }
+        await notificationCoordinator.setDashboardRefreshHandler { [weak self] in
+            await self?.reloadDashboardAfterCommittedAgentCommand()
+        }
         do {
-            await notificationCoordinator.setActivityRefreshHandler { [weak self] projectID in
-                await self?.refreshNotificationActivity(for: projectID)
-            }
             if seedSampleData {
                 try await DashboardSampleData.seedIfNeeded(in: store)
             }
-            let loadedDashboard = try await dashboardLoader(store)
-            dashboard = loadedDashboard
-            try await loadWorkspace(for: loadedDashboard)
+#if DEBUG
+            if let rr9ActivePhaseCaptureScenario {
+                try await RR9ActivePhaseCaptureFixture.seedIfNeeded(
+                    in: store,
+                    rootDirectory: rr9ActivePhaseCaptureRootDirectory
+                        ?? DeliveryStore.applicationSupportDatabaseURL()
+                            .deletingLastPathComponent()
+                            .appendingPathComponent("RR9ActivePhaseCaptureRoots", isDirectory: true),
+                    scenario: rr9ActivePhaseCaptureScenario
+                )
+            }
+#endif
+            let outcome = await reloadProjectProjections()
+            guard outcome == .published else { return }
+#if DEBUG
+            if let rr9ActivePhaseCaptureScenario {
+                applyRR9InitialRoute(for: rr9ActivePhaseCaptureScenario)
+            }
+#endif
             if !externalServicesSuppressed {
                 await loadPushoverConfiguration()
                 await notificationCoordinator.dispatchPending()
             }
-            try await refreshActivities(for: loadedDashboard)
-            dashboardError = nil
         } catch {
             dashboardError = error.localizedDescription
         }
@@ -210,10 +320,10 @@ final class AppModel {
         try await projectOnboarding.associateFirstProjectRoot(folder, for: projectID)
         selection = .projects
         selectedProjectID = projectID
-        do {
-            try await reloadProjectProjections()
+        switch await reloadProjectProjections() {
+        case .published, .superseded:
             return .attached
-        } catch {
+        case .failed:
             return .attachedNeedsReload
         }
     }
@@ -221,10 +331,10 @@ final class AppModel {
     func reloadAfterFolderAttachment(_ projectID: ProjectID) async -> Bool {
         selection = .projects
         selectedProjectID = projectID
-        do {
-            try await reloadProjectProjections()
+        switch await reloadProjectProjections() {
+        case .published, .superseded:
             return true
-        } catch {
+        case .failed:
             return false
         }
     }
@@ -239,6 +349,130 @@ final class AppModel {
 
     func activity(for projectID: ProjectID) -> ProjectActivityProjection? {
         projectActivities[projectID]
+    }
+
+    func projectGuidanceState(for projectID: ProjectID) -> ProjectGuidanceState {
+        projectGuidanceStates[projectID] ?? .unavailable
+    }
+
+    func projectRoot(for projectID: ProjectID) -> URL? {
+        projectRoots[projectID]
+    }
+
+    func activePhaseSelectionStatus(for projectID: ProjectID) -> ActivePhaseSelectionStatus {
+        activePhaseSelectionStatuses[projectID] ?? .idle
+    }
+
+    func setActivePhase(projectID: ProjectID, phaseID: PhaseID) async {
+        guard dashboard?.projects.first(where: { $0.id == projectID })?.activePhaseID != phaseID else {
+            return
+        }
+        switch activePhaseSelectionStatuses[projectID] ?? .idle {
+        case .saving, .savedNeedsReload:
+            return
+        case .idle, .mutationFailed:
+            break
+        }
+        activePhaseSelectionStatuses[projectID] = .saving(phaseID)
+        let requestID = requestIDGenerator()
+
+#if DEBUG
+        switch rr9ActivePhaseCaptureScenario {
+        case .busy:
+            return
+        case .mutationFailure:
+            activePhaseSelectionStatuses[projectID] = .mutationFailed(
+                FailureStatePresentation(activePhaseAgentError: .invalidReference("The selected phase is unavailable.")),
+                canReauthorize: false
+            )
+            return
+        case .unavailable:
+            activePhaseSelectionStatuses[projectID] = .mutationFailed(
+                FailureStatePresentation(activePhaseAgentError: .appUnavailable),
+                canReauthorize: false
+            )
+            return
+        case .happy, .noAlternative, .authorizationFailure, .savedRefresh,
+             .emptyPhase, .noActivePointer, .crossPhaseDetail, nil:
+            break
+        }
+#endif
+
+        let phaseName = dashboard?.projects
+            .first(where: { $0.id == projectID })?
+            .phases.first(where: { $0.id == phaseID })?
+            .name ?? phaseID.rawValue
+        do {
+            let store = self.store
+            let result = try await projectOnboarding.withAuthorizedProject(projectID: projectID) { project in
+                await AgentCommandDispatcher(
+                    store: store,
+                    projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                ).dispatch(
+                    AgentCommandEnvelope(
+                        version: AgentCommandDispatcher.commandEnvelopeVersion,
+                        requestID: requestID,
+                        projectRoot: project.canonicalRoot.path,
+                        reason: "Owner selected active phase \(phaseID.rawValue)",
+                        command: .setActivePhase(phaseID: phaseID.rawValue)
+                    ),
+                    origin: .ownerApp
+                )
+            }
+            if let error = result.error {
+                activePhaseSelectionStatuses[projectID] = .mutationFailed(
+                    FailureStatePresentation(activePhaseAgentError: error),
+                    canReauthorize: false
+                )
+                return
+            }
+            let outcome = await reloadProjectProjections(
+                context: .ownerActivePhaseCommitted(projectID, phaseID, phaseName)
+            )
+            guard outcome != .superseded else { return }
+        } catch let error as ProjectAuthorizationError {
+            activePhaseSelectionStatuses[projectID] = .mutationFailed(
+                FailureStatePresentation(activePhaseAuthorizationError: error),
+                canReauthorize: Self.canReauthorizeActivePhase(after: error)
+            )
+        } catch {
+            activePhaseSelectionStatuses[projectID] = .mutationFailed(
+                FailureStatePresentation(activePhaseAgentError: .internalFailure(error.localizedDescription)),
+                canReauthorize: false
+            )
+        }
+    }
+
+    func reloadAfterActivePhaseSelection(projectID: ProjectID) async {
+        guard case let .savedNeedsReload(phaseID, phaseName) = activePhaseSelectionStatuses[projectID] else {
+            return
+        }
+        _ = await reloadProjectProjections(
+            context: .ownerActivePhaseCommitted(projectID, phaseID, phaseName)
+        )
+    }
+
+    func reauthorizeActivePhaseProject(at folder: URL, projectID: ProjectID) async {
+        guard case let .mutationFailed(_, canReauthorize) = activePhaseSelectionStatuses[projectID],
+              canReauthorize else { return }
+        do {
+            try await projectOnboarding.reauthorizeProjectRoot(folder, for: projectID)
+            activePhaseSelectionStatuses[projectID] = .idle
+        } catch let error as ProjectAuthorizationError {
+            activePhaseSelectionStatuses[projectID] = .mutationFailed(
+                FailureStatePresentation(activePhaseAuthorizationError: error),
+                canReauthorize: true
+            )
+        } catch {
+            activePhaseSelectionStatuses[projectID] = .mutationFailed(
+                FailureStatePresentation(activePhaseAgentError: .internalFailure(error.localizedDescription)),
+                canReauthorize: true
+            )
+        }
+    }
+
+    func reloadDashboardAfterCommittedAgentCommand() async {
+        _ = await reloadProjectProjections(context: .agentCommandCommitted)
     }
 
     func scopedReviewActionFailure(for projectID: ProjectID) -> FailureStatePresentation? {
@@ -329,12 +563,7 @@ final class AppModel {
                 try await projectOnboarding.associateFirstProjectRoot(folder, for: projectID)
             }
             reviewActionStates[projectID] = nil
-            do {
-                let loadedDashboard = try await DashboardProjection.load(from: store)
-                dashboard = loadedDashboard
-                try await loadWorkspace(for: loadedDashboard)
-                try await refreshActivities(for: loadedDashboard)
-            } catch {
+            if await reloadProjectProjections() == .failed {
                 presentReviewRefreshFailure(
                     projectID: projectID,
                     detail: "Folder access was restored, but Release Radar could not refresh the latest project view. Reload the dashboard before continuing."
@@ -403,14 +632,40 @@ final class AppModel {
         )
     }
 
-    private func loadWorkspace(for dashboard: DashboardProjection) async throws {
+    private func prepareProjectProjections(
+        context: ProjectionReloadContext
+    ) async throws -> PreparedProjectProjections {
+        let dashboard = try await dashboardLoader(store)
+        var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
+        var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
+        var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
+        var projectGuidanceStates: [ProjectID: ProjectGuidanceState] = [:]
+        var projectRoots: [ProjectID: URL] = [:]
+        var selectedTicketID = self.selectedTicketID
+        let visibleProjectID = selection.projectID
+            ?? selectedProjectID
+            ?? dashboard.projects.first?.id
+            ?? DashboardSampleData.projectID
+
         for project in dashboard.projects {
             reviewInboxes[project.id] = try await reviewInboxLoader(store, project.id)
             projectActivities[project.id] = try await ProjectActivityProjection.load(from: store, projectID: project.id)
+            switch context {
+            case .ordinary:
+                let guidance = await projectOnboarding.observeProjectGuidanceContext(projectID: project.id)
+                projectGuidanceStates[project.id] = guidance.state
+                projectRoots[project.id] = guidance.projectRoot
+            case .ownerActivePhaseCommitted, .agentCommandCommitted:
+                projectGuidanceStates[project.id] = self.projectGuidanceStates[project.id] ?? .unavailable
+                projectRoots[project.id] = self.projectRoots[project.id]
+            }
             guard let board = dashboard.board(for: project.id) else { continue }
-            let preferredID = board.detail(for: selectedTicketID) == nil
-                ? board.lanes.flatMap(\.cards).first?.id
-                : selectedTicketID
+            let preferredID = board.detail(for: self.selectedTicketID) == nil
+                ? board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
+                : self.selectedTicketID
+            if project.id == visibleProjectID, let preferredID {
+                selectedTicketID = preferredID
+            }
             guard let preferredID else { continue }
             dependencyGraphs[project.id] = try await DependencyGraphProjection.load(
                 from: store,
@@ -419,15 +674,78 @@ final class AppModel {
                 selectedTicketID: preferredID
             )
         }
-        selectedReviewItemID = reviewInboxes[currentProjectID]?.openItems.first?.id
+        return PreparedProjectProjections(
+            dashboard: dashboard,
+            reviewInboxes: reviewInboxes,
+            dependencyGraphs: dependencyGraphs,
+            projectActivities: projectActivities,
+            projectGuidanceStates: projectGuidanceStates,
+            projectRoots: projectRoots,
+            selectedTicketID: selectedTicketID,
+            selectedReviewItemID: reviewInboxes[visibleProjectID]?.openItems.first?.id
+        )
     }
 
-    private func reloadProjectProjections() async throws {
-        let loadedDashboard = try await dashboardLoader(store)
-        dashboard = loadedDashboard
-        try await loadWorkspace(for: loadedDashboard)
-        try await refreshActivities(for: loadedDashboard)
+    private func publish(_ prepared: PreparedProjectProjections) {
+        dashboard = prepared.dashboard
+        reviewInboxes = prepared.reviewInboxes
+        dependencyGraphs = prepared.dependencyGraphs
+        projectActivities = prepared.projectActivities
+        projectGuidanceStates = prepared.projectGuidanceStates
+        projectRoots = prepared.projectRoots
+        selectedTicketID = prepared.selectedTicketID
+        selectedReviewItemID = prepared.selectedReviewItemID
         dashboardError = nil
+
+        for projectID in Array(activePhaseSelectionStatuses.keys) {
+            let activePhaseID = prepared.dashboard.projects.first { $0.id == projectID }?.activePhaseID
+            switch activePhaseSelectionStatuses[projectID] {
+            case let .saving(target), let .savedNeedsReload(target, _):
+                if activePhaseID == target {
+                    activePhaseSelectionStatuses[projectID] = .idle
+                }
+            case .idle, .mutationFailed, nil:
+                break
+            }
+        }
+    }
+
+    private func publishFailure(_ error: Error, context: ProjectionReloadContext) {
+        switch context {
+        case let .ownerActivePhaseCommitted(projectID, phaseID, phaseName):
+            activePhaseSelectionStatuses[projectID] = .savedNeedsReload(phaseID, phaseName)
+        case .agentCommandCommitted:
+            dashboardError = "The agent action was saved, but Release Radar could not refresh the latest project view. Reload the dashboard to see the change."
+        case .ordinary:
+            dashboardError = error.localizedDescription
+        }
+    }
+
+    private func reloadProjectProjections(
+        context: ProjectionReloadContext = .ordinary
+    ) async -> ProjectionReloadOutcome {
+        projectionReloadGeneration += 1
+        let generation = projectionReloadGeneration
+#if DEBUG
+        if case .ownerActivePhaseCommitted = context,
+           rr9ActivePhaseCaptureScenario == .savedRefresh,
+           !rr9SavedRefreshFailureConsumed {
+            rr9SavedRefreshFailureConsumed = true
+            guard generation == projectionReloadGeneration else { return .superseded }
+            publishFailure(RR9ActivePhaseCaptureError.savedRefresh, context: context)
+            return .failed
+        }
+#endif
+        do {
+            let prepared = try await prepareProjectProjections(context: context)
+            guard generation == projectionReloadGeneration else { return .superseded }
+            publish(prepared)
+            return .published
+        } catch {
+            guard generation == projectionReloadGeneration else { return .superseded }
+            publishFailure(error, context: context)
+            return .failed
+        }
     }
 
     private func refreshActivities(for dashboard: DashboardProjection) async throws {
@@ -438,6 +756,34 @@ final class AppModel {
             )
         }
     }
+
+    private static func canReauthorizeActivePhase(after error: ProjectAuthorizationError) -> Bool {
+        switch error {
+        case .bookmarkMissing, .bookmarkStale, .bookmarkResolutionFailed,
+             .securityScopeAccessDenied, .bookmarkRootMismatch:
+            true
+        case .projectNotFound, .projectRootMissing, .projectRootAlreadyAssociated,
+             .projectRootMismatch, .rootAlreadyOwned, .invalidFolder:
+            false
+        }
+    }
+
+#if DEBUG
+    private func applyRR9InitialRoute(for scenario: RR9ActivePhaseCaptureScenario) {
+        let projectID = RR9ActivePhaseCaptureFixture.projectID(for: scenario)
+        selectedProjectID = projectID
+        switch scenario {
+        case .emptyPhase:
+            selection = .phaseBoard(projectID)
+        case .crossPhaseDetail:
+            selectedTicketID = RR9ActivePhaseCaptureFixture.crossPhaseSourceTicketID
+            selection = .phaseBoard(projectID)
+        case .happy, .busy, .noAlternative, .mutationFailure, .unavailable,
+             .authorizationFailure, .savedRefresh, .noActivePointer:
+            selection = .projectOverview(projectID)
+        }
+    }
+#endif
 
     private func refreshNotificationActivity(for projectID: ProjectID) async {
         do {
@@ -495,6 +841,89 @@ final class AppModel {
             codexSnapshot = try await codexObserver.snapshot()
         } catch {
             codexSnapshot = .unavailable(reason: error.localizedDescription)
+        }
+    }
+
+    func initializeForLaunch() async {
+        await loadCodexRuntime()
+        if dashboard == nil {
+            await loadDashboard()
+        }
+        await initializeCodexPluginLifecycleForLaunch()
+    }
+
+    func initializeCodexPluginLifecycleForLaunch() async {
+        guard !didInitializeCodexPluginLifecycle else { return }
+        didInitializeCodexPluginLifecycle = true
+        guard !externalServicesSuppressed else {
+            codexPluginState = .notInstalled
+            return
+        }
+        guard let codexPluginCoordinator else {
+            codexPluginState = .failed(.integrityInvalid)
+            return
+        }
+        codexPluginOperation = .checking
+        codexPluginAnnouncement = CodexPluginOperation.checking.announcement
+        let result = await codexPluginCoordinator.performAutomaticUpdateIfEligible()
+        applyCodexPluginResult(result, operation: .checking)
+    }
+
+    func loadCodexPluginStatus(retrying: Bool = false) async {
+        guard codexPluginOperation == nil else { return }
+        guard let codexPluginCoordinator else {
+            codexPluginState = .failed(.integrityInvalid)
+            return
+        }
+        let operation: CodexPluginOperation = retrying ? .tryAgain : .checking
+        beginCodexPluginOperation(operation)
+        let result = await codexPluginCoordinator.status()
+        applyCodexPluginResult(result, operation: operation)
+    }
+
+    func installCodexPlugin() async {
+        guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
+        beginCodexPluginOperation(.install)
+        applyCodexPluginResult(await codexPluginCoordinator.install(), operation: .install)
+    }
+
+    func updateCodexPlugin() async {
+        guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
+        beginCodexPluginOperation(.update)
+        applyCodexPluginResult(await codexPluginCoordinator.update(), operation: .update)
+    }
+
+    func removeCodexPlugin() async {
+        guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
+        beginCodexPluginOperation(.remove)
+        applyCodexPluginResult(await codexPluginCoordinator.remove(), operation: .remove)
+    }
+
+    func reinstallCodexPlugin() async {
+        guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
+        beginCodexPluginOperation(.reinstall)
+        applyCodexPluginResult(await codexPluginCoordinator.reinstall(), operation: .reinstall)
+    }
+
+    private func beginCodexPluginOperation(_ operation: CodexPluginOperation) {
+        codexPluginOperation = operation
+        codexPluginSettingsMessage = nil
+        codexPluginAnnouncement = operation.announcement
+    }
+
+    private func applyCodexPluginResult(
+        _ result: CodexPluginLifecycleResult,
+        operation: CodexPluginOperation
+    ) {
+        codexPluginState = result.state
+        codexPluginOperation = nil
+        codexPluginAnnouncement = CodexPluginSettingsPresentation(state: result.state).status
+        if result.changedInstallation {
+            codexPluginSettingsMessage = "Start a new Codex task to load the plugin change."
+        } else if case .failed = result.state {
+            codexPluginSettingsMessage = CodexPluginSettingsPresentation(state: result.state).detail
+        } else if operation == .tryAgain {
+            codexPluginSettingsMessage = nil
         }
     }
 }

@@ -764,6 +764,179 @@ final class NotificationAcceptanceTests: XCTestCase {
         XCTAssertEqual(notification.notificationStatusText, "Delivery failed · Credentials missing")
     }
 
+    func testSuccessfulCallbacksBeforeDashboardRegistrationCoalesceRefreshBeforeNotificationDrain() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        let coordinator = AppNotificationCoordinator(
+            store: fixture.store,
+            dispatcher: PushoverNotificationDispatcher(
+                store: fixture.store,
+                credentials: StaticPushoverCredentialsProvider(credentials: nil),
+                transport: CountingTransport()
+            )
+        )
+        let order = RR9CoordinatorOrderRecorder()
+        await coordinator.setActivityRefreshHandler { _ in
+            await order.recordNotificationDrain()
+        }
+        let envelope = AgentCommandEnvelope(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909071")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Queue refresh before handler registration",
+            command: .requestReview(
+                id: "pre-registration-review",
+                ticketID: nil,
+                kind: "agent_request",
+                summary: "Review"
+            )
+        )
+        let result = await fixture.dispatcher.dispatch(envelope)
+        XCTAssertNil(result.error)
+
+        await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+        await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+
+        let beforeRegistration = await order.snapshot()
+        let beforeRegistrationState = try await notificationState(
+            for: "pre-registration-review",
+            store: fixture.store
+        )
+        XCTAssertEqual(beforeRegistration.refreshCount, 0)
+        XCTAssertEqual(beforeRegistration.notificationDrainCount, 0)
+        XCTAssertEqual(beforeRegistrationState, .queued)
+
+        let registration = Task {
+            await coordinator.setDashboardRefreshHandler {
+                await order.beginRefreshAndWait()
+            }
+        }
+        await order.waitUntilRefreshEntered()
+        let duringRefresh = await order.snapshot()
+        let duringRefreshState = try await notificationState(
+            for: "pre-registration-review",
+            store: fixture.store
+        )
+        XCTAssertEqual(duringRefresh.refreshCount, 1)
+        XCTAssertEqual(duringRefresh.notificationDrainCount, 0)
+        XCTAssertEqual(duringRefreshState, .queued)
+
+        await order.releaseRefresh()
+        await registration.value
+        let afterDrain = await order.snapshot()
+        let afterDrainState = try await notificationState(
+            for: "pre-registration-review",
+            store: fixture.store
+        )
+        XCTAssertEqual(afterDrain.refreshCount, 1)
+        XCTAssertEqual(afterDrain.notificationDrainCount, 1)
+        XCTAssertEqual(afterDrainState, .failed)
+    }
+
+    func testRegisteredSuccessfulCallbackRefreshesBeforeNotificationDrainAndFailedResultQueuesNothing() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        let coordinator = AppNotificationCoordinator(
+            store: fixture.store,
+            dispatcher: PushoverNotificationDispatcher(
+                store: fixture.store,
+                credentials: StaticPushoverCredentialsProvider(credentials: nil),
+                transport: CountingTransport()
+            )
+        )
+        let order = RR9CoordinatorOrderRecorder()
+        await coordinator.setActivityRefreshHandler { _ in
+            await order.recordNotificationDrain()
+        }
+        await coordinator.setDashboardRefreshHandler {
+            await order.beginRefreshAndWait()
+        }
+        let envelope = AgentCommandEnvelope(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909072")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Queue registered refresh",
+            command: .requestReview(
+                id: "registered-refresh-review",
+                ticketID: nil,
+                kind: "agent_request",
+                summary: "Review"
+            )
+        )
+        let result = await fixture.dispatcher.dispatch(envelope)
+        XCTAssertNil(result.error)
+        let callback = Task {
+            await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+        }
+
+        await order.waitUntilRefreshEntered()
+        let duringRefresh = await order.snapshot()
+        let duringRefreshState = try await notificationState(
+            for: "registered-refresh-review",
+            store: fixture.store
+        )
+        XCTAssertEqual(duringRefresh.refreshCount, 1)
+        XCTAssertEqual(duringRefresh.notificationDrainCount, 0)
+        XCTAssertEqual(duringRefreshState, .queued)
+        await order.releaseRefresh()
+        await callback.value
+        let afterDrain = await order.snapshot()
+        let afterDrainState = try await notificationState(
+            for: "registered-refresh-review",
+            store: fixture.store
+        )
+        XCTAssertEqual(afterDrain.notificationDrainCount, 1)
+        XCTAssertEqual(afterDrainState, .failed)
+
+        let failed = AgentCommandResult(entityIDs: [], auditEventID: nil, error: .appUnavailable)
+        await coordinator.dispatchAfterCommittedCommand(envelope, result: failed)
+        let afterFailedResult = await order.snapshot()
+        XCTAssertEqual(afterFailedResult.refreshCount, 1)
+        XCTAssertEqual(afterFailedResult.notificationDrainCount, 1)
+    }
+
+    func testCoordinatorRefreshesDashboardAfterBridgeCommit() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Select active phase") { connection in
+            try connection.execute(
+                "INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-1', 'phase-1')"
+            )
+        }
+        let coordinator = AppNotificationCoordinator(
+            store: fixture.store,
+            dispatcher: PushoverNotificationDispatcher(
+                store: fixture.store,
+                credentials: StaticPushoverCredentialsProvider(credentials: nil),
+                transport: CountingTransport()
+            )
+        )
+        let model = await AppModel(store: fixture.store, notificationCoordinator: coordinator)
+        await model.loadDashboard()
+        let projectID = ProjectID(rawValue: "project-1")
+        let ticketID = TicketID(rawValue: "RR-09")
+        let initiallyInProgress = await model.dashboard?
+            .board(for: projectID)?
+            .lane(.inProgress)?
+            .cards.contains { $0.id == ticketID }
+        XCTAssertEqual(initiallyInProgress, true)
+
+        let envelope = AgentCommandEnvelope(
+            version: 1,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909054")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Accept the ticket and refresh the dashboard",
+            command: .transitionTicket(ticketID: ticketID.rawValue, lane: .accepted)
+        )
+        let result = await fixture.dispatcher.dispatch(envelope)
+        XCTAssertNil(result.error)
+
+        await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+
+        let acceptedAfterCommit = await model.dashboard?
+            .board(for: projectID)?
+            .lane(.accepted)?
+            .cards.contains { $0.id == ticketID }
+        XCTAssertEqual(acceptedAfterCommit, true)
+    }
+
     private func transition(_ lane: TicketLane, requestID: String, fixture: Fixture) async throws {
         let result = await fixture.dispatcher.dispatch(.init(
             version: 1,
@@ -773,6 +946,19 @@ final class NotificationAcceptanceTests: XCTestCase {
             command: .transitionTicket(ticketID: "RR-09", lane: lane)
         ))
         XCTAssertNil(result.error)
+    }
+
+    private func notificationState(
+        for subjectID: String,
+        store: DeliveryStore
+    ) async throws -> NotificationDeliveryState? {
+        let rawState = try await store.read { connection in
+            try connection.scalarText(
+                "SELECT state FROM notification_events WHERE subject_id = ?",
+                bindings: [.text(subjectID)]
+            )
+        }
+        return rawState.flatMap(NotificationDeliveryState.init(rawValue:))
     }
 
     private struct Fixture {
@@ -810,6 +996,43 @@ final class NotificationAcceptanceTests: XCTestCase {
             registry: registry,
             dispatcher: AgentCommandDispatcher(store: store, projectRegistry: registry)
         )
+    }
+}
+
+private actor RR9CoordinatorOrderRecorder {
+    private(set) var refreshCount = 0
+    private(set) var notificationDrainCount = 0
+    private var refreshEntered = false
+    private var refreshReleased = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func beginRefreshAndWait() async {
+        refreshCount += 1
+        refreshEntered = true
+        enteredContinuations.forEach { $0.resume() }
+        enteredContinuations.removeAll()
+        guard !refreshReleased else { return }
+        await withCheckedContinuation { releaseContinuations.append($0) }
+    }
+
+    func waitUntilRefreshEntered() async {
+        guard !refreshEntered else { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+
+    func releaseRefresh() {
+        refreshReleased = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
+
+    func recordNotificationDrain() {
+        notificationDrainCount += 1
+    }
+
+    func snapshot() -> (refreshCount: Int, notificationDrainCount: Int) {
+        (refreshCount, notificationDrainCount)
     }
 }
 

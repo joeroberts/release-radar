@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.rekonlabs.ReleaseRadar.PluginLifecycleHelper</string>
+    <key>BundleProgram</key>
+    <string>Contents/Resources/ReleaseRadarPluginLifecycleHelper</string>
+    <key>MachServices</key>
+    <dict>
+        <key>2UA854NLX4.com.rekonlabs.ReleaseRadar.plugin-lifecycle</key>
+        <true/>
+    </dict>
+</dict>
+</plist>

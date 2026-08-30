@@ -197,8 +197,134 @@ final class DashboardProjectionTests: XCTestCase {
         let board = try XCTUnwrap(projection.board(for: project.id))
 
         XCTAssertEqual(project.activePhaseName, "Current delivery")
+        XCTAssertEqual(project.activePhaseID?.rawValue, "phase-active")
+        XCTAssertEqual(project.phases.map(\.id.rawValue), ["phase-active", "phase-history"])
         XCTAssertEqual(board.phaseID.rawValue, "phase-active")
         XCTAssertEqual(board.lane(.inProgress)?.cards.map(\.id.rawValue), ["ACTIVE-1"])
+    }
+
+    func testActivePhaseSelectionKeepsOptionsDeterministicAndBoardMembershipScopedAcrossRelaunch() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let projectID = ProjectID(rawValue: "phase-selection-project")
+        let projectRoot = databaseURL.deletingLastPathComponent()
+        try await store.transact(
+            actor: .init(id: "dashboard-test"),
+            reason: "Seed active phase projection fixture",
+            auditEventID: .init(rawValue: "phase-selection-seed-audit"),
+            auditScope: .init(
+                projectID: projectID,
+                entityType: .phase,
+                entityID: "phase-current"
+            )
+        ) { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('phase-selection-project', 'Phase Selection')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-current', 'phase-selection-project', 'Current')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-history', 'phase-selection-project', 'History')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-roadmap', 'phase-selection-project', 'Roadmap delivery')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-order-z', 'phase-selection-project', 'ROADMAP')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-order-a', 'phase-selection-project', 'Roadmap')")
+            try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('phase-selection-project', 'phase-current')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('CURRENT-A', 'phase-selection-project', 'phase-current', 'Current ticket keeps cross phase truth.', 'backlog')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('CURRENT-B', 'phase-selection-project', 'phase-current', 'Current ticket keeps local dependency.', 'in_progress')")
+            for index in 1...8 {
+                try connection.execute(
+                    "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, 'phase-selection-project', 'phase-roadmap', ?, 'backlog')",
+                    bindings: [.text("ROAD-B\(index)"), .text("Roadmap backlog outcome \(index).")]
+                )
+            }
+            for index in 1...3 {
+                try connection.execute(
+                    "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, 'phase-selection-project', 'phase-roadmap', ?, 'blocked')",
+                    bindings: [.text("ROAD-X\(index)"), .text("Roadmap blocked outcome \(index).")]
+                )
+            }
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('HISTORY-A', 'phase-selection-project', 'phase-history', 'Historical accepted outcome.', 'accepted')")
+            try connection.execute("INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('phase-dep-roadmap', 'phase-selection-project', 'phase-roadmap', 'phase-current')")
+            try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('dep-cross', 'phase-selection-project', 'CURRENT-A', 'ROAD-B1')")
+            try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('dep-current', 'phase-selection-project', 'CURRENT-B', 'CURRENT-A')")
+            try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('dep-roadmap', 'phase-selection-project', 'ROAD-X1', 'ROAD-B2')")
+        }
+
+        let initial = try await DashboardProjection.load(from: store)
+        let initialProject = try XCTUnwrap(initial.projects.first { $0.id == projectID })
+        let initialBoard = try XCTUnwrap(initial.board(for: projectID))
+        XCTAssertEqual(initialProject.activePhaseID?.rawValue, "phase-current")
+        XCTAssertEqual(initialProject.phases.map(\.id.rawValue), [
+            "phase-current", "phase-history", "phase-order-a", "phase-order-z", "phase-roadmap",
+        ])
+        XCTAssertEqual(Set(initialBoard.details.keys.map(\.rawValue)), ["CURRENT-A", "CURRENT-B"])
+        XCTAssertEqual(initialBoard.detail(for: .init(rawValue: "CURRENT-A"))?.requires.map(\.id.rawValue), ["ROAD-B1"])
+        let initialGraph = try await DependencyGraphProjection.load(
+            from: store,
+            projectID: projectID,
+            phaseID: .init(rawValue: "phase-current"),
+            selectedTicketID: .init(rawValue: "CURRENT-A")
+        )
+        XCTAssertEqual(Set(initialGraph.nodes.map(\.id.rawValue)), ["CURRENT-A", "CURRENT-B"])
+        XCTAssertNil(initialGraph.node(id: .init(rawValue: "ROAD-B1")))
+
+        let before = try await Self.phaseSelectionPersistenceSnapshot(store)
+        XCTAssertEqual(before.activeRows, ["phase-selection-project|phase-current"])
+        XCTAssertEqual(before.phaseDependencies, [
+            "phase-dep-roadmap|phase-selection-project|phase-roadmap|phase-current",
+        ])
+        let requestID = UUID(uuidString: "29292929-2929-4929-8929-292929292929")!
+        let result = await AgentCommandDispatcher(
+            store: store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(projectID: projectID, canonicalRoot: projectRoot, authorizedRoots: [projectRoot]),
+            ])
+        ).dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: requestID,
+            projectRoot: projectRoot.path,
+            reason: "Select roadmap projection",
+            command: .setActivePhase(phaseID: "phase-roadmap")
+        ))
+        XCTAssertNil(result.error)
+
+        let relaunchedStore = DeliveryStore(databaseURL: databaseURL)
+        let reloaded = try await DashboardProjection.load(from: relaunchedStore)
+        let reloadedProject = try XCTUnwrap(reloaded.projects.first { $0.id == projectID })
+        let reloadedBoard = try XCTUnwrap(reloaded.board(for: projectID))
+        XCTAssertEqual(reloadedProject.activePhaseID?.rawValue, "phase-roadmap")
+        XCTAssertEqual(reloadedProject.phases, initialProject.phases)
+        XCTAssertEqual(reloadedBoard.lanes.map(\.count), [8, 0, 0, 3, 0])
+        XCTAssertEqual(Set(reloadedBoard.details.keys.map(\.rawValue)), Set((1...8).map { "ROAD-B\($0)" } + (1...3).map { "ROAD-X\($0)" }))
+        XCTAssertEqual(reloadedBoard.detail(for: .init(rawValue: "ROAD-B1"))?.unlocks.map(\.id.rawValue), ["CURRENT-A"])
+        XCTAssertNil(reloadedBoard.detail(for: .init(rawValue: "CURRENT-A")))
+        let roadmapGraph = try await DependencyGraphProjection.load(
+            from: relaunchedStore,
+            projectID: projectID,
+            phaseID: .init(rawValue: "phase-roadmap"),
+            selectedTicketID: .init(rawValue: "ROAD-B1")
+        )
+        XCTAssertNil(roadmapGraph.node(id: .init(rawValue: "CURRENT-A")))
+        let after = try await Self.phaseSelectionPersistenceSnapshot(relaunchedStore)
+        XCTAssertEqual(after.phases, before.phases)
+        XCTAssertEqual(after.tickets, before.tickets)
+        XCTAssertEqual(after.phaseDependencies, before.phaseDependencies)
+        XCTAssertEqual(after.ticketDependencies, before.ticketDependencies)
+        XCTAssertEqual(after.activeRows, ["phase-selection-project|phase-roadmap"])
+
+        let auditEventID = try XCTUnwrap(result.auditEventID)
+        let selectionAuditPrefix = "\(auditEventID.rawValue)|"
+        let selectionAudits = after.auditRows.filter { $0.hasPrefix(selectionAuditPrefix) }
+        XCTAssertEqual(selectionAudits.count, 1)
+        XCTAssertEqual(
+            after.auditRows.filter { !$0.hasPrefix(selectionAuditPrefix) },
+            before.auditRows
+        )
+
+        let receiptPrefix = "\(requestID.uuidString.lowercased())|"
+        let durableReceipts = after.requestRows.filter {
+            $0.lowercased().hasPrefix(receiptPrefix)
+        }
+        XCTAssertEqual(durableReceipts.count, 1)
+        XCTAssertEqual(
+            after.requestRows.filter { !$0.lowercased().hasPrefix(receiptPrefix) },
+            before.requestRows
+        )
     }
 
     func testProjectWithMultiplePhasesAndNoExplicitActivePhaseHasNoGuessedBoard() async throws {
@@ -212,6 +338,8 @@ final class DashboardProjectionTests: XCTestCase {
         let projection = try await DashboardProjection.load(from: store)
         let project = try XCTUnwrap(projection.projects.first { $0.id.rawValue == "project-ambiguous" })
 
+        XCTAssertNil(project.activePhaseID)
+        XCTAssertEqual(project.phases.map(\.id.rawValue), ["phase-a", "phase-b"])
         XCTAssertEqual(project.activePhaseName, "No active phase")
         XCTAssertNil(projection.board(for: project.id))
         XCTAssertEqual(project.currentWorkCount, 0)
@@ -243,4 +371,74 @@ final class DashboardProjectionTests: XCTestCase {
         XCTAssertEqual(DashboardLayout.sidebarWidth(isCompact: false), 220)
         XCTAssertEqual(DashboardLayout.sidebarWidth(isCompact: true), 96)
     }
+
+    private struct PhaseSelectionPersistenceSnapshot: Equatable {
+        let phases: [String]
+        let tickets: [String]
+        let phaseDependencies: [String]
+        let ticketDependencies: [String]
+        let activeRows: [String]
+        let auditRows: [String]
+        let requestRows: [String]
+    }
+
+    private static func phaseSelectionPersistenceSnapshot(
+        _ store: DeliveryStore
+    ) async throws -> PhaseSelectionPersistenceSnapshot {
+        try await store.read { connection in
+            PhaseSelectionPersistenceSnapshot(
+                phases: try textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || name AS value FROM phases ORDER BY project_id, id"
+                ),
+                tickets: try textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || phase_id || '|' || outcome || '|' || lane AS value FROM tickets ORDER BY project_id, id"
+                ),
+                phaseDependencies: try textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || phase_id || '|' || depends_on_phase_id AS value FROM phase_dependencies ORDER BY project_id, id"
+                ),
+                ticketDependencies: try textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || ticket_id || '|' || depends_on_ticket_id AS value FROM ticket_dependencies ORDER BY project_id, id"
+                ),
+                activeRows: try textRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || phase_id AS value FROM project_active_phases ORDER BY project_id"
+                ),
+                auditRows: try textRows(
+                    connection,
+                    sql: "SELECT id || '|' || actor_id || '|' || COALESCE(thread_id, '') || '|' || thread_attribution || '|' || reason || '|' || COALESCE(project_id, '') || '|' || COALESCE(entity_type, '') || '|' || COALESCE(entity_id, '') || '|' || created_at AS value FROM audit_events ORDER BY id"
+                ),
+                requestRows: try textRows(
+                    connection,
+                    sql: "SELECT request_id || '|' || hex(request_body) || '|' || hex(result_data) || '|' || created_at AS value FROM agent_command_requests ORDER BY request_id"
+                )
+            )
+        }
+    }
+
+    private static func textRows(
+        _ connection: SQLiteConnection,
+        sql: String
+    ) throws -> [String] {
+        var values: [String] = []
+        var offset: Int64 = 0
+        while let row = try connection.row(
+            "\(sql) LIMIT 1 OFFSET ?",
+            bindings: [.integer(offset)]
+        ) {
+            guard case let .text(value)? = row["value"] else {
+                throw DashboardProjectionTestError.missingSnapshotText
+            }
+            values.append(value)
+            offset += 1
+        }
+        return values
+    }
+}
+
+private enum DashboardProjectionTestError: Error {
+    case missingSnapshotText
 }

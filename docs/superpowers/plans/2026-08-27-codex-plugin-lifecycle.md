@@ -454,8 +454,9 @@ The accepted direct handshake for that exact binary supplies protocol
 schema. Start one fresh Codex task and require JSONL `item.started` plus
 `item.completed` for one `mcp_tool_call` whose server is `release_radar`, tool
 is `release_radar_transition_ticket`, and arguments are `{}`. Completion must
-be `failed` with a nonempty schema/argument-validation error, no result, and no
-Release Radar action. This expected non-mutating failure proves callability;
+be `failed` with either a nonempty schema/argument-validation error or a Codex
+approval-policy rejection that prevents server execution, with no result and
+no Release Radar action. This expected non-mutating event pair proves callability;
 agent prose alone is not evidence. No forced-discrepancy or second stochastic
 agent evaluation is part of this gate. Accepted cumulative evidence already
 proves the fixed exact-legacy removal, pinned absence, and restoration sequence;
@@ -545,14 +546,22 @@ only after the postcondition matches. Prove timeout, malformed, contradictory,
 external removal, modification, repeated observation, and remove-success/
 add-failure behavior preserve receipt and never silently retry.
 
-Add first-Install cases for an absent MCP entry, the exact recognized legacy
-entry, and an unrecognized same-name entry. Require managed plugin
+Add first-Install cases for an absent bundled MCP entry, the exact recognized
+direct underscore entry, an unrecognized underscore entry, the exact recognized
+legacy hyphenated entry, and an unrecognized legacy entry. Require managed plugin
 version/digest verification, an initially absent branch that skips migration,
-and an immediate fresh exact-recognition read before legacy removal only for
-the initially exact branch. Require bundled `release_radar` MCP verification
+full direct-entry near-miss coverage for disabled state, disabled reason,
+command, arguments, working directory, and environment fields, classification
+of both direct and legacy entries before mutation,
+an immediate fresh exact-recognition read before direct-entry removal and
+absence verification before plugin add, and an immediate fresh exact-recognition
+read before legacy removal only for the initially exact branch. Require bundled
+`release_radar` MCP verification
 before and after any legacy removal and before `managedInstalled`, and
 rollback that removes only plugin/marketplace state introduced by the attempt
 and restores the exact legacy entry only after the attempt issued removal.
+Require the same ownership-aware rollback for the exact direct entry: restore
+it only after this attempt removed it and only while the key remains absent.
 Explicitly prove: removal
 failure with the exact entry still present causes no add; removal failure with
 the entry absent performs the fixed add and exact verification; unrecognized
@@ -613,8 +622,11 @@ wrong-identity peer. Require:
   invocation;
 - fixed Task 1 argv only; no shell, caller input, `$PATH`, or inherited
   environment; neutral cwd; 15-second timeout; 1 MiB stdout/stderr bounds;
-- strict parsing of the exact legacy `mcp get` contract; fixed `mcp remove` and
-  rollback `mcp add` vectors; absent-entry and unrecognized-entry behavior;
+- strict parsing of both exact direct `release_radar` and legacy `release-radar`
+  `mcp get` contracts; fixed remove and rollback-add vectors for each; all
+  enabled/disabled-reason/command/arguments/cwd/environment near misses;
+  dual-entry classification before mutation; ownership-aware restoration;
+  absent-entry and unrecognized-entry behavior;
   no direct configuration access and no second MCP alias;
 - dedicated CLI process group, bounded TERM/KILL of the exact owned group, and
   direct-child reap on timeout, output overflow, unregister, and abnormal exit;
@@ -654,10 +666,17 @@ performs explicit remove then add and reports partial failure without claiming
 atomicity. The client registers/reaches the agent only for owner Install or an
 already-managed launch check and pins the helper identity.
 
-On first Install only, accept an absent legacy `release-radar` MCP entry or the
-exact recognized legacy entry and retain that observation only for the duration
-of the operation. Require bundled key `release_radar` exactly absent before any
-mutation; a present, malformed, or ambiguous result is a conflict. Install and
+On first Install only, accept bundled key `release_radar` as absent or as the
+exact enabled STDIO entry with no disabled reason, the packaged AgentTools
+command, empty arguments, null working directory, and empty or null environment
+fields. Contradictory fields fail closed. Classify both the direct and legacy
+entries before any mutation. Freshly reread and remove only that exact direct
+entry through the supported
+CLI, then verify absence before plugin installation. Changed or unrecognized
+direct state is a conflict. Restore the direct entry on later failure only if
+this operation removed it and the key remains absent. Separately accept an
+absent legacy `release-radar` MCP entry or the exact recognized legacy entry and
+retain that observation only for the duration of the operation. Install and
 verify the managed plugin, including bundled
 server `release_radar`. If the legacy entry was initially absent, skip migration
 and verify the final bundled-server postcondition. If it was initially exact,
@@ -782,3 +801,131 @@ After all six GO decisions, update only `docs/delivery/progress.md` with the
 evidence enumerated in the product brief and the next eligible task. Stop when
 the approved lifecycle outcome is accepted; do not add adjacent plugin,
 runtime, UI, or distribution work.
+
+### Task 3: Correct the owner-requested repository handoff and observation copy
+
+**Current amendment:** the installed `0.1.2` live proof exposed a self-
+referential copied prompt, unscoped project-status copy, a guidance-only
+`upsert_phase` used solely to obtain an audit, and mutation-before-write ordering
+that refreshed the UI before the guidance existed. The active correction is
+`0.1.3`; `docs/delivery/progress.md` remains the status source of truth.
+
+**Files:**
+- Modify: `ReleaseRadar.xcodeproj/project.pbxproj` (`ReleaseRadar` Debug and Release `MARKETING_VERSION`)
+- Modify: `ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json`
+- Modify: `ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md`
+- Add: `ReleaseRadarCore/Onboarding/ProjectGuidanceInspection.swift`
+- Modify: `ReleaseRadarCore/Onboarding/ProjectOnboarding.swift`
+- Modify: `ReleaseRadar/App/AppModel.swift`
+- Modify: `ReleaseRadar/Projects/OnboardingView.swift`
+- Modify: `ReleaseRadar/Projects/ProjectOverviewView.swift`
+- Modify: `ReleaseRadar/Navigation/SidebarView.swift`
+- Modify: `ReleaseRadar/Shared/FailureStateView.swift`
+- Test: `ReleaseRadarTests/ProjectGuidanceAcceptanceTests.swift`
+- Test: `ReleaseRadarTests/OnboardingAcceptanceTests.swift`
+- Test: `ReleaseRadarTests/FailureStatePresentationTests.swift`
+- Test: `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift` (`testBundledPackageMatchesAppVersionAndCanonicalDigest`)
+- Test: `ReleaseRadarTests/AppRouteTests.swift` (`testPluginLaunchUpdateRunsOnceAndSuppressedLaunchNeverCallsHelper`)
+
+**Boundary:** Codex alone writes owner-authorized repository documentation.
+Release Radar continues to validate, persist, and audit only the existing typed
+MCP mutations. Do not add an MCP operation or read API, app repository-write
+authority, lifecycle-helper authority, live observer, HTTP, polling,
+synchronization/reconciliation framework, route/mockup, or multi-user flow.
+For guidance-only work, Codex refuses symlink/non-regular instruction or ledger
+paths, writes and reads back only the managed block plus an absent-only truthful
+pending-audit ledger, then records the written `AGENTS.md` using the existing
+ticketless `release_radar_add_evidence` mutation. It never uses `upsert_phase`
+merely to obtain a handoff audit. `appUnavailable` preserves the repo-ahead
+pending state and asks the owner to open Release Radar; `outcomeUnknown` replays
+the complete original request verbatim, including the same evidence ID and UUID
+`requestID`, using the existing idempotent receipt. A post-audit ledger failure
+is repaired without another mutation. The existing post-mutation reload then
+observes the already-written guidance.
+The active correction changes the shipped app and plugin version together from
+`0.1.2` to `0.1.3`; it uses the existing clean-managed automatic update at launch or
+the existing explicit Update action as the only live installation path. It does
+not add a same-version overwrite, updater, lifecycle operation, or CLI/config
+path.
+
+- [ ] **Step 1: Write focused RED acceptance tests**
+
+Require `CodexPromptHandoff.prompt` and the packaged skill to operate in the
+current repository-rooted task, invoke `$release-radar:release-radar` exactly,
+and never create or delegate another task. For an
+owner-authorized initialization, update, or repair, require preservation of all
+unrelated `AGENTS.md` content, safe management of the exact versioned Release
+Radar block, and creation of `docs/delivery/progress.md` only when absent; require direct
+repository readback plus a successful audited ticketless evidence result, and
+require discrepancy reporting instead of an invented MCP API. Require the
+packaged skill to fail closed on symlink/non-regular targets, persist/read back
+guidance before evidence, preserve a pending audit on `appUnavailable`, and
+replay the complete identical evidence request after `outcomeUnknown`; forbid
+guidance-only `upsert_phase` and require ledger repair without a second
+mutation. In
+`FailureStatePresentationTests`, require unavailable observation
+copy to say **Codex desktop observation unavailable** and reject **Codex
+unavailable**. Require both ReleaseRadar `MARKETING_VERSION` configurations and
+the plugin manifest to be `0.1.3`, update only the established bundled-package
+digest expectation, and prove the existing clean managed `0.1.2` to shipped
+`0.1.3` launch-update case (or existing Update action) reaches the existing
+verified update path. Run the focused suites and observe RED.
+
+- [ ] **Step 2: Implement the minimum copied prompt, skill, and copy correction**
+
+Change only the installed plugin skill, copied onboarding prompt, read-only
+guidance inspector/presentation, and shared unavailable-observation presentation
+needed by the RED assertions. The skill must preserve existing instructions,
+manage only its exact versioned block, create the truthful pending ledger only
+when absent and the owner explicitly asks, write/read back before the exact
+ticketless evidence mutation, and use no delivery-state mutation for the
+guidance-only handoff. It reports unpaired readback/audit results. Keep the app and lifecycle
+helper without repository-write authority. Change the two ReleaseRadar
+`MARKETING_VERSION` values and the plugin manifest version together to `0.1.3`;
+then recompute only the established bundled package-digest expectation. Preserve
+all lifecycle semantics, including clean-managed-only automatic update, the
+existing explicit Update action, repo-ahead `appUnavailable` handling,
+`outcomeUnknown` complete-request replay, idempotent request receipts, and
+post-audit ledger repair without a distinct mutation.
+
+- [ ] **Step 3: Run focused GREEN and package checks**
+
+Run the same focused suites with a fresh temporary DerivedData path. Verify the
+packaged three-file plugin inventory/digest assertions still pass and that no
+new MCP schema, operation, or protected runtime mutation surface was added.
+
+- [ ] **Step 4: Perform the live owner handoff proof**
+
+Build, sign, and install the bounded correction. In one Codex task the owner
+already rooted at an authorized repository, copy the app prompt and invoke the
+installed skill in that same task. Request initialization: it writes and reads back applicable
+guidance and the absent-only pending ledger, sends ticketless evidence for the
+actual `AGENTS.md`, records the returned audit ID, and reaches the scoped
+current-guidance state through the existing refresh. Confirm `appUnavailable`
+preserves the pending repository handoff and directs the owner to open the app;
+confirm `outcomeUnknown` replays the complete identical request after
+availability; confirm a post-audit ledger failure is repaired without a second
+mutation. Confirm Settings
+reports unavailable **desktop observation**, not unavailable Codex.
+Starting from the clean managed `0.1.2` plugin, install the signed `0.1.3`
+application through the existing clean-managed launch update or the existing
+Update action, verify the `0.1.3` postcondition and digest, then run the handoff
+in that same already-rooted task. Do not add a new installation/update path.
+
+- [ ] **Step 5: Independent acceptance and ledger evidence**
+
+Fresh Code Review, QA/Test, Architecture, Security/Privacy, TPM, and Delivery
+Management independently review this correction. Record focused RED/GREEN,
+package/signing, current-task readback/audit proof, Settings observation copy,
+scope confirmation, and the next eligible work in `docs/delivery/progress.md`.
+
+### 2026-08-29 live-acceptance amendment
+
+Before Step 4 can pass, correct the false-current state exposed by Rekon
+Pursuit. Release Radar must require the exact managed block plus its existing
+ticketless handoff evidence record, show **handoff incomplete** with a copied
+repair prompt when only the block exists, and let the installed skill complete
+that evidence mutation without rewriting an already-matching file. Ship the
+coordinated correction as `0.1.4` from clean managed `0.1.3`, then repeat only
+the focused tests, install checks, and the same Rekon Pursuit live handoff. No
+new operation, schema, service, watcher, or reconciler is part of this amendment.

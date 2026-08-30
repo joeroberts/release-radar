@@ -1,0 +1,23 @@
+{
+  "name": "release-radar",
+  "version": "0.1.5",
+  "description": "Keep durable Release Radar tracking and typed delivery state consistent.",
+  "author": {
+    "name": "Rekon Labs"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Release Radar",
+    "shortDescription": "Track delivery with Release Radar",
+    "longDescription": "Connect Codex to Release Radar to read and update durable local delivery state.",
+    "developerName": "Rekon Labs",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Show my current Release Radar delivery status.",
+      "List tickets that need review in Release Radar.",
+      "Summarize blockers in Release Radar."
+    ]
+  }
+}

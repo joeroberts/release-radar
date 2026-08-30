@@ -42,14 +42,34 @@ enum CodexPromptCopyResult: Equatable, Sendable {
 }
 
 struct CodexPromptHandoff: Sendable {
-    static let prompt = "Define the current Release Radar tracking state for this project. Through Release Radar's existing typed inbound bridge, create or update the active phase and the work currently in scope. Record truthful ticket outcomes, lanes, dependencies, blockers, evidence, and Codex links only when known. Do not create or edit repository dashboard files, do not infer canonical state from arbitrary Markdown, and send uncertain items to Needs Review instead of guessing."
+    private static let setupPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. You are authorizing this task to create or update only the Release Radar managed guidance block in the authorized repository's root AGENTS.md, and to create docs/delivery/progress.md only if it is absent, while preserving every other instruction and all existing delivery content. Follow the skill's repository handoff: write and read back the permitted repository guidance first, record that exact AGENTS.md with the existing ticketless Release Radar evidence mutation, preserve the complete request across uncertain outcomes, and report any pending audit or discrepancy instead of guessing."
+    private static let auditRepairPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. Release Radar reports this repository's guidance handoff incomplete: the v1 managed block already matches, but its required ticketless evidence record is absent. You are authorizing this task to read back the exact root AGENTS.md and complete the handoff through the skill's audited repair path without changing unrelated repository instructions, delivery documentation, or delivery state. Preserve the complete request across uncertain outcomes and report any pending audit or discrepancy instead of guessing."
     static let copyButtonAccessibilityLabel = "Copy Codex prompt"
     static let copyButtonAccessibilityIdentifier = "onboarding-copy-codex-prompt"
     static let clipboardDisclosure = "Only the prompt is copied. It remains on the clipboard until replaced."
 
+    static func prompt(for state: ProjectGuidanceState, projectRoot: URL) -> String {
+        let root = projectRoot.standardizedFileURL.resolvingSymlinksInPath().path
+        let rootBinding = "The exact Release Radar-authorized repository root is `\(root)`. Confirm that this Codex task's canonical repository root exactly matches it. If it does not match, stop before writing any file or calling Release Radar and tell the owner to open a task rooted at that exact folder."
+        let handoff = if case .handoffIncomplete = state { auditRepairPrompt } else { setupPrompt }
+        return rootBinding + "\n\n" + handoff
+    }
+
     @MainActor
-    static func copy(using writer: @MainActor (String) -> Bool) -> CodexPromptCopyResult {
+    static func copy(
+        prompt: String,
+        using writer: @MainActor (String) -> Bool
+    ) -> CodexPromptCopyResult {
         writer(prompt) ? .copied : .failed
+    }
+
+    @MainActor
+    static func copy(
+        for state: ProjectGuidanceState,
+        projectRoot: URL,
+        using writer: @MainActor (String) -> Bool
+    ) -> CodexPromptCopyResult {
+        copy(prompt: prompt(for: state, projectRoot: projectRoot), using: writer)
     }
 
     @MainActor
@@ -304,6 +324,10 @@ struct OnboardingView: View {
                 recognizedArtifactPreview(importPreview)
             }
 
+            let guidance = ProjectGuidancePresentation(state: preview.projectGuidanceState)
+            LabeledContent("Release Radar guidance", value: guidance.status)
+                .accessibilityIdentifier("onboarding-project-guidance-status")
+
             let confirmation = InitializeProjectConfirmation(
                 projectName: projectName,
                 folder: preview.selectedFolder
@@ -335,13 +359,20 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             GroupBox("Continue in Codex") {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Project tracking is saved. Paste this prompt into a Codex task rooted at the selected project folder.")
+                    Text("Project tracking is saved. Paste this prompt into a Codex task rooted at this exact project folder.")
                         .foregroundStyle(.secondary)
-                    Text(CodexPromptHandoff.prompt)
-                        .font(.callout)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("onboarding-codex-prompt")
+                    if let projectRoot = preview?.selectedFolder {
+                        Text(projectRoot.path)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .accessibilityIdentifier("onboarding-authorized-project-root")
+                        Text(CodexPromptHandoff.prompt(for: projectGuidanceState, projectRoot: projectRoot))
+                            .font(.callout)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("onboarding-codex-prompt")
+                    }
 
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Button(action: copyCodexPrompt) {
@@ -717,9 +748,22 @@ struct OnboardingView: View {
 
     private func copyCodexPrompt() {
         promptCopyResult = nil
-        let result = CodexPromptHandoff.copy(using: pasteboardWriter)
+        guard let projectRoot = preview?.selectedFolder else {
+            promptCopyResult = .failed
+            AccessibilityNotification.Announcement(CodexPromptCopyResult.failed.accessibilityAnnouncement).post()
+            return
+        }
+        let result = CodexPromptHandoff.copy(
+            for: projectGuidanceState,
+            projectRoot: projectRoot,
+            using: pasteboardWriter
+        )
         promptCopyResult = result
         AccessibilityNotification.Announcement(result.accessibilityAnnouncement).post()
+    }
+
+    private var projectGuidanceState: ProjectGuidanceState {
+        preview?.projectGuidanceState ?? .missing
     }
 
     private func openExisting(_ projectID: ProjectID) {

@@ -40,6 +40,159 @@ final class AppRouteTests: XCTestCase {
         ))
     }
 
+    func testXCTestHostPreparationCreatesFreshPIDScopedStoreAndOverridesCapture() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-XCTestHostPreparation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let xctestEnvironment = ["XCTestConfigurationFilePath": "/tmp/ReleaseRadarTests.xctestconfiguration"]
+        let emptyXCTestEnvironment = ["XCTestConfigurationFilePath": ""]
+        let firstPID: Int32 = 4_201
+        let secondPID: Int32 = 4_202
+        let expectedFirstURL = root.standardizedFileURL
+            .appendingPathComponent("ReleaseRadar-XCTestHost-\(firstPID)", isDirectory: true)
+            .appendingPathComponent("release-radar.sqlite", isDirectory: false)
+            .standardizedFileURL
+
+        XCTAssertEqual(
+            AppLaunchConfiguration.hostMode(
+                environment: [:],
+                temporaryDirectory: root,
+                processIdentifier: firstPID
+            ),
+            .application
+        )
+        guard case let .xctestHost(databaseURL: firstDatabaseURL, store: _) = AppLaunchConfiguration.prepareXCTestHost(
+            environment: xctestEnvironment,
+            temporaryDirectory: root,
+            processIdentifier: firstPID
+        ) else {
+            return XCTFail("Expected the fresh XCTest host store")
+        }
+        guard case let .xctestHost(databaseURL: secondDatabaseURL, store: _) = AppLaunchConfiguration.prepareXCTestHost(
+            environment: emptyXCTestEnvironment,
+            temporaryDirectory: root,
+            processIdentifier: secondPID
+        ) else {
+            return XCTFail("Expected the empty XCTest value to create an isolated store")
+        }
+        XCTAssertEqual(firstDatabaseURL, expectedFirstURL)
+        XCTAssertNotEqual(firstDatabaseURL.deletingLastPathComponent(), root)
+        XCTAssertNotEqual(firstDatabaseURL, secondDatabaseURL)
+        XCTAssertEqual(secondDatabaseURL.deletingLastPathComponent().lastPathComponent, "ReleaseRadar-XCTestHost-\(secondPID)")
+        XCTAssertEqual(expectedFirstURL.lastPathComponent, "release-radar.sqlite")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: expectedFirstURL.deletingLastPathComponent().path))
+        XCTAssertTrue(AppLaunchConfiguration.isXCTestHost(environment: xctestEnvironment))
+        XCTAssertTrue(AppLaunchConfiguration.isXCTestHost(environment: emptyXCTestEnvironment))
+        XCTAssertFalse(AppLaunchConfiguration.isXCTestHost(environment: [:]))
+        XCTAssertTrue(AppLaunchConfiguration.externalServicesSuppressed(
+            arguments: ["--rr10-capture", "--rr10-empty-store"],
+            isDebugBuild: true
+        ))
+    }
+
+    func testXCTestHostPreparationRejectsExistingDirectoryWithoutInvokingStoreFactory() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-XCTestHostExistingDirectory-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let processIdentifier: Int32 = 8_451
+        let pidDirectory = root.standardizedFileURL
+            .appendingPathComponent("ReleaseRadar-XCTestHost-\(processIdentifier)", isDirectory: true)
+        try FileManager.default.createDirectory(at: pidDirectory, withIntermediateDirectories: true)
+        let staleSentinel = pidDirectory.appendingPathComponent("stale-sentinel")
+        let sentinelContents = Data("stale XCTest state".utf8)
+        try sentinelContents.write(to: staleSentinel)
+        let expectedURL = pidDirectory
+            .appendingPathComponent("release-radar.sqlite", isDirectory: false)
+            .standardizedFileURL
+
+        let preparation = AppLaunchConfiguration.prepareXCTestHost(
+            environment: ["XCTestConfigurationFilePath": "present"],
+            temporaryDirectory: root,
+            processIdentifier: processIdentifier,
+            storeFactory: { _ in
+                XCTFail("The store factory must not run for a pre-existing PID directory")
+                fatalError("Unexpected store factory invocation")
+            }
+        )
+
+        guard case let .xctestHostUnavailable(databaseURL) = preparation else {
+            return XCTFail("Expected the existing PID directory to keep the host unavailable")
+        }
+        XCTAssertEqual(databaseURL, expectedURL)
+        XCTAssertEqual(expectedURL.lastPathComponent, "release-radar.sqlite")
+        XCTAssertEqual(try Data(contentsOf: staleSentinel), sentinelContents)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: pidDirectory.path))
+    }
+
+    func testXCTestHostPreparationRejectsExistingFileWithoutInvokingStoreFactory() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-XCTestHostExistingFile-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let processIdentifier: Int32 = 8_452
+        let pidEntry = root.standardizedFileURL
+            .appendingPathComponent("ReleaseRadar-XCTestHost-\(processIdentifier)", isDirectory: true)
+        let fileContents = Data("PID entry is a file".utf8)
+        try fileContents.write(to: pidEntry)
+        let expectedURL = pidEntry
+            .appendingPathComponent("release-radar.sqlite", isDirectory: false)
+            .standardizedFileURL
+
+        let preparation = AppLaunchConfiguration.prepareXCTestHost(
+            environment: ["XCTestConfigurationFilePath": "present"],
+            temporaryDirectory: root,
+            processIdentifier: processIdentifier,
+            storeFactory: { _ in
+                XCTFail("The store factory must not run for a pre-existing PID file")
+                fatalError("Unexpected store factory invocation")
+            }
+        )
+
+        guard case let .xctestHostUnavailable(databaseURL) = preparation else {
+            return XCTFail("Expected the existing PID file to keep the host unavailable")
+        }
+        XCTAssertEqual(databaseURL, expectedURL)
+        XCTAssertEqual(try Data(contentsOf: pidEntry), fileContents)
+    }
+
+    func testXCTestHostPreparationRejectsExistingSymlinkWithoutInvokingStoreFactory() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-XCTestHostSymlink-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let processIdentifier: Int32 = 8_453
+        let targetDirectory = root.appendingPathComponent("symlink-target", isDirectory: true)
+        try FileManager.default.createDirectory(at: targetDirectory, withIntermediateDirectories: true)
+        let targetSentinel = targetDirectory.appendingPathComponent("target-sentinel")
+        let targetContents = Data("symlink target remains untouched".utf8)
+        try targetContents.write(to: targetSentinel)
+        let pidDirectory = root.standardizedFileURL
+            .appendingPathComponent("ReleaseRadar-XCTestHost-\(processIdentifier)", isDirectory: true)
+        try FileManager.default.createSymbolicLink(at: pidDirectory, withDestinationURL: targetDirectory)
+        let expectedURL = pidDirectory
+            .appendingPathComponent("release-radar.sqlite", isDirectory: false)
+            .standardizedFileURL
+
+        let preparation = AppLaunchConfiguration.prepareXCTestHost(
+            environment: ["XCTestConfigurationFilePath": "present"],
+            temporaryDirectory: root,
+            processIdentifier: processIdentifier,
+            storeFactory: { _ in
+                XCTFail("The store factory must not run for a pre-existing PID symlink")
+                fatalError("Unexpected store factory invocation")
+            }
+        )
+
+        guard case let .xctestHostUnavailable(databaseURL) = preparation else {
+            return XCTFail("Expected the existing PID symlink to keep the host unavailable")
+        }
+        XCTAssertEqual(databaseURL, expectedURL)
+        XCTAssertEqual(try Data(contentsOf: targetSentinel), targetContents)
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: pidDirectory.path), targetDirectory.path)
+    }
+
     @MainActor
     func testSuppressedCaptureLoadLeavesQueuedNotificationUntouched() async throws {
         let directory = FileManager.default.temporaryDirectory
@@ -427,19 +580,21 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     func testCodexPromptCopyWritesExactApprovedBytesAndReturnsAccessibleSuccess() throws {
-        let expectedPrompt = "Define the current Release Radar tracking state for this project. Through Release Radar's existing typed inbound bridge, create or update the active phase and the work currently in scope. Record truthful ticket outcomes, lanes, dependencies, blockers, evidence, and Codex links only when known. Do not create or edit repository dashboard files, do not infer canonical state from arbitrary Markdown, and send uncertain items to Needs Review instead of guessing."
+        let projectRoot = URL(fileURLWithPath: "/tmp/Delivery Workspace", isDirectory: true)
         let pasteboard = NSPasteboard(name: .init("release-radar-tests-\(UUID().uuidString)"))
         pasteboard.clearContents()
         addTeardownBlock { pasteboard.clearContents() }
 
-        let result = CodexPromptHandoff.copy { prompt in
+        let result = CodexPromptHandoff.copy(for: .missing, projectRoot: projectRoot) { prompt in
             pasteboard.clearContents()
             return pasteboard.setString(prompt, forType: .string)
         }
 
         let copied = try XCTUnwrap(pasteboard.string(forType: .string))
-        XCTAssertEqual(Data(copied.utf8), Data(expectedPrompt.utf8))
-        XCTAssertEqual(Data(copied.utf8), Data(CodexPromptHandoff.prompt.utf8))
+        XCTAssertEqual(
+            Data(copied.utf8),
+            Data(CodexPromptHandoff.prompt(for: .missing, projectRoot: projectRoot).utf8)
+        )
         XCTAssertEqual(result, .copied)
         XCTAssertEqual(result.announcement, "Codex prompt copied")
         XCTAssertEqual(result.accessibilityAnnouncement, "Codex prompt copied")
@@ -447,13 +602,129 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(CodexPromptHandoff.copyButtonAccessibilityIdentifier, "onboarding-copy-codex-prompt")
         XCTAssertTrue(CodexPromptHandoff.clipboardDisclosure.localizedCaseInsensitiveContains("only the prompt"))
         XCTAssertTrue(CodexPromptHandoff.clipboardDisclosure.localizedCaseInsensitiveContains("until replaced"))
-        XCTAssertFalse(copied.contains("/tmp/Delivery Workspace"))
+        XCTAssertTrue(copied.contains(projectRoot.path))
+        XCTAssertTrue(copied.contains("stop before writing any file or calling Release Radar"))
+    }
+
+    @MainActor
+    func testCodexPromptCopyUsesRepairPromptForIncompleteHandoff() {
+        var copiedPrompt: String?
+        let projectRoot = URL(fileURLWithPath: "/Users/example/RekonDesignSystem", isDirectory: true)
+
+        let result = CodexPromptHandoff.copy(
+            for: .handoffIncomplete(version: 1),
+            projectRoot: projectRoot
+        ) { prompt in
+            copiedPrompt = prompt
+            return true
+        }
+
+        XCTAssertEqual(result, .copied)
+        XCTAssertEqual(
+            copiedPrompt,
+            CodexPromptHandoff.prompt(for: .handoffIncomplete(version: 1), projectRoot: projectRoot)
+        )
+        XCTAssertTrue(copiedPrompt?.contains(projectRoot.path) == true)
+        XCTAssertTrue(copiedPrompt?.contains("stop before writing any file or calling Release Radar") == true)
+    }
+
+    func testProjectGuidancePresentationOffersOwnerMediatedRecoveryOnlyWhenNeeded() {
+        XCTAssertEqual(ProjectGuidancePresentation(state: .current(version: 1)).status, "Release Radar guidance current · v1")
+        XCTAssertNil(ProjectGuidancePresentation(state: .current(version: 1)).actionTitle)
+        XCTAssertEqual(
+            ProjectGuidancePresentation(state: .handoffIncomplete(version: 1)).status,
+            "Release Radar guidance handoff incomplete · v1"
+        )
+        XCTAssertEqual(
+            ProjectGuidancePresentation(state: .handoffIncomplete(version: 1)).actionTitle,
+            "Copy repair prompt"
+        )
+        XCTAssertEqual(ProjectGuidancePresentation(state: .missing).status, "Release Radar guidance not installed")
+        XCTAssertEqual(ProjectGuidancePresentation(state: .missing).actionTitle, "Copy setup prompt")
+        XCTAssertEqual(
+            ProjectGuidancePresentation(state: .outdated(installed: 0, current: 1)).status,
+            "Release Radar guidance update required · v0 → v1"
+        )
+        XCTAssertEqual(
+            ProjectGuidancePresentation(state: .outdated(installed: 0, current: 1)).actionTitle,
+            "Copy update prompt"
+        )
+        XCTAssertEqual(ProjectGuidancePresentation(state: .needsRepair).status, "Release Radar guidance needs repair")
+        XCTAssertEqual(ProjectGuidancePresentation(state: .unavailable).status, "Release Radar guidance unavailable")
+    }
+
+    @MainActor
+    func testAppModelRefreshesReadOnlyProjectGuidanceAfterFolderContentChanges() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-GuidanceRoute-\(UUID().uuidString)", isDirectory: true)
+        let folder = directory.appendingPathComponent("attached-folder", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let agentsURL = folder.appendingPathComponent("AGENTS.md")
+        let outdated = "# Owner instructions\n\n<!-- release-radar-guidance:v0:start -->\nold\n<!-- release-radar-guidance:end -->\n"
+        try Data(outdated.utf8).write(to: agentsURL)
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await seedAttachmentRouteProjects(in: store)
+        let bookmarks = RouteBookmarkStore()
+        let model = AppModel(
+            store: store,
+            projectOnboarding: FolderProjectOnboarding(store: store, bookmarkStore: bookmarks),
+            externalServicesSuppressed: true
+        )
+
+        await model.loadDashboard()
+        _ = try await model.attachFolder(folder, to: attachmentRouteProjectID)
+
+        XCTAssertEqual(
+            model.projectGuidanceState(for: attachmentRouteProjectID),
+            .outdated(installed: 0, current: 1)
+        )
+        XCTAssertEqual(model.projectRoot(for: attachmentRouteProjectID), folder)
+        XCTAssertEqual(try String(contentsOf: agentsURL, encoding: .utf8), outdated)
+
+        let current = "# Owner instructions\n\n\(ProjectGuidanceInspection.managedBlock)\n"
+        try Data(current.utf8).write(to: agentsURL)
+        await model.loadDashboard()
+
+        XCTAssertEqual(
+            model.projectGuidanceState(for: attachmentRouteProjectID),
+            .handoffIncomplete(version: 1)
+        )
+
+        let handoff = await AgentCommandDispatcher(
+            store: store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(
+                    projectID: attachmentRouteProjectID,
+                    canonicalRoot: folder,
+                    authorizedRoots: [folder]
+                ),
+            ])
+        ).dispatch(.init(
+            version: 1,
+            requestID: UUID(),
+            projectRoot: folder.path,
+            reason: "Complete Release Radar repository handoff",
+            command: .addEvidence(
+                id: ProjectGuidanceInspection.handoffEvidenceIDPrefix + UUID().uuidString,
+                ticketID: nil,
+                path: agentsURL.path
+            )
+        ))
+        XCTAssertNil(handoff.error)
+        XCTAssertNotNil(handoff.auditEventID)
+
+        await model.loadDashboard()
+
+        XCTAssertEqual(model.projectGuidanceState(for: attachmentRouteProjectID), .current(version: 1))
+        XCTAssertEqual(try String(contentsOf: agentsURL, encoding: .utf8), current)
+        XCTAssertEqual(bookmarks.accessStarts, bookmarks.accessStops)
     }
 
     @MainActor
     func testCodexPromptCopyFailureReplacesPriorSuccessWithoutReportingCopied() {
-        let firstResult = CodexPromptHandoff.copy { _ in true }
-        let secondResult = CodexPromptHandoff.copy { _ in false }
+        let firstResult = CodexPromptHandoff.copy(prompt: "first") { _ in true }
+        let secondResult = CodexPromptHandoff.copy(prompt: "second") { _ in false }
 
         XCTAssertEqual(firstResult, .copied)
         XCTAssertEqual(secondResult, .failed)
@@ -839,6 +1110,1644 @@ final class AppRouteTests: XCTestCase {
         }
     }
 
+    func testPluginSettingsActionHierarchyAndBusyCopy() {
+        XCTAssertEqual(CodexPluginSettingsPresentation(state: .notInstalled).actions, [.install])
+        XCTAssertEqual(CodexPluginSettingsPresentation(state: .installed(version: "0.1.0")).actions, [.remove])
+        XCTAssertEqual(
+            CodexPluginSettingsPresentation(state: .updateAvailable(installed: "0.0.9", shipped: "0.1.0")).actions,
+            [.update, .remove]
+        )
+        XCTAssertEqual(CodexPluginSettingsPresentation(state: .modified(version: "0.1.0")).actions, [.reinstall, .remove])
+        XCTAssertEqual(CodexPluginSettingsPresentation(state: .needsRepair).actions, [.reinstall, .remove])
+        XCTAssertEqual(CodexPluginSettingsPresentation(state: .failed(.timeout)).actions, [.tryAgain])
+        XCTAssertEqual(CodexPluginSettingsPresentation(state: .checking).actions, [])
+        XCTAssertEqual(
+            CodexPluginSettingsPresentation(state: .installed(version: "0.1.0"), operation: .reinstall).status,
+            "Reinstalling plugin"
+        )
+        XCTAssertEqual(
+            CodexPluginSettingsPresentation(state: .installed(version: "0.1.0"), operation: .reinstall).actions,
+            []
+        )
+    }
+
+    func testPluginSettingsKeepsLiveObservationSeparate() {
+        let plugin = CodexPluginSettingsPresentation(state: .installed(version: "0.1.0"))
+        let observation = CodexConnectionPresentation(
+            freshness: CodexSnapshot.unavailable(reason: "No live attachment").freshness
+        )
+        XCTAssertEqual(plugin.status, "Installed")
+        XCTAssertEqual(observation.status, "Unavailable")
+    }
+
+    @MainActor
+    func testPluginLaunchUpdateRunsOnceAndSuppressedLaunchNeverCallsHelper() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-AppPluginLaunch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let lifecycleStore = CodexPluginLifecycleStore(store: store)
+        try await lifecycleStore.recordVerified(
+            .init(
+                intent: .managedInstalled,
+                managedVersion: "0.1.2",
+                managedDigest: "old",
+                verifiedAt: Date(timeIntervalSince1970: 1)
+            ),
+            reason: "Install Release Radar Codex plugin"
+        )
+        let manager = AppLifecycleManager(replies: [
+            .init(wireVersion: 1, observedState: .clean(version: "0.1.2", digest: "old"), error: nil),
+            .init(wireVersion: 1, observedState: .clean(version: "0.1.3", digest: "current"), error: nil),
+            .init(wireVersion: 1, observedState: .clean(version: "0.1.3", digest: "current"), error: nil),
+        ])
+        let coordinator = CodexPluginLifecycleCoordinator(
+            manager: manager,
+            store: lifecycleStore,
+            shippedVersion: "0.1.3",
+            shippedDigest: "current"
+        )
+        let model = AppModel(
+            store: store,
+            codexPluginCoordinator: coordinator,
+            codexPluginShippedVersion: "0.1.3"
+        )
+
+        await model.initializeCodexPluginLifecycleForLaunch()
+        await model.initializeCodexPluginLifecycleForLaunch()
+
+        let calls = await manager.operations()
+        XCTAssertEqual(calls, [.status, .install, .status])
+        XCTAssertEqual(model.codexPluginState, .installed(version: "0.1.3"))
+        XCTAssertEqual(model.codexPluginSettingsMessage, "Start a new Codex task to load the plugin change.")
+
+        let suppressedManager = AppLifecycleManager(replies: [])
+        let suppressedModel = AppModel(
+            store: store,
+            codexPluginCoordinator: .init(
+                manager: suppressedManager,
+                store: lifecycleStore,
+                shippedVersion: "0.1.3",
+                shippedDigest: "current"
+            ),
+            externalServicesSuppressed: true
+        )
+        await suppressedModel.initializeCodexPluginLifecycleForLaunch()
+        let suppressedCalls = await suppressedManager.operations()
+        XCTAssertEqual(suppressedCalls, [])
+        XCTAssertEqual(suppressedModel.codexPluginState, .notInstalled)
+    }
+
+    @MainActor
+    func testAppLaunchChecksPluginOnlyAfterDashboardLoad() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-AppPluginLaunchOrder-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let lifecycleStore = CodexPluginLifecycleStore(store: store)
+        try await lifecycleStore.recordVerified(
+            .init(
+                intent: .managedInstalled,
+                managedVersion: "0.1.0",
+                managedDigest: "current",
+                verifiedAt: Date(timeIntervalSince1970: 1)
+            ),
+            reason: "Install Release Radar Codex plugin"
+        )
+        let events = LaunchOrderRecorder()
+        let model = AppModel(
+            store: store,
+            codexObserver: LaunchOrderCodexObserver(events: events),
+            codexPluginCoordinator: .init(
+                manager: LaunchOrderLifecycleManager(events: events),
+                store: lifecycleStore,
+                shippedVersion: "0.1.0",
+                shippedDigest: "current"
+            ),
+            dashboardLoader: { _ in
+                await events.record(.dashboard)
+                return DashboardProjection(projects: [], boards: [:])
+            }
+        )
+
+        await model.initializeForLaunch()
+
+        let recordedEvents = await events.snapshot()
+        XCTAssertEqual(recordedEvents, [.codexObservation, .dashboard, .pluginStatus])
+    }
+
+    func testRR9CapturePolicyRequiresDebugCaptureEmptyStoreAndOneKnownScenario() {
+        let required = ["--rr10-capture", "--rr10-empty-store"]
+        let recognized: [(String, RR9ActivePhaseCaptureScenario)] = [
+            ("happy", .happy),
+            ("busy", .busy),
+            ("no-alternative", .noAlternative),
+            ("mutation-failure", .mutationFailure),
+            ("unavailable", .unavailable),
+            ("authorization-failure", .authorizationFailure),
+            ("saved-refresh", .savedRefresh),
+            ("empty-phase", .emptyPhase),
+            ("no-active-pointer", .noActivePointer),
+            ("cross-phase-detail", .crossPhaseDetail),
+        ]
+        for (argument, scenario) in recognized {
+            XCTAssertEqual(
+                AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+                    arguments: required + ["--rr9-active-phase-fixture=\(argument)"],
+                    isDebugBuild: true
+                ),
+                scenario
+            )
+        }
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: ["--rr10-empty-store", "--rr9-active-phase-fixture=happy"],
+            isDebugBuild: true
+        ))
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: ["--rr10-capture", "--rr9-active-phase-fixture=happy"],
+            isDebugBuild: true
+        ))
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: required + ["--rr10-capture", "--rr9-active-phase-fixture=happy"],
+            isDebugBuild: true
+        ))
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: required + ["--rr10-empty-store", "--rr9-active-phase-fixture=happy"],
+            isDebugBuild: true
+        ))
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: required + ["--rr9-active-phase-fixture=unknown"],
+            isDebugBuild: true
+        ))
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: required + [
+                "--rr9-active-phase-fixture=happy",
+                "--rr9-active-phase-fixture=busy",
+            ],
+            isDebugBuild: true
+        ))
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: required + ["--rr9-active-phase-fixture=happy"],
+            isDebugBuild: false
+        ))
+        XCTAssertNil(AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
+            arguments: required,
+            isDebugBuild: true
+        ))
+    }
+
+    func testActivePhaseSelectorPresentationDistinguishesSelectionBusyAndNoAlternative() {
+        let phase = ProjectPhaseProjection(id: .init(rawValue: "phase-only"), name: "Roadmap")
+        let project = ProjectDashboardProjection(
+            id: .init(rawValue: "selector-project"),
+            name: "Selector",
+            activePhaseID: phase.id,
+            activePhaseName: phase.name,
+            phases: [phase],
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+
+        XCTAssertEqual(ActivePhaseSelectorSurface.overview.accessibilityIdentifier, "active-phase-selector-overview")
+        XCTAssertEqual(ActivePhaseSelectorSurface.board.accessibilityIdentifier, "active-phase-selector-board")
+        XCTAssertEqual(
+            ActivePhaseSelectorPresentation(project: project, status: .idle).accessibilityValue,
+            "Roadmap (phase-only)"
+        )
+        XCTAssertEqual(
+            ActivePhaseSelectorPresentation(project: project, status: .idle).accessibilityHelp,
+            "No other phases are available for this project."
+        )
+        XCTAssertTrue(ActivePhaseSelectorPresentation(project: project, status: .idle).isDisabled)
+        XCTAssertEqual(
+            ActivePhaseSelectorPresentation(project: project, status: .saving(phase.id)).accessibilityValue,
+            "Saving active phase"
+        )
+
+        let unselected = ProjectDashboardProjection(
+            id: project.id,
+            name: project.name,
+            activePhaseID: nil,
+            activePhaseName: "No active phase",
+            phases: [phase],
+            goalContext: project.goalContext,
+            currentWorkCount: 0,
+            attentionCount: 0
+        )
+        XCTAssertEqual(
+            ActivePhaseSelectorPresentation(project: unselected, status: .idle).accessibilityValue,
+            "No active phase"
+        )
+        XCTAssertFalse(ActivePhaseSelectorPresentation(project: unselected, status: .idle).isDisabled)
+    }
+
+    @MainActor
+    func testOwnerActivePhaseSelectionPublishesCoherentProjectionAndPersistsAcrossModelRelaunch() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let requestIDs = RR9RequestIDCounter()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            requestIDGenerator: { requestIDs.next() },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        model.selectedTicketID = .init(rawValue: "CURRENT-1")
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+        XCTAssertEqual(requestIDs.count, 1)
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+        XCTAssertEqual(model.currentProject?.activePhaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(model.dashboard?.board(for: fixture.projectID)?.lanes.map(\.count), [2, 0, 0, 1, 0])
+        XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(model.activity(for: fixture.projectID)?.items.first?.detail, "Owner selected active phase phase-roadmap")
+        let state = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(state.activePhaseID, fixture.roadmapPhaseID.rawValue)
+        XCTAssertEqual(state.commandRequests, 1)
+        XCTAssertEqual(state.selectionAudits, 1)
+        XCTAssertEqual(state.actorID, "release-radar-owner")
+
+        let relaunched = AppModel(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await relaunched.loadDashboard()
+        XCTAssertEqual(relaunched.currentProject?.activePhaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(relaunched.dashboard?.board(for: fixture.projectID)?.lanes.map(\.count), [2, 0, 0, 1, 0])
+    }
+
+    @MainActor
+    func testAlreadyActiveOwnerCallReturnsBeforeUUIDAuthorizationRequestAndAudit() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let requestIDs = RR9RequestIDCounter()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            requestIDGenerator: { requestIDs.next() },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        let before = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.currentPhaseID)
+
+        let after = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(requestIDs.count, 0)
+        XCTAssertEqual(after, before)
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+    }
+
+    @MainActor
+    func testSavingOwnerCallRejectsDuplicateBeforeSecondUUIDRequestAndAudit() async throws {
+        let fixture = try await makeRR9OwnerFixture(blockAuthorization: true)
+        let requestIDs = RR9RequestIDCounter()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            requestIDGenerator: { requestIDs.next() },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await fixture.bookmarks.armAccessGate()
+
+        let first = Task {
+            await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        }
+        await fixture.bookmarks.waitUntilAccessEntered()
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .saving(fixture.roadmapPhaseID))
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.emptyPhaseID)
+
+        XCTAssertEqual(requestIDs.count, 1)
+        let whileSaving = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(whileSaving.commandRequests, 0)
+        XCTAssertEqual(whileSaving.selectionAudits, 0)
+        await fixture.bookmarks.releaseAccess()
+        await first.value
+        let final = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(final.commandRequests, 1)
+        XCTAssertEqual(final.selectionAudits, 1)
+    }
+
+    @MainActor
+    func testSavedNeedsReloadRejectsMutationAndRecoversThroughReadOnlyReload() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let requestIDs = RR9RequestIDCounter()
+        let loader = RouteDashboardLoader(failingCalls: [2])
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            dashboardLoader: { store in try await loader.load(from: store) },
+            requestIDGenerator: { requestIDs.next() },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+        XCTAssertEqual(
+            model.activePhaseSelectionStatus(for: fixture.projectID),
+            .savedNeedsReload(fixture.roadmapPhaseID, "Roadmap")
+        )
+        let committed = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(committed.commandRequests, 1)
+        XCTAssertEqual(committed.selectionAudits, 1)
+        XCTAssertEqual(model.currentProject?.activePhaseID, fixture.currentPhaseID)
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.emptyPhaseID)
+
+        XCTAssertEqual(requestIDs.count, 1)
+        let afterRejectedSelection = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(afterRejectedSelection, committed)
+        await model.reloadAfterActivePhaseSelection(projectID: fixture.projectID)
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+        XCTAssertEqual(model.currentProject?.activePhaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(requestIDs.count, 1)
+        let afterReload = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(afterReload, committed)
+    }
+
+    @MainActor
+    func testExternalCommittedRefreshReusesCachedGuidanceWithoutBookmarkOrAuditMutation() async throws {
+        let mismatchedRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9-ExternalRefreshMismatch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: mismatchedRoot, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: mismatchedRoot) }
+        let failures: [RR9BookmarkFailureMode] = [
+            .resolutionFailure,
+            .stale,
+            .mismatchedRoot(mismatchedRoot),
+            .accessDenied,
+        ]
+
+        for failure in failures {
+            let fixture = try await makeRR9OwnerFixture()
+            let requestIDs = RR9RequestIDCounter()
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                requestIDGenerator: { requestIDs.next() },
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+
+            let storeBefore = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+            let dashboardBefore = model.dashboard
+            let activityBefore = model.activity(for: fixture.projectID)
+            let errorBefore = model.dashboardError
+            let statusBefore = model.activePhaseSelectionStatus(for: fixture.projectID)
+            let guidanceBefore = model.projectGuidanceState(for: fixture.projectID)
+            let rootBefore = model.projectRoot(for: fixture.projectID)
+            XCTAssertEqual(guidanceBefore, .missing)
+            XCTAssertEqual(rootBefore, fixture.projectRoot)
+            fixture.bookmarks.setFailureMode(failure)
+
+            await model.reloadDashboardAfterCommittedAgentCommand()
+
+            let storeAfter = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+            XCTAssertEqual(storeAfter, storeBefore, "Failure: \(failure)")
+            XCTAssertEqual(model.dashboard, dashboardBefore, "Failure: \(failure)")
+            XCTAssertEqual(model.activity(for: fixture.projectID), activityBefore, "Failure: \(failure)")
+            XCTAssertEqual(model.dashboardError, errorBefore, "Failure: \(failure)")
+            XCTAssertEqual(
+                model.activePhaseSelectionStatus(for: fixture.projectID),
+                statusBefore,
+                "Failure: \(failure)"
+            )
+            XCTAssertEqual(
+                model.projectGuidanceState(for: fixture.projectID),
+                guidanceBefore,
+                "Failure: \(failure)"
+            )
+            XCTAssertEqual(model.projectRoot(for: fixture.projectID), rootBefore, "Failure: \(failure)")
+            XCTAssertEqual(requestIDs.count, 0, "Failure: \(failure)")
+        }
+    }
+
+    @MainActor
+    func testOwnerSavedRefreshReusesCachedGuidanceWithoutBookmarkAuditOrCommandRetry() async throws {
+        let mismatchedRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9-SavedRefreshMismatch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: mismatchedRoot, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: mismatchedRoot) }
+        let failures: [RR9BookmarkFailureMode] = [
+            .resolutionFailure,
+            .stale,
+            .mismatchedRoot(mismatchedRoot),
+            .accessDenied,
+        ]
+
+        for failure in failures {
+            let fixture = try await makeRR9OwnerFixture()
+            let requestIDs = RR9RequestIDCounter()
+            let loader = RouteDashboardLoader(failingCalls: [2])
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                dashboardLoader: { store in try await loader.load(from: store) },
+                requestIDGenerator: { requestIDs.next() },
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+            let guidanceBefore = model.projectGuidanceState(for: fixture.projectID)
+            let rootBefore = model.projectRoot(for: fixture.projectID)
+            XCTAssertEqual(guidanceBefore, .missing)
+            XCTAssertEqual(rootBefore, fixture.projectRoot)
+
+            await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+            XCTAssertEqual(
+                model.activePhaseSelectionStatus(for: fixture.projectID),
+                .savedNeedsReload(fixture.roadmapPhaseID, "Roadmap")
+            )
+            XCTAssertEqual(model.currentProject?.activePhaseID, fixture.currentPhaseID)
+            let dashboardBefore = model.dashboard
+            let activityBefore = model.activity(for: fixture.projectID)
+            let errorBefore = model.dashboardError
+            let storeBefore = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+            let expectedDashboard = try await DashboardProjection.load(from: fixture.store)
+            let expectedActivity = try await ProjectActivityProjection.load(
+                from: fixture.store,
+                projectID: fixture.projectID
+            )
+            fixture.bookmarks.setFailureMode(failure)
+
+            await model.reloadAfterActivePhaseSelection(projectID: fixture.projectID)
+
+            let storeAfter = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+            XCTAssertEqual(storeAfter, storeBefore, "Failure: \(failure)")
+            XCTAssertNotEqual(model.dashboard, dashboardBefore, "Failure: \(failure)")
+            XCTAssertEqual(model.dashboard, expectedDashboard, "Failure: \(failure)")
+            XCTAssertNotEqual(model.activity(for: fixture.projectID), activityBefore, "Failure: \(failure)")
+            XCTAssertEqual(
+                model.activity(for: fixture.projectID),
+                expectedActivity,
+                "Failure: \(failure)"
+            )
+            XCTAssertEqual(model.dashboardError, errorBefore, "Failure: \(failure)")
+            XCTAssertNil(model.dashboardError, "Failure: \(failure)")
+            XCTAssertEqual(
+                model.activePhaseSelectionStatus(for: fixture.projectID),
+                .idle,
+                "Failure: \(failure)"
+            )
+            XCTAssertEqual(
+                model.projectGuidanceState(for: fixture.projectID),
+                guidanceBefore,
+                "Failure: \(failure)"
+            )
+            XCTAssertEqual(model.projectRoot(for: fixture.projectID), rootBefore, "Failure: \(failure)")
+            XCTAssertEqual(requestIDs.count, 1, "Failure: \(failure)")
+        }
+    }
+
+    @MainActor
+    func testPostCommitWorkspacePreparationFailurePublishesNoPartialDashboardBeforeReadOnlyRecovery() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let reviewLoader = RR9SequencedReviewInboxLoader(failingCalls: [2])
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            reviewInboxLoader: { store, projectID in
+                try await reviewLoader.load(from: store, projectID: projectID)
+            },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        let dashboard = model.dashboard
+        let graph = model.dependencyGraph(for: fixture.projectID)
+        let activity = model.activity(for: fixture.projectID)
+        let guidance = model.projectGuidanceState(for: fixture.projectID)
+        let root = model.projectRoot(for: fixture.projectID)
+        let selectedTicketID = model.selectedTicketID
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+        XCTAssertEqual(
+            model.activePhaseSelectionStatus(for: fixture.projectID),
+            .savedNeedsReload(fixture.roadmapPhaseID, "Roadmap")
+        )
+        XCTAssertEqual(model.dashboard, dashboard)
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID), graph)
+        XCTAssertEqual(model.activity(for: fixture.projectID), activity)
+        XCTAssertEqual(model.projectGuidanceState(for: fixture.projectID), guidance)
+        XCTAssertEqual(model.projectRoot(for: fixture.projectID), root)
+        XCTAssertEqual(model.selectedTicketID, selectedTicketID)
+
+        await model.reloadAfterActivePhaseSelection(projectID: fixture.projectID)
+
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+        XCTAssertEqual(model.currentProject?.activePhaseID, fixture.roadmapPhaseID)
+        let state = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(state.commandRequests, 1)
+        XCTAssertEqual(state.selectionAudits, 1)
+    }
+
+    @MainActor
+    func testAuthorizationRecoveryRestoresOnlyExactRootAndNeverRetriesSelection() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasBookmark: false)
+        let requestIDs = RR9RequestIDCounter()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            requestIDGenerator: { requestIDs.next() },
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+        guard case let .mutationFailed(presentation, canReauthorize) = model.activePhaseSelectionStatus(for: fixture.projectID) else {
+            return XCTFail("Expected phase authorization recovery")
+        }
+        XCTAssertEqual(presentation.accessibilityID, "active-phase-authorization-failed")
+        XCTAssertTrue(canReauthorize)
+        XCTAssertEqual(requestIDs.count, 1)
+        let failedSelection = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(failedSelection.commandRequests, 0)
+
+        await model.reauthorizeActivePhaseProject(at: fixture.projectRoot, projectID: fixture.projectID)
+
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+        XCTAssertEqual(model.currentProject?.activePhaseID, fixture.currentPhaseID)
+        let reauthorized = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(reauthorized.commandRequests, 0)
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        XCTAssertEqual(model.currentProject?.activePhaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(requestIDs.count, 2)
+    }
+
+    @MainActor
+    func testRejectedReauthorizationFoldersFailClosedAndPreserveLocateRecovery() async throws {
+        for rejectedFolderKind in ["parent", "child", "different"] {
+            let fixture = try await makeRR9OwnerFixture(hasBookmark: false)
+            let child = fixture.projectRoot.appendingPathComponent("child", isDirectory: true)
+            let different = fixture.projectRoot.deletingLastPathComponent()
+                .appendingPathComponent("different", isDirectory: true)
+            try FileManager.default.createDirectory(at: child, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: different, withIntermediateDirectories: true)
+            let rejectedFolder = switch rejectedFolderKind {
+            case "parent": fixture.projectRoot.deletingLastPathComponent()
+            case "child": child
+            default: different
+            }
+            let requestIDs = RR9RequestIDCounter()
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                requestIDGenerator: { requestIDs.next() },
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+            await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+            let beforeRejectedAttempt = try await rr9SelectionState(
+                store: fixture.store,
+                projectID: fixture.projectID
+            )
+            let auditCountBeforeRejectedAttempt = try await fixture.store.read { connection in
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1
+            }
+
+            await model.reauthorizeActivePhaseProject(
+                at: rejectedFolder,
+                projectID: fixture.projectID
+            )
+
+            guard case let .mutationFailed(presentation, canReauthorize) = model.activePhaseSelectionStatus(
+                for: fixture.projectID
+            ) else {
+                XCTFail("Expected rejected \(rejectedFolderKind) folder to remain recoverable")
+                continue
+            }
+            XCTAssertEqual(presentation.accessibilityID, "active-phase-authorization-failed")
+            guard canReauthorize else {
+                XCTFail("Expected Locate to remain actionable after rejected \(rejectedFolderKind) folder")
+                continue
+            }
+            XCTAssertEqual(requestIDs.count, 1)
+            let afterRejectedAttempt = try await rr9SelectionState(
+                store: fixture.store,
+                projectID: fixture.projectID
+            )
+            let auditCountAfterRejectedAttempt = try await fixture.store.read { connection in
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1
+            }
+            XCTAssertEqual(afterRejectedAttempt, beforeRejectedAttempt)
+            XCTAssertEqual(auditCountAfterRejectedAttempt, auditCountBeforeRejectedAttempt)
+
+            await model.reauthorizeActivePhaseProject(
+                at: fixture.projectRoot,
+                projectID: fixture.projectID
+            )
+
+            XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+            XCTAssertEqual(requestIDs.count, 1)
+            let afterRecovery = try await rr9SelectionState(
+                store: fixture.store,
+                projectID: fixture.projectID
+            )
+            XCTAssertEqual(afterRecovery.activePhaseID, fixture.currentPhaseID.rawValue)
+            XCTAssertEqual(afterRecovery.commandRequests, 0)
+            XCTAssertEqual(afterRecovery.selectionAudits, 0)
+        }
+    }
+
+    @MainActor
+    func testEveryRecoverableBookmarkFailureFailsClosedBeforePhaseMutation() async throws {
+        let mismatchedRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9-Mismatched-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: mismatchedRoot, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: mismatchedRoot) }
+        let failures: [RR9BookmarkFailureMode] = [
+            .stale,
+            .resolutionFailure,
+            .accessDenied,
+            .mismatchedRoot(mismatchedRoot),
+        ]
+
+        for failure in failures {
+            let fixture = try await makeRR9OwnerFixture()
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+            fixture.bookmarks.setFailureMode(failure)
+
+            await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+            guard case let .mutationFailed(presentation, canReauthorize) = model.activePhaseSelectionStatus(for: fixture.projectID) else {
+                return XCTFail("Expected recoverable authorization failure for \(failure)")
+            }
+            XCTAssertEqual(presentation.accessibilityID, "active-phase-authorization-failed")
+            XCTAssertTrue(canReauthorize)
+            let state = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+            XCTAssertEqual(state.activePhaseID, fixture.currentPhaseID.rawValue)
+            XCTAssertEqual(state.commandRequests, 0)
+            XCTAssertEqual(state.selectionAudits, 0)
+        }
+    }
+
+    @MainActor
+    func testDirectInvalidTargetShowsTypedFailureWithoutChangingCoherentProjection() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        let dashboard = model.dashboard
+        let dependencyGraph = model.dependencyGraph(for: fixture.projectID)
+
+        await model.setActivePhase(
+            projectID: fixture.projectID,
+            phaseID: PhaseID(rawValue: "phase-does-not-exist")
+        )
+
+        guard case let .mutationFailed(presentation, canReauthorize) = model.activePhaseSelectionStatus(for: fixture.projectID) else {
+            return XCTFail("Expected a typed mutation failure")
+        }
+        XCTAssertEqual(presentation.accessibilityID, "active-phase-mutation-failed")
+        XCTAssertFalse(canReauthorize)
+        XCTAssertEqual(model.dashboard, dashboard)
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID), dependencyGraph)
+        let state = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(state.activePhaseID, fixture.currentPhaseID.rawValue)
+        XCTAssertEqual(state.commandRequests, 0)
+        XCTAssertEqual(state.selectionAudits, 0)
+    }
+
+    @MainActor
+    func testProjectWithoutActivePointerCanEstablishItFromEitherOwnerRoute() async throws {
+        let routes: [(ProjectID) -> AppRoute] = [
+            { .projectOverview($0) },
+            { .phaseBoard($0) },
+        ]
+
+        for route in routes {
+            let fixture = try await makeRR9OwnerFixture(hasActivePointer: false)
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+            model.selection = route(fixture.projectID)
+            XCTAssertNil(model.currentProject?.activePhaseID)
+            XCTAssertNil(model.dashboard?.board(for: fixture.projectID))
+
+            await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.currentPhaseID)
+
+            XCTAssertEqual(model.currentProject?.activePhaseID, fixture.currentPhaseID)
+            XCTAssertEqual(model.dashboard?.board(for: fixture.projectID)?.phaseID, fixture.currentPhaseID)
+            XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+            let state = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+            XCTAssertEqual(state.commandRequests, 1)
+            XCTAssertEqual(state.selectionAudits, 1)
+        }
+    }
+
+    @MainActor
+    func testEmptyTargetRemovesVisibleDetailAndDependencyGraphWithoutStaleBoardState() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        XCTAssertNotNil(model.dependencyGraph(for: fixture.projectID))
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.emptyPhaseID)
+
+        let board = try XCTUnwrap(model.dashboard?.board(for: fixture.projectID))
+        XCTAssertEqual(board.phaseID, fixture.emptyPhaseID)
+        XCTAssertEqual(board.lanes.map(\.count), [0, 0, 0, 0, 0])
+        XCTAssertTrue(board.details.isEmpty)
+        XCTAssertNil(board.detail(for: model.selectedTicketID))
+        XCTAssertNil(model.dependencyGraph(for: fixture.projectID))
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+    }
+
+    @MainActor
+    func testCurrentGenerationTargetMismatchPreservesSavingAndSavedRecoveryStatus() async throws {
+        for failingCommittedReload in [false, true] {
+            let fixture = try await makeRR9OwnerFixture()
+            let loader = RR9TargetMismatchDashboardLoader(failCommittedReload: failingCommittedReload)
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                dashboardLoader: { store in try await loader.load(from: store) },
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+
+            await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+            if failingCommittedReload {
+                XCTAssertEqual(
+                    model.activePhaseSelectionStatus(for: fixture.projectID),
+                    .savedNeedsReload(fixture.roadmapPhaseID, "Roadmap")
+                )
+                await model.reloadAfterActivePhaseSelection(projectID: fixture.projectID)
+                XCTAssertEqual(
+                    model.activePhaseSelectionStatus(for: fixture.projectID),
+                    .savedNeedsReload(fixture.roadmapPhaseID, "Roadmap")
+                )
+            } else {
+                XCTAssertEqual(
+                    model.activePhaseSelectionStatus(for: fixture.projectID),
+                    .saving(fixture.roadmapPhaseID)
+                )
+                await model.reloadDashboardAfterCommittedAgentCommand()
+                XCTAssertEqual(
+                    model.activePhaseSelectionStatus(for: fixture.projectID),
+                    .saving(fixture.roadmapPhaseID)
+                )
+            }
+            XCTAssertEqual(model.currentProject?.activePhaseID, fixture.currentPhaseID)
+            let state = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+            XCTAssertEqual(state.activePhaseID, fixture.roadmapPhaseID.rawValue)
+            XCTAssertEqual(state.commandRequests, 1)
+            XCTAssertEqual(state.selectionAudits, 1)
+        }
+    }
+
+    @MainActor
+    func testNewerAgentReloadWinsOverOlderOwnerReloadSuccessOrFailure() async throws {
+        for staleCompletion in RR9StaleCompletion.allCases {
+            let fixture = try await makeRR9OwnerFixture()
+            let loader = RR9InterleavingDashboardLoader(staleCompletion: staleCompletion)
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                dashboardLoader: { store in try await loader.load(from: store) },
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+            let ownerReload = Task {
+                await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+            }
+            await loader.waitUntilOlderReloadEntered()
+
+            await model.reloadDashboardAfterCommittedAgentCommand()
+
+            XCTAssertEqual(model.currentProject?.activePhaseID, fixture.roadmapPhaseID)
+            XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+            XCTAssertNil(model.dashboardError)
+            let publishedDashboard = model.dashboard
+            let publishedReviewInbox = model.reviewInbox(for: fixture.projectID)
+            let publishedGraph = model.dependencyGraph(for: fixture.projectID)
+            let publishedActivity = model.activity(for: fixture.projectID)
+            let publishedGuidance = model.projectGuidanceState(for: fixture.projectID)
+            let publishedRoot = model.projectRoot(for: fixture.projectID)
+            let publishedTicketID = model.selectedTicketID
+            let publishedReviewItemID = model.selectedReviewItemID
+            await loader.releaseOlderReload()
+            await ownerReload.value
+            XCTAssertEqual(model.dashboard, publishedDashboard)
+            XCTAssertEqual(model.reviewInbox(for: fixture.projectID), publishedReviewInbox)
+            XCTAssertEqual(model.dependencyGraph(for: fixture.projectID), publishedGraph)
+            XCTAssertEqual(model.activity(for: fixture.projectID), publishedActivity)
+            XCTAssertEqual(model.projectGuidanceState(for: fixture.projectID), publishedGuidance)
+            XCTAssertEqual(model.projectRoot(for: fixture.projectID), publishedRoot)
+            XCTAssertEqual(model.selectedTicketID, publishedTicketID)
+            XCTAssertEqual(model.selectedReviewItemID, publishedReviewItemID)
+            XCTAssertEqual(model.activePhaseSelectionStatus(for: fixture.projectID), .idle)
+            XCTAssertNil(model.dashboardError)
+        }
+    }
+
+    @MainActor
+    func testSupersededLoadDashboardReturnsBeforeDebugRouteAndPublishedStateMutation() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9SupersededLoad-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let loader = RR9SupersededLoadDashboardLoader()
+        let model = AppModel(
+            store: store,
+            dashboardLoader: { store in try await loader.load(from: store) },
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            rr9ActivePhaseCaptureScenario: .busy,
+            rr9ActivePhaseCaptureRootDirectory: directory.appendingPathComponent("RR9ActivePhaseCaptureRoots")
+        )
+        await model.loadDashboard()
+        let initialActivity = model.activity(for: RR9ActivePhaseCaptureFixture.primaryProjectID)
+
+        let olderLoad = Task { await model.loadDashboard() }
+        await loader.waitUntilOlderLoadEntered()
+        try await store.transact(
+            actor: .init(id: "agent"),
+            reason: "Newer agent activity",
+            auditEventID: .init(rawValue: "rr9-newer-agent-audit"),
+            auditScope: AuditScope(
+                projectID: RR9ActivePhaseCaptureFixture.primaryProjectID,
+                entityType: .phase,
+                entityID: RR9ActivePhaseCaptureFixture.roadmapPhaseID.rawValue
+            )
+        ) { _ in }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        XCTAssertNotEqual(
+            model.activity(for: RR9ActivePhaseCaptureFixture.primaryProjectID),
+            initialActivity
+        )
+        model.selection = .phaseBoard(RR9ActivePhaseCaptureFixture.primaryProjectID)
+        await model.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.primaryProjectID,
+            phaseID: RR9ActivePhaseCaptureFixture.roadmapPhaseID
+        )
+
+        let publishedDashboard = model.dashboard
+        let publishedActivity = model.activity(for: RR9ActivePhaseCaptureFixture.primaryProjectID)
+        let publishedError = model.dashboardError
+        let publishedStatus = model.activePhaseSelectionStatus(
+            for: RR9ActivePhaseCaptureFixture.primaryProjectID
+        )
+        await loader.releaseOlderLoad()
+        await olderLoad.value
+
+        XCTAssertEqual(model.selection, .phaseBoard(RR9ActivePhaseCaptureFixture.primaryProjectID))
+        XCTAssertEqual(model.dashboard, publishedDashboard)
+        XCTAssertEqual(
+            model.activity(for: RR9ActivePhaseCaptureFixture.primaryProjectID),
+            publishedActivity
+        )
+        XCTAssertEqual(model.dashboardError, publishedError)
+        XCTAssertNil(model.dashboardError)
+        XCTAssertEqual(
+            model.activePhaseSelectionStatus(for: RR9ActivePhaseCaptureFixture.primaryProjectID),
+            publishedStatus
+        )
+        XCTAssertEqual(publishedStatus, .saving(RR9ActivePhaseCaptureFixture.roadmapPhaseID))
+    }
+
+    @MainActor
+    func testRR9DebugFixtureSeedsIdempotentlyAndSelectsScenarioRouteWithoutOrdinarySampleData() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9Capture-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let model = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            rr9ActivePhaseCaptureScenario: .crossPhaseDetail,
+            rr9ActivePhaseCaptureRootDirectory: directory.appendingPathComponent("RR9ActivePhaseCaptureRoots")
+        )
+
+        await model.loadDashboard()
+        let first = model.dashboard
+        await model.loadDashboard()
+
+        XCTAssertEqual(model.dashboard, first)
+        XCTAssertEqual(model.selection, .phaseBoard(RR9ActivePhaseCaptureFixture.primaryProjectID))
+        XCTAssertEqual(model.currentProject?.phases.count, 6)
+        XCTAssertEqual(
+            model.dashboard?.board(for: RR9ActivePhaseCaptureFixture.primaryProjectID)?
+                .detail(for: RR9ActivePhaseCaptureFixture.crossPhaseSourceTicketID)?
+                .requires.map(\.id),
+            [RR9ActivePhaseCaptureFixture.crossPhaseTargetTicketID]
+        )
+        let state = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM projects"),
+                try connection.scalarInt("SELECT COUNT(*) FROM project_bookmarks"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests")
+            )
+        }
+        XCTAssertEqual(state.0, 7)
+        XCTAssertEqual(state.1, 6)
+        XCTAssertEqual(state.2, 0)
+        XCTAssertFalse(model.dashboard?.projects.contains { $0.id == DashboardSampleData.projectID } == true)
+    }
+
+    @MainActor
+    func testRR9DebugFixtureScenariosExposeDeterministicRoutesStatusesAndOneShotRecovery() async throws {
+        let noAlternative = try await makeRR9CaptureModel(scenario: .noAlternative)
+        XCTAssertEqual(noAlternative.model.selection, .projectOverview(RR9ActivePhaseCaptureFixture.soleProjectID))
+        let soleProject = try XCTUnwrap(noAlternative.model.currentProject)
+        let solePresentation = ActivePhaseSelectorPresentation(project: soleProject, status: .idle)
+        XCTAssertTrue(solePresentation.isDisabled)
+        XCTAssertEqual(solePresentation.accessibilityHelp, "No other phases are available for this project.")
+
+        let noPointer = try await makeRR9CaptureModel(scenario: .noActivePointer)
+        XCTAssertEqual(noPointer.model.selection, .projectOverview(RR9ActivePhaseCaptureFixture.noPointerProjectID))
+        XCTAssertNil(noPointer.model.currentProject?.activePhaseID)
+        XCTAssertEqual(noPointer.model.currentProject?.phases.count, 2)
+        XCTAssertNil(noPointer.model.dashboard?.board(for: RR9ActivePhaseCaptureFixture.noPointerProjectID))
+        XCTAssertEqual(
+            ActivePhaseSelectorPresentation(
+                project: try XCTUnwrap(noPointer.model.currentProject),
+                status: .idle
+            ).accessibilityValue,
+            "No active phase"
+        )
+
+        let empty = try await makeRR9CaptureModel(scenario: .emptyPhase)
+        XCTAssertEqual(empty.model.selection, .phaseBoard(RR9ActivePhaseCaptureFixture.emptyProjectID))
+        XCTAssertEqual(empty.model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.emptyCurrentPhaseID)
+        await empty.model.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.emptyProjectID,
+            phaseID: RR9ActivePhaseCaptureFixture.emptyTargetPhaseID
+        )
+        XCTAssertEqual(empty.model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.emptyTargetPhaseID)
+        XCTAssertEqual(
+            empty.model.dashboard?.board(for: RR9ActivePhaseCaptureFixture.emptyProjectID)?.lanes.map(\.count),
+            [0, 0, 0, 0, 0]
+        )
+        XCTAssertNil(empty.model.dependencyGraph(for: RR9ActivePhaseCaptureFixture.emptyProjectID))
+
+        let faultCases: [(RR9ActivePhaseCaptureScenario, String)] = [
+            (.mutationFailure, "active-phase-mutation-failed"),
+            (.unavailable, "active-phase-unavailable"),
+        ]
+        for (scenario, expectedAccessibilityID) in faultCases {
+            let fixture = try await makeRR9CaptureModel(scenario: scenario)
+            await fixture.model.setActivePhase(
+                projectID: RR9ActivePhaseCaptureFixture.primaryProjectID,
+                phaseID: RR9ActivePhaseCaptureFixture.roadmapPhaseID
+            )
+            guard case let .mutationFailed(presentation, canReauthorize) = fixture.model.activePhaseSelectionStatus(
+                for: RR9ActivePhaseCaptureFixture.primaryProjectID
+            ) else {
+                return XCTFail("Expected Debug fault presentation for \(scenario)")
+            }
+            XCTAssertEqual(presentation.accessibilityID, expectedAccessibilityID)
+            XCTAssertFalse(canReauthorize)
+            let state = try await rr9SelectionState(
+                store: fixture.store,
+                projectID: RR9ActivePhaseCaptureFixture.primaryProjectID
+            )
+            XCTAssertEqual(state.commandRequests, 0)
+            XCTAssertEqual(state.selectionAudits, 0)
+        }
+
+        let busy = try await makeRR9CaptureModel(scenario: .busy)
+        await busy.model.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.primaryProjectID,
+            phaseID: RR9ActivePhaseCaptureFixture.roadmapPhaseID
+        )
+        XCTAssertEqual(
+            busy.model.activePhaseSelectionStatus(for: RR9ActivePhaseCaptureFixture.primaryProjectID),
+            .saving(RR9ActivePhaseCaptureFixture.roadmapPhaseID)
+        )
+        let busyState = try await rr9SelectionState(
+            store: busy.store,
+            projectID: RR9ActivePhaseCaptureFixture.primaryProjectID
+        )
+        XCTAssertEqual(busyState.commandRequests, 0)
+        XCTAssertEqual(busyState.selectionAudits, 0)
+
+        let authorization = try await makeRR9CaptureModel(scenario: .authorizationFailure)
+        let authorizationTarget = PhaseID(rawValue: "rr9-authorization-target")
+        await authorization.model.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.authorizationProjectID,
+            phaseID: authorizationTarget
+        )
+        guard case let .mutationFailed(authorizationFailure, canReauthorize) = authorization.model.activePhaseSelectionStatus(
+            for: RR9ActivePhaseCaptureFixture.authorizationProjectID
+        ) else {
+            return XCTFail("Expected missing-bookmark recovery")
+        }
+        XCTAssertEqual(authorizationFailure.accessibilityID, "active-phase-authorization-failed")
+        XCTAssertTrue(canReauthorize)
+
+        let happy = try await makeRR9CaptureModel(scenario: .happy)
+        await happy.model.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.happyProjectID,
+            phaseID: RR9ActivePhaseCaptureFixture.happyTargetPhaseID
+        )
+        XCTAssertEqual(happy.model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.happyTargetPhaseID)
+        XCTAssertEqual(
+            happy.model.activePhaseSelectionStatus(for: RR9ActivePhaseCaptureFixture.happyProjectID),
+            .idle
+        )
+
+        let saved = try await makeRR9CaptureModel(scenario: .savedRefresh)
+        let savedTarget = PhaseID(rawValue: "rr9-saved-target")
+        await saved.model.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.savedRefreshProjectID,
+            phaseID: savedTarget
+        )
+        XCTAssertEqual(
+            saved.model.activePhaseSelectionStatus(for: RR9ActivePhaseCaptureFixture.savedRefreshProjectID),
+            .savedNeedsReload(savedTarget, "Saved target")
+        )
+        let committed = try await rr9SelectionState(
+            store: saved.store,
+            projectID: RR9ActivePhaseCaptureFixture.savedRefreshProjectID
+        )
+        XCTAssertEqual(committed.commandRequests, 1)
+        XCTAssertEqual(committed.selectionAudits, 1)
+        await saved.model.reloadAfterActivePhaseSelection(projectID: RR9ActivePhaseCaptureFixture.savedRefreshProjectID)
+        XCTAssertEqual(
+            saved.model.activePhaseSelectionStatus(for: RR9ActivePhaseCaptureFixture.savedRefreshProjectID),
+            .idle
+        )
+        XCTAssertEqual(saved.model.currentProject?.activePhaseID, savedTarget)
+        let recovered = try await rr9SelectionState(
+            store: saved.store,
+            projectID: RR9ActivePhaseCaptureFixture.savedRefreshProjectID
+        )
+        XCTAssertEqual(recovered, committed)
+    }
+
+    @MainActor
+    func testRR9MutatingCaptureScenariosStayIsolatedAcrossSameContainerRelaunches() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9Capture-Relaunch-\(UUID().uuidString)", isDirectory: true)
+        let roots = directory.appendingPathComponent("RR9ActivePhaseCaptureRoots", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+
+        let happy = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            rr9ActivePhaseCaptureScenario: .happy,
+            rr9ActivePhaseCaptureRootDirectory: roots
+        )
+        await happy.loadDashboard()
+        await happy.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.happyProjectID,
+            phaseID: RR9ActivePhaseCaptureFixture.happyTargetPhaseID
+        )
+        XCTAssertEqual(happy.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.happyTargetPhaseID)
+
+        let empty = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            rr9ActivePhaseCaptureScenario: .emptyPhase,
+            rr9ActivePhaseCaptureRootDirectory: roots
+        )
+        await empty.loadDashboard()
+        XCTAssertEqual(empty.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.emptyCurrentPhaseID)
+        await empty.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.emptyProjectID,
+            phaseID: RR9ActivePhaseCaptureFixture.emptyTargetPhaseID
+        )
+        XCTAssertEqual(empty.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.emptyTargetPhaseID)
+
+        let noPointer = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            rr9ActivePhaseCaptureScenario: .noActivePointer,
+            rr9ActivePhaseCaptureRootDirectory: roots
+        )
+        await noPointer.loadDashboard()
+        let pointerTarget = try XCTUnwrap(noPointer.currentProject?.phases.first?.id)
+        await noPointer.setActivePhase(
+            projectID: RR9ActivePhaseCaptureFixture.noPointerProjectID,
+            phaseID: pointerTarget
+        )
+        XCTAssertEqual(noPointer.currentProject?.activePhaseID, pointerTarget)
+
+        let crossPhase = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            rr9ActivePhaseCaptureScenario: .crossPhaseDetail,
+            rr9ActivePhaseCaptureRootDirectory: roots
+        )
+        await crossPhase.loadDashboard()
+        XCTAssertEqual(crossPhase.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.currentPhaseID)
+        XCTAssertEqual(
+            crossPhase.dashboard?.board(for: RR9ActivePhaseCaptureFixture.primaryProjectID)?
+                .detail(for: RR9ActivePhaseCaptureFixture.crossPhaseSourceTicketID)?
+                .requires.map(\.id),
+            [RR9ActivePhaseCaptureFixture.crossPhaseTargetTicketID]
+        )
+    }
+
+    @MainActor
+    private func makeRR9CaptureModel(
+        scenario: RR9ActivePhaseCaptureScenario
+    ) async throws -> (model: AppModel, store: DeliveryStore) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9Capture-\(scenario.rawValue)-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let model = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            rr9ActivePhaseCaptureScenario: scenario,
+            rr9ActivePhaseCaptureRootDirectory: directory.appendingPathComponent("RR9ActivePhaseCaptureRoots")
+        )
+        await model.loadDashboard()
+        return (model, store)
+    }
+
+    @MainActor
+    private func makeRR9OwnerFixture(
+        hasBookmark: Bool = true,
+        blockAuthorization: Bool = false,
+        hasActivePointer: Bool = true
+    ) async throws -> RR9OwnerFixture {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9Owner-\(UUID().uuidString)", isDirectory: true)
+        let projectRoot = directory.appendingPathComponent("project", isDirectory: true)
+        try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let bookmarks = RR9RouteBookmarkStore(blocksAccess: blockAuthorization)
+        let bookmark = try bookmarks.makeBookmark(for: projectRoot)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed RR-R9 owner fixture") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('rr9-owner-project', 'RR-R9 Owner')")
+            try connection.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('rr9-owner-root', 'rr9-owner-project', ?)", bindings: [.text(projectRoot.path)])
+            if hasBookmark {
+                try connection.execute(
+                    "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES ('rr9-owner-project', ?, ?, 0)",
+                    bindings: [.text(projectRoot.path), .blob(bookmark)]
+                )
+            }
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-current', 'rr9-owner-project', 'Current')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-roadmap', 'rr9-owner-project', 'Roadmap')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-empty', 'rr9-owner-project', 'Empty')")
+            if hasActivePointer {
+                try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('rr9-owner-project', 'phase-current')")
+            }
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('CURRENT-1', 'rr9-owner-project', 'phase-current', 'Current work remains coherent.', 'in_progress')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-1', 'rr9-owner-project', 'phase-roadmap', 'Roadmap backlog one.', 'backlog')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-2', 'rr9-owner-project', 'phase-roadmap', 'Roadmap backlog two.', 'backlog')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROAD-X', 'rr9-owner-project', 'phase-roadmap', 'Roadmap blocker.', 'blocked')")
+            try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('road-dependency', 'rr9-owner-project', 'ROAD-X', 'ROAD-1')")
+        }
+        let projectID = ProjectID(rawValue: "rr9-owner-project")
+        return RR9OwnerFixture(
+            databaseURL: directory.appendingPathComponent("store.sqlite"),
+            projectRoot: projectRoot,
+            projectID: projectID,
+            currentPhaseID: .init(rawValue: "phase-current"),
+            roadmapPhaseID: .init(rawValue: "phase-roadmap"),
+            emptyPhaseID: .init(rawValue: "phase-empty"),
+            store: store,
+            bookmarks: bookmarks,
+            onboarding: FolderProjectOnboarding(store: store, bookmarkStore: bookmarks)
+        )
+    }
+
+    @MainActor
+    private func rr9SelectionState(
+        store: DeliveryStore,
+        projectID: ProjectID
+    ) async throws -> RR9SelectionState {
+        try await store.read { connection in
+            RR9SelectionState(
+                activePhaseID: try connection.scalarText(
+                    "SELECT phase_id FROM project_active_phases WHERE project_id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ),
+                commandRequests: try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
+                selectionAudits: try connection.scalarInt(
+                    "SELECT COUNT(*) FROM audit_events WHERE reason LIKE 'Owner selected active phase %'"
+                ) ?? -1,
+                actorID: try connection.scalarText(
+                    "SELECT actor_id FROM audit_events WHERE reason LIKE 'Owner selected active phase %' ORDER BY rowid DESC LIMIT 1"
+                )
+            )
+        }
+    }
+
+    private static func rr9ReadOnlyReloadStoreSnapshot(
+        _ store: DeliveryStore
+    ) async throws -> RR9ReadOnlyReloadStoreSnapshot {
+        try await store.read { connection in
+            RR9ReadOnlyReloadStoreSnapshot(
+                bookmarkRows: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || path || '|' || hex(bookmark_data) || '|' || is_stale AS value FROM project_bookmarks ORDER BY project_id, path"
+                ),
+                auditRows: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT id || '|' || actor_id || '|' || COALESCE(thread_id, '') || '|' || thread_attribution || '|' || reason || '|' || COALESCE(project_id, '') || '|' || COALESCE(entity_type, '') || '|' || COALESCE(entity_id, '') || '|' || created_at AS value FROM audit_events ORDER BY id"
+                ),
+                requestRows: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT request_id || '|' || hex(request_body) || '|' || hex(result_data) || '|' || created_at AS value FROM agent_command_requests ORDER BY request_id"
+                ),
+                activeRows: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || phase_id AS value FROM project_active_phases ORDER BY project_id"
+                )
+            )
+        }
+    }
+
+    private static func rr9TextRows(
+        _ connection: SQLiteConnection,
+        sql: String
+    ) throws -> [String] {
+        var values: [String] = []
+        var offset: Int64 = 0
+        while let row = try connection.row(
+            "\(sql) LIMIT 1 OFFSET ?",
+            bindings: [.integer(offset)]
+        ) {
+            guard case let .text(value)? = row["value"] else {
+                throw RouteProjectionError.missingSnapshotText
+            }
+            values.append(value)
+            offset += 1
+        }
+        return values
+    }
+
+}
+
+private struct RR9OwnerFixture {
+    let databaseURL: URL
+    let projectRoot: URL
+    let projectID: ProjectID
+    let currentPhaseID: PhaseID
+    let roadmapPhaseID: PhaseID
+    let emptyPhaseID: PhaseID
+    let store: DeliveryStore
+    let bookmarks: RR9RouteBookmarkStore
+    let onboarding: FolderProjectOnboarding
+}
+
+private struct RR9SelectionState: Equatable {
+    let activePhaseID: String?
+    let commandRequests: Int64
+    let selectionAudits: Int64
+    let actorID: String?
+}
+
+private struct RR9ReadOnlyReloadStoreSnapshot: Equatable {
+    let bookmarkRows: [String]
+    let auditRows: [String]
+    let requestRows: [String]
+    let activeRows: [String]
+}
+
+private final class RR9RequestIDCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var generated = 0
+
+    var count: Int { lock.withLock { generated } }
+
+    func next() -> UUID {
+        lock.withLock { generated += 1 }
+        return UUID()
+    }
+}
+
+private final class RR9RouteBookmarkStore: @unchecked Sendable, ProjectBookmarkStoring {
+    private let gate: RR9RouteAccessGate?
+    private let lock = NSLock()
+    private var failureMode = RR9BookmarkFailureMode.none
+
+    init(blocksAccess: Bool) {
+        gate = blocksAccess ? RR9RouteAccessGate() : nil
+    }
+
+    func makeBookmark(for url: URL) throws -> Data {
+        Data(url.standardizedFileURL.resolvingSymlinksInPath().path.utf8)
+    }
+
+    func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        let url = URL(fileURLWithPath: String(decoding: bookmark, as: UTF8.self))
+        return try lock.withLock {
+            switch failureMode {
+            case .none, .accessDenied:
+                return ResolvedProjectBookmark(url: url, isStale: false)
+            case .stale:
+                return ResolvedProjectBookmark(url: url, isStale: true)
+            case .resolutionFailure:
+                throw ProjectBookmarkError.bookmarkResolutionFailed
+            case let .mismatchedRoot(root):
+                return ResolvedProjectBookmark(url: root, isStale: false)
+            }
+        }
+    }
+
+    func withSecurityScopedAccess<T: Sendable>(
+        bookmark: Data,
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T {
+        let resolved = try resolve(bookmark)
+        if lock.withLock({ failureMode == .accessDenied }) {
+            throw ProjectBookmarkError.securityScopeAccessDenied
+        }
+        if let gate { await gate.enterAndWait() }
+        return try await body(resolved)
+    }
+
+    func setFailureMode(_ mode: RR9BookmarkFailureMode) {
+        lock.withLock { failureMode = mode }
+    }
+
+    func waitUntilAccessEntered() async {
+        await gate?.waitUntilEntered()
+    }
+
+    func armAccessGate() async {
+        await gate?.arm()
+    }
+
+    func releaseAccess() async {
+        await gate?.release()
+    }
+}
+
+private enum RR9BookmarkFailureMode: Equatable, CustomStringConvertible {
+    case none
+    case stale
+    case resolutionFailure
+    case accessDenied
+    case mismatchedRoot(URL)
+
+    var description: String {
+        switch self {
+        case .none: "none"
+        case .stale: "stale"
+        case .resolutionFailure: "resolution failure"
+        case .accessDenied: "access denied"
+        case .mismatchedRoot: "mismatched root"
+        }
+    }
+}
+
+private actor RR9RouteAccessGate {
+    private var armed = false
+    private var entered = false
+    private var released = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func enterAndWait() async {
+        guard armed else { return }
+        entered = true
+        enteredContinuations.forEach { $0.resume() }
+        enteredContinuations.removeAll()
+        guard !released else { return }
+        await withCheckedContinuation { releaseContinuations.append($0) }
+    }
+
+    func arm() {
+        armed = true
+    }
+
+    func waitUntilEntered() async {
+        guard !entered else { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+
+    func release() {
+        released = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
+}
+
+private enum RR9StaleCompletion: CaseIterable {
+    case success
+    case failure
+}
+
+private actor RR9InterleavingDashboardLoader {
+    private let staleCompletion: RR9StaleCompletion
+    private var callCount = 0
+    private var initialProjection: DashboardProjection?
+    private var olderEntered = false
+    private var olderReleased = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    init(staleCompletion: RR9StaleCompletion) {
+        self.staleCompletion = staleCompletion
+    }
+
+    func load(from store: DeliveryStore) async throws -> DashboardProjection {
+        callCount += 1
+        if callCount == 1 {
+            let projection = try await DashboardProjection.load(from: store)
+            initialProjection = projection
+            return projection
+        }
+        if callCount == 2 {
+            olderEntered = true
+            enteredContinuations.forEach { $0.resume() }
+            enteredContinuations.removeAll()
+            if !olderReleased {
+                await withCheckedContinuation { releaseContinuations.append($0) }
+            }
+            if staleCompletion == .failure { throw RouteProjectionError.forcedRefreshFailure }
+            return initialProjection ?? DashboardProjection(projects: [], boards: [:])
+        }
+        return try await DashboardProjection.load(from: store)
+    }
+
+    func waitUntilOlderReloadEntered() async {
+        guard !olderEntered else { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+
+    func releaseOlderReload() {
+        olderReleased = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
+}
+
+private actor RR9SupersededLoadDashboardLoader {
+    private var callCount = 0
+    private var olderEntered = false
+    private var olderReleased = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func load(from store: DeliveryStore) async throws -> DashboardProjection {
+        callCount += 1
+        let projection = try await DashboardProjection.load(from: store)
+        guard callCount == 2 else { return projection }
+        olderEntered = true
+        enteredContinuations.forEach { $0.resume() }
+        enteredContinuations.removeAll()
+        if !olderReleased {
+            await withCheckedContinuation { releaseContinuations.append($0) }
+        }
+        return projection
+    }
+
+    func waitUntilOlderLoadEntered() async {
+        guard !olderEntered else { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+
+    func releaseOlderLoad() {
+        olderReleased = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
+}
+
+private actor RR9TargetMismatchDashboardLoader {
+    private let failCommittedReload: Bool
+    private var callCount = 0
+    private var initialProjection: DashboardProjection?
+
+    init(failCommittedReload: Bool) {
+        self.failCommittedReload = failCommittedReload
+    }
+
+    func load(from store: DeliveryStore) async throws -> DashboardProjection {
+        callCount += 1
+        if callCount == 1 {
+            let projection = try await DashboardProjection.load(from: store)
+            initialProjection = projection
+            return projection
+        }
+        if callCount == 2, failCommittedReload {
+            throw RouteProjectionError.forcedRefreshFailure
+        }
+        return initialProjection ?? DashboardProjection(projects: [], boards: [:])
+    }
+}
+
+private actor RR9SequencedReviewInboxLoader {
+    private let failingCalls: Set<Int>
+    private var callCount = 0
+
+    init(failingCalls: Set<Int>) {
+        self.failingCalls = failingCalls
+    }
+
+    func load(from store: DeliveryStore, projectID: ProjectID) async throws -> ReviewInboxProjection {
+        callCount += 1
+        guard !failingCalls.contains(callCount) else {
+            throw RouteProjectionError.forcedRefreshFailure
+        }
+        return try await ReviewInboxProjection.load(from: store, projectID: projectID)
+    }
+}
+
+private actor LaunchOrderRecorder {
+    enum Event: Equatable { case codexObservation, dashboard, pluginStatus }
+    private var events: [Event] = []
+
+    func record(_ event: Event) { events.append(event) }
+    func snapshot() -> [Event] { events }
+}
+
+private struct LaunchOrderCodexObserver: CodexObserver {
+    let recorder: LaunchOrderRecorder
+
+    init(events: LaunchOrderRecorder) {
+        recorder = events
+    }
+
+    func snapshot() async throws -> CodexSnapshot {
+        await recorder.record(.codexObservation)
+        return .unavailable(reason: "No live attachment")
+    }
+
+    func events() -> AsyncThrowingStream<CodexRuntimeEvent, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+}
+
+private actor LaunchOrderLifecycleManager: CodexPluginLifecycleManaging {
+    let events: LaunchOrderRecorder
+
+    init(events: LaunchOrderRecorder) {
+        self.events = events
+    }
+
+    func status() async -> CodexPluginHelperReply {
+        await events.record(.pluginStatus)
+        return .init(
+            wireVersion: 1,
+            observedState: .clean(version: "0.1.0", digest: "current"),
+            error: nil
+        )
+    }
+
+    func install() async -> CodexPluginHelperReply { await status() }
+    func remove() async -> CodexPluginHelperReply { await status() }
+    func reinstall() async -> CodexPluginHelperReply { await status() }
+}
+
+private actor AppLifecycleManager: CodexPluginLifecycleManaging {
+    enum Operation: Equatable { case status, install, remove, reinstall }
+    private var replies: [CodexPluginHelperReply]
+    private var calls: [Operation] = []
+
+    init(replies: [CodexPluginHelperReply]) {
+        self.replies = replies
+    }
+
+    func status() async -> CodexPluginHelperReply { next(.status) }
+    func install() async -> CodexPluginHelperReply { next(.install) }
+    func remove() async -> CodexPluginHelperReply { next(.remove) }
+    func reinstall() async -> CodexPluginHelperReply { next(.reinstall) }
+    func operations() -> [Operation] { calls }
+
+    private func next(_ operation: Operation) -> CodexPluginHelperReply {
+        calls.append(operation)
+        return replies.isEmpty
+            ? .init(wireVersion: 1, observedState: nil, error: .malformedResult)
+            : replies.removeFirst()
+    }
 }
 
 private final class RouteBookmarkStore: @unchecked Sendable, ProjectBookmarkStoring {
@@ -900,6 +2809,7 @@ private actor RouteDashboardLoader {
 
 private enum RouteProjectionError: Error {
     case forcedRefreshFailure
+    case missingSnapshotText
 }
 
 private actor RouteCountingTransport: PushoverTransport {

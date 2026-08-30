@@ -551,6 +551,7 @@ final class StoreAcceptanceTests: XCTestCase {
 
         let legacy = try SQLiteConnection(url: databaseURL)
         try legacy.executeScript("""
+        DROP TABLE codex_plugin_lifecycle;
         DROP TABLE alert_rules;
         DROP TABLE ticket_goal_links;
         DROP INDEX observed_goals_project_identity_unique;
@@ -582,7 +583,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(state.0, "single-phase")
         XCTAssertNil(state.1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 9)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
     }
 
     func testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity() async throws {
@@ -631,6 +632,7 @@ final class StoreAcceptanceTests: XCTestCase {
 
         let legacy = try SQLiteConnection(url: databaseURL)
         try legacy.executeScript("""
+        DROP TABLE codex_plugin_lifecycle;
         DROP TABLE alert_rules;
         DROP TABLE IF EXISTS ticket_goal_links;
         DROP INDEX IF EXISTS observed_goals_project_identity_unique;
@@ -664,7 +666,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL))
         XCTAssertEqual(relaunchedLinkCount, 1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 9)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 7)
         XCTAssertNil(try snapshot.scalarText("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'ticket_goal_links'"))
         XCTAssertEqual(try snapshot.scalarText("SELECT outcome FROM tickets WHERE id = 'ONE'"), "Owner-authored unambiguous outcome")
@@ -738,6 +740,7 @@ final class StoreAcceptanceTests: XCTestCase {
         legacyStore = nil
         let legacy = try SQLiteConnection(url: databaseURL)
         try legacy.executeScript("""
+        DROP TABLE IF EXISTS codex_plugin_lifecycle;
         DROP TABLE IF EXISTS alert_rules;
         PRAGMA user_version = 8;
         """)
@@ -749,7 +752,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertTrue(initial[.agentCompletionAndReview])
         XCTAssertTrue(initial[.needsReviewEntry])
         XCTAssertFalse(initial[.pausedGoals])
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 9)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
 
         let schema = try SQLiteConnection(url: databaseURL)
         XCTAssertThrowsError(try schema.execute("INSERT INTO alert_rules (kind, is_enabled) VALUES ('unknown', 1)"))
@@ -788,6 +791,108 @@ final class StoreAcceptanceTests: XCTestCase {
             try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason LIKE 'Set global alert rule %'")
         }
         XCTAssertEqual(auditCountAfterFailures, 1)
+    }
+
+    func testVersionNineMigratesToVersionTenWithExactlyOneLifecycleSingleton() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var currentStore: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        _ = currentStore
+        currentStore = nil
+        let legacy = try SQLiteConnection(url: databaseURL)
+        try legacy.executeScript("""
+        DROP TABLE codex_plugin_lifecycle;
+        PRAGMA user_version = 9;
+        """)
+
+        let migrated = DeliveryStore(databaseURL: databaseURL)
+        let state = try await migrated.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle"),
+                try connection.scalarText("SELECT intent FROM codex_plugin_lifecycle WHERE plugin_id = 'release-radar'")
+            )
+        }
+
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(state.0, 1)
+        XCTAssertEqual(state.1, "neverInstalled")
+    }
+
+    func testVersionTenMissingLifecycleSingletonIsUnavailableAndRecoverable() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var currentStore: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await currentStore!.transact(actor: .init(id: "fixture"), reason: "Remove lifecycle singleton") {
+            try $0.execute("DELETE FROM codex_plugin_lifecycle")
+        }
+        currentStore = nil
+
+        let relaunched = DeliveryStore(databaseURL: databaseURL)
+        guard case let .unavailable(recovery) = await relaunched.availability else {
+            return XCTFail("Expected missing lifecycle singleton to make version 10 unavailable")
+        }
+        XCTAssertEqual(recovery.kind, .migration)
+        let original = try SQLiteConnection(url: databaseURL)
+        let snapshot = try SQLiteConnection(url: try XCTUnwrap(recovery.preMigrationSnapshotURL))
+        XCTAssertEqual(try original.scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(try original.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle"), 0)
+        XCTAssertEqual(try snapshot.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle"), 0)
+    }
+
+    func testVersionTenMalformedLifecycleSingletonIsRejectedByLoadAndRelaunch() async throws {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        try await store!.transact(actor: .init(id: "fixture"), reason: "Corrupt lifecycle singleton") {
+            try $0.execute(
+                """
+                UPDATE codex_plugin_lifecycle
+                SET intent = 'managedInstalled',
+                    managed_version = X'01',
+                    managed_digest = 'digest',
+                    verified_at = '2026-08-28T00:00:00Z'
+                WHERE plugin_id = 'release-radar'
+                """
+            )
+        }
+        await XCTAssertThrowsErrorAsync {
+            _ = try await CodexPluginLifecycleStore(store: store!).load()
+        }
+        store = nil
+
+        let relaunched = DeliveryStore(databaseURL: databaseURL)
+        guard case .unavailable = await relaunched.availability else {
+            return XCTFail("Expected malformed lifecycle singleton to make version 10 unavailable")
+        }
+        XCTAssertEqual(
+            try SQLiteConnection(url: databaseURL).scalarText(
+                "SELECT typeof(managed_version) FROM codex_plugin_lifecycle"
+            ),
+            "blob"
+        )
+    }
+
+    func testLifecycleUpdateRequiresSingletonAndRollsBackItsAudit() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Remove lifecycle singleton") {
+            try $0.execute("DELETE FROM codex_plugin_lifecycle")
+        }
+        let before = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events")
+        }
+
+        await XCTAssertThrowsErrorAsync {
+            try await CodexPluginLifecycleStore(store: store).recordVerified(
+                .init(intent: .managedInstalled, managedVersion: "0.1.0", managedDigest: "digest", verifiedAt: Date(timeIntervalSince1970: 1)),
+                reason: "Install Release Radar Codex plugin"
+            )
+        }
+
+        let after = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events")
+        }
+        XCTAssertEqual(after, before)
+        await XCTAssertThrowsErrorAsync {
+            _ = try await CodexPluginLifecycleStore(store: store).load()
+        }
     }
 
     func testLinkedGoalThreadReassignmentRollsBackObservedGoalAndLink() async throws {
@@ -863,7 +968,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 9)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 10)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }

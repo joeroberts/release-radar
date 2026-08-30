@@ -4,6 +4,28 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class OnboardingAcceptanceTests: XCTestCase {
+    func testCodexHandoffPromptRunsInCurrentTaskWithExactInstalledReleaseRadarSkill() {
+        let root = URL(fileURLWithPath: "/Users/example/RekonDesignSystem", isDirectory: true)
+        let setup = CodexPromptHandoff.prompt(for: .missing, projectRoot: root)
+        let repair = CodexPromptHandoff.prompt(for: .handoffIncomplete(version: 1), projectRoot: root)
+
+        XCTAssertTrue(setup.localizedCaseInsensitiveContains("this Codex task"))
+        XCTAssertTrue(setup.contains("$release-radar:release-radar"))
+        XCTAssertTrue(setup.localizedCaseInsensitiveContains("installed"))
+        XCTAssertTrue(setup.contains("root AGENTS.md"))
+        XCTAssertTrue(setup.localizedCaseInsensitiveContains("authorizing"))
+        XCTAssertTrue(setup.localizedCaseInsensitiveContains("preserving every other instruction"))
+        XCTAssertTrue(setup.contains(root.path))
+        XCTAssertTrue(setup.localizedCaseInsensitiveContains("exactly matches"))
+        XCTAssertTrue(setup.localizedCaseInsensitiveContains("stop before writing any file"))
+        XCTAssertFalse(setup.localizedCaseInsensitiveContains("start a fresh"))
+        XCTAssertFalse(setup.localizedCaseInsensitiveContains("create another task"))
+        XCTAssertFalse(setup.localizedCaseInsensitiveContains("delegate another task"))
+        XCTAssertTrue(repair.localizedCaseInsensitiveContains("handoff incomplete"))
+        XCTAssertTrue(repair.localizedCaseInsensitiveContains("already matches"))
+        XCTAssertTrue(repair.contains("$release-radar:release-radar"))
+    }
+
     func testInitializeProjectTrackingAllowsLegacyForeignKeyAuditReadWithoutAllowingAuditMutation() async throws {
         let fixture = try FolderFixture()
         let sentinelURL = fixture.root.appendingPathComponent("owner-sentinel.txt")
@@ -284,7 +306,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertEqual(resumedCounts.1, 1)
         XCTAssertEqual(resumedCounts.2, 0)
         XCTAssertEqual(resumedCounts.3, 0)
-        XCTAssertFalse(CodexPromptHandoff.prompt.isEmpty)
+        XCTAssertFalse(CodexPromptHandoff.prompt(for: .missing, projectRoot: fixture.root).isEmpty)
         let authorizedRoot = try await relaunched.withAuthorizedProject(projectID: projectID) { project in
             project.canonicalRoot
         }
@@ -380,7 +402,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertEqual(resumedCounts.2, 0)
         XCTAssertEqual(resumedCounts.3, 0)
         XCTAssertEqual(resumedCounts.4, 0)
-        XCTAssertFalse(CodexPromptHandoff.prompt.isEmpty)
+        XCTAssertFalse(CodexPromptHandoff.prompt(for: .missing, projectRoot: fixture.root).isEmpty)
         let authorizedRoot = try await relaunched.withAuthorizedProject(projectID: savedProjectID) { project in
             project.canonicalRoot
         }

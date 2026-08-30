@@ -66,7 +66,7 @@ struct FailureStatePresentation: Equatable, Sendable {
             return nil
         case .unavailable:
             self.init(
-                title: "Codex unavailable",
+                title: "Codex desktop observation unavailable",
                 detail: freshness.reason ?? "No supported Codex attachment is available.",
                 systemImage: "bolt.horizontal.circle",
                 tone: .neutral,
@@ -271,6 +271,46 @@ struct FailureStatePresentation: Equatable, Sendable {
             accessibilityID: recoverable ? "review-locate-authorization" : "review-folder-authorization-error"
         )
     }
+
+    init(activePhaseAuthorizationError error: ProjectAuthorizationError) {
+        self.init(
+            title: "Active phase authorization required",
+            detail: "\(error.localizedDescription) Locate the same project folder to restore access, then select the phase again.",
+            systemImage: "folder.badge.questionmark",
+            tone: .warning,
+            accessibilityID: "active-phase-authorization-failed"
+        )
+    }
+
+    init(activePhaseAgentError error: AgentCommandError) {
+        switch error {
+        case .appUnavailable:
+            self.init(
+                title: "Active phase unavailable",
+                detail: "Release Radar could not accept the phase change. The active phase and current board did not change. Reopen or reload Release Radar before trying again.",
+                systemImage: "app.badge.checkmark",
+                tone: .error,
+                accessibilityID: "active-phase-unavailable"
+            )
+        case .outcomeUnknown:
+            self.init(
+                title: "Active phase outcome unknown",
+                detail: "Refresh persisted state before deciding what to do next. Release Radar will not retry the phase change automatically.",
+                systemImage: "questionmark.diamond",
+                tone: .warning,
+                accessibilityID: "active-phase-outcome-unknown"
+            )
+        default:
+            let base = FailureStatePresentation(agentError: error)
+            self.init(
+                title: "Active phase change failed",
+                detail: base?.detail ?? "The phase change failed and no partial delivery state was kept.",
+                systemImage: base?.systemImage ?? "exclamationmark.triangle",
+                tone: base?.tone ?? .error,
+                accessibilityID: "active-phase-mutation-failed"
+            )
+        }
+    }
 }
 
 enum FailureStateViewStyle: Sendable {
@@ -289,11 +329,14 @@ struct FailureStateView: View {
         Group {
             switch style {
             case .full:
-                ContentUnavailableView(
-                    presentation.title,
-                    systemImage: presentation.systemImage,
-                    description: Text(presentation.detail)
-                )
+                VStack(spacing: 12) {
+                    ContentUnavailableView(
+                        presentation.title,
+                        systemImage: presentation.systemImage,
+                        description: Text(presentation.detail)
+                    )
+                    actionButton
+                }
             case .inline:
                 HStack(alignment: .top, spacing: 12) {
                     stateIcon
@@ -332,13 +375,18 @@ struct FailureStateView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if let actionTitle, let action {
-                Button(actionTitle, action: action)
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .padding(.top, 4)
-                    .accessibilityIdentifier("\(presentation.accessibilityID)-action")
-            }
+            actionButton
+        }
+    }
+
+    @ViewBuilder
+    private var actionButton: some View {
+        if let actionTitle, let action {
+            Button(actionTitle, action: action)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .padding(.top, 4)
+                .accessibilityIdentifier("\(presentation.accessibilityID)-action")
         }
     }
 }

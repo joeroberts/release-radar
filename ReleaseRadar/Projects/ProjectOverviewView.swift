@@ -2,57 +2,72 @@ import SwiftUI
 import ReleaseRadarCore
 
 struct ProjectOverviewView: View {
-    let board: PhaseBoardProjection
+    let project: ProjectDashboardProjection
+    let board: PhaseBoardProjection?
+    let guidanceState: ProjectGuidanceState
+    let projectRoot: URL?
+    let phaseSelectionStatus: ActivePhaseSelectionStatus
     let openBoard: () -> Void
+    let selectActivePhase: (PhaseID) async -> Void
+    let reloadActivePhase: () async -> Void
+    let reauthorizeActivePhase: (URL) async -> Void
+    @State private var promptCopyResult: CodexPromptCopyResult?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(board.project.name)
+                    Text(project.name)
                         .font(.largeTitle.weight(.semibold))
                     Text("Project overview")
                         .foregroundStyle(.secondary)
                 }
 
                 HStack(spacing: 14) {
-                    summaryCard("Active phase", value: board.project.activePhaseName, systemImage: "flag")
-                    summaryCard("Current work", value: "\(board.project.currentWorkCount)", systemImage: "rectangle.stack")
-                    summaryCard("Owner attention", value: "\(board.project.attentionCount)", systemImage: "person.crop.circle.badge.exclamationmark")
+                    summaryCard("Active phase", value: project.activePhaseName, systemImage: "flag")
+                    summaryCard("Current work", value: "\(project.currentWorkCount)", systemImage: "rectangle.stack")
+                    summaryCard("Owner attention", value: "\(project.attentionCount)", systemImage: "person.crop.circle.badge.exclamationmark")
                 }
 
-                ProjectGoalSummaryView(context: board.project.goalContext)
+                ProjectGoalSummaryView(context: project.goalContext)
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
 
+                guidanceCard
+
                 VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(board.project.activePhaseName)
-                                .font(.title2.weight(.semibold))
-                            Text("Delivery state is derived from persisted lane membership.")
-                                .foregroundStyle(.secondary)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .center, spacing: 16) {
+                            deliveryHeading
+                            Spacer()
+                            phaseControls
                         }
-                        Spacer()
-                        Button("Open phase board", action: openBoard)
-                            .buttonStyle(.borderedProminent)
-                            .accessibilityIdentifier("open-phase-board")
+                        VStack(alignment: .leading, spacing: 12) {
+                            deliveryHeading
+                            phaseControls
+                        }
                     }
 
-                    HStack(spacing: 10) {
-                        ForEach(board.lanes) { lane in
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(lane.lane.dashboardTitle)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Text("\(lane.count)")
-                                    .font(.title2.weight(.medium))
+                    if let board {
+                        HStack(spacing: 10) {
+                            ForEach(board.lanes) { lane in
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text(lane.lane.dashboardTitle)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text("\(lane.count)")
+                                        .font(.title2.weight(.medium))
+                                }
+                                .padding(12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(lane.lane.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                             }
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(lane.lane.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                         }
+                    } else {
+                        Text("Choose an existing active phase to load its five-lane board. The persisted phase and ticket history remains unchanged.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding(20)
@@ -61,6 +76,68 @@ struct ProjectOverviewView: View {
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private var deliveryHeading: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(project.activePhaseName)
+                .font(.title2.weight(.semibold))
+            Text("Delivery state is derived from persisted lane membership.")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var phaseControls: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ActivePhaseSelector(
+                project: project,
+                surface: .overview,
+                status: phaseSelectionStatus,
+                onSelect: selectActivePhase,
+                onReload: reloadActivePhase,
+                onReauthorize: reauthorizeActivePhase
+            )
+            if board != nil {
+                Button("Open phase board", action: openBoard)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("open-phase-board")
+            }
+        }
+    }
+
+    private var guidanceCard: some View {
+        let presentation = ProjectGuidancePresentation(state: guidanceState)
+        return VStack(alignment: .leading, spacing: 8) {
+            Label(presentation.status, systemImage: presentation.systemImage)
+                .font(.headline)
+            Text(presentation.detail)
+                .foregroundStyle(.secondary)
+            if let actionTitle = presentation.actionTitle, let projectRoot {
+                Text(projectRoot.path)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("project-guidance-authorized-root")
+                Button(actionTitle) {
+                    promptCopyResult = CodexPromptHandoff.copy(
+                        prompt: CodexPromptHandoff.prompt(for: guidanceState, projectRoot: projectRoot),
+                        using: CodexPromptHandoff.writeToGeneralPasteboard
+                    )
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("project-guidance-copy-prompt")
+            }
+            if let promptCopyResult {
+                Text(promptCopyResult.announcement)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(promptCopyResult == .copied ? .green : .red)
+                    .accessibilityIdentifier("project-guidance-copy-result")
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityIdentifier("project-guidance-status")
     }
 
     private func summaryCard(_ title: String, value: String, systemImage: String) -> some View {
@@ -78,6 +155,48 @@ struct ProjectOverviewView: View {
         .padding(18)
         .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
         .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+struct ProjectGuidancePresentation: Equatable, Sendable {
+    let status: String
+    let detail: String
+    let systemImage: String
+    let actionTitle: String?
+
+    init(state: ProjectGuidanceState) {
+        switch state {
+        case let .current(version):
+            status = "Release Radar guidance current · v\(version)"
+            detail = "This repository has the guidance version shipped with Release Radar."
+            systemImage = "checkmark.circle"
+            actionTitle = nil
+        case let .handoffIncomplete(version):
+            status = "Release Radar guidance handoff incomplete · v\(version)"
+            detail = "The guidance block is present, but Release Radar has no audited handoff evidence. Use Codex to complete the handoff without changing delivery state."
+            systemImage = "exclamationmark.arrow.triangle.2.circlepath"
+            actionTitle = "Copy repair prompt"
+        case .missing:
+            status = "Release Radar guidance not installed"
+            detail = "Use the owner-authorized Codex handoff to add Release Radar guidance without replacing existing repository instructions."
+            systemImage = "doc.badge.plus"
+            actionTitle = "Copy setup prompt"
+        case let .outdated(installed, current):
+            status = "Release Radar guidance update required · v\(installed) → v\(current)"
+            detail = "Use Codex to replace only the managed Release Radar block and preserve every other repository instruction."
+            systemImage = "arrow.triangle.2.circlepath"
+            actionTitle = "Copy update prompt"
+        case .needsRepair:
+            status = "Release Radar guidance needs repair"
+            detail = "The managed Release Radar guidance block is incomplete or modified. Use Codex to repair only that block."
+            systemImage = "wrench.and.screwdriver"
+            actionTitle = "Copy repair prompt"
+        case .unavailable:
+            status = "Release Radar guidance unavailable"
+            detail = "Release Radar could not read this repository's guidance. Restore folder access and reload the project."
+            systemImage = "folder.badge.questionmark"
+            actionTitle = nil
+        }
     }
 }
 

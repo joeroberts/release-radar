@@ -3,10 +3,14 @@ import ReleaseRadarCore
 
 actor AppNotificationCoordinator {
     typealias ActivityRefreshHandler = @Sendable (ProjectID) async -> Void
+    typealias DashboardRefreshHandler = @Sendable () async -> Void
 
     private let store: DeliveryStore
     private let dispatcher: PushoverNotificationDispatcher
     private var activityRefreshHandler: ActivityRefreshHandler?
+    private var dashboardRefreshHandler: DashboardRefreshHandler?
+    private var pendingSuccessfulCommandRefresh = false
+    private var successfulCommandRefreshDrainInProgress = false
 
     init(store: DeliveryStore, dispatcher: PushoverNotificationDispatcher) {
         self.store = store
@@ -15,6 +19,11 @@ actor AppNotificationCoordinator {
 
     func setActivityRefreshHandler(_ handler: @escaping ActivityRefreshHandler) {
         activityRefreshHandler = handler
+    }
+
+    func setDashboardRefreshHandler(_ handler: @escaping DashboardRefreshHandler) async {
+        dashboardRefreshHandler = handler
+        await drainSuccessfulCommandRefreshIfPossible()
     }
 
     func initializeForLaunch() async {
@@ -32,7 +41,24 @@ actor AppNotificationCoordinator {
         result: AgentCommandResult
     ) async {
         guard result.error == nil else { return }
-        await dispatchPending()
+        pendingSuccessfulCommandRefresh = true
+        await drainSuccessfulCommandRefreshIfPossible()
+    }
+
+    private func drainSuccessfulCommandRefreshIfPossible() async {
+        guard !successfulCommandRefreshDrainInProgress,
+              pendingSuccessfulCommandRefresh,
+              let dashboardRefreshHandler else { return }
+        successfulCommandRefreshDrainInProgress = true
+        defer { successfulCommandRefreshDrainInProgress = false }
+        while true {
+            repeat {
+                pendingSuccessfulCommandRefresh = false
+                await dashboardRefreshHandler()
+            } while pendingSuccessfulCommandRefresh
+            await dispatchPending()
+            guard pendingSuccessfulCommandRefresh else { return }
+        }
     }
 
     private func refreshProjectsWithNotifications() async {
@@ -60,6 +86,8 @@ struct ReleaseRadarAppServices: Sendable {
     let store: DeliveryStore
     let keychain: PushoverKeychainStore
     let notificationCoordinator: AppNotificationCoordinator
+    let codexPluginCoordinator: CodexPluginLifecycleCoordinator?
+    let codexPluginShippedVersion: String
 
     private init() {
         let store = DeliveryStore(databaseURL: DeliveryStore.applicationSupportDatabaseURL())
@@ -70,5 +98,20 @@ struct ReleaseRadarAppServices: Sendable {
             store: store,
             dispatcher: PushoverNotificationDispatcher(store: store, credentials: keychain)
         )
+        if let packageURL = Bundle.main.resourceURL?
+            .appendingPathComponent("CodexPluginMarketplace", isDirectory: true),
+           let package = try? CodexPluginPackage(rootURL: packageURL)
+        {
+            codexPluginShippedVersion = package.version
+            codexPluginCoordinator = CodexPluginLifecycleCoordinator(
+                manager: CodexPluginLifecycleClient(),
+                store: CodexPluginLifecycleStore(store: store),
+                shippedVersion: package.version,
+                shippedDigest: package.digest
+            )
+        } else {
+            codexPluginShippedVersion = "Unknown"
+            codexPluginCoordinator = nil
+        }
     }
 }

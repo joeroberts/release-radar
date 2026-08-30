@@ -23,10 +23,10 @@ plugin as signed application resources. Codex remains the owner of installed
 plugin state, enablement, approval, and permissions.
 
 Release Radar may register one separately signed, same-user lifecycle helper.
-The helper is deliberately outside App Sandbox solely to invoke the verified
-ChatGPT-bundled Codex CLI for the fixed Release Radar plugin. Its private typed
-XPC interface contains exactly `status`, `install`, `remove`, and `reinstall`.
-It accepts no arbitrary command, path, identity, source, arguments, or
+The helper remains inside App Sandbox and invokes the verified ChatGPT-bundled
+Codex CLI only for the fixed Release Radar plugin. Its private typed XPC
+interface contains exactly `status`, `install`, `remove`, and `reinstall`. It
+accepts no arbitrary command, path, identity, source, arguments, or
 environment.
 
 The helper has no app-group, Keychain, folder-bookmark, network, SQLite, MCP,
@@ -34,6 +34,30 @@ STDIO, URL, or agent-facing authority and does not link `ReleaseRadarCore`. It
 authenticates the same-user Release Radar caller, directly invokes only the
 fixed verified Codex executable with fixed arguments and a sanitized
 environment, strictly parses bounded results, and fails closed.
+
+### 2026-08-28 implementation amendment
+
+Live signed-app testing established that macOS rejects a sandboxed application
+registering an unsandboxed `SMAppService` login-item helper. The production
+helper therefore remains sandboxed. The owner approved the minimum local,
+single-user exceptions needed by the installed Codex CLI: read-write access to
+`~/.codex/`; read-only access to
+`~/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime/`
+and `~/Documents/dev/joeroberts/ai-tools/integrations/codex/`; read-only access
+to `/private/var/empty/`; and Mach lookup of `com.apple.security.syspolicy`.
+The two marketplace roots are required because this installed CLI reads every
+configured marketplace even when Release Radar issues a targeted marketplace
+or plugin command. The helper still has no network, database, project-wide,
+Keychain, credential, bookmark, or app-group access, and `~/.codex/` remains
+its only writable filesystem area. A request for any additional unrelated root
+requires a new owner decision.
+
+`SMAppService` may launch the helper with a relative `argv[0]`. The helper uses
+`_NSGetExecutablePath` to locate its own signed bundle and derive the bundled
+marketplace root instead of interpreting that relative argument as a path.
+This amendment changes only the helper's minimum sandbox access needed for the
+fixed CLI operations; the four-method XPC surface, exact-entry migration,
+official-CLI ownership, and local-only runtime boundary are unchanged.
 
 The plugin and marketplace retain the single canonical product identity
 `release-radar`. The plugin-provided MCP server uses machine identifier
@@ -49,6 +73,19 @@ An absent entry is also allowed. Additional CLI fields are tolerated only when
 they do not contradict the required semantics; malformed, duplicate, or
 contradictory values fail closed. Any other same-name entry fails closed.
 
+### 2026-08-28 repository-handoff clarification
+
+The installed skill may direct an owner-authorized Codex task to preserve or
+create applicable repository `AGENTS.md` guidance and the minimum durable
+delivery ledger during requested initialization. Those are Codex repository
+writes, not app or lifecycle-helper writes. The same task uses only existing
+typed Release Radar MCP mutations for the corresponding delivery state; Release
+Radar remains the sole SQLite writer and returns the mutation's audit result.
+Completion reads repository files back and requires that successful audited MCP
+result. This does not authorize an MCP repository-read operation, app-side
+repository authority, a new MCP operation, observer transport, polling,
+synchronization/reconciliation, HTTP, or multi-user behavior.
+
 For Task 1's corrected composition proof, the exact recognized legacy entry
 remains untouched. The proof first requires exact absence for bundled key
 `release_radar`, then installs the derived plugin and requires one fresh task to
@@ -56,9 +93,17 @@ emit a machine-verifiable `mcp_tool_call` for that server; cleanup removes only
 the temporary plugin and marketplace and re-verifies exact bundled-key absence.
 Earlier accepted Task 1 evidence already proves exact legacy
 removal, pinned absence, and restoration through supported CLI vectors. For the
-product's first managed Install, the helper retains the operation-local initial
-absent or exact-legacy observation and requires bundled key `release_radar`
-exactly absent before mutation. It installs the managed plugin and verifies
+product's first managed Install, the helper first accepts bundled key
+`release_radar` as absent or as the exact enabled STDIO entry with no disabled
+reason, the packaged AgentTools command, empty arguments, null working
+directory, and empty or null environment fields. Contradictory fields fail
+closed. It classifies both direct and legacy entries before mutation, then
+immediately rereads and removes only that exact direct entry through the
+supported CLI, verifies absence, and restores it
+on a later failure only if this operation removed it and the key remains absent.
+Changed or unrecognized direct state fails closed. The helper then retains the
+operation-local initial absent or exact-legacy `release-radar` observation,
+installs the managed plugin, and verifies
 bundled server `release_radar`. An initially absent entry proceeds directly to
 the final bundled-server postcondition. An initially exact legacy entry is
 immediately reread and removed through the supported CLI only when the fresh
@@ -68,7 +113,7 @@ rolls back attempt-owned state without restoration. After the operation issues
 removal, a later failure may restore the recognized entry. Only the final
 bundled-server verification permits the app to persist `managedInstalled`.
 Later lifecycle operations neither repeat the migration nor recreate the
-legacy entry.
+legacy or direct entry.
 
 Task 1 feasibility composes two existing Release Radar boundaries instead of
 creating a second lifecycle service. The lifecycle lane uses only the verified

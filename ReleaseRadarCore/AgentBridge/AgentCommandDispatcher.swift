@@ -129,6 +129,8 @@ public actor AgentCommandDispatcher {
             commandFieldsAreValid = valid(ticketID, maximum: 256) && valid(phaseID, maximum: 256) && valid(outcome)
         case let .transitionTicket(ticketID, _):
             commandFieldsAreValid = valid(ticketID, maximum: 256)
+        case let .setActivePhase(phaseID):
+            commandFieldsAreValid = valid(phaseID, maximum: 256)
         case let .setDependency(id, _, subjectID, dependsOnID):
             commandFieldsAreValid = valid(id, maximum: 256)
                 && valid(subjectID, maximum: 256)
@@ -193,6 +195,8 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
         case let .transitionTicket(ticketID, _):
             return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
+        case let .setActivePhase(phaseID):
+            return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
         case let .setDependency(id, _, _, _),
              let .recordBlocker(id, _, _),
              let .addEvidence(id, _, _),
@@ -211,6 +215,7 @@ public actor AgentCommandDispatcher {
     private static func auditScope(for command: AgentCommand, projectID: ProjectID) -> AuditScope {
         let entity: (AuditEntityType, String) = switch command {
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
+        case let .setActivePhase(phaseID): (.phase, phaseID)
         case let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _): (.ticket, ticketID)
         case let .setDependency(id, kind, _, _):
             (kind == .ticket ? .ticketDependency : .phaseDependency, id)
@@ -282,6 +287,16 @@ public actor AgentCommandDispatcher {
                 enteredNeedsReview: previousLane != TicketLane.needsReview.rawValue,
                 projectID: projectID,
                 connection: connection
+            )
+        case let .setActivePhase(phaseID):
+            try requireProjectEntity(phaseID, table: "phases", projectID: projectID, connection: connection)
+            try connection.execute(
+                """
+                INSERT INTO project_active_phases (project_id, phase_id)
+                VALUES (?, ?)
+                ON CONFLICT(project_id) DO UPDATE SET phase_id = excluded.phase_id;
+                """,
+                bindings: [.text(projectID.rawValue), .text(phaseID)]
             )
         case let .setDependency(id, kind, subjectID, dependsOnID):
             let table = kind == .ticket ? "tickets" : "phases"

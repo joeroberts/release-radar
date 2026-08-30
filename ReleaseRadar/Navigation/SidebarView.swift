@@ -17,10 +17,7 @@ struct SidebarView: View {
                 .background(Color(nsColor: .windowBackgroundColor))
         }
         .task {
-            await model.loadCodexRuntime()
-            if model.dashboard == nil {
-                await model.loadDashboard()
-            }
+            await model.initializeForLaunch()
         }
     }
 
@@ -173,7 +170,11 @@ struct SidebarView: View {
                     tone: .error,
                     accessibilityID: "failure-delivery-data"
                 ),
-                style: .full
+                style: .full,
+                actionTitle: "Reload dashboard",
+                action: {
+                    Task { await model.reloadDashboardAfterCommittedAgentCommand() }
+                }
             )
         } else if let dashboard = model.dashboard {
             switch model.selection {
@@ -215,16 +216,61 @@ struct SidebarView: View {
                     DetailUnavailableView(title: "Notifications", image: "bell")
                 }
             case let .projectOverview(projectID):
-                if let board = dashboard.board(for: projectID) {
-                    ProjectOverviewView(board: board) {
-                        Task { await model.navigate(to: .phaseBoard(projectID)) }
-                    }
+                if let project = dashboard.projects.first(where: { $0.id == projectID }),
+                   !project.phases.isEmpty {
+                    ProjectOverviewView(
+                        project: project,
+                        board: dashboard.board(for: projectID),
+                        guidanceState: model.projectGuidanceState(for: projectID),
+                        projectRoot: model.projectRoot(for: projectID),
+                        phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
+                        openBoard: {
+                            Task { await model.navigate(to: .phaseBoard(projectID)) }
+                        },
+                        selectActivePhase: { phaseID in
+                            await model.setActivePhase(projectID: projectID, phaseID: phaseID)
+                        },
+                        reloadActivePhase: {
+                            await model.reloadAfterActivePhaseSelection(projectID: projectID)
+                        },
+                        reauthorizeActivePhase: { folder in
+                            await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
+                        }
+                    )
                 } else {
                     FailureStateView(presentation: .firstPhaseRequired, style: .full)
                 }
             case let .phaseBoard(projectID):
                 if let board = dashboard.board(for: projectID) {
-                    PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID)
+                    PhaseBoardView(
+                        board: board,
+                        selectedTicketID: $model.selectedTicketID,
+                        phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
+                        selectActivePhase: { phaseID in
+                            await model.setActivePhase(projectID: projectID, phaseID: phaseID)
+                        },
+                        reloadActivePhase: {
+                            await model.reloadAfterActivePhaseSelection(projectID: projectID)
+                        },
+                        reauthorizeActivePhase: { folder in
+                            await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
+                        }
+                    )
+                } else if let project = dashboard.projects.first(where: { $0.id == projectID }),
+                          !project.phases.isEmpty {
+                    ActivePhaseBoardRecoveryView(
+                        project: project,
+                        status: model.activePhaseSelectionStatus(for: projectID),
+                        onSelect: { phaseID in
+                            await model.setActivePhase(projectID: projectID, phaseID: phaseID)
+                        },
+                        onReload: {
+                            await model.reloadAfterActivePhaseSelection(projectID: projectID)
+                        },
+                        onReauthorize: { folder in
+                            await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
+                        }
+                    )
                 } else {
                     FailureStateView(presentation: .firstPhaseRequired, style: .full)
                 }

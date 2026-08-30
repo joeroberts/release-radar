@@ -52,6 +52,230 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.6, "RR-03")
     }
 
+    func testSetActivePhaseCommitsOnlyPointerAuditAndReceiptAndDurablyReplays() async throws {
+        let fixture = try await makeActivePhaseFixture()
+        let before = try await Self.activePhaseSnapshot(fixture.store)
+        let requestID = UUID(uuidString: "19191919-1919-4919-8919-191919191911")!
+        let envelope = AgentCommandEnvelope(
+            version: 1,
+            requestID: requestID,
+            projectRoot: fixture.projectRoot.path,
+            assertedThreadID: "asserted-phase-thread",
+            reason: "Select roadmap phase",
+            command: .setActivePhase(phaseID: "RR-ROADMAP")
+        )
+
+        let first = await fixture.dispatcher.dispatch(envelope)
+        XCTAssertNil(first.error)
+        XCTAssertEqual(first.entityIDs, ["RR-ROADMAP"])
+        let auditEventID = try XCTUnwrap(first.auditEventID)
+
+        let afterFirst = try await Self.activePhaseSnapshot(fixture.store)
+        XCTAssertEqual(afterFirst.activeRows, ["project-1|RR-ROADMAP"])
+        XCTAssertEqual(afterFirst.phases, before.phases)
+        XCTAssertEqual(afterFirst.tickets, before.tickets)
+        XCTAssertEqual(afterFirst.phaseDependencies, before.phaseDependencies)
+        XCTAssertEqual(afterFirst.ticketDependencies, before.ticketDependencies)
+        XCTAssertEqual(afterFirst.auditRows.count, before.auditRows.count + 1)
+        XCTAssertTrue(Set(afterFirst.auditRows).isSuperset(of: Set(before.auditRows)))
+        XCTAssertEqual(afterFirst.requestRows.count, before.requestRows.count + 1)
+        XCTAssertTrue(Set(afterFirst.requestRows).isSuperset(of: Set(before.requestRows)))
+
+        let auditMatches = try await fixture.store.read { connection in
+            try connection.scalarInt(
+                """
+                SELECT COUNT(*) FROM audit_events
+                WHERE id = ?
+                  AND actor_id = 'release-radar-agent'
+                  AND thread_id = 'asserted-phase-thread'
+                  AND thread_attribution = 'asserted'
+                  AND reason = 'Select roadmap phase'
+                  AND project_id = 'project-1'
+                  AND entity_type = 'phase'
+                  AND entity_id = 'RR-ROADMAP'
+                  AND created_at <> ''
+                """,
+                bindings: [.text(auditEventID.rawValue)]
+            )
+        }
+        XCTAssertEqual(auditMatches, 1)
+
+        let replay = await AgentCommandDispatcher(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            projectRegistry: fixture.registry
+        ).dispatch(envelope)
+        XCTAssertEqual(replay, first)
+        let afterReplay = try await Self.activePhaseSnapshot(fixture.store)
+        XCTAssertEqual(afterReplay, afterFirst)
+    }
+
+    func testSetActivePhaseOwnerOriginUsesOwnerAttributionWithoutAssertedThread() async throws {
+        let fixture = try await makeActivePhaseFixture()
+        let result = await fixture.dispatcher.dispatch(
+            .init(
+                version: 1,
+                requestID: UUID(uuidString: "19191919-1919-4919-8919-191919191912")!,
+                projectRoot: fixture.projectRoot.path,
+                assertedThreadID: "must-not-be-recorded-for-owner",
+                reason: "Owner selected roadmap phase",
+                command: .setActivePhase(phaseID: "RR-ROADMAP")
+            ),
+            origin: .ownerApp
+        )
+
+        XCTAssertNil(result.error)
+        XCTAssertEqual(result.entityIDs, ["RR-ROADMAP"])
+        let auditEventID = try XCTUnwrap(result.auditEventID)
+        let state = try await fixture.store.read { connection in
+            [
+                try connection.scalarInt(
+                    """
+                    SELECT COUNT(*) FROM audit_events
+                    WHERE id = ?
+                      AND actor_id = 'release-radar-owner'
+                      AND thread_id IS NULL
+                      AND thread_attribution = 'none'
+                      AND reason = 'Owner selected roadmap phase'
+                      AND project_id = 'project-1'
+                      AND entity_type = 'phase'
+                      AND entity_id = 'RR-ROADMAP'
+                      AND created_at <> ''
+                    """,
+                    bindings: [.text(auditEventID.rawValue)]
+                ) ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = '19191919-1919-4919-8919-191919191912'") ?? -1,
+            ]
+        }
+        XCTAssertEqual(state, [1, 1])
+    }
+
+    func testSetActivePhaseRejectsMissingCrossProjectAndUnauthorizedTargetsWithoutWrites() async throws {
+        let fixture = try await makeActivePhaseFixture()
+        let baseline = try await Self.activePhaseSnapshot(fixture.store)
+        let cases: [(String, String, String, (AgentCommandError) -> Bool)] = [
+            (
+                "19191919-1919-4919-8919-191919191913",
+                fixture.projectRoot.path,
+                "missing-phase",
+                { if case .invalidReference = $0 { return true }; return false }
+            ),
+            (
+                "19191919-1919-4919-8919-191919191914",
+                fixture.projectRoot.path,
+                "other-project-phase",
+                { if case .crossProjectReference = $0 { return true }; return false }
+            ),
+            (
+                "19191919-1919-4919-8919-191919191915",
+                fixture.projectRoot.deletingLastPathComponent().path,
+                "RR-ROADMAP",
+                { $0 == .unauthorizedProjectRoot }
+            ),
+            (
+                "19191919-1919-4919-8919-191919191916",
+                fixture.projectRoot.path,
+                "",
+                { if case .invalidEnvelope = $0 { return true }; return false }
+            ),
+        ]
+
+        for (requestID, projectRoot, phaseID, matches) in cases {
+            let result = await fixture.dispatcher.dispatch(.init(
+                version: 1,
+                requestID: UUID(uuidString: requestID)!,
+                projectRoot: projectRoot,
+                reason: "Reject invalid active phase",
+                command: .setActivePhase(phaseID: phaseID)
+            ))
+            guard let error = result.error, matches(error) else {
+                return XCTFail("Unexpected active-phase validation result for \(phaseID): \(result)")
+            }
+            let after = try await Self.activePhaseSnapshot(fixture.store)
+            XCTAssertEqual(after, baseline)
+        }
+    }
+
+    func testSetActivePhaseRejects258ByteIdentifierBeforeAnyWrite() async throws {
+        let fixture = try await makeActivePhaseFixture()
+        let baseline = try await Self.activePhaseSnapshot(fixture.store)
+        let oversizedPhaseID = String(repeating: "é", count: 129)
+        XCTAssertEqual(oversizedPhaseID.utf8.count, 258)
+
+        let result = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(uuidString: "19191919-1919-4919-8919-191919191917")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Reject oversized phase identity",
+            command: .setActivePhase(phaseID: oversizedPhaseID)
+        ))
+
+        guard case .invalidEnvelope? = result.error else {
+            return XCTFail("Expected invalidEnvelope, got \(String(describing: result.error))")
+        }
+        let after = try await Self.activePhaseSnapshot(fixture.store)
+        XCTAssertEqual(after, baseline)
+    }
+
+    func testSetActivePhaseFreshAlreadyActiveIntentAuditsOnceAndReplayAddsNothing() async throws {
+        let fixture = try await makeActivePhaseFixture()
+        let before = try await Self.activePhaseSnapshot(fixture.store)
+        let envelope = AgentCommandEnvelope(
+            version: 1,
+            requestID: UUID(uuidString: "19191919-1919-4919-8919-191919191918")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Confirm current phase intent",
+            command: .setActivePhase(phaseID: "phase-current")
+        )
+
+        let first = await fixture.dispatcher.dispatch(envelope)
+        XCTAssertNil(first.error)
+        XCTAssertEqual(first.entityIDs, ["phase-current"])
+        XCTAssertNotNil(first.auditEventID)
+        let afterFirst = try await Self.activePhaseSnapshot(fixture.store)
+        XCTAssertEqual(afterFirst.activeRows, before.activeRows)
+        XCTAssertEqual(afterFirst.phases, before.phases)
+        XCTAssertEqual(afterFirst.tickets, before.tickets)
+        XCTAssertEqual(afterFirst.phaseDependencies, before.phaseDependencies)
+        XCTAssertEqual(afterFirst.ticketDependencies, before.ticketDependencies)
+        XCTAssertEqual(afterFirst.auditRows.count, before.auditRows.count + 1)
+        XCTAssertEqual(afterFirst.requestRows.count, before.requestRows.count + 1)
+
+        let replay = await AgentCommandDispatcher(
+            store: DeliveryStore(databaseURL: fixture.databaseURL),
+            projectRegistry: fixture.registry
+        ).dispatch(envelope)
+        XCTAssertEqual(replay, first)
+        let afterReplay = try await Self.activePhaseSnapshot(fixture.store)
+        XCTAssertEqual(afterReplay, afterFirst)
+    }
+
+    func testSetActivePhaseChangedBodyRequestIDReusePreservesOriginalSelection() async throws {
+        let fixture = try await makeActivePhaseFixture()
+        let requestID = UUID(uuidString: "19191919-1919-4919-8919-191919191919")!
+        let first = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: requestID,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Select active phase with stable request",
+            command: .setActivePhase(phaseID: "RR-ROADMAP")
+        ))
+        XCTAssertNil(first.error)
+        let afterFirst = try await Self.activePhaseSnapshot(fixture.store)
+
+        let reused = await fixture.dispatcher.dispatch(.init(
+            version: 1,
+            requestID: requestID,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Select active phase with stable request",
+            command: .setActivePhase(phaseID: "phase-historical")
+        ))
+
+        XCTAssertEqual(reused.error, .requestIDReused)
+        let afterReuse = try await Self.activePhaseSnapshot(fixture.store)
+        XCTAssertEqual(afterReuse, afterFirst)
+        XCTAssertEqual(afterFirst.activeRows, ["project-1|RR-ROADMAP"])
+    }
+
     func testLinkGoalPersistsTicketScopedAuditAndDurableReplay() async throws {
         let fixture = try await makeFixture()
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed approved goal candidate") { connection in
@@ -584,6 +808,33 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         let dispatcher: AgentCommandDispatcher
     }
 
+    private struct ActivePhaseSnapshot: Equatable {
+        let phases: [String]
+        let tickets: [String]
+        let phaseDependencies: [String]
+        let ticketDependencies: [String]
+        let activeRows: [String]
+        let auditRows: [String]
+        let requestRows: [String]
+    }
+
+    private func makeActivePhaseFixture() async throws -> Fixture {
+        let fixture = try await makeFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed active-phase history") { connection in
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-current', 'project-1', 'Current')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('RR-ROADMAP', 'project-1', 'Roadmap')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-historical', 'project-1', 'Historical')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('CURRENT-1', 'project-1', 'phase-current', 'Current delivery', 'in_progress')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ROADMAP-1', 'project-1', 'RR-ROADMAP', 'Roadmap delivery', 'backlog')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('HISTORY-1', 'project-1', 'phase-historical', 'Historical delivery', 'accepted')")
+            try connection.execute("INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('phase-dependency-history', 'project-1', 'RR-ROADMAP', 'phase-current')")
+            try connection.execute("INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES ('ticket-dependency-history', 'project-1', 'ROADMAP-1', 'CURRENT-1')")
+            try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-1', 'phase-current')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('other-project-phase', 'project-2', 'Other project')")
+        }
+        return fixture
+    }
+
     private func makeFixture(seedDelivery: Bool = true) async throws -> Fixture {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-AgentBridgeTests-\(UUID().uuidString)", isDirectory: true)
@@ -622,4 +873,56 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         }
     }
 
+    private static func activePhaseSnapshot(_ store: DeliveryStore) async throws -> ActivePhaseSnapshot {
+        try await store.read { connection in
+            ActivePhaseSnapshot(
+                phases: try Self.textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || name AS value FROM phases ORDER BY project_id, id"
+                ),
+                tickets: try Self.textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || phase_id || '|' || outcome || '|' || lane AS value FROM tickets ORDER BY project_id, id"
+                ),
+                phaseDependencies: try Self.textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || phase_id || '|' || depends_on_phase_id AS value FROM phase_dependencies ORDER BY project_id, id"
+                ),
+                ticketDependencies: try Self.textRows(
+                    connection,
+                    sql: "SELECT id || '|' || project_id || '|' || ticket_id || '|' || depends_on_ticket_id AS value FROM ticket_dependencies ORDER BY project_id, id"
+                ),
+                activeRows: try Self.textRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || phase_id AS value FROM project_active_phases ORDER BY project_id"
+                ),
+                auditRows: try Self.textRows(
+                    connection,
+                    sql: "SELECT id || '|' || actor_id || '|' || COALESCE(thread_id, '') || '|' || thread_attribution || '|' || reason || '|' || COALESCE(project_id, '') || '|' || COALESCE(entity_type, '') || '|' || COALESCE(entity_id, '') || '|' || created_at AS value FROM audit_events ORDER BY id"
+                ),
+                requestRows: try Self.textRows(
+                    connection,
+                    sql: "SELECT request_id || '|' || hex(request_body) || '|' || hex(result_data) || '|' || created_at AS value FROM agent_command_requests ORDER BY request_id"
+                )
+            )
+        }
+    }
+
+    private static func textRows(_ connection: SQLiteConnection, sql: String) throws -> [String] {
+        var values: [String] = []
+        var offset: Int64 = 0
+        while let row = try connection.row("\(sql) LIMIT 1 OFFSET ?", bindings: [.integer(offset)]) {
+            guard case let .text(value)? = row["value"] else {
+                throw ActivePhaseTestError.missingTextValue
+            }
+            values.append(value)
+            offset += 1
+        }
+        return values
+    }
+
+}
+
+private enum ActivePhaseTestError: Error {
+    case missingTextValue
 }

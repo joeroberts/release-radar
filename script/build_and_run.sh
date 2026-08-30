@@ -7,6 +7,8 @@ BUNDLE_ID="com.rekonlabs.ReleaseRadar"
 TEAM_ID="2UA854NLX4"
 APP_GROUP="2UA854NLX4.com.rekonlabs.ReleaseRadar"
 SIGNING_AUTHORITY="Apple Development: jaroberts4@gmail.com (PT7GS96H3L)"
+BRIDGE_SERVICE_LABEL="com.rekonlabs.ReleaseRadar.BridgeAgent"
+PLUGIN_LIFECYCLE_SERVICE_LABEL="com.rekonlabs.ReleaseRadar.PluginLifecycleHelper"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DERIVED_DATA="$ROOT_DIR/DerivedData"
 BUILD_BUNDLE="$DERIVED_DATA/Build/Products/Release/$APP_NAME.app"
@@ -17,6 +19,65 @@ INSTALLED_BUNDLE="/Applications/$APP_NAME.app"
 
 report_error() {
     printf 'error: %s\n' "$*" >&2
+}
+
+wait_for_process_exit() {
+    local pid="$1"
+    local description="$2"
+    local attempt
+
+    for ((attempt = 0; attempt < 50; attempt++)); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.1
+    done
+    report_error "$description process $pid did not stop"
+    return 1
+}
+
+stop_exact_executable() {
+    local executable_path="$1"
+    local pid
+    local pids
+
+    pids="$(pgrep -f -x "$executable_path" 2>/dev/null || true)"
+    for pid in $pids; do
+        if ! kill -TERM "$pid" 2>/dev/null && kill -0 "$pid" 2>/dev/null; then
+            report_error "could not stop Release Radar executable $executable_path (pid $pid)"
+            return 1
+        fi
+    done
+    for pid in $pids; do
+        if ! wait_for_process_exit "$pid" "$executable_path"; then return 1; fi
+    done
+}
+
+stop_launchd_service() {
+    local service_label="$1"
+    local service_target="gui/$(id -u)/$service_label"
+    local service_state
+    local pid
+
+    if ! service_state="$(launchctl print "$service_target" 2>/dev/null)"; then
+        return 0
+    fi
+    pid="$(awk '/^[[:space:]]*pid = / {print $3; exit}' <<<"$service_state")"
+    if [[ -z "$pid" ]]; then
+        return 0
+    fi
+    if ! launchctl kill SIGTERM "$service_target" 2>/dev/null && kill -0 "$pid" 2>/dev/null; then
+        report_error "could not stop Release Radar service $service_label (pid $pid)"
+        return 1
+    fi
+    wait_for_process_exit "$pid" "$service_label"
+}
+
+stop_running_release_radar_processes() {
+    stop_exact_executable "$INSTALLED_BUNDLE/Contents/MacOS/$APP_NAME"
+    stop_exact_executable "$BUILD_BUNDLE/Contents/MacOS/$APP_NAME"
+    stop_launchd_service "$BRIDGE_SERVICE_LABEL"
+    stop_launchd_service "$PLUGIN_LIFECYCLE_SERVICE_LABEL"
 }
 
 require_value() {
@@ -410,6 +471,7 @@ install_staged_release_no_launch() {
 
     local source_identity
 
+    stop_running_release_radar_processes
     if ! verify_bundle "$STAGED_BUNDLE"; then return 1; fi
     if ! temporary_directory="$(mktemp -d "/Applications/.${APP_NAME}.install.XXXXXX")"; then report_error "could not create install temporary directory"; return 1; fi
     candidate_bundle="$temporary_directory/$APP_NAME.app"
@@ -423,7 +485,7 @@ install_staged_release_no_launch() {
 }
 
 stop_running_app_for_explicit_launch() {
-    pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+    stop_running_release_radar_processes
 }
 
 open_app_for_explicit_launch() {

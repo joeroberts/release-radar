@@ -51,6 +51,11 @@ SHA-256 package digest is calculated over normalized relative paths and file
 bytes. The app-bundled package is the intended source; Codex owns its installed
 cache, enablement, approvals, configuration, and MCP permission state.
 
+The corrected repository handoff ships app and manifest version `0.1.5`
+together. A clean managed `0.1.4` plugin reaches it only through the existing
+clean-managed launch update or existing explicit Update action; no same-version
+overwrite or additional updater path is introduced.
+
 The `.mcp.json` uses the official direct server map form, with
 `"release_radar"` as the top-level machine key and `command`/`args` beneath it.
 It does not use a camel-case `mcpServers` wrapper. The underscore is required
@@ -62,18 +67,69 @@ Release Radar tracking.`
 
 The skill is concise and project-facing. It tells Codex to:
 
+- require the copied prompt to name the exact Release Radar-authorized
+  repository root, canonicalize that root and the current Codex task root, and
+  continue only when they match exactly;
+- when the exact root is missing or the task is rooted at a parent, child, or
+  different directory, report the mismatch and stop before any repository
+  write or Release Radar call;
 - inspect the current repository instructions and Release Radar tracking
   artifacts before reporting or changing delivery state;
-- initialize the minimum durable tracking documentation when it is absent and
-  the owner has asked to begin tracking;
+- when the owner asks to initialize or update tracking guidance, preserve every
+  unrelated repository instruction and manage
+  exact versioned Release Radar managed block in the repository-root
+  `AGENTS.md`, creating the file when absent, appending when no marker exists,
+  replacing only one older managed range, and stopping on malformed, duplicate,
+  modified-current, or newer markers;
+- refuse before writing if the root `AGENTS.md` or delivery-ledger path is a
+  symlink or non-regular filesystem item;
+- preserve the durable delivery ledger at `docs/delivery/progress.md`, creating
+  it only when absent with the guidance version and an explicitly pending
+  Release Radar audit, never inventing delivery state;
 - use the plugin's typed MCP tools for consequential Release Radar state
   transitions rather than editing Release Radar's SQLite database;
-- keep repository documentation and Release Radar ticket state consistent as
-  one owner-directed workflow;
+- write the managed block and absent-only pending ledger first and directly read
+  them back; then record the actual root `AGENTS.md` with the existing
+  ticketless `release_radar_add_evidence` mutation and an evidence ID prefixed
+  `release-radar-handoff:v1:`. When Release Radar reports that the exact block
+  is present but this audited evidence is absent, the copied repair prompt
+  authorizes the same evidence mutation without rewriting repository files.
+  Never use `upsert_phase` or another delivery-state mutation merely to
+  manufacture a handoff audit;
+- when the app is closed or no callback is available, retain the repository
+  guidance with its audit pending, tell the owner to open Release Radar, and
+  retry the complete evidence request. `outcomeUnknown` likewise replays the
+  complete request verbatim—including evidence ID, path, command, root, reason,
+  attribution, and UUID `requestID`—through the existing idempotent receipt;
+- after a successful result, replace only the pending audit value in a ledger
+  created by this handoff with the returned audit-event ID and perform final
+  readback. A post-audit ledger failure is repaired without another mutation;
 - surface uncertainty instead of fabricating completion or acceptance.
 
-The skill does not grant authority to mutate project files, Release Radar data,
-or external systems. Normal Codex authorization rules still apply.
+The skill does not grant new authority to mutate project files, Release Radar
+data, or external systems. Codex performs repository documentation writes only
+when normal authorization and the owner request allow them. Release Radar alone
+validates and persists its existing typed MCP mutations; the app and lifecycle
+helper have no repository-write authority. Normal Codex authorization rules
+still apply.
+
+For every onboarded project, Release Radar uses the existing security-scoped
+project bookmark to inspect only the root `AGENTS.md` and pairs that read-only
+result with its existing ticketless evidence row for the exact file. **Release
+Radar guidance current** requires both the exact versioned block and an
+available evidence ID prefixed `release-radar-handoff:v1:`. An exact block
+without that audited evidence is **Release Radar guidance handoff incomplete**
+and offers the copied repair prompt; malformed guidance remains **needs
+repair**. Missing, update available, and unavailable retain their existing
+meanings. A symlink or non-regular root instruction path is unavailable. The
+guidance version is independent of the app/plugin version.
+Inspection occurs during the existing project/dashboard load path, including
+the existing refresh after a successful MCP mutation. The app never writes the
+repository instruction file: when owner action is needed, it copies the exact
+current-task prompt, shows and embeds the exact canonical authorized root, and
+Codex performs the authorized managed-block change through the installed skill
+only from a task rooted there. No watcher, poller, synchronization framework,
+or repository-read MCP operation is introduced.
 
 ## Existing legacy MCP entry and machine identifier
 
@@ -123,11 +179,21 @@ proves exact legacy removal, pinned absence, and exact restoration through the
 fixed supported CLI vectors; it is cumulative migration evidence and is not
 rerun.
 
-For the product's first managed Install, Release Radar records the operation-
-local initial observation as absent or exact legacy and also requires bundled
-machine key `release_radar` to be exactly absent. Any pre-existing bundled-key
-entry is a conflict and stops before mutation. Release Radar then installs the
-managed plugin and verifies bundled server `release_radar`. An initially absent entry
+For the product's first managed Install, Release Radar also recognizes the
+owner's troubleshooting-era direct `release_radar` entry only when it is an
+enabled STDIO entry with no disabled reason, the exact packaged AgentTools
+command, empty arguments, null working directory, and empty or null environment
+fields. Contradictory fields fail closed. The helper classifies both this direct
+entry and the legacy `release-radar` entry before any mutation, then freshly
+rereads and removes that exact direct entry through the supported CLI,
+then verifies the machine key is absent before installing the plugin. Any
+changed or unrecognized `release_radar` entry stops before mutation. If the
+attempt later fails, rollback restores the direct entry only when this operation
+removed it and the key remains absent; it never overwrites changed state.
+
+Release Radar separately records the operation-local initial `release-radar`
+observation as absent or exact legacy, installs the managed plugin, and verifies
+bundled server `release_radar`. An initially absent entry
 proceeds directly to the final bundled-server postcondition. For an initially
 exact legacy entry, Release Radar immediately reads `release-radar` again and
 removes it through the Codex CLI only when that fresh observation still matches
@@ -248,6 +314,12 @@ Codex availability, plugin installation, and live Codex observation are
 separate statuses. An installed plugin must never be represented as proof that
 Codex is running or connected.
 
+When a supported desktop-observation attachment is unavailable, Settings must
+say that **Codex desktop observation is unavailable** (with the bounded reason
+when known). It must not say **Codex unavailable** solely because no observation
+attachment exists. This presentation change does not add observation transport,
+polling, or a live-state claim.
+
 ## Lifecycle rules
 
 - Initial install requires a visible owner action.
@@ -266,6 +338,10 @@ Codex is running or connected.
   privacy-bounded failure.
 - App launch after an app update may update only an intact, recognized,
   `managedInstalled` copy.
+- The signed local replacement workflow stops the running app and its two
+  Release Radar-owned Service Management helpers before promoting the new
+  bundle, preventing an older helper from surviving the replacement with stale
+  in-memory package metadata.
 - `neverInstalled`, `removed`, absent, modified, conflicted, or unknown state
   never triggers automatic installation or replacement.
 - External removal of a previously managed plugin becomes `removed`; it is not
@@ -401,9 +477,11 @@ The gate must prove:
     must emit `item.started` and `item.completed` JSONL for one
     `mcp_tool_call` whose server is `release_radar`, tool is
     `release_radar_transition_ticket`, and arguments are `{}`. Completion must
-    be `failed` with a nonempty schema/argument-validation error, no result, and
-    no Release Radar action; that expected validation failure proves the tool
-    was callable without reaching XPC or SQLite. Agent prose is not evidence.
+    be `failed` with either a nonempty schema/argument-validation error or a
+    Codex approval-policy rejection that prevents server execution, with no
+    result and no Release Radar action. The structured event pair proves the
+    tool is model-callable without requiring an XPC or SQLite mutation. Agent
+    prose is not evidence.
     Cleanup
     removes the derived plugin/marketplace and then exactly verifies bundled
     `release_radar` absence plus the unchanged legacy entry. Missing or
@@ -463,8 +541,14 @@ Acceptance evidence includes:
   proof the helper does not link ReleaseRadarCore or SQLite;
 - strict signed-bundle/resource verification;
 - Settings visual and accessibility comparison at wide and compact sizes;
-- installed skill discovery in a new Codex task and one existing typed MCP
-  action through XPC into a temporary app-owned database;
+- one owner-confirmed Codex task already rooted at the selected repository
+  exactly matches the canonical authorized root embedded in the copied prompt
+  and explicitly invokes `$release-radar:release-radar` in that same task; for
+  initialization it preserves or creates the applicable repository `AGENTS.md`
+  guidance and minimum pending-audit `docs/delivery/progress.md` ledger, reads
+  those files back, and records the actual `AGENTS.md` with successful audited
+  existing ticketless evidence. This is a
+  one-shot handoff proof, not an MCP read API or synchronization framework;
 - unchanged behavior for the existing runtime bridge and delivery mutations;
 - final status, evidence, decisions, and residual risks in
   `docs/delivery/progress.md` only.

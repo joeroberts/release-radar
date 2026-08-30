@@ -28,22 +28,820 @@ Deliver the signed native macOS MVP described by
 
 - Baseline release state: RR-10 and the Release Radar MVP remain accepted and release-ready at product HEAD `271fcd4`.
 - Current remediation state: **Done and Accepted.** On 2026-08-27, the owner confirmed that the installed `/Applications/ReleaseRadar.app` no longer produces the SQLite authorization error, that the pending tracking state persists across relaunch, and that the remediation is explicitly **Done/Accepted**. The accepted product implementation is commit `353322c`; the exact verified Release bundle remains preserved under `dist/` and installed under `/Applications`.
-- Active delivery gate: the owner-approved Codex plugin lifecycle feasibility
-  proof in Plan Task 1 is the sole eligible active task. The controller owns the
-  pre-skill baseline and ledger checkpoint; one fresh Task 1 Implementer may be
-  released afterward as the sole repository writer. Product Task 2 remains
-  closed pending accepted proof evidence and fresh independent release
-  decisions. This dated gate supersedes the older `Active 0` reconciliation
-  snapshot for current eligibility only; it does not reopen completed MVP or
-  remediation work.
-- Next eligible remediation work: none; the remediation gate is closed. No later product writer is released automatically. The coupled product/IA reconciliation is the next potential product decision, while Help, Portable Import/exporter work, wordmark production, warning cleanup, and other deferred or blocked work remain closed until explicitly released.
+- Active delivery gate: **Exact-root repository-handoff correction Done and
+  Accepted.** Signed app/plugin `0.1.5` is installed; the owner completed the
+  handoff from the exact authorized RekonDesignSystem root, confirmed the
+  immediate running-UI guidance state, then confirmed `RR-R8` on the live Phase
+  Board. The audited final transition placed `RR-R8` in Accepted.
+- Active RR-R9 gate: **Complete product outcome Accepted, Required 0; terminal
+  Git finalization open; goal not yet complete.** The one accepted live command
+  and its
+  immediate/relaunch `RR-ROADMAP` evidence remain definitive historical
+  activation evidence. Later valid owner UI choices set the current persisted
+  pointer to **Post-MVP reported-defect remediation**. The bounded test-host
+  isolation correction and its corrected installed product are independently
+  accepted with Required 0. The exact authorized tracking request moved
+  `RR-R9` to **Accepted** once, audit
+  `286C23C2-19D9-4C6F-B219-AFC1440E4FA8`; direct and independent UI readback
+  verified the exact outcome, counts 0/0/0/0/9, unchanged Post-MVP pointer, and
+  no later phase-selection event. The whole RR-R9 product outcome is accepted;
+  only the owner-required terminal Git finalization remains before the RR-R9
+  goal may be complete.
+- Next eligible work: **RR-R9 terminal Git finalization only.**
+  The registered controlling correction brief is
+  `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
+  at SHA-256
+  `2d4c855adecab3c20da618f8147f60aa42d8da903ea000e5675e58eb3f7571de`.
+  The accepted correction remains present at blobs
+  `e0965e340b0c6e49451ecdcf31188c301cf9b8ba` and
+  `e0206a8c3fef481c75603d324904a279aabeba06`. Open only: classify the dirty tree
+  by provenance; stage every accepted durable RR-R9/Release Radar deliverable
+  and exclude unrelated or temporary artifacts; create the coherent final
+  commit or commits; push the configured upstream; and verify the remote result.
+  Only after that verification may the RR-R9 goal be marked complete. Every
+  product mutation, active-phase command, SQLite access, and unrelated roadmap
+  gate remains closed; RR-RM1 planning/reconciliation remains closed until
+  terminal finalization succeeds.
 - Open product blockers: Release Radar has no authoritative portable project archive. Its Markdown delivery records and the existing partial Rekon seed importer cannot import the repository as a complete existing project.
-- Nonblocking next-phase candidates: reconcile the coupled product/IA decisions; productionize the owner-approved wordmark recorded in `docs/brand/README.md`; remove the Swift optional-`.none` and test actor-isolation warnings; attach live Codex state only when a supported authenticated endpoint exists; and add Developer ID/notarized packaging only if distribution expands beyond the owner Mac. The structure-less onboarding decision and repaired installed workflow are accepted.
+- Nonblocking next-phase candidates: reconcile the coupled product/IA decisions; productionize the owner-approved wordmark recorded in `docs/brand/README.md`; remove the Swift optional-`.none` and test actor-isolation warnings; attach live Codex state only when a supported authenticated endpoint exists; and add Developer ID/notarized packaging only if distribution expands beyond the owner Mac. Structure-less onboarding persistence and its Codex repository handoff are accepted.
 - Install note: macOS may require one-time owner approval for the packaged LaunchAgent in System Settings. Startup reports the required action and fails closed until enabled.
 
 ## Unscheduled product backlog
 
 - Add owner-visible Back and Forward navigation buttons with defined navigation-history behavior. This item is not assigned to the current phase or any next-phase gate.
+
+## Release Radar roadmap synchronization — 2026-08-29
+
+- Status: **Complete at the audited tracking layer; roadmap-ticket
+  implementation remains closed.** The separate RR-R9 active-phase-selection
+  capability is released only through RR-R9A below. Release Radar phase
+  `RR-ROADMAP` (`Established product roadmap`) contains 11 open roadmap
+  records: eight Backlog tickets (`RR-RM1`–`RR-RM4` and `RR-RM8`–`RR-RM11`)
+  and three Blocked tickets (`RR-RM5`–`RR-RM7`).
+- Coverage: `RR-RM1` owns the coupled M1–M5/P1 product and IA decision;
+  `RR-RM2` owns F2 Back/Forward history; `RR-RM3` owns F3 wordmark production;
+  `RR-RM4` owns F4 warning cleanup; `RR-RM5` owns B2 portable export and its
+  authoritative fixture; `RR-RM6` owns B3 Portable Import; `RR-RM7` owns B1
+  supported live Codex attachment; `RR-RM8` owns P3's iPhone-companion product
+  decision; `RR-RM9` owns F5 conditional notarized distribution; `RR-RM10`
+  owns F1 Help; and `RR-RM11` owns P2's role-agent workflow decision.
+- Dependencies: `RR-RM2` depends on `RR-RM1`; `RR-RM6` depends on `RR-RM5`;
+  `RR-RM8` depends on `RR-RM1` and `RR-RM7`; and `RR-RM10` depends on
+  `RR-RM1`. Open blockers record the missing exporter brief/fixture for
+  `RR-RM5`, the accepted-export prerequisite for `RR-RM6`, and the absent
+  supported authenticated live-Codex endpoint for `RR-RM7`.
+- Audit evidence: phase event `4CA6A26B-475A-40D9-AAFF-1E4463002239`; ticket
+  events `5DC98AC4-231C-43FB-9B8D-D71E1CC80FA1`,
+  `CE35DDB9-E8AE-48E6-9C7F-906FA2B17DFD`,
+  `B29A50E6-BA44-43F7-816D-01C83AB494D8`,
+  `DC32D5BD-2D22-48C5-BBFF-4CED130935F3`,
+  `86553EC9-76FD-4720-9F52-296ABF79DA88`,
+  `40856513-F199-4AD0-B335-026787397755`,
+  `CEEA3146-EE53-4EDE-8EAD-9B460588274C`,
+  `21EDC6E4-0857-48A6-A37A-56648F588D49`,
+  `F992B5B3-4589-4D72-92F7-1FC80356F7C1`,
+  `55A54CB1-153C-4F5E-8FA7-82461443B9D5`, and
+  `16163A27-350B-4512-87F1-5B65B6F79A71`. Audited dependency and blocker
+  mutations also succeeded, and the installed app's Activity surface directly
+  read back the new roadmap entries.
+- Visibility limitation: the installed dashboard projects only the persisted
+  explicit active phase, which remains the accepted post-MVP remediation
+  phase. The supported typed mutation surface has no active-phase-selection
+  command, so `RR-ROADMAP` is durably tracked and visible in Activity but is
+  not presented as the current Phase Board. No direct database edit was used.
+
+## RR-R9 preimplementation gate — Active-phase selection — 2026-08-29
+
+- Approved complete outcome: owners and authorized agents can select one
+  existing same-project active phase through accessible Project Overview and
+  Phase Board controls or the typed `release_radar_set_active_phase` MCP
+  command. The shared app-owned command path validates authorization and phase
+  ownership, persists and audits the selection, immediately publishes a
+  coherent board/count/detail/dependency/Activity/selection refresh, survives
+  relaunch, and provides explicit busy, no-alternative, unavailable,
+  authorization, mutation-failed, and saved-but-refresh-failed recovery without
+  silent or duplicate mutation. Final acceptance activates `RR-ROADMAP`.
+- Bounded delivery: RR-R9A delivers the complete command/store/audit/replay/
+  transport authority; RR-R9B delivers the shared owner experience and
+  coherent refresh/recovery behavior; RR-R9C integrates and independently
+  verifies the running product before the one accepted live activation. These
+  checkpoints constrain implementation and review risk; no checkpoint reduces
+  the approved complete outcome or makes an intermediate slice a completed
+  RR-R9 feature.
+- Controlling artifacts:
+  `docs/design/release-radar-active-phase-selection-design.md`,
+  `docs/architecture/ADR-003-active-phase-selection.md`, and
+  `docs/superpowers/plans/2026-08-29-release-radar-active-phase-selection.md`.
+  The registered implementation briefs are
+  `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-1-brief.md`
+  at SHA-256
+  `1be7442a7f5725fa300911489ad63c7a6b668a7b948a6071176f2a2442d28d31`
+  and
+  `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-2-brief.md`
+  at SHA-256
+  `226ba89999e08da2b291db196c4ab859cdc897ff7d770595e90b3c905045ba7c`;
+  the complete `docs/delivery/task-briefs/SHA256SUMS` verification passes.
+- Independent preimplementation decisions:
+  - Planning agent: **Complete**; the approved complete outcome, TDD sequence,
+    RR-R9A/B task boundaries, and RR-R9C handoff are durable and registered.
+  - Architect: **GO, Required 0, Optional 0**; ADR-003 accepts the narrow owner
+    working-context decision while preserving app-only store authority,
+    same-project validation, current-generation publication, and cross-phase
+    dependency-reference semantics.
+  - TPM: **GO, Required 0**; RR-R9A alone is dependency-safe and released.
+    Existing migration-fixture drift is not RR-R9 scope and does not block the
+    focused baseline.
+  - QA/Test: **GO, Required 0** after the plan incorporated the isolated runtime
+    fixture, deterministic boundary tests, `NOCASE`/ID ordering, and correct
+    evidence authority. The nonblocking execution caution is to make queued
+    notification work non-vacuous in ordering tests and clean up every gate and
+    temporary task deterministically.
+  - Security/Privacy: **GO, Required 0** after the plan incorporated retained
+    pre-handler refresh, live-versus-isolated evidence authority, the explicit
+    258-byte identifier test, and installed-app/MCP readiness before UUID
+    generation. There are no optional security blockers.
+  - Delivery Management: **GO, Required 0**; artifact registration, hashes,
+    source state, baseline evidence, writer serialization, and dependency gates
+    are sufficient to release RR-R9A only.
+- Pre-RR-R9 baseline: the focused `xcodebuild` selection covering
+  `AgentBridgeAcceptanceTests`, `AgentBridgeTransportAcceptanceTests`,
+  `DashboardProjectionTests`, and `AppRouteTests` exited 0 before any RR-R9
+  product change. A full-suite result bundle recorded 186 passed tests, five
+  genuine pre-existing plugin/schema-migration fixture failures (three stale
+  schema-9 expectations against accepted schema 10 and two repair-fixture
+  failures), and two cancellations when a stalled runner was stopped. The five
+  failures reproduced in isolation and are unrelated baseline limitations;
+  they must be reported, not repaired under RR-R9 unless they prevent direct
+  verification of the requested capability.
+- Source-state verification: current on-disk command, dispatcher, MCP tool, UI,
+  and focused test sources contain no `setActivePhase` or
+  `release_radar_set_active_phase` implementation. RR-R9 product/test work has
+  not begun. Existing changes in AppModel, Overview, Sidebar, AgentTools, and
+  focused test files belong to the accepted plugin-lifecycle and other
+  pre-existing work and must be preserved.
+- Workspace and authorship decision: continue on the current
+  `codex/release-radar-mvp` checkout with exactly one writer at a time. A new
+  worktree would omit or mis-base required uncommitted accepted work and would
+  increase overlap risk in files RR-R9 must touch. Each Implementer must make
+  targeted edits against the current diff and attribute only its RR-R9 changes;
+  no staging or commit is authorized or required for these checkpoints.
+- Release decision: **RR-R9A open; RR-R9B closed; RR-R9C closed.** RR-R9A must
+  begin with the brief's failing dispatcher and signed-tool tests and receive
+  fresh independent Code Review, QA/Test, Architecture, Security/Privacy, TPM,
+  and Delivery Management acceptance before RR-R9B can open. `RR-ROADMAP`
+  remains tracked but inactive until the final RR-R9C live gate.
+
+## RR-R9A acceptance — Typed active-phase authority — 2026-08-29
+
+- Status and gate: **Accepted; Required 0.** RR-R9A is the completed first
+  checkpoint of RR-R9, not a completed product feature. It adds the typed,
+  audited, idempotent active-phase authority; RR-R9B alone is now
+  dependency-safe and released. RR-R9C and the live `RR-ROADMAP` activation
+  remain closed.
+- Serialized implementation attribution: one fresh Implementer changed only
+  `ReleaseRadarCore/AgentBridge/AgentCommand.swift`,
+  `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift`,
+  `ReleaseRadarAgentTools/main.swift`,
+  `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift`, and
+  `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`. Independent
+  pre-edit-blob comparison confirms exactly `+1/-0`, `+15/-0`, `+9/-0`,
+  `+303/-0`, and `+82/-7` respectively; the current on-disk blob IDs are
+  `a244ca9ce21557bdd881da1e0cb6e154120e5048`,
+  `3992cdf7c6f8c2392f0da504ba5a6624493fc5c8`,
+  `fb451a4911728f260c51dd3ce1131ff243f6996e`,
+  `a10f4b6175397433819d0013fc042f8ecd3e6c38`, and
+  `70b124acce3c22aa7e44a4fa8be9c69571805f64`. Independent current SHA-256
+  readback, in the same order, is
+  `d0118045b142a47d6d5cd127ab1a6462be981854f82bffac81b5b57edfc3796f`,
+  `ecdf1f2f36c8151f24a4dfbe7565bc752a9930db799d39fb1619b33161cb7f3e`,
+  `6518190b30b107e06cf7e34a24fbd0b1bf8d2a1bbeebf4c22367f787c0ec94dc`,
+  `b319c3ddea34d7f1e8e336186930382085c74a2fa31053dad54ac8bdd23a34ee`,
+  and `004c3520025082ed9b1687c43ef6589fc44577181285b18554b2ad9d3bc7ccc`.
+- Delivered authority: additive envelope-v1 `setActivePhase(phaseID:)`, same
+  authorized-project and same-project-phase admission, the existing app-owned
+  transaction's single active-pointer upsert, returned selected phase/audit ID,
+  phase-scoped actor/reason attribution, durable receipt/replay, and the
+  thirteenth strict MCP tool `release_radar_set_active_phase`. No migration,
+  plugin/bridge version, signing, permission, schema, transport, owner UI, or
+  direct SQLite access changed.
+- TDD evidence: core RED
+  `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -derivedDataPath /tmp/ReleaseRadar-RR-R9A-Core-RED -only-testing:ReleaseRadarTests/AgentBridgeAcceptanceTests CODE_SIGNING_ALLOWED=NO`
+  exited 65 on the absent command. Signed transport RED
+  `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -derivedDataPath /tmp/ReleaseRadar-RR-R9A-Transport-RED -only-testing:ReleaseRadarTests/AgentBridgeTransportAcceptanceTests`
+  exited 65 on the missing 13th-tool/schema behavior. Core GREEN passed
+  19/19 and signed transport GREEN passed 5/5.
+- Final focused verification: fresh QA ran
+  `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -derivedDataPath /tmp/ReleaseRadar-RR-R9A-QA-POST -only-testing:ReleaseRadarTests/AgentBridgeAcceptanceTests -only-testing:ReleaseRadarTests/AgentBridgeTransportAcceptanceTests -only-testing:ReleaseRadarTests/StoreAcceptanceTests`
+  with 53 passed, 0 failed, and 0 skipped. Independent readback of the retained
+  final result bundle reports the same 53/53, 0 failed/skipped. The scoped
+  five-file `git diff --check` is clean.
+- Behavioral evidence: real-store fixtures prove the pointer-only transaction,
+  phase-scoped audit and durable receipt, relaunch/recreated-dispatcher exact
+  replay, changed-body request-ID rejection, missing/cross-project/unauthorized
+  rollback, 258-byte UTF-8 pre-write rejection, and a fresh already-active
+  agent intent that creates one audit/receipt while its replay creates none.
+  The packaged signed tool lists exactly 13 strict tools, commits through the
+  registered broker/app callback with `isError: false`, and preserves the
+  existing wrong-peer/version/unavailable/deadline/outcome-unknown contracts.
+  Post-test `launchctl print gui/501/com.rekonlabs.ReleaseRadar.BridgeAgent`
+  exits 113 with no registered service.
+- Independent acceptance: Code Review **Approved** (Critical/Important/Minor
+  0); QA/Test **GO** (Required 0); Architecture **GO** (Required/Optional 0);
+  Security/Privacy **GO** (Required 0, no attributable Optional finding); TPM
+  **GO** (Required 0, release RR-R9B only); Delivery Management **GO**
+  (Required/Optional/Out-of-scope 0). No reviewer authorized a commit or
+  stage, and none occurred: HEAD remains
+  `bcd108f3d1a95be7733a39f42d8b68c98748a30e` on
+  `codex/release-radar-mvp` with no staged paths.
+- Limitations and temporary evidence: the full suite remains out of scope for
+  RR-R9A because its five plugin/schema fixture failures are documented
+  pre-existing baseline drift; they do not affect the direct 53-test focused
+  result. Non-authoritative artifacts remain at
+  `/tmp/ReleaseRadar-RR-R9A-Core-RED`,
+  `/tmp/ReleaseRadar-RR-R9A-Transport-RED`,
+  `/tmp/ReleaseRadar-RR-R9A-GREEN`,
+  `/tmp/ReleaseRadar-RR-R9A-QA-POST`, and the temporary
+  `ReleaseRadar-AgentBridgeTests-*` fixture directories. They were not deleted
+  because cleanup authorization was not requested.
+- Release decision: **RR-R9B open; RR-R9C closed.** Assign RR-R9B to exactly
+  one fresh serialized Implementer. It must use the registered Task 2 brief,
+  preserve this accepted authority slice and unrelated dirty work, begin with
+  its required RED tests, and receive fresh independent Code Review, QA/Test,
+  Architecture, Security/Privacy, TPM, and Delivery Management acceptance.
+  The final live `RR-ROADMAP` selection remains an RR-R9C action only.
+
+## RR-R9B acceptance — Owner active-phase experience — 2026-08-29
+
+- Status and gate: **Accepted; Required 0, Optional 0, Out-of-scope 0.** RR-R9B
+  is the completed second checkpoint of RR-R9, not final product acceptance.
+  It delivers the shared owner selector, coherent projection refresh,
+  recoverable failure states, current-generation publication, notification
+  ordering, and the isolated Debug acceptance fixture. RR-R9C alone is now
+  dependency-safe and released. Runtime UI, keyboard/accessibility,
+  wide/compact screenshots, mockup comparison, Release packaging/signing,
+  installation, installed MCP readiness, and live `RR-ROADMAP` activation are
+  not claimed here and remain closed until the combined RR-R9C final GO.
+- Controlling contract integrity: the registered Task 1 and Task 2 brief
+  SHA-256 values remain respectively
+  `1be7442a7f5725fa300911489ad63c7a6b668a7b948a6071176f2a2442d28d31`
+  and
+  `226ba89999e08da2b291db196c4ab859cdc897ff7d770595e90b3c905045ba7c`;
+  both current files match their entries in
+  `docs/delivery/task-briefs/SHA256SUMS`.
+- Serialized implementation attribution: one fresh Implementer owned exactly
+  the 13 Task 2 product/test paths. Independent current-blob comparison against
+  the initial attributable package plus review-loop 1 and Security correction
+  packages confirms the complete serialized chain: Dashboard Projection
+  `a3641b3b45e4a0e7f2483b7a8d547ba168f1c793`, ReleaseRadarApp
+  `916e18c67469f60079fc8b829bdfbe6582de203b`, AppModel
+  `cb4a9d98ad7b135104d87e1319b8cdbe9054ebef`, Project Overview
+  `2b65f5cad8523413b92238b2cebfde45abcc4c87`, Phase Board
+  `04fd1741bddfc4c4ed1370b625391a3be3c3fe5e`, Sidebar
+  `e1b4f0e2bd2a9bd3108e00c826bd5b581866a8ac`, Failure State
+  `609f294f5a780764a10cb0e7bdf8205e26f6cc97`, Notification Coordinator
+  `e021f51be497c0aac13feb103e8b872241de9b7a`, Dashboard Projection tests
+  `f1ca4e7de8ec63bcb7e5f66eda489c6c8eda25af`, App Route tests
+  `cd926cbdadaa49902d8282bd79dcd1bf401a013d`, Notification Acceptance tests
+  `d4595db72e52425484e07c47cc14c0bb45ac56c0`, the new shared selector
+  `3bccd435b3d22d32a0c52654579d9cf5d31b7f77`, and the new Debug fixture
+  `e9b973bf799781b0c236adfa009a599736b77271`. This accepts only the
+  attributable package chain; unrelated dirty-baseline bytes remain preserved
+  and unattributed.
+- Original test-first evidence: the exact required pre-product RED exited 65
+  after the test target reached the intended missing-product boundary:
+  `ProjectDashboardProjection` lacked `activePhaseID` and `phases`, with the
+  expected dependent inference errors. No test executed in that compile RED
+  (0 passed, 0 failed, 0 skipped). The retained result is
+  `/tmp/ReleaseRadar-RR-R9B-RED/Logs/Test/Test-ReleaseRadar-2026.08.29_15-23-31--0400.xcresult`.
+- Delivered projection and persistence coverage: fresh focused tests prove
+  deterministic same-project phase options ordered by `name COLLATE NOCASE,
+  id`, including the explicit equal-name ID tie-break; optional no-active-
+  pointer projection and first selection from both owner routes; active-phase-
+  only cards, detail keys, counts, and dependency-graph nodes; preserved valid
+  same-project cross-phase references inside active-ticket detail; exact
+  unchanged phase, ticket, phase-dependency, ticket-dependency, historical
+  audit, and durable-receipt rows; accepted pointer/audit persistence across
+  store recreation and AppModel relaunch; and empty-target ticket/detail/graph
+  reconciliation.
+- Model-authority and recovery coverage: direct AppModel tests prove already-
+  active, `.saving`, and `.savedNeedsReload` guards execute before bookmark
+  access and UUID generation, each with request-ID/request/audit deltas of
+  `0/0/0`. Valid authorization dispatches the accepted RR-R9A command with
+  `.ownerApp`; missing, stale, resolver-failed, access-denied, and mismatched
+  bookmarks fail closed. Reauthorization accepts only the same canonical root,
+  preserves Locate eligibility after rejected parent/child/different roots,
+  never auto-selects, and never retries the command. Typed mutation and
+  unavailable failures preserve the last coherent projection; committed-but-
+  refresh-failed recovery performs only an explicit read-only dashboard reload
+  and retains exactly one request/audit.
+- Publication and coordinator coverage: continuation-gated older-A/newer-B
+  tests cover both stale success and stale failure without sleeps. A
+  superseded caller performs no route, notification, dashboard, workspace,
+  guidance/root, Activity, selection, dependency, error, or phase-status write;
+  only the current non-suspending publication wins. Current-generation target
+  matches clear `.saving`/`.savedNeedsReload`, while mismatches preserve the
+  pending state. Deterministic coordinator tests prove successful callbacks
+  before handler registration coalesce with zero notification drain, handler
+  registration begins exactly one read-only refresh before notifications,
+  ordinary registered and overlapping callbacks preserve that ordering, and a
+  failed command queues no refresh.
+- Debug fixture coverage: tests prove the fixture is `#if DEBUG`, default-off,
+  and admitted only by exactly one `--rr10-capture`, one
+  `--rr10-empty-store`, and one recognized scenario. Unknown, partial, and
+  duplicate arguments and Release builds reject it. The app-owned fixture uses
+  production bookmark creation for disposable exact roots, exercises `happy`,
+  `busy`, `no-alternative`, `mutation-failure`, `unavailable`,
+  `authorization-failure`, `saved-refresh`, `empty-phase`, `no-active-pointer`,
+  and `cross-phase-detail`, and proves deterministic/idempotent seeding,
+  one-shot faults, relaunch behavior, scenario isolation, normal sample-data
+  absence, and continued external-service suppression. This is automated
+  fixture evidence only; RR-R9C still owns running-app evidence.
+- Review loop 1 and closure: Architecture initially reported NO-GO/Required 1
+  because a superseded top-level `loadDashboard()` continued into Debug route
+  and notification side effects. Code Review reported four Required findings:
+  that same stale-caller defect, rejected-folder recovery losing Locate
+  eligibility, duplicate capture-control flags being admitted, and row-
+  preservation coverage that compared counts and omitted a phase-dependency
+  fixture. The bounded corrections made post-load work conditional on
+  `.published`, preserved recovery eligibility, required exact-one flags, and
+  compared exact persisted rows. Focused RED/closure evidence is recorded in
+  the Implementer report; the complete post-loop focused suite passed 102/102.
+  Fresh Code Review then Approved with Critical/Important/Minor/Required 0,
+  QA/Test reported GO/Required 0, and Architecture reported GO/Required 0 with
+  ADR-001 and ADR-003 satisfied and no new ADR.
+- Security review loop and no-write closure: Security/Privacy then reported
+  NO-GO/Required 1 because committed external-command refresh and owner saved-
+  refresh recovery still called mutating guidance authorization. Across armed
+  resolver failure, stale resolution, root mismatch, and access denial, the
+  focused RED ran 2 tests and failed both because the bookmark was marked stale,
+  an owner authorization audit was appended, and cached guidance/root changed.
+  The correction makes committed contexts reuse the published guidance/root
+  snapshot. The focused GREEN passed 2/2 and compares exact bookmark, audit,
+  command-receipt, and active-pointer rows plus cached guidance/root,
+  dashboard, Activity, error, and phase status; owner recovery also proves no
+  command retry. Fresh Security/Privacy reported GO/Required 0 after this
+  no-write correction.
+- Final automated evidence: fresh independent QA ran the exact required
+  Dashboard Projection, App Route, Agent Bridge Acceptance, and Notification
+  Acceptance selection. Direct `xcresulttool` readback of
+  `/tmp/ReleaseRadar-RR-R9B-QA-SECURITY/Logs/Test/Test-ReleaseRadar-2026.08.29_16-57-44--0400.xcresult`
+  reports **104 total, 104 passed, 0 failed, 0 skipped, 0 expected failures**.
+  The exact 13-file `git diff --check` exits 0 with no output. QA/Test's final
+  verdict is GO/Required 0 with no staged paths.
+- Final independent verdicts: Code Review **Approved**
+  (Critical/Important/Minor/Required 0); QA/Test **GO** (Required 0);
+  Architecture **GO** (Required 0, ADR-001/ADR-003 satisfied, no new ADR);
+  Security/Privacy **GO** after the committed-refresh no-write correction
+  (Required 0); TPM **GO** (Required 0, Optional 0, Out-of-scope 0) and
+  authorizes acceptance of RR-R9B plus release of RR-R9C only; Delivery
+  Management **GO** (Required 0, Optional 0, Out-of-scope 0) on the direct
+  evidence above. No role authorizes live activation before RR-R9C combined
+  final GO.
+- Source and workspace state: all 13 current blobs match the composite package
+  chain, the exact scoped diff check is clean, and the index has zero staged
+  paths. HEAD remains `bcd108f3d1a95be7733a39f42d8b68c98748a30e` on
+  `codex/release-radar-mvp`. No RR-R9B commit, stage, push, install, launch,
+  external mutation, or direct SQLite access occurred. The accepted existing
+  dirty baseline and unrelated work remain present; acceptance does not absorb
+  or reattribute them.
+- Limitations and temporary evidence: non-authoritative retained evidence
+  includes `/tmp/ReleaseRadar-RR-R9B-RED`,
+  `/tmp/ReleaseRadar-RR-R9B-GREEN`, `/tmp/ReleaseRadar-RR-R9B-QA-POST`,
+  `/tmp/ReleaseRadar-RR-R9B-Security-RED`,
+  `/tmp/ReleaseRadar-RR-R9B-Security-GREEN`, and
+  `/tmp/ReleaseRadar-RR-R9B-QA-SECURITY`. These paths are evidence locations,
+  not controlling artifacts, and were not removed because destructive cleanup
+  was not authorized. The repository-wide suite was not rerun for this bounded
+  slice; its five previously reproduced plugin/schema-migration fixture
+  failures remain documented unrelated baseline drift. The standard multiple-
+  destination and App Intents metadata-skip output and the pre-existing
+  optional-`.none` ambiguity warning are non-failing baseline limitations.
+- Release decision: **RR-R9C open; live `RR-ROADMAP` activation closed.** RR-R9C
+  must perform the registered combined automated, configured Release build and
+  signing, isolated alternate-container runtime, wide/compact visual,
+  keyboard/accessibility, recovery, relaunch, installed-app and installed-MCP
+  readiness evidence. Only its fresh combined final GO with Required 0 may
+  authorize generation of the one live request UUID and the accepted
+  `RR-ROADMAP` command. All other roadmap work remains closed.
+
+## RR-R9C live activation history and correction acceptance gate — 2026-08-29
+
+- Status and gate: **Complete RR-R9 product outcome Accepted, Required 0;
+  terminal Git finalization open.** The automated,
+  package,
+  isolated-runtime, accessibility, responsive, recovery, visual, installed-MCP,
+  one-time live-activation, and immediate/relaunch evidence remains truthful.
+  The one accepted command established `RR-ROADMAP` and its immediate/relaunch
+  verification remains valid; later valid owner UI choices set the current
+  persisted pointer to **Post-MVP reported-defect remediation**. The registered
+  bounded correction, installed-product readback, tracking-only ticket
+  transition, and final independent UI readback are accepted. RR-R9C and the
+  complete RR-R9 product outcome are accepted; the RR-R9 goal remains incomplete
+  only until the owner-required Git finalization and remote verification finish.
+- Automated acceptance: the exact registered seven-suite selection produced
+  **146 total, 142 passed, 4 failed, 0 skipped, 0 expected failures** at
+  `/tmp/ReleaseRadar-RR-R9C-Acceptance/Logs/Test/Test-ReleaseRadar-2026.08.29_17-17-31--0400.xcresult`.
+  All direct RR-R9 suites were green: Store 29/29, Agent Bridge 19/19, signed
+  transport 5/5, Dashboard Projection 10/10, App Route 51/51, and Notification
+  24/24. End-to-End was 4/8; its four failures are the documented unrelated
+  schema/plugin fixture drift: two stale schema-9 expectations against schema
+  10, the version-7 lifecycle-table-already-exists fixture, and the unrecognized
+  version-3 fixture. Independent QA reproduced the same 142/146 classification.
+- Staged Release evidence: `./script/build_and_run.sh
+  --stage-release-no-launch` exited 0 without installation or launch, and
+  `codesign --verify --deep --strict --verbose=2 dist/ReleaseRadar.app` exited
+  0. The verified arm64 bundle is `com.rekonlabs.ReleaseRadar`, version `0.1.5`
+  build `1`, signed by Apple Development team `2UA854NLX4` with hardened
+  runtime. It contains the established core framework, AgentTools, BridgeAgent,
+  plugin lifecycle helper, marketplace, and both LaunchAgent plists. The
+  BridgeAgent job was absent (`launchctl` exit 113), the existing owner app and
+  helper were left untouched, the scoped diff check was clean, and the index
+  remained empty.
+- Isolated runtime evidence: one alternate Debug identity
+  `com.rekonlabs.ReleaseRadar.RR9Capture.6f368f13-5c53-464b-be75-ad8b212bda4b`
+  built and passed strict deep signing under
+  `/tmp/release-radar-rr9-capture.pyI7WK`. Computer Use exercised all ten
+  default-off fixture scenarios through the running app: happy, busy,
+  no-alternative, mutation-failure, unavailable, authorization-failure,
+  saved-refresh, empty-phase, no-active-pointer, and cross-phase-detail.
+  Evidence covers both selector placements, pointer and keyboard paths,
+  duplicate suppression, exact-root reauthorization with no automatic retry,
+  read-only saved-refresh recovery, coherent five-lane/detail/dependency/
+  Activity publication, empty and no-pointer states, preserved cross-phase
+  detail references with phase-scoped cards/graph nodes, and same-container
+  relaunch persistence. The alternate app quit cleanly afterward.
+- Visual and accessibility evidence: the four canonical PNGs are
+  `docs/delivery/evidence/rr-r9-active-phase-overview.png`
+  (`1499×768`, SHA-256
+  `ea3b61f69defb448656e5a26e1f4aa98f916a06ee82f54b74c3c21b8654ff084`),
+  `docs/delivery/evidence/rr-r9-active-phase-board-wide.png`
+  (`1411×768`,
+  `5a4e626ce5b5a9693444f5255c919b9cf6328a16b283a0d9e4fe14cd22880d61`),
+  `docs/delivery/evidence/rr-r9-active-phase-board-compact.png`
+  (`768×777`,
+  `b286ad8e20adae2afb2db98909a8687af3e0af9c1c93077b402dac28c4914a3e`),
+  and `docs/delivery/evidence/rr-r9-active-phase-recovery.png`
+  (`1411×768`,
+  `4e744541eb09632b48f0419bb48fb0f6e070fe2bf88600014ce769f276f78af4`).
+  They were reopened at original detail and compared with
+  `docs/design/mockups/phase_board.png`; no material contradiction was found.
+  Wide mode retained the right-side inspector; compact mode retained all five
+  lanes and moved the inspector below. Independent QA also directly observed a
+  `760×552` outer window, equal to `760×520` content plus the 32-point title
+  bar, with compact recovery intact.
+- Owner-approved evidence deviation: the controlling
+  `docs/design/release-radar-active-phase-selection-design.md` records the
+  owner's explicit acceptance of the current wide/compact captures and QA's
+  minimum-content observation because the Computer Use viewport could not
+  produce a near-`1586×992` raster. This changes only the evidence threshold;
+  the responsive product contract remains unchanged. Code/Product and
+  Architecture closure re-reviews both returned GO/Required 0 on that basis.
+- Independent combined verdicts: Code/Product **GO, Required 0**; QA/Test
+  **GO, Required 0**; Architecture **GO, Required 0** with ADR-001/ADR-003
+  intact and no new ADR; Security/Privacy **GO, Required 0**; TPM **GO,
+  Required 0** and authorizes only this final activation gate; Delivery
+  Management **GO, Required 0** on the direct evidence above. The reviews were
+  independent of implementation and no Required finding remains open.
+- Isolation and privacy: the capture used only the alternate bundle/container,
+  showed no network sockets, registered no alternate helper, and used the
+  established capture suppression. No owner container or SQLite database was
+  opened or inspected, no direct database write occurred, no live MCP
+  connection was used, no final UUID was generated, and no `RR-ROADMAP`
+  mutation occurred during pre-activation acceptance.
+- Optional and out-of-scope findings: an exact near-`1586×992` raster and a
+  clean happy-path recapture are Optional, not blocking; the local account path
+  in internal evidence should be redacted only if that evidence is later
+  published. Repairing the four unrelated End-to-End schema/plugin fixtures,
+  product/IA reconciliation, and all other roadmap work are out of RR-R9C's
+  final activation scope.
+- Historical pre-activation safeguards, executed once and now closed: first
+  quit the existing owner-facing Release Radar
+  process normally. Install only the already verified staged bundle with
+  `./script/build_and_run.sh --install-staged-release-no-launch`, verify the
+  installed bundle with strict deep signing, then launch that exact installed
+  app. Before UUID generation, require a fully loaded installed dashboard and
+  ready **Active phase** selector plus read-only installed-MCP `initialize` and
+  `tools/list` evidence for the expected server identity and exactly 13 strict
+  tools including the accepted `release_radar_set_active_phase` schema. A
+  readiness failure stops before UUID generation or mutation.
+- Historical one-time live-command boundary, executed once and now closed:
+  only after both readiness checks passed, generate and record one fresh UUID
+  and invoke `release_radar_set_active_phase` once with
+  version `1`, the exact authorized repository root, reason `Activate
+  RR-ROADMAP after RR-R9 acceptance`, and phase `RR-ROADMAP`. On
+  `outcomeUnknown`, retain and replay only the complete original argument
+  object with that same UUID; never generate a replacement or inspect SQLite.
+  Pair the returned audit ID with the recorded request ID, then verify the
+  immediate and relaunched installed UI shows `RR-ROADMAP`, counts Backlog 8 /
+  In progress 0 / Needs review 0 / Blocked 3 / Accepted 0, target-phase detail
+  and dependencies, Activity's exact reason, and the prior active phase still
+  available as a selector option. Delivery Management must record the final
+  disposition before RR-R9 could be marked complete or RR-ROADMAP work
+  released. This historical boundary grants no present or future command
+  authority.
+
+### RR-R9C live activation — accepted
+
+- Installed bundle readiness: strict deep signing passed for
+  `/Applications/ReleaseRadar.app`, bundle ID `com.rekonlabs.ReleaseRadar`,
+  version `0.1.5` build `1`, arm64 with hardened runtime, Team
+  `2UA854NLX4`, and CDHash
+  `e0aa8ffe8bc15d20e95d671c3841007505790de2`. The installed dashboard loaded
+  and its **Active phase** selector reached ready accessibility state before
+  UUID generation.
+- Installed MCP read-only readiness: `initialize` returned server name
+  `Release Radar`, server version `1`, and protocol `2025-06-18`; `tools/list`
+  returned exactly 13 tools. `release_radar_set_active_phase` has strict object
+  input with `additionalProperties: false`; required fields are `version`,
+  `requestID`, `projectRoot`, `reason`, and `phaseID`; `version` is constant
+  `1`; `requestID` has UUID format; the other required fields are strings with
+  `minLength: 1`; optional `assertedThreadID` is a string with `minLength: 1`.
+- Live invocation: exactly one call was made after readiness, with no retry and
+  no `outcomeUnknown`. Request ID
+  `385154BC-DC33-4F9C-ABBD-D80B271D8FF4` and this complete original argument
+  object were used:
+
+```json
+{
+  "version": 1,
+  "requestID": "385154BC-DC33-4F9C-ABBD-D80B271D8FF4",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "reason": "Activate RR-ROADMAP after RR-R9 acceptance",
+  "phaseID": "RR-ROADMAP"
+}
+```
+
+- `assertedThreadID` was intentionally omitted. The definitive MCP result had
+  `isError: false`, `entityIDs: ["RR-ROADMAP"]`, and audit event ID
+  `FBBB409B-9E4A-4165-A22D-6BFD16B3E154`.
+- Immediate installed-UI verification showed **Established product roadmap** /
+  `RR-ROADMAP`, counts Backlog 8 / In progress 0 / Needs review 0 / Blocked 3 /
+  Accepted 0, and all 11 target tickets in those lanes. `RR-RM1` was the
+  selected detail and truthfully exposed unlocks `RR-RM2`, `RR-RM8`, and
+  `RR-RM10`. The prior **Post-MVP reported-defect remediation** phase remained
+  available as a selector option. Activity showed the exact reason `Activate
+  RR-ROADMAP after RR-R9 acceptance`.
+- After a normal quit and relaunch of the same installed bundle, the installed
+  UI retained the same `RR-ROADMAP` identity, 8/0/0/3/0 counts, all 11 target
+  tickets, selected RR-RM1 detail and unlocks, prior-phase selector option, and
+  exact Activity reason.
+- Fresh post-activation QA/Test reports **GO, Required 0** and fresh
+  Security/Privacy reports **GO, Required 0**. No direct database inspection or
+  edit was used; the app-owned typed command and visible installed-app
+  readbacks remain the live authorities, with isolated RR-R9A tests retaining
+  authority for actor/thread/audit/receipt cardinality and replay semantics.
+- Prior Delivery Management disposition, now superseded: **RR-R9 Complete and
+  Accepted; Required 0** was recorded before the Required test-host isolation
+  defect was discovered. The live activation remains accepted and
+  its `RR-ROADMAP` immediate/relaunch evidence remains valid, but later valid
+  owner UI choices made Post-MVP remediation the current pointer. This is no
+  longer the current completion or next-work disposition.
+
+### RR-R9C XCTest-host isolation correction — installed acceptance complete
+
+- Root-cause evidence: a fresh standard `xcodebuild test` host launched
+  `/tmp/.../Debug/ReleaseRadar.app` with production bundle ID
+  `com.rekonlabs.ReleaseRadar`. Current source constructs
+  `ReleaseRadarAppServices.shared` unconditionally from `ReleaseRadarApp`; that
+  singleton is backed by `DeliveryStore.applicationSupportDatabaseURL()`.
+  `SidebarView.task` then calls `initializeForLaunch`. Only AppDelegate bridge
+  startup is guarded by `XCTestConfigurationFilePath`, so that guard does not
+  protect app initialization or the Sidebar launch task.
+- Authority exposure: an ordinary test host can therefore open owner
+  Application Support and reach production Keychain, network/Pushover, plugin
+  lifecycle/helper, notification, and related launch paths. This is a Required
+  isolation defect even without evidence of an owner-state mutation.
+- Attribution boundary: do not attribute the two later owner phase Activity
+  entries to XCTest. Unified TCC logs instead correlate those entries with
+  separate Gemini accessibility access to installed PID `1072`. Subsequent
+  valid owner UI choices made **Post-MVP reported-defect remediation** the
+  current persisted pointer. That later choice does not invalidate the
+  accepted `RR-ROADMAP` request, audit, or immediate/relaunch evidence.
+- Controlling correction contract:
+  `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`,
+  SHA-256
+  `2d4c855adecab3c20da618f8147f60aa42d8da903ea000e5675e58eb3f7571de`.
+  It permits only the narrow test-first correction in
+  `ReleaseRadar/App/ReleaseRadarApp.swift` and
+  `ReleaseRadarTests/AppRouteTests.swift`; it adds no generalized harness,
+  dependency, schema, entitlement, test-target, or product behavior.
+- Amended-brief review history: QA/Test initially returned **NO-GO, Required
+  1** because the brief did not require a deterministic test of test-host
+  directory-preparation failure. Planning amended the exact production
+  `hostMode` contract and focused policy matrix to create a regular file at the
+  required PID-scoped directory, require
+  `.xctestHostUnavailable(databaseURL:)` with the same isolated URL, and prove
+  the unavailable branch retains no store and can never select application
+  mode, a production URL, `ReleaseRadarAppServices.shared`, or `AppModel`.
+  Planning also made that unavailable contract part of the compile-only RED and
+  acceptance criteria. QA/Test re-reviewed the amendment and returned **GO,
+  Required 0**.
+- TPM review history: TPM's subsequent **NO-GO** was temporary and solely a
+  ledger-consistency blocker because this ledger still named the superseded
+  brief hash. The two correction-specific ledger references now name the
+  registered and independently computed amended SHA-256 above. TPM's final
+  amended-checksum re-review is **GO, Required 0**.
+- Final amended-artifact decisions: Architecture **GO, Required 0**; QA/Test
+  **GO, Required 0**; TPM **GO, Required 0**; Delivery Management **GO,
+  Required 0**. Delivery Management independently verified the brief file,
+  `SHA256SUMS`, and both ledger references at the same amended checksum, the
+  clean scoped target diff, empty index, accepted pre-correction target blobs,
+  writer serialization, two-file scope, and owner finalization boundary.
+- Configured-plugin QA attribution correction: the idempotent return of exact
+  existing audit event `D8B5E932-BC1C-466E-8329-092B166568BA` for entity
+  `RR-R9` remains truthful and made no new mutation. Later conclusive process
+  identity evidence mapped AgentTools PIDs `75927` and `7341` to deleted backup
+  bundles, not the current installation; both stale processes were terminated.
+  The current bridge/helper processes map to
+  `/Applications/ReleaseRadar.app`.
+- Historical Implementer release boundary, now closed: exactly one fresh
+  Implementer was permitted to modify only
+  `ReleaseRadar/App/ReleaseRadarApp.swift` and
+  `ReleaseRadarTests/AppRouteTests.swift`. It must first add the focused policy
+  assertions and run the brief's compile-only `build-for-testing` RED with
+  `CODE_SIGNING_ALLOWED=NO`; the RED must fail for the missing isolation/
+  unavailable-preparation contract without launching the vulnerable test host.
+  It may then implement only the bounded correction and run the brief's focused
+  App Route GREEN plus the exact two-file `git diff --check`. It stops and
+  returns evidence after GREEN; it does not review its own work or expand
+  scope.
+- Initial correction evidence: the safe compile-only RED exited `65` on the
+  absent isolation API without starting a test session or launching a test
+  host; focused `AppRouteTests` then passed **53/53** with zero failures or
+  skips. Code Review and Architecture returned **NO-GO, Required 2** because a
+  same-PID directory could be reused as stale test state and the tested
+  `XCTestHostConstruction` mirror was not consumed by production startup.
+  Security/Privacy returned **NO-GO, Required 2** because existing-directory or
+  symlink acceptance plus check/create/check sequencing could redirect the
+  lexical test URL, and tests called the side-effecting production
+  `DeliveryStore.applicationSupportDatabaseURL()` helper.
+- Fix round 1 evidence: a second compile-only RED exited `65` on the absent
+  production preparation API without launching a test host; focused GREEN then
+  passed **55/55** with zero failures or skips, and the two-file diff check was
+  clean. Current source blobs are `ReleaseRadar/App/ReleaseRadarApp.swift`
+  `e0965e340b0c6e49451ecdcf31188c301cf9b8ba` and
+  `ReleaseRadarTests/AppRouteTests.swift`
+  `e0206a8c3fef481c75603d324904a279aabeba06`. POSIX `mkdir` now performs
+  owner-only exclusive creation and rejects every pre-existing directory,
+  regular file, or symlink before the store factory; the production-consumed
+  `XCTestHostPreparation` carries the exact store retained by app startup;
+  fail-fast collision tests prove the factory remains uncalled; and
+  `AppRouteTests` has no production Application Support helper reference.
+- Fix closure: Code Review **GO, Required 0**; Architecture **GO, Required 0**;
+  Security/Privacy **GO, Required 0**. The theoretical hostile same-user
+  replacement after successful `mkdir` remains out of scope under the accepted
+  local threat model; no Optional finding blocks this correction.
+- Runtime QA: **GO, Required 0.** The ordinary seven-suite run produced **150
+  total / 146 passed / 4 failed / 0 skipped / 0 expected failures**. All six
+  directly relevant suites passed **142/142**, including App Route **55/55**;
+  the only failures were the same four known unrelated End-to-End schema/plugin
+  fixture failures. Public diagnostics recorded seven isolated hosts, PIDs
+  `8554`, `8556`, `8558`, `8559`, `8560`, `8561`, and `8562`, each at the exact
+  PID-scoped form
+  `/Users/jroberts/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/ReleaseRadar-XCTestHost-<PID>/release-radar.sqlite`,
+  never an owner Application Support path. No SQLite file was opened or queried
+  for this evidence.
+- Owner-state preservation: read-only installed accessibility snapshots before
+  and after both ordinary test-host executions were equal. Both showed active
+  phase **Post-MVP reported-defect remediation** and the same 25 ordered visible
+  Activity rows (`phaseSnapshotEqual: true`; `activitySnapshotEqual: true`). No
+  app install, MCP call, UUID, active-phase command, ticket transition, staging,
+  commit, or push occurred during correction runtime QA.
+- Final independent correction verdicts: Code Review **GO, Required 0**;
+  QA/Test **GO, Required 0**; Architecture **GO, Required 0**;
+  Security/Privacy **GO, Required 0**; TPM **GO, Required 0**; Delivery
+  Management **GO, Required 0**. Delivery independently verified the amended
+  brief/SHA registration, exact current two-file blobs, clean scoped diff,
+  empty index, serialized writer boundary, review closures, runtime QA, and
+  owner-state equality. The XCTest-host correction is accepted.
+- Corrected packaging and signing acceptance: staging without launch, staged
+  strict/deep verification, installation, and installed strict/deep
+  verification all passed. The installed arm64/hardened-runtime bundle is
+  identifier `com.rekonlabs.ReleaseRadar`, version `0.1.5` build `1`, Team
+  `2UA854NLX4`, CDHash `d204ccdd17628d6089694cf615b3c0a2a36195f4`.
+  Installed SHA-256 values are main binary
+  `9f65653f28584bef118ffa692f5a0e17656b88d5b4c40f63e64864551289d384`,
+  AgentTools
+  `acf00b7a7df3dca53a7af2b4cf141df902ea8869a6fd3a1700c6ff2ddbb24f31`,
+  and BridgeAgent
+  `9aa8bdcfe9345c3884a733b5d5ab18f6403e1c3c29457c6860e5f06e236e8d03`;
+  the installed bundle contains no `.xctest` artifact.
+- Installed-product identity and process evidence: independent QA verified all
+  five inspected installed main/helper/framework binaries byte-for-byte equal
+  to `dist/`. The two stale AgentTools PIDs `75927` and `7341` were conclusively
+  traced to deleted backup bundles and terminated; current bridge/helper PIDs
+  map to `/Applications/ReleaseRadar.app`.
+- Installed persisted-state readback: normal launch and a separate normal
+  quit/relaunch both showed active phase **Post-MVP reported-defect
+  remediation**, ticket `RR-R9` in **In progress**, and counts Backlog 0 / In
+  progress 1 / Needs review 0 / Blocked 0 / Accepted 8. Activity gained only
+  ordinary **Open project dashboard** rows from the readback. No active-phase
+  selection appears after the legitimate 7:01 PM owner events, so the installed
+  gate caused no active-pointer mutation. No SQLite access was used.
+- Independent installed-product QA: **GO, Required 0, Optional 0.** QA accepts
+  the corrected installed package, process identity, normal launch/relaunch,
+  persisted Post-MVP pointer, RR-R9 ticket state, counts, and Activity boundary.
+  Delivery Management therefore accepts the packaging/install/readback gate.
+- Tracking-only transition: **Completed and accepted.** Exactly one typed
+  `release_radar_upsert_ticket` mutation was authorized for existing ticket
+  `RR-R9` on `release-radar-post-mvp-remediation`, preserving its approved
+  outcome and changing only lane `in_progress` to `accepted`.
+- Completed invocation — exact authorized request, invoked once:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "phaseID": "release-radar-post-mvp-remediation",
+  "ticketID": "RR-R9",
+  "outcome": "Let owners and authorized agents select a project's active phase from Overview or Phase Board with persisted, audited, recoverable behavior, then activate the established product roadmap after acceptance.",
+  "lane": "accepted",
+  "reason": "Record the independently accepted RR-R9 active-phase-selection outcome after corrected Release packaging, installation, and relaunch verification; preserve the owner's current Post-MVP active phase.",
+  "requestID": "A855DC87-AFD9-4A22-A640-D47B9043963B"
+}
+```
+
+  Configured-plugin invocation succeeded once with `entityIDs: ["RR-R9"]`,
+  lane `accepted`, and audit event
+  `286C23C2-19D9-4C6F-B219-AFC1440E4FA8`. There was no retry, replacement
+  request ID, or other mutation.
+- Final installed-UI readback: direct and independent verification both showed
+  active phase **Post-MVP reported-defect remediation**, `RR-R9` in **Accepted**
+  with the exact approved outcome, and counts Backlog 0 / In progress 0 / Needs
+  review 0 / Blocked 0 / Accepted 9. Activity's top entry is exactly one RR-R9
+  **Accepted** entry with the approved reason. No phase-selection event appears
+  after the legitimate 7:01 PM owner events.
+- Final independent installed UI QA: **GO, Required 0, Optional 0.** QA
+  authorizes Delivery Management to record the complete RR-R9 disposition and
+  open terminal Git finalization.
+- Complete product disposition: **RR-R9 product outcome Complete and Accepted;
+  Required 0, Optional 0.** The requested owner and authorized-agent active-phase
+  selection behavior, persistence/audit/recovery, historical one-time
+  `RR-ROADMAP` activation, bounded XCTest-host correction, corrected installed
+  package, persisted-state verification, and board tracking are accepted. The
+  RR-R9 goal is not yet complete because terminal Git finalization and remote
+  verification remain mandatory.
+- Gate boundary: no `release_radar_set_active_phase` or other active-phase
+  command is authorized. Product/App/MCP/SQLite mutation is closed. Terminal
+  provenance classification, Git staging of accepted durable work only,
+  coherent commit or commits, push, and remote verification are now open under
+  the owner finalization rule below; only then may the goal be completed.
+- Permanent command safeguard: the accepted request
+  `385154BC-DC33-4F9C-ABBD-D80B271D8FF4` and audit event
+  `FBBB409B-9E4A-4165-A22D-6BFD16B3E154` remain the sole live activation
+  evidence. A second UUID, MCP readiness probe, replay, or
+  `release_radar_set_active_phase` call is permanently prohibited, including
+  after any tracking-transition or finalization failure. RR-RM1 planning and
+  every unrelated roadmap gate remain closed until terminal Git finalization
+  succeeds and the RR-R9 goal is complete.
+
+### RR-R9 board tracking repair — accepted
+
+- Status: **Complete; tracking Required finding closed.** Approved delivery ID
+  `RR-R9` is now represented on its governing Release Radar phase board. This
+  repaired tracking representation only; it changed no RR-R9 product scope and
+  is distinct from the now-accepted XCTest-host isolation correction; it does
+  not itself complete RR-R9. The later tracking-only lane transition is now
+  completed and accepted exactly as recorded above.
+- Approved command: `release_radar_upsert_ticket`. The complete original
+  argument object, durably recorded before invocation, is:
+
+```json
+{
+  "version": 1,
+  "requestID": "58F4FBDD-2710-427A-8C21-EF96B86B7C37",
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+  "ticketID": "RR-R9",
+  "phaseID": "release-radar-post-mvp-remediation",
+  "lane": "in_progress",
+  "outcome": "Let owners and authorized agents select a project's active phase from Overview or Phase Board with persisted, audited, recoverable behavior, then activate the established product roadmap after acceptance.",
+  "reason": "Represent the approved RR-R9 active-phase-selection work on its governing phase board; RR-R9 remains reopened for the XCTest-host isolation correction."
+}
+```
+
+- `assertedThreadID` was intentionally omitted. The initial installed-plugin
+  invocation returned `appUnavailable`; after a normal app relaunch, the same
+  plugin path and exact same request again returned `appUnavailable`. No
+  alternate request ID or argument object was generated.
+- After the installed BridgeAgent was verified running, the exact same request
+  was replayed through the installed signed newline-delimited STDIO helper. It
+  returned definitively with `isError: false`, `entityIDs: ["RR-R9"]`, and
+  audit event ID `D8B5E932-BC1C-466E-8329-092B166568BA`.
+- Direct running-UI readback of **Post-MVP reported-defect remediation** showed
+  counts Backlog 0 / In progress 1 / Needs review 0 / Blocked 0 / Accepted 8.
+  Card `ticket-RR-R9` was visible in **In progress** with the exact approved
+  outcome: `Let owners and authorized agents select a project's active phase
+  from Overview or Phase Board with persisted, audited, recoverable behavior,
+  then activate the established product roadmap after acceptance.` No database
+  inspection was used for this verification.
+- Scope safeguard: the accepted request represented RR-R9 only on phase
+  `release-radar-post-mvp-remediation` in lane `in_progress`. It does not
+  authorize a second `release_radar_set_active_phase` invocation or any other
+  mutation;
+  later valid owner UI choices made **Post-MVP reported-defect remediation**
+  the current persisted pointer. RR-R9 remains incomplete pending the released
+  corrected packaging/readback gate, and all unrelated roadmap gates remain
+  closed or governed exactly as recorded above.
 
 ## Planning reconciliation — 2026-08-26
 
@@ -75,8 +873,8 @@ writer.
 
 | Classification | Count | Counted work |
 | --- | ---: | --- |
-| Active | 0 | None. No product or remediation writer is released. |
-| Completed | 21 | RR-01–RR-10 (10), RR-R1–RR-R6 (6), Attach Folder (1), Tasks 7A/7B (2), absorbed RR-R7 route/sidebar work (1), and owner runtime validation of the installed SQLite-23 repair (1). |
+| Active | 0 | None. |
+| Completed | 22 | RR-01–RR-10 (10), RR-R1–RR-R6 (6), Attach Folder (1), Tasks 7A/7B (2), absorbed RR-R7 route/sidebar work (1), owner runtime validation of the installed SQLite-23 repair (1), and Product Task 2 repository handoff/Codex plugin lifecycle (1). |
 | Superseded | 2 | Request-marker/“first phase” onboarding; Ready-lane or automatic transition proposals. |
 | Misaligned | 5 | All-phase Work Board, Activity-to-History replacement, one-to-many goal linkage, semantic link/confidence suggestions, and partial Back-to-Goal history. |
 | Duplicative | 2 | Replay of historical unchecked tasks; duplicate raster brand copies under the mockup set. |
@@ -89,6 +887,7 @@ writer.
 | ID | Qty | Work item | Classification | Canonical source and evidence | Reason and surviving requirement | Duplicate/conflict; dependency or blocker | Required mockup |
 | --- | ---: | --- | --- | --- | --- | --- | --- |
 | A1 | 1 | SQLite-23 repair owner validation | Completed | This ledger, **Current gate** and **Initialize Project Tracking SQLite-23 repair — reopened owner gate** | The owner confirmed the SQLite authorization error is gone, pending tracking state persists across relaunch, and the remediation is Done/Accepted. | Gate closed on 2026-08-27; no product writer is automatically released. | None; validation used the installed app. |
+| A2 | 1 | Codex repository handoff and truthful observation copy | Completed; owner live acceptance 2026-08-29 | This ledger, **Product Task 2 repository-handoff acceptance correction**; plugin lifecycle design and plan | Installed `0.1.4` now distinguishes missing, incomplete, current, outdated, malformed, and unavailable guidance; the owner completed the audited no-rewrite repair and the running app immediately reported current. | Accepted local-only lifecycle and handoff; no follow-up writer is implied. | Existing onboarding and Project Overview surfaces; no new route or mockup. |
 | C1 | 10 | MVP RR-01–RR-10 | Completed | This ledger, **Task ledger**; `docs/superpowers/plans/2026-08-23-release-radar-mvp.md` | Accepted delivery remains intact; preserve historical evidence and do not replay. | Historical unchecked boxes duplicate completed work. | None; completed work is excluded from generation. |
 | C2 | 6 | Remediation RR-R1–RR-R6 | Completed | This ledger, **2026-08-25 — Post-MVP reported-defect remediation intake**; `docs/superpowers/plans/2026-08-25-release-radar-remediation.md` | Accepted in the combined validation artifact. | Historical plan state is superseded by later ledger gates. | None; completed work is excluded from generation. |
 | C3 | 1 | Attach Folder to Existing Project | Completed | This ledger, **Existing-project onboarding implementation and current gate** | Accepted behavior and residual tooling limitation are historical delivery evidence. | Portable Import is a different blocked workflow. | None; completed work is excluded from generation. |
@@ -149,6 +948,7 @@ for completed, speculative, blocked, or unresolved work.
 | Priority / sequence | Status and gate | Dependencies and blocking decisions | Shared surfaces/contracts; concurrency | Mockup state | Why this priority |
 | --- | --- | --- | --- | --- | --- |
 | P0 / 1 — Owner runtime validation | **Completed; Done/Accepted** | Owner confirmed the installed Release workflow no longer produces the SQLite authorization error, persists pending tracking state across relaunch, and is accepted. | Installed app and local owner state; no product writer was released during validation. | No mockup required. | Closed successfully on 2026-08-27. |
+| P0 / current — Repository-handoff acceptance correction | **Active; owner-approved versioned-guidance correction** | Implement and prove the versioned managed `AGENTS.md` block and read-only per-project current/outdated observation. | Preserve the installed typed MCP, lifecycle-helper, and authority boundaries; touch no current-repository `AGENTS.md`. | Existing onboarding and project overview surfaces only; no new route or mockup. | Owner acceptance is blocked until newly onboarded repositories receive deterministic guidance and Release Radar can truthfully identify older deployed guidance. |
 | P1 / 2 — Coupled product/IA reconciliation | **Closed decision gate; next potential product work** | P0 is complete; owner decisions remain required for Phase Board/Project Plan/Work Board, Activity/History, one-to-one/one-to-many links, semantic suggestions, and complete history semantics; update the ADR where data authority changes. | Project navigation, board/plan routes, goal-link storage, observation provenance, archive coverage, focus/history state. Serialize as one design stream. | Existing proposal images retained but unapproved; new images only after decisions. | These choices overlap and cannot safely be planned or mocked independently. |
 | P2 / 3 — Deterministic wordmark/lockups | **Deferred; separable candidate** | P0 is complete; explicit owner release and a production typeface/license or drawn outlines remain required. | Brand files only; may proceed independently from later product IA when released. | Existing raster direction adequate; no new AI mockup. | It is the only surviving visual-production candidate that does not share product routes or data. |
 | P3 / 4 — Warning cleanup | **Deferred maintenance** | P0 is complete; explicit owner release remains required. | Compiler/test files; keep separate from product UI/data work. | None. | Low-risk maintenance that is not automatically released by remediation acceptance. |
@@ -2310,3 +3110,743 @@ skill/MCP and `SMAppService` proof. Product Task 2 remains **NO-GO**.
   Product Task 2 release is authorized. Continuing requires a new owner-
   authorized narrow investigation or an owner decision to close the
   feasibility effort with this blocker.
+
+### Corrected AgentTools reader proof and Product Task 2 release review
+
+- The owner authorized the narrow remediation and rerun. The packaged
+  `ReleaseRadarAgentTools` STDIO reader now returns each complete JSON-RPC line
+  while stdin remains open. Focused XCTest
+  `testPackagedToolRespondsToInitializeWhileInputRemainsOpen` passed, and the
+  installed signed helper initialized in Codex with all twelve Release Radar
+  tools. One owner-authorized live transition of `RR-R7` to `accepted` created
+  audit event `D2B76E4D-6E26-4714-B81C-9CC5482AFADD`; exact request replay
+  returned that event without another mutation.
+- Exactly one corrected plugin-composition attempt used `codex-cli
+  0.149.0-alpha.4.3`. Preparation artifact
+  `3401107D-22F2-4099-A3EC-0E148EABB05F` produced derived digest
+  `6802c8e801ec7b70330e31f2476a3a737e1658f8376f8700634a3ffbae3a3f47`.
+  The installed target digest matched, and one fresh Codex task emitted matching
+  `item.started` and `item.completed` `mcp_tool_call` events for server
+  `release_radar`, tool `release_radar_transition_ticket`, arguments `{}`, and
+  `result: null`. Transcript SHA-256 is
+  `3874437751624e3f6a98ceb7c76f196dce2d68ad63d016e9299a73d8efb4aa5d`.
+- The literal anticipated terminal error did not occur: the fresh task's
+  `never` approval policy rejected the call before server-side schema validation
+  with `MCP tool call requires approval, but approval policy is never`. No
+  Release Radar action, XPC call, SQLite mutation, or downstream file access
+  occurred. The structured events nevertheless prove the material
+  model-callable plugin-composition boundary; accepted direct-handshake evidence
+  continues to cover server protocol and schema behavior. No retry is required.
+- Attempt-owned plugin and marketplace state was removed, the opaque unrelated
+  fingerprint remained
+  `8f612bba593cf9aa779fbf3117d8594755c63f391d3910e6ed4a629d92b6b916`,
+  and the exact enabled direct `release_radar` entry for the installed packaged
+  AgentTools was restored with empty arguments/environment and null optional
+  fields.
+- Corrected dependency reviews: TPM **GO**, Required 0; Security/Privacy **GO**,
+  Required 0; QA/Test **GO**, Required 0. QA classified another approval-enabled
+  retry as optional and out of the released scope. Architecture required the
+  proof be recorded and the exact restored direct underscore entry be adopted
+  safely by first managed Install. The design, ADR, product brief, and plan now
+  specify fresh exact recognition, supported removal, absence verification,
+  attempt-owned rollback, and no later migration replay. Architecture and
+  Delivery Management re-review remain the final Product Task 2 release checks.
+- Final corrected release: the task brief now accepts either server-side schema
+  validation or a Codex approval-policy rejection that prevents server
+  execution as the safe failed pre-action callability oracle. Its registered
+  SHA-256 is
+  `bb21bcb48d8d35db6d7192eb2361103acc01d724facfb6ddc0d9b9ce6aaf786f`.
+  Architecture **GO**, Required 0, accepted the exact direct-entry contract,
+  dual-entry preflight ordering, ownership-aware rollback, and transport test
+  coverage. Delivery Management **GO**, Required 0. Feasibility Task 1 is
+  **Accepted** and exactly one fresh sole-writer Implementer is released for the
+  approved Product Task 2 vertical slice.
+
+### Product Task 2 Step 2 implementation checkpoint
+
+- Owner stop condition: end this session after Step 2 and resume in a fresh
+  session with fresh role assignments and context.
+- Step 2 implementation is **complete/green, pending independent acceptance**.
+  The canonical bundled marketplace/plugin package, strict three-file inventory
+  and digest validation, lifecycle types/reducer/coordinator, SQLite schema v10
+  singleton store and migration, exact audit behavior, postcondition-before-
+  receipt handling, auto-update eligibility, and persistent modified-digest
+  attention state are implemented.
+- Implementer verification passed:
+  `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar
+  -derivedDataPath /tmp/ReleaseRadar-PluginLifecycle-Step2
+  -only-testing:ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests
+  CODE_SIGNING_ALLOWED=NO` (`TEST SUCCEEDED`). Independent code review, QA,
+  architecture, and security/privacy acceptance are intentionally deferred to
+  the fresh session.
+- Primary-agent handoff verification independently reran the same two suites
+  with DerivedData at `/tmp/ReleaseRadar-PluginLifecycle-Step2-Handoff` and
+  observed `TEST SUCCEEDED`: all 8 lifecycle acceptance tests and all 25 store
+  acceptance tests passed.
+- Step 3+ helper, XPC transport/client, Xcode packaging, Settings/AppModel/
+  Sidebar wiring, and their tests are present in the working tree as
+  **unverified in-progress carryover**. They are not accepted or claimed
+  complete by this checkpoint.
+- No live Codex/plugin state, installed application, commit, push, or remote
+  state was changed during Step 2 implementation. The unrelated untracked
+  `default.profraw` remains untouched.
+- Next session: begin with an independent review/acceptance wave for Step 2,
+  then inspect and continue Step 3 from the existing working tree without
+  reverting or attributing unrelated changes.
+
+### Product Task 2 Step 2 acceptance checkpoint
+
+- Step 2 is **Done/Accepted**. The fresh bounded acceptance-remediation pass
+  completed launch-observation coverage, singleton and audit atomicity, a fixed
+  stable package snapshot, partial-reinstall recovery, SemVer precedence, and
+  the compact lifecycle acceptance matrix. These decisions remain scoped to
+  this single-user, local-only application: Release Radar, its helper, the
+  managed Codex plugin, the exact supported `release_radar` MCP entry, and
+  STDIO MCP. No multi-user, service, synchronization, generalized
+  reconciliation, or unrelated Codex-management requirement was introduced.
+- Fresh Implementer verification passed **49/49** tests (**20 lifecycle + 29
+  store**) and `git diff --check`. Fresh independent Code Review is
+  **Accepted** with a separate **49/49** run and no required findings.
+  Architecture is **Accepted**, with no ADR change required. Fresh independent
+  QA is **Accepted** after another **49/49** run and a **20/20** lifecycle
+  matrix recheck. Security/Privacy is **Accepted** after **10** focused
+  regressions covering the changed local persistence, package-integrity,
+  recovery, and unrelated-state-preservation boundaries. Only correctness,
+  local file/Codex configuration safety, the helper boundary, and recoverable
+  failures were treated as blocking.
+- TPM released the dependency gate with zero blockers. Delivery Management
+  accepts the recorded Step 2 evidence and releases inspection and completion
+  of the existing Step 3+ carryover as the next eligible work. The helper, XPC
+  client/transport, Xcode packaging, Settings/AppModel/Sidebar wiring, and
+  transport tests remain **unverified/unaccepted carryover**; this checkpoint
+  does not claim Step 3 or full-feature acceptance, and that work must be
+  continued in place rather than discarded or recreated.
+- Relevant test build products remain temporary, non-authoritative evidence at
+  `/tmp/ReleaseRadar-PluginLifecycle-Step2-AcceptanceFixes-GREEN5`,
+  `/tmp/ReleaseRadar-PluginLifecycle-Step2-Reaccept`,
+  `/tmp/ReleaseRadar-PluginLifecycle-Step2-QA-Reacceptance-20260828`,
+  `/tmp/ReleaseRadar-PluginLifecycle-Step2-QA-Matrix-Recheck-20260828`, and
+  `/tmp/ReleaseRadar-PluginLifecycle-Step2-Security`. This repository ledger
+  is the durable source of truth; the temporary paths are not controlling
+  artifacts.
+- No application installation, live Codex/plugin/MCP mutation, commit, or push
+  occurred during Step 2 acceptance. The unrelated untracked `default.profraw`
+  remains untouched.
+- Next eligible work: inspect the existing Step 3+ carryover against the
+  controlling design, ADR, brief, and plan; then complete its bounded helper,
+  client, packaging, Settings, launch, and transport behavior test-first.
+
+### Product Task 2 Step 3+ implementation and live-install checkpoint
+
+- The existing Step 3+ carryover was completed in place without introducing a
+  service, command framework, synchronization layer, reconciliation machinery,
+  or generalized test harness. The bounded changes are the helper's atomic
+  owned process-group launch/termination, preservation of normalized
+  ServiceManagement errors, dashboard-before-one-plugin-check launch ordering,
+  Settings confirmation focus recovery, and the plugin manifest metadata
+  required by the installed plugin guidance. The official direct `.mcp.json`
+  server-map form remains unchanged.
+- Focused lifecycle, store, transport, and AppRoute verification passed **81**
+  tests with zero failures or skips. The updated package digest assertion
+  passed separately. The initial signed Debug application build passed strict
+  deep signature verification; its lifecycle helper had the expected
+  identifier/team, Hardened Runtime, no ReleaseRadarCore/SQLite/network-
+  framework linkage, the canonical LaunchAgent plist, and the exact four-file
+  marketplace inventory. Its initial empty-entitlement packaging was superseded
+  by the live sandbox remediation and owner-approved exact entitlements recorded
+  in the completed-evidence section below and in ADR-002.
+- The signed application was installed at `/Applications/ReleaseRadar.app` and
+  verified in place. Live Settings inspection proved that the managed plugin
+  state remains independent from desktop observation: the plugin correctly
+  reported **Not installed** with Install available while the separate Codex
+  live-observation section reported desktop observation unavailable.
+- The first real Install attempt exposed `SMAppServiceErrorDomain` code 1,
+  `Operation not permitted`. Debugger evidence confirmed this is the lifecycle
+  LaunchAgent registration boundary; no Codex/plugin/configuration mutation
+  occurred. The client now maps that exact ServiceManagement denial to the
+  existing `unauthorizedPeer` recovery state, with a RED/GREEN regression, and
+  the rebuilt signed application is installed. Live Settings now correctly
+  reports `macOS did not authorize the Release Radar lifecycle helper. Review
+  Login Items, then try again.` rather than incorrectly reporting Codex or the
+  helper unavailable.
+- macOS Login Items & Extensions is open at **App Background Activity**, where
+  ReleaseRadar is visible. The lifecycle service is still absent from
+  `launchctl` and background-task registration, so the next live step requires
+  the owner to toggle ReleaseRadar background activity off and back on to
+  refresh consent. This temporarily stops the existing Release Radar bridge and
+  therefore awaits explicit owner action. Until then, real plugin installation,
+  modified-state/reinstall, MCP startup, one safe MCP operation with immediate
+  dashboard refresh, and final full-feature acceptance remain pending.
+- The unrelated untracked `default.profraw` remains untouched. No commit or push
+  occurred. The pre-install application backups and build/test output remain
+  temporary under `/tmp`; they are non-authoritative and have not been deleted.
+
+### Product Task 2 completed implementation and live-acceptance evidence
+
+- Step 2 remains **Done/Accepted** under its preceding acceptance checkpoint;
+  it was not reopened. The remaining Step 3+ implementation and the full Codex
+  plugin lifecycle feature are **Done/Accepted**. Work
+  remained scoped to this owner-operated, single-user Mac application and did
+  not add HTTP, a command framework, synchronization, generalized
+  reconciliation, another database writer, or multi-user behavior.
+- The signed lifecycle helper remains sandboxed. After the owner refreshed its
+  Login Item consent, live diagnosis established the minimum working boundary:
+  `~/.codex/` is the helper's only writable filesystem area; the two exact
+  configured marketplace roots
+  `~/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime/`
+  and `~/Documents/dev/joeroberts/ai-tools/integrations/codex/` are read-only;
+  `/private/var/empty/` is read-only; and `com.apple.security.syspolicy` is the
+  sole extra Mach lookup. The installed Codex CLI reads every configured
+  marketplace even for a targeted command. The owner explicitly accepted
+  these exact read-only exceptions and directed that any additional unrelated
+  path return for a new decision. ADR-002 records the amendment. The helper
+  still has no network, database, project-wide, Keychain, credential, bookmark,
+  or app-group authority.
+- `SMAppService` supplies a relative `argv[0]` to this helper on this system.
+  Resolving the signed executable through `_NSGetExecutablePath` corrected the
+  bundled-marketplace derivation without expanding the XPC or CLI surface. The
+  helper continues to expose only `status`, `install`, `remove`, and
+  `reinstall`, and all Codex CLI operations remain fixed and bounded.
+- The final focused command ran the lifecycle, schema-v10 store, lifecycle-XPC
+  transport, and AppRoute suites from a fresh DerivedData root. Its xcresult
+  reports **82/82 passed**, zero failures, zero skips, and
+  `TEST SUCCEEDED`. This includes clean managed auto-update eligibility,
+  direct-entry migration and fail-closed recognition, helper registration,
+  lifecycle reply bounds, modified-state recovery, launch ordering, Settings
+  observation separation, and persistence/relaunch behavior. `git diff
+  --check` passed.
+- The current installed package at `/Applications/ReleaseRadar.app` passes
+  strict deep signature verification. Supported Codex CLI reads report the
+  single `release-radar` marketplace rooted at the installed app, one enabled
+  installed local `release-radar` plugin at version `0.1.0`, and bundled STDIO
+  server `release_radar` pointing exactly to the installed
+  `ReleaseRadarAgentTools` with empty arguments/environment and null working
+  directory. Hyphenated server key `release-radar` is absent. Bundled and
+  installed plugin files are byte-identical after the final reinstall.
+- Live Settings testing exercised the complete owner workflow in the installed
+  app: Install reported **Installed 0.1.0**; a deliberate edit to installed
+  `SKILL.md` was detected as **Modified 0.1.0** with Reinstall and Remove
+  available; confirmed Reinstall restored the package and **Installed 0.1.0**;
+  confirmed Remove reported **Not installed**; and a final Install restored
+  **Installed 0.1.0**. The reinstall warning named overwrite of local
+  modifications, and removal stated that Release Radar delivery records remain.
+  The temporary modification is absent. The plugin status remains Installed
+  while a separate section truthfully reports only that Codex desktop live
+  observation is unavailable, so desktop observation no longer masks the real
+  plugin state.
+- The installed `ReleaseRadarAgentTools` completed a real newline-delimited
+  STDIO MCP session: `initialize` negotiated protocol `2025-06-18`,
+  `tools/list` returned all twelve typed tools, and
+  `release_radar_add_evidence` committed evidence ID
+  `plugin-lifecycle-live-20260828` for `RR-R7`. The non-error result returned
+  audit event `D9B219C7-8CBF-4422-BE8F-5CB16BA366F4`. With the RR-R7 inspector
+  already open, the running UI immediately added
+  `ADR-002-codex-plugin-lifecycle.md` without navigation or manual refresh.
+- The installed plugin-creator validator was invoked once as requested by its
+  guidance but could not start because its own Python environment lacks the
+  `yaml` module. No dependency or validator machinery was added, and the
+  already accepted four-file package was not changed to accommodate that tool.
+  Current Codex CLI marketplace/plugin/MCP reads, the package inventory/digest
+  acceptance tests, byte-identity check, and live MCP startup are the direct
+  package evidence.
+- The final Code/Architecture review found one required exact-entry recovery
+  defect: a supported CLI remove could make the entry absent but return failure
+  before the helper recorded ownership. The bounded correction records that
+  each fixed removal was issued before invoking the CLI; rollback fresh-reads
+  the key, preserves exact state, restores only absence, verifies the exact
+  restoration, refuses conflicts, and surfaces restoration failure as
+  `postconditionFailed`. The same focused suites then passed **82/82** again,
+  and a fresh clean signed build (without test-bundle content) replaced the app
+  at `/Applications/ReleaseRadar.app`. Final Settings still reports
+  **Installed 0.1.0** separately from unavailable desktop observation; strict
+  deep signing, exact helper entitlements, byte-identical installed plugin,
+  exact `release_radar` MCP state, hyphenated-key absence, and `git diff
+  --check` all passed. Code Review and Architecture re-review are **Accepted**,
+  each Required 0. QA/Test and TPM are **Accepted**, each Required 0.
+  Security/Privacy and Delivery Management are **Accepted**, each Required 0.
+- Historical Product Task 2 disposition: **superseded by the reopened
+  repository-handoff acceptance correction below.** The lifecycle-helper,
+  signing, exact-entry migration, Settings lifecycle controls, real MCP
+  startup/mutation, and immediate dashboard-refresh evidence remain accepted.
+  The earlier Done/Accepted claim was premature because it did not verify the
+  owner-facing repository handoff or the explicit requirement not to report
+  Codex unavailable merely because desktop observation is unavailable.
+- No commit or push occurred. The unrelated untracked `default.profraw` remains
+  untouched. Replaced application builds and focused test output remain only
+  as non-authoritative temporary recovery/evidence copies under `/tmp`; none
+  has been deleted.
+
+### Product Task 2 repository-handoff acceptance correction — 2026-08-28
+
+- Status: **Done/Accepted.** After rejecting the false-current `0.1.3` result,
+  the owner completed the installed `0.1.4` repair workflow on 2026-08-29 and
+  returned its successful audit/readback evidence. The running app immediately
+  changed Rekon Pursuit from **handoff incomplete · v1** to **guidance current ·
+  v1**. Codex remains the repository writer; Release Radar remains the sole
+  SQLite writer and read-only repository observer through the existing
+  authorized bookmark.
+- Root cause: plugin lifecycle implementation and acceptance were scoped around
+  package installation, lifecycle state, transport, and one direct MCP
+  mutation. The unchanged onboarding prompt still told Codex not to edit
+  repository dashboard files, never invoked the installed skill, and never
+  established durable Release Radar guidance in the tracked repository.
+  Separately, the shared unavailable-observer presentation still rendered
+  **Codex unavailable**, contradicting the owner's explicit acceptance
+  criterion even though plugin status was presented in another section.
+- Authority contract: Codex, operating in the owner-authorized repository,
+  owns repository instruction and delivery-document writes. The installed
+  Release Radar skill requires the same agent workflow to send corresponding
+  typed MCP mutations. Release Radar alone validates and writes its SQLite
+  state and returns an audited result. For guidance-only handoff, repository
+  guidance is written/read first and the actual `AGENTS.md` is then recorded
+  through existing ticketless evidence; `upsert_phase` is not a handoff audit.
+  The app and lifecycle helper retain no
+  repository-write authority; the helper retains no project, database, MCP,
+  network, credential, or app-group authority.
+- In scope: reconcile the controlling design/plan/brief; update the copied
+  onboarding prompt to invoke the installed skill in the current Codex task
+  already rooted at the selected repository;
+  update the bundled skill so owner-requested initialization preserves or
+  creates the applicable `AGENTS.md` guidance and minimum durable delivery
+  ledger, performs corresponding typed MCP mutations, verifies the repository
+  result plus successful audited MCP result, and reports discrepancies; replace
+  the misleading unavailable-observer title with observation-specific copy;
+  run focused RED/GREEN tests; validate the package; rebuild and install the
+  signed app; and complete one current-task repository-docs plus MCP workflow.
+- Out of scope: a new MCP operation, direct database or Codex-configuration
+  access, app-side repository writes, live-observation transport, polling,
+  background synchronization, generalized reconciliation, new routes or
+  mockups, multi-user behavior, and every deferred or proposed roadmap item.
+- Superseded `0.1.2` correction: app and plugin are version `0.1.2`. Release Radar
+  read-only classifies the selected repository's exact versioned root
+  `AGENTS.md` block as missing, current, outdated, needs repair, or unavailable
+  through the existing security-scoped project bookmark. Onboarding and Project
+  Overview copied one fresh-task prompt authorizing Codex to manage only that
+  marked block and create `docs/delivery/progress.md` only when absent. The app
+  and helper have no repository-write path. The bundled skill preserves all
+  unrelated instructions, stops on malformed/duplicate/newer markers, uses only
+  existing typed MCP mutations, writes documentation only after an audited
+  result, reads it back, and retained mutation-first `appUnavailable`, exact-
+  request replay, and RR-ahead recovery. Unavailable desktop observation still renders **Codex
+  desktop observation unavailable** without claiming Codex is unavailable.
+- Completion gate: the earlier engineering and independent delivery evidence
+  remains valid for the `0.1.1` lifecycle and MCP boundary. The versioned
+  guidance implementation, focused verification, fresh independent acceptance,
+  signed `0.1.2` installation, and read-only live UI verification remain valid.
+  The `0.1.4` false-current correction must pass focused RED/GREEN, package and
+  signed-install checks, and one current-task live repair whose post-mutation
+  ticketless evidence refresh reports current guidance before Done/Accepted.
+- Earlier `0.1.1` pre-implementation gate (historical):
+  - Planning: **Complete.** The tracked correction brief and controlling
+    design, ADR, and implementation plan now define the repository/MCP
+    authority split, offline recovery, observation-specific copy, and the
+    coordinated app/plugin `0.1.1` delivery path.
+  - Architecture: **GO; Required 0.** The earlier same-version delivery defect
+    is resolved by the bounded `0.1.1` app/manifest bump and the existing
+    clean-managed automatic update or explicit Update action. The offline path
+    reuses `appUnavailable`, exact-request replay after `outcomeUnknown`, and
+    the existing idempotent request receipt; it adds no writer or transport.
+  - QA/Test: **GO; Required 0.** Focused RED/GREEN coverage is limited to the
+    copied prompt, installed-skill semantics, unavailable-observation copy,
+    established package version/digest check, and existing clean-managed
+    launch-update test. Live proof must use direct repository readback plus a
+    successful audited MCP result; no custom simulation harness is required.
+  - TPM: **GO; Required 0.** This is the sole active correction, Step 2's
+    accepted lifecycle core is not reopened, and no roadmap or multi-user scope
+    is added.
+  - Delivery Management: **GO; Required 0.** The brief authorizes exactly the
+    required focused bundled-skill assertions, its checksum is current, and the
+    Architecture, QA/Test, and TPM decisions above make the correction
+    dependency-safe. Release exactly one fresh Implementer.
+- Earlier `0.1.1` fresh-task live acceptance: explicitly invoked the installed `release-radar`
+  skill; `release_radar_add_evidence` successfully attached the tracked
+  correction brief to `RR-R7` with audit event
+  `7AD37264-B202-4108-9DE8-A5F8E04A53EA`; repository readback confirmed this
+  ledger entry and the brief at its tracked path without changing RR-R7 state.
+- Recovery replay: `appUnavailable` caused no repository file write; after
+  Release Radar reopened, the identical request UUID
+  `cdf7aa12-6fb5-4ab5-89fb-8b3d2ec9b8dc` was replayed successfully with audit
+  event `8240BA08-AD9D-4771-B850-A848A38AB2BC`.
+- Earlier `0.1.1` test-first evidence: the initial correction selection failed on the obsolete
+  prompt, skill, version/digest, and unavailable-observation contracts, then
+  passed all **6/6** focused cases after the bounded implementation. The live
+  reinstall propagation defect received its own RED regression; the one
+  absent-only 250 ms recheck then passed the focused case and all **7/7**
+  lifecycle transport tests. Fresh independent QA repeated both selections
+  with zero failures or skips. The final installed-owner-gate selection repeated
+  all six correction cases plus the seven transport cases: **13/13 passed**, with
+  zero failures or skips; `git diff --check` is clean.
+- Independent acceptance: fresh Code Review, QA/Test, Architecture, and
+  Security/Privacy accepted the repository-handoff correction with Required 0.
+  The bounded helper recheck received separate fresh Code, QA, and combined
+  Architecture/Security acceptance with Required 0; it adds no command,
+  permission, loop, background work, or reconciliation machinery. Final
+  runtime QA **ACCEPT**, TPM **GO**, and Delivery Management **GO**, each with
+  Required 0.
+- Versioned-guidance `0.1.2` test-first evidence: the initial selection failed
+  because `ProjectGuidanceInspection`, its states, project-model plumbing, and
+  presentation did not exist. The bounded implementation then passed **9/9**
+  focused cases. Independent review found two Required defects: the copied
+  prompt excluded creation of an absent delivery ledger, and a valid block plus
+  a stray malformed marker could be classified current. Both received focused
+  RED failures, bounded fixes, and a fresh **4/4** GREEN run; unavailable project
+  authorization is now explicitly covered. Fresh independent QA also passed its
+  **9/9** correction selection and the existing dashboard-refresh integration
+  case. The final correction selection passed **10/10** with zero failures or
+  skips. Fresh Code Review/Architecture/Security **ACCEPT**, QA/Test **ACCEPT**,
+  TPM **GO**, and Delivery Management **GO**, all with Required 0.
+- Versioned-guidance `0.1.2` package and install evidence: the final configured
+  Release build succeeded at
+  `/tmp/ReleaseRadar-Guidance-Release-0.1.2`; the app and embedded helper pass
+  strict signing checks with Apple Development identity, team `2UA854NLX4`, and
+  Hardened Runtime. Version `0.1.2` is installed and running from
+  `/Applications/ReleaseRadar.app` with no test bundle. Launch automatically
+  updated the clean managed plugin from `0.1.1` to `0.1.2`; Codex reports the
+  plugin enabled and the exact `release_radar` STDIO entry targeting the
+  installed helper with empty arguments/environment and null working directory.
+  The installed cache is byte-identical to the app's bundled plugin, and its
+  skill passes the installed quick validator. The owner Codex configuration
+  hash remained
+  `e530cb7a370140f130ee813963766ea82c8b9601a3adba7b8e22734c8778a56f`
+  before and after installation. The previous app remains recoverable at the
+  temporary, non-authoritative path
+  `/tmp/ReleaseRadar-Install-Backup-0.1.1.qMgg5t/ReleaseRadar.app`; it has not
+  been deleted.
+- Versioned-guidance `0.1.2` live UI evidence: Settings reports **Installed
+  0.1.2**, confirms that it matches the shipped version, offers Remove, and
+  renders **Codex desktop observation unavailable** with truthful observation-
+  specific explanatory copy rather than claiming Codex itself is unavailable.
+  Project Overview read-only inspection reports **Not installed** for each
+  currently onboarded repository (`release_radar`, `RekonDesignSystem`, and
+  `Rekon Pursuit`) and offers **Copy setup prompt**. The copied prompt was
+  exercised in the running app and reported **Codex prompt copied**. No project
+  `AGENTS.md` was modified by Release Radar, and this repository's root
+  `AGENTS.md` remains untouched.
+- Installed `0.1.2` live handoff rejection: the copied prompt told an already
+  fresh `Rekon Pursuit` task to create another task. The delegated task loaded
+  `$release-radar:release-radar`, but the skill did not name a guidance-specific
+  existing mutation and therefore used `upsert_phase` on
+  `post_mvp_refinement` merely to obtain audit event
+  `CDE7AD50-842F-48F0-9896-2141AC8831DD`. It then appended the v1 managed block
+  and created a title-only `docs/delivery/progress.md`. Because the mutation and
+  app refresh occurred before those file writes, the running Project Overview
+  still reported the unscoped **Not installed** afterward. The transport and
+  repository readback worked, but the workflow and UI did not meet acceptance.
+  The owner approved `0.1.3` to operate in the current task, scope every guidance
+  status explicitly, refuse symlink/non-regular targets, persist a truthful
+  pending handoff first, record the actual written `AGENTS.md` through existing
+  ticketless `add_evidence`, replay the complete request verbatim on uncertainty,
+  and let the existing post-mutation reload observe the already-written block.
+  No new operation, schema, service, watcher, or reconciler is authorized.
+- Earlier `0.1.1` package and install evidence: the configured Release build succeeded at
+  `/tmp/ReleaseRadar-Handoff-Release-0.1.1-fixed`; the app and embedded helper
+  pass strict signing checks with Apple Development identity, team
+  `2UA854NLX4`, and Hardened Runtime. The signed app is installed at
+  `/Applications/ReleaseRadar.app` as version `0.1.1`, contains no test bundle,
+  and its bundled plugin is byte-identical to the installed Codex cache. Codex
+  reports one enabled `release-radar` plugin at `0.1.1` and the exact enabled
+  `release_radar` STDIO entry targeting the installed `ReleaseRadarAgentTools`
+  with empty arguments/environment and null working directory.
+- Package-guidance evidence: after the owner-requested PyYAML installation, the
+  active Python imports PyYAML `6.0.3`, and the installed skill validator reports
+  `Skill is valid!`. The installed plugin
+  validator expects an `.mcp.json` `mcpServers` wrapper, while the pinned Codex
+  runtime accepts and loads the supported direct server map used here. The
+  direct map was preserved; real fresh tasks loaded the skill and all twelve
+  typed tools, and the installed MCP completed audited mutations.
+- Earlier `0.1.1` live Settings evidence: the installed app reported **Installed 0.1.1** and
+  the observation-specific unavailable copy. A deliberate edit to only the
+  Release Radar-owned installed skill was detected as **Modified 0.1.1** after
+  relaunch with Reinstall offered; confirmed Reinstall restored the exact
+  shipped bytes and **Installed 0.1.1**. A stale helper process was proven to
+  originate from a recoverable `/private/tmp` backup and was terminated; the
+  active helper now executes from `/Applications/ReleaseRadar.app`.
+- `0.1.3` bounded implementation evidence: the copied prompt now operates in
+  the already-rooted current task and invokes the exact
+  `$release-radar:release-radar` skill. The bundled skill writes and reads the
+  permitted repository files before calling Release Radar, checks every
+  existing target-path component without following symlinks, creates only a
+  state-neutral pending handoff ledger when the ledger is absent, and records
+  the read-back root `AGENTS.md` with existing ticketless
+  `release_radar_add_evidence`. Either permitted-file change requires that
+  audit, so a ledger-only handoff cannot remain pending. The skill never uses
+  `upsert_phase` for the handoff and retains the complete original request for
+  idempotent replay. Project Overview now scopes all five states as **Release
+  Radar guidance ...**, and its read-only inspector rejects an existing
+  symlink or non-regular root `AGENTS.md`. App and plugin versions are `0.1.3`;
+  the canonical package digest is
+  `07e8df95362133e7290f1ce41fa0ad47ed4201e0f554069d062d4496a32a37df`.
+- `0.1.3` test-first and package evidence: the initial focused selection failed
+  on the old prompt, skill, version/digest, UI copy, and symlink handling. The
+  intermediate-path and ledger-only audit findings each received a focused RED
+  assertion before the one-sentence skill correction. The stabilized fresh
+  selection passed **8/8** with zero failures or skips at
+  `/tmp/ReleaseRadar-Handoff-0.1.3-FinalGreen`; independent QA passed its fresh
+  **12/12** selection with zero failures or skips. `git diff --check` passes and
+  this repository's root `AGENTS.md` has no diff. The installed skill validator
+  reports **Skill is valid!**. The installed plugin validator still rejects the
+  direct `.mcp.json` server map that the installed Codex runtime loads; the
+  supported four-file package was not changed for that validator mismatch.
+- `0.1.3` independent disposition: QA/Test, TPM, and Delivery Management are
+  **GO**, each Required 0. Code/Architecture/Security found the real
+  ledger-only pending gap above and it is resolved. Its proposed atomic
+  descriptor reader for a malicious path swap in the separate read-only UI
+  inspector is **Optional/Deferred** for this single-user local app: the stable
+  symlink case is refused, the inspector has no write path, and expanding it
+  would be disproportionate to the accepted boundary. No new operation,
+  schema, permission, service, watcher, or reconciliation mechanism was added.
+- `0.1.3` signed-build evidence: the fresh Release build succeeded at
+  `/tmp/ReleaseRadar-Handoff-Release-0.1.3-Final`; it reports version `0.1.3`,
+  contains no test bundle, embeds plugin bytes identical to the repository,
+  and passes strict deep signing verification with the configured Apple
+  Development identity.
+- `0.1.3` installation and running-UI evidence: the signed app is installed and
+  running from `/Applications/ReleaseRadar.app`. Codex reports the
+  `release-radar` plugin installed and enabled at `0.1.3`, its marketplace source
+  is the installed app, and the exact enabled `release_radar` STDIO entry targets
+  `/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools` with
+  empty arguments/environment and a null working directory. The installed cache
+  is byte-identical to the app's bundled package. The owner Codex configuration
+  SHA-256 remained
+  `b212898e27c8aa8b2e72a22f4d1d1a1588800f8a13e01a3994535d0873dae43d`
+  across the confirmed reinstall. Settings reports **Installed 0.1.3**, offers
+  Remove, and separately reports **Codex desktop observation unavailable**; it
+  does not report Codex itself unavailable. Rekon Pursuit Project Overview
+  reports **Release Radar guidance current · v1**.
+- During the manual app-bundle replacement, the Service Management job retained
+  the already-running `0.1.2` lifecycle helper from the recoverable backup at
+  `/tmp/ReleaseRadar-Install-Backup-0.1.2.D5baon/ReleaseRadar.app`. That stale
+  executable produced the false **Needs repair** and failed-reinstall result.
+  Direct process-path evidence identified the cause; restarting only the
+  registered Release Radar lifecycle job loaded the helper from
+  `/Applications/ReleaseRadar.app`, after which the same confirmed Reinstall
+  succeeded and Settings reported **Installed 0.1.3**. This was an artifact of
+  replacing a running app while preserving its old bundle as a backup, not a
+  plugin/configuration mutation; no product framework or generalized recovery
+  mechanism was added. Status remains **Active** only until the owner completes
+  one new-task repository-first handoff using the freshly loaded `0.1.3` skill,
+  with ticketless audit, repository readback, immediate UI proof, and explicit
+  Done/Accepted confirmation.
+- Live repository/MCP evidence: a fresh task explicitly invoked the installed
+  skill, attached the tracked correction brief to `RR-R7`, received audit event
+  `7AD37264-B202-4108-9DE8-A5F8E04A53EA`, then wrote and read back this ledger.
+  With `RR-R7` already selected, the inspector immediately showed the new
+  evidence and audit without navigation or manual refresh. The closed-app probe
+  returned `appUnavailable` with an empty entity list and identical repository
+  hashes; replaying UUID `cdf7aa12-6fb5-4ab5-89fb-8b3d2ec9b8dc` after reopen
+  produced audit event `8240BA08-AD9D-4771-B850-A848A38AB2BC` and another
+  immediate inspector refresh. No artificial `outcomeUnknown` or RR-ahead
+  failure injector was added; their exact-request/document-repair behavior is
+  retained in the installed skill and existing focused acceptance coverage.
+- Scope and handoff: Step 2 remains accepted and was not reopened. No HTTP,
+  new MCP operation, direct database/config writer, synchronization framework,
+  generalized reconciler, multi-user behavior, commit, or push was introduced.
+  Untracked `default.profraw` remains untouched. Build/test roots, recoverable
+  app backups, and command transcripts remain non-authoritative temporary files
+  under `/tmp`; none has been deleted. The `0.1.4` installation and completed
+  Rekon Pursuit live-repair evidence are recorded below; no acceptance gate
+  remains.
+- `0.1.4` live-acceptance defect and bounded correction: Rekon Pursuit's exact
+  v1 block was written by the rejected `0.1.2` flow after its wrong
+  `upsert_phase`; no ticketless evidence row recorded that file. The installed
+  `0.1.3` app nevertheless reported **Release Radar guidance current · v1**
+  because read-only inspection considered only the block, and the skill's
+  no-file-change rule could not repair the missing audit. Current status now
+  requires the exact block plus an available, ticketless evidence row for the
+  exact root `AGENTS.md` whose ID begins `release-radar-handoff:v1:`. A block
+  without that record is **Release Radar guidance handoff incomplete · v1** and
+  offers a state-specific repair prompt; that prompt lets the skill perform the
+  existing ticketless `add_evidence` mutation after direct file readback without
+  rewriting the file or changing delivery state. The existing mutation refresh
+  then observes the evidence and reports current. The first focused RED build
+  failed on the absent state/signature as expected; the initial focused GREEN
+  selection passed **9/9** with zero failures or skips at
+  `/tmp/ReleaseRadar-Handoff-Audit-GREEN-1`. App/plugin version is `0.1.4`; the
+  recomputed package digest is
+  `e40251bcfc869b9571ab7abd3970cfe878c65b26ac98b486d47b38c1a9079092`.
+  No schema, operation, service, watcher, polling, repository writer, or
+  generalized reconciliation machinery was added. Remaining gate: final
+  focused/package verification, signed install/update, and the same Rekon
+  Pursuit repair workflow with immediate UI proof and owner Done/Accepted.
+- `0.1.4` final review correction and acceptance: the independent
+  Code/Architecture/Security review found one required wiring defect in the
+  separate onboarding screen: it displayed and copied the generic prompt even
+  when the inspected state was handoff-incomplete. The new regression test
+  failed at compile time before the state-aware copy API existed, then the
+  minimum correction made both the displayed and copied prompt derive from the
+  inspected guidance state. The final focused selection passed **12/12** with
+  zero failures or skips at
+  `/tmp/ReleaseRadar-Handoff-0.1.4-Final.xcresult`. Independent
+  Code/Architecture/Security re-review returned **GO, Required 0**; independent
+  QA returned **ACCEPT, Required 0**; TPM/Delivery returned **GO, Required 0**.
+  The reviewer's optional old-version-label test cleanup was deferred and did
+  not expand this single-user correction.
+- `0.1.4` signed installation evidence: a fresh Release build succeeded at
+  `/tmp/ReleaseRadar-Handoff-Release-0.1.4-Final`. Its app reports `0.1.4`,
+  contains no test bundle, embeds marketplace bytes identical to the repository,
+  and passes strict deep signing verification. The installed app at
+  `/Applications/ReleaseRadar.app` also passes strict verification. The
+  previous `0.1.3` app remains recoverable at
+  `/tmp/ReleaseRadar-Install-Backup-0.1.3.29Zll2/ReleaseRadar.app`; both
+  Release Radar-owned Service Management jobs were stopped before replacement,
+  and direct executable-path evidence shows the relaunched lifecycle helper and
+  bridge agent running from `/Applications/ReleaseRadar.app`, not the backup.
+  Supported Codex reads report the installed and enabled
+  `release-radar@release-radar` plugin at `0.1.4`, its marketplace rooted at the
+  installed app, and the exact enabled `release_radar` STDIO entry targeting
+  `/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools` with
+  empty arguments/environment and null working directory. The installed cache
+  is byte-identical to the bundled package. The owner Codex configuration
+  SHA-256 remains
+  `b212898e27c8aa8b2e72a22f4d1d1a1588800f8a13e01a3994535d0873dae43d`.
+  Running Settings reports **Installed 0.1.4** and separately, truthfully,
+  **Codex desktop observation unavailable**.
+- `0.1.4` running pre-repair UI evidence: Rekon Pursuit now reports **Release
+  Radar guidance handoff incomplete · v1**, explains that the block is present
+  but audited handoff evidence is absent, and offers **Copy repair prompt**.
+  Invoking that action produced the visible **Codex prompt copied** confirmation.
+  The final owner-started new-task gate and its result are recorded below.
+- `0.1.4` owner live acceptance and final state: the owner ran the copied repair
+  prompt in a new Codex task rooted at Rekon Pursuit. The installed skill sent
+  exactly one ticketless `release_radar_add_evidence` mutation with evidence ID
+  `release-radar-handoff:v1:7fffd6cd-6a99-4c89-b02b-47824d8ea95f` and request
+  ID `0a04793a-d1e9-46ca-be8e-a5bfea552cb0`; Release Radar returned audit event
+  `A5F23FDD-E0AE-40A7-8B42-BE0BC6A7A255`. The owner-provided readback reports
+  that root `AGENTS.md` and `docs/delivery/progress.md` remained byte-for-byte
+  unchanged, `ticketID` was omitted, no delivery-state mutation occurred, and
+  no pending audit or discrepancy remained. Direct inspection of the running
+  installed app then reported **Release Radar guidance current · v1** without
+  navigation or manual refresh. A fresh completion selection passed **12/12**
+  with zero failures or skips at
+  `/tmp/ReleaseRadar-Handoff-0.1.4-Completion.xcresult`; installed app/package,
+  helper-path, exact MCP, configuration-hash, signing, and independent
+  acceptance evidence remain as recorded above. Product Task 2 repository
+  handoff and the full Codex plugin lifecycle are **Done/Accepted**. No commit
+  or push occurred; untracked `default.profraw` remains untouched.
+
+### Product Task 2 exact-root repository-handoff correction — 2026-08-29
+
+- Status: **Done/Accepted.** The owner approved
+  one bounded correction after the first RekonDesignSystem handoff ran at an
+  unauthorized parent directory. Implementation, installation, fresh
+  independent acceptance, the owner-started exact-root handoff, and running-UI
+  confirmation are complete. The owner also confirmed the synchronized `RR-R8`
+  card in the running Phase Board.
+- Root cause: Release Radar authorized
+  `/Users/jroberts/Documents/UILib/RekonDesignSystem`, while the generic copied
+  prompt allowed Codex to run at `/Users/jroberts/Documents/UILib`. The typed
+  bridge correctly returned `unauthorizedProjectRoot`, but only after Codex had
+  created the two permitted repository files at that parent. The app did not
+  display or copy the exact authorized root, and the skill did not require an
+  exact canonical task-root match before repository writes.
+- Bounded implementation: Project Overview now reads the authorized project
+  root once through the existing bookmark path, shows that exact path beside
+  the action, and passes it to the existing setup/update/repair prompt builder.
+  Every prompt embeds the canonical path and requires an exact task-root match.
+  Bundled skill v1 now stops before any file write or Release Radar call when
+  the prompt omits the root or the task is rooted at a parent, child, or
+  different directory. App and plugin versions advance together to `0.1.5`;
+  canonical package digest is
+  `822da35f80e6c47a4c907353ea5aca99d954bd929c6456518b907b38cc2c69cf`.
+- Test-first evidence: the initial focused build failed because the root-bound
+  prompt API and `AppModel.projectRoot(for:)` did not exist. After the bounded
+  implementation, the four focused prompt/model cases passed **4/4** and the
+  two package/skill cases passed **2/2**. The expanded relevant selection also
+  passed the root-binding, guidance, app-route, and lifecycle cases. One
+  unrelated legacy migration assertion still expects schema version 9 while
+  the accepted store is schema version 10; it was not changed for this task.
+  The installed skill quick validator reports **Skill is valid!**. The generic
+  plugin validator still rejects Codex's supported direct `.mcp.json` map and
+  optional presentation metadata, so the supported package was not changed for
+  that known validator mismatch. `bash -n script/build_and_run.sh` and `git
+  diff --check` pass.
+- Final regression and independent-acceptance evidence: a fresh focused run of
+  the setup prompt, repair prompt, clipboard, and bundled-skill cases passed
+  **4/4** with zero failures or skips. The bundled-skill acceptance contract now
+  explicitly covers the authorized root, canonical task-root comparison, exact
+  match, parent/child/different-root rejection, and the stop-before-write-or-call
+  rule. Independent QA, Code/Architecture/Security, TPM, and Delivery
+  Management each returned **GO, Required 0**. QA accepted the direct running
+  accessibility and clipboard evidence for Project Overview instead of adding
+  a source-grep or new SwiftUI test harness.
+- Signed package and installation evidence: the repository-native Release
+  staging command produced signed `dist/ReleaseRadar.app` version `0.1.5` and
+  strict deep verification passed. The same verified bundle is installed at
+  `/Applications/ReleaseRadar.app`; its bundled manifest is `0.1.5`, its skill
+  contains the exact-root stop condition, and the installed Codex cache is
+  byte-identical. The first replacement exposed that the old lifecycle helper
+  could remain running with `0.1.4` metadata and misclassify the new package.
+  The existing installer now targets only the installed/build app executable
+  paths and the two exact Release Radar launchd service labels, and aborts
+  before promotion unless each captured PID exits within five seconds. A live
+  reinstall left all three prior processes absent, returned success, and kept
+  the Codex configuration hash unchanged. Relaunch produced new app, bridge,
+  and helper PIDs; Settings immediately reported **Installed 0.1.5**. The prior
+  `0.1.4` app remains recoverable at
+  `/Applications/ReleaseRadar-0.1.4-recovery.app`.
+- Configuration and running-UI evidence: the owner Codex configuration SHA-256
+  remained
+  `b212898e27c8aa8b2e72a22f4d1d1a1588800f8a13e01a3994535d0873dae43d`
+  before and after the update. Supported Codex reads report the single enabled
+  `release-radar@release-radar` plugin at `0.1.5`, its installed-app marketplace,
+  and exact enabled `release_radar` STDIO entry. Running Settings reports
+  **Installed 0.1.5** and separately **Codex desktop observation unavailable**;
+  it does not call Codex unavailable. RekonDesignSystem Project Overview
+  reports **Release Radar guidance not installed**, visibly shows
+  `/Users/jroberts/Documents/UILib/RekonDesignSystem`, and confirms **Codex
+  prompt copied**. Clipboard readback contains that exact path plus the
+  stop-before-write-or-call mismatch requirement.
+- Live exact-root evidence: after the owner ran the copied prompt from the exact
+  `/Users/jroberts/Documents/UILib/RekonDesignSystem` task root, the running app
+  changed to **Release Radar guidance current · v1**. That state requires the
+  exact managed block plus exactly one available ticketless handoff-evidence row
+  for that root `AGENTS.md`. Activity immediately shows **Owner-authorized
+  Release Radar v1 repository guidance handoff for the exact root AGENTS.md** at
+  August 29, 2026, 10:37 AM. The owner confirmed that `v1` correctly names the
+  repository-guidance format while app/plugin version `0.1.5` remains separately
+  reported in Settings. The files mistakenly created at the parent remain
+  outside this repository and were not touched. No HTTP service, new MCP operation,
+  watcher, polling, synchronization framework, generalized reconciler,
+  multi-user behavior, commit, or push was introduced; untracked
+  `default.profraw` remains untouched.
+- Authoritative board synchronization: the correction was represented as
+  `RR-R8` in **Needs review** under the existing Post-MVP reported-defect
+  remediation phase, alongside the seven previously accepted remediation
+  tickets. The audited `release_radar_upsert_ticket` mutation returned event
+  `FB2F4E61-E1FD-4368-833E-4AF557E64404`. Because the controlling correction
+  brief is already uniquely attached to `RR-R7`, `RR-R8` instead carries the
+  exact-root prompt implementation at `ReleaseRadar/Projects/OnboardingView.swift`;
+  that audited evidence mutation returned event
+  `13BC1C9E-8BBE-469A-85E3-816220011105`. The owner confirmed the running board,
+  and the audited final transition returned event
+  `8C33DFA0-CC64-4DC2-B920-1E83F390065C`. Fresh read-only database verification
+  shows **Needs review 0 / Accepted 8**. This closes the exact-root correction
+  and the active goal as Done/Accepted.
+- Final completion verification: the six focused exact-root prompt, clipboard,
+  AppModel guidance-refresh, bundled-package, and bundled-skill tests passed
+  **6/6** with `TEST SUCCEEDED` at
+  `/tmp/ReleaseRadar-ExactRoot-Final-20260829`. The installed app still reports
+  `0.1.5`, passes strict deep code-signing verification, and its bundled plugin
+  is byte-identical to the installed Codex `0.1.5` cache. `git diff --check`
+  passes. No commit or push occurred, and untracked `default.profraw` remains
+  untouched.
+
+### RR-R9 owner finalization gate — 2026-08-29
+
+- Status: **OPEN — terminal Git finalization only; RR-R9 goal not yet
+  complete.** The complete RR-R9 product outcome is accepted with Required 0
+  and Optional 0, satisfying the owner's prerequisite for repository
+  finalization.
+- Required terminal sequence: first classify the dirty tree by provenance;
+  stage every accepted durable Release Radar deliverable required by RR-R9 and
+  exclude unrelated owner work and temporary artifacts; create the coherent
+  final commit or commits; push them to the configured upstream branch; then
+  verify the remote branch contains the exact committed result. Only after all
+  of those steps succeed may the RR-R9 goal be marked complete.
+- This is explicit owner authorization for that conditional final push. It is
+  not authorization for an early commit or push, and it does not permit
+  unrelated user work or temporary artifacts to be absorbed. Before staging,
+  classify the dirty tree by provenance, include every accepted durable
+  Release Radar deliverable required by the goal, and preserve or exclude
+  unrelated and temporary files.

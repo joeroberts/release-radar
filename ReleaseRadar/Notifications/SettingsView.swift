@@ -1,8 +1,11 @@
+import AppKit
 import ReleaseRadarCore
 import SwiftUI
 
 struct SettingsView: View {
     @Bindable var model: AppModel
+    @State private var pendingPluginConfirmation: PluginConfirmation?
+    @FocusState private var focusedPluginAction: CodexPluginLifecycleAction?
 
     var body: some View {
         TabView {
@@ -19,7 +22,7 @@ struct SettingsView: View {
                 .tabItem { Label(SettingsTab.projects.title, systemImage: SettingsTab.projects.systemImage) }
                 .accessibilityIdentifier(SettingsTab.projects.accessibilityID)
         }
-        .frame(width: 620, height: 420)
+        .frame(width: 680, height: 560)
         .scenePadding()
         .accessibilityIdentifier("content-settings")
     }
@@ -37,8 +40,36 @@ struct SettingsView: View {
     }
 
     private var connections: some View {
+        let plugin = CodexPluginSettingsPresentation(
+            state: model.codexPluginState,
+            operation: model.codexPluginOperation
+        )
         return Form {
-            Section("Codex") {
+            Section("Release Radar Codex Plugin") {
+                LabeledContent {
+                    Text(plugin.status)
+                } label: {
+                    Label("Status", systemImage: plugin.systemImage)
+                }
+                .accessibilityIdentifier("codex-plugin-status")
+                .accessibilityLabel("Release Radar Codex Plugin status: \(plugin.status)")
+
+                LabeledContent("Shipped version", value: model.codexPluginShippedVersion)
+                Text(plugin.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let message = model.codexPluginSettingsMessage {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("codex-plugin-result")
+                }
+
+                pluginActions(plugin.actions)
+            }
+
+            Section("Codex live observation") {
                 if let codexFailure = FailureStatePresentation(freshness: model.codexSnapshot.freshness) {
                     FailureStateView(presentation: codexFailure, style: .compact)
                 } else {
@@ -60,6 +91,97 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .confirmationDialog(
+            pendingPluginConfirmation?.title ?? "",
+            isPresented: Binding(
+                get: { pendingPluginConfirmation != nil },
+                set: { if !$0 { cancelPluginConfirmation() } }
+            ),
+            titleVisibility: .visible
+        ) {
+            switch pendingPluginConfirmation {
+            case .remove:
+                Button("Remove", role: .destructive) {
+                    pendingPluginConfirmation = nil
+                    focusedPluginAction = nil
+                    Task { await model.removeCodexPlugin() }
+                }
+                Button("Cancel", role: .cancel) { cancelPluginConfirmation() }
+                    .keyboardShortcut(.defaultAction)
+            case .reinstall:
+                Button("Reinstall", role: .destructive) {
+                    pendingPluginConfirmation = nil
+                    focusedPluginAction = nil
+                    Task { await model.reinstallCodexPlugin() }
+                }
+                Button("Cancel", role: .cancel) { cancelPluginConfirmation() }
+                    .keyboardShortcut(.defaultAction)
+            case nil:
+                EmptyView()
+            }
+        } message: {
+            if let pendingPluginConfirmation {
+                Text(pendingPluginConfirmation.message)
+            }
+        }
+        .onChange(of: model.codexPluginAnnouncement) { _, announcement in
+            guard let announcement else { return }
+            NSAccessibility.post(
+                element: NSApp as Any,
+                notification: .announcementRequested,
+                userInfo: [
+                    .announcement: announcement,
+                    .priority: NSAccessibilityPriorityLevel.high.rawValue,
+                ]
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func pluginActions(_ actions: [CodexPluginLifecycleAction]) -> some View {
+        if !actions.isEmpty {
+            ViewThatFits(in: .horizontal) {
+                HStack { pluginActionButtons(actions) }
+                VStack(alignment: .leading) { pluginActionButtons(actions) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func pluginActionButtons(_ actions: [CodexPluginLifecycleAction]) -> some View {
+        ForEach(actions, id: \.rawValue) { action in
+            switch action {
+            case .install:
+                Button("Install") { Task { await model.installCodexPlugin() } }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("codex-plugin-install")
+            case .update:
+                Button("Update") { Task { await model.updateCodexPlugin() } }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("codex-plugin-update")
+            case .remove:
+                Button("Remove", role: .destructive) { pendingPluginConfirmation = .remove }
+                    .accessibilityIdentifier("codex-plugin-remove")
+                    .focused($focusedPluginAction, equals: .remove)
+            case .reinstall:
+                Button("Reinstall") { pendingPluginConfirmation = .reinstall }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("codex-plugin-reinstall")
+                    .focused($focusedPluginAction, equals: .reinstall)
+            case .tryAgain:
+                Button("Try Again") { Task { await model.loadCodexPluginStatus(retrying: true) } }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("codex-plugin-retry")
+            }
+        }
+    }
+
+    private func cancelPluginConfirmation() {
+        let action = pendingPluginConfirmation?.returnFocusAction
+        pendingPluginConfirmation = nil
+        DispatchQueue.main.async {
+            focusedPluginAction = action
+        }
     }
 
     private var notifications: some View {
@@ -165,5 +287,35 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private enum PluginConfirmation: Identifiable {
+    case remove
+    case reinstall
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .remove: "Remove Release Radar Codex Plugin?"
+        case .reinstall: "Reinstall Release Radar Codex Plugin?"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .remove:
+            "This removes the managed Codex plugin. It does not remove Release Radar delivery records."
+        case .reinstall:
+            "This replaces the managed plugin with the version shipped by Release Radar and may overwrite local plugin modifications."
+        }
+    }
+
+    var returnFocusAction: CodexPluginLifecycleAction {
+        switch self {
+        case .remove: .remove
+        case .reinstall: .reinstall
+        }
     }
 }

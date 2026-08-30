@@ -52,6 +52,105 @@ struct CodexConnectionPresentation: Equatable, Sendable {
     }
 }
 
+enum CodexPluginOperation: Equatable, Sendable {
+    case checking
+    case install
+    case update
+    case remove
+    case reinstall
+    case tryAgain
+
+    var announcement: String {
+        switch self {
+        case .checking: "Checking plugin status"
+        case .install: "Installing plugin"
+        case .update: "Updating plugin"
+        case .remove: "Removing plugin"
+        case .reinstall: "Reinstalling plugin"
+        case .tryAgain: "Trying plugin status again"
+        }
+    }
+}
+
+struct CodexPluginSettingsPresentation: Equatable, Sendable {
+    let state: CodexPluginPresentationState
+    let operation: CodexPluginOperation?
+
+    init(state: CodexPluginPresentationState, operation: CodexPluginOperation? = nil) {
+        self.state = state
+        self.operation = operation
+    }
+
+    var status: String {
+        if let operation { return operation.announcement }
+        return switch state {
+        case .checking: "Checking"
+        case .notInstalled: "Not installed"
+        case .installed: "Installed"
+        case .updateAvailable: "Update available"
+        case .modified: "Modified"
+        case .needsRepair: "Needs repair"
+        case .failed: "Failed"
+        }
+    }
+
+    var detail: String {
+        return switch state {
+        case .checking:
+            "Reading the managed plugin state."
+        case .notInstalled:
+            "Install the Release Radar workflow and its local typed MCP connection for Codex."
+        case let .installed(version):
+            "Installed version \(version) matches the version shipped with Release Radar."
+        case let .updateAvailable(installed, shipped):
+            "Version \(installed) is installed. Release Radar ships version \(shipped)."
+        case let .modified(version):
+            "The installed plugin\(version.map { " (\($0))" } ?? "") differs from its last managed receipt. Reinstall only if you want to replace those changes."
+        case .needsRepair:
+            "The managed plugin is incomplete or inconsistent. Reinstall to replace it with the shipped version."
+        case let .failed(error):
+            failureDetail(error)
+        }
+    }
+
+    var actions: [CodexPluginLifecycleAction] {
+        operation == nil ? CodexPluginLifecycleReducer.actions(for: state) : []
+    }
+
+    var systemImage: String {
+        switch state {
+        case .checking: "arrow.triangle.2.circlepath"
+        case .notInstalled: "puzzlepiece.extension"
+        case .installed: "checkmark.circle"
+        case .updateAvailable: "arrow.down.circle"
+        case .modified: "pencil.circle"
+        case .needsRepair: "wrench.and.screwdriver"
+        case .failed: "exclamationmark.triangle"
+        }
+    }
+
+    private func failureDetail(_ error: CodexPluginLifecycleError) -> String {
+        switch error {
+        case .codexUnavailable:
+            "The local Codex lifecycle helper is unavailable. Try again; macOS may ask you to allow the helper in Login Items."
+        case .codexUntrusted:
+            "The installed Codex executable could not be verified. Update or reinstall ChatGPT, then try again."
+        case .unauthorizedPeer:
+            "macOS did not authorize the Release Radar lifecycle helper. Review Login Items, then try again."
+        case .marketplaceConflict:
+            "A different Release Radar plugin or MCP entry already owns this name. Release Radar left it unchanged."
+        case .timeout:
+            "Codex did not finish the operation in time. No automatic retry was attempted."
+        case .partialReinstall:
+            "The previous plugin was removed, but the shipped copy could not be installed. Choose Reinstall to recover."
+        case .integrityInvalid, .postconditionFailed:
+            "The managed plugin could not be verified. Choose Reinstall to replace it, or Remove to leave it uninstalled."
+        case .malformedResult, .outputOverflow, .integrityUnknown:
+            "Release Radar could not safely verify the plugin state. Try again after checking the local Codex installation."
+        }
+    }
+}
+
 enum AlertRulesRetryAction: Equatable, Sendable {
     case load
     case update(AlertRuleKind, enabled: Bool)

@@ -49,6 +49,10 @@ enum PhaseBoardLayout {
 struct PhaseBoardView: View {
     let board: PhaseBoardProjection
     @Binding var selectedTicketID: TicketID
+    let phaseSelectionStatus: ActivePhaseSelectionStatus
+    let selectActivePhase: (PhaseID) async -> Void
+    let reloadActivePhase: () async -> Void
+    let reauthorizeActivePhase: (URL) async -> Void
     @State private var density: BoardDensity = .fullOutcomes
 
     private let minimumLaneWidth: CGFloat = 112
@@ -110,20 +114,42 @@ struct PhaseBoardView: View {
     }
 
     private func boardHeader(laneWidth: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(board.project.name)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                Text(board.project.activePhaseName)
-                    .font(.title2.weight(.semibold))
-                Text("Lane position communicates delivery state; cards show work and constraints.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 18) {
+                boardContext
+                Spacer(minLength: 12)
+                boardControls(laneWidth: laneWidth)
             }
+            VStack(alignment: .leading, spacing: 12) {
+                boardContext
+                boardControls(laneWidth: laneWidth)
+            }
+        }
+    }
 
-            Spacer()
+    private var boardContext: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(board.project.name)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+            Text(board.project.activePhaseName)
+                .font(.title2.weight(.semibold))
+            Text("Lane position communicates delivery state; cards show work and constraints.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
 
+    private func boardControls(laneWidth: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ActivePhaseSelector(
+                project: board.project,
+                surface: .board,
+                status: phaseSelectionStatus,
+                onSelect: selectActivePhase,
+                onReload: reloadActivePhase,
+                onReauthorize: reauthorizeActivePhase
+            )
             Picker("Card density", selection: $density) {
                 ForEach(BoardDensity.allCases) { option in
                     Text(option.displayName)

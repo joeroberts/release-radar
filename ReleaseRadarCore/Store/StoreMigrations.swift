@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 9
+    static let currentVersion: Int64 = 10
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -45,6 +45,9 @@ enum StoreMigrations {
             }
             if version < 9 {
                 try connection.executeScript(schemaVersion9)
+            }
+            if version < 10 {
+                try connection.executeScript(schemaVersion10)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -180,6 +183,29 @@ enum StoreMigrations {
             guard let alertRulesSQL = try connection.scalarText(
                 "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'alert_rules'"
             ), normalizedSQL(alertRulesSQL) == normalizedSQL(alertRulesTableSQL)
+            else { return false }
+        }
+        if version >= 10 {
+            guard let lifecycleSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'codex_plugin_lifecycle'"
+            ), normalizedSQL(lifecycleSQL) == normalizedSQL(codexPluginLifecycleTableSQL),
+            try connection.scalarInt(
+                """
+                SELECT COUNT(*) FROM codex_plugin_lifecycle
+                WHERE plugin_id = 'release-radar'
+                  AND intent IN ('neverInstalled','managedInstalled','removed','attentionRequired')
+                  AND ((managed_version IS NULL) = (managed_digest IS NULL))
+                  AND ((managed_version IS NULL) = (verified_at IS NULL))
+                  AND (
+                    managed_version IS NULL OR (
+                      typeof(managed_version) = 'text'
+                      AND typeof(managed_digest) = 'text'
+                      AND typeof(verified_at) = 'text'
+                    )
+                  )
+                """
+            ) == 1,
+            try connection.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle") == 1
             else { return false }
         }
         return try connection.row("PRAGMA foreign_key_check") == nil
@@ -340,6 +366,9 @@ enum StoreMigrations {
         ]),
         (8, "ticket_goal_links", ["id", "project_id", "ticket_id", "thread_id", "goal_id"]),
         (9, "alert_rules", ["kind", "is_enabled"]),
+        (10, "codex_plugin_lifecycle", [
+            "plugin_id", "intent", "managed_version", "managed_digest", "verified_at",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -827,5 +856,23 @@ enum StoreMigrations {
         ('agent_completion_and_review', 1),
         ('needs_review_entry', 1),
         ('paused_goals', 0);
+    """
+
+    private static let codexPluginLifecycleTableSQL = """
+    CREATE TABLE codex_plugin_lifecycle (
+        plugin_id TEXT PRIMARY KEY NOT NULL CHECK (plugin_id = 'release-radar'),
+        intent TEXT NOT NULL CHECK (intent IN ('neverInstalled','managedInstalled','removed','attentionRequired')),
+        managed_version TEXT,
+        managed_digest TEXT,
+        verified_at TEXT,
+        CHECK ((managed_version IS NULL) = (managed_digest IS NULL)),
+        CHECK ((managed_version IS NULL) = (verified_at IS NULL))
+    )
+    """
+
+    private static let schemaVersion10 = """
+    \(codexPluginLifecycleTableSQL);
+    INSERT INTO codex_plugin_lifecycle (plugin_id, intent)
+    VALUES ('release-radar', 'neverInstalled');
     """
 }

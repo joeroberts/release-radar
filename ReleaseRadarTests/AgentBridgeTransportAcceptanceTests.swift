@@ -85,6 +85,74 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             defer { lock.unlock() }
             return try XCTUnwrap(result).get()
         }
+
+        func getIfAvailable() -> Result<Data, Error>? {
+            lock.lock()
+            defer { lock.unlock() }
+            return result
+        }
+    }
+
+    func testPackagedToolRespondsToInitializeWhileInputRemainsOpen() async throws {
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        XCTAssertTrue(FileManager.default.isExecutableFile(atPath: packagedTool.path))
+
+        let process = Process()
+        process.executableURL = packagedTool
+        let input = Pipe()
+        let output = Pipe()
+        let errors = Pipe()
+        process.standardInput = input
+        process.standardOutput = output
+        process.standardError = errors
+
+        try process.run()
+        defer {
+            try? input.fileHandleForWriting.close()
+            process.waitUntilExit()
+        }
+
+        let response = DataCapture()
+        DispatchQueue.global().async {
+            response.set(Result {
+                try Self.readLine(from: output.fileHandleForReading)
+            })
+        }
+
+        let request: [String: Any] = [
+            "jsonrpc": "2.0",
+            "id": 42,
+            "method": "initialize",
+            "params": [
+                "protocolVersion": "2025-06-18",
+                "capabilities": [:],
+                "clientInfo": ["name": "ReleaseRadarTests", "version": "1"],
+            ],
+        ]
+        var requestData = try JSONSerialization.data(withJSONObject: request)
+        requestData.append(0x0A)
+        input.fileHandleForWriting.write(requestData)
+
+        let deadline = ContinuousClock.now + .seconds(2)
+        var captured = response.getIfAvailable()
+        while captured == nil, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+            captured = response.getIfAvailable()
+        }
+        guard let captured else {
+            XCTFail("The MCP server did not respond to initialize while stdin remained open")
+            return
+        }
+
+        let responseData = try captured.get()
+        guard let object = try JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+              (object["id"] as? NSNumber)?.intValue == 42,
+              let result = object["result"] as? [String: Any]
+        else {
+            throw TransportTestError.invalidResponse(String(decoding: responseData, as: UTF8.self))
+        }
+        XCTAssertEqual(result["protocolVersion"] as? String, "2025-06-18")
     }
 
     func testPackagedSignedToolUsesRegisteredBrokerAndFailsClosedWithoutTheApp() async throws {
@@ -243,6 +311,63 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             persistedStateBeforeRejectedPeer,
             [.text("in_progress"), .integer(1), .integer(1), .integer(1)]
         )
+
+        let activePhaseRequestID = UUID(uuidString: "77777777-7777-4777-8777-777777777778")!
+        let activePhaseArguments: [String: Any] = [
+            "version": 1,
+            "requestID": activePhaseRequestID.uuidString,
+            "projectRoot": fixture.projectRoot.path,
+            "reason": "Select phase through the packaged signed transport",
+            "phaseID": "phase-2",
+        ]
+        let activePhaseFirst = try Self.runTool(
+            packagedTool,
+            tool: "release_radar_set_active_phase",
+            arguments: activePhaseArguments
+        )
+        let activePhaseFirstResult = try decodeCommandResult(activePhaseFirst)
+        XCTAssertNil(activePhaseFirstResult.error)
+        XCTAssertEqual(activePhaseFirstResult.entityIDs, ["phase-2"])
+        XCTAssertEqual(mcpIsError(activePhaseFirst), false)
+        let activePhaseAuditEventID = try XCTUnwrap(activePhaseFirstResult.auditEventID)
+
+        let activePhaseReplay = try Self.runTool(
+            packagedTool,
+            tool: "release_radar_set_active_phase",
+            arguments: activePhaseArguments
+        )
+        XCTAssertEqual(try decodeCommandResult(activePhaseReplay), activePhaseFirstResult)
+        XCTAssertEqual(mcpIsError(activePhaseReplay), false)
+        let activePhaseState: [SQLiteValue] = try await fixture.store.read { connection in
+            let phaseID = try connection.scalarText(
+                "SELECT phase_id FROM project_active_phases WHERE project_id = 'project-1'"
+            ) ?? "missing"
+            let requestCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM agent_command_requests WHERE request_id = ?",
+                bindings: [.text(activePhaseRequestID.uuidString)]
+            ) ?? -1
+            let auditCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM audit_events WHERE reason = 'Select phase through the packaged signed transport'"
+            ) ?? -1
+            let scopedAuditCount = try connection.scalarInt(
+                """
+                SELECT COUNT(*) FROM audit_events
+                WHERE id = ?
+                  AND actor_id = 'release-radar-agent'
+                  AND thread_id IS NULL
+                  AND thread_attribution = 'none'
+                  AND project_id = 'project-1'
+                  AND entity_type = 'phase'
+                  AND entity_id = 'phase-2'
+                  AND reason = 'Select phase through the packaged signed transport'
+                  AND created_at <> ''
+                """,
+                bindings: [.text(activePhaseAuditEventID.rawValue)]
+            ) ?? -1
+            return [.text(phaseID), .integer(requestCount), .integer(auditCount), .integer(scopedAuditCount)]
+        }
+        let expectedActivePhaseState: [SQLiteValue] = [.text("phase-2"), .integer(1), .integer(1), .integer(1)]
+        XCTAssertEqual(activePhaseState, expectedActivePhaseState)
 
         let rejectedPeer = try Self.runTool(wrongTool, tool: "release_radar_transition_ticket", arguments: arguments)
         XCTAssertEqual(try decodeCommandResult(rejectedPeer).error, .appUnavailable)
@@ -514,6 +639,8 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
                 bindings: [.text(projectRoot.path)]
             )
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-2', 'project-1', 'Launch')")
+            try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-1', 'phase-1')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-03', 'project-1', 'phase-1', 'Signed bridge', 'backlog')")
         }
         return .init(databaseURL: databaseURL, projectRoot: projectRoot, store: store)
@@ -587,6 +714,20 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         return callResponse
     }
 
+    nonisolated private static func readLine(from handle: FileHandle) throws -> Data {
+        var line = Data()
+        while true {
+            let byte = handle.readData(ofLength: 1)
+            guard !byte.isEmpty else {
+                throw TransportTestError.invalidResponse("stdout closed before a complete JSON-RPC response")
+            }
+            if byte[byte.startIndex] == 0x0A {
+                return line
+            }
+            line.append(byte)
+        }
+    }
+
     nonisolated private static func runToolData(
         _ executableURL: URL,
         tool: String,
@@ -611,15 +752,31 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 12,
+              tools.count == 13,
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
-              let schema = transition["inputSchema"] as? [String: Any],
-              let properties = schema["properties"] as? [String: Any],
-              let required = schema["required"] as? [String]
+              let transitionSchema = transition["inputSchema"] as? [String: Any],
+              let transitionProperties = transitionSchema["properties"] as? [String: Any],
+              let transitionRequired = transitionSchema["required"] as? [String],
+              let activePhase = tools.first(where: { $0["name"] as? String == "release_radar_set_active_phase" }),
+              let activePhaseSchema = activePhase["inputSchema"] as? [String: Any]
         else { return false }
-        return Set(properties.keys) == ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "ticketID", "lane"]
-            && Set(required) == ["version", "requestID", "projectRoot", "reason", "ticketID", "lane"]
-            && schema["additionalProperties"] as? Bool == false
+        let expectedActivePhaseSchema: [String: Any] = [
+            "type": "object",
+            "properties": [
+                "version": ["type": "integer", "const": 1],
+                "requestID": ["type": "string", "format": "uuid"],
+                "projectRoot": ["type": "string", "minLength": 1],
+                "assertedThreadID": ["type": "string", "minLength": 1],
+                "reason": ["type": "string", "minLength": 1],
+                "phaseID": ["type": "string", "minLength": 1],
+            ],
+            "required": ["version", "requestID", "projectRoot", "reason", "phaseID"],
+            "additionalProperties": false,
+        ]
+        return Set(transitionProperties.keys) == ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "ticketID", "lane"]
+            && Set(transitionRequired) == ["version", "requestID", "projectRoot", "reason", "ticketID", "lane"]
+            && transitionSchema["additionalProperties"] as? Bool == false
+            && NSDictionary(dictionary: activePhaseSchema).isEqual(to: expectedActivePhaseSchema)
     }
 
     private func decodeCommandResult(_ response: [String: Any]) throws -> AgentCommandResult {
