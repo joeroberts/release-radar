@@ -57,10 +57,11 @@ non-UI fixture task. No visual deviation or design mutation is authorized.
   before adding the temporary generator test.
 - Temporarily add exactly the approved generator test to
   `ReleaseRadarTests/StoreAcceptanceTests.swift`.
-- Prove the generator's negative precondition when its required output
-  environment variable is absent.
-- Run that test once with the exact repository fixture output path while v10
-  production code is unchanged.
+- Preserve the completed historical negative-precondition evidence from the
+  original generator; do not rerun it.
+- Run the attachment generator once with the exact export gate while v10
+  production code is unchanged, then export its validated passing attachment
+  into the absent repository fixture path from the parent process.
 - Remove the generator test immediately after successful generation.
 - Prove the generated database reports `PRAGMA user_version == 10`.
 - Prove it has no v11 tables, indexes, triggers, or
@@ -135,8 +136,9 @@ groups; no `project.pbxproj` change is required.
 
 ## Data, persistence, security, and privacy implications
 
-- Generate a brand-new database at the exact fixture path; never copy or open
-  an owner database.
+- Generate a brand-new database at a unique sandbox-writable XCTest temporary
+  path, close it, and copy only its validated passing-test attachment into the
+  exact absent repository fixture path; never copy or open an owner database.
 - The fixture must have zero rows in `projects`, `project_roots`, `phases`,
   `tickets`, observed-thread/goal/link tables, audit tables, request receipts,
   notifications, bookmarks, review items, blockers, evidence, and completion
@@ -144,8 +146,8 @@ groups; no `project.pbxproj` change is required.
 - Schema-owned rows such as the four `alert_rules` rows and the single
   `codex_plugin_lifecycle` row are expected v10 defaults, not owner data.
 - The app process remains the only SQLite initializer. The generator uses a
-  `DeliveryStore` at the explicitly supplied test URL; no helper gains SQLite
-  authority.
+  `DeliveryStore` at its unique sandbox-writable test URL; the parent process
+  only exports/copies captured bytes and no helper gains SQLite authority.
 - The fixture contains no path, bookmark, credential, token, project content,
   personal data, or network-derived data.
 - The fixture SHA-256 makes accidental replacement or mutation detectable.
@@ -157,27 +159,48 @@ groups; no `project.pbxproj` change is required.
 Add this test verbatim and do not add another generator path:
 
 ```swift
-func testGenerateExactVersionTenFixture() throws {
+func testGenerateExactVersionTenFixtureAttachment() throws {
     let environment = ProcessInfo.processInfo.environment
-    let path = try XCTUnwrap(environment["RR_SCHEMA_V10_FIXTURE_OUTPUT"])
-    let url = URL(fileURLWithPath: path)
-    XCTAssertFalse(FileManager.default.fileExists(atPath: path))
+    let exportGate = try XCTUnwrap(environment["RR_SCHEMA_V10_FIXTURE_EXPORT"])
+    guard exportGate == "1" else {
+        XCTFail("RR_SCHEMA_V10_FIXTURE_EXPORT must equal 1")
+        return
+    }
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("rr-schema-v10-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(
-        at: url.deletingLastPathComponent(),
+        at: directory,
         withIntermediateDirectories: true
     )
-    _ = DeliveryStore(databaseURL: url)
-    XCTAssertEqual(try SQLiteConnection(url: url).scalarInt("PRAGMA user_version"), 10)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let url = directory.appendingPathComponent("release-radar-v10.sqlite")
+    XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    var store: DeliveryStore? = DeliveryStore(databaseURL: url)
+    guard try SQLiteConnection(url: url).scalarInt("PRAGMA user_version") == 10 else {
+        return XCTFail("Generated fixture was not schema version 10")
+    }
+    withExtendedLifetime(store) {}
+    store = nil
+    let attachment = XCTAttachment(
+        data: try Data(contentsOf: url),
+        uniformTypeIdentifier: "public.data"
+    )
+    attachment.name = "release-radar-v10.sqlite"
+    attachment.lifetime = .keepAlways
+    add(attachment)
 }
 ```
 
-The test intentionally fails if the environment variable is absent or the
-target already exists. It may be run successfully exactly once for the durable
+The test intentionally fails if the export gate is absent or not exactly `1`.
+It writes only to the sandbox-writable XCTest temporary directory, attaches the
+closed schema-v10 database bytes to the passing result, and removes its local
+temporary directory. It may be run successfully exactly once for the durable
 fixture. Remove it after generation; the generator is not a deliverable.
 
-### Negative generator-precondition check
+### Historical negative generator-precondition evidence — completed, do not run
 
-Run without the environment variable:
+The first Implementer ran this now-retired command once without the old output
+environment variable:
 
 ```bash
 xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
@@ -186,7 +209,7 @@ xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
   -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionTenFixture
 ```
 
-Expected negative result: the selected test fails at `XCTUnwrap` because
+Its recorded result was the expected failure at `XCTUnwrap` because
 `RR_SCHEMA_V10_FIXTURE_OUTPUT` is absent, and no fixture file is created. This
 proves generator gating; it is not represented as substantive product TDD.
 
@@ -198,38 +221,110 @@ It produced no fixture, the temporary generator was removed, and the worktree
 retained no product or test-source change. Do not retry that shell-environment
 form.
 
+The reviewed `.xctestrun` correction was then committed and pushed at
+`b62dcd12f6740c156ffd87b16c4e5741b4b9783c`. Its single generator run proved
+that the environment injection works, but the sandbox correctly rejected
+creating the repository fixture directory with Cocoa error 513 / POSIX error
+1. It exited 65, created neither fixture nor checksum, and the temporary
+generator was removed. Do not weaken or remove the app sandbox, grant a broad
+write entitlement, re-sign the test host, or retry a direct repository output
+path.
+
 ### GREEN generation command
 
-Use Xcode's generated test-run specification to cross the hosted-test
-environment boundary. Build without running tests, identify exactly one
-generated Release Radar `.xctestrun`, copy it under `/tmp`, insert the fixture
-variable into its documented `EnvironmentVariables` dictionary, and run only
-the generator once with parallel testing disabled. Run exactly:
+Use Xcode's generated test-run specification to cross only the hosted-test
+environment boundary. Start with a new absent DerivedData path, build without
+running tests, identify exactly one freshly generated Release Radar format-2
+`.xctestrun`, and assert its exact nested test-target environment structure
+before copying it under `/tmp`. Insert only the exact export gate, then run only
+the attachment generator once with parallel testing disabled and an explicit
+result bundle. Run exactly:
 
 ```bash
 set -euo pipefail
-RR_TASK1A_DERIVED=/tmp/release-radar-rr-r10-v10-fixture
+RR_TASK1A_DERIVED=/tmp/release-radar-rr-r10-v10-attachment
+test ! -e "$RR_TASK1A_DERIVED"
 xcodebuild build-for-testing -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
   -destination 'platform=macOS' -derivedDataPath "$RR_TASK1A_DERIVED"
 RR_TASK1A_XCTESTRUN="$(rg --files --hidden --no-ignore "$RR_TASK1A_DERIVED/Build/Products" \
   | rg '/ReleaseRadar_ReleaseRadar_.*\.xctestrun$')"
 test -n "$RR_TASK1A_XCTESTRUN"
 test "$(printf '%s\n' "$RR_TASK1A_XCTESTRUN" | wc -l | tr -d ' ')" = "1"
+test "$(plutil -extract __xctestrun_metadata__.FormatVersion raw \
+  "$RR_TASK1A_XCTESTRUN")" = "2"
+test "$(plutil -type TestConfigurations "$RR_TASK1A_XCTESTRUN")" = "array"
+test "$(plutil -extract TestConfigurations raw -expect array \
+  "$RR_TASK1A_XCTESTRUN")" = "1"
+if plutil -type EnvironmentVariables "$RR_TASK1A_XCTESTRUN" >/dev/null 2>&1; then
+  exit 1
+fi
+test "$(plutil -extract TestConfigurations.0.TestTargets raw -expect array \
+  "$RR_TASK1A_XCTESTRUN")" = "1"
+test "$(plutil -type \
+  TestConfigurations.0.TestTargets.0.EnvironmentVariables \
+  "$RR_TASK1A_XCTESTRUN")" = "dictionary"
 RR_TASK1A_CONFIGURED="$RR_TASK1A_DERIVED/Build/Products/ReleaseRadar_Task1A.xctestrun"
 cp "$RR_TASK1A_XCTESTRUN" "$RR_TASK1A_CONFIGURED"
 plutil -insert \
-  TestConfigurations.0.TestTargets.0.EnvironmentVariables.RR_SCHEMA_V10_FIXTURE_OUTPUT \
-  -string "$PWD/ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite" \
+  TestConfigurations.0.TestTargets.0.EnvironmentVariables.RR_SCHEMA_V10_FIXTURE_EXPORT \
+  -string "1" \
   "$RR_TASK1A_CONFIGURED"
+RR_TASK1A_RESULT=/tmp/release-radar-rr-r10-v10-attachment-result.xcresult
+test ! -e "$RR_TASK1A_RESULT"
 xcodebuild test-without-building -xctestrun "$RR_TASK1A_CONFIGURED" \
   -destination 'platform=macOS' -parallel-testing-enabled NO \
-  -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionTenFixture
+  -resultBundlePath "$RR_TASK1A_RESULT" \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionTenFixtureAttachment
 ```
 
-Expected GREEN: the selected test passes, the target is created once, and
-direct inspection reports schema version 10. The configured `.xctestrun` and
-all build products remain temporary under `/tmp`; do not persist a scheme,
-project, or test-plan environment change.
+Expected GREEN: the selected test passes once and retains one fixture
+attachment in the explicit result bundle. The configured `.xctestrun`, build
+products, sandbox-local database, and result bundle remain temporary; do not
+persist a scheme, project, test-plan, entitlement, or signing change.
+
+Immediately remove the generator source with `apply_patch` before exporting
+the attachment. Then export and validate only this test's retained attachment,
+and copy it into the still-absent durable fixture path:
+
+```bash
+set -euo pipefail
+RR_TASK1A_RESULT=/tmp/release-radar-rr-r10-v10-attachment-result.xcresult
+RR_TASK1A_ATTACHMENTS=/tmp/release-radar-rr-r10-v10-attachment-export
+test -d "$RR_TASK1A_RESULT"
+test ! -e "$RR_TASK1A_ATTACHMENTS"
+xcrun xcresulttool export attachments \
+  --test-id 'StoreAcceptanceTests/testGenerateExactVersionTenFixtureAttachment()' \
+  --path "$RR_TASK1A_RESULT" \
+  --output-path "$RR_TASK1A_ATTACHMENTS"
+RR_TASK1A_MANIFEST="$RR_TASK1A_ATTACHMENTS/manifest.json"
+test "$(plutil -extract 0.testIdentifier raw "$RR_TASK1A_MANIFEST")" = \
+  'StoreAcceptanceTests/testGenerateExactVersionTenFixtureAttachment()'
+if plutil -extract 1.testIdentifier raw "$RR_TASK1A_MANIFEST" >/dev/null 2>&1; then
+  exit 1
+fi
+test "$(plutil -extract 0.attachments raw -expect array "$RR_TASK1A_MANIFEST")" = "1"
+test "$(plutil -extract 0.attachments.0.suggestedHumanReadableName raw "$RR_TASK1A_MANIFEST")" = \
+  'release-radar-v10.sqlite'
+test "$(plutil -extract 0.attachments.0.isAssociatedWithFailure raw "$RR_TASK1A_MANIFEST")" = \
+  'false'
+RR_TASK1A_EXPORTED_NAME="$(plutil -extract \
+  0.attachments.0.exportedFileName raw "$RR_TASK1A_MANIFEST")"
+case "$RR_TASK1A_EXPORTED_NAME" in
+  ''|'.'|'..'|*/*) exit 1 ;;
+esac
+RR_TASK1A_EXPORTED="$RR_TASK1A_ATTACHMENTS/$RR_TASK1A_EXPORTED_NAME"
+RR_TASK1A_FIXTURE_DIR="$PWD/ReleaseRadarTests/Fixtures/SchemaV10"
+RR_TASK1A_FIXTURE="$RR_TASK1A_FIXTURE_DIR/release-radar-v10.sqlite"
+test -f "$RR_TASK1A_EXPORTED"
+test ! -e "$RR_TASK1A_FIXTURE"
+mkdir -p "$RR_TASK1A_FIXTURE_DIR"
+cp "$RR_TASK1A_EXPORTED" "$RR_TASK1A_FIXTURE"
+```
+
+Expected export: exactly one passing-test attachment named
+`release-radar-v10.sqlite`; no failure attachment or second manifest entry; the
+parent process creates the repository directory and copies only the captured
+database bytes. The test host never gains repository write access.
 
 After removing the generator, create the fixture-local checksum from the
 fixture directory so its manifest contains only the filename:
@@ -366,23 +461,31 @@ xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
 
 ## Happy path
 
-The missing-environment negative check proves the generator is gated. The exact
-generation command creates one empty v10 store. Direct SQL proves genuine version/schema
-identity and absence of v11 state. The local checksum validates. The generator
-is removed, v10 store/lifecycle tests pass, independent review accepts the two
-durable artifacts, and the exact Task 1A commit is pushed and remotely verified
-before Task 1B opens.
+The historical missing-environment negative check proves the generator is
+gated. The exact generation command creates one empty v10 store inside the
+sandbox, captures its closed bytes as a retained passing-test attachment, and
+the parent process exports exactly that attachment into the repository. Direct
+SQL proves genuine version/schema identity and absence of v11 state. The local
+checksum validates. The generator is removed, v10 store/lifecycle tests pass,
+independent review accepts the two durable artifacts, and the exact Task 1A
+commit is pushed and remotely verified before Task 1B opens.
 
 ## Non-happy paths and recovery
 
-- If the target exists before generation, stop. Do not overwrite, delete, or
-  regenerate it until the mismatch is investigated and the exact target is
-  explicitly cleared through the normal reviewed workflow.
+- If the durable repository fixture target exists before the attachment run or
+  export, stop. Do not overwrite, delete, or regenerate it until the mismatch
+  is investigated and the exact target is explicitly cleared through the
+  normal reviewed workflow.
 - If `currentVersion` is not 10, Task 1A is blocked; do not reconstruct v10 SQL
   from v11 source.
 - If the GREEN test fails or the database is unavailable, retain no claimed
   fixture and diagnose the test/store failure before another materially changed
   attempt.
+- If the result bundle or attachment-export path already exists, the manifest
+  is not exact, the attachment is associated with failure, or the exported name
+  is unsafe, stop without copying or rerunning the generator. Preserve the
+  result bundle for diagnosis; a failed export may be resumed from that same
+  passing result without another test execution.
 - If direct inspection finds project data, v11 objects, a wrong singleton
   count, a foreign-key error, or a digest mismatch, return NO-GO and do not
   commit or release Task 1B.
@@ -406,9 +509,11 @@ remote-SHA equality recorded by Delivery Management.
       verified before the temporary generator is added.
 - [ ] `StoreMigrations.currentVersion` was 10 throughout generation and no
       product source changed.
-- [ ] The required negative precondition check failed only because the output
-      environment variable was absent and created no fixture.
-- [ ] The exact GREEN command passed and created the exact durable fixture.
+- [ ] The historical negative precondition evidence records only the absent old
+      output variable and no fixture; neither retired command was repeated.
+- [ ] The exact attachment GREEN command passed once with
+      `RR_SCHEMA_V10_FIXTURE_EXPORT=1`, retained exactly one passing attachment,
+      and the parent exported/copied it into the absent durable fixture path.
 - [ ] Direct inspection proves schema version 10, expected empty/default-row
       inventory, no v11 table/column/index/trigger, and no foreign-key error.
 - [ ] `ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS` contains the exact

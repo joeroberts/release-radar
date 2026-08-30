@@ -120,56 +120,101 @@ that checkpoint is remotely exact.
 - [ ] **Step 2: Generate one genuine schema-v10 fixture before changing production code**
 
 While `StoreMigrations.currentVersion` is still 10, temporarily add one
-`StoreAcceptanceTests` generator test that requires
-`RR_SCHEMA_V10_FIXTURE_OUTPUT`, creates its parent directory, initializes a
-`DeliveryStore` at that exact URL, and asserts `PRAGMA user_version == 10`.
-Use this exact body and fail if the target already exists:
+`StoreAcceptanceTests` generator test. Require the exact
+`RR_SCHEMA_V10_FIXTURE_EXPORT=1` gate, create a unique directory under the
+sandbox-writable XCTest temporary directory, initialize a `DeliveryStore`
+there, assert `PRAGMA user_version == 10`, close the store, and attach the
+database bytes to the passing test result before removing the temporary
+directory. Use this exact body:
 
 ```swift
-func testGenerateExactVersionTenFixture() throws {
+func testGenerateExactVersionTenFixtureAttachment() throws {
     let environment = ProcessInfo.processInfo.environment
-    let path = try XCTUnwrap(environment["RR_SCHEMA_V10_FIXTURE_OUTPUT"])
-    let url = URL(fileURLWithPath: path)
-    XCTAssertFalse(FileManager.default.fileExists(atPath: path))
+    let exportGate = try XCTUnwrap(environment["RR_SCHEMA_V10_FIXTURE_EXPORT"])
+    guard exportGate == "1" else {
+        XCTFail("RR_SCHEMA_V10_FIXTURE_EXPORT must equal 1")
+        return
+    }
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("rr-schema-v10-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(
-        at: url.deletingLastPathComponent(),
+        at: directory,
         withIntermediateDirectories: true
     )
-    _ = DeliveryStore(databaseURL: url)
-    XCTAssertEqual(try SQLiteConnection(url: url).scalarInt("PRAGMA user_version"), 10)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let url = directory.appendingPathComponent("release-radar-v10.sqlite")
+    XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+    var store: DeliveryStore? = DeliveryStore(databaseURL: url)
+    guard try SQLiteConnection(url: url).scalarInt("PRAGMA user_version") == 10 else {
+        return XCTFail("Generated fixture was not schema version 10")
+    }
+    withExtendedLifetime(store) {}
+    store = nil
+    let attachment = XCTAttachment(
+        data: try Data(contentsOf: url),
+        uniformTypeIdentifier: "public.data"
+    )
+    attachment.name = "release-radar-v10.sqlite"
+    attachment.lifetime = .keepAlways
+    add(attachment)
 }
 ```
-The initial shell-environment form was proven invalid on this hosted XCTest
-target: `xcodebuild test` did not propagate the arbitrary parent variable into
-the test host. Use Xcode's generated test-run specification instead. Build once
-without running tests, copy the single generated `.xctestrun` under `/tmp`, add
-the fixture variable to its documented `EnvironmentVariables` dictionary, and
-run only the generator once with parallel testing disabled:
+Two prior forms failed closed without producing a fixture: the original parent-
+shell variable did not reach hosted XCTest, and the first `.xctestrun` form
+successfully crossed that boundary but the app sandbox correctly denied a
+direct repository write. Keep the sandbox intact. Build without running tests,
+use a new absent DerivedData path, copy the single freshly generated format-2
+`.xctestrun` under `/tmp`, assert its exact nested test-target environment
+structure before injecting only the export gate, run only the attachment
+generator once with parallel testing disabled and an explicit absent result-
+bundle path, then remove the generator source:
 
 ```bash
 set -euo pipefail
-RR_TASK1A_DERIVED=/tmp/release-radar-rr-r10-v10-fixture
+RR_TASK1A_DERIVED=/tmp/release-radar-rr-r10-v10-attachment
+test ! -e "$RR_TASK1A_DERIVED"
 xcodebuild build-for-testing -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
   -destination 'platform=macOS' -derivedDataPath "$RR_TASK1A_DERIVED"
 RR_TASK1A_XCTESTRUN="$(rg --files --hidden --no-ignore "$RR_TASK1A_DERIVED/Build/Products" \
   | rg '/ReleaseRadar_ReleaseRadar_.*\.xctestrun$')"
 test -n "$RR_TASK1A_XCTESTRUN"
 test "$(printf '%s\n' "$RR_TASK1A_XCTESTRUN" | wc -l | tr -d ' ')" = "1"
+test "$(plutil -extract __xctestrun_metadata__.FormatVersion raw \
+  "$RR_TASK1A_XCTESTRUN")" = "2"
+test "$(plutil -type TestConfigurations "$RR_TASK1A_XCTESTRUN")" = "array"
+test "$(plutil -extract TestConfigurations raw -expect array \
+  "$RR_TASK1A_XCTESTRUN")" = "1"
+if plutil -type EnvironmentVariables "$RR_TASK1A_XCTESTRUN" >/dev/null 2>&1; then
+  exit 1
+fi
+test "$(plutil -extract TestConfigurations.0.TestTargets raw -expect array \
+  "$RR_TASK1A_XCTESTRUN")" = "1"
+test "$(plutil -type \
+  TestConfigurations.0.TestTargets.0.EnvironmentVariables \
+  "$RR_TASK1A_XCTESTRUN")" = "dictionary"
 RR_TASK1A_CONFIGURED="$RR_TASK1A_DERIVED/Build/Products/ReleaseRadar_Task1A.xctestrun"
 cp "$RR_TASK1A_XCTESTRUN" "$RR_TASK1A_CONFIGURED"
 plutil -insert \
-  TestConfigurations.0.TestTargets.0.EnvironmentVariables.RR_SCHEMA_V10_FIXTURE_OUTPUT \
-  -string "$PWD/ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite" \
+  TestConfigurations.0.TestTargets.0.EnvironmentVariables.RR_SCHEMA_V10_FIXTURE_EXPORT \
+  -string "1" \
   "$RR_TASK1A_CONFIGURED"
+RR_TASK1A_RESULT=/tmp/release-radar-rr-r10-v10-attachment-result.xcresult
+test ! -e "$RR_TASK1A_RESULT"
 xcodebuild test-without-building -xctestrun "$RR_TASK1A_CONFIGURED" \
   -destination 'platform=macOS' -parallel-testing-enabled NO \
-  -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionTenFixture
+  -resultBundlePath "$RR_TASK1A_RESULT" \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionTenFixtureAttachment
 ```
 
-Remove the generator test immediately, verify the fixture directly reports
-schema 10 and contains no v11 table, column, index, or trigger, then write its
-SHA-256 to `ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS`. The fixture and
-digest are durable test inputs; the removed generator is not a deliverable.
+After removing the generator, export only that test's attachments to a new
+`/tmp` directory. Require exactly one manifest entry and one nonfailure
+attachment named `release-radar-v10.sqlite`, reject unsafe exported names, and
+copy those bytes from the result bundle to the still-absent repository fixture
+path. Verify the fixture directly reports schema 10 and contains no v11 table,
+column, index, or trigger, then write its SHA-256 to
+`ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS`. The fixture and digest are
+durable test inputs; the removed generator, result bundle, and attachment export
+are temporary evidence, not deliverables.
 Require fresh postimplementation Code Review and QA plus Architecture,
 Security/Privacy, TPM, and Delivery Management GO with Required 0. Update the
 ledger, stage only the two fixture artifacts and `docs/delivery/progress.md`,

@@ -249,6 +249,18 @@ Deliver the signed native macOS MVP described by
   `c81d2fd2d432c8f4fc5c3355a1c4dec52a0e95d4ef8638a613a343f240cd3938`.
   Task 1B remains unchanged at
   `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`.
+- RR-R10 Task 1A attachment-command format correction: Security/Privacy
+  returned NO-GO/Required 1 after inspecting the already-consumed prior-run
+  `.xctestrun`, whose post-test representation exposed a top-level environment
+  dictionary. A fresh read-only `build-for-testing` into a new absent
+  DerivedData path produced the actual pre-execution format-2 specification:
+  top-level `EnvironmentVariables` was absent, `TestConfigurations` was an
+  array, and the sole test target contained the nested `EnvironmentVariables`
+  dictionary used by the reviewed insertion. The controlling command now uses
+  a new absent DerivedData path and fails closed unless those exact structural
+  assertions pass before it copies or mutates the specification. It does not
+  adopt the proposed top-level insertion because fresh direct evidence shows
+  that key path is absent at the point the command performs the mutation.
   The correction
   requires fresh exact-hash Architecture, QA/Test, Security/Privacy, TPM, and
   Delivery Management GO before any successor Implementer retry; no ticket,
@@ -266,12 +278,53 @@ Deliver the signed native macOS MVP described by
   persistent scheme, project, product, owner data, board, ticket, or goal.
   The correction must be committed, pushed, and remotely verified exactly
   before a fresh successor Implementer may run it.
-- Next eligible RR-R10 work: **Release one fresh Task 1A Implementer to generate
-  and prove the genuine schema-v10 fixture.** The Implementer may temporarily
-  edit only `StoreAcceptanceTests.swift` and must remove that edit; the only
-  durable implementation outputs are the fixture and its local checksum. Task
-  1B and every product edit remain dependency-blocked until Task 1A passes all
-  postimplementation reviews and its exact commit is remotely verified.
+- RR-R10 Task 1A execution-command correction checkpoint: commit
+  `b62dcd12f6740c156ffd87b16c4e5741b4b9783c` contains exactly the corrected
+  plan, registered Task 1A brief and checksum index, and canonical failure/
+  review evidence. It was pushed to `origin/codex/release-radar-mvp`; fresh
+  `git ls-remote` readback returned the exact same SHA and ahead/behind `0/0`.
+  The fresh successor Implementer is therefore released for Task 1A only.
+- RR-R10 Task 1A sandbox-boundary evidence: the fresh successor ran the exact
+  corrected generator once. `build-for-testing`, exact `.xctestrun` selection,
+  environment injection, and selected `test-without-building` execution all
+  worked, but the sandboxed test host correctly denied direct creation of the
+  repository fixture directory with Cocoa error 513 / POSIX error 1. The run
+  exited 65; no fixture, checksum, product diff, or durable test-source diff
+  exists, and the generator was removed without retry. Existing test practice
+  and the captured `.xcresult` confirm the bounded correction: generate the
+  empty v10 database under `FileManager.default.temporaryDirectory`, retain its
+  closed bytes as a passing-test `XCTAttachment`, remove the sandbox-local
+  source file, then let the parent process export that one attachment from the
+  result bundle and copy it to the absent repository fixture path. This keeps
+  the app sandbox and SQLite authority intact and requires a new exact-hash
+  independent closure plus remote planning checkpoint before another fresh
+  Implementer run. The final correction is fixed at plan SHA-256
+  `b256ce5084e2af640d493f73d4f4a3c0ce927e0895df7023134637b4729b86de`
+  and registered Task 1A brief SHA-256
+  `9522656de14199db53a1338299fa131871837583ef3b73b6d5b1986ac0c02980`;
+  Task 1B remains unchanged at
+  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`.
+- RR-R10 Task 1A attachment-correction exact-hash closure: Architecture,
+  QA/Test, Security/Privacy, TPM, and Delivery Management each returned
+  **GO, Required 0, Optional 0, Out-of-scope 0** against plan
+  `b256ce5084e2af640d493f73d4f4a3c0ce927e0895df7023134637b4729b86de`
+  and registered Task 1A brief
+  `9522656de14199db53a1338299fa131871837583ef3b73b6d5b1986ac0c02980`.
+  Fresh evidence proves the format-2 metadata and exact one-configuration/one-
+  target nested environment structure before mutation; all actual-run,
+  result, export, fixture, and checksum paths are absent; product and temporary
+  generator-source diffs are empty. This closes the prior direct-write,
+  sandbox, stale-instruction, release-gate, and test-run-format findings. The
+  generator remains closed until this four-file planning correction is pushed
+  and remotely exact at ahead/behind `0/0`.
+- Next eligible RR-R10 work: **Close Architecture, QA/Test, Security/Privacy,
+  TPM, and Delivery Management on the exact attachment-correction hashes, then
+  commit/push that planning correction and verify exact local/remote SHA with
+  ahead/behind `0/0`.** Only after that remote checkpoint may one fresh Task 1A
+  Implementer temporarily edit `StoreAcceptanceTests.swift`, remove that edit,
+  and leave only the fixture and local checksum. Task 1B and every product edit
+  remain dependency-blocked until Task 1A passes all postimplementation reviews
+  and its exact commit is remotely verified.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
