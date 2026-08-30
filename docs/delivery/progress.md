@@ -477,14 +477,44 @@ Deliver the signed native macOS MVP described by
   `git ls-remote` each returned that exact SHA with ahead/behind `0/0`. The
   three accepted artifact hashes remained byte-identical after the push, and
   the worktree was clean.
-- Next eligible RR-R10 work: **Perform the authorized typed/UI and exact
-  installed-identity preflight before resolving
-  `RR-R10-BLOCKER-DESIGN-APPROVAL` or moving RR-R10 from Blocked to In
-  progress.** Any mismatch stops before mutation for a bounded reviewed
-  correction. After successful audited lane/blocker readback, one fresh
-  Planning agent may produce the complete Task 2A brief; Task 2A RED and every
-  later product edit remain blocked until that exact brief receives the
-  required independent release.
+- RR-R10 start-state preflight: the installed bundle and every running Release
+  Radar process matched the accepted schema-v10 identity before mutation:
+  `com.rekonlabs.ReleaseRadar` version `0.1.5` build `1`, Team `2UA854NLX4`,
+  CDHash `d204ccdd17628d6089694cf615b3c0a2a36195f4`, main SHA-256
+  `9f65653f28584bef118ffa692f5a0e17656b88d5b4c40f63e64864551289d384`,
+  AgentTools SHA-256
+  `acf00b7a7df3dca53a7af2b4cf141df902ea8869a6fd3a1700c6ff2ddbb24f31`,
+  and BridgeAgent SHA-256
+  `9aa8bdcfe9345c3884a733b5d5ab18f6403e1c3c29457c6860e5f06e236e8d03`.
+  Strict deep signing passed. Running main, AgentTools, BridgeAgent, and
+  PluginLifecycleHelper executable paths all resolved under the exact installed
+  `/Applications/ReleaseRadar.app`. Owner-UI readback, without SQLite access,
+  showed the Post-MVP reported-defect remediation phase at `0/0/0/1/9`, RR-R10
+  Blocked with `RR-R10-BLOCKER-DESIGN-APPROVAL` represented by its exact owner-
+  attention reason, nine unchanged Accepted tickets, and no unrelated state
+  mismatch. This proved the authorized early transition remained on schema v10
+  and preserved eligibility for the later v10→v11 migration-only
+  continuation.
+- RR-R10 audited start handoff: exact request
+  `E26F7BAE-A070-4CF3-860B-B1BB00028F87` resolved only
+  `RR-R10-BLOCKER-DESIGN-APPROVAL` and returned audit event
+  `44783DB0-14B9-4912-BF49-136CDB62CB88`. Immediate owner-UI readback kept
+  RR-R10 Blocked, showed zero blockers and no owner attention, and preserved
+  every other lane count. Exact request
+  `01DF6950-9393-444B-9BC5-99CA77E35F52` then moved only RR-R10 from Blocked
+  to In progress and returned audit event
+  `7A91291D-1098-4D45-806C-AE12A3A693E3`. Final owner-UI readback showed the
+  same active phase at `0/1/0/0/9`, RR-R10 In progress with zero blockers and
+  no owner attention, nine unchanged Accepted tickets, and both new audit
+  reasons. No task plan was created or inferred, and no product file,
+  installation, owner-data backup, or SQLite access occurred.
+- Next eligible RR-R10 work: **Start one fresh Codex session, create the same
+  unfinished RR-R10 delivery goal in that session, and have one fresh Planning
+  agent produce the complete Task 2A brief.** Architecture, TPM, QA/Test, and
+  Delivery Management must independently return GO with Required 0 on the
+  brief's exact hash before any Task 2A RED test or product edit. Task 2A is
+  “Generate and verify the genuine schema-v11 fixture”; every later task remains
+  dependency-blocked.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
