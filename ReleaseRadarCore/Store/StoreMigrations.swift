@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 10
+    static let currentVersion: Int64 = 11
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -48,6 +48,9 @@ enum StoreMigrations {
             }
             if version < 10 {
                 try connection.executeScript(schemaVersion10)
+            }
+            if version < 11 {
+                try connection.executeScript(schemaVersion11)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -208,6 +211,16 @@ enum StoreMigrations {
             try connection.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle") == 1
             else { return false }
         }
+        if version >= 11 {
+            guard try hasExpectedLegacyContinuationColumn(connection) else { return false }
+            for table in planningTableSQL {
+                guard let actualSQL = try connection.scalarText(
+                    "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
+                    bindings: [.text(table.name)]
+                ), normalizedSQL(actualSQL) == normalizedSQL(table.sql)
+                else { return false }
+            }
+        }
         return try connection.row("PRAGMA foreign_key_check") == nil
     }
 
@@ -306,6 +319,26 @@ enum StoreMigrations {
         return names
     }
 
+    private static func hasExpectedLegacyContinuationColumn(
+        _ connection: SQLiteConnection
+    ) throws -> Bool {
+        guard try connection.scalarText(
+            "SELECT type FROM pragma_table_info('tickets') WHERE name = 'plan_legacy_continuation'"
+        ) == "INTEGER",
+        try connection.scalarInt(
+            "SELECT \"notnull\" FROM pragma_table_info('tickets') WHERE name = 'plan_legacy_continuation'"
+        ) == 1,
+        try connection.scalarText(
+            "SELECT dflt_value FROM pragma_table_info('tickets') WHERE name = 'plan_legacy_continuation'"
+        ) == "0",
+        let ticketsSQL = try connection.scalarText(
+            "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'tickets'"
+        ),
+        normalizedSQL(ticketsSQL) == normalizedSQL(ticketsVersionElevenTableSQL)
+        else { return false }
+        return true
+    }
+
     private static func hasColumn(
         _ connection: SQLiteConnection,
         table: String,
@@ -369,6 +402,24 @@ enum StoreMigrations {
         (10, "codex_plugin_lifecycle", [
             "plugin_id", "intent", "managed_version", "managed_digest", "verified_at",
         ]),
+        (11, "phase_plans", [
+            "project_id", "phase_id", "state", "revision", "ready_revision",
+            "created_at", "updated_at", "finalized_at",
+        ]),
+        (11, "delivery_goals", [
+            "project_id", "phase_id", "id", "title", "outcome", "lifecycle", "sort_order",
+            "created_at", "updated_at", "activated_at", "accepted_at",
+        ]),
+        (11, "delivery_goal_done_criteria", [
+            "project_id", "phase_id", "goal_id", "sort_order", "criterion",
+        ]),
+        (11, "delivery_goal_ticket_assignments", [
+            "project_id", "phase_id", "goal_id", "ticket_id",
+        ]),
+        (11, "delivery_goal_assignment_events", [
+            "audit_event_id", "project_id", "phase_id", "ticket_id", "previous_goal_id",
+            "current_goal_id", "revision", "action",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -390,6 +441,7 @@ enum StoreMigrations {
         (6, "notification_events", "attempt_started_at"),
         (6, "notification_events", "completed_at"),
         (6, "notification_events", "failure_code"),
+        (11, "tickets", "plan_legacy_continuation"),
     ]
 
     private static let criticalObjects: [(version: Int64, type: String, name: String)] = [
@@ -401,6 +453,15 @@ enum StoreMigrations {
         (5, "index", "project_active_phases_phase_index"),
         (6, "index", "notification_events_project_created_index"),
         (6, "index", "notification_events_state_index"),
+        (11, "index", "tickets_project_phase_identity_unique"),
+        (11, "index", "delivery_goals_project_phase_identity_unique"),
+        (11, "index", "delivery_goals_phase_sort_index"),
+        (11, "index", "delivery_goal_ticket_assignments_goal_index"),
+        (11, "index", "delivery_goal_assignment_events_ticket_revision_unique"),
+        (11, "trigger", "phase_plans_after_phase_insert"),
+        (11, "trigger", "delivery_goals_reject_ownership_change"),
+        (11, "trigger", "tickets_reject_legacy_continuation_insert"),
+        (11, "trigger", "tickets_reject_legacy_continuation_regrant"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -479,11 +540,58 @@ enum StoreMigrations {
     END
     """
 
+    private static let phasePlanAfterPhaseInsertTrigger = """
+    CREATE TRIGGER phase_plans_after_phase_insert
+    AFTER INSERT ON phases
+    BEGIN
+        INSERT INTO phase_plans (
+            project_id, phase_id, state, revision, ready_revision,
+            created_at, updated_at, finalized_at
+        ) VALUES (
+            NEW.project_id, NEW.id, 'legacy_unassessed', 0, NULL,
+            strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            NULL
+        );
+    END
+    """
+
+    private static let rejectDeliveryGoalOwnershipChangeTrigger = """
+    CREATE TRIGGER delivery_goals_reject_ownership_change
+    BEFORE UPDATE OF project_id, phase_id ON delivery_goals
+    WHEN OLD.project_id <> NEW.project_id OR OLD.phase_id <> NEW.phase_id
+    BEGIN
+        SELECT RAISE(ABORT, 'delivery goal ownership is immutable');
+    END
+    """
+
+    private static let rejectLegacyContinuationInsertTrigger = """
+    CREATE TRIGGER tickets_reject_legacy_continuation_insert
+    BEFORE INSERT ON tickets
+    WHEN NEW.plan_legacy_continuation = 1
+    BEGIN
+        SELECT RAISE(ABORT, 'legacy continuation is migration-only');
+    END
+    """
+
+    private static let rejectLegacyContinuationRegrantTrigger = """
+    CREATE TRIGGER tickets_reject_legacy_continuation_regrant
+    BEFORE UPDATE OF plan_legacy_continuation ON tickets
+    WHEN OLD.plan_legacy_continuation = 0 AND NEW.plan_legacy_continuation = 1
+    BEGIN
+        SELECT RAISE(ABORT, 'legacy continuation cannot be regranted');
+    END
+    """
+
     private static let criticalTriggers: [(version: Int64, name: String, sql: String)] = [
         (1, "reject_phase_dependency_cycle_insert", phaseDependencyCycleInsertTrigger),
         (1, "reject_phase_dependency_cycle_update", phaseDependencyCycleUpdateTrigger),
         (1, "reject_ticket_dependency_cycle_insert", ticketDependencyCycleInsertTrigger),
         (1, "reject_ticket_dependency_cycle_update", ticketDependencyCycleUpdateTrigger),
+        (11, "phase_plans_after_phase_insert", phasePlanAfterPhaseInsertTrigger),
+        (11, "delivery_goals_reject_ownership_change", rejectDeliveryGoalOwnershipChangeTrigger),
+        (11, "tickets_reject_legacy_continuation_insert", rejectLegacyContinuationInsertTrigger),
+        (11, "tickets_reject_legacy_continuation_regrant", rejectLegacyContinuationRegrantTrigger),
     ]
 
     private static let criticalIndexes: [(
@@ -506,6 +614,16 @@ enum StoreMigrations {
          [("project_id", false), ("ticket_id", false)]),
         (8, "ticket_goal_links_project_goal_unique", "ticket_goal_links", true,
          [("project_id", false), ("goal_id", false)]),
+        (11, "tickets_project_phase_identity_unique", "tickets", true,
+         [("project_id", false), ("phase_id", false), ("id", false)]),
+        (11, "delivery_goals_project_phase_identity_unique", "delivery_goals", true,
+         [("project_id", false), ("phase_id", false), ("id", false)]),
+        (11, "delivery_goals_phase_sort_index", "delivery_goals", false,
+         [("project_id", false), ("phase_id", false), ("sort_order", false)]),
+        (11, "delivery_goal_ticket_assignments_goal_index", "delivery_goal_ticket_assignments", false,
+         [("project_id", false), ("phase_id", false), ("goal_id", false)]),
+        (11, "delivery_goal_assignment_events_ticket_revision_unique", "delivery_goal_assignment_events", true,
+         [("project_id", false), ("phase_id", false), ("ticket_id", false), ("revision", false)]),
     ]
 
     private static let requiredForeignKeys: [(
@@ -545,6 +663,16 @@ enum StoreMigrations {
         (6, "notification_occurrences", "project_id", "projects", "id", "CASCADE"),
         (8, "ticket_goal_links", "project_id,ticket_id,thread_id", "thread_links", "project_id,ticket_id,thread_id", "CASCADE"),
         (8, "ticket_goal_links", "project_id,goal_id,thread_id", "observed_goals", "project_id,id,thread_id", "CASCADE"),
+        (11, "phase_plans", "project_id,phase_id", "phases", "project_id,id", "CASCADE"),
+        (11, "delivery_goals", "project_id,phase_id", "phase_plans", "project_id,phase_id", "NO ACTION"),
+        (11, "delivery_goal_done_criteria", "project_id,phase_id,goal_id", "delivery_goals", "project_id,phase_id,id", "CASCADE"),
+        (11, "delivery_goal_ticket_assignments", "project_id,phase_id,goal_id", "delivery_goals", "project_id,phase_id,id", "NO ACTION"),
+        (11, "delivery_goal_ticket_assignments", "project_id,phase_id,ticket_id", "tickets", "project_id,phase_id,id", "NO ACTION"),
+        (11, "delivery_goal_assignment_events", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (11, "delivery_goal_assignment_events", "project_id,phase_id", "phase_plans", "project_id,phase_id", "NO ACTION"),
+        (11, "delivery_goal_assignment_events", "project_id,phase_id,ticket_id", "tickets", "project_id,phase_id,id", "NO ACTION"),
+        (11, "delivery_goal_assignment_events", "project_id,phase_id,previous_goal_id", "delivery_goals", "project_id,phase_id,id", "NO ACTION"),
+        (11, "delivery_goal_assignment_events", "project_id,phase_id,current_goal_id", "delivery_goals", "project_id,phase_id,id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -874,5 +1002,163 @@ enum StoreMigrations {
     \(codexPluginLifecycleTableSQL);
     INSERT INTO codex_plugin_lifecycle (plugin_id, intent)
     VALUES ('release-radar', 'neverInstalled');
+    """
+
+    private static let phasePlansTableSQL = """
+    CREATE TABLE phase_plans (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('legacy_unassessed', 'draft', 'ready')),
+        revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0),
+        ready_revision INTEGER,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        finalized_at TEXT,
+        PRIMARY KEY(project_id, phase_id),
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id) ON DELETE CASCADE,
+        CHECK ((state = 'ready') = (ready_revision IS NOT NULL)),
+        CHECK (ready_revision IS NULL OR ready_revision = revision)
+    )
+    """
+
+    private static let deliveryGoalsTableSQL = """
+    CREATE TABLE delivery_goals (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        lifecycle TEXT NOT NULL CHECK (
+            lifecycle IN ('draft', 'planned', 'active', 'awaiting_acceptance', 'accepted', 'superseded')
+        ),
+        sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        activated_at TEXT,
+        accepted_at TEXT,
+        PRIMARY KEY(project_id, id),
+        FOREIGN KEY(project_id, phase_id) REFERENCES phase_plans(project_id, phase_id)
+    )
+    """
+
+    private static let deliveryGoalDoneCriteriaTableSQL = """
+    CREATE TABLE delivery_goal_done_criteria (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        goal_id TEXT NOT NULL,
+        sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+        criterion TEXT NOT NULL CHECK (length(trim(criterion)) > 0),
+        PRIMARY KEY(project_id, phase_id, goal_id, sort_order),
+        FOREIGN KEY(project_id, phase_id, goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id) ON DELETE CASCADE
+    )
+    """
+
+    private static let deliveryGoalTicketAssignmentsTableSQL = """
+    CREATE TABLE delivery_goal_ticket_assignments (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        goal_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id),
+        FOREIGN KEY(project_id, phase_id, goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id),
+        FOREIGN KEY(project_id, phase_id, ticket_id)
+            REFERENCES tickets(project_id, phase_id, id)
+    )
+    """
+
+    private static let deliveryGoalAssignmentEventsTableSQL = """
+    CREATE TABLE delivery_goal_assignment_events (
+        audit_event_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        previous_goal_id TEXT,
+        current_goal_id TEXT,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        action TEXT NOT NULL CHECK (action IN ('assigned', 'unassigned', 'reassigned')),
+        PRIMARY KEY(audit_event_id, ticket_id),
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) DEFERRABLE INITIALLY DEFERRED,
+        FOREIGN KEY(project_id, phase_id) REFERENCES phase_plans(project_id, phase_id),
+        FOREIGN KEY(project_id, phase_id, ticket_id)
+            REFERENCES tickets(project_id, phase_id, id),
+        FOREIGN KEY(project_id, phase_id, previous_goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id),
+        FOREIGN KEY(project_id, phase_id, current_goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id),
+        CHECK (
+            (action = 'assigned' AND previous_goal_id IS NULL AND current_goal_id IS NOT NULL)
+            OR (action = 'unassigned' AND previous_goal_id IS NOT NULL AND current_goal_id IS NULL)
+            OR (
+                action = 'reassigned'
+                AND previous_goal_id IS NOT NULL
+                AND current_goal_id IS NOT NULL
+                AND previous_goal_id <> current_goal_id
+            )
+        )
+    )
+    """
+
+    private static let planningTableSQL: [(name: String, sql: String)] = [
+        ("phase_plans", phasePlansTableSQL),
+        ("delivery_goals", deliveryGoalsTableSQL),
+        ("delivery_goal_done_criteria", deliveryGoalDoneCriteriaTableSQL),
+        ("delivery_goal_ticket_assignments", deliveryGoalTicketAssignmentsTableSQL),
+        ("delivery_goal_assignment_events", deliveryGoalAssignmentEventsTableSQL),
+    ]
+
+    private static let ticketsVersionElevenTableSQL = """
+    CREATE TABLE tickets (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        phase_id TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        lane TEXT NOT NULL CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+        plan_legacy_continuation INTEGER NOT NULL DEFAULT 0
+            CHECK (plan_legacy_continuation IN (0, 1)),
+        UNIQUE(project_id, id),
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
+    )
+    """
+
+    private static let schemaVersion11 = """
+    ALTER TABLE tickets ADD COLUMN plan_legacy_continuation INTEGER NOT NULL DEFAULT 0
+        CHECK (plan_legacy_continuation IN (0, 1));
+    UPDATE tickets
+    SET plan_legacy_continuation = 1
+    WHERE lane IN ('in_progress', 'needs_review');
+
+    \(phasePlansTableSQL);
+    \(deliveryGoalsTableSQL);
+    CREATE UNIQUE INDEX tickets_project_phase_identity_unique
+        ON tickets(project_id, phase_id, id);
+    CREATE UNIQUE INDEX delivery_goals_project_phase_identity_unique
+        ON delivery_goals(project_id, phase_id, id);
+    CREATE INDEX delivery_goals_phase_sort_index
+        ON delivery_goals(project_id, phase_id, sort_order);
+    \(deliveryGoalDoneCriteriaTableSQL);
+    \(deliveryGoalTicketAssignmentsTableSQL);
+    CREATE INDEX delivery_goal_ticket_assignments_goal_index
+        ON delivery_goal_ticket_assignments(project_id, phase_id, goal_id);
+    \(deliveryGoalAssignmentEventsTableSQL);
+    CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
+        ON delivery_goal_assignment_events(project_id, phase_id, ticket_id, revision);
+
+    INSERT INTO phase_plans (
+        project_id, phase_id, state, revision, ready_revision,
+        created_at, updated_at, finalized_at
+    )
+    SELECT phases.project_id, phases.id, 'legacy_unassessed', 0, NULL,
+           migration_timestamp.value, migration_timestamp.value, NULL
+    FROM phases
+    CROSS JOIN (
+        SELECT strftime('%Y-%m-%dT%H:%M:%fZ', 'now') AS value
+    ) AS migration_timestamp;
+
+    \(phasePlanAfterPhaseInsertTrigger);
+    \(rejectDeliveryGoalOwnershipChangeTrigger);
+    \(rejectLegacyContinuationInsertTrigger);
+    \(rejectLegacyContinuationRegrantTrigger);
     """
 }

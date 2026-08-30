@@ -407,13 +407,40 @@ Deliver the signed native macOS MVP described by
   returned that exact SHA with ahead/behind `0/0`, and the worktree was clean.
   Task 1A is complete and its immutable fixture/checksum boundary is now open
   for Task 1B consumption.
-- Next eligible RR-R10 work: **Release one fresh Task 1B Implementer against
-  registered brief SHA-256
-  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`
-  for schema-v11 persistence and public models, beginning with the specified
-  failing tests.** The Implementer must preserve the accepted Task 1A fixture
-  and checksum unchanged and remain within Task 1B's registered file and
-  behavior boundary. Task 2 and later product work remain dependency-blocked.
+- RR-R10 Task 1B implementation evidence: against registered brief SHA-256
+  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`,
+  the fresh Implementer delivered the public Delivery Goal/phase-plan values,
+  additive schema-v11 migration and manifest, immutable goal ownership,
+  migration-only ticket continuation, fail-safe Legacy-unassessed plans,
+  composite project/phase enforcement, and authoritative deferred assignment
+  history in exactly the five registered implementation/test paths. The
+  accepted schema-v10 fixture and checksum remain byte-identical at SHA-256
+  `9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559`.
+  Initial independent review found three required defects in negative-test
+  isolation, goal-ownership immutability, and continuation-column manifest
+  validation. The Implementer corrected each test-first. Security then proved
+  the first manifest correction could be spoofed by embedding expected text in
+  an inert constraint; the final correction compares normalized SQL against the
+  complete canonical v11 `tickets` definition and retains that semantic
+  counterfeit as a regression test.
+- RR-R10 Task 1B postimplementation closure: final independent Code Review,
+  QA/Test, Architecture, Security/Privacy, TPM, and Delivery Management each
+  returned **GO, Required 0, Optional 0, Out-of-scope 0** on the exact final
+  diff. Fresh QA reports 37/37 focused Store tests and 58/58 combined Store and
+  plugin-lifecycle tests, with zero failed/skipped, at
+  `/tmp/release-radar-rr-r10-task1b-finalqa.1dqOBB/focused.xcresult` and
+  `/tmp/release-radar-rr-r10-task1b-finalqa.1dqOBB/regression.xcresult`.
+  Direct probes confirm phase and cross-project goal moves reject and roll back
+  without audit residue; both weak and text-embedding counterfeit continuation
+  schemas reopen unavailable; every negative assignment-history case reaches
+  its intended CHECK or foreign-key constraint; and observed Codex-goal,
+  recovery, archive, signing, entitlement, sandbox, credential, and bookmark
+  boundaries remain unchanged.
+- Next eligible RR-R10 work: **Commit and push only the five registered Task 1B
+  implementation/test paths plus this delivery record, then verify exact
+  local/remote SHA equality with ahead/behind `0/0`.** Task 2 and all later
+  product work remain dependency-blocked until that remote checkpoint and Task
+  1B accepted completion are recorded.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`

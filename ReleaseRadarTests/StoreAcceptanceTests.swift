@@ -1,8 +1,574 @@
+import CryptoKit
 import Foundation
 import XCTest
 @testable import ReleaseRadarCore
 
 final class StoreAcceptanceTests: XCTestCase {
+    func testDeliveryGoalPublicModelsRoundTripAndKeepObservedGoalIdentityDistinct() throws {
+        let createdAt = Date(timeIntervalSince1970: 1_777_777_777)
+        let goalID = DeliveryGoalID(rawValue: "DG-1")
+        let observedGoalID = ObservedGoalID(rawValue: "DG-1")
+        let envelope = DeliveryGoalModelEnvelope(
+            draft: .init(
+                id: goalID,
+                title: "Outcome",
+                outcome: "The complete outcome is delivered.",
+                doneCriteria: ["One", "Two"],
+                sortOrder: 3
+            ),
+            assignment: .init(goalID: goalID, ticketID: .init(rawValue: "RR-1")),
+            phasePlan: .init(
+                projectID: .init(rawValue: "project-1"),
+                phaseID: .init(rawValue: "phase-1"),
+                state: .ready,
+                revision: 4,
+                readyRevision: 4,
+                createdAt: createdAt,
+                updatedAt: createdAt,
+                finalizedAt: createdAt
+            ),
+            goal: .init(
+                id: goalID,
+                projectID: .init(rawValue: "project-1"),
+                phaseID: .init(rawValue: "phase-1"),
+                title: "Outcome",
+                outcome: "The complete outcome is delivered.",
+                lifecycle: .awaitingAcceptance,
+                sortOrder: 3,
+                createdAt: createdAt,
+                updatedAt: createdAt,
+                activatedAt: createdAt,
+                acceptedAt: nil
+            ),
+            criterion: .init(
+                projectID: .init(rawValue: "project-1"),
+                phaseID: .init(rawValue: "phase-1"),
+                goalID: goalID,
+                sortOrder: 0,
+                text: "One measurable result"
+            ),
+            assignmentRecord: .init(
+                projectID: .init(rawValue: "project-1"),
+                phaseID: .init(rawValue: "phase-1"),
+                goalID: goalID,
+                ticketID: .init(rawValue: "RR-1")
+            ),
+            assignmentEvent: .init(
+                auditEventID: .init(rawValue: "audit-1"),
+                projectID: .init(rawValue: "project-1"),
+                phaseID: .init(rawValue: "phase-1"),
+                ticketID: .init(rawValue: "RR-1"),
+                previousGoalID: nil,
+                currentGoalID: goalID,
+                revision: 4,
+                action: "assigned"
+            ),
+            readinessFailure: .init(
+                unassignedTicketIDs: [.init(rawValue: "RR-2"), .init(rawValue: "RR-1")],
+                incompleteGoalIDs: [.init(rawValue: "DG-2"), .init(rawValue: "DG-1")],
+                conflictingTicketIDs: [.init(rawValue: "RR-4"), .init(rawValue: "RR-3")]
+            )
+        )
+
+        let encoded = try JSONEncoder().encode(envelope)
+        XCTAssertEqual(try JSONDecoder().decode(DeliveryGoalModelEnvelope.self, from: encoded), envelope)
+        XCTAssertEqual(envelope.readinessFailure.unassignedTicketIDs.map(\.rawValue), ["RR-1", "RR-2"])
+        XCTAssertEqual(envelope.readinessFailure.incompleteGoalIDs.map(\.rawValue), ["DG-1", "DG-2"])
+        XCTAssertEqual(envelope.readinessFailure.conflictingTicketIDs.map(\.rawValue), ["RR-3", "RR-4"])
+        XCTAssertEqual(goalID.rawValue, observedGoalID.rawValue)
+        XCTAssertNotEqual(String(reflecting: type(of: goalID)), String(reflecting: type(of: observedGoalID)))
+        XCTAssertEqual(AuditEntityType.phasePlan.rawValue, "phase_plan")
+        XCTAssertEqual(AuditEntityType.deliveryGoal.rawValue, "delivery_goal")
+    }
+
+    func testExactVersionTenFixtureMigratesToVersionElevenWithoutInference() async throws {
+        let databaseURL = try copyVerifiedVersionTenFixture()
+        let fixture = try SQLiteConnection(url: databaseURL)
+        try seedCompleteVersionTenGraph(fixture)
+        let beforeMigration = try semanticVersionTenSnapshot(fixture)
+
+        var migrated: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        guard case .available = await migrated!.availability else {
+            return XCTFail("Expected the exact v10 fixture to migrate")
+        }
+        let firstRead = try await migrated!.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_plans WHERE state = 'legacy_unassessed' AND revision = 0 AND ready_revision IS NULL"),
+                try connection.scalarInt("SELECT COUNT(DISTINCT created_at) FROM phase_plans"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_plans WHERE created_at = updated_at AND finalized_at IS NULL"),
+                try connection.scalarInt("SELECT COUNT(*) FROM delivery_goals"),
+                try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_done_criteria"),
+                try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_ticket_assignments"),
+                try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_assignment_events"),
+                try connection.scalarText("SELECT group_concat(id, ',') FROM (SELECT id FROM tickets WHERE plan_legacy_continuation = 1 ORDER BY id)"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE lane IN ('backlog', 'blocked', 'accepted') AND plan_legacy_continuation <> 0")
+            )
+        }
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 11)
+        XCTAssertEqual(firstRead.0, 2)
+        XCTAssertEqual(firstRead.1, 1)
+        XCTAssertEqual(firstRead.2, 2)
+        XCTAssertEqual(firstRead.3, 0)
+        XCTAssertEqual(firstRead.4, 0)
+        XCTAssertEqual(firstRead.5, 0)
+        XCTAssertEqual(firstRead.6, 0)
+        XCTAssertEqual(firstRead.7, "ticket-active,ticket-review")
+        XCTAssertEqual(firstRead.8, 0)
+        XCTAssertEqual(try semanticVersionTenSnapshot(SQLiteConnection(url: databaseURL)), beforeMigration)
+        XCTAssertNil(try SQLiteConnection(url: databaseURL).row("PRAGMA foreign_key_check"))
+
+        migrated = nil
+        let relaunched = DeliveryStore(databaseURL: databaseURL)
+        guard case .available = await relaunched.availability else {
+            return XCTFail("Expected migrated v11 fixture to relaunch")
+        }
+        XCTAssertEqual(try semanticVersionTenSnapshot(SQLiteConnection(url: databaseURL)), beforeMigration)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("SELECT COUNT(*) FROM phase_plans"), 2)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("SELECT COUNT(*) FROM delivery_goals"), 0)
+        XCTAssertNil(try SQLiteConnection(url: databaseURL).row("PRAGMA foreign_key_check"))
+    }
+
+    func testVersionElevenPlanningSchemaEnforcesConstraintsAndCompositeOwnership() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let connection = try SQLiteConnection(url: databaseURL)
+        try connection.executeScript(Self.versionElevenOwnershipSeedSQL)
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "planner"), reason: "Reject goal phase move") { connection in
+                try connection.execute("UPDATE delivery_goals SET title = 'Tentative', phase_id = 'phase-2' WHERE project_id = 'p1' AND id = 'goal-1'")
+            }
+        }
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "planner"), reason: "Reject goal project move") { connection in
+                try connection.execute("UPDATE delivery_goals SET title = 'Tentative', project_id = 'p2', phase_id = 'phase-3' WHERE project_id = 'p1' AND id = 'goal-1'")
+            }
+        }
+        let unchangedGoal = try await store.read { connection in
+            try connection.row("SELECT project_id, phase_id, title FROM delivery_goals WHERE project_id = 'p1' AND id = 'goal-1'")
+        }
+        XCTAssertEqual(unchangedGoal?["project_id"], .text("p1"))
+        XCTAssertEqual(unchangedGoal?["phase_id"], .text("phase-1"))
+        XCTAssertEqual(unchangedGoal?["title"], .text("Goal one"))
+        let ownershipAuditCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason IN ('Reject goal phase move', 'Reject goal project move')")
+        }
+        XCTAssertEqual(ownershipAuditCount, 0)
+
+        for sql in [
+            "INSERT INTO phase_plans (project_id, phase_id, state, revision, created_at, updated_at) VALUES ('p1', 'missing', 'draft', 0, 't', 't')",
+            "UPDATE phase_plans SET state = 'invalid' WHERE project_id = 'p1' AND phase_id = 'phase-1'",
+            "UPDATE phase_plans SET revision = -1 WHERE project_id = 'p1' AND phase_id = 'phase-1'",
+            "UPDATE phase_plans SET state = 'ready', ready_revision = NULL WHERE project_id = 'p1' AND phase_id = 'phase-1'",
+            "UPDATE phase_plans SET state = 'draft', ready_revision = 0 WHERE project_id = 'p1' AND phase_id = 'phase-1'",
+            "UPDATE phase_plans SET state = 'ready', revision = 1, ready_revision = 0 WHERE project_id = 'p1' AND phase_id = 'phase-1'",
+            "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES ('p1', 'phase-1', 'bad-life', 'Bad', 'Bad', 'unknown', 0, 't', 't')",
+            "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES ('p1', 'phase-1', 'bad-sort', 'Bad', 'Bad', 'draft', -1, 't', 't')",
+            "INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('p1', 'phase-1', 'goal-1', -1, 'Bad')",
+            "INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('p1', 'phase-1', 'goal-1', 1, '   ')",
+            "INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('p1', 'phase-2', 'goal-1', 1, 'Wrong phase')",
+            "INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES ('p1', 'phase-1', 'goal-1', 'ticket-2')",
+            "INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES ('p2', 'phase-3', 'goal-3', 'ticket-1')",
+        ] {
+            XCTAssertThrowsError(try connection.execute(sql), "Expected schema to reject: \(sql)")
+        }
+
+        try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('p1', 'phase-1', 'goal-1', 0, 'Complete')")
+        XCTAssertThrowsError(
+            try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('p1', 'phase-1', 'goal-1', 0, 'Duplicate')")
+        )
+        try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES ('p1', 'phase-1', 'goal-1', 'ticket-1')")
+        XCTAssertThrowsError(
+            try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES ('p1', 'phase-1', 'goal-1b', 'ticket-1')")
+        )
+        XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_done_criteria"), 1)
+        XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_ticket_assignments"), 1)
+        XCTAssertNil(try connection.row("PRAGMA foreign_key_check"))
+    }
+
+    func testVersionElevenAssignmentHistoryRequiresTheAuthoritativeDeferredAudit() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed planning history") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('p1', 'Project One')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'p1', 'One'), ('phase-2', 'p1', 'Two')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ticket-1', 'p1', 'phase-1', 'One', 'backlog'), ('ticket-2', 'p1', 'phase-2', 'Two', 'backlog')")
+            try connection.execute("INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES ('p1', 'phase-1', 'goal-1', 'Goal one', 'Outcome one', 'draft', 0, 't', 't'), ('p1', 'phase-2', 'goal-2', 'Goal two', 'Outcome two', 'draft', 0, 't', 't')")
+        }
+        let auditID = AuditEventID(rawValue: "assignment-audit")
+        try await store.transact(
+            actor: .init(id: "planner"),
+            reason: "Assign ticket",
+            auditEventID: auditID,
+            auditScope: .init(projectID: .init(rawValue: "p1"), entityType: .phasePlan, entityID: "phase-1")
+        ) { connection in
+            try connection.execute(
+                """
+                INSERT INTO delivery_goal_assignment_events
+                    (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action)
+                VALUES (?, 'p1', 'phase-1', 'ticket-1', NULL, 'goal-1', 1, 'assigned')
+                """,
+                bindings: [.text(auditID.rawValue)]
+            )
+        }
+        let committed = try await store.read { connection in
+            try connection.scalarInt(
+                """
+                SELECT COUNT(*)
+                FROM delivery_goal_assignment_events AS assignment_event
+                JOIN audit_events AS audit ON audit.id = assignment_event.audit_event_id
+                WHERE assignment_event.audit_event_id = 'assignment-audit'
+                  AND audit.entity_type = 'phase_plan'
+                """
+            )
+        }
+        XCTAssertEqual(committed, 1)
+
+        let raw = try SQLiteConnection(url: databaseURL)
+        try raw.execute("BEGIN IMMEDIATE TRANSACTION")
+        try raw.execute(
+            """
+            INSERT INTO delivery_goal_assignment_events
+                (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action)
+            VALUES ('missing-audit', 'p1', 'phase-1', 'ticket-1', 'goal-1', NULL, 2, 'unassigned')
+            """
+        )
+        XCTAssertThrowsError(try raw.execute("COMMIT"))
+        try? raw.execute("ROLLBACK")
+        XCTAssertEqual(try raw.scalarInt("SELECT COUNT(*) FROM delivery_goal_assignment_events"), 1)
+
+        let invalidEventAuditIDs = (1...6).map { AuditEventID(rawValue: "bad-\($0)") }
+        for auditID in invalidEventAuditIDs {
+            try await store.transact(
+                actor: .init(id: "constraint-probe"),
+                reason: "Authorize isolated assignment-event constraint probe",
+                auditEventID: auditID
+            ) { _ in }
+        }
+        XCTAssertEqual(
+            try raw.scalarInt(
+                "SELECT COUNT(*) FROM audit_events WHERE id IN ('bad-1', 'bad-2', 'bad-3', 'bad-4', 'bad-5', 'bad-6')"
+            ),
+            6
+        )
+
+        for (sql, expectedFailure) in [
+            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-1', 'p1', 'phase-1', 'ticket-1', NULL, NULL, 2, 'assigned')", "CHECK constraint failed"),
+            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-2', 'p1', 'phase-1', 'ticket-1', NULL, 'goal-1', -1, 'assigned')", "CHECK constraint failed"),
+            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-3', 'p1', 'phase-1', 'ticket-1', 'goal-1', 'goal-1', 2, 'reassigned')", "CHECK constraint failed"),
+            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-4', 'p1', 'phase-1', 'ticket-1', 'goal-1', NULL, 2, 'unknown')", "CHECK constraint failed"),
+            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-5', 'p1', 'phase-1', 'ticket-2', NULL, 'goal-1', 2, 'assigned')", "FOREIGN KEY constraint failed"),
+            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-6', 'p1', 'phase-1', 'ticket-1', NULL, 'goal-2', 2, 'assigned')", "FOREIGN KEY constraint failed"),
+        ] {
+            XCTAssertThrowsError(try raw.execute(sql)) { error in
+                XCTAssertTrue(error.localizedDescription.contains(expectedFailure), "Unexpected failure: \(error)")
+            }
+        }
+        XCTAssertEqual(try raw.scalarInt("SELECT COUNT(*) FROM delivery_goal_assignment_events"), 1)
+        XCTAssertNil(try raw.row("PRAGMA foreign_key_check"))
+    }
+
+    func testVersionElevenPhaseInsertCreatesOneLegacyUnassessedPlan() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        try await store.transact(actor: .init(id: "fixture"), reason: "Create future phase") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('p1', 'Project')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'p1', 'Future')")
+        }
+        let plan = try await store.read { connection in
+            try connection.row(
+                "SELECT state, revision, ready_revision, created_at, updated_at, finalized_at FROM phase_plans WHERE project_id = 'p1' AND phase_id = 'phase-1'"
+            )
+        }
+        XCTAssertEqual(plan?["state"], .text("legacy_unassessed"))
+        XCTAssertEqual(plan?["revision"], .integer(0))
+        XCTAssertEqual(plan?["ready_revision"], .null)
+        XCTAssertEqual(plan?["created_at"], plan?["updated_at"])
+        XCTAssertEqual(plan?["finalized_at"], .null)
+        let count = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM phase_plans") }
+        XCTAssertEqual(count, 1)
+    }
+
+    func testVersionElevenContinuationCanOnlyBeGrantedByMigration() async throws {
+        let databaseURL = try copyVerifiedVersionTenFixture()
+        let legacy = try SQLiteConnection(url: databaseURL)
+        try legacy.executeScript("""
+        INSERT INTO projects (id, name) VALUES ('p1', 'Project');
+        INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'p1', 'Phase');
+        INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES
+            ('active', 'p1', 'phase-1', 'Active', 'in_progress'),
+            ('review', 'p1', 'phase-1', 'Review', 'needs_review'),
+            ('blocked', 'p1', 'phase-1', 'Blocked', 'blocked'),
+            ('backlog', 'p1', 'phase-1', 'Backlog', 'backlog'),
+            ('accepted', 'p1', 'phase-1', 'Accepted', 'accepted');
+        """)
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let initial = try await store.read {
+            try $0.scalarText("SELECT group_concat(id, ',') FROM (SELECT id FROM tickets WHERE plan_legacy_continuation = 1 ORDER BY id)")
+        }
+        XCTAssertEqual(initial, "active,review")
+
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "fixture"), reason: "Reject continuation insert") { connection in
+                try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane, plan_legacy_continuation) VALUES ('new', 'p1', 'phase-1', 'New', 'backlog', 1)")
+            }
+        }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Clear continuation") { connection in
+            try connection.execute("UPDATE tickets SET plan_legacy_continuation = 0 WHERE id = 'active'")
+        }
+        await XCTAssertThrowsErrorAsync {
+            try await store.transact(actor: .init(id: "fixture"), reason: "Reject continuation regrant") { connection in
+                try connection.execute("UPDATE tickets SET plan_legacy_continuation = 1 WHERE id = 'active'")
+            }
+        }
+        let final = try await store.read {
+            (
+                try $0.scalarText("SELECT group_concat(id, ',') FROM (SELECT id FROM tickets WHERE plan_legacy_continuation = 1 ORDER BY id)"),
+                try $0.scalarInt("SELECT COUNT(*) FROM tickets WHERE id = 'new'")
+            )
+        }
+        XCTAssertEqual(final.0, "review")
+        XCTAssertEqual(final.1, 0)
+    }
+
+    func testVersionElevenManifestRejectsMissingOrCounterfeitPlanningObjects() async throws {
+        let missingIndexURL = try makeVersionElevenDatabaseURL()
+        try SQLiteConnection(url: missingIndexURL).execute("DROP INDEX delivery_goals_project_phase_identity_unique")
+        await assertMigrationUnavailable(databaseURL: missingIndexURL)
+
+        let counterfeitTriggerURL = try makeVersionElevenDatabaseURL()
+        let counterfeitTrigger = try SQLiteConnection(url: counterfeitTriggerURL)
+        try counterfeitTrigger.execute("DROP TRIGGER phase_plans_after_phase_insert")
+        try counterfeitTrigger.executeScript("""
+        CREATE TRIGGER phase_plans_after_phase_insert AFTER INSERT ON phases
+        BEGIN
+            SELECT 1;
+        END;
+        """)
+        await assertMigrationUnavailable(databaseURL: counterfeitTriggerURL)
+
+        let immediateAuditURL = try makeVersionElevenDatabaseURL()
+        let immediateAudit = try SQLiteConnection(url: immediateAuditURL)
+        try immediateAudit.executeScript("""
+        PRAGMA foreign_keys = OFF;
+        DROP INDEX delivery_goal_assignment_events_ticket_revision_unique;
+        ALTER TABLE delivery_goal_assignment_events
+            RENAME TO delivery_goal_assignment_events_deferred_original;
+        CREATE TABLE delivery_goal_assignment_events (
+            audit_event_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            phase_id TEXT NOT NULL,
+            ticket_id TEXT NOT NULL,
+            previous_goal_id TEXT,
+            current_goal_id TEXT,
+            revision INTEGER NOT NULL CHECK (revision >= 0),
+            action TEXT NOT NULL CHECK (action IN ('assigned', 'unassigned', 'reassigned')),
+            PRIMARY KEY(audit_event_id, ticket_id),
+            FOREIGN KEY(audit_event_id) REFERENCES audit_events(id),
+            FOREIGN KEY(project_id, phase_id) REFERENCES phase_plans(project_id, phase_id),
+            FOREIGN KEY(project_id, phase_id, ticket_id)
+                REFERENCES tickets(project_id, phase_id, id),
+            FOREIGN KEY(project_id, phase_id, previous_goal_id)
+                REFERENCES delivery_goals(project_id, phase_id, id),
+            FOREIGN KEY(project_id, phase_id, current_goal_id)
+                REFERENCES delivery_goals(project_id, phase_id, id),
+            CHECK (
+                (action = 'assigned' AND previous_goal_id IS NULL AND current_goal_id IS NOT NULL)
+                OR (action = 'unassigned' AND previous_goal_id IS NOT NULL AND current_goal_id IS NULL)
+                OR (
+                    action = 'reassigned'
+                    AND previous_goal_id IS NOT NULL
+                    AND current_goal_id IS NOT NULL
+                    AND previous_goal_id <> current_goal_id
+                )
+            )
+        );
+        CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
+            ON delivery_goal_assignment_events(project_id, phase_id, ticket_id, revision);
+        DROP TABLE delivery_goal_assignment_events_deferred_original;
+        PRAGMA foreign_keys = ON;
+        """)
+        await assertMigrationUnavailable(databaseURL: immediateAuditURL)
+
+        let counterfeitContinuationURL = try makeVersionElevenDatabaseURL()
+        do {
+            let counterfeitContinuation = try SQLiteConnection(url: counterfeitContinuationURL)
+            try counterfeitContinuation.executeScript("""
+            PRAGMA foreign_keys = OFF;
+            PRAGMA legacy_alter_table = ON;
+            DROP TRIGGER tickets_reject_legacy_continuation_regrant;
+            DROP TRIGGER tickets_reject_legacy_continuation_insert;
+            ALTER TABLE tickets RENAME TO tickets_exact_original;
+            CREATE TABLE tickets (
+                id TEXT PRIMARY KEY NOT NULL,
+                project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                phase_id TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                lane TEXT NOT NULL CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+                plan_legacy_continuation INTEGER,
+                UNIQUE(project_id, id),
+                FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
+            );
+            INSERT INTO tickets
+                (id, project_id, phase_id, outcome, lane, plan_legacy_continuation)
+            SELECT id, project_id, phase_id, outcome, lane, plan_legacy_continuation
+            FROM tickets_exact_original;
+            DROP TABLE tickets_exact_original;
+            CREATE UNIQUE INDEX tickets_project_phase_identity_unique
+                ON tickets(project_id, phase_id, id);
+            CREATE TRIGGER tickets_reject_legacy_continuation_insert
+            BEFORE INSERT ON tickets
+            WHEN NEW.plan_legacy_continuation = 1
+            BEGIN
+                SELECT RAISE(ABORT, 'legacy continuation is migration-only');
+            END;
+            CREATE TRIGGER tickets_reject_legacy_continuation_regrant
+            BEFORE UPDATE OF plan_legacy_continuation ON tickets
+            WHEN OLD.plan_legacy_continuation = 0 AND NEW.plan_legacy_continuation = 1
+            BEGIN
+                SELECT RAISE(ABORT, 'legacy continuation cannot be regranted');
+            END;
+            PRAGMA legacy_alter_table = OFF;
+            PRAGMA foreign_keys = ON;
+            """)
+        }
+        do {
+            let counterfeitContinuation = try SQLiteConnection(url: counterfeitContinuationURL)
+            try counterfeitContinuation.executeScript("""
+            INSERT INTO projects (id, name) VALUES ('counterfeit', 'Counterfeit');
+            INSERT INTO phases (id, project_id, name) VALUES ('counterfeit-phase', 'counterfeit', 'Counterfeit');
+            INSERT INTO tickets
+                (id, project_id, phase_id, outcome, lane, plan_legacy_continuation)
+            VALUES
+                ('counterfeit-ticket', 'counterfeit', 'counterfeit-phase', 'Counterfeit', 'backlog', 2);
+            """)
+            XCTAssertEqual(
+                try counterfeitContinuation.scalarInt(
+                    "SELECT plan_legacy_continuation FROM tickets WHERE id = 'counterfeit-ticket'"
+                ),
+                2
+            )
+        }
+        await assertMigrationUnavailable(databaseURL: counterfeitContinuationURL)
+
+        let semanticCounterfeitContinuationURL = try makeVersionElevenDatabaseURL()
+        do {
+            let semanticCounterfeitContinuation = try SQLiteConnection(
+                url: semanticCounterfeitContinuationURL
+            )
+            try semanticCounterfeitContinuation.executeScript("""
+            PRAGMA foreign_keys = OFF;
+            PRAGMA legacy_alter_table = ON;
+            DROP TRIGGER tickets_reject_legacy_continuation_regrant;
+            DROP TRIGGER tickets_reject_legacy_continuation_insert;
+            ALTER TABLE tickets RENAME TO tickets_exact_original;
+            CREATE TABLE tickets (
+                id TEXT PRIMARY KEY NOT NULL,
+                project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                phase_id TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                lane TEXT NOT NULL CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+                plan_legacy_continuation INTEGER NOT NULL DEFAULT 0,
+                CHECK (
+                    'plan_legacy_continuation INTEGER NOT NULL DEFAULT 0 CHECK (plan_legacy_continuation IN (0, 1))' <> ''
+                ),
+                UNIQUE(project_id, id),
+                FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
+            );
+            INSERT INTO tickets
+                (id, project_id, phase_id, outcome, lane, plan_legacy_continuation)
+            SELECT id, project_id, phase_id, outcome, lane, plan_legacy_continuation
+            FROM tickets_exact_original;
+            DROP TABLE tickets_exact_original;
+            CREATE UNIQUE INDEX tickets_project_phase_identity_unique
+                ON tickets(project_id, phase_id, id);
+            CREATE TRIGGER tickets_reject_legacy_continuation_insert
+            BEFORE INSERT ON tickets
+            WHEN NEW.plan_legacy_continuation = 1
+            BEGIN
+                SELECT RAISE(ABORT, 'legacy continuation is migration-only');
+            END;
+            CREATE TRIGGER tickets_reject_legacy_continuation_regrant
+            BEFORE UPDATE OF plan_legacy_continuation ON tickets
+            WHEN OLD.plan_legacy_continuation = 0 AND NEW.plan_legacy_continuation = 1
+            BEGIN
+                SELECT RAISE(ABORT, 'legacy continuation cannot be regranted');
+            END;
+            PRAGMA legacy_alter_table = OFF;
+            PRAGMA foreign_keys = ON;
+            INSERT INTO projects (id, name) VALUES ('semantic-counterfeit', 'Semantic Counterfeit');
+            INSERT INTO phases (id, project_id, name)
+            VALUES ('semantic-counterfeit-phase', 'semantic-counterfeit', 'Semantic Counterfeit');
+            INSERT INTO tickets
+                (id, project_id, phase_id, outcome, lane, plan_legacy_continuation)
+            VALUES (
+                'semantic-counterfeit-ticket',
+                'semantic-counterfeit',
+                'semantic-counterfeit-phase',
+                'Semantic Counterfeit',
+                'backlog',
+                2
+            );
+            """)
+            XCTAssertEqual(
+                try semanticCounterfeitContinuation.scalarInt(
+                    "SELECT plan_legacy_continuation FROM tickets WHERE id = 'semantic-counterfeit-ticket'"
+                ),
+                2
+            )
+            XCTAssertNil(try semanticCounterfeitContinuation.row("PRAGMA foreign_key_check"))
+        }
+        await assertMigrationUnavailable(databaseURL: semanticCounterfeitContinuationURL)
+    }
+
+    func testVersionElevenMigrationFailureRollsBackToExactVersionTenStateAndRecovers() async throws {
+        let databaseURL = try copyVerifiedVersionTenFixture()
+        let legacy = try SQLiteConnection(url: databaseURL)
+        try seedCompleteVersionTenGraph(legacy)
+        let beforeMigration = try semanticVersionTenSnapshot(legacy)
+        try legacy.executeScript("""
+        CREATE TRIGGER task1b_abort_continuation_backfill
+        BEFORE UPDATE ON tickets
+        BEGIN
+            SELECT RAISE(ABORT, 'task1b late migration failure');
+        END;
+        """)
+
+        let failed = DeliveryStore(databaseURL: databaseURL)
+        guard case let .unavailable(recovery) = await failed.availability else {
+            return XCTFail("Expected the injected late-v11 failure")
+        }
+        XCTAssertEqual(recovery.kind, .migration)
+        XCTAssertEqual(recovery.originalDatabaseURL, databaseURL)
+        let snapshotURL = try XCTUnwrap(recovery.preMigrationSnapshotURL)
+        for recoverableURL in [databaseURL, snapshotURL] {
+            let recoverable = try SQLiteConnection(url: recoverableURL)
+            XCTAssertEqual(try recoverable.scalarInt("PRAGMA user_version"), 10)
+            XCTAssertEqual(try semanticVersionTenSnapshot(recoverable), beforeMigration)
+            XCTAssertEqual(try recoverable.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE type = 'trigger' AND name = 'task1b_abort_continuation_backfill'"), 1)
+            XCTAssertEqual(try recoverable.scalarInt("SELECT COUNT(*) FROM pragma_table_info('tickets') WHERE name = 'plan_legacy_continuation'"), 0)
+            XCTAssertEqual(try recoverable.scalarInt("SELECT COUNT(*) FROM sqlite_schema WHERE name IN ('phase_plans', 'delivery_goals', 'delivery_goal_done_criteria', 'delivery_goal_ticket_assignments', 'delivery_goal_assignment_events')"), 0)
+            XCTAssertEqual(try recoverable.scalarInt("SELECT COUNT(*) FROM audit_events"), 1)
+            XCTAssertEqual(try recoverable.scalarInt("SELECT COUNT(*) FROM notification_events"), 1)
+            XCTAssertEqual(try recoverable.scalarInt("SELECT COUNT(*) FROM agent_command_requests"), 1)
+        }
+
+        let original = try SQLiteConnection(url: databaseURL)
+        try original.execute("DROP TRIGGER task1b_abort_continuation_backfill")
+        var recovered: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        guard case .available = await recovered!.availability else {
+            return XCTFail("Expected normal migration after removing only the injected trigger")
+        }
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 11)
+        XCTAssertEqual(try semanticVersionTenSnapshot(SQLiteConnection(url: databaseURL)), beforeMigration)
+        recovered = nil
+        let relaunched = DeliveryStore(databaseURL: databaseURL)
+        guard case .available = await relaunched.availability else {
+            return XCTFail("Expected recovered v11 state to relaunch")
+        }
+        XCTAssertEqual(try semanticVersionTenSnapshot(SQLiteConnection(url: databaseURL)), beforeMigration)
+        XCTAssertNil(try SQLiteConnection(url: databaseURL).row("PRAGMA foreign_key_check"))
+    }
+
     func testSuccessfulTicketTransitionCommitsAttributedAuditEvent() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
@@ -550,6 +1116,7 @@ final class StoreAcceptanceTests: XCTestCase {
         currentStore = nil
 
         let legacy = try SQLiteConnection(url: databaseURL)
+        try removeVersionElevenSchema(legacy)
         try legacy.executeScript("""
         DROP TABLE codex_plugin_lifecycle;
         DROP TABLE alert_rules;
@@ -583,7 +1150,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(state.0, "single-phase")
         XCTAssertNil(state.1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 11)
     }
 
     func testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity() async throws {
@@ -631,6 +1198,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
 
         let legacy = try SQLiteConnection(url: databaseURL)
+        try removeVersionElevenSchema(legacy)
         try legacy.executeScript("""
         DROP TABLE codex_plugin_lifecycle;
         DROP TABLE alert_rules;
@@ -666,7 +1234,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL))
         XCTAssertEqual(relaunchedLinkCount, 1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 11)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 7)
         XCTAssertNil(try snapshot.scalarText("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'ticket_goal_links'"))
         XCTAssertEqual(try snapshot.scalarText("SELECT outcome FROM tickets WHERE id = 'ONE'"), "Owner-authored unambiguous outcome")
@@ -739,6 +1307,7 @@ final class StoreAcceptanceTests: XCTestCase {
         _ = legacyStore
         legacyStore = nil
         let legacy = try SQLiteConnection(url: databaseURL)
+        try removeVersionElevenSchema(legacy)
         try legacy.executeScript("""
         DROP TABLE IF EXISTS codex_plugin_lifecycle;
         DROP TABLE IF EXISTS alert_rules;
@@ -752,7 +1321,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertTrue(initial[.agentCompletionAndReview])
         XCTAssertTrue(initial[.needsReviewEntry])
         XCTAssertFalse(initial[.pausedGoals])
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 11)
 
         let schema = try SQLiteConnection(url: databaseURL)
         XCTAssertThrowsError(try schema.execute("INSERT INTO alert_rules (kind, is_enabled) VALUES ('unknown', 1)"))
@@ -799,6 +1368,7 @@ final class StoreAcceptanceTests: XCTestCase {
         _ = currentStore
         currentStore = nil
         let legacy = try SQLiteConnection(url: databaseURL)
+        try removeVersionElevenSchema(legacy)
         try legacy.executeScript("""
         DROP TABLE codex_plugin_lifecycle;
         PRAGMA user_version = 9;
@@ -812,7 +1382,7 @@ final class StoreAcceptanceTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 11)
         XCTAssertEqual(state.0, 1)
         XCTAssertEqual(state.1, "neverInstalled")
     }
@@ -827,12 +1397,12 @@ final class StoreAcceptanceTests: XCTestCase {
 
         let relaunched = DeliveryStore(databaseURL: databaseURL)
         guard case let .unavailable(recovery) = await relaunched.availability else {
-            return XCTFail("Expected missing lifecycle singleton to make version 10 unavailable")
+            return XCTFail("Expected missing lifecycle singleton to make version 11 unavailable")
         }
         XCTAssertEqual(recovery.kind, .migration)
         let original = try SQLiteConnection(url: databaseURL)
         let snapshot = try SQLiteConnection(url: try XCTUnwrap(recovery.preMigrationSnapshotURL))
-        XCTAssertEqual(try original.scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(try original.scalarInt("PRAGMA user_version"), 11)
         XCTAssertEqual(try original.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle"), 0)
         XCTAssertEqual(try snapshot.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle"), 0)
     }
@@ -859,7 +1429,7 @@ final class StoreAcceptanceTests: XCTestCase {
 
         let relaunched = DeliveryStore(databaseURL: databaseURL)
         guard case .unavailable = await relaunched.availability else {
-            return XCTFail("Expected malformed lifecycle singleton to make version 10 unavailable")
+            return XCTFail("Expected malformed lifecycle singleton to make version 11 unavailable")
         }
         XCTAssertEqual(
             try SQLiteConnection(url: databaseURL).scalarText(
@@ -968,7 +1538,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 10)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 11)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }
@@ -1022,6 +1592,183 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertNil(try original.scalarText("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tickets'"))
     }
 
+    private static let versionElevenOwnershipSeedSQL = """
+    INSERT INTO projects (id, name) VALUES ('p1', 'Project One'), ('p2', 'Project Two');
+    INSERT INTO phases (id, project_id, name) VALUES
+        ('phase-1', 'p1', 'One'),
+        ('phase-2', 'p1', 'Two'),
+        ('phase-3', 'p2', 'Three');
+    INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES
+        ('ticket-1', 'p1', 'phase-1', 'One', 'backlog'),
+        ('ticket-2', 'p1', 'phase-2', 'Two', 'backlog'),
+        ('ticket-3', 'p2', 'phase-3', 'Three', 'backlog');
+    INSERT INTO delivery_goals
+        (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at)
+    VALUES
+        ('p1', 'phase-1', 'goal-1', 'Goal one', 'Outcome one', 'draft', 0, 't', 't'),
+        ('p1', 'phase-1', 'goal-1b', 'Goal one B', 'Outcome one B', 'draft', 1, 't', 't'),
+        ('p1', 'phase-2', 'goal-2', 'Goal two', 'Outcome two', 'draft', 0, 't', 't'),
+        ('p2', 'phase-3', 'goal-3', 'Goal three', 'Outcome three', 'draft', 0, 't', 't');
+    """
+
+    private func copyVerifiedVersionTenFixture() throws -> URL {
+        let testsDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let fixtureDirectory = testsDirectory.appendingPathComponent("Fixtures/SchemaV10", isDirectory: true)
+        let fixtureURL = fixtureDirectory.appendingPathComponent("release-radar-v10.sqlite")
+        let sumsURL = fixtureDirectory.appendingPathComponent("SHA256SUMS")
+        let sumFields = try String(contentsOf: sumsURL, encoding: .utf8)
+            .split(whereSeparator: \.isWhitespace)
+        let expectedDigest = try XCTUnwrap(sumFields.first.map(String.init))
+        let fixtureData = try Data(contentsOf: fixtureURL)
+        let actualDigest = SHA256.hash(data: fixtureData).map { String(format: "%02x", $0) }.joined()
+        XCTAssertEqual(actualDigest, expectedDigest)
+        XCTAssertEqual(expectedDigest, "9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559")
+
+        let databaseURL = try makeDatabaseURL()
+        try FileManager.default.copyItem(at: fixtureURL, to: databaseURL)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 10)
+        return databaseURL
+    }
+
+    private func seedCompleteVersionTenGraph(_ connection: SQLiteConnection) throws {
+        try connection.executeScript("""
+        INSERT INTO projects (id, name, first_dashboard_opened) VALUES
+            ('project-main', 'Main', 1),
+            ('project-other', 'Other', 0);
+        INSERT INTO project_roots (id, project_id, path) VALUES
+            ('root-main', 'project-main', '/tmp/main'),
+            ('root-other', 'project-other', '/tmp/other');
+        INSERT INTO phases (id, project_id, name) VALUES
+            ('phase-1', 'project-main', 'Established'),
+            ('phase-2', 'project-main', 'Next');
+        INSERT INTO project_active_phases (project_id, phase_id)
+            VALUES ('project-main', 'phase-2');
+        INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES
+            ('ticket-backlog', 'project-main', 'phase-1', 'Backlog outcome', 'backlog'),
+            ('ticket-active', 'project-main', 'phase-1', 'Active outcome', 'in_progress'),
+            ('ticket-review', 'project-main', 'phase-2', 'Review outcome', 'needs_review'),
+            ('ticket-blocked', 'project-main', 'phase-2', 'Blocked outcome', 'blocked'),
+            ('ticket-accepted', 'project-main', 'phase-1', 'Accepted outcome', 'accepted');
+        INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id)
+            VALUES ('phase-dependency', 'project-main', 'phase-2', 'phase-1');
+        INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id)
+            VALUES ('ticket-dependency', 'project-main', 'ticket-review', 'ticket-accepted');
+        INSERT INTO blockers (id, project_id, ticket_id, summary, resolved_at)
+            VALUES ('blocker', 'project-main', 'ticket-blocked', 'Still unresolved', NULL);
+        INSERT INTO evidence (id, project_id, ticket_id, path, is_available)
+            VALUES ('evidence', 'project-main', 'ticket-active', '/tmp/evidence', 1);
+        INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status)
+            VALUES ('review', 'project-main', 'ticket-review', 'acceptance', 'Review it', 'open');
+        INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at)
+            VALUES ('completion', 'project-main', 'ticket-accepted', 'Completed', '2026-08-29T10:00:00Z');
+        INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale)
+            VALUES ('project-main', '/tmp/main', X'00010203', 0);
+        INSERT INTO thread_exclusions (id, project_id, thread_id, reason)
+            VALUES ('exclusion', 'project-main', 'excluded-thread', 'Private');
+        INSERT INTO observed_threads (id, project_id, status, last_observed_at)
+            VALUES ('thread-1', 'project-main', 'running', '2026-08-29T10:00:00Z');
+        INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at)
+            VALUES ('observed-goal-1', 'project-main', 'thread-1', 'active', 'Observed execution', '2026-08-29T10:00:00Z');
+        INSERT INTO thread_links (id, project_id, ticket_id, thread_id)
+            VALUES ('thread-link', 'project-main', 'ticket-active', 'thread-1');
+        INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id)
+            VALUES ('goal-link', 'project-main', 'ticket-active', 'thread-1', 'observed-goal-1');
+        INSERT INTO notification_events
+            (id, fingerprint, state, ticket_id, goal_id, provider_receipt, acknowledged_at,
+             project_id, event_kind, subject_id, occurrence, title, message, created_at,
+             attempt_count, attempt_started_at, completed_at, failure_code)
+            VALUES
+            ('notification', 'fingerprint', 'delivered', 'ticket-active', 'observed-goal-1',
+             'receipt', NULL, 'project-main', 'goal_blocked', 'observed-goal-1', 1,
+             'Blocked', 'Observed goal blocked', '2026-08-29T10:00:00Z', 1,
+             '2026-08-29T10:00:01Z', '2026-08-29T10:00:02Z', NULL);
+        INSERT INTO notification_occurrences
+            (subject_key, project_id, event_kind, subject_id, generation, is_active)
+            VALUES ('project-main|observed-goal-1', 'project-main', 'goal_blocked', 'observed-goal-1', 1, 1);
+        UPDATE alert_rules SET is_enabled = 1 WHERE kind = 'paused_goals';
+        UPDATE codex_plugin_lifecycle
+            SET intent = 'managedInstalled', managed_version = '0.1.0', managed_digest = 'digest',
+                verified_at = '2026-08-29T10:00:00Z'
+            WHERE plugin_id = 'release-radar';
+        INSERT INTO audit_events
+            (id, actor_id, thread_id, reason, created_at, thread_attribution, project_id, entity_type, entity_id)
+            VALUES ('audit-seeded', 'agent', 'thread-1', 'Seed graph', '2026-08-29T10:00:00Z',
+                    'verified', 'project-main', 'ticket', 'ticket-active');
+        INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at)
+            VALUES ('request-1', X'010203', X'040506', '2026-08-29T10:00:00Z');
+        """)
+        XCTAssertNil(try connection.row("PRAGMA foreign_key_check"))
+    }
+
+    private func semanticVersionTenSnapshot(_ connection: SQLiteConnection) throws -> [String: String] {
+        let queries: [(String, String)] = [
+            ("projects", "SELECT json_group_array(json_array(id,name,first_dashboard_opened)) FROM (SELECT * FROM projects ORDER BY id)"),
+            ("project_roots", "SELECT json_group_array(json_array(id,project_id,path)) FROM (SELECT * FROM project_roots ORDER BY id)"),
+            ("phases", "SELECT json_group_array(json_array(id,project_id,name)) FROM (SELECT * FROM phases ORDER BY id)"),
+            ("tickets", "SELECT json_group_array(json_array(id,project_id,phase_id,outcome,lane)) FROM (SELECT id,project_id,phase_id,outcome,lane FROM tickets ORDER BY id)"),
+            ("phase_dependencies", "SELECT json_group_array(json_array(id,project_id,phase_id,depends_on_phase_id)) FROM (SELECT * FROM phase_dependencies ORDER BY id)"),
+            ("ticket_dependencies", "SELECT json_group_array(json_array(id,project_id,ticket_id,depends_on_ticket_id)) FROM (SELECT * FROM ticket_dependencies ORDER BY id)"),
+            ("blockers", "SELECT json_group_array(json_array(id,project_id,ticket_id,summary,resolved_at)) FROM (SELECT * FROM blockers ORDER BY id)"),
+            ("evidence", "SELECT json_group_array(json_array(id,project_id,ticket_id,path,is_available)) FROM (SELECT * FROM evidence ORDER BY id)"),
+            ("thread_exclusions", "SELECT json_group_array(json_array(id,project_id,thread_id,reason)) FROM (SELECT * FROM thread_exclusions ORDER BY id)"),
+            ("observed_threads", "SELECT json_group_array(json_array(id,project_id,status,last_observed_at)) FROM (SELECT * FROM observed_threads ORDER BY id)"),
+            ("observed_goals", "SELECT json_group_array(json_array(id,project_id,thread_id,status,text,last_observed_at)) FROM (SELECT * FROM observed_goals ORDER BY id)"),
+            ("thread_links", "SELECT json_group_array(json_array(id,project_id,ticket_id,thread_id)) FROM (SELECT * FROM thread_links ORDER BY id)"),
+            ("review_items", "SELECT json_group_array(json_array(id,project_id,ticket_id,kind,summary,status)) FROM (SELECT * FROM review_items ORDER BY id)"),
+            ("audit_events", "SELECT json_group_array(json_array(id,actor_id,thread_id,reason,created_at,thread_attribution,project_id,entity_type,entity_id)) FROM (SELECT * FROM audit_events ORDER BY id)"),
+            ("notification_events", "SELECT json_group_array(json_array(id,fingerprint,state,ticket_id,goal_id,provider_receipt,acknowledged_at,project_id,event_kind,subject_id,occurrence,title,message,created_at,attempt_count,attempt_started_at,completed_at,failure_code)) FROM (SELECT * FROM notification_events ORDER BY id)"),
+            ("completion_records", "SELECT json_group_array(json_array(id,project_id,ticket_id,summary,created_at)) FROM (SELECT * FROM completion_records ORDER BY id)"),
+            ("agent_command_requests", "SELECT json_group_array(json_array(request_id,hex(request_body),hex(result_data),created_at)) FROM (SELECT * FROM agent_command_requests ORDER BY request_id)"),
+            ("project_bookmarks", "SELECT json_group_array(json_array(project_id,path,hex(bookmark_data),is_stale)) FROM (SELECT * FROM project_bookmarks ORDER BY project_id,path)"),
+            ("project_active_phases", "SELECT json_group_array(json_array(project_id,phase_id)) FROM (SELECT * FROM project_active_phases ORDER BY project_id)"),
+            ("notification_occurrences", "SELECT json_group_array(json_array(subject_key,project_id,event_kind,subject_id,generation,is_active)) FROM (SELECT * FROM notification_occurrences ORDER BY subject_key)"),
+            ("ticket_goal_links", "SELECT json_group_array(json_array(id,project_id,ticket_id,thread_id,goal_id)) FROM (SELECT * FROM ticket_goal_links ORDER BY id)"),
+            ("alert_rules", "SELECT json_group_array(json_array(kind,is_enabled)) FROM (SELECT * FROM alert_rules ORDER BY kind)"),
+            ("codex_plugin_lifecycle", "SELECT json_group_array(json_array(plugin_id,intent,managed_version,managed_digest,verified_at)) FROM (SELECT * FROM codex_plugin_lifecycle ORDER BY plugin_id)"),
+        ]
+        return try Dictionary(uniqueKeysWithValues: queries.map { name, query in
+            (name, try XCTUnwrap(connection.scalarText(query), "Missing semantic snapshot for \(name)"))
+        })
+    }
+
+    private func makeVersionElevenDatabaseURL() throws -> URL {
+        let databaseURL = try makeDatabaseURL()
+        var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
+        _ = store
+        store = nil
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 11)
+        return databaseURL
+    }
+
+    private func removeVersionElevenSchema(_ connection: SQLiteConnection) throws {
+        try connection.executeScript("""
+        DROP TRIGGER tickets_reject_legacy_continuation_regrant;
+        DROP TRIGGER tickets_reject_legacy_continuation_insert;
+        DROP TRIGGER phase_plans_after_phase_insert;
+        DROP TABLE delivery_goal_assignment_events;
+        DROP TABLE delivery_goal_ticket_assignments;
+        DROP TABLE delivery_goal_done_criteria;
+        DROP TABLE delivery_goals;
+        DROP TABLE phase_plans;
+        DROP INDEX tickets_project_phase_identity_unique;
+        ALTER TABLE tickets DROP COLUMN plan_legacy_continuation;
+        """)
+    }
+
+    private func assertMigrationUnavailable(
+        databaseURL: URL,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        guard case let .unavailable(recovery) = await store.availability else {
+            return XCTFail("Expected schema drift to fail closed", file: file, line: line)
+        }
+        XCTAssertEqual(recovery.kind, .migration, file: file, line: line)
+        XCTAssertEqual(recovery.originalDatabaseURL, databaseURL, file: file, line: line)
+        XCTAssertNotNil(recovery.preMigrationSnapshotURL, file: file, line: line)
+    }
+
     private func seedProject(_ store: DeliveryStore) async throws {
         try await store.transact(actor: .init(id: "agent-seed"), reason: "Seed project") { connection in
             try connection.execute("INSERT INTO projects (id, name) VALUES ('project-1', 'Release Radar')")
@@ -1072,6 +1819,17 @@ final class StoreAcceptanceTests: XCTestCase {
             XCTFail("Expected expression to throw", file: file, line: line)
         } catch {}
     }
+}
+
+private struct DeliveryGoalModelEnvelope: Codable, Equatable {
+    let draft: DeliveryGoalDraft
+    let assignment: DeliveryGoalAssignment
+    let phasePlan: PhasePlanRecord
+    let goal: DeliveryGoalRecord
+    let criterion: DeliveryGoalCriterionRecord
+    let assignmentRecord: DeliveryGoalAssignmentRecord
+    let assignmentEvent: DeliveryGoalAssignmentEventRecord
+    let readinessFailure: PhasePlanReadinessFailure
 }
 
 private enum CallbackFailure: Error {

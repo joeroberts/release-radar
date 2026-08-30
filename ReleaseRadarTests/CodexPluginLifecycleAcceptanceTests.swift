@@ -382,7 +382,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-owner' AND reason = 'Install Release Radar Codex plugin'")
             )
         }
-        XCTAssertEqual(schemaVersion, 10)
+        XCTAssertEqual(schemaVersion, 11)
         XCTAssertEqual(persisted.0, 1)
         XCTAssertEqual(persisted.1, 1)
     }
