@@ -78,6 +78,13 @@ The Xcode project uses file-system-synchronized groups, so these files require n
 
 ### Task 1: Add the v11 persistence foundation
 
+**Owner-size split:** Deliver this original outcome through two dependency-safe
+checkpoints. Task 1A generates, proves, reviews, commits, pushes, and remotely
+verifies the genuine schema-v10 fixture before any v11 production edit. Task
+1B then delivers the public models plus complete additive v11 migration and
+preservation proof. The split changes commit/review boundaries only; together
+the two briefs cover every Task 1 requirement.
+
 **Files:**
 - Create: `ReleaseRadarCore/Models/DeliveryGoalModels.swift`
 - Modify: `ReleaseRadarCore/Store/DeliveryStore.swift`
@@ -85,7 +92,8 @@ The Xcode project uses file-system-synchronized groups, so these files require n
 - Modify: `ReleaseRadarTests/StoreAcceptanceTests.swift`
 - Create: `ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite`
 - Create: `ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS`
-- Create: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1-v11-persistence-brief.md`
+- Create: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1a-schema-v10-fixture-brief.md`
+- Create: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1b-v11-persistence-models-brief.md`
 
 **Interfaces:**
 - Produces: `DeliveryGoalID`, `PhasePlanState`, `DeliveryGoalLifecycle`, `PhasePlanRecord`, `DeliveryGoalRecord`, `DeliveryGoalCriterionRecord`, `DeliveryGoalAssignmentRecord`, `DeliveryGoalAssignmentEventRecord`, `PhasePlanReadinessFailure`.
@@ -97,10 +105,17 @@ The Xcode project uses file-system-synchronized groups, so these files require n
 Have a fresh independent Planning agent record the objective, exact
 spec/ADR/design references, in/out scope, migration risk, v10 fixture,
 foreign-key/rollback strategy, no-inference rule, test commands, independent
-reviewers, and expected ledger evidence. Register its SHA-256 in
+reviewers, and expected ledger evidence in the two split briefs. Register both SHA-256 values in
 `docs/delivery/task-briefs/SHA256SUMS` using the existing format. Architecture,
 TPM, QA/Test, Delivery Management, and Security/Privacy must return GO with
 Required 0 on that exact brief before Step 2 begins.
+
+After Required-0 closure, create a planning-only checkpoint before any
+generator or product edit. Stage only `.gitignore`, this split amendment, both
+registered briefs, `docs/delivery/task-briefs/SHA256SUMS`, and the planning/
+review evidence in `docs/delivery/progress.md`. Commit, push, and verify exact
+local/remote SHA equality with ahead/behind `0/0`; Step 2 remains closed until
+that checkpoint is remotely exact.
 
 - [ ] **Step 2: Generate one genuine schema-v10 fixture before changing production code**
 
@@ -137,6 +152,11 @@ Remove the generator test immediately, verify the fixture directly reports
 schema 10 and contains no v11 table, column, index, or trigger, then write its
 SHA-256 to `ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS`. The fixture and
 digest are durable test inputs; the removed generator is not a deliverable.
+Require fresh postimplementation Code Review and QA plus Architecture,
+Security/Privacy, TPM, and Delivery Management GO with Required 0. Update the
+ledger, stage only the two fixture artifacts and `docs/delivery/progress.md`,
+commit/push Task 1A, and verify exact remote equality before Step 3/Task 1B
+opens.
 
 - [ ] **Step 3: Write RED model and migration tests against the exact fixture**
 
@@ -279,11 +299,13 @@ Expected: all selected tests pass after updating assertions that truthfully expe
 
 - [ ] **Step 9: Independent gate, ledger update, commit, and remote verification**
 
-Run `git diff --check` and require the task's independent reviews to return GO
-with Required 0. Record exact commands/results and reviewer dispositions in
-`docs/delivery/progress.md`. Stage only Task 1 paths, inspect the staged diff,
-commit the fully verified task, push `codex/release-radar-mvp`, and verify local
-HEAD equals the remote branch SHA before Task 2 opens.
+This is the Task 1B gate; Task 1A must already be committed, pushed, and
+remotely exact. Run `git diff --check` and require Task 1B's independent reviews
+to return GO with Required 0. Record exact commands/results and reviewer
+dispositions in `docs/delivery/progress.md`. Stage only Task 1B model/store/test
+paths plus the ledger, inspect the staged diff, commit the fully verified task,
+push `codex/release-radar-mvp`, and verify local HEAD equals the remote branch
+SHA before Task 2 opens.
 
 ---
 

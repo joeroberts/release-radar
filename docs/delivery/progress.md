@@ -114,7 +114,7 @@ Deliver the signed native macOS MVP described by
   large for one coherent review, must be split into smaller dependency-safe,
   fully testable tasks with separate verification and Git checkpoints. Current
   artifact hashes are plan
-  `5ea16874c71934e26f5c30d0f76af4071b6b8fe9e3aa49e6113cd476c5b53d90`,
+  `c86cab9fcfe90c31dfa92331dee66c154e27b16ebfc2ba4d4eb817edf3bec0c2`,
   spec `c1327bf8272a0a76b8e7eb235f41f149908b1de783d3fdd058425d416b6d7ed8`,
   ADR `cb6fbb55585fc9493f255e7efe83eccb9d9d64c0492e1d11b3d5510799254420`,
   and board contract
@@ -162,10 +162,72 @@ Deliver the signed native macOS MVP described by
   complete task after full verification, splitting a task before coding when
   its forecast or review surface is too large. This replaces the prior agent-
   inferred single-terminal-commit interpretation.
-- Next eligible RR-R10 work: **Commit and remotely verify the approved planning
-  package, then commission and independently release the Task 1 planning
-  brief.** No product implementation, installed repair, or ticket mutation is
-  authorized before that brief passes its required preimplementation reviews.
+- RR-R10 approved planning-package Git checkpoint: commit
+  `363a2c7acb5a89405bc282bc8186a5f69d4c7d8d` contains only the five approved
+  RR-R10 planning/design/architecture/ledger paths and was pushed to
+  `origin/codex/release-radar-mvp`. Fresh verification returned the same exact
+  local and remote SHA with ahead/behind `0/0`; unrelated `default.profraw`
+  remained untracked and untouched.
+- RR-R10 Task 1 planning split: a fresh Planning agent assessed the original
+  persistence task at roughly 9–12 agent-working hours and split it without
+  reducing scope. Task 1A freezes and proves the genuine schema-v10 fixture
+  before any v11 production edit; Task 1B then delivers all public models and
+  the complete additive v11 migration/preservation contract. Canonical briefs
+  are registered at SHA-256
+  `e065f997e625cd8f1e0f8d62214b09d43d74f6bec9fdab4fbe6a85af112e8576`
+  and
+  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`.
+  The plan's local split amendment is SHA-256
+  `c86cab9fcfe90c31dfa92331dee66c154e27b16ebfc2ba4d4eb817edf3bec0c2`.
+  The corrected Git boundary creates a planning-only checkpoint first,
+  containing the owner-directed `.gitignore` change, both registered briefs,
+  checksum index, split amendment, and canonical planning/review evidence.
+  Only after exact remote verification may Task 1A generate the fixture; its
+  separate accepted commit contains only the two fixture artifacts plus
+  postimplementation ledger evidence. Task 1B later includes its canonical
+  evidence with the verified product/test diff. `default.profraw` is now
+  ignored and remains untouched.
+- RR-R10 Task 1 initial brief review: exact prior brief SHAs
+  `6a5f4806330d66c50453ffdaa1bcabdb2e993c786ccff5ea4893c32acf92440c`
+  and
+  `ee92a5693df7caa4ad944da0d5f870c05792741d61a394399598528add655443`
+  received TPM and Delivery Management GO/Required 0. Architecture returned
+  Task 1A NO-GO/Required 1 for the circular planning/implementation Git gate
+  and Task 1B GO/Required 0. QA returned Task 1A NO-GO/Required 1 because the
+  fixture inspection omitted owner-data tables, exact defaults, and complete
+  schema inventory; it returned Task 1B NO-GO/Required 1 because no deliberate
+  late-v11 rollback test exercised the additive migration. Security/Privacy
+  independently confirmed the Task 1A inspection defect and returned Task 1B
+  content GO/Required 0. The corrected exact artifacts now separate the
+  planning-only remote checkpoint, enumerate every v10 application table plus
+  exact default/schema inventory, and require a test-only abort-trigger failure
+  after v11 work begins with exact original/snapshot rollback and recovery.
+  The first closure pass accepted Task 1B with Required 0 but Architecture and
+  QA correctly retained Task 1A NO-GO/Required 1 because the exact schema CTE
+  still omitted three real v8 indexes. The final Task 1A brief now includes
+  `observed_goals_project_identity_unique`,
+  `ticket_goal_links_project_ticket_unique`, and
+  `ticket_goal_links_project_goal_unique`, making the expected v10 inventory
+  exactly 23 tables, seven explicit indexes, and four triggers.
+- RR-R10 Task 1 final exact-hash closure: against plan
+  `c86cab9fcfe90c31dfa92331dee66c154e27b16ebfc2ba4d4eb817edf3bec0c2`,
+  Task 1A brief
+  `e065f997e625cd8f1e0f8d62214b09d43d74f6bec9fdab4fbe6a85af112e8576`,
+  and Task 1B brief
+  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`,
+  Architecture, QA/Test, and Security/Privacy each returned GO with Required 0,
+  Optional 0, Out-of-scope 0 for both briefs. TPM and Delivery Management each
+  returned Task 1A GO with Required 0/Optional 0/Out-of-scope 0 and Task 1B
+  content GO with the same counts while retaining its dependency block. These
+  verdicts close the circular checkpoint, complete fixture inventory, and
+  late-migration rollback findings. Task 1A is released only through its
+  planning-only Git checkpoint; Task 1B is not released.
+- Next eligible RR-R10 work: **Create and remotely verify the exact planning-
+  only Git checkpoint.** Stage only `.gitignore`, the split plan, both exact
+  briefs, `docs/delivery/task-briefs/SHA256SUMS`, and this planning/review
+  ledger evidence. The generator remains closed until local/remote SHA equality
+  and ahead/behind `0/0` are proven. No product implementation, installed
+  repair, or ticket mutation is authorized at this checkpoint.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
