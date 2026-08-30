@@ -362,17 +362,52 @@ Deliver the signed native macOS MVP described by
   and remotely exact before one fresh recovery Implementer validates and copies
   the preserved bytes, creates the checksum, and runs the complete assertions
   and regressions.
-- Next eligible RR-R10 work: **Close Architecture, QA/Test, Security/Privacy,
-  TPM, and Delivery Management on the exact attachment-correction hashes, then
-  commit/push that planning correction and verify exact local/remote SHA with
-  ahead/behind `0/0`.** Only after that remote checkpoint may one fresh Task 1A
-  recovery Implementer run only the exact preserved-result validation, copy,
-  checksum, complete SQLite assertions, source-removal proof, and regression
-  sequence. That Implementer must not edit `StoreAcceptanceTests.swift`, rerun
-  the generator, or rerun attachment export, and may leave only the fixture and
-  local checksum. Task 1B and every product edit remain dependency-blocked until
-  Task 1A passes all postimplementation reviews and its exact commit is remotely
-  verified.
+- RR-R10 Task 1A preserved-result recovery checkpoint: commit
+  `40bcbb3e3bcbd9c80ea3d183a3751c0d80cc148a` contains exactly the corrected
+  plan, registered Task 1A brief and checksum index, and canonical passing-
+  result/review evidence. It was pushed to
+  `origin/codex/release-radar-mvp`; fresh remote-ref readback returned the same
+  exact SHA with ahead/behind `0/0`. One fresh recovery-only Implementer is now
+  released under the no-generator/no-export/no-source-edit boundary. Task 1B
+  remains blocked.
+- RR-R10 Task 1A recovery implementation evidence: the fresh recovery-only
+  Implementer ran the exact preserved-result command with exit 0 and did not
+  rerun build, generator, test execution, or attachment export. The preserved
+  result remained 1/1 passed with zero failed/skipped/expected failures; the
+  exact one nonfailure attachment and strict Xcode name validated; exported
+  bytes matched pinned SHA-256
+  `9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559`
+  before the one absent-destination copy. The durable fixture is 278,528 bytes
+  with that same digest, and its local `SHA256SUMS` verifies. The complete
+  fail-fast SQLite block exited 0: user version 10; zero owner/nondefault rows;
+  exact four alert defaults; exact `release-radar`/`neverInstalled` lifecycle
+  singleton with null managed fields; no v11 continuation column; exact 23
+  tables, seven explicit indexes, four triggers, and 34 total non-internal
+  objects; zero foreign-key violations; integrity `ok`. The exact Store and
+  plugin-lifecycle regression selection reports `TEST SUCCEEDED`, 50 total,
+  50 passed, zero failed/skipped/expected failures at
+  `/tmp/release-radar-rr-r10-task1a-regression/Logs/Test/Test-ReleaseRadar-2026.08.30_11-27-44--0400.xcresult`.
+  `StoreAcceptanceTests.swift` and all product/project files have no diff. Only
+  the fixture and its checksum are Task 1A implementation outputs.
+- RR-R10 Task 1A postimplementation closure: the independent Code Reviewer,
+  QA/Test verifier, Architect, Security/Privacy verifier, TPM, and Delivery
+  Manager each returned **GO, Required 0, Optional 0, Out-of-scope 0** on the
+  exact registered plan and brief hashes. QA independently reran the exact
+  regression selection from a fresh temporary DerivedData path and reported 50
+  total, 50 passed, zero failed/skipped/expected failures at
+  `/tmp/release-radar-rr-r10-task1a-qa-regression.t14DmX/DerivedData/Logs/Test/Test-ReleaseRadar-2026.08.30_11-32-20--0400.xcresult`.
+  The reviews independently confirmed the pinned fixture digest and byte
+  identity, complete SQLite assertions, privacy-empty owner data, exact default
+  rows, absence of v11 continuation state, no product/test/project/signing/
+  entitlement/sandbox diff, and the exact three-path commit boundary. Task 1A
+  is accepted for commit and push; Task 1B remains dependency-blocked until the
+  exact Task 1A commit is remotely verified and its completion evidence is
+  recorded.
+- Next eligible RR-R10 work: **Commit and push only the Task 1A schema-v10
+  fixture, fixture-local checksum, and this delivery record, then verify exact
+  local/remote SHA equality with ahead/behind `0/0`.** Do not include any other
+  path. Task 1B and every product edit remain blocked until that remote
+  checkpoint is recorded.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
