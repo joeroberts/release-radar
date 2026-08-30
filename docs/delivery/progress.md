@@ -399,15 +399,21 @@ Deliver the signed native macOS MVP described by
   The reviews independently confirmed the pinned fixture digest and byte
   identity, complete SQLite assertions, privacy-empty owner data, exact default
   rows, absence of v11 continuation state, no product/test/project/signing/
-  entitlement/sandbox diff, and the exact three-path commit boundary. Task 1A
-  is accepted for commit and push; Task 1B remains dependency-blocked until the
-  exact Task 1A commit is remotely verified and its completion evidence is
-  recorded.
-- Next eligible RR-R10 work: **Commit and push only the Task 1A schema-v10
-  fixture, fixture-local checksum, and this delivery record, then verify exact
-  local/remote SHA equality with ahead/behind `0/0`.** Do not include any other
-  path. Task 1B and every product edit remain blocked until that remote
-  checkpoint is recorded.
+  entitlement/sandbox diff, and the exact three-path commit boundary.
+- RR-R10 Task 1A accepted completion: commit
+  `ace6c59efc3c95ee23542f8ae9e31fdfb26f6054` contains exactly the schema-v10
+  fixture, fixture-local checksum, and postimplementation delivery evidence.
+  It was pushed to `origin/codex/release-radar-mvp`; fresh remote-ref readback
+  returned that exact SHA with ahead/behind `0/0`, and the worktree was clean.
+  Task 1A is complete and its immutable fixture/checksum boundary is now open
+  for Task 1B consumption.
+- Next eligible RR-R10 work: **Release one fresh Task 1B Implementer against
+  registered brief SHA-256
+  `e3d9d4e00e8081d16330d55e34dcd2717350030eb4711cf9da94eb45a75e17ff`
+  for schema-v11 persistence and public models, beginning with the specified
+  failing tests.** The Implementer must preserve the accepted Task 1A fixture
+  and checksum unchanged and remain within Task 1B's registered file and
+  behavior boundary. Task 2 and later product work remain dependency-blocked.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
