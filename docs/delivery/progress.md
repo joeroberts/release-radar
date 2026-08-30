@@ -443,12 +443,41 @@ Deliver the signed native macOS MVP described by
   returned that exact SHA with ahead/behind `0/0`, and the worktree was clean.
   Task 1B is complete; its schema-v11 storage/model contract is now the
   immutable dependency boundary for Task 2.
-- Next eligible RR-R10 work: **Have one fresh Planning agent produce and
-  register the Task 2 planning-policy brief, then obtain Architecture,
-  QA/Test, Security/Privacy, TPM, and Delivery Management GO with Required 0 on
-  its exact hash before any Task 2 test or product edit.** Task 2 implementation
-  and all later product work remain dependency-blocked until that planning gate
-  closes.
+- RR-R10 Ticket Tasks course-correction owner acceptance: on 2026-08-30 the
+  owner accepted the exact first-class Ticket Tasks planning package presented
+  in this Codex task and directed execution to proceed. The accepted artifacts
+  are the Ticket Tasks design at SHA-256
+  `c1def10263d0a71dac042472faa8113d0ba7ecfc896c0ab2d64854911922ab08`,
+  ADR-005 at SHA-256
+  `6c3c35d62249c0d267c353c7f4c7d7d9adb738be3cd0c9d4f2753b101ff6eab5`,
+  and the corrected implementation plan at SHA-256
+  `2c3b40e99ff2f280fad574a9c2f939d4e959c77bdded95b9c44070a1b34bfea1`.
+  This correction preserves accepted Tasks 1A and 1B and replaces only the
+  unopened Task 2-and-later sequence. Its owner-visible catalog contains 16
+  stable rows: Task 1A and Task 1B checked; Tasks 2A, 2B, 3, 4A, 4B, 5, 6, 7,
+  7A, 8, 9, 10, 11A, and 11B unchecked. Ticket Details shows titled read-only
+  task rows; cards show only the active non-superseded total as `☷ N`; no
+  completed/total fraction, percentage, LOE, or inferred execution state is
+  persisted or presented.
+- RR-R10 Ticket Tasks final planning review: Architecture, TPM, QA/Test,
+  Delivery Management, Security/Privacy, and UX/Accessibility each returned
+  **GO with Required 0** against those exact hashes. The package requires the
+  authorized schema-v10/start-state proof before RR-R10 leaves Blocked, a
+  bounded independently approved owner-store backup/restore runbook before
+  installation, durable completion-revision reconciliation before successor
+  release, and installed repair rows that remain unchecked until the corrected
+  installed behavior and preserved owner state are independently verified and
+  remote-exact. Architecture recorded two nonblocking implementation-brief
+  refinements; neither changes the accepted outcome or releases extra scope.
+- Next eligible RR-R10 work: **Commit and push only the three accepted planning
+  artifacts plus this owner-acceptance ledger record, verify exact remote
+  equality, then perform the authorized typed/UI and installed-identity
+  preflight before resolving `RR-R10-BLOCKER-DESIGN-APPROVAL` or moving RR-R10
+  from Blocked to In progress.** Any mismatch stops before mutation for a
+  bounded reviewed correction. After successful audited lane/blocker readback,
+  one fresh Planning agent may produce the complete Task 2A brief; Task 2A RED
+  and every later product edit remain blocked until that exact brief receives
+  the required independent release.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`

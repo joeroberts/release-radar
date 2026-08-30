@@ -2,13 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Deliver first-class phase-scoped Delivery Goals, enforce exact ready-phase coverage across every ticket writer, present the distinction from Codex execution goals, and repair RR-R10 plus the complete Established product roadmap without reopening any Accepted ticket.
+**Goal:** Deliver first-class per-ticket Tasks and phase-scoped Delivery Goals, enforce exact ticket-task completion plus ready-phase coverage through app-owned authority, present both without conflating Codex execution goals, and repair RR-R10 plus the complete Established product roadmap without reopening any Accepted ticket.
 
-**Architecture:** Add an additive v11 relational model and a single store-owned planning policy consumed by bridge, importer, sample, and debug phase/ticket writers. Extend the existing audited/idempotent agent-command path for bounded plan revisions, finalization, and Delivery Goal lifecycle, then project all phase plans into the existing five-lane SwiftUI board with a non-mutating viewed-phase selector. Finish with an installed, replay-safe data repair and exact state-preservation proof.
+**Architecture:** Preserve the accepted additive v11 Delivery Goal foundation, then add an additive v12 per-ticket task-plan model with an independent optimistic revision and same-transaction ticket-acceptance gate. Route task plans, Delivery Goals, and every ticket writer through store-owned policies and the existing audited/idempotent command path; project canonical tasks and phase plans into the five-lane SwiftUI board; finish with typed, replay-safe installed bootstraps and exact state-preservation proof.
 
 **Tech Stack:** Swift 6, SwiftUI, Observation, SQLite3, XCTest, macOS 14+, Xcode project file-system-synchronized groups, existing XPC/MCP bridge.
 
-**Spec:** `docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md`
+**Specs:** `docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md` and `docs/design/release-radar-ticket-tasks-design.md`
+
+**Package status:** owner-approved direction; exact planning package pending owner acceptance.
 
 ## Global Constraints
 
@@ -19,40 +21,59 @@
 - Delivery Goals are app-owned phase-plan records; `observed_goals` and `ticket_goal_links` remain Codex execution context with unchanged semantics.
 - Release Radar's app process remains the only SQLite writer. The helper and bridge use typed commands only.
 - Store migration is additive v10 to v11 and never infers Delivery Goals or assignments.
+- The accepted Task 1A schema-v10 fixture and Task 1B schema-v11 persistence/model contract are complete, immutable dependency boundaries. Do not reopen, rename, or semantically rewrite them.
+- Schema v12 is additive to v11, creates zero task plans/tasks, and never rewrites the accepted v11 definitions.
+- Atomic tickets may have no task plan. Once a plan exists it cannot be deleted or have zero active tasks; all active tasks must be completed before the exact-revision Accepted transition.
+- Task machine IDs and visible labels are stable; task rows are never hard-deleted; completed history never returns to pending; superseded history remains durable but is excluded from the visible list, card count, and acceptance gate.
+- Core and MCP enforce encoded UTF-8 maxima of 256 bytes for task machine IDs, 256 bytes for visible labels, and 4,096 bytes for titles; no truncation or character-count substitution is permitted.
+- Schema v12 parent foreign keys and triggers reject ticket/project deletion or cascade attempts that would erase task-plan or task history.
+- Task-only mutations never change phase-plan state or revision. Ticket outcome/phase and Delivery Goal structural changes retain ADR-004 invalidation semantics.
+- A Ticket Details task row is read-only `[checked/unchecked] [label]: [verb-led title]`. Cards show only a neutral active-task count. No completion aggregate, percentage, progress bar, or persisted level of effort exists.
 - New and phase-moved tickets enter Backlog. Backlog and Blocked cannot bypass Ready plus exact-assignment validation.
 - Existing v10 In progress and Needs review tickets receive the only legacy continuation; existing Blocked tickets do not.
+- Before the early RR-R10 start, authorized typed/UI state plus exact installed app/helper/running-process identity must prove the ledger-backed schema-v10 build and Blocked state without direct SQLite inspection. Failure stops before any mutation or Task 2A release for a bounded architecture-reviewed, owner-accepted reconciliation checkpoint.
 - Plan revisions allow at most 64 total goal operations (`goalUpserts + supersededGoalIDs`), 512 total assignment operations (`assignments + unassignedTicketIDs`), and 65,536 bytes for the sorted-key JSON encoding of the `AgentCommand` value before it is placed in the XPC envelope. Validate limit−1, limit, and limit+1 at the command boundary.
 - A viewed phase is navigation-only. Existing active-phase mutation remains separate and governed by ADR-003.
-- Portable archive v1 must never silently omit Delivery Goals; no portable archive v2 is added.
-- The approved planning package is committed and pushed before implementation. Thereafter, each bounded task is committed and pushed only after that task is completely implemented and its required independent gate returns GO with Required 0. Never commit or push partial or unverified task work.
+- Current production import creates no task plans, and no production portable exporter/exportability call path exists. RR-R10 adds no export guard or archive v2. Future RM5 owns exporter/archive-format work and must represent Delivery Goals and ticket tasks or fail before emission; RM6 import accepts only complete supported exporter output or rejects it.
+- The direction is owner-approved, but this exact planning package remains pending owner acceptance. After exact owner acceptance, coordinator ledger recording, a planning-artifact/ledger commit and push, remote equality with ahead/behind `0/0`, and the governed current-state handoff below, each bounded task is committed and pushed only after complete implementation and a GO/Required 0 independent gate. Never commit or push partial or unverified task work.
+- After each live completion of Task 7A, 8, 9, 10, or 11A, the exact returned task-plan revision/audit must be durably recorded, committed/pushed, and remote-verified no later than the next task brief/release; the next task cannot open first. Task 11B's final row is recorded by terminal reconciliation, and repair rows are reconciled before their parent resumes. These records create no task row or framework.
 - Before coding begins, the task brief must split any task forecast to exceed roughly eight hours of agent implementation work, or whose diff would be too large for one coherent review, into smaller dependency-safe tasks. Each resulting task must still deliver a complete testable slice, pass its own independent gate, and receive its own commit/push/remote checkpoint.
 - Preserve the unrelated untracked `default.profraw` file untouched.
-- Before each implementation task, a fresh independent Planning agent produces its durable brief under `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/`; Architecture, TPM, QA/Test, and Delivery Management review and release that brief before even the RED implementation test is written. After implementation, a separate fresh Code Reviewer and QA verifier review the result, with Architecture, TPM, and Delivery Management disposition before the next task opens. Storage/bridge/archive tasks also require independent Security/Privacy review. No implementer reviews or verifies its own work.
+- Before each implementation task, a fresh independent Planning agent produces its durable brief under `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/`; Architecture, TPM, QA/Test, and Delivery Management review and release that brief before even the RED implementation test is written. After implementation, a separate fresh Code Reviewer and QA verifier review the result, with Architecture, TPM, and Delivery Management disposition before the next task opens. Storage and bridge tasks also require independent Security/Privacy review. No implementer reviews or verifies its own work.
 
 ## File Structure
 
+### Accepted immutable foundations
+
+- `ReleaseRadarCore/Models/DeliveryGoalModels.swift` — accepted Task 1B v11 public model contract; no Ticket Tasks edit.
+- `ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite` and `SHA256SUMS` — accepted Task 1A fixture/checksum; unchanged.
+- The schema-v11 SQL, manifest objects, and Task 1B tests in `ReleaseRadarCore/Store/StoreMigrations.swift`, `ReleaseRadarCore/Store/DeliveryStore.swift`, and `ReleaseRadarTests/StoreAcceptanceTests.swift` remain semantically immutable while receiving additive v12 content.
+- `ReleaseRadarCore/Import/DeliveryArtifactImporter.swift` — unchanged import-only boundary; current import creates no task plans, and no production exporter/exportability path exists.
+
 ### New production files
 
-- `ReleaseRadarCore/Models/DeliveryGoalModels.swift` — public IDs, phase-plan/goal states, revision operations, projections shared across Core and app.
-- `ReleaseRadarCore/Planning/DeliveryPlanningPolicy.swift` — the sole SQL-writing policy for phase creation, phase plans, Delivery Goals, assignments, goal lifecycle, ticket creation/movement/lane transitions, migration-granted continuation enforcement, and archive-v1 compatibility.
+- `ReleaseRadarCore/Models/TicketTaskModels.swift` — task-plan IDs, states, revision operations, and records shared across Core and app.
+- `ReleaseRadarCore/Planning/TicketTaskPlanningPolicy.swift` — the sole task-plan definition/completion/supersession authority and the exact-revision task gate composed by every Accepted transition.
+- `ReleaseRadarCore/Planning/DeliveryPlanningPolicy.swift` — the sole SQL-writing policy for phase creation, phase plans, Delivery Goals, assignments, goal lifecycle, ticket creation/movement/lane transitions, and migration-granted continuation enforcement; its Accepted path delegates to the Ticket Task gate.
 - `ReleaseRadar/Projects/PhaseBoardPlanningControls.swift` — viewed-phase, active-phase action, plan summary, goal filters, status, and accessibility presentation.
 
 The Xcode project uses file-system-synchronized groups, so these files require no `project.pbxproj` membership edit.
 
 ### Modified production files
 
-- `ReleaseRadarCore/Store/StoreMigrations.swift` — schema v11, manifest validation, indexes, foreign keys, migration backfill.
-- `ReleaseRadarCore/Store/DeliveryStore.swift` — new audit entity types only; existing observed-goal types remain unchanged.
-- `ReleaseRadarCore/AgentBridge/AgentCommand.swift` — new bounded plan/lifecycle commands and typed errors/results.
-- `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift` — validation, audit scope, replay-safe application, and routing all ticket writes through planning policy.
-- `ReleaseRadarAgentTools/main.swift` — MCP definitions and exact JSON translation for the new commands.
+- `ReleaseRadarCore/Store/StoreMigrations.swift` — additive schema v12 task tables/indexes/triggers/manifest; accepted v11 definitions unchanged.
+- `ReleaseRadarCore/Store/DeliveryStore.swift` — additive task-plan audit entity type; existing v11 and observed-goal types unchanged.
+- `ReleaseRadarCore/AgentBridge/AgentCommand.swift` — Task 4A extends only the existing ticket transition with optional exact task-plan revision while upsert retains no such field; Task 4B adds bounded task-plan commands/results; later work adds Delivery Goal commands.
+- `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift` — Task 4A rejects Accepted upsert create/update and routes every existing transition to Accepted through the task gate; Task 4B adds audited task-plan revision/replay/concurrency; later work adds Delivery Goal/ticket-writer routing.
+- `ReleaseRadarAgentTools/main.swift` — Task 4A updates only the existing transition translator/schema for exact planned acceptance; Task 4B exposes the two new task-plan mutation tools; later work adds Delivery Goal tools.
 - `ReleaseRadarCore/Import/RekonArtifactImporter.swift` — Legacy-unassessed phase creation, Backlog-only ticket creation, and source-lane review facts.
 - `ReleaseRadar/Projects/DashboardSampleData.swift` — valid sample plan creation before governed lane transitions.
 - `ReleaseRadar/Projects/RR9ActivePhaseCaptureFixture.swift` — valid capture plan creation before governed lane transitions under `#if DEBUG`.
-- `ReleaseRadar/Projects/DashboardProjection.swift` — all-phase boards, plan/goal coverage, unambiguous ticket goal contexts, filtering.
-- `ReleaseRadar/Projects/PhaseBoardView.swift` — planning controls and filtered five-lane board.
+- `ReleaseRadar/Projects/DashboardProjection.swift` — tri-state ticket tasks, shared card/detail task rows, then all-phase Delivery Goal coverage and filtering.
+- `ReleaseRadar/Projects/TicketCardView.swift` — neutral canonical active-task count with existing dependency/blocker metadata.
+- `ReleaseRadar/Projects/PhaseBoardView.swift` — pass its existing reload callback into Task 5's unavailable Tasks treatment, then add planning controls and the filtered five-lane board in Task 10.
 - `ReleaseRadar/Projects/ActivePhaseSelector.swift` — extract reusable active-phase mutation status presentation; keep Overview behavior unchanged.
-- `ReleaseRadar/Projects/TicketDetailView.swift` — separate Delivery Goal and Codex execution goal sections.
+- `ReleaseRadar/Projects/TicketDetailView.swift` — read-only Tasks plus separate Delivery Goal and Codex execution goal sections.
 - `ReleaseRadar/App/AppModel.swift` — per-project viewed-phase state and dependency/selection coherence without active-phase mutation.
 - `ReleaseRadar/Navigation/SidebarView.swift` — supply the viewed board and planning-control callbacks.
 - `ReleaseRadar/Activity/ProjectActivityProjection.swift` — goal/plan audit titles and phase/ticket attribution.
@@ -61,18 +82,21 @@ The Xcode project uses file-system-synchronized groups, so these files require n
 
 ### Test files
 
-- Modify `ReleaseRadarTests/StoreAcceptanceTests.swift` — v11 migration and schema integrity.
+- Modify `ReleaseRadarTests/StoreAcceptanceTests.swift` — additive v11-to-v12 migration, representative v11 graph preservation, rollback, and manifest integrity.
 - Create `ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite` — exact empty schema-v10 database generated before v11 production code changes.
 - Create `ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS` — exact fixture digest.
-- Create `ReleaseRadarTests/DeliveryPlanningPolicyAcceptanceTests.swift` — state machines, readiness, ticket-writer matrix, rollback, archive guard.
-- Modify `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift` — typed command validation, replay, limits, and all existing-ticket command bypasses.
-- Modify `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift` — packaged MCP schemas and signed bridge transport.
+- Create `ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite` and `SHA256SUMS` — genuine accepted schema-v11 migration boundary.
+- Create `ReleaseRadarTests/TicketTaskPlanningPolicyAcceptanceTests.swift` — task-plan invariants, revision, replay, acceptance, and rollback.
+- Create `ReleaseRadarTests/DeliveryPlanningPolicyAcceptanceTests.swift` — state machines, readiness, complete ticket-writer matrix, and rollback.
+- Modify `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift` — Task 4A Accepted-path bypass rejection, then Task 4B task-command validation, replay, bounds, and concurrency.
+- Modify `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift` — Task 4A existing-transition revision schema and Task 4B packaged task-plan tools/transport.
 - Modify `ReleaseRadarTests/RekonImportAcceptanceTests.swift` — Legacy phase state, Backlog coercion, and source-lane review behavior.
 - Modify `ReleaseRadarTests/DashboardProjectionTests.swift` — phase-plan/goal projection and exact RR-ROADMAP catalog.
 - Modify `ReleaseRadarTests/AppRouteTests.swift` — non-mutating viewed phase, active-phase separation, refresh/recovery, selection coherence.
 - Modify `ReleaseRadarTests/ReviewAndGraphAcceptanceTests.swift` — Activity attribution and dependency preservation.
-- Modify `ReleaseRadarTests/EndToEndAcceptanceTests.swift` — complete v11 command-to-UI data flow and no-reopen invariant.
-- Modify `ReleaseRadarUITests/ReleaseRadarUITests.swift` — wide/compact controls, keyboard/VoiceOver identifiers, goal filters, inspector headings.
+- Modify `ReleaseRadarTests/EndToEndAcceptanceTests.swift` — v12 task/acceptance, Task 7A live bootstrap/replay, Delivery Goal integration, and final installed verification.
+- Modify `ReleaseRadarTests/NotificationAcceptanceTests.swift` and `OnboardingAcceptanceTests.swift` — acceptance side effects, import preservation, and installed critical paths.
+- Modify `ReleaseRadarUITests/ReleaseRadarUITests.swift` — task card/detail tri-state and accessibility, then Delivery Goal controls/filters/inspector headings.
 
 ---
 
@@ -378,7 +402,7 @@ SHA before Task 2 opens.
 
 ---
 
-### Task 2: Implement the store-owned plan and ticket policy
+### Superseded unopened Task 2: Implement the store-owned plan and ticket policy
 
 **Files:**
 - Create: `ReleaseRadarCore/Planning/DeliveryPlanningPolicy.swift`
@@ -640,14 +664,18 @@ and verify exact local/remote SHA equality before Task 3 opens.
 
 ---
 
-### Task 3: Expose audited, bounded Delivery Goal commands
+### Superseded unopened Task 3: Expose audited, bounded Delivery Goal commands
 
 **Files:**
 - Modify: `ReleaseRadarCore/AgentBridge/AgentCommand.swift`
 - Modify: `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift`
 - Modify: `ReleaseRadarAgentTools/main.swift`
+- Modify: `ReleaseRadarCore/Import/RekonArtifactImporter.swift`
+- Modify: `ReleaseRadar/Projects/DashboardSampleData.swift`
+- Modify: `ReleaseRadar/Projects/RR9ActivePhaseCaptureFixture.swift`
 - Modify: `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift`
 - Modify: `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/RekonImportAcceptanceTests.swift`
 - Create: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-agent-command-surface-brief.md`
 
 **Interfaces:**
@@ -776,7 +804,7 @@ equality before Task 4 opens.
 
 ---
 
-### Task 4: Present Delivery Goals and non-mutating phase browsing
+### Superseded unopened Task 4: Present Delivery Goals and non-mutating phase browsing
 
 **Files:**
 - Create: `ReleaseRadar/Projects/PhaseBoardPlanningControls.swift`
@@ -969,7 +997,7 @@ task, and verify exact local/remote SHA equality before Task 5 opens.
 
 ---
 
-### Task 5: Prove full integration and installed-state repair
+### Superseded unopened Task 5: Prove full integration and installed-state repair
 
 **Files:**
 - Modify: `ReleaseRadarTests/EndToEndAcceptanceTests.swift`
@@ -1142,7 +1170,7 @@ persistent Codex goal active for Task 6's terminal evidence reconciliation.
 
 ---
 
-### Task 6: Terminal evidence reconciliation, status commit, and goal completion
+### Superseded unopened Task 6: Terminal evidence reconciliation, status commit, and goal completion
 
 **Files:**
 - Modify: `docs/delivery/progress.md`
@@ -1214,7 +1242,7 @@ Read back the evidence, exact remote SHA, and unchanged Accepted state. Mark the
 persistent Codex goal complete only after remote verification and no required
 work remains.
 
-## Plan Completion Check
+## Historical plan completion check (superseded)
 
 - Every spec requirement maps to Tasks 1-5; each verified task is committed and remotely verified before the next opens, and terminal evidence reconciliation maps to Task 6.
 - Every new type and method used by a later task is declared in an earlier `Interfaces` block.
@@ -1223,3 +1251,967 @@ work remains.
 - Viewed-phase browsing remains separate from active-phase mutation.
 - Accepted tickets are terminal in schema/policy tests, bridge tests, end-to-end tests, installed repair, and terminal tracking.
 - No partial or unverified task is committed or pushed; the approved planning package and each fully verified task have an exact remote checkpoint.
+
+---
+
+## 2026-08-30 Ticket Tasks course correction — owner-approved direction; exact planning package pending owner acceptance
+
+Everything under a `Superseded unopened Task` heading above is retained only
+as historical planning context and has no implementation authority. No brief
+was accepted and no product work began for those tasks. Task 1A and Task 1B
+remain accepted exactly as delivered; their checked state, labels, titles,
+fixture/checksum, schema-v11 definitions, commit history, and semantics are not
+reopened by this correction. Any preserved Task 1 text that says the next gate
+is `Task 2` now points only to revised Task 2A; it does not release any
+superseded Task 2 work.
+
+### Exact old-to-revised mapping
+
+| Prior unopened task | Revised active replacement | Disposition |
+| --- | --- | --- |
+| Task 2 — Implement the store-owned plan and ticket policy | Tasks 6 and 7 | Split between Delivery Goal state/policy and all structural ticket-writer integration; the acceptance path now consumes the independent ticket-task revision. The older archive-helper assumption is not implemented without a real exporter boundary. |
+| Task 3 — Expose audited, bounded Delivery Goal commands | Task 8 | Renumbered after the Ticket Tasks foundation; Delivery Goal command semantics remain as approved. |
+| Task 4 — Present Delivery Goals and non-mutating phase browsing | Tasks 9 and 10 | Split into projection/activity/review data and running Phase Board/AppModel UI for coherent review. |
+| Task 5 — Prove full integration and installed-state repair | Tasks 7A, 11A, and 11B | Task 7A installs and bootstraps live tracking after the policy/UI foundation; Tasks 11A/11B split final automated integration from installed repair/readback. |
+| Task 6 — Terminal evidence reconciliation, status commit, and goal completion | Non-ticket terminal reconciliation | Retained as a repository execution step after Accepted state; it is not a task-plan row and cannot mutate the Accepted plan. |
+
+The first Ticket Tasks course-correction draft had one unopened, planning-only
+row `Task 4: Expose audited ticket-task commands` with proposed machine ID
+`rr-r10-task-4`. This correction replaces it before bootstrap with Task 4A
+(`rr-r10-task-4a`) for all Accepted-path safety and Task 4B
+(`rr-r10-task-4b`) for external task-plan mutations. No app-owned Task 4 row or
+ID was ever created, so there is no persisted history to delete or supersede;
+`rr-r10-task-4` is not an alias and must never be installed or reused. Every
+other previously named active row keeps its prior label, title, machine ID, and
+status. Task 7A is a new owner-visible checkpoint required to make tracking live
+before the remaining work; no earlier row or ID is repurposed.
+
+### Exact-package acceptance and RR-R10 start handoff
+
+The owner-approved direction does not authorize implementation from this exact
+package. The following ordered gate must complete before Task 2A RED:
+
+1. The owner explicitly accepts the exact hashes of the design, ADR, and this
+   plan.
+2. The coordinator records that exact acceptance in
+   `docs/delivery/progress.md`.
+3. Commit and push only those planning artifacts plus the coordinator-owned
+   ledger record. Verify exact local/remote SHA equality and upstream ahead/
+   behind `0/0`.
+4. Before any mutation, use the authorized typed command path and owner UI to
+   confirm the active phase and unrelated state plus RR-R10 Blocked with
+   `RR-R10-BLOCKER-DESIGN-APPROVAL` present. Prove the installed application,
+   helper, and running processes match the ledger-backed schema-v10 build:
+   bundle `com.rekonlabs.ReleaseRadar`, version `0.1.5` build `1`, Team
+   `2UA854NLX4`, CDHash `d204ccdd17628d6089694cf615b3c0a2a36195f4`, main
+   SHA-256 `9f65653f28584bef118ffa692f5a0e17656b88d5b4c40f63e64864551289d384`,
+   AgentTools SHA-256
+   `acf00b7a7df3dca53a7af2b4cf141df902ea8869a6fd3a1700c6ff2ddbb24f31`,
+   and BridgeAgent SHA-256
+   `9aa8bdcfe9345c3884a733b5d5ab18f6403e1c3c29457c6860e5f06e236e8d03`.
+   Running executable paths and hashes must resolve to those artifacts and
+   their accepted schema-v10 manifest. Together with the Blocked readback, this
+   proves the authorized early move will leave RR-R10 In progress on schema v10
+   and eligible for v10→v11 migration-only continuation. Do not inspect SQLite
+   directly.
+5. If identity, schema eligibility, state, or authorized readback cannot be
+   proven, stop before blocker/lane mutation and before Task 2A. Define a
+   bounded architecture-reviewed, owner-accepted reconciliation checkpoint,
+   make it remote-exact, and repeat this preflight. Do not force state or defer
+   this discovery to Task 7A.
+6. Through the currently valid typed audited path, resolve that blocker and
+   transition RR-R10 Blocked→In progress. Read back the lane, cleared blocker,
+   exact audit/receipt, and unchanged unrelated delivery state through typed/UI
+   surfaces. No task plan exists yet and none is inferred.
+7. A fresh Planning agent writes the complete Task 2A brief. Architecture,
+   TPM, QA/Test, and Delivery Management independently review and explicitly
+   release that exact brief before an Implementer writes the RED test.
+
+Owner acceptance alone never releases Task 2A.
+
+Tasks 2A through 5 are new dependency-safe work required by
+`docs/design/release-radar-ticket-tasks-design.md` and ADR-005. The owner-
+visible plan has **16 active tasks**: Task 1A and Task 1B are completed; Tasks
+2A, 2B, 3, 4A, 4B, 5, 6, 7, 7A, 8 through 10, 11A, and 11B are pending at this planning
+checkpoint.
+These are the exact owner-visible rows to install. Because Ticket Tasks does not
+exist earlier in RR-R10, they first become live app-owned rows during Task 7A
+bootstrap. Until then this catalog is owner-approved direction whose exact
+package still requires owner acceptance, not inferred or live Release Radar
+tracking. The checkbox steps inside each task are repository
+execution actions; they are never persisted as additional ticket tasks or
+included in the card count.
+
+### Active task catalog
+
+```text
+[checked] Task 1A: Generate and verify the genuine schema-v10 fixture
+[checked] Task 1B: Add schema-v11 persistence and public models
+[unchecked] Task 2A: Generate and verify the genuine schema-v11 fixture
+[unchecked] Task 2B: Add schema-v12 ticket-task persistence and models
+[unchecked] Task 3: Enforce ticket-task revisions and acceptance
+[unchecked] Task 4A: Guard every Accepted path
+[unchecked] Task 4B: Expose audited ticket-task commands
+[unchecked] Task 5: Present ticket tasks on cards and Ticket Details
+[unchecked] Task 6: Enforce Delivery Goal plan and lifecycle rules
+[unchecked] Task 7: Route every ticket writer and compose planning policy
+[unchecked] Task 7A: Install and bootstrap live RR-R10 task tracking
+[unchecked] Task 8: Expose audited Delivery Goal commands
+[unchecked] Task 9: Project Delivery Goals, Activity, and owner review
+[unchecked] Task 10: Present non-mutating phase browsing and Delivery Goals
+[unchecked] Task 11A: Integrate and stage the release candidate
+[unchecked] Task 11B: Install and verify the final RR-R10 outcome
+```
+
+Machine IDs, in the same order, are `rr-r10-task-1a`, `rr-r10-task-1b`,
+`rr-r10-task-2a`, `rr-r10-task-2b`, `rr-r10-task-3`, `rr-r10-task-4a`,
+`rr-r10-task-4b`, `rr-r10-task-5`, `rr-r10-task-6`, `rr-r10-task-7`,
+`rr-r10-task-7a`, `rr-r10-task-8`, `rr-r10-task-9`, `rr-r10-task-10`,
+`rr-r10-task-11a`, and `rr-r10-task-11b`. Labels, titles, IDs, and order above
+are stable bootstrap values. Sixteen is the initial reviewed catalog, not a
+fixed target; later accepted scope is added as a new Active/Pending row through
+the live revisioned plan and never by rewriting this history.
+
+### Checkpoint sizing forecasts
+
+These planning forecasts size independent review checkpoints only. They are
+not fields in the task model, bootstrap payload, card, Ticket Details, or any
+runtime/UI contract.
+
+| Active task | Forecast |
+| --- | --- |
+| Task 2A | 3–5 agent-hours |
+| Task 2B | 6–8 agent-hours |
+| Task 3 | 6–8 agent-hours |
+| Task 4A | 6–8 agent-hours |
+| Task 4B | 7–8 agent-hours |
+| Task 5 | 6–8 agent-hours |
+| Task 6 | 6–8 agent-hours |
+| Task 7 | 7–8 agent-hours |
+| Task 7A | 6–8 agent-hours |
+| Task 8 | 5–7 agent-hours |
+| Task 9 | 5–7 agent-hours |
+| Task 10 | 7–8 agent-hours |
+| Task 11A | 6–8 agent-hours |
+| Task 11B | 6–8 agent-hours |
+
+Task 7 remains one checkpoint because its single rejectable outcome is routing
+every structural shipping/debug ticket writer through one shared Delivery Goal
+policy while preserving Task 4A's Accepted gate; splitting writers would
+knowingly commit a bypassable structural policy. Task 10 remains one
+checkpoint because its files form one owner-visible Delivery Goal browsing and
+acceptance surface, and its 7–8 hour forecast stays within the owner limit.
+Task 7A remains one 6–8 hour checkpoint because its one rejectable outcome is
+the safely installed through-Task-7 candidate plus a live, replay-proven task
+plan; splitting install from bootstrap would leave owner state upgraded without
+the recovery/visibility contract that authorizes that upgrade.
+
+## Revised active implementation sequence
+
+### Task 2A: Generate and verify the genuine schema-v11 fixture
+
+**Files:**
+- Create: `ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite`
+- Create: `ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS`
+- Temporary modify then restore: `ReleaseRadarTests/StoreAcceptanceTests.swift`
+
+**Interfaces:** Consumes the accepted v10 fixture and exact Task 1B product
+commit. Produces one privacy-empty, checksum-pinned schema-v11 database for
+Task 2B; produces no product API or runtime mode.
+
+- [ ] **RED:** Add an exact-gated XCTest attachment generator that starts from
+  a checksum-verified copy of the v10 fixture, opens `DeliveryStore`, asserts
+  user version 11 plus all accepted v11 manifest objects and zero planning
+  rows, and prove the absent gate fails without an attachment.
+- [ ] **GREEN:** Use the already-proven sandbox-safe `.xctestrun` attachment
+  path, export exactly one passing attachment, remove the generator, pin its
+  SHA-256, and verify zero owner rows, exact v11 objects, empty
+  `foreign_key_check`, and `integrity_check = ok`.
+- [ ] **Verify:** Run
+  `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -destination 'platform=macOS' -derivedDataPath /tmp/release-radar-rr-r10-task2a -only-testing:ReleaseRadarTests/StoreAcceptanceTests -only-testing:ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests`.
+- [ ] **Gate/checkpoint:** Fresh Code Review, QA/Test, Architecture,
+  Security/Privacy, TPM, and Delivery Management must return GO with Required
+  0. Commit/push only the two fixture artifacts plus coordinator-owned ledger
+  evidence and verify exact local/remote SHA before Task 2B.
+
+### Task 2B: Add schema-v12 ticket-task persistence and models
+
+**Files:**
+- Create: `ReleaseRadarCore/Models/TicketTaskModels.swift`
+- Modify: `ReleaseRadarCore/Store/StoreMigrations.swift`
+- Modify: `ReleaseRadarCore/Store/DeliveryStore.swift`
+- Modify: `ReleaseRadarTests/StoreAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`
+
+**Interfaces:** Produces `TicketTaskID`, `TicketTaskCompletion`,
+`TicketTaskLifecycle`, `TicketTaskDraft`, `TicketTaskDefinitionRevision`,
+`TicketTaskPlanRecord`, and `TicketTaskRecord`; adds `.ticketTaskPlan` audit
+scope; adds manifest-validated `ticket_task_plans` and `ticket_tasks` in schema
+v12. `TicketTaskDraft` carries only machine ID, label, title, and sort order;
+policy creation always writes Active/Pending and accepts no completion input.
+Parent foreign keys/triggers reject deletion of any ticket or project that owns
+task history; no cascade can erase a task plan or task row.
+
+- [ ] **RED:** Copy and checksum the v11 fixture, seed a representative valid
+  nonempty v11 graph through raw fixture SQL, and snapshot every seeded v11
+  table in primary-key order. Include two projects/phases; all five lanes;
+  Delivery Goals, ordered criteria, assignments and deferred assignment-event/
+  audit history; dependencies, blockers, evidence, reviews/completions;
+  active-phase pointer; observed threads/goals/exact links; notifications;
+  bookmarks; lifecycle singleton; and request receipts. Test exact additive
+  migration, zero inferred task rows, model round trips, composite ownership,
+  stable ID/label uniqueness, state/timestamp checks, immutable ID/label and
+  no-delete triggers, deterministic ordering indexes, counterfeit-manifest
+  rejection, direct ticket delete, project-delete cascade attempts, direct
+  plan/task deletion, late-migration rollback, relaunch, and unchanged v11
+  snapshot. Every rejected deletion leaves parent, plan, and task rows intact.
+- [ ] **GREEN:** Set `currentVersion` to 12, apply only the two additive tables,
+  indexes, composite parent restrictions, parent/no-delete triggers, and
+  manifest entries, and add the public value types with explicit initializers.
+  Do not alter any v11 SQL constant or the accepted SchemaV10/SchemaV11
+  fixtures.
+- [ ] **Verify:** Reuse that same seeded fixture copy for the deliberate late-
+  migration abort, rollback/snapshot inspection, trigger removal, normal
+  reopen, and second reopen; add no harness or second fixture. Run Store tests
+  RED before product edits and GREEN afterward, then Store plus plugin-
+  lifecycle tests from fresh DerivedData and require schema 12, zero task
+  plans/tasks, empty `foreign_key_check`, and exact every-table v11 equality.
+- [ ] **Gate/checkpoint:** All six independent disciplines, including storage
+  Security/Privacy, return GO/Required 0. Commit/push only the registered
+  model/store/test paths plus ledger evidence and verify remote equality before
+  Task 3.
+
+### Task 3: Enforce ticket-task revisions and acceptance
+
+**Files:**
+- Create: `ReleaseRadarCore/Planning/TicketTaskPlanningPolicy.swift`
+- Create: `ReleaseRadarTests/TicketTaskPlanningPolicyAcceptanceTests.swift`
+
+**Interfaces:** Produces:
+
+```swift
+TicketTaskPlanningPolicy.revisePlan(
+    projectID:ticketID:expectedRevision:additions:definitionRevisions:
+    supersededTaskIDs:auditEventID:connection:
+) throws -> TicketTaskPlanRecord
+TicketTaskPlanningPolicy.completeTask(
+    projectID:ticketID:taskID:expectedRevision:connection:
+) throws -> TicketTaskPlanRecord
+TicketTaskPlanningPolicy.assertCanAcceptTicket(
+    projectID:ticketID:expectedRevision:connection:
+) throws
+```
+
+- [ ] **RED:** Prove optional no-plan tickets; create-only nil revision; exact
+  creation returns revision 1; stale revision rollback; one R→R+1 increment per
+  later mutation; immutable machine ID/label/completed definition; monotonic
+  completion; retained superseded state;
+  no deletion/reuse; 64-operation boundaries; empty-command rejection; atomic
+  last-task replacement; and Accepted-plan immutability. At the Core boundary,
+  test ASCII and multibyte machine IDs at 255/256/257 UTF-8 bytes, labels at
+  255/256/257 bytes, and titles at 4,095/4,096/4,097 bytes; exact-limit values
+  succeed and oversize values reject without truncation or effects.
+- [ ] **RED:** Direct store/policy tests prove completion/lifecycle
+  orthogonality: superseding pending and completed tasks preserves completion
+  plus completed timestamp; completing or definition-revising a superseded task
+  rejects; re-superseding rejects as a no-op. Reject the same or duplicate task
+  ID within additions, revisions, or supersessions and every ID repeated across
+  those arrays, with plan/task/audit state unchanged.
+- [ ] **RED:** Directly prove `assertCanAcceptTicket` distinguishes no plan from
+  exact-revision loaded plan, rejects pending active tasks, and has no lane-
+  mutation authority itself. All-complete remains in its current lane and
+  creates no review/audit/notification.
+- [ ] **GREEN:** Implement private SQL helpers behind the three policy methods,
+  validate the final transaction state, and expose no command/dispatcher/MCP
+  integration. Do not change phase-plan state/revision for task-only mutation.
+- [ ] **Verify/gate/checkpoint:** Run only the new direct policy tests plus the
+  Store boundary; require fresh Code Review, QA, Architecture,
+  Security/Privacy, TPM, and Delivery Management GO/Required 0; commit/push the
+  bounded policy/test diff and verify exact remote equality before Task 4A.
+
+### Task 4A: Guard every Accepted path
+
+**Files:**
+- Modify: `ReleaseRadarCore/Planning/TicketTaskPlanningPolicy.swift`
+- Modify: `ReleaseRadarCore/AgentBridge/AgentCommand.swift`
+- Modify: `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift`
+- Modify: `ReleaseRadarAgentTools/main.swift`
+- Modify: `ReleaseRadarCore/Import/RekonArtifactImporter.swift`
+- Modify: `ReleaseRadar/Projects/DashboardSampleData.swift`
+- Modify: `ReleaseRadar/Projects/RR9ActivePhaseCaptureFixture.swift`
+- Modify: `ReleaseRadar/App/AppModel.swift`
+- Modify: `ReleaseRadarTests/TicketTaskPlanningPolicyAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/RekonImportAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/AppRouteTests.swift`
+- Modify: `ReleaseRadarTests/ReviewAndGraphAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/NotificationAcceptanceTests.swift`
+
+**Interfaces:** Extends the existing `.transitionTicket` command and existing
+`release_radar_transition_ticket` translator/schema with an optional
+`ticketTaskPlanRevision` used only for an Accepted destination. It adds no new
+command case, no task-plan definition/completion mutation, and no new MCP tool.
+Dispatcher, owner-AppModel callback, importer, sample, debug capture, and any
+internal ticket-transition helper all invoke Task 3's
+`assertCanAcceptTicket` inside the same transaction. `AgentCommand.upsertTicket`
+retains its existing shape with no task-plan revision and rejects every create
+or update whose supplied lane is Accepted. Planned and no-plan acceptance both
+use only the existing transition command.
+
+- [ ] **RED/Accepted matrix:** For dispatcher, owner AppModel, Rekon importer,
+  sample seed, debug capture, and internal transition helper, test all four
+  acceptance inputs: no plan/no revision keeps existing rules; completed
+  plan/exact revision may accept; no plan/any revision rejects; and any plan
+  without its exact revision rejects. Pending tasks, stale revisions, legacy
+  `.transitionTicket(...accepted)` without a plan revision, non-Accepted
+  destinations carrying a task revision, and every raw bypass attempt reject
+  without lane, task, task-plan, audit, receipt, owner-attention, or notification
+  effects. Accepted plans remain immutable and no-plan atomic tickets remain
+  supported.
+- [ ] **RED/upsert closure:** Exercise `AgentCommand.upsertTicket` with Accepted
+  for both absent-ticket create and existing-ticket update, with and without a
+  task plan. Every request rejects without ticket/outcome/phase/lane, task/plan,
+  audit, receipt, review occurrence, owner-attention, or notification effects.
+  Prove upsert has no task-plan revision field and the transition path remains
+  the only Accepted route.
+- [ ] **GREEN:** Route every listed Accepted entry point through Task 3 in the
+  transaction that changes the lane, preserve existing lane/dependency/review/
+  notification rules, and add only the optional revision field to the existing
+  transition JSON/tool schema. Reject Accepted in `upsertTicket` before either
+  its insert or conflict-update branch can write. Do not expose
+  `reviseTicketTaskPlan`, `completeTicketTask`, a dedicated accept command, or a
+  new MCP tool in this checkpoint.
+- [ ] **Verify:** Run `TicketTaskPlanningPolicyAcceptanceTests`,
+  `AgentBridgeAcceptanceTests`, `AgentBridgeTransportAcceptanceTests`,
+  `RekonImportAcceptanceTests`, `AppRouteTests`,
+  `ReviewAndGraphAcceptanceTests`, and `NotificationAcceptanceTests`, plus a
+  Debug build. Inspect the packaged helper schema to prove upsert has no task-
+  plan revision, both Accepted upsert branches reject, the existing transition
+  tool accepts the bounded optional revision, and the tool-name set is
+  otherwise unchanged. Verify every listed Accepted path fails closed.
+- [ ] **Gate/checkpoint:** Code Review, QA/Test, Architecture,
+  Security/Privacy, TPM, and Delivery Management return GO/Required 0. Do not
+  install or mutate owner data. Commit/push only the 8 production paths and 7
+  test paths declared above plus coordinator-owned ledger evidence; verify the
+  exact reviewed local/remote SHA before Task 4B.
+
+### Task 4B: Expose audited ticket-task commands
+
+**Files:**
+- Modify: `ReleaseRadarCore/AgentBridge/AgentCommand.swift`
+- Modify: `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift`
+- Modify: `ReleaseRadarAgentTools/main.swift`
+- Modify: `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/NotificationAcceptanceTests.swift`
+
+**Interfaces:** Adds `reviseTicketTaskPlan` and `completeTicketTask` command
+cases plus MCP tools `release_radar_revise_ticket_task_plan` and
+`release_radar_complete_ticket_task`. Additions contain no completion field and
+are always Active/Pending. Results add optional `ticketTaskPlanRevision` without
+changing prior result JSON. Both commands dispatch only through Task 3 and use
+the existing durable request receipt, transaction, `.ticketTaskPlan` audit
+scope, authorized-root/attribution checks, and packaged helper transport. Task
+4A's existing revision-bearing Accepted path and upsert rejection remain
+unchanged.
+
+- [ ] **RED/commands:** Add exact command JSON round trips, translators, and
+  strict MCP schemas. Test nil creation returning revision 1 versus present
+  expected revision,
+  63/64/65 aggregate operations, 65,535/65,536/65,537 sorted-key bytes, stable
+  IDs/labels, Core-plus-MCP UTF-8 boundaries for 255/256/257-byte machine IDs
+  and labels plus 4,095/4,096/4,097-byte titles using ASCII and multibyte
+  values, wrong-project/ticket references, stale revision, pending-only
+  additions, duplicate/conflicting operation identities, semantic no-op,
+  changed-body request reuse, exact create/each-completion replay, out-of-order
+  chained completion, transaction rollback, committed audit/revision/result,
+  helper/app unavailable, and `outcomeUnknown` recovery by replaying the exact
+  complete original request.
+- [ ] **RED/concurrency:** Only after Task 4A is remote-exact, use the existing
+  store/dispatcher concurrency infrastructure for all four schedules: no-plan
+  Accept versus first plan creation; Accept@R versus add/supersede@R; Accept@R
+  versus completion@R; and two revisions or completions at R. Assert one
+  coherent winner and exact loser rollback with no orphan task/plan, extra
+  audit/receipt, lane, owner-attention, or notification effect.
+- [ ] **GREEN:** Validate schema/bounds before mutation, canonicalize request
+  bodies once, transact through Task 3, return only committed revisions and
+  audits, and retain complete requests for replay/outcome-unknown recovery. Add
+  exactly the two new helper tools; do not add a second accept tool, alter any
+  Accepted-path rule, or infer state from Git, Markdown, tests, goals, or
+  execution.
+- [ ] **Verify:** Run `AgentBridgeAcceptanceTests`,
+  `AgentBridgeTransportAcceptanceTests`, and `NotificationAcceptanceTests` plus
+  a Debug build. Exercise the packaged helper and prove it lists all Task 4A
+  tool names plus exactly the two task-plan tools, translates their strict
+  schemas, and remains fail-closed when the app is unavailable.
+- [ ] **Gate/checkpoint:** Code Review, QA/Test, Architecture,
+  Security/Privacy, TPM, and Delivery Management return GO/Required 0. Do not
+  install or mutate owner data. Commit/push only the 3 production and 3 test
+  paths declared above plus coordinator-owned ledger evidence; verify exact
+  reviewed local/remote SHA equality before Task 5. This checkpoint authorizes
+  only isolated tests and development-build exercise: do not install it for the
+  owner, designate it as a release candidate, ship it, or permit external use
+  of either new tool until Task 5 task visibility/recovery and Task 7 full
+  planning/lane enforcement are independently accepted and remote-exact. Add no
+  feature-flag system.
+
+### Task 5: Present ticket tasks on cards and Ticket Details
+
+**Files:**
+- Modify: `ReleaseRadar/Projects/DashboardProjection.swift`
+- Modify: `ReleaseRadar/Projects/TicketCardView.swift`
+- Modify: `ReleaseRadar/Projects/PhaseBoardView.swift`
+- Modify: `ReleaseRadar/Projects/TicketDetailView.swift`
+- Modify: `ReleaseRadarTests/DashboardProjectionTests.swift`
+- Modify: `ReleaseRadarTests/AppRouteTests.swift`
+- Modify: `ReleaseRadarUITests/ReleaseRadarUITests.swift`
+
+**Interfaces:** Produces `TicketTaskProjection` and explicit
+`TicketTaskPlanProjection.noPlan`, `.loaded(plan:)`, and
+`.unavailable(recovery:)`; only Loaded supplies
+`TicketCardProjection.activeTaskCount` and Ticket Details rows from the same
+active collection. `PhaseBoardView`, which constructs `TicketDetailView`,
+routes its existing reload action/callback into the unavailable Tasks recovery
+treatment; Task 5 adds no separate reload mechanism.
+
+- [ ] **RED:** Assert the three projection states cannot collapse into each
+  other; card count exists only for Loaded. Assert no-plan omission,
+  unavailable recovery/omission, and isolated task-query failure: discard stale
+  task rows/count, return unavailable recovery for that ticket, and keep the
+  rest of the successfully loaded phase board usable. Assert
+  deterministic active list, superseded exclusion, checked/unchecked state,
+  add/supersede count synchronization, completion count stability, and no
+  aggregate or task action. Test one-task `1 task` and sixteen-task `16 tasks`
+  announcements with no completed/total fraction rendered or announced;
+  glyph/count have no separate focus/action;
+  completion preserves count; superseded rows disappear; a long list scrolls
+  from first through last with no hidden `more`; compact identity, dependency,
+  blocker, count, and full hit target do not overlap. Add row accessibility for
+  label/title/checked state/item position and hidden decorative box. Exercise
+  the existing PhaseBoardView reload callback from the unavailable treatment
+  and assert the compact card retains its current 48-point minimum hit-target
+  height.
+- [ ] **GREEN:** Batch-load canonical active task rows, derive the card count
+  from that array, add the neutral checklist signal, and render the read-only
+  `Tasks` section exactly as the design specifies. Route the existing
+  `PhaseBoardView` reload callback into the unavailable treatment. Keep five
+  lanes and existing dependency/blocker signals.
+- [ ] **Verify:** This is the exhaustive Ticket Tasks visual gate. Run
+  projection/AppRoute/UI selections, then inspect one isolated running app at
+  relevant wide and compact widths against
+  `docs/design/mockups/phase_board.png`; exercise keyboard, VoiceOver,
+  increased contrast, Dynamic Type at both wide and compact widths, exact
+  metadata order/separators/narrow priority, long wrapping/scrolling, no-plan,
+  Loaded, and unavailable states. Reuse this existing manual/runtime path; add
+  no verification harness.
+- [ ] **Focused owner UI acceptance:** Present the isolated running Ticket
+  Tasks surface and exact wide/compact/accessibility evidence, including
+  running-app Dynamic Type at both widths, to the owner. Record explicit
+  acceptance of this UI contract before Task 5 closes or any Task 5 path is
+  committed. This focused product gate applies to Task 5 only; it is not
+  repeated as an owner-acceptance requirement on every later task.
+- [ ] **Gate/checkpoint:** Code Review, QA, Architecture, TPM, and Delivery
+  Management plus Security/Privacy authority review return GO/Required 0.
+  After the focused owner UI acceptance, commit/push the seven UI/projection/test
+  paths plus evidence and verify exact remote equality before Task 6. Task 4B
+  tools now have their required visible
+  recovery surface but remain non-installable/non-shippable until Task 7 also
+  reaches its remote-exact gate.
+
+### Task 6: Enforce Delivery Goal plan and lifecycle rules
+
+**Files:**
+- Create: `ReleaseRadarCore/Planning/DeliveryPlanningPolicy.swift`
+- Create: `ReleaseRadarTests/DeliveryPlanningPolicyAcceptanceTests.swift`
+
+**Interfaces:** Produces `PhaseCreationMode`, `applyRevision`, `finalizePlan`,
+`transitionGoal`, and plan/goal read helpers using the accepted Task 1B types
+and v11 tables. It does not yet expose commands or own general ticket writers.
+
+- [ ] **RED:** Cover the full ADR-004 phase-plan and goal lifecycle matrices,
+  exact structural revisions, finalization coverage, initially empty versus
+  delivery-complete Ready, assignment history, lifecycle current-revision-but-
+  Draft rejection, owner-only acceptance, supersession rules, operation limits,
+  and rollback. Add the one migration-adoption case: when finalizing a plan to
+  Ready, a migration-continuation In-progress or Needs-review ticket explicitly
+  assigned to exactly one Draft goal atomically promotes only that goal to
+  Active, sets `activated_at`, and clears the continuation. Reject
+  zero/multiple/inferred/retroactive assignments and prove this grants no
+  freestanding Planned→Active transition.
+- [ ] **GREEN:** Implement one store-owned Delivery Goal policy with private SQL
+  mutation helpers. Keep the legacy-adoption branch narrow, explicit-assignment
+  only, and inside finalization. Task-plan rows are read only when ticket
+  acceptance needs them; task-only mutation never calls phase invalidation.
+- [ ] **Verify/gate/checkpoint:** Run focused policy and Store tests; require all
+  six disciplines GO/Required 0, with Architecture explicitly approving the
+  migration-adoption rule; commit/push only this policy/test slice plus ledger
+  evidence and verify exact remote equality before Task 7.
+
+### Task 7: Route every ticket writer and compose planning policy
+
+**Files:**
+- Modify: `ReleaseRadarCore/Planning/DeliveryPlanningPolicy.swift`
+- Modify: `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift`
+- Modify: `ReleaseRadarCore/Import/RekonArtifactImporter.swift`
+- Modify: `ReleaseRadar/Projects/DashboardSampleData.swift`
+- Modify: `ReleaseRadar/Projects/RR9ActivePhaseCaptureFixture.swift`
+- Modify: `ReleaseRadarTests/DeliveryPlanningPolicyAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/RekonImportAcceptanceTests.swift`
+
+**Interfaces:** Adds policy-owned `upsertPhase`, `upsertTicket`,
+`transitionTicket`, and `assertCanRecordReviewOrCompletion`; every product/debug
+ticket writer becomes a client. The Accepted transition preserves Task 4A's
+exact task revision gate and its unconditional rejection of Accepted upsert
+create/update requests. No portable exporter/exportability helper is added.
+
+- [ ] **RED:** Exercise every ticket operation row, dependency/blocker gates,
+  legacy continuation, Accepted terminality, structural invalidation, task-
+  only non-invalidation, Backlog-only import, source-lane review facts, valid
+  sample/debug setup, and Accepted-upsert rejection across every routed writer.
+  Current import creates no task plans.
+- [ ] **GREEN:** Route all current shipping/debug phase and ticket SQL writers
+  through the policy; remove bypass modes; keep setup-only test SQL isolated.
+  Preserve the Task 4A task gate and upsert closure. Do not create an unused
+  archive predicate/helper/error or archive v2; future RM5 owns exporter/
+  archive-format completeness and RM6 may import only its complete supported
+  output.
+- [ ] **Verify/gate/checkpoint:** Run policy, importer, onboarding, bridge, and
+  relevant sample/capture tests; require all six disciplines GO/Required 0;
+  commit/push the bounded writer/policy diff and verify exact remote equality
+  before Task 7A. This remote-exact gate, together with Tasks 5 and 6, makes
+  Task 7A eligible to lift Task 4B's owner-install restriction; Task 7 itself
+  does not install or ship the tools.
+
+### Task 7A: Install and bootstrap live RR-R10 task tracking
+
+**Files:**
+- Modify: `ReleaseRadarTests/EndToEndAcceptanceTests.swift`
+- Coordinator modify: `docs/delivery/progress.md`
+
+**Interfaces:** Consumes the exact remote-equal through-Task-7 candidate and
+the shared owner-install security/recovery contract in the Ticket Tasks design.
+It adds no product behavior. It installs schema v12 plus task UI/policy/tools,
+creates the live 16-row RR-R10 plan at revision 1, completes accepted rows
+through Task 7, and produces installed replay/readback evidence that every
+later task command consumes.
+
+- [ ] **Brief/runbook release gate:** Before RED or any owner install, the Task
+  7A brief defines the exact bounded repository-owned owner-store backup/
+  restore runbook using existing repository facilities. It specifies app/helper
+  quiescence and process checks; one consistent SQLite main/WAL/SHM set; backup
+  identity; restore verification on a disposable copy; retention through post-
+  install acceptance; and exact abort, restore, relaunch, and typed/UI readback.
+  Architecture, Security/Privacy, QA, TPM, and Delivery Management independently
+  approve it. Do not add a generalized backup framework or product feature.
+- [ ] **RED/isolated install proof:** In the declared end-to-end test, start
+  from the supported pre-policy owner-state shape with RR-R10 In progress,
+  migrate through v11 and v12, and assert migration-only continuation remains
+  attached to RR-R10. Exercise one 16-addition Active/Pending creation request,
+  the exact chained completion manifest through Task 7, replay, relaunch, and
+  Task 7A still Pending. Prove `☷ 16`, all labels/titles/order, checked states
+  through Task 7, no lane/goal movement, no duplicate audit/receipt/
+  notification, and unchanged unrelated state. The test must fail before its
+  Task-7 product dependencies are present.
+- [ ] **GREEN/isolated install proof:** Make only the declared integration test
+  pass against the exact through-Task-7 product. Do not add product behavior in
+  this checkpoint. Run the focused test, complete scheme on isolated data, and
+  strict application/helper signing checks before owner installation.
+- [ ] **Owner pre-install safety:** Confirm Tasks 5, 6, and 7 are independently
+  accepted, committed/pushed, remote-equal, and the through-Task-7 candidate is
+  exact. Apply the shared contract explicitly: capture typed/UI active-phase,
+  relevant lane/outcome/dependency/blocker, observed-goal/link, notification,
+  and no-plan/goal-state snapshot; execute the approved runbook's quiescence,
+  consistent main/WAL/SHM backup, identity, disposable-copy restore proof, and
+  retention steps; verify candidate/helper/signing/running-process hashes; and
+  retain the ordered request manifest with authorized root, trusted origin,
+  attribution, reason, UUID, full body, and order. Stop on any mismatch.
+- [ ] **Install and bootstrap:** Install only the exact candidate. Do not read
+  SQLite after install. Through retained typed requests, create every catalog
+  row Active/Pending at revision 1, then complete Task 1A, Task 1B, Task 2A,
+  Task 2B, Task 3, Task 4A, Task 4B, Task 5, Task 6, and Task 7 in order using
+  each returned exact revision. Leave Task 7A and Tasks 8–11B Pending. Relaunch
+  and verify the live list/card, migration continuation, unchanged RR-R10 In
+  progress lane, stable first/last row, exact revisions/audits, and original-
+  request replay with no duplicates.
+- [ ] **Abort/repair rule:** Migration failure, corruption, unexpected state,
+  inability to prove the continuation, or any snapshot/hash/signing/process
+  mismatch executes the approved runbook's exact abort, quiescence, restore,
+  relaunch, and typed/UI readback. The pre-Task-2A gate has already proved
+  migration eligibility; this is failure recovery, not deferred discovery. If a
+  product defect appears before live plan creation, stop and add a separately
+  owner-accepted, architecture-reviewed bounded catalog checkpoint before
+  retrying. If it appears after plan creation, keep Task 7A Pending, use
+  `reviseTicketTaskPlan` at the exact revision to add one meaningful Active/
+  Pending repair task, and create/review/release its full brief. Keep that row
+  Pending through implementation/tests, corrected-candidate staging, the
+  shared snapshot/backup/hash/install contract, typed/UI proof that the defect
+  is fixed and owner state preserved, independent review, commit/push, and
+  remote equality. Only then complete/read back the repair row, durably record/
+  commit/push/remote-verify its returned revision and audit, and resume Task 7A.
+  Never hide the fix here or precreate a contingent row.
+- [ ] **Gate/checkpoint and row completion:** Code Review, QA, Architecture,
+  Security/Privacy, TPM, and Delivery Management return GO/Required 0 on the
+  isolated and installed evidence. Commit/push only the declared test plus the
+  coordinator-owned ledger evidence and verify exact remote equality with
+  ahead/behind `0/0`. Only then issue the retained exact-revision
+  `completeTicketTask` for Task 7A and read back its checked row, unchanged
+  active count/lane/goal state, resulting revision, and audit. The coordinator
+  records that exact revision/audit in `docs/delivery/progress.md`, commits/
+  pushes it, and verifies remote equality no later than Task 8's brief/release
+  checkpoint. Task 8 cannot open before that durable reconciliation.
+
+### Task 8: Expose audited Delivery Goal commands
+
+**Files:**
+- Modify: `ReleaseRadarCore/AgentBridge/AgentCommand.swift`
+- Modify: `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift`
+- Modify: `ReleaseRadarAgentTools/main.swift`
+- Modify: `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`
+
+**Interfaces:** Adds `applyPhasePlanRevision`, `finalizePhasePlan`, and
+`transitionDeliveryGoal`; adds the three exact `release_radar_*` MCP tools from
+the superseded Task 3; extends results with optional `phasePlanRevision`.
+Before either mutation or durable replay, owner-only lifecycle requests
+reauthorize the trusted `AgentCommandOrigin`. Preserve the preexisting
+canonical request-receipt bytes: validate replay origin through the stored
+authoritative audit actor/result association rather than adding origin to old
+receipt bodies. Decode the stored result's audit event ID, load that
+authoritative audit row, and require its persisted owner/agent actor identity
+to match the newly supplied trusted origin before returning the old result;
+missing or mismatched association rejects.
+
+- [ ] **RED:** Test exact round trips/schemas, 64 goal and 512 assignment
+  aggregate limits, 65,536-byte boundary, stale/current-Draft revisions,
+  coupled transition denial, external acceptance denial, owner-app acceptance,
+  same-origin exact replay returning the original result, cross-origin reuse of
+  an owner request ID rejecting without replay, changed-body reuse, rollback,
+  no duplicate mutation/audit, and assignment-event audit scope.
+- [ ] **GREEN:** Dispatch only through Tasks 6–7, preserve non-spoofable origin
+  and current canonical request-receipt bytes, reauthorize the supplied trusted
+  origin against the persisted authoritative audit actor/result association on
+  replay, and expose only `awaiting_acceptance` through the external lifecycle
+  schema. A mismatched origin returns the typed reuse/authorization rejection
+  before the prior result can escape.
+- [ ] **Verify/gate/checkpoint:** Run bridge/transport tests and Debug build;
+  exercise new owner request, same-origin replay, and external-origin reuse of
+  the same request ID with one result/one audit/one mutation total. Require all
+  six reviews GO/Required 0; commit/push only the bounded command slice and
+  verify exact remote equality. Then issue `completeTicketTask` for Task 8 at
+  the exact live revision and read back its checked row, resulting revision,
+  audit, unchanged active count, and unchanged lane/goal state. The coordinator
+  records that exact revision/audit in `docs/delivery/progress.md`, commits/
+  pushes it, and verifies remote equality no later than Task 9's brief/release
+  checkpoint. Task 9 cannot open before that durable reconciliation.
+
+### Task 9: Project Delivery Goals, Activity, and owner review
+
+**Files:**
+- Modify: `ReleaseRadar/Projects/DashboardProjection.swift`
+- Modify: `ReleaseRadar/Activity/ProjectActivityProjection.swift`
+- Modify: `ReleaseRadar/Review/ReviewInboxProjection.swift`
+- Modify: `ReleaseRadarTests/DashboardProjectionTests.swift`
+- Modify: `ReleaseRadarTests/ReviewAndGraphAcceptanceTests.swift`
+
+**Interfaces:** Produces `PhaseBoardKey`, `PhasePlanProjection`,
+`DeliveryGoalSummaryProjection`, `TicketDeliveryGoalProjection`,
+`DeliveryGoalAcceptanceReviewProjection`, and both dashboard board accessors;
+preserves the active-board accessor for existing callers.
+
+- [ ] **RED:** Assert all-phase loading, exact coverage/unassigned/completed
+  states, separate Delivery Goal/Codex execution context, stable goal filters,
+  assignment-event Activity attribution, and exactly one Awaiting-acceptance
+  review item with replay/failure cleanup behavior.
+- [ ] **GREEN:** Add all-phase keyed projection and unambiguous goal/activity/
+  review joins without changing observed-goal persistence or notification
+  semantics. Preserve Task 5 task rows/counts in every board projection.
+- [ ] **Verify/gate/checkpoint:** Run projection and review/graph tests; require
+  Code Review, QA, Architecture, TPM, Delivery Management, and authority-
+  separation Security/Privacy GO/Required 0; commit/push and verify remote
+  equality. Then issue `completeTicketTask` for Task 9 at the exact live
+  revision and read back its checked row, revision, audit, unchanged count,
+  and unchanged lane/goal state. The coordinator records that exact revision/
+  audit in `docs/delivery/progress.md`, commits/pushes it, and verifies remote
+  equality no later than Task 10's brief/release checkpoint. Task 10 cannot
+  open before that durable reconciliation.
+
+### Task 10: Present non-mutating phase browsing and Delivery Goals
+
+**Files:**
+- Create: `ReleaseRadar/Projects/PhaseBoardPlanningControls.swift`
+- Modify: `ReleaseRadar/Projects/PhaseBoardView.swift`
+- Modify: `ReleaseRadar/Projects/ActivePhaseSelector.swift`
+- Modify: `ReleaseRadar/Projects/TicketDetailView.swift`
+- Modify: `ReleaseRadar/App/AppModel.swift`
+- Modify: `ReleaseRadar/Navigation/SidebarView.swift`
+- Modify: `ReleaseRadar/Review/NeedsReviewView.swift`
+- Modify: `ReleaseRadarTests/AppRouteTests.swift`
+- Modify: `ReleaseRadarUITests/ReleaseRadarUITests.swift`
+
+**Interfaces:** Adds `AppModel.viewPhase` and owner-only
+`acceptDeliveryGoal`; consumes Task 9 projections while preserving Task 5's
+read-only `Tasks` section before Delivery Goal and Codex execution goal.
+
+- [ ] **RED:** Prove viewed phase never mutates the active pointer/audit,
+  Make-active remains separate, filters retain lane identity, owner acceptance
+  uses `.ownerApp`, and wide/compact/focus/keyboard/VoiceOver/store-refresh/
+  revision failures match the Delivery Goal design. Retain a focused regression
+  that Task 5's tri-state Tasks section and canonical count survive phase
+  browsing/filtering; do not repeat Task 5's exhaustive task visual matrix.
+- [ ] **GREEN:** Build the planning controls, per-project viewed state, distinct
+  inspector sections, filtered five-lane board, and Needs Review acceptance
+  action without exposing task-row actions or owner acceptance through MCP.
+- [ ] **Verify/gate/checkpoint:** Run AppRoute/UI tests and one isolated wide/
+  compact runtime comparison focused on Delivery Goal controls, active/viewed
+  separation, filter/focus, inspector headings, and the task regression;
+  require all six disciplines GO/Required 0; commit/push and verify remote
+  equality. Then issue `completeTicketTask` for Task 10 at the exact live
+  revision and read back its checked row, revision, audit, unchanged count,
+  and unchanged lane/goal state. The coordinator records that exact revision/
+  audit in `docs/delivery/progress.md`, commits/pushes it, and verifies remote
+  equality no later than Task 11A's brief/release checkpoint. Task 11A cannot
+  open before that durable reconciliation.
+
+### Task 11A: Integrate and stage the release candidate
+
+**Files:**
+- Modify: `ReleaseRadarTests/EndToEndAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/NotificationAcceptanceTests.swift`
+- Modify: `ReleaseRadarTests/OnboardingAcceptanceTests.swift`
+- Coordinator modify: `docs/delivery/progress.md`
+
+**Interfaces:** Consumes every prior public command/projection. Produces no new
+product abstraction; produces an independently accepted, committed/pushed,
+remote-exact staged candidate and automated integration evidence for Task 11B.
+
+- [ ] **RED/integration fixture:** Drive public APIs from a v10 fixture through
+  v11/v12 and cover pending-only plan creation, chained completions, exact task
+  acceptance, the seven Delivery Goals, roadmap assignment sets, all ticket
+  writers including Accepted-upsert rejection, import creating no task plans,
+  no-reopen, and notification preservation. Immediate pass after prior tasks is
+  valid. A discovered product defect remains a
+  failing regression in one of the three declared integration-test files and
+  stops Task 11A; it is not repaired inside this checkpoint.
+- [ ] **GREEN/integration:** Prove the exact seven Delivery Goals and roadmap
+  assignment sets, all ticket writers, task-plan-free import, no-reopen rule,
+  notification preservation, focused integration selections, build/signing,
+  and one staged Release candidate. Modify only the three declared integration
+  tests and coordinator-owned evidence; do not change any owning product
+  boundary, install, bootstrap owner data, repeat Task 5/10 manual UI matrices,
+  or perform owner acceptance. If a product defect appears, the coordinator
+  must stop with Task 11A Pending, call `reviseTicketTaskPlan` at the exact live
+  revision to add one meaningful Active/Pending repair task, obtain its complete
+  brief and independent release, implement/test/review/commit/push/remote-
+  verify it, complete that new row explicitly, and then rerun Task 11A. No
+  owning product fix is hidden inside Task 11A and no contingent defect row is
+  created in advance.
+- [ ] **Gate/checkpoint:** Independent Code Review, QA, Architecture,
+  Security/Privacy, TPM, and Delivery Management return GO/Required 0. Update
+  coordinator evidence, commit/push only the three declared integration-test
+  paths plus that evidence, and verify exact remote equality. Then issue
+  `completeTicketTask` for Task 11A at the exact live revision and read back
+  its checked row, revision, audit, unchanged count, and unchanged lane/goal
+  state. The coordinator records that exact revision/audit in
+  `docs/delivery/progress.md`, commits/pushes it, and verifies remote equality
+  no later than Task 11B's brief/release checkpoint. Task 11B cannot open before
+  that durable reconciliation. Owner acceptance remains closed.
+
+### Task 11B: Install and verify the final RR-R10 outcome
+
+**Files:**
+- Modify: `ReleaseRadarTests/EndToEndAcceptanceTests.swift`
+- Modify: `docs/delivery/progress.md`
+
+**Interfaces:** Consumes the exact Task 11A staged hashes plus every prior
+checkpoint and the live Task 7A plan. Produces final installed preservation,
+Delivery Goal repair/adoption, replay/readback evidence, then a completed Task
+11B row and final task-plan revision. If N is the dynamic active count of all
+16 initial rows plus every reviewed later row, it ends with installed card
+signal `☷ N` and typed/UI proof that all N active rows are checked, and performs
+none of the later ticket or Delivery Goal closure.
+
+- [ ] **Pre-install/full-suite gate:** Verify Task 11A local/remote/hash equality,
+  run the complete scheme against isolated data, and require independent pre-
+  install release. Apply the shared owner-install contract explicitly: capture
+  typed/UI active-phase, relevant ticket lane/outcome/dependency/blocker,
+  observed-goal/link, notification, all 16 initial task rows plus every reviewed
+  later row, dynamic active count N, and current Delivery Goal state. Reuse the
+  exact Task-7A-brief runbook: prove app/helper quiescence, consistent SQLite
+  main/WAL/SHM backup identity, disposable-copy restore, and retained backup;
+  verify exact staged app/helper/signing/running-process hashes; retain every
+  repair request's
+  authorized root, trusted origin, attribution, reason, UUID, complete body,
+  and order. Any mismatch stops without installation.
+- [ ] **Final install and continuation preservation:** Install only the exact
+  candidate and do not read SQLite afterward. Through typed/UI readback, prove
+  the plan contains all 16 initial rows plus every reviewed later row with
+  dynamic active count N, every required row through Task 11A completed, Task
+  11B Pending, exact revision/audits, RR-R10 In progress migration
+  continuation, and all unrelated snapshot state preserved. Migration failure,
+  corruption, unexpected state, or inability to prove that invariant executes
+  the approved runbook's exact abort, quiescence, restore, relaunch, and typed/
+  UI readback.
+- [ ] **Installed Delivery Goal repair/adoption:** Through the retained typed
+  manifest, create RR-DG-R10 and RR-DG1…6 as Draft, explicitly assign the
+  migration-continuation RR-R10 to exactly RR-DG-R10, assign the roadmap
+  tickets as specified, and finalize the Ready plan. Assert finalization
+  atomically promotes RR-DG-R10 to Active, sets its activation time, and clears
+  RR-R10's continuation; RR-DG1…6 remain Planned. Prove there is no inferred or
+  retroactive assignment and no general goal-activation request. Replay every
+  original request, relaunch, and verify `☷ N`, exact goals/assignments,
+  unchanged historical tickets/active phase/observed goals, and no duplicate
+  audit/receipt/notification. This is critical installed readback, not a repeat
+  of Task 5 or Task 10's exhaustive visual matrices.
+- [ ] **Installed-only defect stop/repair:** Keep Task 11B Pending. At the exact
+  live revision, add one meaningfully titled Active/Pending task through
+  `reviseTicketTaskPlan` and create/review/release its full bounded brief. Keep
+  both Task 11B and the repair row Pending through implementation/tests,
+  corrected-candidate staging, the shared snapshot/approved-runbook/hash/
+  install contract, typed/UI proof that the original defect is fixed and owner
+  state preserved, independent review, commit/push, and remote equality. Only
+  then complete/read back the repair row, record its exact revision/audit in
+  `docs/delivery/progress.md`, commit/push/remote-verify that ledger record, and
+  resume Task 11B. Never hide the fix in Task 11B or precreate a contingent row.
+  Uncertain requests recover only through exact original replay.
+- [ ] **Independent gate/checkpoint:** Code Review, QA, Architecture,
+  Security/Privacy, TPM, and Delivery Management return GO/Required 0 on Task
+  11B. Commit/push its exact tests/evidence and verify local/remote equality
+  while RR-R10 remains unaccepted and Task 11B remains pending.
+- [ ] **Complete Task 11B and stop:** Send the retained exact-next-revision
+  `completeTicketTask` for Task 11B only after its independent checkpoint is
+  committed/pushed/remote-exact. Read back all 16 initial rows plus every
+  reviewed later row completed, dynamic active count N, card signal `☷ N`,
+  proof that all N active rows are checked, and the resulting final task-plan
+  revision/audit. Verify RR-R10 remains In progress,
+  RR-DG-R10 remains Active, RR-DG1…6 remain Planned, no lane or goal moved
+  because of task completion, and the task-plan revision is authoritative.
+  Task 11B ends immediately at this installed readback; terminal reconciliation
+  durably records its returned revision/audit.
+
+## Post-task governed ticket and Delivery Goal closure before Accepted
+
+This is an execution section, not an owner-visible task row. It cannot perform
+product implementation and begins only after Task 11B has ended with all 16
+initial rows plus every reviewed later row checked at dynamic active count N.
+
+- [ ] **Verify the adopted starting state:** Preserve the final task-plan
+  revision. Read back the Post-MVP plan Ready at its exact revision, RR-R10
+  already In progress and explicitly assigned only to RR-DG-R10, RR-DG-R10
+  Active with activation time, migration continuation cleared, dependencies
+  satisfied, and zero blockers. No blocker-resolution, ticket-start, or goal-
+  activation action occurs in this post-task section.
+- [ ] **Reach owner review:** Record the governed completion and review evidence
+  through typed audited requests, then transition RR-R10 In progress→Needs
+  review. Read back each committed request and prove the final task-plan
+  revision is unchanged.
+- [ ] **Owner acceptance and goal closure:** Obtain explicit owner acceptance,
+  then use the exact unchanged task-plan revision for RR-R10 Needs
+  review→Accepted. Request RR-DG-R10 Active→Awaiting acceptance with the exact
+  current phase-plan revision, then use the installed owner-app action for
+  Awaiting acceptance→Accepted. Read back each step; replay every original
+  request verbatim and prove the original receipts/audits, no duplicate
+  side effects, terminal Accepted states, and unchanged task-plan revision.
+  Any optional owner-visible closing summary states that Task 7A, Task 11A,
+  and Task 11B were each completed only after their own remote-exact
+  checkpoints, never by bootstrap or lane movement.
+- [ ] **New implementation stop rule:** If any product implementation is
+  discovered before acceptance, stop this closure. Use
+  `reviseTicketTaskPlan` at the exact current revision to add a new active
+  Pending task; create its complete bounded brief, independently release it,
+  implement/review/verify/commit/push it through its own remote-exact gate, and
+  explicitly complete that row. Only then resume this closure from current
+  authoritative readback. Do not implement the work inside this non-task
+  section or erase completed history.
+
+## Non-ticket terminal reconciliation after Accepted state
+
+This is a repository execution step, not an owner-visible task row. It cannot
+add, revise, complete, supersede, or otherwise mutate the Accepted RR-R10 task
+plan and is not part of its denominator.
+
+- [ ] Record the already-Accepted RR-R10/RR-DG-R10 state, all 16 initial task
+  rows plus any later reviewed additions completed, final revision, full/
+  installed/replay/reviewer/owner evidence, the exact returned Task 11B task-
+  plan revision/audit, and
+  every exact pushed checkpoint in `docs/delivery/progress.md`.
+- [ ] Run `git diff --check` and `git status --short --branch`; stage only the
+  terminal ledger record, commit `docs: record accepted RR-R10 delivery`, push,
+  and verify exact `git ls-remote` equality with ahead/behind `0/0`.
+- [ ] Record remote evidence through the typed evidence path without changing
+  ticket, goal, or task-plan state. Complete the persistent Codex goal only
+  when no required work remains.
+
+## Revised plan completion check
+
+- The direction is owner-approved and the exact package is pending owner
+  acceptance. Exact acceptance, coordinator ledger record, planning/ledger
+  commit/push, remote equality with ahead/behind `0/0`, authorized typed/UI
+  Blocked-state readback, and exact installed app/helper/running-process match
+  to the ledger-backed schema-v10 build all precede any mutation. Failure stops
+  for a bounded architecture-reviewed, owner-accepted reconciliation checkpoint
+  before the audited early In-progress handoff or Task 2A release. Owner
+  approval alone does not release implementation; eligibility is not deferred
+  to Task 7A and SQLite is not inspected directly.
+- The initial catalog has 16 stable active rows: completed Task 1A/1B plus
+  pending Tasks 2A/2B/3/4A/4B/5/6/7/7A/8/9/10/11A/11B at this planning
+  checkpoint. That is 2 checked and 14 unchecked. They first become app-owned
+  at Task 7A; later reviewed additions increase the live count rather than
+  rewriting or laundering the initial denominator.
+- Tasks 2A/2B/3/4A/4B/5 implement Ticket Tasks without reopening accepted v11
+  work; Tasks 6–10 replace prior unopened Tasks 2–4; Task 7A makes tracking
+  live; Tasks 11A/11B split final integration from installed repair. The non-
+  ticket reconciliation preserves prior Task 6 responsibility without ever
+  becoming a task row or mutating Accepted state.
+- Every revised task is a complete independently testable slice with explicit
+  files, interfaces, RED/GREEN behavior, independent review, and its own
+  commit/push/remote checkpoint. Internal checkbox steps are execution actions,
+  not persisted task rows.
+- Every Task 7A bootstrap addition is Active/Pending. Explicit chained
+  completion requests through Task 7, then exact completion after each Task
+  7A/8/9/10/11A/11B remote gate, produce checked rows and preserve replay/
+  audit/revision evidence. Creation returns revision 1; every later successful
+  mutation advances once. Catalog changes after bootstrap use
+  `reviseTicketTaskPlan` at the exact live revision and never infer authority.
+- The coordinator durably records, commits/pushes, and remote-verifies each
+  Task 7A/8/9/10/11A completion revision/audit no later than the next task's
+  brief/release; the next task cannot open first. Repair rows are reconciled
+  before their parent resumes, and Task 11B's final row is recorded by terminal
+  reconciliation. No reconciliation becomes a task row or framework.
+- Task-plan and phase-plan revisions remain independent; the Accepted
+  transaction observes the exact task revision and all active completions.
+  Final task completion never changes the lane or goal.
+- Card count and Ticket Details list share canonical active rows; completion
+  never changes count or lane; isolated task-query failure supplies unavailable
+  recovery with no stale count while the rest of the board remains usable.
+- Core and MCP enforce 256-byte machine-ID, 256-byte label, and 4,096-byte title
+  UTF-8 maxima with minus-one/exact/plus-one ASCII and multibyte tests. Schema
+  v12 parent deletion and cascade attempts cannot erase task history.
+- Current import creates no task plans. RR-R10 adds no exporter, exportability
+  helper, guard, archive error, or archive v2. Future RM5 export/format work
+  represents tasks or fails before emission; RM6 accepts only complete
+  supported exporter output or rejects it.
+- The Task 7A brief defines and independently approves the exact bounded
+  repository-owned backup/restore runbook before owner install: app/helper
+  quiescence, SQLite main/WAL/SHM consistency, backup identity, disposable-copy
+  restore proof, retention through post-install acceptance, and exact abort/
+  restore/relaunch/readback. Task 11B reuses it. Both installs retain exact
+  hash/signing/process/request-manifest/replay checks without direct post-
+  install SQLite reads or a generalized backup product/framework.
+- Installed repair rows remain Pending through corrected-candidate staging,
+  the shared install contract, typed/UI defect and owner-state proof,
+  independent review, commit/push, and remote equality; only then are they
+  completed/read back and durably reconciled before the parent resumes.
+- RR-R10 is already In progress when Task 7A installs. Migration-only
+  continuation is preserved through v11/v12. Task 11B explicitly assigns it to
+  Draft RR-DG-R10 and Ready finalization atomically adopts it by promoting that
+  goal to Active, setting activation time, and clearing continuation; roadmap
+  goals remain Planned. No inferred assignment or general goal-activation path
+  exists.
+- Task 11B independently reviews/commits/pushes/verifies final installed repair,
+  then completes its row and ends with all 16 initial rows plus every reviewed
+  later row checked and card signal `☷ N`. A separate non-implementation closure begins from
+  In progress/Active, records completion/review, moves to Needs review, obtains
+  explicit owner acceptance for exact-task-revision Needs review→Accepted, and
+  closes RR-DG-R10 through Active→Awaiting acceptance→owner-app Accepted. Post-
+  Accepted terminal reconciliation remains a separate final section.
