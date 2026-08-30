@@ -33,8 +33,8 @@ Deliver the signed native macOS MVP described by
   handoff from the exact authorized RekonDesignSystem root, confirmed the
   immediate running-UI guidance state, then confirmed `RR-R8` on the live Phase
   Board. The audited final transition placed `RR-R8` in Accepted.
-- Active RR-R9 gate: **Complete product outcome Accepted, Required 0; accepted
-  delivery commit pushed and remote-verified; final ledger-only push pending.**
+- Active RR-R9 gate: **COMPLETE — product Accepted, Required 0, Optional 0;
+  terminal Git sequence complete; no RR-R9 work remains.**
   The one accepted live command and its
   immediate/relaunch `RR-ROADMAP` evidence remain definitive historical
   activation evidence. Later valid owner UI choices set the current persisted
@@ -47,24 +47,24 @@ Deliver the signed native macOS MVP described by
   no later phase-selection event. The whole RR-R9 product outcome is accepted.
   Accepted-delivery commit `10e844fe801642a4a9176eb8813d75a958b3246e`
   is on `origin/codex/release-radar-mvp` with exact remote-SHA match and 0/0
-  upstream counts. Only this final ledger evidence update must still be
-  committed, pushed, and remote-verified before the RR-R9 goal may be complete.
-- Next eligible work: **Commit, push, and remote-verify this ledger-only final
-  evidence update.**
+  upstream counts. Ledger evidence commit
+  `985d9eb0f6b8e3c93fa079b27e566e4fe70d67b1` is also pushed with exact
+  `git ls-remote` match and 0/0 upstream counts. The RR-R9 goal is complete.
+- Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
   at SHA-256
   `2d4c855adecab3c20da618f8147f60aa42d8da903ea000e5675e58eb3f7571de`.
   The accepted correction remains present at blobs
   `e0965e340b0c6e49451ecdcf31188c301cf9b8ba` and
-  `e0206a8c3fef481c75603d324904a279aabeba06`. Provenance classification,
-  accepted-delivery commit, push, and remote verification are complete. Open
-  only Git staging of `docs/delivery/progress.md`, a ledger-only final evidence
-  commit, push to the configured upstream, and exact remote verification;
-  excluded `default.profraw` must remain untouched. Every product mutation,
-  active-phase command, SQLite access, and unrelated roadmap gate remains
-  closed. After the exact ledger commit is remote-verified, the RR-R9 goal may
-  be marked complete with no further product or tracking mutation.
+  `e0206a8c3fef481c75603d324904a279aabeba06`. Provenance classification, both
+  terminal commits, both pushes, and exact remote verification are complete.
+  This final canonical completion marker is the sole local delta and may be
+  committed and pushed as a status-only record; it intentionally does not
+  self-reference that future commit hash. Excluded `default.profraw` must remain
+  untouched. Every product mutation, active-phase command, SQLite access, and
+  unrelated roadmap gate remains closed. RR-RM1 and all unrelated work remain
+  unstarted pending owner direction.
 - Open product blockers: Release Radar has no authoritative portable project archive. Its Markdown delivery records and the existing partial Rekon seed importer cannot import the repository as a complete existing project.
 - Nonblocking next-phase candidates: reconcile the coupled product/IA decisions; productionize the owner-approved wordmark recorded in `docs/brand/README.md`; remove the Swift optional-`.none` and test actor-isolation warnings; attach live Codex state only when a supported authenticated endpoint exists; and add Developer ID/notarized packaging only if distribution expands beyond the owner Mac. Structure-less onboarding persistence and its Codex repository handoff are accepted.
 - Install note: macOS may require one-time owner approval for the packaged LaunchAgent in System Settings. Startup reports the required action and fails closed until enabled.
@@ -430,7 +430,7 @@ Deliver the signed native macOS MVP described by
 ## RR-R9C live activation history and correction acceptance gate — 2026-08-29
 
 - Status and gate: **Complete RR-R9 product outcome Accepted, Required 0;
-  accepted-delivery commit remote-verified; final ledger-only push pending.**
+  terminal Git sequence COMPLETE; no RR-R9 work remains.**
   The automated,
   package,
   isolated-runtime, accessibility, responsive, recovery, visual, installed-MCP,
@@ -440,8 +440,7 @@ Deliver the signed native macOS MVP described by
   persisted pointer to **Post-MVP reported-defect remediation**. The registered
   bounded correction, installed-product readback, tracking-only ticket
   transition, and final independent UI readback are accepted. RR-R9C and the
-  complete RR-R9 product outcome are accepted; the RR-R9 goal remains incomplete
-  only until this final ledger update is committed, pushed, and remote-verified.
+  complete RR-R9 product outcome are accepted; the RR-R9 goal is complete.
 - Automated acceptance: the exact registered seven-suite selection produced
   **146 total, 142 passed, 4 failed, 0 skipped, 0 expected failures** at
   `/tmp/ReleaseRadar-RR-R9C-Acceptance/Logs/Test/Test-ReleaseRadar-2026.08.29_17-17-31--0400.xcresult`.
@@ -783,21 +782,18 @@ Deliver the signed native macOS MVP described by
   selection behavior, persistence/audit/recovery, historical one-time
   `RR-ROADMAP` activation, bounded XCTest-host correction, corrected installed
   package, persisted-state verification, and board tracking are accepted. The
-  RR-R9 goal is not yet complete because terminal Git finalization and remote
-  verification remain mandatory.
+  RR-R9 goal and terminal Git sequence are complete.
 - Gate boundary: no `release_radar_set_active_phase` or other active-phase
-  command is authorized. Product/App/MCP/SQLite mutation is closed. Terminal
-  provenance classification, Git staging of accepted durable work only,
-  coherent commit or commits, push, and remote verification are now open under
-  the owner finalization rule below; only then may the goal be completed.
+  command is authorized. Product/App/MCP/SQLite mutation is closed. No RR-R9
+  implementation, tracking, verification, or finalization work remains. RR-RM1
+  and unrelated roadmap work remain unstarted pending owner direction.
 - Permanent command safeguard: the accepted request
   `385154BC-DC33-4F9C-ABBD-D80B271D8FF4` and audit event
   `FBBB409B-9E4A-4165-A22D-6BFD16B3E154` remain the sole live activation
   evidence. A second UUID, MCP readiness probe, replay, or
   `release_radar_set_active_phase` call is permanently prohibited, including
-  after any tracking-transition or finalization failure. RR-RM1 planning and
-  every unrelated roadmap gate remain closed until terminal Git finalization
-  succeeds and the RR-R9 goal is complete.
+  after any later failure. RR-RM1 planning and every unrelated roadmap gate
+  remain closed pending owner direction.
 
 ### RR-R9 board tracking repair — accepted
 
@@ -843,9 +839,8 @@ Deliver the signed native macOS MVP described by
   authorize a second `release_radar_set_active_phase` invocation or any other
   mutation;
   later valid owner UI choices made **Post-MVP reported-defect remediation**
-  the current persisted pointer. RR-R9 remains incomplete pending the released
-  corrected packaging/readback gate, and all unrelated roadmap gates remain
-  closed or governed exactly as recorded above.
+  the current persisted pointer. RR-R9 is complete and accepted; all unrelated
+  roadmap gates remain closed or governed exactly as recorded above.
 
 ## Planning reconciliation — 2026-08-26
 
@@ -3838,10 +3833,9 @@ skill/MCP and `SMAppService` proof. Product Task 2 remains **NO-GO**.
 
 ### RR-R9 owner finalization gate — 2026-08-29
 
-- Status: **Accepted-delivery commit complete and remote-verified; final
-  ledger-only commit/push pending; RR-R9 goal not yet complete.** The whole
-  RR-R9 product outcome remains Complete and Accepted with Required 0 and
-  Optional 0.
+- Status: **COMPLETE.** The whole RR-R9 product outcome and terminal Git
+  sequence are complete; product disposition remains Accepted with Required 0
+  and Optional 0, and no RR-R9 work remains.
 - Final full-suite verification: the run at
   `/tmp/ReleaseRadar-RR-R9-Final-8J8iH9` reported **248 total / 243 passed / 5
   failed / 0 skipped**. The five and only five failures are the documented
@@ -3874,11 +3868,12 @@ skill/MCP and `SMAppService` proof. Product Task 2 remains **NO-GO**.
 - Push and remote evidence: the accepted-delivery commit was pushed to
   `origin/codex/release-radar-mvp`; `git ls-remote` returned the exact same SHA,
   and upstream ahead/behind counts were `0/0`.
-- Remaining terminal action: this canonical ledger-only final evidence update
-  must itself be committed, pushed to the same upstream, and remote-verified.
-  Only after that exact remote verification may the RR-R9 goal be marked
-  complete. No further product, Release Radar tracking, phase, MCP, SQLite, or
-  temporary-file action is authorized or required.
-- This is explicit owner authorization for the remaining ledger-only commit and
-  push. Stage only `docs/delivery/progress.md`; do not absorb unrelated work or
-  temporary artifacts, and preserve excluded `default.profraw` untouched.
+- Ledger-evidence remote completion: commit
+  `985d9eb0f6b8e3c93fa079b27e566e4fe70d67b1` was pushed to the same upstream;
+  exact `git ls-remote` matched and upstream ahead/behind counts were `0/0`.
+  Repository status then contained only excluded untracked `default.profraw`.
+- Final canonical marker: this completion marker is the sole local delta and is
+  authorized for a status-only commit and push. Do not self-reference its future
+  commit hash, absorb unrelated work, delete temporary files, or touch
+  `default.profraw`. This administrative persistence does not reopen RR-R9; the
+  goal is complete and no RR-R9 work remains.
