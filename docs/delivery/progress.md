@@ -50,6 +50,122 @@ Deliver the signed native macOS MVP described by
   upstream counts. Ledger evidence commit
   `985d9eb0f6b8e3c93fa079b27e566e4fe70d67b1` is also pushed with exact
   `git ls-remote` match and 0/0 upstream counts. The RR-R9 goal is complete.
+- Active RR-R10 gate: **CORRECTED IMPLEMENTATION PLAN OWNER-CONFIRMED;
+  TASK 1 PLANNING BRIEF IS THE NEXT GATE. No product code has begun.**
+  The owner approved the corrected phase-scoped Delivery Goals contract, the
+  six-goal RR-ROADMAP catalog, and directed that this prevention-and-
+  roadmap-repair outcome be governed by **Post-MVP reported-defect
+  remediation**. The active Codex goal is the complete outcome: add first-class
+  phase-scoped Delivery Goals, prevent incomplete ready phases, repair the
+  Established product roadmap into owner-approved goals, independently verify
+  the result, obtain owner acceptance, and remotely verify every accepted
+  delivery checkpoint. Bounded chunks are complete, independently verified
+  review checkpoints under this one goal; they are not reduced feature
+  commitments.
+- RR-R10 Codex-goal continuation: on 2026-08-29 the owner explicitly directed
+  the stalled goal to restart. The goal service correctly rejected creating a
+  duplicate because this objective is still unfinished. Its read API continues
+  to report the prior `blocked` status and exposes no resume mutation, so work
+  continues on the same objective under the owner's resume instruction; no
+  replacement goal or ticket was created and no completion/blocked mutation
+  was fabricated.
+- RR-R10 board evidence: audited request
+  `5DFCA88C-30DF-414F-B884-A01E7984EF28` created `RR-R10` in **In progress** on
+  `release-radar-post-mvp-remediation`; audit event
+  `24C8BE78-2FF3-43BD-82FF-E67E7C21B518`. The configured plugin wrapper closed
+  its transport without a result. After direct UI readback proved the card
+  absent and a normal app relaunch restored the missing BridgeAgent, the exact
+  same idempotent request was replayed through the installed signed MCP helper
+  and returned `isError: false`. Running-app readback then verified the Post-MVP
+  board at 0/1/0/0/9 and the exact `RR-R10` outcome in In progress. No SQLite
+  access was used.
+- RR-R10 owner-attention evidence: request
+  `CBBA1301-646A-47FC-A7B0-6F35D78EB9E0` recorded blocker
+  `RR-R10-BLOCKER-DESIGN-APPROVAL`, audit event
+  `D742AFE8-2CFA-49BE-AB77-EC17F5A6F6DD`. Request
+  `57A0E7C5-AA7D-4CA7-B54A-E057CC703CDB` then moved `RR-R10` to **Blocked**,
+  audit event `0D594EBA-256F-4842-9BEC-22559F360D76`. Fresh running-app
+  readback verified the Post-MVP board at 0/0/0/1/9, the card's one blocker,
+  and the exact owner-attention reason in the selected-ticket inspector. The
+  approval-needed Pushover alert had already been delivered, so no duplicate
+  notification was sent. Both mutations used the installed signed MCP helper;
+  no SQLite access was used.
+- Current RR-R10 design gate: the complete contract and exact catalog are
+  durably recorded in
+  `docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md`,
+  with the architecture decision in
+  `docs/architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md` and the
+  bounded board contract in
+  `docs/design/release-radar-delivery-goals-phase-board-design.md`. The owner
+  added the explicit invariant that Accepted tickets are terminal and are never
+  reopened; rework or later defects require a new Backlog ticket. The written
+  artifacts passed their initial self-review and the owner approved their
+  direction. The first implementation-plan reviews exposed contradictions that
+  required narrow corrections to those controlling artifacts, and the owner
+  subsequently confirmed the corrected semantics. The granular test-first
+  implementation plan is durably recorded at
+  `docs/superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md`; it
+  preserves the complete outcome, independent per-task gates, the terminal
+  Accepted-ticket/no-reopen invariant, and the owner-corrected Git cadence:
+  commit/push the approved planning package now, then commit/push each complete
+  task only after its required independent gate returns GO with Required 0.
+  Partial or unverified task work is never committed. Before coding, any task
+  forecast to exceed roughly eight hours of agent implementation work, or too
+  large for one coherent review, must be split into smaller dependency-safe,
+  fully testable tasks with separate verification and Git checkpoints. Current
+  artifact hashes are plan
+  `5ea16874c71934e26f5c30d0f76af4071b6b8fe9e3aa49e6113cd476c5b53d90`,
+  spec `c1327bf8272a0a76b8e7eb235f41f149908b1de783d3fdd058425d416b6d7ed8`,
+  ADR `cb6fbb55585fc9493f255e7efe83eccb9d9d64c0492e1d11b3d5510799254420`,
+  and board contract
+  `04f518854f288fc9cd1d943301f3bd8a89b7aa903d35b04e4ed12d6c5ece7381`.
+  No RR-R10 product code, schema migration, UI implementation, installed
+  repair, or ticket transition has begun.
+- RR-R10 independent design review history: the pre-approval review was
+  **NO-GO for implementation; architectural direction accepted.** Fresh
+  Architecture, TPM/Delivery, and QA reviews agreed
+  that a separate phase-owned Delivery Goal model, additive migration, atomic
+  revision-aware plan finalization, preserved five lanes, and explicit Codex-
+  execution separation are the correct direction. Required corrections before
+  owner approval include complete readiness and lifecycle state machines;
+  enforcement across every ticket writer and lane bypass; exact structural-
+  revision invalidation; a migration-safe RR-R10 bootstrap; non-mutating phase
+  browsing; complete goal outcome/acceptance contracts; coherent treatment of
+  the conditional distribution and independent decision work; explicit audit,
+  Activity, archive-guard, recovery, accessibility, and installed-repair
+  evidence. The approved written artifacts incorporate those corrections and
+  received the post-persistence owner approval. The first plan review at SHA
+  `074cf74923f3243d01c3c072d3f244edbe026a49d0e5ad8eb7ee8b49559f3dec`
+  returned NO-GO: Architecture Required 5, TPM/Delivery Required 8, and QA
+  Required 10. The incorporated corrections now distinguish empty
+  finalization from completed Ready state; use a genuine v10 fixture; remove
+  post-migration continuation modes; bind lifecycle to phase revision and
+  owner-app acceptance; enforce dependency/blocker gates; attribute bulk
+  assignments to tickets; exercise behavioral accessibility and the full
+  scheme without pre-gate owner launch; preserve captured active state; and
+  close RR-R10/RR-DG-R10 through their valid lifecycles. Focused closure
+  re-reviews against exact plan SHA
+  `d14c89e67acc15fb9f7490ab88840615d5508a920d7893b8fee364377a156eeb`
+  returned Architecture **GO, Required 0**, TPM/Delivery **GO, Required 0**,
+  and QA **GO, Required 0**. QA's one final regression gap was closed by
+  current-revision-but-Draft rejection/re-finalization tests for both allowed
+  direct lifecycle transitions. No ticket transition was made after owner
+  approval.
+- RR-R10 corrected-plan owner attention: after Required-0 closure review, one
+  normal-priority Pushover notification was delivered requesting owner
+  confirmation of the review-driven semantic corrections. It created no
+  Release Radar ticket, blocker, lane, or goal-state mutation.
+- RR-R10 corrected-plan owner confirmation: the owner explicitly approved the
+  corrected controlling artifacts and independently accepted implementation
+  plan. The owner then corrected the Git cadence to avoid giant commits:
+  commit/push the currently approved planning package, then commit/push every
+  complete task after full verification, splitting a task before coding when
+  its forecast or review surface is too large. This replaces the prior agent-
+  inferred single-terminal-commit interpretation.
+- Next eligible RR-R10 work: **Commit and remotely verify the approved planning
+  package, then commission and independently release the Task 1 planning
+  brief.** No product implementation, installed repair, or ticket mutation is
+  authorized before that brief passes its required preimplementation reviews.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
