@@ -436,11 +436,19 @@ Deliver the signed native macOS MVP described by
   its intended CHECK or foreign-key constraint; and observed Codex-goal,
   recovery, archive, signing, entitlement, sandbox, credential, and bookmark
   boundaries remain unchanged.
-- Next eligible RR-R10 work: **Commit and push only the five registered Task 1B
-  implementation/test paths plus this delivery record, then verify exact
-  local/remote SHA equality with ahead/behind `0/0`.** Task 2 and all later
-  product work remain dependency-blocked until that remote checkpoint and Task
-  1B accepted completion are recorded.
+- RR-R10 Task 1B accepted completion: commit
+  `b711229a109c1a58c9616e4ff907afb18cd4f958` contains exactly the five
+  registered model/store/test paths plus postimplementation delivery evidence.
+  It was pushed to `origin/codex/release-radar-mvp`; fresh remote-ref readback
+  returned that exact SHA with ahead/behind `0/0`, and the worktree was clean.
+  Task 1B is complete; its schema-v11 storage/model contract is now the
+  immutable dependency boundary for Task 2.
+- Next eligible RR-R10 work: **Have one fresh Planning agent produce and
+  register the Task 2 planning-policy brief, then obtain Architecture,
+  QA/Test, Security/Privacy, TPM, and Delivery Management GO with Required 0 on
+  its exact hash before any Task 2 test or product edit.** Task 2 implementation
+  and all later product work remain dependency-blocked until that planning gate
+  closes.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
