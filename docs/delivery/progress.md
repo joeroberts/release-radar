@@ -469,15 +469,22 @@ Deliver the signed native macOS MVP described by
   installed behavior and preserved owner state are independently verified and
   remote-exact. Architecture recorded two nonblocking implementation-brief
   refinements; neither changes the accepted outcome or releases extra scope.
-- Next eligible RR-R10 work: **Commit and push only the three accepted planning
-  artifacts plus this owner-acceptance ledger record, verify exact remote
-  equality, then perform the authorized typed/UI and installed-identity
-  preflight before resolving `RR-R10-BLOCKER-DESIGN-APPROVAL` or moving RR-R10
-  from Blocked to In progress.** Any mismatch stops before mutation for a
-  bounded reviewed correction. After successful audited lane/blocker readback,
-  one fresh Planning agent may produce the complete Task 2A brief; Task 2A RED
-  and every later product edit remain blocked until that exact brief receives
-  the required independent release.
+- RR-R10 Ticket Tasks planning Git checkpoint: commit
+  `ab0a08811684265ea0dadc8e370c79a3c8f559ee` contains exactly the accepted
+  Ticket Tasks design, ADR-005, corrected implementation plan, and owner-
+  acceptance ledger record. It was pushed to
+  `origin/codex/release-radar-mvp`; fresh fetch, upstream readback, and
+  `git ls-remote` each returned that exact SHA with ahead/behind `0/0`. The
+  three accepted artifact hashes remained byte-identical after the push, and
+  the worktree was clean.
+- Next eligible RR-R10 work: **Perform the authorized typed/UI and exact
+  installed-identity preflight before resolving
+  `RR-R10-BLOCKER-DESIGN-APPROVAL` or moving RR-R10 from Blocked to In
+  progress.** Any mismatch stops before mutation for a bounded reviewed
+  correction. After successful audited lane/blocker readback, one fresh
+  Planning agent may produce the complete Task 2A brief; Task 2A RED and every
+  later product edit remain blocked until that exact brief receives the
+  required independent release.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
