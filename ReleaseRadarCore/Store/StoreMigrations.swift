@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 11
+    static let currentVersion: Int64 = 12
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -51,6 +51,9 @@ enum StoreMigrations {
             }
             if version < 11 {
                 try connection.executeScript(schemaVersion11)
+            }
+            if version < 12 {
+                try connection.executeScript(schemaVersion12)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -221,6 +224,15 @@ enum StoreMigrations {
                 else { return false }
             }
         }
+        if version >= 12 {
+            for table in ticketTaskTableSQL {
+                guard let actualSQL = try connection.scalarText(
+                    "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
+                    bindings: [.text(table.name)]
+                ), normalizedSQL(actualSQL) == normalizedSQL(table.sql)
+                else { return false }
+            }
+        }
         return try connection.row("PRAGMA foreign_key_check") == nil
     }
 
@@ -249,7 +261,7 @@ enum StoreMigrations {
     ) throws -> Bool {
         for index in criticalIndexes where index.version <= version && !missingObjects.contains(index.name) {
             guard try connection.scalarInt(
-                "SELECT COUNT(*) FROM pragma_index_list('\(index.table)') WHERE name = ? AND \"unique\" = ?",
+                "SELECT COUNT(*) FROM pragma_index_list('\(index.table)') WHERE name = ? AND \"unique\" = ? AND partial = 0",
                 bindings: [.text(index.name), .integer(index.isUnique ? 1 : 0)]
             ) == 1,
             try connection.scalarInt(
@@ -264,7 +276,11 @@ enum StoreMigrations {
                 try connection.scalarInt(
                     "SELECT desc FROM pragma_index_xinfo('\(index.name)') WHERE key = 1 AND seqno = ?",
                     bindings: [.integer(Int64(offset))]
-                ) == (column.descending ? 1 : 0)
+                ) == (column.descending ? 1 : 0),
+                try connection.scalarText(
+                    "SELECT coll FROM pragma_index_xinfo('\(index.name)') WHERE key = 1 AND seqno = ?",
+                    bindings: [.integer(Int64(offset))]
+                ) == "BINARY"
                 else { return false }
             }
         }
@@ -420,6 +436,13 @@ enum StoreMigrations {
             "audit_event_id", "project_id", "phase_id", "ticket_id", "previous_goal_id",
             "current_goal_id", "revision", "action",
         ]),
+        (12, "ticket_task_plans", [
+            "project_id", "ticket_id", "revision", "created_at", "updated_at",
+        ]),
+        (12, "ticket_tasks", [
+            "project_id", "ticket_id", "id", "label", "title", "sort_order", "completion",
+            "lifecycle", "created_at", "updated_at", "completed_at", "superseded_at",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -462,6 +485,15 @@ enum StoreMigrations {
         (11, "trigger", "delivery_goals_reject_ownership_change"),
         (11, "trigger", "tickets_reject_legacy_continuation_insert"),
         (11, "trigger", "tickets_reject_legacy_continuation_regrant"),
+        (12, "index", "ticket_task_plans_ticket_unique"),
+        (12, "index", "ticket_tasks_label_unique"),
+        (12, "index", "ticket_tasks_active_order_index"),
+        (12, "trigger", "ticket_tasks_reject_identity_update"),
+        (12, "trigger", "ticket_tasks_reject_label_update"),
+        (12, "trigger", "ticket_task_plans_reject_delete"),
+        (12, "trigger", "ticket_tasks_reject_delete"),
+        (12, "trigger", "ticket_task_plans_reject_ticket_delete"),
+        (12, "trigger", "ticket_task_plans_reject_project_delete"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -583,6 +615,69 @@ enum StoreMigrations {
     END
     """
 
+    private static let ticketTasksRejectIdentityUpdateTrigger = """
+    CREATE TRIGGER ticket_tasks_reject_identity_update
+    BEFORE UPDATE OF project_id, ticket_id, id ON ticket_tasks
+    WHEN OLD.project_id <> NEW.project_id
+       OR OLD.ticket_id <> NEW.ticket_id
+       OR OLD.id <> NEW.id
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket task identity is immutable');
+    END
+    """
+
+    private static let ticketTasksRejectLabelUpdateTrigger = """
+    CREATE TRIGGER ticket_tasks_reject_label_update
+    BEFORE UPDATE OF label ON ticket_tasks
+    WHEN OLD.label <> NEW.label
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket task label is immutable');
+    END
+    """
+
+    private static let ticketTaskPlansRejectDeleteTrigger = """
+    CREATE TRIGGER ticket_task_plans_reject_delete
+    BEFORE DELETE ON ticket_task_plans
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket task plan history cannot be deleted');
+    END
+    """
+
+    private static let ticketTasksRejectDeleteTrigger = """
+    CREATE TRIGGER ticket_tasks_reject_delete
+    BEFORE DELETE ON ticket_tasks
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket task history cannot be deleted');
+    END
+    """
+
+    private static let ticketTaskPlansRejectTicketDeleteTrigger = """
+    CREATE TRIGGER ticket_task_plans_reject_ticket_delete
+    BEFORE DELETE ON tickets
+    WHEN EXISTS (
+        SELECT 1
+        FROM ticket_task_plans
+        WHERE project_id = OLD.project_id
+          AND ticket_id = OLD.id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket owns task history');
+    END
+    """
+
+    private static let ticketTaskPlansRejectProjectDeleteTrigger = """
+    CREATE TRIGGER ticket_task_plans_reject_project_delete
+    BEFORE DELETE ON projects
+    WHEN EXISTS (
+        SELECT 1
+        FROM ticket_task_plans
+        WHERE project_id = OLD.id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'project owns task history');
+    END
+    """
+
     private static let criticalTriggers: [(version: Int64, name: String, sql: String)] = [
         (1, "reject_phase_dependency_cycle_insert", phaseDependencyCycleInsertTrigger),
         (1, "reject_phase_dependency_cycle_update", phaseDependencyCycleUpdateTrigger),
@@ -592,6 +687,12 @@ enum StoreMigrations {
         (11, "delivery_goals_reject_ownership_change", rejectDeliveryGoalOwnershipChangeTrigger),
         (11, "tickets_reject_legacy_continuation_insert", rejectLegacyContinuationInsertTrigger),
         (11, "tickets_reject_legacy_continuation_regrant", rejectLegacyContinuationRegrantTrigger),
+        (12, "ticket_tasks_reject_identity_update", ticketTasksRejectIdentityUpdateTrigger),
+        (12, "ticket_tasks_reject_label_update", ticketTasksRejectLabelUpdateTrigger),
+        (12, "ticket_task_plans_reject_delete", ticketTaskPlansRejectDeleteTrigger),
+        (12, "ticket_tasks_reject_delete", ticketTasksRejectDeleteTrigger),
+        (12, "ticket_task_plans_reject_ticket_delete", ticketTaskPlansRejectTicketDeleteTrigger),
+        (12, "ticket_task_plans_reject_project_delete", ticketTaskPlansRejectProjectDeleteTrigger),
     ]
 
     private static let criticalIndexes: [(
@@ -624,6 +725,13 @@ enum StoreMigrations {
          [("project_id", false), ("phase_id", false), ("goal_id", false)]),
         (11, "delivery_goal_assignment_events_ticket_revision_unique", "delivery_goal_assignment_events", true,
          [("project_id", false), ("phase_id", false), ("ticket_id", false), ("revision", false)]),
+        (12, "ticket_task_plans_ticket_unique", "ticket_task_plans", true,
+         [("project_id", false), ("ticket_id", false)]),
+        (12, "ticket_tasks_label_unique", "ticket_tasks", true,
+         [("project_id", false), ("ticket_id", false), ("label", false)]),
+        (12, "ticket_tasks_active_order_index", "ticket_tasks", false,
+         [("project_id", false), ("ticket_id", false), ("lifecycle", false),
+          ("sort_order", false), ("label", false), ("id", false)]),
     ]
 
     private static let requiredForeignKeys: [(
@@ -673,6 +781,9 @@ enum StoreMigrations {
         (11, "delivery_goal_assignment_events", "project_id,phase_id,ticket_id", "tickets", "project_id,phase_id,id", "NO ACTION"),
         (11, "delivery_goal_assignment_events", "project_id,phase_id,previous_goal_id", "delivery_goals", "project_id,phase_id,id", "NO ACTION"),
         (11, "delivery_goal_assignment_events", "project_id,phase_id,current_goal_id", "delivery_goals", "project_id,phase_id,id", "NO ACTION"),
+        (12, "ticket_task_plans", "project_id", "projects", "id", "NO ACTION"),
+        (12, "ticket_task_plans", "project_id,ticket_id", "tickets", "project_id,id", "NO ACTION"),
+        (12, "ticket_tasks", "project_id,ticket_id", "ticket_task_plans", "project_id,ticket_id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -1100,6 +1211,50 @@ enum StoreMigrations {
     )
     """
 
+    private static let ticketTaskPlansTableSQL = """
+    CREATE TABLE ticket_task_plans (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id),
+        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE NO ACTION,
+        FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id)
+            ON DELETE NO ACTION
+    )
+    """
+
+    private static let ticketTasksTableSQL = """
+    CREATE TABLE ticket_tasks (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        id TEXT NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 256),
+        label TEXT NOT NULL CHECK (length(CAST(label AS BLOB)) BETWEEN 1 AND 256),
+        title TEXT NOT NULL CHECK (length(CAST(title AS BLOB)) BETWEEN 1 AND 4096),
+        sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+        completion TEXT NOT NULL CHECK (completion IN ('pending', 'completed')),
+        lifecycle TEXT NOT NULL CHECK (lifecycle IN ('active', 'superseded')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        superseded_at TEXT,
+        PRIMARY KEY(project_id, ticket_id, id),
+        FOREIGN KEY(project_id, ticket_id) REFERENCES ticket_task_plans(project_id, ticket_id)
+            ON DELETE NO ACTION,
+        CHECK ((completion = 'completed') = (completed_at IS NOT NULL)),
+        CHECK ((lifecycle = 'superseded') = (superseded_at IS NOT NULL)),
+        CHECK (completed_at IS NULL OR completed_at >= created_at),
+        CHECK (superseded_at IS NULL OR superseded_at >= created_at),
+        CHECK (updated_at >= created_at)
+    )
+    """
+
+    private static let ticketTaskTableSQL: [(name: String, sql: String)] = [
+        ("ticket_task_plans", ticketTaskPlansTableSQL),
+        ("ticket_tasks", ticketTasksTableSQL),
+    ]
+
     private static let planningTableSQL: [(name: String, sql: String)] = [
         ("phase_plans", phasePlansTableSQL),
         ("delivery_goals", deliveryGoalsTableSQL),
@@ -1160,5 +1315,25 @@ enum StoreMigrations {
     \(rejectDeliveryGoalOwnershipChangeTrigger);
     \(rejectLegacyContinuationInsertTrigger);
     \(rejectLegacyContinuationRegrantTrigger);
+    """
+
+    private static let schemaVersion12 = """
+    \(ticketTaskPlansTableSQL);
+    \(ticketTasksTableSQL);
+    CREATE UNIQUE INDEX ticket_task_plans_ticket_unique
+        ON ticket_task_plans(project_id, ticket_id);
+    CREATE UNIQUE INDEX ticket_tasks_label_unique
+        ON ticket_tasks(project_id, ticket_id, label COLLATE BINARY);
+    CREATE INDEX ticket_tasks_active_order_index
+        ON ticket_tasks(
+            project_id, ticket_id, lifecycle, sort_order,
+            label COLLATE BINARY, id COLLATE BINARY
+        );
+    \(ticketTasksRejectIdentityUpdateTrigger);
+    \(ticketTasksRejectLabelUpdateTrigger);
+    \(ticketTaskPlansRejectDeleteTrigger);
+    \(ticketTasksRejectDeleteTrigger);
+    \(ticketTaskPlansRejectTicketDeleteTrigger);
+    \(ticketTaskPlansRejectProjectDeleteTrigger);
     """
 }

@@ -36,6 +36,7 @@ public enum AuditEntityType: String, Equatable, Sendable {
     case phase
     case phasePlan = "phase_plan"
     case deliveryGoal = "delivery_goal"
+    case ticketTaskPlan = "ticket_task_plan"
     case ticket
     case phaseDependency = "phase_dependency"
     case ticketDependency = "ticket_dependency"

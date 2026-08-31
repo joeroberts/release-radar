@@ -1630,19 +1630,46 @@ Deliver the signed native macOS MVP described by
   test, registered gate, staging, commit, push, evidence mutation, owner-state
   access, Release Radar mutation, live-plan action, Task 3 work, or external
   mutation occurred during aggregate recovery planning.
-- Next eligible RR-R10 work: **After Delivery Management verifies these actual
-  ledger bytes, stage exactly the final Task 2B brief, root registry, and this
-  ledger. Verify exact staged inventory and run ordinary
-  `git diff --cached --check`; stop before commit on any mismatch. Commit the
-  three documents as the single direct child of
-  `606cb20c02eac183214923c8cacf3e7b4829bc84`, push, prove exact HEAD/upstream/
-  live-remote equality with ahead/behind `0/0`, then run the sole registered
-  aggregate-recovery release gate exactly once under `/bin/bash`. Only a
-  passing gate releases one fresh serialized Implementer for the exact
-  aggregate test postimage, single RED, minimal `hasExpectedIndexes` repair,
-  43/43 GREEN, and conditional 64/64 regression.** Task 3 and the live Ticket
-  Tasks plan remain closed until Task 2B's independently accepted
-  implementation checkpoint is remote-exact.
+- RR-R10 Task 2B implementation status: **Complete and independently accepted.**
+  Planning checkpoint `1ba65257681f6ebdd7a46bb3718debb58fb2967d` was pushed
+  and verified equal at local HEAD, upstream, and live remote with
+  ahead/behind `0/0` before implementation resumed. The bounded implementation
+  adds the app-owned Ticket Task value models, schema-v12 migration and
+  manifest validation, DeliveryStore persistence APIs, migration/constraint/
+  ordering/audit acceptance coverage, and plugin-lifecycle regression coverage.
+  No fixture, project, signing, sandbox, owner state, Release Radar state,
+  live Ticket Tasks plan, Task 3, or unrelated product surface changed.
+- RR-R10 Task 2B final implementation inventory: Models
+  `49f365dd1e074d4d2b716384756e71a3c5fb1ce1`, DeliveryStore
+  `d930ab18794a959b44cad4293cee24647a1af8f6`, StoreMigrations
+  `8e51d4ff7af0d8d5c9def6ffb55ce20da21f9d35`, Store tests
+  `4507928ba00113f0781658252c189b2975ac7b9f`, and plugin-lifecycle tests
+  `d5d2bd7411bf7b10892b93ee57f62cc76c47492a`. The Store test source is
+  exactly 156,791 bytes. The final migration repair uniformly rejects partial
+  indexes and requires BINARY collation for every key while preserving the
+  accepted table/name, uniqueness, count, ordering, and direction checks.
+- RR-R10 Task 2B test-first evidence: the retained aggregate RED proves exactly
+  one failed existing Store test, one failure record, and both required
+  partial/NOCASE markers. The retained Store GREEN passes exactly `43/43`.
+  The retained selected regression passes exactly `64/64`, split `43` Store
+  and `21` plugin-lifecycle, with zero failures, skips, expected failures, or
+  failure records. Evidence parents remain restricted mode `700`, scalar
+  evidence remains mode `600`, and the required quiet privacy scans returned
+  status `1` for no match. Both accepted schema-v10 and schema-v11 fixture
+  manifests report `OK`, both fixture directories are byte-clean, and the one
+  authoritative postimplementation `git diff --check` passed.
+- RR-R10 Task 2B independent postimplementation acceptance: separate Code
+  Review, QA/Test, Architecture, Security/Privacy, TPM, and Delivery Management
+  roles each returned **GO with Required 0, Optional 0, and Out-of-scope 0**.
+  The Implementer did not approve its own work. The Required aggregate-harness
+  and index-manifest findings are closed; no open Task 2B blocker or risk
+  remains.
+- RR-R10 Task 2B checkpoint boundary: stage exactly the five implementation
+  paths above plus this ledger, verify their staged blobs and diff, then commit,
+  push, and require exact local HEAD/upstream/live-remote equality with
+  ahead/behind `0/0`. No raw evidence or temporary artifact is committed.
+  Task 3 becomes the next eligible RR-R10 task only after that terminal equality
+  check; it and the live Ticket Tasks plan remain unopened in this checkpoint.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
