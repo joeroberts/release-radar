@@ -1443,16 +1443,114 @@ Deliver the signed native macOS MVP described by
   edit, test, executable gate, staging, commit, push, evidence mutation,
   owner-state access, Release Radar mutation, live-plan action, Task 3 release,
   or external mutation occurred during amendment planning.
-- Next eligible RR-R10 work: **After Delivery Management verifies this actual
-  ledger, run the registered index-manifest precommit gate once; if it passes,
-  stage exactly the final Task 2B brief, root registry, and this ledger, run
-  the staged gate, commit directly above
-  `acbf6eafabe103092df5057be68209c10d9bb521`, push, prove remote equality,
-  and run the committed post-push gate once. Only then release one fresh
-  serialized Implementer for the test-only focused RED, minimal shared
-  validator repair, new 43/43 GREEN, and conditional 64/64 regression.** Task
-  3 remains closed until Task 2B's independently accepted implementation
-  checkpoint is remote-exact.
+- RR-R10 Task 2B index-manifest recovery planning checkpoint: commit
+  `38ec1631f2982963fc5648dce6e4946cacf62744` is the single direct child of
+  source-conformance checkpoint
+  `acbf6eafabe103092df5057be68209c10d9bb521` and contains exactly the amended
+  Task 2B brief, root task-brief registry, and this ledger. The registered
+  precommit and staged gates each ran once and exited `0`; the checkpoint was
+  pushed to `origin/codex/release-radar-mvp`. The registered post-push gate was
+  invoked once under the default `zsh`: every substantive assertion passed,
+  while each of its three final Bash-only `compgen -G` prefix checks printed
+  `command not found` and, because each was an `if` condition, the shell
+  returned `0`. The registered gate was not rerun. Only those three missed
+  prefix-absence assertions then ran once as a distinct `/bin/bash` command
+  and exited `0`, proving the RED, GREEN, and regression prefixes absent.
+  HEAD, upstream, and the live remote were equal at the checkpoint with
+  ahead/behind `0/0`; the index was empty; no repository or evidence state
+  changed during the shell correction.
+- RR-R10 Task 2B consumed index-manifest RED: fresh Implementer
+  `/root/task2b_index_manifest_implementer` first issued a read-only prefix
+  check under `zsh`, where `compgen` printed `command not found`, then ran only
+  that distinct prefix check once under `/bin/bash` before any edit; it exited
+  `0` and confirmed absence. The Implementer extended only the existing
+  `testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects` method
+  with the reviewed supported-DDL partial-index and `COLLATE NOCASE`
+  counterfeits; the Store test-method count remained `43` and its blob became
+  `e5d4106cfafb9c0296d47a94abee78bdc1321463`. The registered focused RED fence
+  then ran exactly once under `/bin/bash` and consumed restricted parent
+  `/tmp/release-radar-rr-r10-task2b-index-manifest-red.jflpkq`, but its
+  classifier exited `1` with `RED must have exactly two counterfeit failure
+  records`. The Implementer stopped without retry, production edit, GREEN,
+  regression, staging, commit, push, or external mutation.
+- RR-R10 Task 2B consumed RED scalar evidence: the retained parent is mode
+  `700`. Its regular, non-symlink mode-`600` files are the 413,826-byte log at
+  SHA-256 `0479bb772521cfa87aa5b9bbf9872526871bc0edbafc085995bca2b2227fe40c`,
+  1,181-byte summary JSON at SHA-256
+  `5bc4c4b6d58746aabcdc8c3776211ff2d30af60ac198cd6937b7b0924c6356c2`,
+  1,325-byte tests JSON at SHA-256
+  `338b1b065f14454566335b3ef06b049ea7c7676a46af653b903b063aa144d44b`,
+  and 263-byte inventory at SHA-256
+  `1a257e45baf3e6025c1ce87d53e6ca90decf641f484682b82b77c80b6f1835d6`;
+  the contained xcresult is mode `700`. A quiet credential/private-key rescan
+  of the four scalar/text files returned status `1` for no match. Structured
+  results report exactly one selected failed test, zero passed, skipped, or
+  expected-failure tests, and exactly one failure record: `Expected partial
+  ticket_tasks_label_unique index to fail closed` at Store test line `506`.
+  The later NOCASE case is present in source but absent from both structured
+  results and the log.
+- RR-R10 Task 2B RED-classifier diagnosis and recovery plan: fresh Planning
+  agent `/root/task2b_red_classifier_recovery_planning` classified the
+  mismatch as a Required test-harness defect: the runner ended the method
+  after the first intentional `XCTFail`, so the accepted classifier's demand
+  for two records could not be met. Production `StoreMigrations.swift`
+  remained at `6fad7835211cace656e854aa0249f8775280a6dd`. The bounded correction
+  saves the inherited `continueAfterFailure`, sets it to `true` immediately
+  before the two counterfeit tail cases, and restores the prior value with
+  method-scoped `defer`. A new unique no-retry RED must produce exactly both
+  intentional records before the previously reviewed shared index validator
+  edit, new 43/43 GREEN, and conditional 64/64 regression with exact 43/21
+  split.
+- RR-R10 Task 2B RED-classifier recovery current inventory: the five unstaged
+  implementation blobs are Models
+  `49f365dd1e074d4d2b716384756e71a3c5fb1ce1`, DeliveryStore
+  `d930ab18794a959b44cad4293cee24647a1af8f6`, StoreMigrations
+  `6fad7835211cace656e854aa0249f8775280a6dd`, Store tests
+  `e5d4106cfafb9c0296d47a94abee78bdc1321463`, and plugin-lifecycle tests
+  `d5d2bd7411bf7b10892b93ee57f62cc76c47492a`. Exactly one old
+  `/tmp/release-radar-rr-r10-task2b-index-manifest-red.*` parent exists, the
+  retained `jflpkq` parent above. No prior GREEN/regression prefix and no new
+  `index-manifest-red-classifier-recovery`,
+  `index-manifest-green-classifier-recovery`, or
+  `index-manifest-regression-classifier-recovery` prefix exists.
+- RR-R10 Task 2B RED-classifier recovery final reviewed brief SHA-256: `ef4906c121a83cb1ddf469903eff177402b262244d19a530b6287ea530b71c18`
+- RR-R10 Task 2B RED-classifier recovery final reviewed registry SHA-256: `e07ec624ed9821d6b2dd382ee12b12ee1d1f4dccc5f2c0bb6c18f72258c0a582`
+- RR-R10 Task 2B RED-classifier recovery review closure: Architecture reviewer
+  `/root/task2b_red_recovery_arch_review`, Security/Privacy reviewer
+  `/root/task2b_red_recovery_security_review`, TPM reviewer
+  `/root/task2b_red_recovery_tpm_review`, and Delivery Management reviewer
+  `/root/task2b_red_recovery_delivery_review` returned **GO with Required 0,
+  Optional 0, and Out-of-scope 0** on the exact brief/registry pair. QA/Test
+  reviewer `/root/task2b_red_recovery_qa_review` first returned **NO-GO with
+  Required 1** because the registry still bound the prior brief; after the
+  coordinator changed only that unique entry, QA re-reviewed the exact pair
+  and returned **GO with Required 0, Optional 0, and Out-of-scope 0**. The
+  roles verified the retained failure evidence and diagnosis, local
+  continuation save/set/deferred restore, exact-two-record RED classifier,
+  shared fail-closed nonpartial/BINARY repair, immediate evidence privacy
+  checks, no-rerun boundaries, 43/64 counts, exact Git/blob/prefix state, and
+  Task 3/no-live-plan closure.
+- RR-R10 Task 2B RED-classifier planning boundary: the recovery planner edited
+  only the canonical Task 2B brief; the coordinator changed only the unique
+  Task 2B registry entry and this ledger. No new test or production edit,
+  executable gate, staging, commit, push, retained-evidence mutation,
+  owner-state access, Release Radar mutation, live-plan action, Task 3 work,
+  or external mutation occurred during recovery planning.
+- Next eligible RR-R10 work: **After Delivery Management verifies these actual
+  ledger bytes, stage exactly the final Task 2B brief, root registry, and this
+  ledger. Verify the ordinary staged inventory contains exactly those three
+  paths and run `git diff --cached --check`; these are ordinary Git checks,
+  not registered gates. If either check fails, stop before commit. Commit the
+  three documents as the single direct child of
+  `38ec1631f2982963fc5648dce6e4946cacf62744`, push, and prove exact HEAD,
+  upstream, and live-remote equality with ahead/behind `0/0`. Only then run
+  the sole registered RED-classifier recovery release gate exactly once under
+  `/bin/bash`. Only after that gate passes may a fresh serialized Implementer
+  apply the method-local continuation correction, consume the new focused
+  RED, minimally repair `hasExpectedIndexes`, and run the new 43/43 GREEN plus
+  conditional 64/64 regression.** Task 3 and the live Ticket Tasks plan remain
+  closed until Task 2B's independently accepted implementation checkpoint is
+  remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
