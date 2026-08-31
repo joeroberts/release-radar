@@ -3697,3 +3697,964 @@ The coordinator ledger must record:
   are closed only by the exact four-space deletion plus passing evidence.
   Product defects, test-behavior defects, and planning hash defects remain
   Required `0`; Optional `0`; Out-of-scope `0`.
+
+## Postimplementation index-manifest recovery amendment — 2026-08-31
+
+This amendment is the controlling recovery authority after the exact
+source-conformance edit and its newly authorized Store and selected regression
+fences passed, but fresh independent postimplementation Code Review and QA/Test
+each returned **NO-GO with Required 1**. It preserves the accepted Task 2B
+model, migration, fixture, privacy, and evidence contracts above and supersedes
+only the postimplementation continuation, test-first correction, fence,
+planning-checkpoint, review, and final-checkpoint instructions where they
+conflict with this section.
+
+Direct continuation is **NO-GO**. No implementation edit, build, test,
+executable gate, staging, commit, push, owner-state access, Release Radar
+mutation, external mutation, live Ticket Tasks plan, Task 3 work, or evidence
+mutation is authorized until the exact amendment and registry receive the five
+preimplementation reviews and the committed planning checkpoint below passes.
+
+### Objective and unchanged user-visible outcome
+
+Close one fail-closed schema-manifest defect without changing schema-v12 DDL or
+any public or user-visible behavior. The repaired validator must reject a
+canonical-name Ticket Task label index when it is partial or when any key uses
+non-BINARY collation. The accepted Task 2B outcome remains additive local
+schema-v12 persistence and public Ticket Task value types for later policy and
+projection work. This recovery adds no command, UI, projection, notification,
+bridge/MCP behavior, owner workflow, or live task plan.
+
+### Controlling references and fixed dependency state
+
+This amendment remains controlled by the accepted hashes already pinned in
+this brief for:
+
+- `docs/design/release-radar-ticket-tasks-design.md`;
+- `docs/architecture/ADR-005-ticket-task-work-plans.md`;
+- `docs/superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md`;
+- the accepted schema-v11 fixture and its manifest;
+- this canonical Task 2B brief; and
+- `docs/delivery/progress.md` as the only delivery ledger.
+
+The fixed recovery base is commit
+`acbf6eafabe103092df5057be68209c10d9bb521`, subject
+`docs: authorize Task 2B source conformance recovery`. At diagnosis, HEAD,
+upstream, and live `origin/codex/release-radar-mvp` were exact at that commit
+with ahead/behind `0/0`, the index was empty, and the five Task 2B paths were
+the only implementation deltas described below.
+
+Fresh independent postimplementation Code Reviewer
+`/root/task2b_post_code_review` and QA/Test verifier
+`/root/task2b_post_qa_review` each returned **NO-GO with Required 1** on the
+same defect. The retained second-successor Store evidence remains valid
+historical `43/43`, and the retained selected regression remains valid
+historical `64/64` with exact `43/21` Store/plugin-lifecycle split. Those
+results exercised the current blobs before this new regression existed and are
+insufficient to accept corrected source. They must be retained and must not be
+rerun, overwritten, renamed, staged, transmitted, or deleted.
+
+The planning-agent diagnostic command `git diff --check` was invoked once
+despite the diagnosis-only no-gate boundary. It was read-only, exited `0`,
+created no artifact, and changed no repository, evidence, owner, Release Radar,
+or external state. It is nonauthoritative historical diagnostic activity and
+must not be counted as the future postimplementation diff check.
+
+Task 3 remains dependency-blocked until this recovery has valid new RED,
+GREEN, and regression evidence, all six postimplementation reviews return
+GO/Required `0`, and the bounded implementation checkpoint is committed,
+pushed, and exact at local/upstream/live remote with ahead/behind `0/0`.
+
+### Required root cause and classification
+
+`StoreMigrations.hasExpectedIndexes` currently validates each registered
+index's table/name association, unique flag, key-column count, ordered key
+names, and descending flags. It does not inspect
+`pragma_index_list.partial`, and its per-key `pragma_index_xinfo` checks do not
+inspect `coll`. A schema-v12-only special case verifies BINARY collation only
+for key positions 4 and 5 of `ticket_tasks_active_order_index`; it does not
+verify `ticket_tasks_label_unique` and does not repair the shared manifest
+gap.
+
+Consequently, both ordinary supported-DDL counterfeits below retain the name,
+unique flag, key count, key names, and directions that the current validator
+checks and are accepted incorrectly:
+
+```sql
+CREATE UNIQUE INDEX ticket_tasks_label_unique
+ON ticket_tasks(project_id, ticket_id, label COLLATE BINARY)
+WHERE lifecycle = 'active'
+```
+
+The partial form removes superseded rows from uniqueness enforcement and can
+permit reuse of a durable historical label, violating the accepted no-reuse
+contract.
+
+```sql
+CREATE UNIQUE INDEX ticket_tasks_label_unique
+ON ticket_tasks(project_id, ticket_id, label COLLATE NOCASE)
+```
+
+The NOCASE form changes the exact BINARY equality contract and can reject
+byte-distinct labels that the canonical index permits.
+
+Classification for this recovery:
+
+- Required findings: `1`, the shared index-manifest omission above. It has one
+  production-validation facet and one missing-regression facet represented by
+  the two metadata-counterfeit cases in the existing manifest test; these are
+  evidence and repair surfaces for the same blocker, not two findings;
+- Optional: `0`;
+- Out-of-scope: `0`.
+
+### In scope, out of scope, and affected files
+
+After the committed planning checkpoint passes, exactly one fresh serialized
+Implementer may modify only:
+
+- `ReleaseRadarTests/StoreAcceptanceTests.swift`; and
+- `ReleaseRadarCore/Store/StoreMigrations.swift`.
+
+In scope:
+
+- extend the existing
+  `testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects` method with
+  supported-DDL partial and NOCASE `ticket_tasks_label_unique` counterfeits;
+- assert the intended `partial` and `coll` setup metadata before reopening the
+  store;
+- preserve exactly 43 Store test methods by adding no test method;
+- run one newly authorized focused RED on that existing method;
+- minimally require `partial = 0` and BINARY collation for every registered
+  key row in `hasExpectedIndexes` while retaining every existing index
+  validation;
+- remove only the redundant schema-v12 special-case collation guard;
+- run one fresh full Store GREEN and, only after it passes, one fresh selected
+  Store plus plugin-lifecycle regression;
+- run ordinary fixture and diff checks only after both passing fences; and
+- obtain independent reviews and assemble the bounded checkpoint.
+
+Out of scope:
+
+- any schema DDL, canonical index definition, table, trigger, foreign-key,
+  migration-order, public-model, `DeliveryStore`, plugin-lifecycle test,
+  fixture, fixture-manifest, project, scheme, entitlement, signing, sandbox,
+  dependency, script, generated-file, or documentation change outside this
+  amendment, its registry entry, and coordinator ledger evidence;
+- canonical index-SQL normalization, `origin` validation, custom collation
+  registration, a new index descriptor abstraction, a new test method, a new
+  fixture, or a new harness;
+- rerunning any original RED, original GREEN, first-successor GREEN,
+  second-successor GREEN, or prior selected-regression fence;
+- Task 3, ticket-task policy/commands, UI/projection, owner state, owner app,
+  bridge/MCP, Release Radar mutation, live plan creation, notification, or any
+  external action.
+
+The planning checkpoint may change exactly this brief, the root task-brief
+registry, and coordinator-owned `docs/delivery/progress.md`. This Planning
+writer changes only the brief and registry; Delivery Management owns the
+ledger update and must review its actual bytes before staging.
+
+### Data, persistence, security, privacy, and activity implications
+
+The repair changes only recognition of malformed schema metadata. It changes
+no database row, canonical DDL, schema version, persisted format, migration
+output, fixture, audit record, Activity event, owner state, sandbox,
+entitlement, permission, authentication boundary, credential, or external
+state. Valid canonical stores remain available. Partial or non-BINARY
+canonical-name critical indexes fail closed through the existing migration
+recovery path without repair or mutation.
+
+Every new evidence parent must be a unique mode-`700` directory under `/tmp`.
+Logs, extracted summary/test JSON, and scalar inventory reports must be
+regular, non-symlink, contained mode-`600` files. Result bundles must be
+contained directories. Privacy scans use the existing secret/private-key
+marker, print no matches, and require exact status `1`. Raw logs, raw extracted
+JSON, result bundles, owner data, matching lines, credentials, secrets, and
+private keys must not enter durable artifacts. Every prior and new evidence
+parent remains temporary, retained, unstaged, untransmitted, and undeleted.
+In each new RED, GREEN, and regression fence, immediately after capturing the
+`xcodebuild` status, the raw log must be proven a contained, regular,
+non-symlink mode-`600` file and quietly scanned with exact no-match status `1`
+before the fence evaluates build status, result-bundle state, extraction, or
+test classification.
+
+### Exact current implementation inventory
+
+The planning and fresh-writer pre-edit gates must pin these exact current
+blobs:
+
+| Path | Required current blob |
+| --- | --- |
+| `ReleaseRadarCore/Models/TicketTaskModels.swift` | `49f365dd1e074d4d2b716384756e71a3c5fb1ce1` |
+| `ReleaseRadarCore/Store/DeliveryStore.swift` | `d930ab18794a959b44cad4293cee24647a1af8f6` |
+| `ReleaseRadarCore/Store/StoreMigrations.swift` | `6fad7835211cace656e854aa0249f8775280a6dd` |
+| `ReleaseRadarTests/StoreAcceptanceTests.swift` | `6be00b5661c48121b4fa054507b15b627fda1c9f` |
+| `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift` | `d5d2bd7411bf7b10892b93ee57f62cc76c47492a` |
+
+No post-edit blob is invented or precomputed. The focused RED fence records
+the actual Store-test blob after the test-only edit. The GREEN fence reads
+that retained report, requires the Store-test blob to remain exact, records
+the actual post-product `StoreMigrations.swift` blob, and requires the other
+three blobs to remain exact. The regression fence reads both retained reports
+and requires the complete final five-blob inventory to remain unchanged.
+
+Any hash, scope, branch, base, remote, index, report, mode, containment,
+privacy, or evidence-prefix mismatch stops before the next action and requires
+a new reviewed amendment. Do not repair or normalize an unexpected file.
+
+### Exact test-first implementation
+
+#### Test-only RED edit
+
+Before production code changes, extend only the existing manifest test. For
+each counterfeit, create a fresh empty schema-v12 test database through the
+existing helper, drop `ticket_tasks_label_unique`, and recreate it with
+ordinary `CREATE UNIQUE INDEX` DDL:
+
+1. partial BINARY index with `WHERE lifecycle = 'active'`;
+2. nonpartial index with `label COLLATE NOCASE`.
+
+For the partial case, assert exactly one named index row, `unique = 1`,
+`partial = 1`, and key-2 `coll = BINARY`. For the NOCASE case, assert exactly
+one named index row, `unique = 1`, `partial = 0`, and key-2 `coll = NOCASE`.
+Then reopen each through `DeliveryStore` and require unavailable migration
+recovery. Give the two failed-reopen assertions distinct exact descriptions:
+
+- `Expected partial ticket_tasks_label_unique index to fail closed`;
+- `Expected NOCASE ticket_tasks_label_unique index to fail closed`.
+
+The existing helper may accept an optional failure description while
+preserving its current default message and all existing call behavior. Do not
+add a test method or a new database helper. The production mutation that makes
+the test pass is the shared `hasExpectedIndexes` metadata validation below;
+neither counterfeit may be special-cased by name in test or production code.
+
+#### Minimal production edit
+
+Only after the focused RED is valid, modify
+`StoreMigrations.hasExpectedIndexes`:
+
+1. Add `partial = 0` to the existing `pragma_index_list` name/unique match.
+2. For every `key = 1` row already checked by offset, additionally require
+   `pragma_index_xinfo.coll == "BINARY"`.
+3. Retain table/name association, unique flag, key count, ordered key names,
+   and descending-direction checks unchanged.
+4. Retain canonical task-table SQL, foreign-key, trigger, and
+   `foreign_key_check` validation unchanged.
+5. Remove the now-redundant schema-v12 special-case queries that check only
+   `ticket_tasks_active_order_index` positions 4 and 5.
+
+Every currently registered critical index is canonical nonpartial with BINARY
+key collation, including keys whose DDL relies on SQLite's BINARY default. The
+uniform shared check therefore validates all canonical indexes without
+changing the manifest data structure or expanding product scope.
+
+Happy path: every canonical v1-v12 store and fixture continues to pass the
+shared manifest and all 43 Store tests.
+
+Non-happy path: both supported-DDL counterfeits fail closed through existing
+migration recovery; a missing index still fails; a wrong unique flag, key
+count, key order/name, or direction still fails; no attempted validator repair
+or schema mutation occurs.
+
+### Distinct index-manifest ledger bindings
+
+After the five preimplementation reviewers approve the exact brief and
+registry, Delivery Management must add exactly one of each line to the actual
+ledger before staging:
+
+```text
+- RR-R10 Task 2B index-manifest recovery final reviewed brief SHA-256: `<64 lowercase hex>`
+- RR-R10 Task 2B index-manifest recovery final reviewed registry SHA-256: `<64 lowercase hex>`
+```
+
+The values must be the actual current worktree hashes of this brief and the
+root registry. These distinct field names must not reuse, replace, or match an
+earlier recovery field by accident. The gates below require exactly one match
+and prove the same values against worktree, staged, and committed bytes without
+self-referencing a checkpoint commit.
+
+### Preimplementation independent reviews
+
+Before the planning checkpoint, fresh independent agents must review the exact
+final brief and registry bytes and return GO with Required `0`:
+
+- Architecture: shared manifest semantics and no DDL change;
+- QA/Test: supported-DDL setup, exact RED classifier, 43/64 cardinality, and
+  no-rerun boundaries;
+- Security/Privacy: fail-closed durable label-history protection and evidence
+  privacy;
+- TPM: scope, sequencing, failure stops, Task 3 closure, and checkpoint
+  boundaries;
+- Delivery Management: actual ledger bindings, exact three-document
+  checkpoint inventory, current five-blob inventory, retained evidence, and
+  remote gate.
+
+A role may not approve its own authored work. Any Required finding blocks
+staging. Optional and out-of-scope observations do not expand this task.
+
+### Index-manifest recovery precommit gate
+
+Run once after the five exact-hash reviews and Delivery Management's review of
+the actual ledger, before staging:
+
+```bash
+set -euo pipefail
+RR_IM_BASE=acbf6eafabe103092df5057be68209c10d9bb521
+RR_IM_BRANCH=codex/release-radar-mvp
+RR_IM_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_IM_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_IM_LEDGER=docs/delivery/progress.md
+test "$(git rev-parse --abbrev-ref HEAD)" = "$RR_IM_BRANCH"
+test "$(git rev-parse HEAD)" = "$RR_IM_BASE"
+test "$(git rev-parse @{u})" = "$RR_IM_BASE"
+test "$(git rev-list --left-right --count HEAD...@{u})" = $'0\t0'
+RR_IM_REMOTE="$(git ls-remote --exit-code origin "refs/heads/$RR_IM_BRANCH")"
+test "$(printf '%s\n' "$RR_IM_REMOTE" | wc -l | tr -d ' ')" = "1"
+test "$(printf '%s\n' "$RR_IM_REMOTE" | awk '{print $1}')" = "$RR_IM_BASE"
+test "$(git diff --cached --name-only)" = ""
+test "$(git diff --name-only "$RR_IM_BASE" -- "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" | LC_ALL=C sort)"
+
+python3 - "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" <<'PYTHON'
+import hashlib
+import pathlib
+import re
+import sys
+
+brief, registry, ledger = map(pathlib.Path, sys.argv[1:])
+patterns = {
+    "brief": r"^- RR-R10 Task 2B index-manifest recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B index-manifest recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+ledger_text = ledger.read_text(encoding="utf-8")
+values = {}
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger_text, re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected exactly one {name} index-manifest ledger binding")
+    values[name] = matches[0]
+if hashlib.sha256(brief.read_bytes()).hexdigest() != values["brief"]:
+    raise SystemExit("brief worktree hash does not match ledger")
+if hashlib.sha256(registry.read_bytes()).hexdigest() != values["registry"]:
+    raise SystemExit("registry worktree hash does not match ledger")
+
+task2b = 0
+for number, line in enumerate(registry.read_text(encoding="utf-8").splitlines(), 1):
+    parts = line.split("  ", 1)
+    if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
+        raise SystemExit(f"invalid registry line {number}")
+    target = pathlib.Path(parts[1])
+    if hashlib.sha256(target.read_bytes()).hexdigest() != parts[0]:
+        raise SystemExit(f"registry mismatch for {target}")
+    task2b += target == brief
+if task2b != 1:
+    raise SystemExit("Task 2B registry entry must be unique")
+PYTHON
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "6be00b5661c48121b4fa054507b15b627fda1c9f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+```
+
+Any failure stops before staging or retry. The planning checkpoint may stage
+only the three documentation paths.
+
+### Index-manifest recovery staged-checkpoint gate
+
+After staging exactly the brief, registry, and ledger, run once before commit:
+
+```bash
+set -euo pipefail
+RR_IM_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_IM_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_IM_LEDGER=docs/delivery/progress.md
+test "$(git diff --cached --name-only | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" | LC_ALL=C sort)"
+git diff --cached --check
+git diff --exit-code -- "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER"
+
+python3 - "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" <<'PYTHON'
+import hashlib
+import re
+import subprocess
+import sys
+
+brief, registry, ledger = sys.argv[1:]
+def staged(path):
+    return subprocess.check_output(["git", "show", f":{path}"])
+ledger_text = staged(ledger).decode()
+patterns = {
+    "brief": r"^- RR-R10 Task 2B index-manifest recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B index-manifest recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+values = {}
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger_text, re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected one staged {name} binding")
+    values[name] = matches[0]
+if hashlib.sha256(staged(brief)).hexdigest() != values["brief"]:
+    raise SystemExit("staged brief hash mismatch")
+if hashlib.sha256(staged(registry)).hexdigest() != values["registry"]:
+    raise SystemExit("staged registry hash mismatch")
+
+task2b = 0
+for number, line in enumerate(staged(registry).decode().splitlines(), 1):
+    parts = line.split("  ", 1)
+    if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
+        raise SystemExit(f"invalid staged registry line {number}")
+    if hashlib.sha256(staged(parts[1])).hexdigest() != parts[0]:
+        raise SystemExit(f"staged registry mismatch for {parts[1]}")
+    task2b += parts[1] == brief
+if task2b != 1:
+    raise SystemExit("staged Task 2B registry entry must be unique")
+PYTHON
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "6be00b5661c48121b4fa054507b15b627fda1c9f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+```
+
+Any failure stops before commit or retry.
+
+### Index-manifest recovery committed post-push gate
+
+After the three-document checkpoint is committed and pushed, run once before
+releasing the Implementer:
+
+```bash
+set -euo pipefail
+RR_IM_BASE=acbf6eafabe103092df5057be68209c10d9bb521
+RR_IM_BRANCH=codex/release-radar-mvp
+RR_IM_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_IM_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_IM_LEDGER=docs/delivery/progress.md
+RR_IM_HEAD="$(git rev-parse HEAD)"
+test "$(git rev-parse "$RR_IM_HEAD^")" = "$RR_IM_BASE"
+test "$(git rev-parse --abbrev-ref HEAD)" = "$RR_IM_BRANCH"
+test "$(git rev-parse @{u})" = "$RR_IM_HEAD"
+test "$(git rev-list --left-right --count HEAD...@{u})" = $'0\t0'
+RR_IM_REMOTE="$(git ls-remote --exit-code origin "refs/heads/$RR_IM_BRANCH")"
+test "$(printf '%s\n' "$RR_IM_REMOTE" | wc -l | tr -d ' ')" = "1"
+test "$(printf '%s\n' "$RR_IM_REMOTE" | awk '{print $1}')" = "$RR_IM_HEAD"
+test "$(git diff-tree --no-commit-id --name-only -r "$RR_IM_HEAD" | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" | LC_ALL=C sort)"
+test "$(git diff --cached --name-only)" = ""
+git diff --exit-code "$RR_IM_HEAD" -- "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER"
+
+python3 - "$RR_IM_HEAD" "$RR_IM_BRIEF" "$RR_IM_REGISTRY" "$RR_IM_LEDGER" <<'PYTHON'
+import hashlib
+import re
+import subprocess
+import sys
+
+head, brief, registry, ledger = sys.argv[1:]
+def committed(path):
+    return subprocess.check_output(["git", "show", f"{head}:{path}"])
+ledger_text = committed(ledger).decode()
+patterns = {
+    "brief": r"^- RR-R10 Task 2B index-manifest recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B index-manifest recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+values = {}
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger_text, re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected one committed {name} binding")
+    values[name] = matches[0]
+if hashlib.sha256(committed(brief)).hexdigest() != values["brief"]:
+    raise SystemExit("committed brief hash mismatch")
+if hashlib.sha256(committed(registry)).hexdigest() != values["registry"]:
+    raise SystemExit("committed registry hash mismatch")
+
+task2b = 0
+for number, line in enumerate(committed(registry).decode().splitlines(), 1):
+    parts = line.split("  ", 1)
+    if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
+        raise SystemExit(f"invalid committed registry line {number}")
+    if hashlib.sha256(committed(parts[1])).hexdigest() != parts[0]:
+        raise SystemExit(f"committed registry mismatch for {parts[1]}")
+    task2b += parts[1] == brief
+if task2b != 1:
+    raise SystemExit("committed Task 2B registry entry must be unique")
+PYTHON
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "6be00b5661c48121b4fa054507b15b627fda1c9f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-red.*' >/dev/null; then exit 1; fi
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-green.*' >/dev/null; then exit 1; fi
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-regression.*' >/dev/null; then exit 1; fi
+```
+
+Any failure stops before implementation, RED, or retry.
+
+### Focused index-manifest RED fence
+
+Run exactly once after the test-only edit and before any production edit. This
+is a new regression RED, not a rerun of an earlier Task 2B fence.
+
+```bash
+set -euo pipefail
+umask 077
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-red.*' >/dev/null; then exit 1; fi
+RR_IM_RED_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-index-manifest-red.XXXXXX)"
+chmod 700 "$RR_IM_RED_PARENT"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_RED_PARENT")" = "700"
+RR_IM_RED_DERIVED="$RR_IM_RED_PARENT/DerivedData"
+RR_IM_RED_RESULT="$RR_IM_RED_PARENT/index-manifest-red.xcresult"
+RR_IM_RED_LOG="$RR_IM_RED_PARENT/index-manifest-red.log"
+RR_IM_RED_SUMMARY="$RR_IM_RED_PARENT/index-manifest-red-summary.json"
+RR_IM_RED_TESTS="$RR_IM_RED_PARENT/index-manifest-red-tests.json"
+RR_IM_RED_INVENTORY="$RR_IM_RED_PARENT/index-manifest-red-inventory.txt"
+RR_IM_SECRET='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+RR_IM_RED_TEST_BLOB="$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)"
+test "$RR_IM_RED_TEST_BLOB" != "6be00b5661c48121b4fa054507b15b627fda1c9f"
+case "$RR_IM_RED_TEST_BLOB" in (*[!0-9a-f]*|'') exit 1;; esac
+test "${#RR_IM_RED_TEST_BLOB}" = "40"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --cached --name-only)" = ""
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+(
+  set -C
+  printf '%s\n' \
+    "models=49f365dd1e074d4d2b716384756e71a3c5fb1ce1" \
+    "delivery_store=d930ab18794a959b44cad4293cee24647a1af8f6" \
+    "migrations=6fad7835211cace656e854aa0249f8775280a6dd" \
+    "store_tests=$RR_IM_RED_TEST_BLOB" \
+    "plugin_tests=d5d2bd7411bf7b10892b93ee57f62cc76c47492a" >"$RR_IM_RED_INVENTORY"
+)
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_IM_RED_DERIVED" \
+  -resultBundlePath "$RR_IM_RED_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects >"$RR_IM_RED_LOG" 2>&1
+RR_IM_RED_STATUS=$?
+set -e
+test -f "$RR_IM_RED_LOG"
+test ! -L "$RR_IM_RED_LOG"
+test "$(/usr/bin/stat -f '%HT' "$RR_IM_RED_LOG")" = "Regular File"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_RED_LOG")" = "600"
+test "$(dirname "$(realpath "$RR_IM_RED_LOG")")" = "$(realpath "$RR_IM_RED_PARENT")"
+RR_IM_SCAN=0
+rg --quiet --pcre2 "$RR_IM_SECRET" "$RR_IM_RED_LOG" >/dev/null 2>&1 || RR_IM_SCAN=$?
+test "$RR_IM_SCAN" = "1"
+test "$RR_IM_RED_STATUS" -ne 0
+test -d "$RR_IM_RED_RESULT"
+test ! -L "$RR_IM_RED_RESULT"
+test "$(dirname "$(realpath "$RR_IM_RED_RESULT")")" = "$(realpath "$RR_IM_RED_PARENT")"
+test -f "$RR_IM_RED_INVENTORY"
+test ! -L "$RR_IM_RED_INVENTORY"
+test "$(/usr/bin/stat -f '%HT' "$RR_IM_RED_INVENTORY")" = "Regular File"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_RED_INVENTORY")" = "600"
+test "$(dirname "$(realpath "$RR_IM_RED_INVENTORY")")" = "$(realpath "$RR_IM_RED_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_IM_RED_RESULT" --compact >"$RR_IM_RED_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_IM_RED_RESULT" --compact >"$RR_IM_RED_TESTS"
+)
+for RR_IM_FILE in "$RR_IM_RED_SUMMARY" "$RR_IM_RED_TESTS"; do
+  test -f "$RR_IM_FILE"; test ! -L "$RR_IM_FILE"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IM_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IM_FILE")")" = "$(realpath "$RR_IM_RED_PARENT")"
+done
+RR_IM_SCAN=0
+rg --quiet --pcre2 "$RR_IM_SECRET" "$RR_IM_RED_LOG" "$RR_IM_RED_SUMMARY" "$RR_IM_RED_TESTS" >/dev/null 2>&1 || RR_IM_SCAN=$?
+test "$RR_IM_SCAN" = "1"
+
+python3 - "$RR_IM_RED_SUMMARY" "$RR_IM_RED_TESTS" <<'PYTHON'
+import json
+import sys
+summary = json.load(open(sys.argv[1], encoding="utf-8"))
+tests = json.load(open(sys.argv[2], encoding="utf-8"))
+expected = {
+    "result": "Failed", "totalTestCount": 1, "passedTests": 0,
+    "failedTests": 1, "skippedTests": 0, "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected RED {key}: {summary.get(key)!r}")
+failures = summary.get("testFailures")
+if not isinstance(failures, list) or len(failures) != 2:
+    raise SystemExit("RED must have exactly two counterfeit failure records")
+failure_text = json.dumps(failures, sort_keys=True)
+for marker in (
+    "Expected partial ticket_tasks_label_unique index to fail closed",
+    "Expected NOCASE ticket_tasks_label_unique index to fail closed",
+):
+    if marker not in failure_text:
+        raise SystemExit(f"missing expected RED classifier: {marker}")
+cases = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        for child in value.values(): visit(child)
+    elif isinstance(value, list):
+        for child in value: visit(child)
+visit(tests)
+expected_case = (
+    "StoreAcceptanceTests/testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects()",
+    "Failed",
+)
+if cases != [expected_case]:
+    raise SystemExit(f"unexpected RED test cases: {cases!r}")
+PYTHON
+```
+
+Valid RED is exactly one failed existing test and exactly the two described
+counterfeit failure records. A compile, setup-DDL, metadata-assertion,
+fixture, parser, privacy, mode, containment, or different-test failure is
+invalid. Any failure of the fence itself consumes it and stops before
+production edit, GREEN, regression, diff check, review, staging, checkpoint,
+or retry.
+
+### Full Store index-manifest GREEN fence
+
+Run exactly once after the minimal production edit. It records rather than
+invents the final migration blob and requires the RED Store-test blob to be
+unchanged.
+
+```bash
+set -euo pipefail
+umask 077
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-green.*' >/dev/null; then exit 1; fi
+RR_IM_RED_PARENT="$(compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-red.*' || true)"
+test "$(printf '%s\n' "$RR_IM_RED_PARENT" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+RR_IM_RED_INVENTORY="$RR_IM_RED_PARENT/index-manifest-red-inventory.txt"
+RR_IM_RED_TEST_BLOB="$(awk -F= '$1 == "store_tests" {print $2}' "$RR_IM_RED_INVENTORY")"
+case "$RR_IM_RED_TEST_BLOB" in (*[!0-9a-f]*|'') exit 1;; esac
+test "${#RR_IM_RED_TEST_BLOB}" = "40"
+
+RR_IM_GREEN_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-index-manifest-green.XXXXXX)"
+chmod 700 "$RR_IM_GREEN_PARENT"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_GREEN_PARENT")" = "700"
+RR_IM_GREEN_DERIVED="$RR_IM_GREEN_PARENT/DerivedData"
+RR_IM_GREEN_RESULT="$RR_IM_GREEN_PARENT/index-manifest-green.xcresult"
+RR_IM_GREEN_LOG="$RR_IM_GREEN_PARENT/index-manifest-green.log"
+RR_IM_GREEN_SUMMARY="$RR_IM_GREEN_PARENT/index-manifest-green-summary.json"
+RR_IM_GREEN_TESTS="$RR_IM_GREEN_PARENT/index-manifest-green-tests.json"
+RR_IM_GREEN_INVENTORY="$RR_IM_GREEN_PARENT/index-manifest-green-inventory.txt"
+RR_IM_SECRET='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+RR_IM_GREEN_MIGRATIONS_BLOB="$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)"
+test "$RR_IM_GREEN_MIGRATIONS_BLOB" != "6fad7835211cace656e854aa0249f8775280a6dd"
+case "$RR_IM_GREEN_MIGRATIONS_BLOB" in (*[!0-9a-f]*|'') exit 1;; esac
+test "${#RR_IM_GREEN_MIGRATIONS_BLOB}" = "40"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "$RR_IM_RED_TEST_BLOB"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --cached --name-only)" = ""
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+(
+  set -C
+  printf '%s\n' \
+    "models=49f365dd1e074d4d2b716384756e71a3c5fb1ce1" \
+    "delivery_store=d930ab18794a959b44cad4293cee24647a1af8f6" \
+    "migrations=$RR_IM_GREEN_MIGRATIONS_BLOB" \
+    "store_tests=$RR_IM_RED_TEST_BLOB" \
+    "plugin_tests=d5d2bd7411bf7b10892b93ee57f62cc76c47492a" >"$RR_IM_GREEN_INVENTORY"
+)
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_IM_GREEN_DERIVED" \
+  -resultBundlePath "$RR_IM_GREEN_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests >"$RR_IM_GREEN_LOG" 2>&1
+RR_IM_GREEN_STATUS=$?
+set -e
+test -f "$RR_IM_GREEN_LOG"
+test ! -L "$RR_IM_GREEN_LOG"
+test "$(/usr/bin/stat -f '%HT' "$RR_IM_GREEN_LOG")" = "Regular File"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_GREEN_LOG")" = "600"
+test "$(dirname "$(realpath "$RR_IM_GREEN_LOG")")" = "$(realpath "$RR_IM_GREEN_PARENT")"
+RR_IM_SCAN=0
+rg --quiet --pcre2 "$RR_IM_SECRET" "$RR_IM_GREEN_LOG" >/dev/null 2>&1 || RR_IM_SCAN=$?
+test "$RR_IM_SCAN" = "1"
+test "$RR_IM_GREEN_STATUS" = "0"
+test -d "$RR_IM_GREEN_RESULT"; test ! -L "$RR_IM_GREEN_RESULT"
+test "$(dirname "$(realpath "$RR_IM_GREEN_RESULT")")" = "$(realpath "$RR_IM_GREEN_PARENT")"
+test -f "$RR_IM_GREEN_INVENTORY"
+test ! -L "$RR_IM_GREEN_INVENTORY"
+test "$(/usr/bin/stat -f '%HT' "$RR_IM_GREEN_INVENTORY")" = "Regular File"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_GREEN_INVENTORY")" = "600"
+test "$(dirname "$(realpath "$RR_IM_GREEN_INVENTORY")")" = "$(realpath "$RR_IM_GREEN_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_IM_GREEN_RESULT" --compact >"$RR_IM_GREEN_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_IM_GREEN_RESULT" --compact >"$RR_IM_GREEN_TESTS"
+)
+for RR_IM_FILE in "$RR_IM_GREEN_SUMMARY" "$RR_IM_GREEN_TESTS"; do
+  test -f "$RR_IM_FILE"; test ! -L "$RR_IM_FILE"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IM_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IM_FILE")")" = "$(realpath "$RR_IM_GREEN_PARENT")"
+done
+RR_IM_SCAN=0
+rg --quiet --pcre2 "$RR_IM_SECRET" "$RR_IM_GREEN_LOG" "$RR_IM_GREEN_SUMMARY" "$RR_IM_GREEN_TESTS" >/dev/null 2>&1 || RR_IM_SCAN=$?
+test "$RR_IM_SCAN" = "1"
+
+python3 - "$RR_IM_GREEN_SUMMARY" "$RR_IM_GREEN_TESTS" <<'PYTHON'
+import json
+import sys
+summary = json.load(open(sys.argv[1], encoding="utf-8"))
+tests = json.load(open(sys.argv[2], encoding="utf-8"))
+expected = {
+    "result": "Passed", "totalTestCount": 43, "passedTests": 43,
+    "failedTests": 0, "skippedTests": 0, "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected GREEN {key}: {summary.get(key)!r}")
+if summary.get("testFailures") != []:
+    raise SystemExit("GREEN testFailures must be empty")
+cases = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        for child in value.values(): visit(child)
+    elif isinstance(value, list):
+        for child in value: visit(child)
+visit(tests)
+if len(cases) != 43 or len({case[0] for case in cases}) != 43:
+    raise SystemExit("GREEN must contain 43 unique Store tests")
+if any(not case[0].startswith("StoreAcceptanceTests/") or case[1] != "Passed" for case in cases):
+    raise SystemExit("GREEN contains a non-Store or non-passing case")
+PYTHON
+```
+
+Expected: exact structured Store `43/43`, zero failures, skips, expected
+failures, or failure records; 43 unique Store identifiers; both counterfeits
+rejected through migration recovery; and all mode, containment, inventory, and
+privacy checks pass. Any fence failure stops before regression, diff check,
+review, staging, checkpoint, or retry.
+
+### Selected index-manifest regression fence
+
+Run exactly once if and only if the complete GREEN fence passes. It requires
+the final inventory captured by GREEN and uses a distinct evidence parent.
+
+```bash
+set -euo pipefail
+umask 077
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-regression.*' >/dev/null; then exit 1; fi
+RR_IM_GREEN_PARENT="$(compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-green.*' || true)"
+test "$(printf '%s\n' "$RR_IM_GREEN_PARENT" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+RR_IM_FINAL_INVENTORY="$RR_IM_GREEN_PARENT/index-manifest-green-inventory.txt"
+for RR_IM_PAIR in \
+  "ReleaseRadarCore/Models/TicketTaskModels.swift:models" \
+  "ReleaseRadarCore/Store/DeliveryStore.swift:delivery_store" \
+  "ReleaseRadarCore/Store/StoreMigrations.swift:migrations" \
+  "ReleaseRadarTests/StoreAcceptanceTests.swift:store_tests" \
+  "ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift:plugin_tests"; do
+  RR_IM_PATH="${RR_IM_PAIR%%:*}"; RR_IM_KEY="${RR_IM_PAIR##*:}"
+  RR_IM_EXPECTED="$(awk -F= -v key="$RR_IM_KEY" '$1 == key {print $2}' "$RR_IM_FINAL_INVENTORY")"
+  test "$(git hash-object "$RR_IM_PATH")" = "$RR_IM_EXPECTED"
+done
+test "$(git diff --cached --name-only)" = ""
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+
+RR_IM_REG_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-index-manifest-regression.XXXXXX)"
+chmod 700 "$RR_IM_REG_PARENT"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_REG_PARENT")" = "700"
+RR_IM_REG_DERIVED="$RR_IM_REG_PARENT/DerivedData"
+RR_IM_REG_RESULT="$RR_IM_REG_PARENT/index-manifest-regression.xcresult"
+RR_IM_REG_LOG="$RR_IM_REG_PARENT/index-manifest-regression.log"
+RR_IM_REG_SUMMARY="$RR_IM_REG_PARENT/index-manifest-regression-summary.json"
+RR_IM_REG_TESTS="$RR_IM_REG_PARENT/index-manifest-regression-tests.json"
+RR_IM_SECRET='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_IM_REG_DERIVED" \
+  -resultBundlePath "$RR_IM_REG_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests \
+  -only-testing:ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests >"$RR_IM_REG_LOG" 2>&1
+RR_IM_REG_STATUS=$?
+set -e
+test -f "$RR_IM_REG_LOG"
+test ! -L "$RR_IM_REG_LOG"
+test "$(/usr/bin/stat -f '%HT' "$RR_IM_REG_LOG")" = "Regular File"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IM_REG_LOG")" = "600"
+test "$(dirname "$(realpath "$RR_IM_REG_LOG")")" = "$(realpath "$RR_IM_REG_PARENT")"
+RR_IM_SCAN=0
+rg --quiet --pcre2 "$RR_IM_SECRET" "$RR_IM_REG_LOG" >/dev/null 2>&1 || RR_IM_SCAN=$?
+test "$RR_IM_SCAN" = "1"
+test "$RR_IM_REG_STATUS" = "0"
+test -d "$RR_IM_REG_RESULT"; test ! -L "$RR_IM_REG_RESULT"
+test "$(dirname "$(realpath "$RR_IM_REG_RESULT")")" = "$(realpath "$RR_IM_REG_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_IM_REG_RESULT" --compact >"$RR_IM_REG_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_IM_REG_RESULT" --compact >"$RR_IM_REG_TESTS"
+)
+for RR_IM_FILE in "$RR_IM_REG_LOG" "$RR_IM_REG_SUMMARY" "$RR_IM_REG_TESTS"; do
+  test -f "$RR_IM_FILE"; test ! -L "$RR_IM_FILE"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IM_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IM_FILE")")" = "$(realpath "$RR_IM_REG_PARENT")"
+done
+RR_IM_SCAN=0
+rg --quiet --pcre2 "$RR_IM_SECRET" "$RR_IM_REG_LOG" "$RR_IM_REG_SUMMARY" "$RR_IM_REG_TESTS" >/dev/null 2>&1 || RR_IM_SCAN=$?
+test "$RR_IM_SCAN" = "1"
+
+python3 - "$RR_IM_REG_SUMMARY" "$RR_IM_REG_TESTS" <<'PYTHON'
+import json
+import sys
+summary = json.load(open(sys.argv[1], encoding="utf-8"))
+tests = json.load(open(sys.argv[2], encoding="utf-8"))
+expected = {
+    "result": "Passed", "totalTestCount": 64, "passedTests": 64,
+    "failedTests": 0, "skippedTests": 0, "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected regression {key}: {summary.get(key)!r}")
+if summary.get("testFailures") != []:
+    raise SystemExit("regression testFailures must be empty")
+cases = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        for child in value.values(): visit(child)
+    elif isinstance(value, list):
+        for child in value: visit(child)
+visit(tests)
+if len(cases) != 64 or len({case[0] for case in cases}) != 64:
+    raise SystemExit("regression must contain 64 unique tests")
+if any(case[1] != "Passed" for case in cases):
+    raise SystemExit("every selected regression case must pass")
+store = [case for case in cases if case[0].startswith("StoreAcceptanceTests/")]
+plugin = [case for case in cases if case[0].startswith("CodexPluginLifecycleAcceptanceTests/")]
+if len(store) != 43 or len(plugin) != 21 or len(store) + len(plugin) != 64:
+    raise SystemExit("regression must have exact 43/21 suite split")
+PYTHON
+```
+
+Expected: exact structured `64/64`, exact `43/21` Store/plugin-lifecycle
+split, zero failures, skips, expected failures, or failure records, 64 unique
+identifiers, unchanged final five-blob inventory, and passing mode,
+containment, and privacy checks. Any failure stops before diff check, review,
+staging, checkpoint, or retry.
+
+### Postimplementation reviews and final checkpoint
+
+Only after both new passing fences may the coordinator run one authoritative
+`git diff --check` and the accepted schema-v10/schema-v11 fixture checksum and
+byte-diff checks. Then obtain fresh independent:
+
+- Code Review: GO, Required `0`;
+- QA/Test: GO, Required `0`;
+- Architecture: GO, Required `0`;
+- Security/Privacy: GO, Required `0`;
+- TPM: GO, Required `0`;
+- Delivery Management: GO, Required `0`.
+
+The Implementer may not review its own work. Reviewers must inspect the actual
+test-only RED blob, final migration blob, final Store-test blob, focused RED
+classifier, Store GREEN, selected regression, privacy scans, fixture checks,
+and exact final diff. Required findings block the checkpoint. Optional and
+out-of-scope observations do not expand the task.
+
+The implementation checkpoint may stage exactly:
+
+- `ReleaseRadarCore/Models/TicketTaskModels.swift`;
+- `ReleaseRadarCore/Store/DeliveryStore.swift`;
+- `ReleaseRadarCore/Store/StoreMigrations.swift`;
+- `ReleaseRadarTests/StoreAcceptanceTests.swift`;
+- `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`; and
+- coordinator-owned `docs/delivery/progress.md`.
+
+It must read the final five-blob inventory from the retained GREEN scalar
+report and require every staged implementation blob to match it. It must not
+stage this amendment or registry again, fixtures, raw evidence, scripts,
+project files, generated files, owner data, Release Radar state, or external
+artifacts. Task 3 remains closed until this checkpoint is committed, pushed,
+and exact at local/upstream/live remote with ahead/behind `0/0`.
+
+### Completion evidence expected in the progress ledger
+
+Delivery Management must record sanitized scalar facts only:
+
+- both independent postimplementation NO-GO/Required `1` findings and the
+  exact shared root cause;
+- retained historical `43/43` and `64/64` with `43/21`, explicitly marked
+  insufficient for corrected source and not rerun;
+- nonauthoritative diagnostic diff-check disclosure;
+- final reviewed amendment and registry hashes plus all five
+  preimplementation review dispositions;
+- precommit, staged, commit inventory, post-push remote equality, current
+  five-blob, and fresh-prefix outcomes;
+- RED evidence parent, file modes/sizes/hashes, actual test-only blob, exact
+  one-test/two-failure classifier, and privacy scan statuses;
+- final migration and Store-test blobs from the GREEN inventory report;
+- GREEN evidence parent and exact `43/43` scalar results;
+- regression evidence parent and exact `64/64`, `43/21` scalar results;
+- fixture/diff-check outcomes and all six postimplementation review
+  dispositions;
+- final checkpoint inventory and local/upstream/live-remote equality;
+- retained evidence status, open risks, and Task 3 gate state.
+
+### Index-manifest recovery acceptance criteria
+
+- This canonical brief contains the complete durable amendment and the root
+  registry contains exactly one matching Task 2B entry.
+- Architecture, QA/Test, Security/Privacy, TPM, and Delivery Management review
+  the exact amendment and registry and return GO/Required `0` before staging.
+- Delivery Management reviews the actual distinct ledger bindings and exact
+  three-document inventory.
+- The planning checkpoint is one direct child of
+  `acbf6eafabe103092df5057be68209c10d9bb521`, contains exactly brief,
+  registry, and progress, and reaches exact local/upstream/live-remote
+  equality with ahead/behind `0/0` before implementation.
+- The five current pre-edit blobs match the exact table above.
+- The existing manifest test gains supported-DDL partial and NOCASE
+  `ticket_tasks_label_unique` cases with asserted setup metadata and distinct
+  fail-closed descriptions; no test method is added, so Store remains 43.
+- A new focused RED runs once and proves exactly that one existing test fails
+  with both expected counterfeit failure records; no prior fence reruns.
+- The shared index validator requires `partial = 0` and BINARY for every key
+  row while retaining all existing checks and removing only the redundant v12
+  special guard.
+- No canonical DDL, model, `DeliveryStore`, plugin test, fixture, project,
+  signing, sandbox, owner, Release Radar, live-plan, Task 3, or external state
+  changes.
+- The new Store GREEN runs once and passes exact `43/43`; only then the new
+  selected regression runs once and passes exact `64/64` with `43/21` split.
+- Every fence is no-retry and fail-stop; all prior and new evidence remains
+  retained, private, unstaged, untransmitted, and undeleted.
+- Each new fence validates and quietly scans its contained regular mode-`600`
+  raw log immediately after status capture and before evaluating build status,
+  result-bundle state, extraction, or classification.
+- Actual post-test and post-product blobs are captured through retained scalar
+  inventory reports; no post-edit hash is invented.
+- One authoritative postimplementation diff check and exact fixture checks
+  pass only after both new test fences.
+- Fresh Code Review, QA/Test, Architecture, Security/Privacy, TPM, and Delivery
+  Management return GO/Required `0` before the final bounded checkpoint.
+- Required finding `1`, including its production-validation and regression
+  facets, closes only through the accepted RED/GREEN evidence. Optional
+  remains `0`; out-of-scope remains `0`.

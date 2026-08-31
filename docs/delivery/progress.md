@@ -1325,16 +1325,134 @@ Deliver the signed native macOS MVP described by
   test, executable gate, staging, commit, push, evidence mutation, owner-state
   access, Release Radar mutation, live-plan action, Task 3 release, or external
   mutation occurred during amendment planning.
+- RR-R10 Task 2B source-conformance recovery checkpoint: commit
+  `acbf6eafabe103092df5057be68209c10d9bb521` is the single direct child of
+  second-recovery checkpoint `b60c06bb161fcd663754ab482a8eedb485d463de`
+  and contains exactly the amended Task 2B brief, root task-brief registry, and
+  this ledger. The registered precommit and staged gates each ran once and
+  exited `0`; the checkpoint was pushed to
+  `origin/codex/release-radar-mvp`; and the committed post-push gate ran once
+  and exited `0`, proving direct lineage, exact three-document inventory,
+  committed ledger/hash bindings, full unique registry verification,
+  HEAD/upstream/live-remote equality with ahead/behind `0/0`, empty index,
+  exact implementation blobs, and unchanged SchemaV11 fixture.
+- RR-R10 Task 2B source-conformance recovery execution: fresh writer
+  `/root/task2b_third_recovery_writer` ran the registered pre-edit gate once,
+  removed exactly four leading spaces from the unique `LIMIT 2` query, and ran
+  the post-edit target gate once. Both gates exited `0`; Store test blob became
+  the required `6be00b5661c48121b4fa054507b15b627fda1c9f`, while expected value
+  `task-3,task-1` and the other four implementation blobs remained unchanged.
+  The same writer then ran the still-unconsumed Store GREEN fence exactly once
+  and the selected regression fence exactly once in the required order.
+- RR-R10 Task 2B retained passing Store evidence: restricted mode-`700` parent
+  `/tmp/release-radar-rr-r10-task2b-green-recovery-2.oEFPnn` contains a
+  mode-`600`, 452,483-byte log at SHA-256
+  `ee0b346fce0d1fbd16f9b13731af284f2d882a3824c4d4177706d53b1ed01113`,
+  mode-`600`, 844-byte summary JSON at SHA-256
+  `4f5423c1b8e510888962f754115bc7a00d40fc8a0e158c5343decab3133d88af`,
+  mode-`600`, 19,672-byte test JSON at SHA-256
+  `a7b496d306839413b877e1e7034142df920ffdfdec6282197a4eebef94a461ff`,
+  and a mode-`700` xcresult with 116 files, 381,789 bytes, and sorted tree-
+  manifest SHA-256
+  `42462cb4fb5abe178f0f58e921fb10cea3ed162b9d0a4b74341132813775efef`.
+  Structured evidence reports exactly 43/43 unique Store cases with zero
+  failed, skipped, expected-failure, or failure-record results; required
+  privacy scans were negative.
+- RR-R10 Task 2B retained passing regression evidence: restricted mode-`700`
+  parent `/tmp/release-radar-rr-r10-task2b-regression-recovery-2.exoifq`
+  contains a mode-`600`, 465,805-byte log at SHA-256
+  `41f54219d57e538edd7aca0e7875d1e2522c5a6fbc5f44e557bd6a6fc3cd7a14`,
+  mode-`600`, 844-byte summary JSON at SHA-256
+  `677a021b76c3e8b7d10aec0750b53b3853620ba7c60d1af3ee1624b3a0108123`,
+  mode-`600`, 29,654-byte test JSON at SHA-256
+  `d825083ec371b7df804558cc2e3880965887162b4c7124dc58d4c6be054b0861`,
+  and a mode-`700` xcresult with 158 files, 405,699 bytes, and sorted tree-
+  manifest SHA-256
+  `50e43b7c8dfd4590a72d9b73a5f32e19a26c33246241b519510f13802c91e4c0`.
+  Structured evidence reports exactly 64/64 unique cases with exact 43 Store/
+  21 plugin-lifecycle split and zero failed, skipped, expected-failure, or
+  failure-record results; required privacy scans were negative. Both fixture
+  manifests verified `OK`, and the registered post-boundary `git diff --check`
+  ran once and passed. Two later reporting wrappers stopped before completion
+  on abbreviated-blob expansion and zsh's special `path` variable; neither
+  changed state or reran a gate or test, and remaining scalar checks passed.
+- RR-R10 Task 2B postimplementation manifest finding: fresh Code Reviewer
+  `/root/task2b_post_code_review` and fresh QA/Test verifier
+  `/root/task2b_post_qa_review` independently returned **NO-GO with Required
+  1, Optional 0, and Out-of-scope 0**. Both found that
+  `StoreMigrations.hasExpectedIndexes` validated index identity, uniqueness,
+  key count/name/order/direction but not `pragma_index_list.partial` or each
+  key's `pragma_index_xinfo.coll`. The narrow v12 special case covered only two
+  active-order positions. A same-named partial or `COLLATE NOCASE`
+  `ticket_tasks_label_unique` could therefore pass manifest validation,
+  violating durable BINARY label non-reuse. Existing retained 43/43 and 64/64
+  evidence is valid historical evidence for the current blobs but does not
+  exercise or accept that corrected boundary.
+- RR-R10 Task 2B index-manifest recovery planning: fresh Planning agent
+  `/root/task2b_index_manifest_recovery_planning` independently confirmed the
+  one Required defect and defined a two-file test-first recovery that extends
+  the existing manifest test with supported-DDL partial and `NOCASE`
+  counterfeits, consumes one focused one-test RED, then requires the shared
+  validator to reject partial indexes and require BINARY for every key row.
+  It preserves 43 Store and 21 plugin-lifecycle test-method counts and changes
+  no schema DDL, public model, DeliveryStore behavior, fixture, project, or
+  Task 3 surface. During diagnosis it inadvertently ran a read-only
+  `git diff --check` once at exit `0`; that check is non-authoritative for the
+  future corrected implementation and caused no repository or external effect.
+- RR-R10 Task 2B index-manifest planning review history: the first complete
+  amendment at SHA-256
+  `e82843bfd33ce563f16778807579f148c6cb4030a3cbadc9a9bc0d8784c35ab3`
+  with registry SHA-256
+  `1c0f2cd56a398603c1711f191e216d7d1afd2c9c82fb54e648325a181f1dd8b1`
+  received Architecture, QA/Test, and TPM **GO with Required 0**, while
+  Security/Privacy returned **NO-GO with Required 1** because failed fences
+  could retain an unscanned log. The planner moved regular-file, no-symlink,
+  mode, containment, and quiet privacy-scan checks immediately after each
+  `xcodebuild` status capture and before status/result/extraction handling.
+- RR-R10 Task 2B index-manifest recovery current blobs and fence state: the
+  five unstaged implementation blobs are
+  `ReleaseRadarCore/Models/TicketTaskModels.swift`
+  `49f365dd1e074d4d2b716384756e71a3c5fb1ce1`,
+  `ReleaseRadarCore/Store/DeliveryStore.swift`
+  `d930ab18794a959b44cad4293cee24647a1af8f6`,
+  `ReleaseRadarCore/Store/StoreMigrations.swift`
+  `6fad7835211cace656e854aa0249f8775280a6dd`,
+  `ReleaseRadarTests/StoreAcceptanceTests.swift`
+  `6be00b5661c48121b4fa054507b15b627fda1c9f`, and
+  `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`
+  `d5d2bd7411bf7b10892b93ee57f62cc76c47492a`. No path matching any of
+  `/tmp/release-radar-rr-r10-task2b-index-manifest-red.*`,
+  `/tmp/release-radar-rr-r10-task2b-index-manifest-green.*`, or
+  `/tmp/release-radar-rr-r10-task2b-index-manifest-regression.*` exists; all
+  three new fences remain unconsumed.
+- RR-R10 Task 2B index-manifest recovery final reviewed brief SHA-256: `483307679f4ff6611cd4430fef404d9f6f140acc5a14dcdb175699c630b2a303`
+- RR-R10 Task 2B index-manifest recovery final reviewed registry SHA-256: `cc6433185b6c4c08ec4e4dce4032d4f4120f4114fbf296dc435fe5c5479bd90e`
+- RR-R10 Task 2B index-manifest recovery exact-hash closure: Architecture
+  reviewer `/root/task2b_arch_review_replacement`, QA/Test verifier
+  `/root/task2b_qa_review_replacement`, TPM reviewer
+  `/root/task2b_tpm_review`, Security/Privacy verifier
+  `/root/task2b_security_review`, and Delivery Management reviewer
+  `/root/task2b_delivery_review_final` each independently reviewed the final
+  amendment and registry and returned **GO with Required 0, Optional 0, and
+  Out-of-scope 0**. They verified the shared manifest root cause, exact
+  two-file/red-first scope, partial and `NOCASE` supported-DDL cases, uniform
+  nonpartial/BINARY repair, 43/64 counts, immediate privacy-scan ordering,
+  no-rerun/fail-stop rules, exact `acbf6ea` checkpoint bindings, retained
+  historical evidence, and Task 3/no-live-plan closure.
+- RR-R10 Task 2B index-manifest recovery planning boundary: no implementation
+  edit, test, executable gate, staging, commit, push, evidence mutation,
+  owner-state access, Release Radar mutation, live-plan action, Task 3 release,
+  or external mutation occurred during amendment planning.
 - Next eligible RR-R10 work: **After Delivery Management verifies this actual
-  ledger, run the registered third-recovery precommit gate once; if it passes,
+  ledger, run the registered index-manifest precommit gate once; if it passes,
   stage exactly the final Task 2B brief, root registry, and this ledger, run
   the staged gate, commit directly above
-  `b60c06bb161fcd663754ab482a8eedb485d463de`, push, prove remote equality,
-  and run the committed post-push gate once. Only then release a fresh writer
-  to delete the exact four spaces, prove target blob `6be00b56...`, and run the
-  one-time second-successor GREEN.** Regression runs only after GREEN passes
-  43/43. Task 3 remains closed until Task 2B's independently accepted
-  implementation checkpoint is remote-exact.
+  `acbf6eafabe103092df5057be68209c10d9bb521`, push, prove remote equality,
+  and run the committed post-push gate once. Only then release one fresh
+  serialized Implementer for the test-only focused RED, minimal shared
+  validator repair, new 43/43 GREEN, and conditional 64/64 regression.** Task
+  3 remains closed until Task 2B's independently accepted implementation
+  checkpoint is remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
