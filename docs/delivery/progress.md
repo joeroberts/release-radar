@@ -703,16 +703,115 @@ Deliver the signed native macOS MVP described by
   and tracked-state gates, exact three-path planning and two-path implementation
   inventories, role separation, Task 2A pause, and Task 2B closure. Delivery
   Management authorizes planning-checkpoint assembly only; RED remains held.
+- RR-R10 Task 2A0 initial planning checkpoint: commit
+  `fccab15dacef8ad4452743a7e75ebf8773304cf3` is the unique child of corrected
+  Task 2A checkpoint `d8bda5a035e0324acd90bcbe67036f8d217b18bf` and contains
+  exactly this ledger, the final preimplementation Task 2A0 brief, and the root
+  task-brief registry. It was pushed to `origin/codex/release-radar-mvp`;
+  fresh fetch and live remote readback matched exactly with ahead/behind
+  `0/0`. The complete Step 0 planning-authority gate passed before RED,
+  including the exact three-path commit inventory, all 18 registered briefs,
+  immutable controlling hashes, clean tracked/index state, the exact two-file
+  untracked SchemaV11 fixture inventory, and unchanged shared scheme and
+  repository-owned entitlements.
+  Task 2A0 initial planning checkpoint: fccab15dacef8ad4452743a7e75ebf8773304cf3
+- RR-R10 Task 2A0 retained implementation evidence: fresh serialized
+  Implementer `/root/task2a0_manifest_membership_implementer` ran exactly one
+  signing-disabled `xcodebuild build-for-testing` RED from an initially absent
+  fresh DerivedData path, with no tests or generator. RED exited `65` with
+  exactly one authorized `Multiple commands produce` error, exactly the
+  SchemaV10 and SchemaV11 manifest producers, exactly one exact
+  `** TEST BUILD FAILED **` marker, zero build-success markers, and quiet
+  credential/private-key scan status `1`. It then added only
+  `Fixtures/SchemaV11/SHA256SUMS` to ReleaseRadarTests exception set
+  `A90000000000000000000003` for target `A20000000000000000000004` in
+  `ReleaseRadar.xcodeproj/project.pbxproj`. Baseline project blob
+  `736654a040a90603ad322068fa48fa428acca3fb` became working blob
+  `2b984d44e5b73602bf04b18b761d308761de789c`; the eight existing plugin
+  exceptions, SchemaV10 bundle membership, test source, scheme, entitlements,
+  fixtures, and every unrelated byte remained unchanged. One identical
+  signing-disabled GREEN `build-for-testing` invocation using a different
+  initially absent DerivedData path exited `0`, produced zero collision or
+  failure markers, ended with exactly one `** TEST BUILD SUCCEEDED **`, and
+  bundled the SchemaV10 manifest byte-identically. No Task 2A generator,
+  export, test, fixture generation, owner state, app, bridge, external state,
+  staging, commit, or push ran or changed. The index remains empty; the only
+  tracked implementation delta is the project file, and the two SchemaV11
+  artifacts remain untracked and byte-identical to their accepted identities.
+  Task 2A0 retained RED: exit 65; marker scan 1; exact marker ** TEST BUILD FAILED **
+  Task 2A0 retained GREEN: exit 0; marker scan 1; terminal ** TEST BUILD SUCCEEDED **
+  Task 2A0 current project blob: 2b984d44e5b73602bf04b18b761d308761de789c
+- RR-R10 Task 2A0 restricted retained evidence: RED parent
+  `/tmp/release-radar-rr-r10-task2a0-red.ftQACG` and GREEN parent
+  `/tmp/release-radar-rr-r10-task2a0-green.Fq0sWc` are mode `700`; their raw
+  and normalized logs are regular non-symlinks at mode `600`, remain temporary,
+  unstaged, and untransmitted, and must not be deleted without owner
+  authorization. RED raw SHA-256 is
+  `ad3e40becf20b3dace25d62b32b675af68b5e5e350be5a34b66095a5efb5506f`;
+  RED normalized SHA-256 is
+  `477c93ae7b9fa312fed759fc6567974c7b277322fef4f993c6cf57d0c8f58d8c`;
+  GREEN raw SHA-256 is
+  `fd09908beb4761a1029aaf91f2ce999f45665dfa9ed102428c1a26d282b488b0`.
+  Quiet scans found no credential or private-key marker. Restricted project
+  gate parents
+  `/tmp/release-radar-task2a0-project-gate.0qHeJB`,
+  `/tmp/release-radar-task2a0-project-gate.FIN1dC`, and
+  `/tmp/release-radar-task2a0-project-gate.HwztB4` are mode `700` and retained.
+  Security review also retained temporary sanitized registry output
+  `/tmp/rr_task2a0_registry_check.out`; it contains only brief filename/status
+  lines and no build-log content. None of these temporary artifacts is a
+  controlling source.
+- RR-R10 Task 2A0 postexecution marker-oracle correction: the Implementer's
+  original report incorrectly treated wrapper success as proof of the brief's
+  generic `** BUILD SUCCEEDED **` literal; independent reinspection proved the
+  retained GREEN instead has exactly one final
+  `** TEST BUILD SUCCEEDED **`. The Implementer corrected its disposition to
+  `DONE_WITH_CONCERNS`; neither build was rerun and no retained evidence was
+  changed. Planning agent `/root/task2a_manifest_prereq_planner` produced
+  candidate brief SHA-256
+  `f23a44b7cd3be50519d8d235b6cd612b033b1a38fd55a1d4131f28f93766cbf8`.
+  Architecture returned GO with Required 0, but QA/Test returned NO-GO with
+  Required 1 because RED's unique exact failure marker is line 69 while the
+  last nonempty line is 74, so the candidate's final-line RED predicate was
+  false. Planning corrected only that oracle and its controlling prose. The
+  final candidate brief is SHA-256
+  `db34c56d5c312a82b35e5a07434a94db2388d567e75ac1e8085d307d69dce733`;
+  root registry SHA-256 is
+  `3cea0629458fd85c86990e57e59c6ce2506c5a6ddc98cb0411971ff7563e2845`,
+  its candidate entry is unique, and all 18 registered briefs verify. RED now
+  requires its exact marker once but not as the final line; GREEN still
+  requires its exact success marker once as the final nonempty line. No build,
+  generator, fixture, product, owner, external, or Git mutation occurred during
+  correction or review.
+- RR-R10 Task 2A0 exact-hash postexecution planning closure: Architecture
+  `/root/task2a0_correction_arch_review`, QA/Test
+  `/root/task2a0_correction_qa_review`, Security/Privacy
+  `/root/task2a0_correction_security_review`, TPM
+  `/root/task2a0_correction_tpm_review`, and Delivery Management
+  `/root/task2a0_correction_delivery_review` each reviewed final brief SHA-256
+  `db34c56d5c312a82b35e5a07434a94db2388d567e75ac1e8085d307d69dce733`
+  and returned **GO with Required 0, Optional 0, and Out-of-scope 0**.
+  Delivery Management `/root/task2a0_correction_delivery_review`: GO; Required 0; Optional 0; Out-of-scope 0.
+  They independently confirmed the exact one-line project scope, immutable
+  retained evidence and no-rerun boundary, corrected RED and final GREEN
+  predicates, local-storage/privacy and scheme/entitlement boundaries, exact
+  three-path correction-checkpoint contract, dependency closure, and Step 7's
+  deterministic read-only continuation. A prior reused Delivery Management
+  agent stalled, was interrupted without returning a verdict, and made no
+  repository change; the replacement completed the full review.
 - Next eligible RR-R10 work: **Stage, inspect, commit, and push only this
-  ledger, the final Task 2A0 brief, and root brief registry; prove the enclosing
-  planning commit is the unique child of `d8bda5a035e0324acd90bcbe67036f8d217b18bf`,
-  equals upstream and live remote, and is ahead/behind `0/0`; then run the
-  complete Task 2A0 Step 0 planning-authority gate.** The two SchemaV11
-  artifacts remain untracked and excluded. Only after that exact checkpoint
-  may one fresh serialized Implementer run Task 2A0's build-only RED. Task 2A's
-  immutable generator RED/export/GREEN must not run again, its 58-test
+  ledger, the final corrected Task 2A0 brief, and root brief registry; prove
+  the correction commit is the single direct child of
+  `fccab15dacef8ad4452743a7e75ebf8773304cf3`, equals upstream and live remote,
+  and is ahead/behind `0/0`. Keep the authorized project diff and both
+  SchemaV11 artifacts unstaged and do not run any build or generator.** Only
+  after that exact correction checkpoint may the coordinator run Task 2A0
+  Step 7 once. Fresh independent postimplementation Code Review, QA,
+  Architecture, Security/Privacy, TPM, and Delivery Management GO with
+  Required 0 then gate the project-plus-ledger implementation checkpoint.
+  Task 2A's immutable generator RED/export/GREEN remain closed, its 58-test
   regression remains paused, and Task 2B and every later RR-R10 task remain
-  closed.
+  dependency-blocked.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`

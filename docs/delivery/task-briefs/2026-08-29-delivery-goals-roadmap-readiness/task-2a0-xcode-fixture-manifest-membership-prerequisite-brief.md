@@ -1,9 +1,11 @@
 # RR-R10 Task 2A0 Brief: Xcode Fixture-Manifest Membership Prerequisite
 
-**Status:** Owner-authorized bounded prerequisite; implementation remains
-closed until this exact registered brief is committed, pushed, remote-exact,
-and independently released by Architecture, TPM, QA/Test, Delivery Management,
-and Security/Privacy with GO and Required 0.
+**Status:** Post-GREEN plan correction required. The owner-authorized project
+edit and both builds are complete; RED and GREEN must not be rerun. Independent
+postimplementation review remains closed until this revised registered brief
+and coordinator ledger are committed as the exact correction checkpoint,
+pushed, remote-exact, and released by Architecture, TPM, QA/Test, Delivery
+Management, and Security/Privacy with GO and Required 0.
 
 ## Size assessment and checkpoint decision
 
@@ -14,8 +16,8 @@ coherent review surface, so no further split is warranted.
 
 This prerequisite does not replace or amend Task 2A. Task 2A remains paused
 with its already-generated schema-v11 fixture and checksum untracked and
-byte-identical until this prerequisite is independently accepted, committed,
-pushed, and remote-exact.
+byte-identical until this prerequisite and its post-GREEN correction are
+independently accepted, committed, pushed, and remote-exact.
 
 ## Objective and owner-visible outcome
 
@@ -53,9 +55,29 @@ The coordinator-supplied blocker determination is narrow:
 - the smallest correction is test-target membership metadata, not source,
   fixture, schema, entitlement, sandbox, or build-setting work.
 
-Independent reviewers must revalidate that classification against this exact
-brief and current project source before RED. A different root cause is Required
-and stops implementation rather than expanding this prerequisite.
+Independent reviewers revalidated that classification against the `fccab15…`
+brief and project source before RED. A different root cause would have been
+Required and stopped implementation rather than expanding this prerequisite.
+
+## Confirmed post-GREEN correction context
+
+The initial planning checkpoint is
+`fccab15dacef8ad4452743a7e75ebf8773304cf3`. The fresh Implementer completed
+the authorized one-entry project edit and retained exact RED/GREEN evidence.
+Independent root verification confirmed the project and fixture boundary, the
+collision oracle, both build statuses, restricted-log hashes and modes, the
+SchemaV10 bundle comparison, the exact RED failure marker, and the final-nonempty
+GREEN success marker. The Implementer's corrected temporary report is
+`DONE_WITH_CONCERNS` because its first report incorrectly claimed the literal
+generic success marker passed.
+
+The defect is in this brief's RED marker oracle, not in the authorized
+project edit or build result. Xcode `build-for-testing` emitted
+`** TEST BUILD FAILED **` for RED and `** TEST BUILD SUCCEEDED **` for GREEN.
+No new build, project edit, fixture change, source/test change, or recovery
+mutation is authorized. The only executable continuation is the correction
+checkpoint and retained-evidence gate in Step 7, followed by independent
+postimplementation review.
 
 ## Controlling references and immutable hashes
 
@@ -97,6 +119,11 @@ changes no UI and authorizes no visual deviation.
   `d8bda5a035e0324acd90bcbe67036f8d217b18bf`, present locally and on
   `origin/codex/release-radar-mvp` with exact equality and upstream
   ahead/behind `0/0` before this planning work.
+- The initial Task 2A0 planning checkpoint is
+  `fccab15dacef8ad4452743a7e75ebf8773304cf3`, a direct child of
+  `d8bda5a035e0324acd90bcbe67036f8d217b18bf`, with exactly the brief, root
+  registry, and coordinator ledger in its commit inventory. Step 0 is the
+  historical pre-RED gate that passed there; it is not rerun post-execution.
 - The accepted design, ADR, plan, and Task 2A brief hashes above must remain
   exact.
 - The accepted Task 1A SchemaV10 artifacts remain immutable. The database is
@@ -110,29 +137,29 @@ changes no UI and authorizes no visual deviation.
   `ad6f2eddf7d47016d4f09fdf50bc82ad8f3cce94043064713607d6b07934762c`;
   its one-line `SHA256SUMS` is 91 bytes at SHA-256
   `ea66d26b4172876ed473a98e09b54149e0fc4896186ed63bd66f8e70bbd17da3`.
-- Planning produces this canonical brief and exactly one root-registry entry.
-  Architecture, TPM, QA/Test, Delivery Management, and Security/Privacy must
-  independently review the exact brief SHA and each return GO with Required 0
-  before RED.
+- This correction revises this canonical brief and its exactly one
+  root-registry entry.
+  Architecture, TPM, QA/Test, Delivery Management, and Security/Privacy
+  already returned GO with Required 0 on the `fccab15…` brief before RED; those
+  dispositions remain historical evidence and do not authorize a rerun. The
+  same independent roles must disposition this revised correction before the
+  implementation checkpoint.
 - The coordinator records owner authorization, exact brief SHA, registry
   verification, role dispositions, and checkpoint evidence in
   `docs/delivery/progress.md`.
-- The planning checkpoint must contain only this new brief, the root brief
-  registry, and coordinator-owned `docs/delivery/progress.md`. It must be
-  committed, pushed, and verified at exact local/remote equality with
-  ahead/behind `0/0` before a fresh Implementer begins RED.
-- Immediately before RED, the fresh Implementer must run the executable
-  planning-authority gate below. That gate derives the planning checkpoint
-  from this committed brief and fails closed unless the brief, registry,
-  ledger, project baseline, checkpoint inventory, parent, worktree, index,
-  upstream, live remote, shared scheme, and all repository-owned entitlement
-  files are exact.
-- One fresh serialized Implementer owns only
-  `ReleaseRadar.xcodeproj/project.pbxproj`. No concurrent writer may modify
-  that project file or either fixture directory.
-- After GREEN and all checks, a fresh independent Code Reviewer and QA/Test
-  verifier, plus Architecture, Security/Privacy, TPM, and Delivery Management,
-  must each return GO with Required 0 before commit.
+- The initial planning checkpoint is complete at `fccab15…`; it must not be
+  amended or replaced. The correction checkpoint must be its single direct
+  child and contain exactly this revised brief, the root brief registry, and
+  coordinator-owned `docs/delivery/progress.md`. It must be committed, pushed,
+  and verified at exact local/upstream/live-remote equality with ahead/behind
+  `0/0` before Step 7 and independent postimplementation review.
+- The Implementer already completed its sole authorized
+  `ReleaseRadar.xcodeproj/project.pbxproj` edit. No writer may modify that
+  project file, either fixture directory, retained log/build evidence, or any
+  source/test file during correction.
+- After the correction checkpoint and Step 7 pass, a fresh independent Code
+  Reviewer and QA/Test verifier, plus Architecture, Security/Privacy, TPM, and
+  Delivery Management, must each return GO with Required 0 before commit.
 - The implementation checkpoint may contain only
   `ReleaseRadar.xcodeproj/project.pbxproj` and coordinator-owned
   `docs/delivery/progress.md`. It must be committed, pushed, and verified at
@@ -140,15 +167,16 @@ changes no UI and authorizes no visual deviation.
 
 ## In scope
 
-- Verify all controlling hashes and fixture byte identities before RED and
-  after GREEN.
-- Run one fresh absent-DerivedData `xcodebuild build-for-testing` RED that
-  fails specifically because both named manifest inputs produce the one named
-  test-bundle output.
+- Preserve the historical pre-RED checks and verify all controlling hashes and
+  fixture byte identities against the completed RED/GREEN state.
+- Accept the one already-completed absent-DerivedData
+  `xcodebuild build-for-testing` RED only from its exact retained hashes,
+  status `65`, marker-scan status `1`, one collision, two producers, exactly
+  one exact `** TEST BUILD FAILED **` marker, and zero success markers.
 - Disable signing only on both build commands with the identical invocation
   arguments `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO`; do not edit a
   build setting.
-- Add exactly one membership exception,
+- Preserve the completed edit that adds exactly one membership exception,
   `Fixtures/SchemaV11/SHA256SUMS`, to exception set
   `A90000000000000000000003` for `ReleaseRadarTests`.
 - Preserve the existing SchemaV10 test-bundle membership and every unrelated
@@ -161,8 +189,14 @@ changes no UI and authorizes no visual deviation.
 - Prove the shared scheme and every repository-owned `.entitlements` file are
   byte-identical to the planning checkpoint before RED, after the edit, and
   after GREEN.
-- Run the identical fresh absent-DerivedData `xcodebuild build-for-testing`
-  invocation GREEN and require success.
+- Accept the already-completed argument-identical absent-DerivedData GREEN only
+  from its exact retained hash, status `0`, marker-scan status `1`, exactly one
+  terminal `** TEST BUILD SUCCEEDED **`, zero
+  `** TEST BUILD FAILED **`, zero collision diagnostics, and exact SchemaV10
+  bundled-manifest comparison.
+- Commit and remotely verify one correction-only checkpoint, then run only the
+  read-only Step 7 correction-authority/retained-evidence gate. Do not execute
+  either build again.
 - Prove the SchemaV10 manifest remains in the built test bundle while the
   SchemaV11 manifest is excluded only from target membership.
 - Prove both SchemaV10 and SchemaV11 fixture pairs remain regular non-symlink
@@ -189,6 +223,9 @@ changes no UI and authorizes no visual deviation.
   or adding a generalized resource-packaging mechanism
 - Rerunning Task 2A's immutable missing-gate generator RED, its export, its
   GREEN generator, or generating another SchemaV11 attachment
+- Rerunning this prerequisite's already-completed RED or GREEN, creating new
+  DerivedData, replacing retained evidence, or deleting retained evidence
+  without owner authorization
 - Running Task 2A's post-generation regression before this prerequisite GREEN
   and independent acceptance
 - Schema v12, Task 2B, Ticket Task models/policy/commands/UI, Delivery Goal
@@ -202,7 +239,7 @@ changes no UI and authorizes no visual deviation.
 
 ## Affected subsystem and anticipated files
 
-Planning checkpoint:
+Initial planning checkpoint (complete at `fccab15…`):
 
 - Create:
   `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md`
@@ -213,6 +250,17 @@ Implementation checkpoint:
 
 - Modify: `ReleaseRadar.xcodeproj/project.pbxproj`
 - Coordinator modify: `docs/delivery/progress.md`
+
+Correction checkpoint:
+
+- Modify:
+  `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md`
+- Modify: `docs/delivery/task-briefs/SHA256SUMS`
+- Coordinator modify: `docs/delivery/progress.md`
+
+The correction checkpoint does not contain `project.pbxproj`; that completed
+authorized edit remains an unstaged worktree diff for Step 7 and the later
+implementation checkpoint.
 
 Consumed unchanged:
 
@@ -294,11 +342,12 @@ Use only repository-native Git, shell tools, Xcode, `plutil`, `rg`, `realpath`,
 `stat`, `cmp`, and `shasum`. Add no test source, dependency, script, fixture,
 or harness.
 
-### Step 0: Pre-RED planning-authority and tracked-boundary gate
+### Step 0: Historical pre-RED planning-authority and tracked-boundary gate
 
-Run in `/bin/bash` from the canonical repository root after the planning
-checkpoint is committed, pushed, and independently released, and immediately
-before Step 1 and RED:
+This `/bin/bash` block records the gate conditions and pinned values satisfied
+from the canonical repository root immediately before Step 1 and RED at the
+initial planning checkpoint. It is retained as historical evidence and must
+not be rerun after execution:
 
 ```bash
 set -euo pipefail
@@ -306,6 +355,7 @@ export LC_ALL=C
 RR_TASK2A0_ROOT="$(git rev-parse --show-toplevel)"
 RR_TASK2A0_BRANCH=codex/release-radar-mvp
 RR_TASK2A0_PARENT=d8bda5a035e0324acd90bcbe67036f8d217b18bf
+RR_TASK2A0_PLANNING_SHA=fccab15dacef8ad4452743a7e75ebf8773304cf3
 RR_TASK2A0_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md
 RR_TASK2A0_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
 RR_TASK2A0_LEDGER=docs/delivery/progress.md
@@ -333,8 +383,8 @@ test "$(grep -Fxc "$RR_TASK2A0_EXPECTED_REGISTRY_ENTRY" \
   "$RR_TASK2A0_REGISTRY")" = "1"
 shasum -a 256 -c "$RR_TASK2A0_REGISTRY"
 
-RR_TASK2A0_PLANNING_SHA="$(git log -1 --format=%H -- "$RR_TASK2A0_BRIEF")"
-test -n "$RR_TASK2A0_PLANNING_SHA"
+test "$(git log -1 --format=%H -- "$RR_TASK2A0_BRIEF")" = \
+  "$RR_TASK2A0_PLANNING_SHA"
 test "$(git rev-parse HEAD)" = "$RR_TASK2A0_PLANNING_SHA"
 test "$(git rev-parse "$RR_TASK2A0_PLANNING_SHA^")" = "$RR_TASK2A0_PARENT"
 RR_TASK2A0_EXPECTED_INVENTORY="$(printf '%s\n' \
@@ -400,19 +450,20 @@ git diff --exit-code "$RR_TASK2A0_PLANNING_SHA" -- \
   '*.entitlements'
 ```
 
-Expected: every check exits 0. This is the executable authority for RED: it
-ties the computed final brief digest to exactly one full-registry-verified
-entry, then ties that registered pair to the unique three-path planning
-checkpoint whose parent is the corrected Task 2A checkpoint and whose HEAD,
-upstream, and live remote are exact. The non-self-referential digest check
-avoids pretending a file can contain its own SHA-256 while preserving exact
-authority. Any mismatch is Required and stops before RED; do not repair,
-amend, pull, push, stage, or otherwise mutate repository or external state.
+Historical result: the recorded conditions were satisfied at
+`fccab15dacef8ad4452743a7e75ebf8773304cf3`. This gate tied the then-computed
+brief digest `7bcc795213f385ff8ba6290234fca296553932cd5793706d721c9be6c824d774`
+to its sole full-registry-verified entry, the exact three-path planning commit,
+its `d8bda5…` parent, clean pre-RED state, and exact upstream/live remote. The
+non-self-referential digest check avoided a hash paradox. Step 0 is immutable
+historical evidence; use Step 7 after the correction checkpoint and do not
+rerun Step 0, RED, or GREEN.
 
-### Step 1: Pre-RED immutable and no-follow boundary
+### Step 1: Historical pre-RED immutable and no-follow boundary
 
-Run in `/bin/bash` from the canonical repository root before editing the
-project:
+The Implementer ran this `/bin/bash` block from the canonical repository root
+before editing the project. Step 7 rechecks the retained fixture boundary; do
+not rerun Step 1 as a route to another RED:
 
 ```bash
 set -euo pipefail
@@ -475,14 +526,16 @@ test "$(shasum -a 256 ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS | awk '{pr
 Expected: every check exits 0. Any mismatch is Required and stops before RED;
 do not repair or regenerate a fixture in this prerequisite.
 
-### Step 2: RED — reproduce only the Xcode membership collision
+### Step 2: Historical RED — the Xcode membership collision
 
 Use a new unique parent and an initially absent DerivedData path. This RED is
 not Task 2A's missing-gate generator RED: it runs `build-for-testing`, executes
 no test, provides no generator environment, opens no SQLite database, and
 creates no fixture or attachment.
 
-Run in `/bin/bash` from the repository root:
+The Implementer ran the `xcodebuild` invocation below once from the repository
+root. The surrounding checks now state the corrected oracle that the retained
+logs satisfy; they do not authorize executing the block again:
 
 ```bash
 set -euo pipefail
@@ -509,7 +562,7 @@ xcodebuild build-for-testing -project ReleaseRadar.xcodeproj -scheme ReleaseRada
   >"$RR_TASK2A0_RED_LOG" 2>&1
 RR_TASK2A0_RED_STATUS=$?
 set -e
-test "$RR_TASK2A0_RED_STATUS" -ne 0
+test "$RR_TASK2A0_RED_STATUS" = "65"
 test -f "$RR_TASK2A0_RED_LOG"
 test ! -L "$RR_TASK2A0_RED_LOG"
 test "$(/usr/bin/stat -f '%HT' "$RR_TASK2A0_RED_LOG")" = "Regular File"
@@ -564,16 +617,21 @@ test "$(grep -Fxc "$RR_TASK2A0_EXPECTED_V10_NOTE" \
   "$RR_TASK2A0_RED_NORMALIZED")" = "1"
 test "$(grep -Fxc "$RR_TASK2A0_EXPECTED_V11_NOTE" \
   "$RR_TASK2A0_RED_NORMALIZED")" = "1"
-if rg -F '** BUILD SUCCEEDED **' "$RR_TASK2A0_RED_LOG"; then exit 1; fi
+test "$(awk '$0 == "** TEST BUILD FAILED **" { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_RED_LOG")" = "1"
+test "$(awk '$0 ~ /^\*\* .*BUILD SUCCEEDED \*\*$/ { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_RED_LOG")" = "0"
 ```
 
-Accepted RED requires the nonzero build, exactly one `error:` line equal to the
+Accepted RED requires exit `65`, exactly one `error:` line equal to the
 dynamic expected `Multiple commands produce '<output>'` diagnostic, and
 exactly two normalized copy-command notes: one exact SchemaV10 producer and one
 exact SchemaV11 producer for that output. The normalized log must contain
 exactly two `has copy command from` lines globally, so a producer targeting any
-other output also rejects. Any extra error, collision output, producer,
-duplicate note, signing failure, compilation failure, dependency
+other output also rejects. The raw log must contain exactly one exact
+`** TEST BUILD FAILED **` line, and every build-success marker must be absent.
+Any extra error, collision output,
+producer, duplicate note, signing failure, compilation failure, dependency
 failure, permission failure, missing-file failure, or unrelated resource
 failure is not accepted RED and blocks implementation. Do not rerun Task 2A's
 generator RED under any outcome. Retain the mode-`700` RED parent and both
@@ -581,17 +639,18 @@ mode-`600` logs through independent postimplementation review, disclose the
 parent and log paths as temporary evidence, never stage or transmit them, and
 do not delete them without owner authorization.
 
-### Step 3: Apply the one authorized project edit
+### Step 3: Historical one authorized project edit
 
-Use `apply_patch` to insert only
+The Implementer used `apply_patch` to insert only
 `Fixtures/SchemaV11/SHA256SUMS` in the existing one-line
 `membershipExceptions` list for exception set
-`A90000000000000000000003`. Do not reformat the project file or touch another
-object.
+`A90000000000000000000003`. That edit is complete; do not reapply, reformat,
+or touch another project object during correction.
 
-### Step 4: Project parse and exact authorized-diff gate
+### Step 4: Historical project parse and exact authorized-diff gate
 
-Run in `/bin/bash` before GREEN:
+The Implementer ran this `/bin/bash` block before GREEN. Step 7 performs the
+post-correction reconstruction without creating new build evidence:
 
 ```bash
 set -euo pipefail
@@ -689,11 +748,13 @@ file, including schemes and entitlements, and the blob comparisons separately
 pin the shared scheme and complete repository-owned entitlement inventory. Any
 other change is Required and stops before GREEN.
 
-### Step 5: GREEN — run the identical fresh build-for-testing invocation
+### Step 5: Historical GREEN — the identical build-for-testing invocation
 
-Use `/bin/bash`, a different new unique parent, and an initially absent
-DerivedData path. The `xcodebuild` line and all build arguments are identical
-to RED:
+The Implementer ran the `xcodebuild` invocation below once with a different
+unique parent and an initially absent DerivedData path. The command and all
+build arguments were identical to RED. The surrounding checks now state the
+corrected oracle that the retained log satisfies; this block must not be run
+again:
 
 ```bash
 set -euo pipefail
@@ -726,8 +787,15 @@ test "$RR_TASK2A0_GREEN_MARKER_STATUS" = "1"
 RR_TASK2A0_GREEN_LOG_SHA256="$(shasum -a 256 \
   "$RR_TASK2A0_GREEN_LOG" | awk '{print $1}')"
 test -n "$RR_TASK2A0_GREEN_LOG_SHA256"
-rg -F '** BUILD SUCCEEDED **' "$RR_TASK2A0_GREEN_LOG"
-if rg -F 'Multiple commands produce' "$RR_TASK2A0_GREEN_LOG"; then exit 1; fi
+test "$(awk '$0 == "** TEST BUILD SUCCEEDED **" { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_GREEN_LOG")" = "1"
+test "$(awk '$0 == "** TEST BUILD FAILED **" { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_GREEN_LOG")" = "0"
+test "$(awk 'index($0, "Multiple commands produce") > 0 { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_GREEN_LOG")" = "0"
+test "$(awk 'NF { final = $0 } END { \
+  print(final == "** TEST BUILD SUCCEEDED **" ? 1 : 0) }' \
+  "$RR_TASK2A0_GREEN_LOG")" = "1"
 RR_TASK2A0_BUNDLED_SUM="$RR_TASK2A0_GREEN_DERIVED/Build/Products/Debug/ReleaseRadar.app/Contents/PlugIns/ReleaseRadarTests.xctest/Contents/Resources/SHA256SUMS"
 test -f "$RR_TASK2A0_BUNDLED_SUM"
 test ! -L "$RR_TASK2A0_BUNDLED_SUM"
@@ -735,16 +803,18 @@ test "$(/usr/bin/stat -f '%HT' "$RR_TASK2A0_BUNDLED_SUM")" = "Regular File"
 cmp ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS "$RR_TASK2A0_BUNDLED_SUM"
 ```
 
-Expected GREEN: exit 0, `** BUILD SUCCEEDED **`, no collision, and the sole
-built `SHA256SUMS` is byte-identical to SchemaV10. The SchemaV10 manifest's
-existing target membership is therefore preserved. Retain the mode-`700`
+Accepted GREEN: exit `0`, exactly one `** TEST BUILD SUCCEEDED **` line as the
+final nonempty line, zero `** TEST BUILD FAILED **` lines, zero collision
+diagnostics, and a sole built `SHA256SUMS` byte-identical to SchemaV10. The
+SchemaV10 manifest's existing target membership is therefore preserved. Retain the mode-`700`
 GREEN parent and mode-`600` raw log through independent postimplementation
 review, disclose their paths as temporary evidence, never stage or transmit
 them, and do not delete them without owner authorization.
 
-### Step 6: Source-path, fixture-identity, and final boundary checks
+### Step 6: Historical source-path, fixture-identity, and final boundary checks
 
-Run in `/bin/bash` after GREEN without running tests:
+The Implementer ran this `/bin/bash` block after GREEN without running tests.
+Step 7 repeats the durable checks from the retained state:
 
 ```bash
 set -euo pipefail
@@ -828,55 +898,310 @@ The `#filePath` assertion and the canonical source-directory checks prove the
 membership exception changes only bundle copying. Both manifests remain
 available from the source tree. No source edit is needed or authorized.
 
-Repeat the complete Step 4 executable block unchanged after GREEN and before
-independent review, including the exact reconstructed-project `cmp`, parse,
-global status/index boundary, and scheme/entitlement comparisons. Step 6
-directly repeats every SchemaV10 and SchemaV11 size/digest pin and local
-manifest check from Step 1; any mismatch is Required.
+Historical execution repeated the complete Step 4 gate after GREEN, including
+the exact reconstructed-project `cmp`, parse, global status/index boundary, and
+scheme/entitlement comparisons. Step 6 repeated every SchemaV10 and SchemaV11
+size/digest pin and local manifest check from Step 1. Step 7 now supersedes
+those post-GREEN checks for correction review; do not rerun the historical
+blocks.
+
+### Step 7: Post-execution correction authority and retained-evidence gate
+
+This is the only executable continuation after the correction checkpoint is
+committed, pushed, and remote-exact. Run it once in `/bin/bash` from the
+canonical repository root before independent postimplementation review. It is
+read-only: it contains no `xcodebuild`, fixture generator, file write, staging,
+commit, push, deletion, or external mutation command.
+
+```bash
+set -euo pipefail
+export LC_ALL=C
+RR_TASK2A0_ROOT="$(git rev-parse --show-toplevel)"
+RR_TASK2A0_BRANCH=codex/release-radar-mvp
+RR_TASK2A0_INITIAL_SHA=fccab15dacef8ad4452743a7e75ebf8773304cf3
+RR_TASK2A0_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md
+RR_TASK2A0_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2A0_LEDGER=docs/delivery/progress.md
+RR_TASK2A0_PROJECT=ReleaseRadar.xcodeproj/project.pbxproj
+RR_TASK2A0_SCHEME=ReleaseRadar.xcodeproj/xcshareddata/xcschemes/ReleaseRadar.xcscheme
+RR_TASK2A0_RED_PARENT=/tmp/release-radar-rr-r10-task2a0-red.ftQACG
+RR_TASK2A0_RED_LOG="$RR_TASK2A0_RED_PARENT/build-for-testing.log"
+RR_TASK2A0_RED_NORMALIZED="$RR_TASK2A0_RED_PARENT/build-for-testing-normalized.log"
+RR_TASK2A0_GREEN_PARENT=/tmp/release-radar-rr-r10-task2a0-green.Fq0sWc
+RR_TASK2A0_GREEN_LOG="$RR_TASK2A0_GREEN_PARENT/build-for-testing.log"
+
+test "$(pwd -P)" = "$(realpath "$RR_TASK2A0_ROOT")"
+test "$(git branch --show-current)" = "$RR_TASK2A0_BRANCH"
+RR_TASK2A0_BRIEF_DIGEST="$(shasum -a 256 "$RR_TASK2A0_BRIEF" | awk '{print $1}')"
+test "$(awk -v brief="$RR_TASK2A0_BRIEF" \
+  '$2 == brief { count += 1 } END { print count + 0 }' \
+  "$RR_TASK2A0_REGISTRY")" = "1"
+RR_TASK2A0_EXPECTED_REGISTRY_ENTRY="$RR_TASK2A0_BRIEF_DIGEST  $RR_TASK2A0_BRIEF"
+test "$(grep -Fxc "$RR_TASK2A0_EXPECTED_REGISTRY_ENTRY" \
+  "$RR_TASK2A0_REGISTRY")" = "1"
+shasum -a 256 -c "$RR_TASK2A0_REGISTRY"
+
+RR_TASK2A0_CORRECTION_SHA="$(git log -1 --format=%H -- "$RR_TASK2A0_BRIEF")"
+test "$(git rev-parse HEAD)" = "$RR_TASK2A0_CORRECTION_SHA"
+test "$(git rev-list --parents -n 1 "$RR_TASK2A0_CORRECTION_SHA")" = \
+  "$RR_TASK2A0_CORRECTION_SHA $RR_TASK2A0_INITIAL_SHA"
+test "$(git rev-list --count \
+  "$RR_TASK2A0_INITIAL_SHA..$RR_TASK2A0_CORRECTION_SHA")" = "1"
+RR_TASK2A0_EXPECTED_INVENTORY="$(printf '%s\n' \
+  "$RR_TASK2A0_BRIEF" \
+  "$RR_TASK2A0_REGISTRY" \
+  "$RR_TASK2A0_LEDGER" | sort)"
+RR_TASK2A0_ACTUAL_INVENTORY="$(git diff-tree --no-commit-id --name-only -r \
+  "$RR_TASK2A0_CORRECTION_SHA" | sort)"
+test "$RR_TASK2A0_ACTUAL_INVENTORY" = "$RR_TASK2A0_EXPECTED_INVENTORY"
+for correction_file in \
+  "$RR_TASK2A0_BRIEF" \
+  "$RR_TASK2A0_REGISTRY" \
+  "$RR_TASK2A0_LEDGER"; do
+  test "$(git hash-object "$correction_file")" = \
+    "$(git rev-parse "$RR_TASK2A0_CORRECTION_SHA:$correction_file")"
+  cmp <(git show "$RR_TASK2A0_CORRECTION_SHA:$correction_file") \
+    "$correction_file"
+done
+
+test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}')" = \
+  "origin/$RR_TASK2A0_BRANCH"
+test "$(git rev-parse '@{upstream}')" = "$RR_TASK2A0_CORRECTION_SHA"
+RR_TASK2A0_REMOTE_LINES="$(git ls-remote --heads origin \
+  "refs/heads/$RR_TASK2A0_BRANCH")"
+test "$(printf '%s\n' "$RR_TASK2A0_REMOTE_LINES" | \
+  awk 'NF { count += 1 } END { print count + 0 }')" = "1"
+test "$(printf '%s\n' "$RR_TASK2A0_REMOTE_LINES" | awk '{print $1}')" = \
+  "$RR_TASK2A0_CORRECTION_SHA"
+read -r RR_TASK2A0_AHEAD RR_TASK2A0_BEHIND < <(
+  git rev-list --left-right --count HEAD...'@{upstream}'
+)
+test "$RR_TASK2A0_AHEAD" = "0"
+test "$RR_TASK2A0_BEHIND" = "0"
+
+git diff --cached --exit-code
+test "$(git diff --name-only)" = "$RR_TASK2A0_PROJECT"
+test "$(git status --short --untracked-files=normal)" = \
+  "$(printf ' M %s\n?? %s' "$RR_TASK2A0_PROJECT" \
+    'ReleaseRadarTests/Fixtures/SchemaV11/')"
+test "$(git status --short --untracked-files=all)" = \
+  "$(printf ' M %s\n?? %s\n?? %s' "$RR_TASK2A0_PROJECT" \
+    'ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS' \
+    'ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite')"
+test "$(git rev-parse \
+  "$RR_TASK2A0_INITIAL_SHA:$RR_TASK2A0_PROJECT")" = \
+  "736654a040a90603ad322068fa48fa428acca3fb"
+test "$(git rev-parse \
+  "$RR_TASK2A0_CORRECTION_SHA:$RR_TASK2A0_PROJECT")" = \
+  "736654a040a90603ad322068fa48fa428acca3fb"
+test "$(git hash-object "$RR_TASK2A0_PROJECT")" = \
+  "2b984d44e5b73602bf04b18b761d308761de789c"
+cmp <(git show "$RR_TASK2A0_CORRECTION_SHA:$RR_TASK2A0_PROJECT" | perl -0pe \
+  's#Fixtures/CodexPluginLifecycle/v2/plugins/release-radar/skills/release-radar/SKILL\.md, \); target = A20000000000000000000004#Fixtures/CodexPluginLifecycle/v2/plugins/release-radar/skills/release-radar/SKILL.md, Fixtures/SchemaV11/SHA256SUMS, ); target = A20000000000000000000004#') \
+  "$RR_TASK2A0_PROJECT"
+test "$(rg -F -o 'Fixtures/SchemaV11/SHA256SUMS' \
+  "$RR_TASK2A0_PROJECT" | wc -l | tr -d ' ')" = "1"
+test "$(rg -F -o 'Fixtures/SchemaV10/SHA256SUMS' \
+  "$RR_TASK2A0_PROJECT" | wc -l | tr -d ' ')" = "0"
+git diff --check -- "$RR_TASK2A0_PROJECT"
+
+test "$(git hash-object "$RR_TASK2A0_SCHEME")" = \
+  "$(git rev-parse "$RR_TASK2A0_CORRECTION_SHA:$RR_TASK2A0_SCHEME")"
+cmp <(git show "$RR_TASK2A0_CORRECTION_SHA:$RR_TASK2A0_SCHEME") \
+  "$RR_TASK2A0_SCHEME"
+RR_TASK2A0_CURRENT_ENTITLEMENTS="$(git ls-files '*.entitlements' | sort)"
+RR_TASK2A0_CORRECTION_ENTITLEMENTS="$(git ls-tree -r --name-only \
+  "$RR_TASK2A0_CORRECTION_SHA" | awk '/[.]entitlements$/ { print }' | sort)"
+test -n "$RR_TASK2A0_CURRENT_ENTITLEMENTS"
+test "$RR_TASK2A0_CURRENT_ENTITLEMENTS" = \
+  "$RR_TASK2A0_CORRECTION_ENTITLEMENTS"
+while IFS= read -r entitlement_file; do
+  test "$(git hash-object "$entitlement_file")" = \
+    "$(git rev-parse "$RR_TASK2A0_CORRECTION_SHA:$entitlement_file")"
+  cmp <(git show "$RR_TASK2A0_CORRECTION_SHA:$entitlement_file") \
+    "$entitlement_file"
+done <<< "$RR_TASK2A0_CURRENT_ENTITLEMENTS"
+
+rr_task2a0_require_regular() {
+  test -f "$1"
+  test ! -L "$1"
+  test "$(/usr/bin/stat -f '%HT' "$1")" = "Regular File"
+}
+rr_task2a0_require_directory() {
+  test -d "$1"
+  test ! -L "$1"
+  test "$(/usr/bin/stat -f '%HT' "$1")" = "Directory"
+}
+RR_TASK2A0_FIXTURE_PARENT="$RR_TASK2A0_ROOT/ReleaseRadarTests/Fixtures"
+rr_task2a0_require_directory "$RR_TASK2A0_FIXTURE_PARENT"
+test "$(realpath "$RR_TASK2A0_FIXTURE_PARENT")" = \
+  "$RR_TASK2A0_ROOT/ReleaseRadarTests/Fixtures"
+for fixture_version in SchemaV10 SchemaV11; do
+  RR_TASK2A0_FIXTURE_DIR="$RR_TASK2A0_FIXTURE_PARENT/$fixture_version"
+  rr_task2a0_require_directory "$RR_TASK2A0_FIXTURE_DIR"
+  test "$(realpath "$RR_TASK2A0_FIXTURE_DIR")" = \
+    "$RR_TASK2A0_FIXTURE_PARENT/$fixture_version"
+done
+for fixture_file in \
+  ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite \
+  ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS \
+  ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite \
+  ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS; do
+  rr_task2a0_require_regular "$fixture_file"
+done
+(cd ReleaseRadarTests/Fixtures/SchemaV10 && shasum -a 256 -c SHA256SUMS)
+(cd ReleaseRadarTests/Fixtures/SchemaV11 && shasum -a 256 -c SHA256SUMS)
+test "$(stat -f '%z' ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite)" = "278528"
+test "$(shasum -a 256 ReleaseRadarTests/Fixtures/SchemaV10/release-radar-v10.sqlite | awk '{print $1}')" = \
+  "9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559"
+test "$(stat -f '%z' ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS)" = "91"
+test "$(shasum -a 256 ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS | awk '{print $1}')" = \
+  "c1c162cabdeb43ec92471b15de4e2d1ee30e7a50c15c89a2503e0c8c58c1b28f"
+test "$(stat -f '%z' ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite)" = "348160"
+test "$(shasum -a 256 ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite | awk '{print $1}')" = \
+  "ad6f2eddf7d47016d4f09fdf50bc82ad8f3cce94043064713607d6b07934762c"
+test "$(stat -f '%z' ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS)" = "91"
+test "$(shasum -a 256 ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS | awk '{print $1}')" = \
+  "ea66d26b4172876ed473a98e09b54149e0fc4896186ed63bd66f8e70bbd17da3"
+
+for evidence_parent in \
+  "$RR_TASK2A0_RED_PARENT" \
+  "$RR_TASK2A0_GREEN_PARENT"; do
+  test -d "$evidence_parent"
+  test ! -L "$evidence_parent"
+  test "$(/usr/bin/stat -f '%HT' "$evidence_parent")" = "Directory"
+  test "$(/usr/bin/stat -f '%Lp' "$evidence_parent")" = "700"
+done
+for evidence_file in \
+  "$RR_TASK2A0_RED_LOG" \
+  "$RR_TASK2A0_RED_NORMALIZED" \
+  "$RR_TASK2A0_GREEN_LOG"; do
+  rr_task2a0_require_regular "$evidence_file"
+  test "$(/usr/bin/stat -f '%Lp' "$evidence_file")" = "600"
+done
+test "$(shasum -a 256 "$RR_TASK2A0_RED_LOG" | awk '{print $1}')" = \
+  "ad3e40becf20b3dace25d62b32b675af68b5e5e350be5a34b66095a5efb5506f"
+test "$(shasum -a 256 "$RR_TASK2A0_RED_NORMALIZED" | awk '{print $1}')" = \
+  "477c93ae7b9fa312fed759fc6567974c7b277322fef4f993c6cf57d0c8f58d8c"
+test "$(shasum -a 256 "$RR_TASK2A0_GREEN_LOG" | awk '{print $1}')" = \
+  "fd09908beb4761a1029aaf91f2ce999f45665dfa9ed102428c1a26d282b488b0"
+
+RR_TASK2A0_SECRET_MARKERS='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|authorization:[[:space:]]*(bearer|basic)[[:space:]]+|(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password)[[:space:]]*[:=][[:space:]]*[^[:space:]]+'
+set +e
+rg -q -i -e "$RR_TASK2A0_SECRET_MARKERS" \
+  "$RR_TASK2A0_RED_LOG" "$RR_TASK2A0_RED_NORMALIZED"
+RR_TASK2A0_RETAINED_RED_MARKER_STATUS=$?
+rg -q -i -e "$RR_TASK2A0_SECRET_MARKERS" "$RR_TASK2A0_GREEN_LOG"
+RR_TASK2A0_RETAINED_GREEN_MARKER_STATUS=$?
+set -e
+test "$RR_TASK2A0_RETAINED_RED_MARKER_STATUS" = "1"
+test "$RR_TASK2A0_RETAINED_GREEN_MARKER_STATUS" = "1"
+
+RR_TASK2A0_EXPECTED_OUTPUT="$RR_TASK2A0_RED_PARENT/DerivedData/Build/Products/Debug/ReleaseRadar.app/Contents/PlugIns/ReleaseRadarTests.xctest/Contents/Resources/SHA256SUMS"
+RR_TASK2A0_EXPECTED_ERROR="error: Multiple commands produce '$RR_TASK2A0_EXPECTED_OUTPUT'"
+RR_TASK2A0_EXPECTED_V10_NOTE="note: Target 'ReleaseRadarTests' (project 'ReleaseRadar') has copy command from '$RR_TASK2A0_ROOT/ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS' to '$RR_TASK2A0_EXPECTED_OUTPUT'"
+RR_TASK2A0_EXPECTED_V11_NOTE="note: Target 'ReleaseRadarTests' (project 'ReleaseRadar') has copy command from '$RR_TASK2A0_ROOT/ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS' to '$RR_TASK2A0_EXPECTED_OUTPUT'"
+test "$(grep -c 'error:' "$RR_TASK2A0_RED_LOG")" = "1"
+test "$(grep -Fxc "$RR_TASK2A0_EXPECTED_ERROR" \
+  "$RR_TASK2A0_RED_LOG")" = "1"
+test "$(grep -Fc 'Multiple commands produce' "$RR_TASK2A0_RED_LOG")" = "1"
+test "$(grep -Fc 'has copy command from' \
+  "$RR_TASK2A0_RED_NORMALIZED")" = "2"
+test "$(grep -Fxc "$RR_TASK2A0_EXPECTED_V10_NOTE" \
+  "$RR_TASK2A0_RED_NORMALIZED")" = "1"
+test "$(grep -Fxc "$RR_TASK2A0_EXPECTED_V11_NOTE" \
+  "$RR_TASK2A0_RED_NORMALIZED")" = "1"
+test "$(awk '$0 == "** TEST BUILD FAILED **" { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_RED_LOG")" = "1"
+test "$(awk '$0 ~ /^\*\* .*BUILD SUCCEEDED \*\*$/ { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_RED_LOG")" = "0"
+
+test "$(awk '$0 == "** TEST BUILD SUCCEEDED **" { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_GREEN_LOG")" = "1"
+test "$(awk '$0 == "** TEST BUILD FAILED **" { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_GREEN_LOG")" = "0"
+test "$(awk 'index($0, "Multiple commands produce") > 0 { count += 1 } \
+  END { print count + 0 }' "$RR_TASK2A0_GREEN_LOG")" = "0"
+test "$(awk 'NF { final = $0 } END { \
+  print(final == "** TEST BUILD SUCCEEDED **" ? 1 : 0) }' \
+  "$RR_TASK2A0_GREEN_LOG")" = "1"
+RR_TASK2A0_BUNDLED_SUM="$RR_TASK2A0_GREEN_PARENT/DerivedData/Build/Products/Debug/ReleaseRadar.app/Contents/PlugIns/ReleaseRadarTests.xctest/Contents/Resources/SHA256SUMS"
+rr_task2a0_require_regular "$RR_TASK2A0_BUNDLED_SUM"
+cmp ReleaseRadarTests/Fixtures/SchemaV10/SHA256SUMS \
+  "$RR_TASK2A0_BUNDLED_SUM"
+
+rr_task2a0_require_ledger_fact() {
+  set +e
+  rg -q -F -- "$1" "$RR_TASK2A0_LEDGER"
+  RR_TASK2A0_LEDGER_FACT_STATUS=$?
+  set -e
+  test "$RR_TASK2A0_LEDGER_FACT_STATUS" = "0"
+}
+rr_task2a0_require_ledger_fact \
+  "Task 2A0 initial planning checkpoint: fccab15dacef8ad4452743a7e75ebf8773304cf3"
+rr_task2a0_require_ledger_fact \
+  "Task 2A0 retained RED: exit 65; marker scan 1; exact marker ** TEST BUILD FAILED **"
+rr_task2a0_require_ledger_fact \
+  "ad3e40becf20b3dace25d62b32b675af68b5e5e350be5a34b66095a5efb5506f"
+rr_task2a0_require_ledger_fact \
+  "477c93ae7b9fa312fed759fc6567974c7b277322fef4f993c6cf57d0c8f58d8c"
+rr_task2a0_require_ledger_fact \
+  "Task 2A0 retained GREEN: exit 0; marker scan 1; terminal ** TEST BUILD SUCCEEDED **"
+rr_task2a0_require_ledger_fact \
+  "fd09908beb4761a1029aaf91f2ce999f45665dfa9ed102428c1a26d282b488b0"
+rr_task2a0_require_ledger_fact \
+  "Task 2A0 current project blob: 2b984d44e5b73602bf04b18b761d308761de789c"
+```
+
+Expected: every check exits 0 without printing raw log content. The correction
+commit is the single direct child of `fccab15…`, contains only the revised
+brief, registry, and coordinator ledger, and is exact at HEAD, upstream, and
+live remote with `0/0`. The only remaining worktree changes are the exact
+authorized project diff and two preserved untracked SchemaV11 artifacts. The
+gate binds the retained logs by mode and hash, silently re-verifies every
+derivable collision, producer, secret-scan, exact RED marker, final GREEN
+marker, and bundle fact,
+and requires the ledger to carry the independently verified exit and prior
+marker-scan statuses as sanitized facts. Exit statuses are process evidence,
+not derivable from log bytes; they are never fabricated by rerunning a build.
+Retain both restricted temporary parents through every independent review and
+do not delete them without owner authorization.
 
 ## Happy path
 
-The executable authority gate proves the registered final brief, exact
-three-path planning checkpoint, pinned parent, clean tracked worktree/index,
-preserved untracked SchemaV11 directory, unchanged project/scheme/entitlements,
-and exact upstream/live remote before every preimplementation reviewer returns
-GO/Required 0. A fresh Implementer creates a restricted unique temporary
-parent and proves one signing-disabled build-only RED from an absent DerivedData
-path: the log has exactly one `error:` line equal to the dynamic expected
-one-output collision and exactly two exact copy-command notes, one for each
-pinned manifest source, with no additional producer, error, collision, test,
-or generator execution. The Implementer adds only the SchemaV11 manifest path
-to the existing ReleaseRadarTests membership exceptions. Exact reconstructed-
-file comparison, Xcode parsing, and global tracked/scheme/entitlement gates
-pass. The argument-identical signing-disabled build-for-testing invocation
-then succeeds from another restricted parent and absent DerivedData path, the
-sole bundled manifest is byte-identical to SchemaV10, both source fixture pairs
-remain regular, contained, checksum-valid, and byte-identical, and no other
-file changes. Restricted logs pass the marker scan and remain temporary through
-review. All six postimplementation roles return GO/Required 0 before the
-project-and-ledger checkpoint is committed, pushed, and verified remote-exact.
+The initial planning checkpoint `fccab15…`, historical Step 0, preimplementation
+reviews, one RED, one authorized project edit, GREEN, and post-GREEN boundary
+checks remain immutable evidence. The coordinator commits only this revised
+brief, its one registry entry, and the sanitized ledger as the single direct
+child of `fccab15…`, pushes it, and proves HEAD/upstream/live-remote equality at
+`0/0`. Step 7 then binds the unchanged project blob, exact reconstructed diff,
+fixtures, scheme, entitlements, retained log hashes/modes, collision oracle,
+the exact RED marker, the final-nonempty GREEN marker, secret scans, and
+SchemaV10 bundle comparison
+without running a build or printing raw log content. All six independent
+postimplementation roles return GO/Required 0 before the project-and-ledger
+implementation checkpoint is committed, pushed, and verified remote-exact.
 Task 2A remains paused until that checkpoint is complete.
 
 ## Non-happy paths and recovery
 
-- If the computed brief digest and sole registry entry differ, the full
-  registry fails, HEAD is not the brief-derived planning commit, its parent or
-  exact three-path inventory differs, any required file differs from that
-  commit, tracked/staged state is nonempty, untracked status is not exactly the
-  preserved SchemaV11 directory, or upstream/live-remote equality and `0/0`
-  fail, stop before RED. Do not amend, pull, push, rewrite an artifact, or
-  mutate external state to make the authority gate pass.
-- If the shared scheme or repository-owned entitlement inventory or any file
-  byte differs from the planning checkpoint at any gate, stop. Do not repair
-  it inside this prerequisite or change signing, sandbox, or capabilities.
+- If the revised brief digest/sole registry entry/full registry fails, the
+  correction commit is not the single direct child of `fccab15…`, its inventory
+  is not exactly brief/registry/coordinator ledger, or HEAD/upstream/live remote
+  and `0/0` differ, stop. Do not amend the initial checkpoint, rerun a build,
+  pull, push another change, or mutate external state to force a pass.
+- If the worktree/index is not exactly the unstaged project diff plus the two
+  untracked SchemaV11 files, the current project blob is not
+  `2b984d44e5b73602bf04b18b761d308761de789c`, reconstructed comparison fails,
+  or the shared scheme/entitlement inventory differs, stop. Do not repair or
+  regenerate any completed implementation artifact in this correction.
 - If either SchemaV10 or SchemaV11 directory/file is missing, a symlink, escapes
   its canonical parent, has a different size or digest, or fails its local
   checksum, stop. Do not regenerate, overwrite, delete, or normalize it.
-- If RED succeeds; has anything other than one exact expected `error:` line;
-  has anything other than the two exact expected copy-command notes; omits,
-  duplicates, or adds a producer; names another collision output; or reports
-  any unrelated build failure, return NO-GO. Do not broaden the project change
-  or rerun Task 2A's generator RED.
+- If retained RED does not have exact hashes, mode/type, exit `65` in the
+  sanitized ledger, marker-scan status `1`, one exact collision error, exactly
+  two producers, exactly one exact `** TEST BUILD FAILED **` marker, or zero
+  success markers, return NO-GO. Do not rerun RED or any Task 2A generator.
 - If either temporary parent is not a mode-`700` directory, any log is not a
   mode-`600` regular non-symlink, or either quiet marker scan returns anything
   other than status `1`, stop without printing or transmitting matching
@@ -885,29 +1210,19 @@ Task 2A remains paused until that checkpoint is complete.
   greater than `1` means the scan itself failed and is never accepted as clean.
   Retain and disclose the restricted temporary path for owner-directed
   handling; do not delete it without owner authorization.
-- If the project baseline already contains the SchemaV11 exception, contains a
-  SchemaV10 exception, lacks an existing plugin exception, or does not resolve
-  to the pinned planning-checkpoint blob, stop before editing.
-- If the exact reconstructed-file `cmp`, `plutil -lint`, `xcodebuild -list`, or
-  global tracked/index/status check fails, restore only the Implementer's
-  project edit with a targeted `apply_patch`, preserve all user work, and
-  return NO-GO for a fresh reviewed correction. Do not reformat or regenerate
-  the project.
-- If GREEN reports another error, lacks `** BUILD SUCCEEDED **`, retains the
-  collision, produces more than one bundled `SHA256SUMS`, omits the SchemaV10
-  manifest, or bundles bytes different from SchemaV10, stop. The failure does
-  not authorize excluding SchemaV10, renaming resources, editing tests, adding
-  a copy phase, or changing build settings. A signing failure is not accepted
-  evidence and does not authorize a project build-setting change.
+- If retained GREEN does not have its exact hash, mode/type, exit `0` in the
+  sanitized ledger, marker-scan status `1`, exactly one terminal
+  `** TEST BUILD SUCCEEDED **`, zero `** TEST BUILD FAILED **`, zero collision
+  diagnostics, or the exact SchemaV10 bundled-manifest comparison, stop. Do
+  not rerun GREEN, edit build settings, rename resources, or add a copy phase.
 - If `#filePath` source lookup or either source fixture pair no longer resolves
   and verifies, stop. Do not compensate by loading fixtures from the bundle.
 - If any SchemaV11 byte changes, leave Task 2A paused and return NO-GO. Do not
   recover by rerunning the generator or attachment export.
-- If any tracked path outside `project.pbxproj` changes before review, or if
-  anything is staged, do not stage or commit it. The exact implementation
-  worktree status is the modified project plus the one untracked SchemaV11
-  directory; coordinator-owned `progress.md` enters only the later checkpoint
-  inventory. Preserve unrelated user changes and escalate overlap.
+- During correction planning, only this brief and registry may be edited; only
+  the coordinator may add `progress.md` to the correction commit. The completed
+  project diff and fixtures remain unstaged. Preserve unrelated work and
+  escalate any overlap.
 - Do not delete the restricted RED/GREEN temporary evidence before all
   independent postimplementation reviews or without owner authorization.
 - No failure authorizes Task 2A regression continuation, Task 2B, owner-data
@@ -923,33 +1238,42 @@ task completion, lane transition, blocker change, or owner-attention event.
 Required repository evidence is:
 
 - owner authorization and the independent blocker classification;
-- computed final brief SHA-256, its sole exact registry entry, full-registry
-  verification, brief-derived planning commit, pinned parent, exact three-path
-  commit inventory, byte equality for the brief/registry/ledger/project, exact
-  pre-RED worktree/index status, upstream/live-remote equality, and `0/0`;
-- planning-checkpoint and repeated post-edit/post-GREEN blob/byte identity for
-  the shared scheme and every repository-owned `.entitlements` file;
+- initial planning checkpoint `fccab15…`, historical Step 0 pass, exact
+  three-path inventory, `d8bda5…` parent, and pre-RED remote-exact state;
+- computed revised brief SHA-256, its sole registry entry, full-registry
+  verification, correction commit as the single direct child of `fccab15…`,
+  exact brief/registry/ledger inventory, HEAD/upstream/live-remote equality,
+  and `0/0`;
+- current project blob `2b984d44e5b73602bf04b18b761d308761de789c`,
+  exact reconstructed one-entry diff, empty index, exact project-plus-fixtures
+  status, and unchanged shared scheme/entitlements;
 - exact pre/post hashes, sizes, no-follow types, canonical containment, and
   local checksum results for both fixture pairs;
-- exact signing-disabled RED command, fresh absent DerivedData proof, nonzero
-  exit, exactly one exact expected `error:` line, and exactly two exact
+- exact historical signing-disabled RED command, absent DerivedData proof,
+  exit `65`, exactly one exact expected `error:` line, and exactly two exact
   copy-command notes—one and only one for each pinned input—targeting the one
   expected output;
-- RED temporary parent and raw/normalized log paths, mode/type checks, log
-  SHA-256 values, exact quiet marker-scan status `1`, and explicit temporary
-  retention;
+- retained RED parent `/tmp/release-radar-rr-r10-task2a0-red.ftQACG`, raw SHA
+  `ad3e40becf20b3dace25d62b32b675af68b5e5e350be5a34b66095a5efb5506f`,
+  normalized SHA
+  `477c93ae7b9fa312fed759fc6567974c7b277322fef4f993c6cf57d0c8f58d8c`,
+  mode/type checks, marker-scan status `1`, exactly one exact
+  `** TEST BUILD FAILED **`, zero success markers, and temporary retention;
 - exact one-entry project diff, reconstructed-file `cmp`, project parse, and
   preserved unrelated exception inventory;
-- exact argument-identical signing-disabled GREEN command, fresh absent
-  DerivedData proof, successful exit, `** BUILD SUCCEEDED **`, collision
-  absence, SchemaV10 bundled-manifest identity, restricted parent/log path,
-  mode/type, log SHA-256, exact quiet marker-scan status `1`, and temporary
-  retention;
+- exact historical argument-identical signing-disabled GREEN command, absent
+  DerivedData proof, exit `0`, retained parent
+  `/tmp/release-radar-rr-r10-task2a0-green.Fq0sWc`, raw SHA
+  `fd09908beb4761a1029aaf91f2ce999f45665dfa9ed102428c1a26d282b488b0`,
+  mode/type, marker-scan status `1`, exactly one final
+  `** TEST BUILD SUCCEEDED **`, zero `** TEST BUILD FAILED **`, collision
+  absence, SchemaV10 bundled-manifest identity, and temporary retention;
 - `#filePath` source-tree resolution and checksum results for both fixture
   versions;
 - reviewer identities, dispositions, and Required/Optional/Out-of-scope counts;
-- exact planning and implementation staged inventories, commits, pushes,
-  live remote SHAs, local/remote equality, and ahead/behind `0/0`; and
+- exact initial planning, correction, and implementation checkpoint
+  inventories, commits, pushes, live remote SHAs, local/remote equality, and
+  ahead/behind `0/0`; and
 - explicit confirmation of no owner, Release Radar, accepted-artifact,
   fixture, generator, test-source, scheme, entitlement, build-setting, Task 2B,
   or external mutation.
@@ -967,20 +1291,14 @@ ledger, or transmitted.
       their contents are unchanged.
 - [ ] This brief has exactly one canonical root-registry entry whose digest
       equals the file's computed SHA-256, and the complete registry verifies.
-- [ ] The executable authority gate derives the planning checkpoint from this
-      brief; requires HEAD equal it and its parent equal
-      `d8bda5a035e0324acd90bcbe67036f8d217b18bf`; proves its inventory is exactly
-      this brief, the registry, and coordinator-owned progress ledger; proves
-      those three files plus `project.pbxproj` byte-identical to the commit;
-      and requires upstream/live-remote equality and ahead/behind `0/0` before
-      RED.
-- [ ] Immediately before RED, tracked and staged diffs are empty and exact
-      short status contains only the preserved untracked SchemaV11 directory.
-      The shared scheme and the complete repository-owned `.entitlements`
-      inventory are byte-identical to the planning checkpoint.
-- [ ] Architecture, TPM, QA/Test, Delivery Management, and Security/Privacy
-      independently return GO with Required 0 on the exact brief SHA before
-      RED.
+- [ ] Initial planning checkpoint
+      `fccab15dacef8ad4452743a7e75ebf8773304cf3` and its historical Step 0,
+      preimplementation GO/Required 0 reviews, three-path inventory,
+      `d8bda5…` parent, clean tracked/index state, untracked SchemaV11 boundary,
+      and remote `0/0` evidence remain truthful and unchanged.
+- [ ] The correction checkpoint is the single direct child of `fccab15…`,
+      contains exactly this revised brief, registry, and coordinator ledger,
+      and is HEAD/upstream/live-remote exact at `0/0` before Step 7.
 - [ ] Both SchemaV10 and SchemaV11 fixture pairs are regular non-symlink files,
       canonically contained, checksum-valid, and pinned to the exact pre-task
       sizes/digests before RED and through the repeated post-GREEN gate.
@@ -992,15 +1310,14 @@ ledger, or transmitted.
       `ad6f2eddf7d47016d4f09fdf50bc82ad8f3cce94043064713607d6b07934762c`
       with a 91-byte manifest at
       `ea66d26b4172876ed473a98e09b54149e0fc4896186ed63bd66f8e70bbd17da3`.
-- [ ] RED uses a fresh absent DerivedData path and the exact
-      signing-disabled `build-for-testing` invocation with
-      `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO`, runs no
-      test/generator, returns nonzero,
+- [ ] Retained RED is only the exact historical signing-disabled
+      `build-for-testing` invocation, exit `65`, marker-scan status `1`,
       contains exactly one `error:` line exactly equal to the dynamic expected
       `Multiple commands produce` diagnostic, and contains exactly two exact
       copy-command notes targeting that output: one and only one for SchemaV10
-      and one and only one for SchemaV11. No additional error, collision
-      output, producer, or unrelated failure is present.
+      and one and only one for SchemaV11. Its exact retained hashes/modes pass,
+      exactly one exact `** TEST BUILD FAILED **` marker is present, and no
+      success marker or unrelated failure is present.
 - [ ] Task 2A's immutable generator RED, export, GREEN generator, and fixture
       generation are not rerun.
 - [ ] The only implementation edit adds exactly one
@@ -1015,11 +1332,15 @@ ledger, or transmitted.
       exact status is that modified project plus the one untracked SchemaV11
       directory, and the shared scheme plus every repository-owned entitlement
       remains byte/blob-identical to the planning checkpoint.
-- [ ] GREEN repeats the identical `build-for-testing` invocation from another
-      fresh absent DerivedData path with the same signing-disabled arguments,
-      exits 0, reports `** BUILD SUCCEEDED **`, contains no collision, and
-      bundles the SchemaV10 manifest byte-identical. No project build setting
-      changes.
+- [ ] Current project blob is exactly
+      `2b984d44e5b73602bf04b18b761d308761de789c`; reconstruction from the
+      correction-commit baseline proves only the one authorized membership
+      exception changed.
+- [ ] Retained GREEN is only the exact historical argument-identical
+      signing-disabled build, exit `0`, marker-scan status `1`, exact retained
+      hash/mode, exactly one final `** TEST BUILD SUCCEEDED **`, zero
+      `** TEST BUILD FAILED **`, zero collision diagnostics, and a bundled
+      manifest byte-identical to SchemaV10. No project build setting changes.
 - [ ] `umask 077` precedes every temporary creation; RED/GREEN parents are
       mode-`700` directories; raw/normalized logs are mode-`600` regular
       non-symlinks; each quiet credential/private-key marker scan returns
@@ -1029,6 +1350,8 @@ ledger, or transmitted.
       review unless the owner authorizes deletion.
 - [ ] Existing `#filePath`-based source-relative behavior remains unchanged,
       and both source fixture pairs resolve and verify without bundle lookup.
+- [ ] Step 7 passes without printing raw content or executing a build. Step 0,
+      RED, GREEN, Task 2A generators, and attachment export are not rerun.
 - [ ] No source/test, fixture, design, ADR, plan, Task 2A brief/evidence,
       scheme, build setting, signing, entitlement, sandbox, owner data,
       Release Radar state, live Ticket Tasks plan, Task 2B, or external state
@@ -1049,6 +1372,9 @@ ledger, or transmitted.
 ## Required independent reviews and role separation
 
 Before RED:
+
+The following completed reviews remain historical evidence and are not rerun
+to authorize another build:
 
 - Architecture verifies the correction is confined to test-target resource
   membership, preserves source-path fixture authority and SchemaV10 bundle
@@ -1072,16 +1398,20 @@ Before RED:
   `1`, sanitized-only ledger evidence, no staging/transmission, and
   owner-controlled log deletion.
 
-After GREEN, a fresh Code Reviewer verifies the exact project diff, global
-tracked/index/status boundary, and unchanged scheme/entitlements; a fresh
-QA/Test verifier independently checks the argument-identical RED/GREEN
-evidence, exact oracle, restricted log evidence, fixture pins, and current
-project parse. Architecture, Security/Privacy, TPM, and Delivery Management
+After the correction checkpoint and Step 7, a fresh Code Reviewer verifies the
+exact project diff, global tracked/index/status boundary, and unchanged
+scheme/entitlements; a fresh QA/Test verifier independently checks the
+argument-identical RED/GREEN retained evidence, exact RED-marker and final
+GREEN-marker oracle,
+restricted log hashes/modes, fixture pins, and current project parse without
+rerunning either build.
+Architecture, Security/Privacy, TPM, and Delivery Management
 independently disposition the completed prerequisite, including the retained
-temporary-log handling relevant to their roles. The Planning agent does
-not implement; the Implementer does not review or independently verify its own
-work. Required 0 is a hard gate. Optional findings do not expand scope, and
-out-of-scope findings do not block this prerequisite.
+temporary-log handling, correction commit, and no-rerun boundary relevant to
+their roles. The Planning agent does not implement; the Implementer does not
+review or independently verify its own work. Required 0 is a hard gate.
+Optional findings do not expand scope, and out-of-scope findings do not block
+this prerequisite.
 
 ## Completion evidence required in `docs/delivery/progress.md`
 
@@ -1092,7 +1422,7 @@ Delivery Management must record:
   verification
 - exact accepted design/ADR/plan/Task 2A hashes and confirmation they remain
   unchanged
-- brief-derived planning checkpoint's exact three paths, parent
+- initial planning checkpoint `fccab15…`, its exact three paths, parent
   `d8bda5a035e0324acd90bcbe67036f8d217b18bf`, byte equality for those paths
   plus `project.pbxproj`, clean tracked/index state, exact untracked SchemaV11
   status, staged-diff inspection, commit, push, upstream/live remote SHA,
@@ -1103,26 +1433,31 @@ Delivery Management must record:
 - pre/post SchemaV10 and SchemaV11 file sizes, SHA-256 values, local checksum
   results, regular non-symlink types, canonical containment, and confirmation
   that the two SchemaV11 files stayed untracked and byte-identical
-- exact signing-disabled RED command and mode-`700` temporary parent, proof
-  DerivedData was absent, mode-`600` raw/normalized log paths and hashes,
-  exact quiet marker-scan status `1`, exit status, the exact sole `error:`
-  diagnostic, the exact
+- exact historical signing-disabled RED command and mode-`700` retained parent
+  `/tmp/release-radar-rr-r10-task2a0-red.ftQACG`, proof DerivedData was absent,
+  mode-`600` raw/normalized log paths and hashes, exit `65`, exact quiet
+  marker-scan status `1`, the exact sole `error:` diagnostic, the exact
   two normalized copy-command notes with one occurrence per input and no
   additional producer, the exact one test-bundle output, and proof no
-  test/generator or Task 2A RED/export/GREEN generator ran
+  test/generator or Task 2A RED/export/GREEN generator ran, exactly one exact
+  `** TEST BUILD FAILED **`, and zero success markers
 - exact inserted exception path, exception-set/target IDs, reconstructed-file
   `cmp`, preserved eight existing exceptions, absent SchemaV10 exception,
   project parse results, and authorized Git diff
-- exact argument-identical signing-disabled GREEN command and mode-`700`
-  temporary parent, proof DerivedData was absent, mode-`600` raw-log path and
-  hash, exact quiet marker-scan status `1`, success status,
-  `** BUILD SUCCEEDED **`, collision absence, and byte identity of the sole
+- exact historical argument-identical signing-disabled GREEN command and
+  mode-`700` retained parent
+  `/tmp/release-radar-rr-r10-task2a0-green.Fq0sWc`, proof DerivedData was
+  absent, mode-`600` raw-log path and hash, exit `0`, exact quiet marker-scan
+  status `1`, exactly one final `** TEST BUILD SUCCEEDED **`, zero
+  `** TEST BUILD FAILED **`, collision absence, and byte identity of the sole
   bundled manifest to SchemaV10
 - `StoreAcceptanceTests.swift` accepted blob identity and exact `#filePath`
   source-directory checks proving both source fixture pairs remain readable
   and checksum-valid
 - all pre- and postimplementation reviewer identities, GO/NO-GO dispositions,
   and Required/Optional/Out-of-scope counts
+- the Implementer's corrected `DONE_WITH_CONCERNS` disposition and the reason
+  that the first report asserted the wrong literal marker
 - disclosure that the restricted RED/GREEN logs necessarily name the canonical
   repository path, contain no owner content/credentials/key material, remained
   temporary/unstaged/untransmitted through review, and were not deleted absent
@@ -1131,15 +1466,31 @@ Delivery Management must record:
   task-plan/notification/external mutation; no fixture, source, accepted
   artifact, or Task 2B change; and Task 2A still paused
 - pre-review exact worktree status (modified project plus untracked SchemaV11
-  only), empty index, implementation checkpoint's exact two paths,
+  only), empty index, current project blob, exact reconstructed diff, the
+  correction checkpoint's exact three paths/direct-parent/remote evidence,
+  Step 7 result, and explicit proof no build was rerun
+- implementation checkpoint's exact two paths,
   staged-diff inspection, commit, push, `git ls-remote` SHA, local/remote
   equality, and ahead/behind `0/0`
 - remaining risks/blockers and Task 2A regression continuation as the only
   next eligible action after exact remote verification
 
-## Planning and implementation checkpoint inventories
+For the fail-closed Step 7 gate, `progress.md` must include each of these exact
+sanitized facts without copying raw log content:
 
-The planning checkpoint contains exactly:
+```text
+Task 2A0 initial planning checkpoint: fccab15dacef8ad4452743a7e75ebf8773304cf3
+Task 2A0 retained RED: exit 65; marker scan 1; exact marker ** TEST BUILD FAILED **
+Task 2A0 retained GREEN: exit 0; marker scan 1; terminal ** TEST BUILD SUCCEEDED **
+Task 2A0 current project blob: 2b984d44e5b73602bf04b18b761d308761de789c
+```
+
+It must also include each exact retained raw/normalized SHA-256 shown above.
+
+## Initial planning, correction, and implementation checkpoint inventories
+
+The completed initial planning checkpoint
+`fccab15dacef8ad4452743a7e75ebf8773304cf3` contains exactly:
 
 ```text
 docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md
@@ -1147,13 +1498,27 @@ docs/delivery/task-briefs/SHA256SUMS
 docs/delivery/progress.md
 ```
 
-Inspect the staged diff, commit/push the complete reviewed planning checkpoint,
-and verify exact local/remote equality plus ahead/behind `0/0`. Neither the
-project file nor either SchemaV11 artifact enters this checkpoint.
+Its parent is `d8bda5a035e0324acd90bcbe67036f8d217b18bf`; historical
+Step 0 passed before RED. Do not amend, replace, or rerun that checkpoint.
+Neither the project file nor either SchemaV11 artifact entered it.
 
-After RED, the one edit, GREEN, all boundary checks, and every independent
-postimplementation GO/Required 0, the implementation checkpoint contains
-exactly:
+The correction checkpoint must be the single direct child of `fccab15…` and
+contain exactly:
+
+```text
+docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md
+docs/delivery/task-briefs/SHA256SUMS
+docs/delivery/progress.md
+```
+
+Inspect its staged diff, commit/push the complete reviewed correction, and
+verify HEAD/upstream/live-remote equality plus ahead/behind `0/0`. The
+completed `project.pbxproj` diff and both SchemaV11 artifacts remain unstaged
+and outside the correction commit. Do not run a build. Step 7 is eligible only
+after this exact remote checkpoint.
+
+After Step 7 and every independent postimplementation GO/Required 0, the
+implementation checkpoint contains exactly:
 
 ```text
 ReleaseRadar.xcodeproj/project.pbxproj
@@ -1162,8 +1527,8 @@ docs/delivery/progress.md
 
 Inspect the staged diff, commit/push the complete reviewed prerequisite, and
 verify exact local/remote equality plus ahead/behind `0/0`. The SchemaV11
-fixture and checksum remain untracked, byte-identical Task 2A outputs; every
-temporary build/log path and every unrelated file is excluded. Task 2A remains
-paused until this checkpoint is exact on the live remote. Task 2B remains
-closed until Task 2A itself is independently accepted, committed, pushed, and
-remote-exact.
+fixture and checksum remain untracked, byte-identical Task 2A outputs. The
+restricted retained logs/build products remain temporary and outside every
+commit but are not deleted without owner authorization. Task 2A remains paused
+until this checkpoint is exact on the live remote. Task 2B remains closed until
+Task 2A itself is independently accepted, committed, pushed, and remote-exact.
