@@ -625,14 +625,94 @@ Deliver the signed native macOS MVP described by
   durable RED facts, privacy boundary, exact worktree inventory, unchanged
   RR-R10 state, and Task 2B closure; and released only the four declared paths
   for the corrected planning checkpoint.
-- Next eligible RR-R10 work: **Commit and push only this ledger, the evidence
-  packet, the corrected brief, and root task-brief registry, then prove exact
-  remote equality with ahead/behind `0/0` and run the complete four-path
-  planning-authority gate.** Only after that checkpoint may one fresh serialized
-  Implementer pass the durable RED recovery gate, reapply the exact temporary
-  generator, and continue at GREEN once. RED and its export must not run again.
-  Task 2B remains closed until Task 2A implementation is independently accepted,
-  committed, pushed, and remote-exact.
+- RR-R10 Task 2A corrected pre-GREEN planning checkpoint: commit
+  `d8bda5a035e0324acd90bcbe67036f8d217b18bf` contains exactly this ledger,
+  the durable RED evidence packet, final corrected Task 2A brief, and root
+  brief registry. It was pushed to `origin/codex/release-radar-mvp`; fresh
+  live `git ls-remote` readback matched that exact SHA, ahead/behind was
+  `0/0`, the complete four-path planning-authority gate passed, all 17
+  registered briefs verified, and the accepted design, ADR, and plan hashes
+  remained unchanged. This released GREEN only; it did not complete Task 2A,
+  create a live Ticket Tasks plan, or open Task 2B.
+- RR-R10 Task 2A GREEN and fixture evidence: fresh serialized Implementer
+  `/root/task2a_green_implementer` consumed only the remote-exact planning
+  checkpoint and durable RED packet; it did not rerun the immutable RED or its
+  attachment export. The exact gated GREEN generator passed **1/1** with zero
+  failed, skipped, or expected failures, the temporary generator was removed
+  immediately, and `StoreAcceptanceTests.swift` was restored byte-identically
+  to accepted blob `7041bd69a9a8349e7164eaee21a11858e9ebd87d`. The exclusively copied
+  schema-v11 fixture is 348,160 bytes at SHA-256
+  `ad6f2eddf7d47016d4f09fdf50bc82ad8f3cce94043064713607d6b07934762c`;
+  its 91-byte one-line `SHA256SUMS` is SHA-256
+  `ea66d26b4172876ed473a98e09b54149e0fc4896186ed63bd66f8e70bbd17da3`
+  and verifies. Direct SQLite checks passed schema 11, the exact 48-object
+  inventory (28 tables, 12 indexes, 8 triggers), exact defaults and
+  continuation column, zero owner/planning rows, no v12 objects, empty
+  `foreign_key_check`, `integrity_check = ok`, exact two-file inventory, and
+  absent WAL/SHM/journal. Both SchemaV11 artifacts remain the only untracked
+  Task 2A outputs and have not been staged, committed, regenerated, or changed.
+- RR-R10 Task 2A regression blocker: the required fresh Store plus
+  plugin-lifecycle regression never reached test execution because Xcode's
+  filesystem-synchronized `ReleaseRadarTests` group issued two copy commands
+  for one test-bundle resource output,
+  `ReleaseRadarTests.xctest/Contents/Resources/SHA256SUMS`, from the source
+  inputs `Fixtures/SchemaV10/SHA256SUMS` and
+  `Fixtures/SchemaV11/SHA256SUMS`. No valid 58/58 result exists. The
+  Implementer stopped without changing the Xcode project or any other path.
+  Independent Planning `/root/task2a_build_blocker_planning` returned NO-GO,
+  Required 2, and Architecture `/root/task2a_build_blocker_architecture`
+  returned NO-GO, Required 1: both confirmed a permanent project-membership
+  correction is required but lies outside the accepted Task 2A checkpoint.
+  The owner then explicitly approved one bounded repository-only prerequisite:
+  exclude only `Fixtures/SchemaV11/SHA256SUMS` from automatic
+  `ReleaseRadarTests` target membership, update this ledger, independently
+  verify it, and commit/push/remote-verify it before Task 2A resumes.
+- RR-R10 Task 2A0 prerequisite planning: fresh Planning agent
+  `/root/task2a_manifest_prereq_planner` created the complete durable brief at
+  `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md`.
+  Review found and closed only executable-authority defects before RED: the
+  initial SHA `3d61e869c6a3f936d8377cbc9cd84ab642581aab5f81cc6d10cec619505c0868`
+  used zsh-special loop variable `path`, did not directly pin SchemaV10, and
+  had a presence-only collision oracle; SHA
+  `59b6f50a34b1f921ced5db789d728207146cb53be533cbe83aeb39543074f438`
+  still did not reject a third producer; SHA
+  `ac1a05ee4fc6ecfd3da667dacba5d1ed24b8f23102cc6570cb6c81863dfeb7fe`
+  closed that oracle but lacked executable planning/remote authority,
+  signing-disabled restricted-log controls, and global scheme/entitlement
+  drift checks; SHA
+  `822d1890becfb2f914ffb368ff1f73da0021afedcfd86a864d96f3785c4b2020`
+  added the complete planning/remote authority, signing-disabled restricted-log,
+  global tracked-state, scheme, and entitlement gates but initially treated a
+  marker-scan error like no match. The final brief is SHA-256
+  `7bcc795213f385ff8ba6290234fca296553932cd5793706d721c9be6c824d774`;
+  it accepts only quiet marker-scan status 1, has exactly one matching root
+  registry entry, and all 18 registered briefs verify. No RED, GREEN, project
+  edit, fixture change, task-plan creation, or external mutation occurred
+  during planning or review.
+- RR-R10 Task 2A0 final exact-hash preimplementation closure: Architecture
+  `/root/task2a0_arch_pre_review`, QA/Test `/root/task2a0_qa_pre_review`,
+  Security/Privacy `/root/task2a0_security_pre_review`, TPM
+  `/root/task2a0_tpm_pre_review`, and Delivery Management
+  `/root/task2a0_delivery_pre_review` each reviewed final brief SHA-256
+  `7bcc795213f385ff8ba6290234fca296553932cd5793706d721c9be6c824d774`
+  and returned **GO with Required 0, Optional 0, and Out-of-scope 0**. They
+  independently verified the exact owner-authorized one-entry scope, pinned
+  fixtures and controlling hashes, exact collision RED and identical GREEN,
+  restricted sanitized-only evidence boundary, preserved source-relative
+  fixture access and SchemaV10 bundle membership, complete scheme/entitlement
+  and tracked-state gates, exact three-path planning and two-path implementation
+  inventories, role separation, Task 2A pause, and Task 2B closure. Delivery
+  Management authorizes planning-checkpoint assembly only; RED remains held.
+- Next eligible RR-R10 work: **Stage, inspect, commit, and push only this
+  ledger, the final Task 2A0 brief, and root brief registry; prove the enclosing
+  planning commit is the unique child of `d8bda5a035e0324acd90bcbe67036f8d217b18bf`,
+  equals upstream and live remote, and is ahead/behind `0/0`; then run the
+  complete Task 2A0 Step 0 planning-authority gate.** The two SchemaV11
+  artifacts remain untracked and excluded. Only after that exact checkpoint
+  may one fresh serialized Implementer run Task 2A0's build-only RED. Task 2A's
+  immutable generator RED/export/GREEN must not run again, its 58-test
+  regression remains paused, and Task 2B and every later RR-R10 task remain
+  closed.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
