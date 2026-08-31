@@ -1247,16 +1247,94 @@ Deliver the signed native macOS MVP described by
   RED, the original GREEN, and the first successor GREEN are consumed and must
   not rerun. Regression remains unopened. Every prior evidence parent remains
   retained, unstaged, untransmitted, and undeleted.
+- RR-R10 Task 2B second GREEN-recovery planning checkpoint: commit
+  `b60c06bb161fcd663754ab482a8eedb485d463de` is the single direct child of
+  first-recovery checkpoint `22178e5cea42a3a3006a8800309d5a76f6610596`
+  and contains exactly the amended Task 2B brief, root task-brief registry, and
+  this ledger. The registered precommit and staged gates each ran once and
+  exited `0`; the checkpoint was pushed to
+  `origin/codex/release-radar-mvp`; and the committed post-push gate ran once
+  and exited `0`, proving direct lineage, exact three-document inventory,
+  committed ledger/hash bindings, full unique registry verification,
+  HEAD/upstream/live-remote equality with ahead/behind `0/0`, empty index, and
+  exact retained implementation blobs.
+- RR-R10 Task 2B second-recovery writer outcome: fresh writer
+  `/root/task2b_second_green_recovery_writer` verified the exact pre-edit
+  boundary and attempted the sole authorized `LIMIT 3` to `LIMIT 2` query
+  correction while preserving expected value `task-3,task-1`. It stopped
+  before any fence when the resulting Store test blob was
+  `a952f19264ca713e694f9e8b65bb827fe7934b5f` rather than the required
+  `6be00b5661c48121b4fa054507b15b627fda1c9f`. The other four implementation
+  blobs remained exact. No evidence parent was created; no `xcodebuild`,
+  GREEN, regression, diff check, review, further edit, staging, commit, push,
+  owner-state, Release Radar, live-plan, or external mutation occurred.
+- RR-R10 Task 2B exact-source diagnosis: fresh Planning agent
+  `/root/task2b_second_recovery_blob_diagnosis` independently proved the
+  planning target was correct and the writer added four leading ASCII spaces
+  in addition to the semantic edit. At the unique query line, the reviewed
+  pre-image has 12 spaces plus `LIMIT 3`, is 153,413 bytes, and hashes to
+  `4d7ac34c31e19c16c46b6bae3d1cf3aec1f294e3`; the intended post-image has 12
+  spaces plus `LIMIT 2`, is 153,413 bytes, and hashes to
+  `6be00b5661c48121b4fa054507b15b627fda1c9f`; the actual post-image has 16
+  spaces plus `LIMIT 2`, is 153,417 bytes, and hashes to
+  `a952f19264ca713e694f9e8b65bb827fe7934b5f`; changing only its `LIMIT 2`
+  back to `LIMIT 3` produces
+  `2ba4a0d54f87a93730543fbba966a8ae58895c87`. Removing exactly four `0x20`
+  bytes at zero-based offset 14,869 yields the intended target, with every
+  other byte and expected value unchanged.
+- RR-R10 Task 2B third-recovery classification and blob boundary: product
+  defects `0`, test-behavior/oracle defects `0`, planning-hash defects `0`,
+  writer execution/reporting defects `1`, and current source-conformance
+  defects `1`; product correctness remains unaccepted. The current unstaged
+  implementation blobs are `ReleaseRadarCore/Models/TicketTaskModels.swift`
+  `49f365dd1e074d4d2b716384756e71a3c5fb1ce1`,
+  `ReleaseRadarCore/Store/DeliveryStore.swift`
+  `d930ab18794a959b44cad4293cee24647a1af8f6`,
+  `ReleaseRadarCore/Store/StoreMigrations.swift`
+  `6fad7835211cace656e854aa0249f8775280a6dd`,
+  `ReleaseRadarTests/StoreAcceptanceTests.swift`
+  `a952f19264ca713e694f9e8b65bb827fe7934b5f`, and
+  `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`
+  `d5d2bd7411bf7b10892b93ee57f62cc76c47492a`. The sole authorized
+  implementation transition is Store test blob `a952f192...` to
+  `6be00b5661c48121b4fa054507b15b627fda1c9f` by deleting those four spaces.
+- RR-R10 Task 2B third-recovery fence state: RED, original GREEN, and the first
+  successor GREEN are consumed and retained. No path matching
+  `/tmp/release-radar-rr-r10-task2b-green-recovery-2.*` or
+  `/tmp/release-radar-rr-r10-task2b-regression-recovery-2.*` exists; therefore
+  the second-successor GREEN and selected regression fences remain unconsumed.
+  Every prior evidence parent remains retained, unstaged, untransmitted, and
+  undeleted.
+- RR-R10 Task 2B third-recovery final reviewed brief SHA-256: `dcbb609574d40945c360b5b81f2ddf9372a4768344929f667263310f4bd5bb84`
+- RR-R10 Task 2B third-recovery final reviewed registry SHA-256: `979f8c0a05b8eb4511a392313298292c4e4b3e170ffd6aac409038f10c511d96`
+- RR-R10 Task 2B third-recovery exact-hash closure: Planning agent
+  `/root/task2b_second_recovery_blob_diagnosis` produced the complete durable
+  source-conformance amendment. Architecture reviewer
+  `/root/task2b_arch_review_replacement`, QA/Test verifier
+  `/root/task2b_qa_review_replacement`, TPM reviewer
+  `/root/task2b_tpm_review`, Security/Privacy verifier
+  `/root/task2b_security_review`, and Delivery Management reviewer
+  `/root/task2b_delivery_review_final` each independently reviewed the exact
+  final amendment and registry and returned **GO with Required 0, Optional 0,
+  and Out-of-scope 0**. They verified the four-byte-only correction, current
+  and target blobs, unchanged product/test behavior and expected value,
+  unconsumed fence state, evidence retention and privacy, base-`b60c06b`
+  non-circular checkpoint gates, exact three-document planning inventory,
+  fresh-writer sequencing, and Task 3/no-live-plan closure.
+- RR-R10 Task 2B third-recovery planning boundary: no implementation edit,
+  test, executable gate, staging, commit, push, evidence mutation, owner-state
+  access, Release Radar mutation, live-plan action, Task 3 release, or external
+  mutation occurred during amendment planning.
 - Next eligible RR-R10 work: **After Delivery Management verifies this actual
-  ledger, run the registered second-recovery precommit gate once; if it passes,
+  ledger, run the registered third-recovery precommit gate once; if it passes,
   stage exactly the final Task 2B brief, root registry, and this ledger, run
-  the staged gate, commit as the direct child of
-  `22178e5cea42a3a3006a8800309d5a76f6610596`, push, prove remote equality,
+  the staged gate, commit directly above
+  `b60c06bb161fcd663754ab482a8eedb485d463de`, push, prove remote equality,
   and run the committed post-push gate once. Only then release a fresh writer
-  for the one-line Store test recovery and the one-time second-successor
-  GREEN.** Regression runs only after GREEN passes 43/43. Task 3 remains
-  closed until Task 2B's independently accepted implementation checkpoint is
-  remote-exact.
+  to delete the exact four spaces, prove target blob `6be00b56...`, and run the
+  one-time second-successor GREEN.** Regression runs only after GREEN passes
+  43/43. Task 3 remains closed until Task 2B's independently accepted
+  implementation checkpoint is remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`

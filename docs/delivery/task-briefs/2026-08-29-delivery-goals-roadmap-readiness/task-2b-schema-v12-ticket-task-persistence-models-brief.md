@@ -2950,3 +2950,750 @@ The coordinator ledger must record, using sanitized scalar facts only:
 - Required `1`, Optional `0`, Out-of-scope `0` at planning diagnosis is closed
   only by the exact edit plus passing newly authorized evidence; until then,
   direct continuation remains NO-GO.
+
+## Third GREEN-recovery exact-source-conformance amendment — 2026-08-31
+
+This amendment is the durable authority after the second-recovery writer made
+the intended `LIMIT 3` to `LIMIT 2` semantic change but produced a Store test
+blob different from the exact reviewed target. It preserves every accepted
+Task 2B product, architecture, persistence, migration, fixture, security,
+privacy, and test-behavior contract above. It supersedes only the
+second-recovery amendment's immediate pre-edit blob, writer action, planning
+checkpoint, and post-edit continuation boundary where they conflict with this
+section.
+
+Direct continuation remains **NO-GO**. No implementation edit, build, test,
+executable gate, staging, commit, push, owner-state access, Release Radar
+mutation, external-service mutation, evidence mutation, live Ticket Tasks
+plan, or Task 3 work is authorized until this exact amendment and its unique
+root-registry entry receive all five pre-resumption GO/Required `0` reviews and
+the committed third-recovery planning checkpoint below passes.
+
+### Objective and unchanged user-visible outcome
+
+The objective is exact source conformance only: restore the reviewed
+12-space indentation of the already-correct `LIMIT 2` ordering query without
+changing test behavior or any product byte. The accepted user-visible outcome
+remains schema-v12 persistence and public Ticket Task value types for later
+features. This amendment adds no persistence behavior, command, policy, UI,
+projection, notification, bridge/MCP behavior, owner workflow, or live task
+plan.
+
+The exact successful outcome is:
+
+- the four non-Store-test Task 2B implementation blobs remain byte-identical;
+- the unique active-order query retains `LIMIT 2`;
+- its expected value remains exactly `"task-3,task-1"`;
+- exactly four leading ASCII space bytes are removed from that query line,
+  changing its indentation from 16 spaces to the reviewed 12 spaces;
+- the Store test blob changes from
+  `a952f19264ca713e694f9e8b65bb827fe7934b5f` to
+  `6be00b5661c48121b4fa054507b15b627fda1c9f`;
+- only after that exact source correction, the still-unconsumed
+  second-successor GREEN and regression fences run under their existing
+  behavioral contracts.
+
+### Fixed authority and checkpoint lineage
+
+The fixed third-recovery base checkpoint is
+`b60c06bb161fcd663754ab482a8eedb485d463de`. At diagnosis, local HEAD,
+upstream, and live `origin/codex/release-radar-mvp` were exact at that commit
+with ahead/behind `0/0`. The commit is the direct child of
+`22178e5cea42a3a3006a8800309d5a76f6610596`, has subject
+`docs: authorize Task 2B second GREEN recovery`, and contains exactly:
+
+- `docs/delivery/progress.md`;
+- this canonical Task 2B brief;
+- `docs/delivery/task-briefs/SHA256SUMS`.
+
+The exact reviewed second-recovery brief SHA-256 at that checkpoint is
+`fcfdfe6e7e83b700ef81f3c8882169f8996995e4f267b8ce24e63c2a1e56822d`.
+The exact reviewed root-registry SHA-256 is
+`0e5e0314af8ee1810c888a24e3cbb51adbe3c9389fe923317b7a7d4d833f70df`.
+Those hashes remain historical authority for the consumed second-recovery
+planning checkpoint; this amendment and its registry update require distinct
+third-recovery ledger bindings.
+
+Task 2A and the accepted schema-v11 fixture remain immutable prerequisites.
+Task 3 remains dependency-blocked until Task 2B has exact corrected source,
+passing second-successor GREEN and regression evidence, all six independent
+postimplementation GO/Required `0` reviews, and an accepted implementation
+checkpoint at exact local/upstream/live-remote equality.
+
+### Exact byte diagnosis and classification
+
+Read-only byte reconstruction established the complete discrepancy at
+`ReleaseRadarTests/StoreAcceptanceTests.swift` line 293 in the diagnosed
+worktree:
+
+| State | Leading spaces | Query limit | Bytes | Git blob |
+| --- | ---: | ---: | ---: | --- |
+| Reviewed pre-semantic-edit source | 12 | 3 | 153,413 | `4d7ac34c31e19c16c46b6bae3d1cf3aec1f294e3` |
+| Reviewed intended post-semantic-edit source | 12 | 2 | 153,413 | `6be00b5661c48121b4fa054507b15b627fda1c9f` |
+| Actual source with semantic edit reversed only | 16 | 3 | 153,417 | `2ba4a0d54f87a93730543fbba966a8ae58895c87` |
+| Actual current source | 16 | 2 | 153,417 | `a952f19264ca713e694f9e8b65bb827fe7934b5f` |
+
+The actual current source contains four additional `0x20` bytes beginning at
+zero-based byte offset `14869`, immediately before `try` on the unique query
+line. Removing exactly those four bytes produces the reviewed target
+`6be00b5661c48121b4fa054507b15b627fda1c9f`; every other byte is equal. The
+query is uniquely present with `LIMIT 2`, the prior `LIMIT 3` query is absent,
+and the expected `"task-3,task-1"` line is unique and unchanged.
+
+Classification:
+
+- Required product implementation defects: `0`;
+- Required test-behavior or test-oracle defects: `0`;
+- Required planning hash defects: `0`; the reviewed
+  `4d7ac34c31e19c16c46b6bae3d1cf3aec1f294e3` to
+  `6be00b5661c48121b4fa054507b15b627fda1c9f` pair is the correct pure
+  `LIMIT 3` to `LIMIT 2` transformation;
+- Required writer execution/reporting defects: `1`; the writer inserted four
+  leading spaces while reporting only the semantic edit;
+- Required current test-source conformance defects: `1`; remove those exact
+  four spaces;
+- Optional: `0`;
+- Out-of-scope: `0`.
+
+Product correctness remains unaccepted until the authorized source correction
+and still-unconsumed test evidence pass. No product defect is identified.
+
+### Retained implementation inventory
+
+Before any third-recovery writer edit, all five implementation paths must
+match exactly:
+
+| Path | Required current pre-edit blob |
+| --- | --- |
+| `ReleaseRadarCore/Models/TicketTaskModels.swift` | `49f365dd1e074d4d2b716384756e71a3c5fb1ce1` |
+| `ReleaseRadarCore/Store/DeliveryStore.swift` | `d930ab18794a959b44cad4293cee24647a1af8f6` |
+| `ReleaseRadarCore/Store/StoreMigrations.swift` | `6fad7835211cace656e854aa0249f8775280a6dd` |
+| `ReleaseRadarTests/StoreAcceptanceTests.swift` | `a952f19264ca713e694f9e8b65bb827fe7934b5f` |
+| `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift` | `d5d2bd7411bf7b10892b93ee57f62cc76c47492a` |
+
+The only authorized post-edit change is the Store test blob becoming
+`6be00b5661c48121b4fa054507b15b627fda1c9f`. The other four blobs must remain
+exact. Any mismatch stops work and requires new reviewed authority; do not
+repair, recreate, normalize, or accept a different file.
+
+### Fence and evidence state
+
+The original RED, original GREEN, and first-successor GREEN-recovery fences
+remain consumed and must not rerun. Their existing restricted evidence remains
+retained, unstaged, untransmitted, and undeleted:
+
+- `/tmp/release-radar-rr-r10-task2b-red.ZvNHEi`;
+- `/tmp/release-radar-rr-r10-task2b-green.YczYQm`;
+- `/tmp/release-radar-rr-r10-task2b-green-recovery.uYnBjE`.
+
+The second-successor GREEN fence and selected regression fence have not run.
+No evidence parent under their
+`/tmp/release-radar-rr-r10-task2b-green-recovery-2.*` or
+`/tmp/release-radar-rr-r10-task2b-regression-recovery-2.*` prefixes existed at
+diagnosis. They remain unconsumed. No fence, result bundle, summary, test-tree,
+log, or other evidence was created or mutated by the diagnosis or this
+planning amendment.
+
+### In scope, out of scope, and exact writer action
+
+In scope after the committed third-recovery planning gate:
+
+- one fresh sole-writer edit in
+  `ReleaseRadarTests/StoreAcceptanceTests.swift`;
+- deletion of exactly four leading ASCII spaces from the unique active-order
+  `LIMIT 2` query line;
+- verification of the exact five-blob post-edit boundary;
+- one execution of the still-unconsumed second-successor Store GREEN fence;
+- only after complete GREEN success, one execution of the still-unconsumed
+  selected regression fence;
+- fixture/diff checks and independent postimplementation review only after
+  both fences pass;
+- coordinator-owned sanitized ledger evidence and the bounded implementation
+  checkpoint.
+
+Out of scope:
+
+- changing `LIMIT 2`, `"task-3,task-1"`, the assertion structure, any helper,
+  boundary fixture, other test line, product source, model, migration,
+  fixture, project, scheme, entitlement, signing, sandbox, package, script,
+  generated result, UI, command, projection, notification, bridge/MCP,
+  owner-state, Release Radar, or external-service byte or state;
+- RED reconstruction or rerun;
+- rerunning the original GREEN or first-successor GREEN-recovery fence;
+- accepting current blob `a952f19264ca713e694f9e8b65bb827fe7934b5f` as the final implementation;
+- retrying a failed edit boundary, build, test, extraction, parser,
+  cardinality, containment, mode, hash, or privacy check;
+- Task 3 or live task-plan creation.
+
+After the post-push planning gate, one fresh writer may make exactly this
+change and no other edit:
+
+```diff
+-                try connection.scalarText("SELECT group_concat(id, ',') FROM (SELECT id FROM ticket_tasks WHERE project_id = 'p1' AND ticket_id = 'ticket-1' AND lifecycle = 'active' ORDER BY sort_order, label COLLATE BINARY, id COLLATE BINARY LIMIT 2)"),
++            try connection.scalarText("SELECT group_concat(id, ',') FROM (SELECT id FROM ticket_tasks WHERE project_id = 'p1' AND ticket_id = 'ticket-1' AND lifecycle = 'active' ORDER BY sort_order, label COLLATE BINARY, id COLLATE BINARY LIMIT 2)"),
+             "task-3,task-1"
+```
+
+The removed prefix is exactly four bytes `20 20 20 20`. The resulting query
+line has exactly 12 leading ASCII spaces. `LIMIT 2` and the expected value are
+unchanged. The writer must use `apply_patch`, verify the post-edit gate below,
+and stop before the second-successor fence if any byte differs.
+
+### Required pre-resumption reviews and distinct ledger bindings
+
+Fresh independent reviewers must review the exact final amendment and root
+registry bytes and return:
+
+- Architecture: GO, Required `0`;
+- QA/Test: GO, Required `0`;
+- Security/Privacy: GO, Required `0`;
+- TPM: GO, Required `0`;
+- Delivery Management: GO, Required `0`.
+
+Delivery Management must additionally review the actual third-recovery ledger
+entry, exact byte diagnosis, writer/reporting classification, retained and
+unconsumed fence state, five implementation blobs, exact three-document
+checkpoint inventory, and Task 3 closure before staging. A role may not
+approve its own implementation. Any Required finding keeps continuation
+NO-GO.
+
+After the five exact-hash reviews and before staging, Delivery Management must
+add exactly one ledger line matching each distinct regex:
+
+```text
+^- RR-R10 Task 2B third-recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$
+^- RR-R10 Task 2B third-recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$
+```
+
+These fields do not replace or duplicate the accepted first- or
+second-recovery bindings. Their values bind the actual final worktree bytes of
+this brief and `docs/delivery/task-briefs/SHA256SUMS`. This brief deliberately
+does not contain its own final digest as a literal.
+
+### Third-recovery precommit planning gate
+
+Run exactly once after the coordinator ledger update and Delivery
+Management's review of the actual ledger, before staging:
+
+```bash
+set -euo pipefail
+RR_TASK2B_RECOVERY3_BASE=b60c06bb161fcd663754ab482a8eedb485d463de
+RR_TASK2B_BRANCH=codex/release-radar-mvp
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git branch --show-current)" = "$RR_TASK2B_BRANCH"
+test "$(git rev-parse HEAD)" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git rev-parse '@{u}')" = "$RR_TASK2B_RECOVERY3_BASE"
+RR_TASK2B_RECOVERY3_REMOTE_LINE="$(git ls-remote --exit-code origin "refs/heads/$RR_TASK2B_BRANCH")"
+test "$(printf '%s\n' "$RR_TASK2B_RECOVERY3_REMOTE_LINE" | wc -l | tr -d ' ')" = "1"
+test "$(printf '%s\n' "$RR_TASK2B_RECOVERY3_REMOTE_LINE" | awk '{print $1}')" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git rev-list --left-right --count HEAD...'@{u}' | tr '\t' ' ')" = "0 0"
+test "$(git diff --cached --name-only)" = ""
+
+RR_TASK2B_RECOVERY3_LEDGER_SHAS="$(python3 - "$RR_TASK2B_LEDGER" <<'PYTHON'
+import re
+import sys
+
+ledger = open(sys.argv[1], encoding="utf-8").read()
+patterns = {
+    "brief": r"^- RR-R10 Task 2B third-recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B third-recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+values = []
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger, flags=re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected exactly one third-recovery {name} binding, found {len(matches)}")
+    values.append(matches[0])
+print(" ".join(values))
+PYTHON
+)"
+test "${RR_TASK2B_RECOVERY3_LEDGER_SHAS%% *}" = "$(shasum -a 256 "$RR_TASK2B_BRIEF" | awk '{print $1}')"
+test "${RR_TASK2B_RECOVERY3_LEDGER_SHAS##* }" = "$(shasum -a 256 "$RR_TASK2B_REGISTRY" | awk '{print $1}')"
+
+python3 - "$RR_TASK2B_REGISTRY" "$RR_TASK2B_BRIEF" <<'PYTHON'
+import hashlib
+import re
+import sys
+from pathlib import Path
+
+registry_path, brief_path = sys.argv[1:3]
+task2b_count = 0
+for line_number, line in enumerate(Path(registry_path).read_text(encoding="utf-8").splitlines(), start=1):
+    if not line:
+        continue
+    parts = line.split("  ", 1)
+    if len(parts) != 2:
+        raise SystemExit(f"registry line {line_number} is not two-space separated")
+    digest, path = parts
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise SystemExit(f"registry line {line_number} has invalid digest")
+    if hashlib.sha256(Path(path).read_bytes()).hexdigest() != digest:
+        raise SystemExit(f"registry mismatch for {path}")
+    if path == brief_path:
+        task2b_count += 1
+if task2b_count != 1:
+    raise SystemExit(f"expected exactly one Task 2B registry entry, found {task2b_count}")
+PYTHON
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "a952f19264ca713e694f9e8b65bb827fe7934b5f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift "$RR_TASK2B_LEDGER" "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+(cd ReleaseRadarTests/Fixtures/SchemaV11 && shasum -a 256 -c SHA256SUMS)
+test "$(shasum -a 256 ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite | awk '{print $1}')" = "ad6f2eddf7d47016d4f09fdf50bc82ad8f3cce94043064713607d6b07934762c"
+test "$(shasum -a 256 ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS | awk '{print $1}')" = "ea66d26b4172876ed473a98e09b54149e0fc4896186ed63bd66f8e70bbd17da3"
+git diff --check -- "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER"
+```
+
+Any failure stops before staging or retry. The planning checkpoint may stage
+exactly this brief, the root registry, and `docs/delivery/progress.md`. The
+five implementation paths remain unstaged at the exact current inventory.
+
+### Third-recovery staged-checkpoint gate
+
+After staging exactly the three planning documents, run exactly once before
+commit:
+
+```bash
+set -euo pipefail
+RR_TASK2B_RECOVERY3_BASE=b60c06bb161fcd663754ab482a8eedb485d463de
+RR_TASK2B_BRANCH=codex/release-radar-mvp
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git branch --show-current)" = "$RR_TASK2B_BRANCH"
+test "$(git rev-parse HEAD)" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git rev-parse '@{u}')" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git rev-list --left-right --count HEAD...'@{u}' | tr '\t' ' ')" = "0 0"
+RR_TASK2B_RECOVERY3_REMOTE_LINE="$(git ls-remote --exit-code origin "refs/heads/$RR_TASK2B_BRANCH")"
+test "$(printf '%s\n' "$RR_TASK2B_RECOVERY3_REMOTE_LINE" | wc -l | tr -d ' ')" = "1"
+test "$(printf '%s\n' "$RR_TASK2B_RECOVERY3_REMOTE_LINE" | awk '{print $1}')" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git diff --cached --name-only | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER" | LC_ALL=C sort)"
+git diff --exit-code -- "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER"
+git diff --cached --check
+
+RR_TASK2B_RECOVERY3_STAGED_SHAS="$(python3 - "$RR_TASK2B_LEDGER" <<'PYTHON'
+import re
+import subprocess
+import sys
+
+ledger = subprocess.check_output(["git", "show", f":{sys.argv[1]}"], text=True)
+patterns = [
+    r"^- RR-R10 Task 2B third-recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    r"^- RR-R10 Task 2B third-recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+]
+values = []
+for pattern in patterns:
+    matches = re.findall(pattern, ledger, flags=re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit("staged third-recovery ledger binding is not unique")
+    values.append(matches[0])
+print(" ".join(values))
+PYTHON
+)"
+test "${RR_TASK2B_RECOVERY3_STAGED_SHAS%% *}" = "$(git show ":$RR_TASK2B_BRIEF" | shasum -a 256 | awk '{print $1}')"
+test "${RR_TASK2B_RECOVERY3_STAGED_SHAS##* }" = "$(git show ":$RR_TASK2B_REGISTRY" | shasum -a 256 | awk '{print $1}')"
+
+python3 - "$RR_TASK2B_REGISTRY" "$RR_TASK2B_BRIEF" <<'PYTHON'
+import hashlib
+import re
+import subprocess
+import sys
+
+registry_path, brief_path = sys.argv[1:3]
+registry = subprocess.check_output(["git", "show", f":{registry_path}"], text=True)
+task2b_count = 0
+for line_number, line in enumerate(registry.splitlines(), start=1):
+    if not line:
+        continue
+    parts = line.split("  ", 1)
+    if len(parts) != 2:
+        raise SystemExit(f"registry line {line_number} is not two-space separated")
+    digest, path = parts
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise SystemExit(f"registry line {line_number} has invalid digest")
+    actual = hashlib.sha256(subprocess.check_output(["git", "show", f":{path}"])).hexdigest()
+    if actual != digest:
+        raise SystemExit(f"staged registry mismatch for {path}")
+    if path == brief_path:
+        task2b_count += 1
+if task2b_count != 1:
+    raise SystemExit(f"expected exactly one staged Task 2B registry entry, found {task2b_count}")
+PYTHON
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "a952f19264ca713e694f9e8b65bb827fe7934b5f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+```
+
+Commit exactly the three staged planning documents as a direct child of
+`b60c06bb161fcd663754ab482a8eedb485d463de`, then push to
+`origin/codex/release-radar-mvp`. Do not stage or commit implementation paths.
+
+### Third-recovery committed post-push gate
+
+Run exactly once after push and before releasing the source-conformance
+writer:
+
+```bash
+set -euo pipefail
+RR_TASK2B_RECOVERY3_BASE=b60c06bb161fcd663754ab482a8eedb485d463de
+RR_TASK2B_BRANCH=codex/release-radar-mvp
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git branch --show-current)" = "$RR_TASK2B_BRANCH"
+test "$(git rev-parse HEAD^)" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER" | LC_ALL=C sort)"
+test "$(git rev-parse HEAD)" = "$(git rev-parse '@{u}')"
+RR_TASK2B_RECOVERY3_REMOTE_LINE="$(git ls-remote --exit-code origin "refs/heads/$RR_TASK2B_BRANCH")"
+test "$(printf '%s\n' "$RR_TASK2B_RECOVERY3_REMOTE_LINE" | wc -l | tr -d ' ')" = "1"
+test "$(printf '%s\n' "$RR_TASK2B_RECOVERY3_REMOTE_LINE" | awk '{print $1}')" = "$(git rev-parse HEAD)"
+test "$(git rev-list --left-right --count HEAD...'@{u}' | tr '\t' ' ')" = "0 0"
+
+python3 - "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER" <<'PYTHON'
+import hashlib
+import re
+import subprocess
+import sys
+
+brief_path, registry_path, ledger_path = sys.argv[1:4]
+
+def committed_bytes(path):
+    return subprocess.check_output(["git", "show", f"HEAD:{path}"])
+
+ledger = committed_bytes(ledger_path).decode("utf-8")
+patterns = {
+    "brief": r"^- RR-R10 Task 2B third-recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B third-recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+values = {}
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger, flags=re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected one committed third-recovery {name} binding, found {len(matches)}")
+    values[name] = matches[0]
+if hashlib.sha256(committed_bytes(brief_path)).hexdigest() != values["brief"]:
+    raise SystemExit("committed brief does not match third-recovery ledger binding")
+if hashlib.sha256(committed_bytes(registry_path)).hexdigest() != values["registry"]:
+    raise SystemExit("committed registry does not match third-recovery ledger binding")
+
+task2b_count = 0
+for line_number, line in enumerate(committed_bytes(registry_path).decode("utf-8").splitlines(), start=1):
+    if not line:
+        continue
+    parts = line.split("  ", 1)
+    if len(parts) != 2:
+        raise SystemExit(f"registry line {line_number} is not two-space separated")
+    digest, path = parts
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise SystemExit(f"registry line {line_number} has invalid digest")
+    if hashlib.sha256(committed_bytes(path)).hexdigest() != digest:
+        raise SystemExit(f"committed registry mismatch for {path}")
+    if path == brief_path:
+        task2b_count += 1
+if task2b_count != 1:
+    raise SystemExit(f"expected exactly one committed Task 2B registry entry, found {task2b_count}")
+PYTHON
+
+git diff --exit-code -- "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER"
+test "$(git diff --cached --name-only)" = ""
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "a952f19264ca713e694f9e8b65bb827fe7934b5f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+(cd ReleaseRadarTests/Fixtures/SchemaV11 && shasum -a 256 -c SHA256SUMS)
+```
+
+Only after this gate passes may the coordinator release one fresh writer for
+the exact four-space deletion.
+
+### Third-recovery fresh-writer pre-edit gate
+
+The fresh writer runs this read-only gate exactly once before `apply_patch`:
+
+```bash
+set -euo pipefail
+RR_TASK2B_RECOVERY3_BASE=b60c06bb161fcd663754ab482a8eedb485d463de
+RR_TASK2B_BRANCH=codex/release-radar-mvp
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git branch --show-current)" = "$RR_TASK2B_BRANCH"
+test "$(git rev-parse HEAD^)" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git rev-parse HEAD)" = "$(git rev-parse '@{u}')"
+test "$(git rev-parse HEAD)" = "$(git ls-remote --exit-code origin "refs/heads/$RR_TASK2B_BRANCH" | awk '{print $1}')"
+test "$(git rev-list --left-right --count HEAD...'@{u}' | tr '\t' ' ')" = "0 0"
+test "$(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER" | LC_ALL=C sort)"
+test "$(git diff --cached --name-only)" = ""
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "a952f19264ca713e694f9e8b65bb827fe7934b5f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+
+python3 - <<'PYTHON'
+from pathlib import Path
+import hashlib
+
+path = Path("ReleaseRadarTests/StoreAcceptanceTests.swift")
+data = path.read_bytes()
+lines = data.splitlines(keepends=True)
+matches = [
+    index for index, line in enumerate(lines)
+    if b"SELECT group_concat(id," in line
+    and b"FROM ticket_tasks" in line
+    and b"LIMIT 2" in line
+]
+if len(matches) != 1:
+    raise SystemExit(f"expected one LIMIT 2 active-order query, found {len(matches)}")
+index = matches[0]
+line = lines[index]
+if len(line) - len(line.lstrip(b" ")) != 16:
+    raise SystemExit("pre-edit query must have exactly 16 leading spaces")
+if lines[index + 1].strip() != b'"task-3,task-1"':
+    raise SystemExit("expected value changed")
+if data.count(b"LIMIT 3)") != 0:
+    raise SystemExit("stale LIMIT 3 query remains")
+
+def git_blob(blob):
+    return hashlib.sha1(b"blob " + str(len(blob)).encode() + b"\0" + blob).hexdigest()
+
+target_lines = lines.copy()
+target_lines[index] = line[4:]
+target = b"".join(target_lines)
+if git_blob(data) != "a952f19264ca713e694f9e8b65bb827fe7934b5f":
+    raise SystemExit("pre-edit blob mismatch")
+if git_blob(target) != "6be00b5661c48121b4fa054507b15b627fda1c9f":
+    raise SystemExit("four-space deletion does not produce reviewed target")
+if len(data) != 153417 or len(target) != 153413:
+    raise SystemExit("unexpected byte-size boundary")
+offset = sum(len(value) for value in lines[:index]) + 12
+if offset != 14869 or data[offset:offset + 4] != b"    ":
+    raise SystemExit("diagnosed four-byte insertion boundary changed")
+PYTHON
+
+if compgen -G '/tmp/release-radar-rr-r10-task2b-green-recovery-2.*' >/dev/null; then
+  exit 1
+fi
+if compgen -G '/tmp/release-radar-rr-r10-task2b-regression-recovery-2.*' >/dev/null; then
+  exit 1
+fi
+```
+
+If this gate passes, the writer applies only the exact diff above with
+`apply_patch`. If it fails, stop without editing or retrying.
+
+### Third-recovery post-edit target gate
+
+Immediately after the exact edit and before any test or evidence-parent
+creation, the same writer runs this gate once:
+
+```bash
+set -euo pipefail
+RR_TASK2B_RECOVERY3_BASE=b60c06bb161fcd663754ab482a8eedb485d463de
+RR_TASK2B_BRANCH=codex/release-radar-mvp
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git branch --show-current)" = "$RR_TASK2B_BRANCH"
+test "$(git rev-parse HEAD^)" = "$RR_TASK2B_RECOVERY3_BASE"
+test "$(git rev-parse HEAD)" = "$(git rev-parse '@{u}')"
+test "$(git rev-parse HEAD)" = "$(git ls-remote --exit-code origin "refs/heads/$RR_TASK2B_BRANCH" | awk '{print $1}')"
+test "$(git rev-list --left-right --count HEAD...'@{u}' | tr '\t' ' ')" = "0 0"
+test "$(git diff --cached --name-only)" = ""
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "6be00b5661c48121b4fa054507b15b627fda1c9f"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+
+python3 - <<'PYTHON'
+from pathlib import Path
+import hashlib
+
+path = Path("ReleaseRadarTests/StoreAcceptanceTests.swift")
+data = path.read_bytes()
+lines = data.splitlines(keepends=True)
+matches = [
+    index for index, line in enumerate(lines)
+    if b"SELECT group_concat(id," in line
+    and b"FROM ticket_tasks" in line
+    and b"LIMIT 2" in line
+]
+if len(matches) != 1:
+    raise SystemExit(f"expected one corrected LIMIT 2 active-order query, found {len(matches)}")
+index = matches[0]
+line = lines[index]
+if len(line) - len(line.lstrip(b" ")) != 12:
+    raise SystemExit("post-edit query must have exactly 12 leading spaces")
+if lines[index + 1].strip() != b'"task-3,task-1"':
+    raise SystemExit("expected value changed")
+if data.count(b"LIMIT 3)") != 0:
+    raise SystemExit("stale LIMIT 3 query remains")
+
+def git_blob(blob):
+    return hashlib.sha1(b"blob " + str(len(blob)).encode() + b"\0" + blob).hexdigest()
+
+pre_lines = lines.copy()
+pre_lines[index] = b"    " + line
+pre_edit = b"".join(pre_lines)
+if git_blob(data) != "6be00b5661c48121b4fa054507b15b627fda1c9f":
+    raise SystemExit("post-edit target blob mismatch")
+if git_blob(pre_edit) != "a952f19264ca713e694f9e8b65bb827fe7934b5f":
+    raise SystemExit("post-edit source is not the exact four-space deletion from the pinned pre-image")
+if len(data) != 153413 or len(pre_edit) != 153417:
+    raise SystemExit("unexpected post-edit byte-size boundary")
+PYTHON
+
+if compgen -G '/tmp/release-radar-rr-r10-task2b-green-recovery-2.*' >/dev/null; then
+  exit 1
+fi
+if compgen -G '/tmp/release-radar-rr-r10-task2b-regression-recovery-2.*' >/dev/null; then
+  exit 1
+fi
+```
+
+Any failure stops before test, evidence creation, diff check, review, staging,
+checkpoint, retry, or Task 3. A successful gate closes only the exact-source
+conformance boundary; it is not product acceptance.
+
+### Still-unconsumed GREEN and regression sequence
+
+After the post-edit target gate passes, run the existing Bash fence under
+`### Second-successor GREEN fence` in the second-recovery amendment exactly
+once. It must create one fresh unique mode-`700` parent and pass exact
+structured Store `43/43`, with zero failed, skipped, expected-failure, or
+failure-record results, exactly 43 unique Store identifiers, contained
+mode-`600` scalar files, and both privacy scans exactly status `1`.
+
+If and only if that complete GREEN fence passes, run the existing Bash fence
+under `### Second-recovery selected regression fence` exactly once. It must
+create a different fresh mode-`700` parent and pass exact structured `64/64`
+with `43/21` Store/plugin-lifecycle cardinality, zero failed, skipped,
+expected-failure, or failure-record results, exactly 64 unique selected
+identifiers, required containment/modes, and both privacy scans exactly status
+`1`.
+
+These are the already-reviewed, never-run second-recovery fences, not retries
+of consumed commands. Do not create duplicate fence definitions. A wrapper,
+build, test, extraction, parser, cardinality, uniqueness, containment, mode,
+hash, or privacy failure consumes that fence and stops before every later
+action. There is no retry. Retain all evidence without mutation, staging,
+transmission, or deletion.
+
+### Postimplementation reviews and implementation checkpoint
+
+Only after both still-unconsumed fences pass may the coordinator run
+`git diff --check` once and the accepted schema-v10/schema-v11 fixture
+checksum and byte-diff checks. Then obtain fresh independent:
+
+- Code Review: GO, Required `0`;
+- QA/Test: GO, Required `0`;
+- Architecture: GO, Required `0`;
+- Security/Privacy: GO, Required `0`;
+- TPM: GO, Required `0`;
+- Delivery Management: GO, Required `0`.
+
+The writer may not review its own edit. Required findings block the
+implementation checkpoint. Optional and out-of-scope observations do not
+expand the task.
+
+The postimplementation checkpoint may stage exactly the existing five Task 2B
+implementation paths plus coordinator-owned `docs/delivery/progress.md`. It
+must require Store test blob
+`6be00b5661c48121b4fa054507b15b627fda1c9f` and the other four exact blobs
+listed above. It must not stage this amendment or registry again, fixtures,
+raw evidence, scripts, project files, generated files, owner data, Release
+Radar state, or external artifacts. Task 3 remains closed until that bounded
+checkpoint is committed, pushed, and exact at local/upstream/live remote with
+ahead/behind `0/0`.
+
+### Activity, audit, privacy, and completion evidence
+
+This amendment creates no product Activity or audit event. It authorizes no
+owner database, app, bridge, notification, provider, credential, Release Radar,
+or external-system access or mutation. Durable artifacts may record only
+sanitized scalar facts: command identity, paths, modes, sizes, hashes, result
+status, suite cardinality, failure counts, exact source classification,
+privacy-scan statuses, and review dispositions. Raw logs, raw extracted JSON,
+raw result bundles, owner data, matching sensitive lines, secrets, or private
+keys must not enter the ledger or another durable artifact.
+
+The coordinator ledger must record:
+
+- the exact four-byte diagnosis and product/test/planning/writer
+  classification;
+- distinct third-recovery brief and registry SHA-256 bindings;
+- all five pre-resumption review dispositions;
+- precommit, staged-checkpoint, commit inventory, post-push remote equality,
+  and fresh-writer pre-edit gate outcomes;
+- the exact `a952f19264ca713e694f9e8b65bb827fe7934b5f` to
+  `6be00b5661c48121b4fa054507b15b627fda1c9f` edit and unchanged four blobs;
+- second-successor and, if eligible, regression evidence as sanitized scalar
+  path/mode/size/hash/count/scan facts only;
+- fixture and diff-check outcomes;
+- all six postimplementation review dispositions;
+- implementation checkpoint inventory and local/upstream/live-remote
+  equality;
+- retained evidence status, open blockers, and Task 3 gate state.
+
+### Third-recovery acceptance criteria
+
+- This canonical brief contains the complete third-recovery authority and the
+  root registry contains exactly one matching Task 2B entry.
+- Architecture, QA/Test, Security/Privacy, TPM, and Delivery Management review
+  the exact brief and registry bytes and return GO/Required `0`.
+- Delivery Management reviews the actual ledger before staging.
+- Exactly one distinct third-recovery brief binding and one distinct
+  third-recovery registry binding match worktree, index, and committed bytes
+  at the applicable gates.
+- The planning checkpoint is a direct child of
+  `b60c06bb161fcd663754ab482a8eedb485d463de`, contains exactly brief,
+  registry, and progress, and reaches exact local/upstream/live-remote
+  equality with ahead/behind `0/0` before implementation resumes.
+- Pre-edit blobs match `a952f19264ca713e694f9e8b65bb827fe7934b5f`
+  for Store tests and the four unchanged retained identities.
+- One fresh writer uses `apply_patch` to delete only four leading ASCII spaces
+  from the unique `LIMIT 2` active-order query line, preserving `LIMIT 2`,
+  `"task-3,task-1"`, and every other byte.
+- Post-edit Store blob is exactly
+  `6be00b5661c48121b4fa054507b15b627fda1c9f`; the other four blobs remain
+  exact.
+- No RED, original GREEN, or first-successor GREEN-recovery fence reruns.
+- No second-successor or selected-regression evidence existed before the
+  source correction.
+- The existing second-successor fence runs once after the exact target gate
+  and passes `43/43`; the existing regression fence runs once only after that
+  success and passes `64/64` with exact `43/21` split.
+- Any fence or parser failure stops with no retry and retains all evidence.
+- Fixture bytes and manifests remain exact; no product, project, signing,
+  sandbox, owner, Release Radar, live-plan, Task 3, or external state changes.
+- Independent Code Review, QA/Test, Architecture, Security/Privacy, TPM, and
+  Delivery Management return GO/Required `0` before the bounded implementation
+  checkpoint.
+- Required writer execution/reporting `1` and current source-conformance `1`
+  are closed only by the exact four-space deletion plus passing evidence.
+  Product defects, test-behavior defects, and planning hash defects remain
+  Required `0`; Optional `0`; Out-of-scope `0`.
