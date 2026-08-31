@@ -911,17 +911,94 @@ Deliver the signed native macOS MVP described by
   `/tmp/rr-tpm-registry-check.out`; it was not staged, transmitted, or deleted.
   Delivery Management authorizes staging only the revised Task 2A brief, root
   registry, and this coordinator ledger.
-- Next eligible RR-R10 work: **Stage, inspect, commit, and push exactly the
-  revised Task 2A brief, root task-brief registry, and this ledger as the single
-  direct child of `f480f8361b562acda760f27e836f8ae595c60a1d`; prove
-  HEAD/upstream/live-remote equality and ahead/behind `0/0`, then run the
-  brief's regression-continuation planning gate once.** Keep both SchemaV11
-  artifacts and every temporary evidence artifact unstaged and run no build,
-  generator, export, or test before that gate passes. Only then may one fresh
-  serialized regression verifier run the one-time 58-test continuation. RR-R10
-  remains In progress with zero blockers and no live Ticket Tasks plan. Task 2B
-  and every later RR-R10 task remain dependency-blocked until Task 2A itself is
-  accepted, committed, pushed, and remote-exact.
+- RR-R10 Task 2A regression-continuation planning checkpoint: commit
+  `e1f3321afefcf95707cef25fe58f24859331e323` is the single direct child of
+  accepted Task 2A0 checkpoint
+  `f480f8361b562acda760f27e836f8ae595c60a1d` and contains exactly the final
+  Task 2A brief, root task-brief registry, and this ledger. It was pushed to
+  `origin/codex/release-radar-mvp`; fresh fetch and live `git ls-remote`
+  readback matched HEAD and upstream exactly with ahead/behind `0/0`. The
+  coordinator then extracted and ran the committed regression-continuation
+  planning gate once with `/bin/bash`; it exited `0` after `0.909090083`
+  seconds and emitted only 18 task-brief checksum `OK` lines plus SchemaV10 and
+  SchemaV11 fixture checksum `OK` lines. The gate proved exact parent and
+  three-path inventory, remote equality, empty index/tracked diff, exact two-
+  file untracked fixture inventory, project blob
+  `2b984d44e5b73602bf04b18b761d308761de789c`, controlling hashes, fixture
+  no-follow types/containment/sizes/hashes, five accepted Task 1B source/test
+  blobs, and exact 37/21 test declarations. No build, test, generator, export,
+  fixture write, owner-state, Release Radar, or external mutation occurred.
+- RR-R10 Task 2A one-time regression evidence: fresh serialized verifier/
+  Implementer `/root/task2a_regression_verifier` ran the committed Store plus
+  plugin-lifecycle regression fence exactly once, with parallel testing
+  disabled and fresh absent DerivedData/result/summary/test-tree paths under
+  mode-`700` parent
+  `/tmp/release-radar-rr-r10-task2a-regression.WpFwUu`. It exited `0`; the
+  selected suites and the independent structured parser both reported Passed
+  exactly 58/58, split 37 Store and 21 plugin-lifecycle unique cases, with zero
+  failed, skipped, expected-failure, failure-record, unexpected-suite, or
+  generator-test results and terminal `** TEST SUCCEEDED **`. There was no
+  regression retry. The required post-regression planning gate then ran once
+  and exited `0`, followed by the immutable-boundary gate once at exit `0`.
+  Every historical Task 2A RED/export/GREEN generator/export/copy/checksum/
+  direct-generation command and Task 2A0 build remained unrun. One preliminary
+  read-only verifier wrapper exited `1` before testing because it expanded awk
+  `$1` under `set -u`; the corrected preflight exited `0`, and the failed
+  wrapper created no build, test, repository, fixture, owner, or external
+  effect. Final HEAD/upstream/live remote remained
+  `e1f3321afefcf95707cef25fe58f24859331e323` at `0/0`; the index and tracked
+  diff remained empty and only the two SchemaV11 artifacts remained untracked.
+- RR-R10 Task 2A retained regression evidence: temporary sanitized verifier
+  report `/tmp/release-radar-rr-r10-task2a-regression-verifier-report.md` is a
+  mode-`600`, 7,654-byte regular file at SHA-256
+  `db03ddd9648396246235714c04d9d154919e567d1a89fd24a1b53aef05be43b3`.
+  The retained parent and its DerivedData/result bundle are mode `700`;
+  `regression.xcresult` contains 146 regular files with sorted content-manifest
+  SHA-256
+  `c9d7a2457e5bbb1a281beaebbab2a73d1cb6bf51f6543486305c404fafcb537e`.
+  Mode-`600` summary JSON is 843 bytes at SHA-256
+  `78a1781a3c54ad5ec3a6ebfd031701d6e12a6ed0855d11b3880b002a10ced584`;
+  mode-`600` test-tree JSON is 26,979 bytes at SHA-256
+  `8fc97fd5a8450b603bb482941218f77a10301d44369ec6be15ff12b655ebcc63`.
+  Independent Security/Privacy inspection found the result bundle symlink-free,
+  every DerivedData symlink contained under the restricted parent, no owner-
+  store path, and quiet sensitive-marker scan status `1`. These artifacts are
+  temporary, non-authoritative, unstaged, untransmitted, and retained without
+  deletion pending owner authorization.
+- RR-R10 Task 2A postimplementation closure: fresh Code Reviewer
+  `/root/task2a_post_code_review`, replacement QA/Test verifier
+  `/root/task2a_post_qa_review_replacement`, Architecture reviewer
+  `/root/task2a_post_arch_review`, Security/Privacy verifier
+  `/root/task2a_post_security_review`, TPM reviewer
+  `/root/task2a_post_tpm_review`, and replacement Delivery Management reviewer
+  `/root/task2a_post_delivery_review_replacement` each independently returned
+  **GO with Required 0, Optional 0, and Out-of-scope 0**. Architecture requires
+  no ADR. They independently confirmed the planning checkpoint and exact
+  hashes; schema 11 with the exact 28-table/12-index/8-trigger and 48-object
+  inventory; zero owner/planning rows and exact five defaults; continuation
+  column; no v12, WAL, SHM, or journal; empty foreign-key check and integrity
+  `ok`; fixture database 348,160 bytes at
+  `ad6f2eddf7d47016d4f09fdf50bc82ad8f3cce94043064713607d6b07934762c`;
+  manifest 91 bytes at
+  `ea66d26b4172876ed473a98e09b54149e0fc4896186ed63bd66f8e70bbd17da3`;
+  valid local checksum; project/source/scheme/entitlement/sandbox/signing/
+  privacy invariants; exact 58/58 and 37/21 retained result; zero reruns; and
+  exact fixture-plus-manifest-plus-ledger checkpoint scope. The first post-run
+  QA and Delivery agents hit model-capacity errors before returning verdicts
+  and made no repository or external change; the fresh replacements completed
+  the full independent reviews. No owner, app, bridge, board, ticket,
+  Accepted-ticket, task-plan, notification, external, source, project, fixture,
+  accepted-artifact, staging, commit, push, or unrelated mutation occurred
+  during verification.
+- Next eligible RR-R10 work: **Stage, inspect, commit, and push exactly
+  `ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite`,
+  `ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS`, and this ledger; prove the
+  Task 2A checkpoint equals HEAD, upstream, and live remote with ahead/behind
+  `0/0`.** Keep every temporary evidence artifact unstaged, untransmitted, and
+  undeleted, and run no build, test, generator, export, or gate again. Task 2B
+  and every later RR-R10 task remain closed until that exact Task 2A checkpoint
+  is remote-exact. RR-R10 remains In progress with zero blockers and no live
+  Ticket Tasks plan.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
