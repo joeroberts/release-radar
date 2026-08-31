@@ -848,15 +848,80 @@ Deliver the signed native macOS MVP described by
   exactly the project file and this coordinator-owned ledger; temporary
   evidence and both SchemaV11 artifacts remain excluded, unstaged,
   untransmitted, and undeleted absent owner authorization.
-- Next eligible RR-R10 work: **Stage, inspect, commit, and push exactly
-  `ReleaseRadar.xcodeproj/project.pbxproj` and this ledger; prove the Task 2A0
-  implementation checkpoint equals upstream and live remote with ahead/behind
-  `0/0`. Keep both SchemaV11 artifacts and every temporary evidence artifact
-  unstaged and run no build, generator, export, or test.** Only after that
-  remote-exact checkpoint may a fresh coordinator resume Task 2A's existing
-  58-test regression continuation. Task 2B and every later RR-R10 task remain
-  dependency-blocked until Task 2A itself is accepted, committed, pushed, and
-  remote-exact.
+- RR-R10 Task 2A0 accepted implementation checkpoint: commit
+  `f480f8361b562acda760f27e836f8ae595c60a1d` is the single direct child of
+  correction checkpoint `5696a43ab8aee9368031cde03f0977b2077091bf` and
+  contains exactly `ReleaseRadar.xcodeproj/project.pbxproj` plus this ledger.
+  The committed project blob is
+  `2b984d44e5b73602bf04b18b761d308761de789c`, containing only the accepted
+  `Fixtures/SchemaV11/SHA256SUMS` ReleaseRadarTests membership exception over
+  baseline blob `736654a040a90603ad322068fa48fa428acca3fb`. It was pushed to
+  `origin/codex/release-radar-mvp`; fresh fetch and live `git ls-remote`
+  readback matched HEAD and upstream exactly at that SHA with ahead/behind
+  `0/0`. Both SchemaV11 artifacts and all temporary Task 2A0 evidence remained
+  excluded, unstaged, untransmitted, and undeleted. The resulting worktree was
+  exactly the two untracked, checksum-valid SchemaV11 artifacts; this completed
+  Task 2A0 and released only Task 2A's regression-continuation planning.
+- RR-R10 Task 2A regression-continuation planning correction: fresh Planning
+  agent `/root/task2a_regression_continuation_planner` revised the existing
+  durable Task 2A brief rather than creating a competing brief. It made
+  `f480f8361b562acda760f27e836f8ae595c60a1d` and project blob
+  `2b984d44e5b73602bf04b18b761d308761de789c` the current authority; classified
+  `d8bda5a035e0324acd90bcbe67036f8d217b18bf` and every generator RED/export/
+  GREEN/export/copy/checksum/direct-SQLite command as immutable historical
+  evidence; repaired shell portability; and defined one fresh serialized,
+  parallel-disabled Store plus plugin-lifecycle regression with absent
+  DerivedData/result paths and fail-closed Passed 58/58 parsing split exactly
+  37 Store and 21 plugin-lifecycle cases. Initial candidate brief SHA-256
+  `7fdf6168e710805cc4a14afc626864abaf41fc56aef4aa997375067d8a921d22`
+  and registry SHA-256
+  `50d6b3cbaa16718b8ac0ad8b4c5f7074ba143bc1cb99f67c17774e1328108792`
+  received QA/Test `/root/task2a_continuation_qa_review` **NO-GO with Required
+  1, Optional 0, and Out-of-scope 0** because the executable gate did not
+  explicitly reject a symlinked SchemaV11 manifest. The same Planning agent
+  added exact directory/file no-follow type checks, canonical containment,
+  sizes, pinned hashes, and local checksum verification without changing the
+  reviewed regression contract. Final brief SHA-256 is
+  `711abe4edee9ac86951e9e41c40170f9fbb67123e2f44216e0203cec85595292`;
+  root registry SHA-256 is
+  `63608195b45cb603f1689c450058932c7fb4e946d27fd3e1342c6e58d33fb526`;
+  the Task 2A entry is unique and all 18 registered briefs verify. The initial
+  Architecture GO was superseded; every final approval was rerun against the
+  final exact hashes. No build, test, brief executable gate, generator, export,
+  project, fixture, source, staging, commit, push, owner-state, Release Radar,
+  or external mutation occurred during planning or review.
+- RR-R10 Task 2A regression-continuation exact-hash closure: Architecture
+  `/root/task2a_continuation_arch_review`, QA/Test
+  `/root/task2a_continuation_qa_review`, Security/Privacy
+  `/root/task2a_continuation_security_review`, TPM
+  `/root/task2a_continuation_tpm_review`, and Delivery Management
+  `/root/task2a_continuation_delivery_review` each independently reviewed final
+  brief SHA-256
+  `711abe4edee9ac86951e9e41c40170f9fbb67123e2f44216e0203cec85595292`
+  and returned **GO with Required 0, Optional 0, and Out-of-scope 0**. They
+  verified branch/HEAD/upstream/live remote
+  `f480f8361b562acda760f27e836f8ae595c60a1d` at `0/0`, the exact Task 2A0
+  parent/inventory/project blob, the accepted design/ADR/plan and Task 1A/1B/
+  Task 2A0 identities, durable RED packet, five source/test blobs, 37/21 test
+  declarations and actual xcresult identifier/schema assumptions, both
+  SchemaV11 artifact sizes/hashes/no-follow containment, one-run/no-retry and
+  historical no-rerun boundaries, exact three-path planning and later
+  fixture-plus-ledger checkpoint inventories, and Task 2B closure. TPM retained
+  non-authoritative sanitized registry output
+  `/tmp/rr-tpm-registry-check.out`; it was not staged, transmitted, or deleted.
+  Delivery Management authorizes staging only the revised Task 2A brief, root
+  registry, and this coordinator ledger.
+- Next eligible RR-R10 work: **Stage, inspect, commit, and push exactly the
+  revised Task 2A brief, root task-brief registry, and this ledger as the single
+  direct child of `f480f8361b562acda760f27e836f8ae595c60a1d`; prove
+  HEAD/upstream/live-remote equality and ahead/behind `0/0`, then run the
+  brief's regression-continuation planning gate once.** Keep both SchemaV11
+  artifacts and every temporary evidence artifact unstaged and run no build,
+  generator, export, or test before that gate passes. Only then may one fresh
+  serialized regression verifier run the one-time 58-test continuation. RR-R10
+  remains In progress with zero blockers and no live Ticket Tasks plan. Task 2B
+  and every later RR-R10 task remain dependency-blocked until Task 2A itself is
+  accepted, committed, pushed, and remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
