@@ -990,15 +990,70 @@ Deliver the signed native macOS MVP described by
   Accepted-ticket, task-plan, notification, external, source, project, fixture,
   accepted-artifact, staging, commit, push, or unrelated mutation occurred
   during verification.
-- Next eligible RR-R10 work: **Stage, inspect, commit, and push exactly
+- RR-R10 Task 2A accepted fixture checkpoint: commit
+  `a08c88c5818f5ea6dbb6932fa336b7bd88b88ddd` is the single direct child of
+  regression-continuation planning checkpoint
+  `e1f3321afefcf95707cef25fe58f24859331e323` and contains exactly
   `ReleaseRadarTests/Fixtures/SchemaV11/release-radar-v11.sqlite`,
-  `ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS`, and this ledger; prove the
-  Task 2A checkpoint equals HEAD, upstream, and live remote with ahead/behind
-  `0/0`.** Keep every temporary evidence artifact unstaged, untransmitted, and
-  undeleted, and run no build, test, generator, export, or gate again. Task 2B
-  and every later RR-R10 task remain closed until that exact Task 2A checkpoint
-  is remote-exact. RR-R10 remains In progress with zero blockers and no live
-  Ticket Tasks plan.
+  `ReleaseRadarTests/Fixtures/SchemaV11/SHA256SUMS`, and this ledger. It was
+  pushed to `origin/codex/release-radar-mvp`; fresh fetch and live
+  `git ls-remote` readback matched HEAD and upstream exactly with ahead/behind
+  `0/0`, after which the index and worktree were clean. The fixture remains
+  348,160 bytes at SHA-256
+  `ad6f2eddf7d47016d4f09fdf50bc82ad8f3cce94043064713607d6b07934762c`;
+  its 91-byte manifest remains at SHA-256
+  `ea66d26b4172876ed473a98e09b54149e0fc4896186ed63bd66f8e70bbd17da3`,
+  and local checksum verification succeeded. No temporary evidence was staged,
+  transmitted, or deleted.
+- RR-R10 Task 2B planning history: the first fresh Planning agent
+  `/root/task2b_planning` hit model capacity before producing an artifact and
+  made no repository or external change. Replacement Planning agent
+  `/root/task2b_planning_replacement` produced the first complete candidate at
+  SHA-256
+  `968c2dad19e77c68ac44c5f3da770da1931e799c247e973f3dd057fcf6dc6c49`
+  with registry SHA-256
+  `f9f7e9ae5e90a1fd4cc1bccd3cd06f84f25ecc64cb95b826f68e36ca6560c8db`.
+  QA/Test returned **NO-GO with Required 7** for the untracked-file gate, late
+  rollback trigger, evidence-command, byte-limit, test-matrix, graph/fixture,
+  and Task 3 policy-boundary defects. The corrected candidate at SHA-256
+  `8802606e5d5e25d05ed322dde66381eabfa3d30fb2a170ff2b727be7d7dacbd5`
+  with registry SHA-256
+  `35f03cfad537050f780cbc74fe0190975611660b54e1d3bb9b3f8607ffa1eb34`
+  closed those seven findings; Architecture and QA/Test returned **GO with
+  Required 0**, while TPM and Security/Privacy each returned **NO-GO with
+  Required 1** for exactly-once GREEN recovery semantics and evidence-privacy
+  controls, respectively. The Planning agent corrected only those findings and
+  produced the final brief at SHA-256
+  `5e1f416cee20ffbd4337beed155f7c04d144c9bd91f25a9e1d2294c18710d954`
+  with root registry SHA-256
+  `e40a565fd97722fc44fc72697a71138cdbf37aadda4abc392791ef8008951802`.
+- RR-R10 Task 2B final exact-hash preimplementation closure: Architecture
+  reviewer `/root/task2b_arch_review_replacement`, QA/Test verifier
+  `/root/task2b_qa_review_replacement`, TPM reviewer
+  `/root/task2b_tpm_review`, Security/Privacy verifier
+  `/root/task2b_security_review`, and fresh Delivery Management reviewer
+  `/root/task2b_delivery_review_final` each independently reviewed the final
+  brief and registry and returned **GO with Required 0, Optional 0, and
+  Out-of-scope 0**. They verified the accepted design/ADR/plan and Task 1B/2A
+  boundaries; Task 2A terminal checkpoint and fixture identities; additive
+  schema-v12 model, migration, manifest, rollback, recovery, deletion, and
+  privacy contracts; exact six-test/43-Store/64-combined strategy; one-run and
+  stop-on-failure rules; exact planning and implementation checkpoint scopes;
+  role separation; no-live-plan boundary; and Task 3 closure. No RED, product
+  or test edit, executable gate, staging, commit, push, owner-state access,
+  Release Radar mutation, or live Ticket Tasks plan occurred during Task 2B
+  planning. RR-R10 remains In progress with zero blockers and no live Ticket
+  Tasks plan; Task 3 and every later task remain closed.
+- RR-R10 Task 2B temporary planning evidence: Bash-fence validation directory
+  `/tmp/rr-task2b-bash-fences.ADf22R` is temporary, non-authoritative,
+  unstaged, untransmitted, retained, and not deleted.
+- Next eligible RR-R10 work: **Stage exactly the final Task 2B brief, root
+  task-brief registry, and this ledger; commit them as the single direct child
+  of `a08c88c5818f5ea6dbb6932fa336b7bd88b88ddd`; push and prove HEAD,
+  upstream, and live remote equality with ahead/behind `0/0` and a clean
+  worktree. Only then run the committed planning gate once and release a fresh
+  serialized Implementer for the one-time RED.** Task 3 remains closed until
+  Task 2B's fully reviewed implementation checkpoint is remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
