@@ -1153,15 +1153,110 @@ Deliver the signed native macOS MVP described by
   owner-state access, Release Radar mutation, or external mutation occurred.
   All RED/GREEN and planning-validation temporary artifacts remain unstaged,
   untransmitted, retained, and undeleted.
-- Next eligible RR-R10 work: **Run the registered precommit recovery gate once;
-  if it passes, stage exactly the final Task 2B brief, root registry, and this
-  ledger, run the staged assembly gate, commit as the direct child of
-  `94f89409631b345d1058dd16a85aaae2f8e26885`, push, prove exact remote
-  equality, and run the committed post-push gate once. Only then release a
-  fresh recovery writer to edit only
-  `ReleaseRadarTests/StoreAcceptanceTests.swift` and run the one-time successor
-  GREEN.** Task 3 remains closed until Task 2B's independently accepted
-  implementation checkpoint is remote-exact.
+- RR-R10 Task 2B first GREEN-recovery planning checkpoint: commit
+  `22178e5cea42a3a3006a8800309d5a76f6610596` is the single direct child of
+  accepted Task 2B planning checkpoint
+  `94f89409631b345d1058dd16a85aaae2f8e26885` and contains exactly the
+  amended Task 2B brief, root task-brief registry, and this ledger. The
+  registered precommit and staged-assembly gates each ran once and exited `0`.
+  The checkpoint was pushed to `origin/codex/release-radar-mvp`; the committed
+  post-push gate then ran once, exited `0`, and proved the direct parent, exact
+  three-document inventory, committed ledger/hash bindings, all 19 registry
+  entries, HEAD/upstream/live-remote equality with ahead/behind `0/0`, empty
+  index, and exact five retained unstaged implementation blobs.
+- RR-R10 Task 2B first recovery writer: fresh writer
+  `/root/task2b_green_recovery_writer` changed only
+  `ReleaseRadarTests/StoreAcceptanceTests.swift` across the six authorized
+  test/harness categories. One initial `apply_patch` context mismatch changed
+  no bytes; the subsequent targeted patches produced Store test blob
+  `4d7ac34c31e19c16c46b6bae3d1cf3aec1f294e3`. Its Markdown-fence extraction
+  wrapper then exited `2` on unmatched backticks before creating an evidence
+  parent or invoking `xcodebuild`; the exact successor fence remained
+  unexecuted. No edit followed that wrapper failure.
+- RR-R10 Task 2B first successor GREEN: fresh no-edit runner
+  `/root/task2b_green_recovery_runner` verified checkpoint and retained blobs,
+  then ran the exact committed successor Store fence once. It exited `1` after
+  executing exactly 43 unique Store cases: 42 passed, 1 failed, 0 skipped, 0
+  expected failures, and 1 failure record. The sole failed identifier was
+  `testVersionTwelveTaskSchemaEnforcesCompositeOwnershipAndInvariants`. The
+  other 12 identifiers from the original failure set passed:
+  `testExactVersionElevenFixtureMigratesToVersionTwelveWithoutInference`,
+  `testVersionTwelveMigrationFailureRollsBackToExactVersionElevenStateAndRecovers`,
+  `testExactVersionTenFixtureMigratesToVersionElevenWithoutInference`,
+  `testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit`,
+  `testVersionElevenManifestRejectsMissingOrCounterfeitPlanningObjects`,
+  `testVersionElevenMigrationFailureRollsBackToExactVersionTenStateAndRecovers`,
+  `testVersionFourMigrationBackfillsOnlyUnambiguousActivePhase`,
+  `testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity`,
+  `testVersionNineAlertRulesMigrateExactlyAndOwnerChangesAuditOnce`,
+  `testVersionNineMigratesToVersionTenWithExactlyOneLifecycleSingleton`,
+  `testVersionTenMissingLifecycleSingletonIsUnavailableAndRecoverable`, and
+  `testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects`.
+- RR-R10 Task 2B first successor retained evidence: parent
+  `/tmp/release-radar-rr-r10-task2b-green-recovery.uYnBjE` is mode `700`;
+  `store-green-recovery.log` is a mode-`600`, 450,416-byte regular file at
+  SHA-256
+  `f48aafa353257827ed9a83e5a1df598d15716f3a7f4619f0b5faf1779a28198a`;
+  its result bundle is retained; and the quiet log privacy scan status was `1`.
+  The exact fence stopped before creating summary/test JSON. A later read-only
+  scalar parser exited `1` on a quoting `SyntaxError`, was not retried, and
+  changed no repository, evidence, owner, Release Radar, or external state.
+  The first successor fence is consumed; regression did not run.
+- RR-R10 Task 2B second-recovery diagnosis: fresh Planning agent
+  `/root/task2b_second_green_recovery_planning` independently inspected the
+  retained structured result and returned direct-continuation **NO-GO with
+  Required 1, Optional 0, and Out-of-scope 0**. The remaining defect is a test
+  oracle: an ordering query requests three active rows while its assertion
+  intentionally expects only `task-3,task-1`; successful boundary probes
+  legitimately supply the third row. Required product defects identified:
+  `0`; required test/harness defects: `1`; product correctness remains
+  unaccepted. The exact authorized correction changes the unique query
+  `LIMIT 3` to `LIMIT 2`, keeps the two-row expected value, and must produce
+  Store test blob `6be00b5661c48121b4fa054507b15b627fda1c9f`.
+- RR-R10 Task 2B second-recovery retained pre-edit blobs: the five
+  implementation paths remain unstaged at
+  `ReleaseRadarCore/Models/TicketTaskModels.swift`
+  `49f365dd1e074d4d2b716384756e71a3c5fb1ce1`,
+  `ReleaseRadarCore/Store/DeliveryStore.swift`
+  `d930ab18794a959b44cad4293cee24647a1af8f6`,
+  `ReleaseRadarCore/Store/StoreMigrations.swift`
+  `6fad7835211cace656e854aa0249f8775280a6dd`,
+  `ReleaseRadarTests/StoreAcceptanceTests.swift`
+  `4d7ac34c31e19c16c46b6bae3d1cf3aec1f294e3`, and
+  `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`
+  `d5d2bd7411bf7b10892b93ee57f62cc76c47492a`.
+- RR-R10 Task 2B second-recovery final reviewed brief SHA-256: `fcfdfe6e7e83b700ef81f3c8882169f8996995e4f267b8ce24e63c2a1e56822d`
+- RR-R10 Task 2B second-recovery final reviewed registry SHA-256: `0e5e0314af8ee1810c888a24e3cbb51adbe3c9389fe923317b7a7d4d833f70df`
+- RR-R10 Task 2B second-recovery exact-hash closure: Planning agent
+  `/root/task2b_second_green_recovery_planning` produced the complete durable
+  amendment. Architecture reviewer `/root/task2b_arch_review_replacement`,
+  QA/Test verifier `/root/task2b_qa_review_replacement`, TPM reviewer
+  `/root/task2b_tpm_review`, Security/Privacy verifier
+  `/root/task2b_security_review`, and Delivery Management reviewer
+  `/root/task2b_delivery_review_final` each independently reviewed the exact
+  final amendment and registry and returned **GO with Required 0, Optional 0,
+  and Out-of-scope 0**. They verified the exact 42/43 evidence and sole failed
+  identifier, closure of the other 12 failures, zero identified product
+  defects, unique one-line edit and target blob, fresh one-run fences,
+  evidence privacy, non-circular ledger bindings, base-`22178e5` checkpoint
+  gates, exact three-document planning inventory, and Task 3/no-live-plan
+  closure.
+- RR-R10 Task 2B second-recovery planning boundary: no implementation edit,
+  test, executable gate, staging, commit, push, owner-state access, Release
+  Radar mutation, or external mutation occurred during amendment planning.
+  RED, the original GREEN, and the first successor GREEN are consumed and must
+  not rerun. Regression remains unopened. Every prior evidence parent remains
+  retained, unstaged, untransmitted, and undeleted.
+- Next eligible RR-R10 work: **After Delivery Management verifies this actual
+  ledger, run the registered second-recovery precommit gate once; if it passes,
+  stage exactly the final Task 2B brief, root registry, and this ledger, run
+  the staged gate, commit as the direct child of
+  `22178e5cea42a3a3006a8800309d5a76f6610596`, push, prove remote equality,
+  and run the committed post-push gate once. Only then release a fresh writer
+  for the one-line Store test recovery and the one-time second-successor
+  GREEN.** Regression runs only after GREEN passes 43/43. Task 3 remains
+  closed until Task 2B's independently accepted implementation checkpoint is
+  remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
