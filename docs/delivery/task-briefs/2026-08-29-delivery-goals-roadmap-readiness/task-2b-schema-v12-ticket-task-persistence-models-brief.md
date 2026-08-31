@@ -1244,3 +1244,808 @@ Temporary implementation evidence may include only `/tmp` DerivedData/result
 directories from the RED, GREEN, and regression commands. These are not
 controlling sources, must not be staged, and must not be presented as final
 deliverables.
+
+## GREEN-recovery amendment — 2026-08-31
+
+This amendment is the durable recovery authority after the first Task 2B
+one-time GREEN Store command failed. It preserves the accepted Task 2B product
+contract above and supersedes only the original post-RED recovery, test-harness,
+GREEN, regression, and checkpoint instructions where they conflict with this
+section. No Task 3 work, live Ticket Tasks plan, owner-state access, Release
+Radar mutation, external-service mutation, build, test, staging, commit, push,
+or implementation edit is authorized by this amendment until the pre-resumption
+gate below is satisfied.
+
+### Recovery objective and user-visible outcome
+
+The recovery objective is to correct the recovery-critical `StoreAcceptanceTests`
+authority so the existing five-path Task 2B implementation can be evaluated
+truthfully against the accepted product contract:
+
+- schema v12 adds `ticket_task_plans` and `ticket_tasks` additively;
+- migration from accepted schema v11 creates zero task plans and zero tasks;
+- v11 data remains semantically unchanged;
+- task-plan/task-history deletion and parent cascade are rejected;
+- counterfeit schema objects fail closed through supported SQLite DDL setup;
+- public Ticket Task model and audit-entity declarations remain scoped to
+  persistence/model setup only;
+- Task 3 remains closed and no live task plan is created.
+
+The user-visible outcome remains unchanged from the accepted brief: Task 2B
+prepares durable local persistence and public model types for later Ticket Task
+APIs. It does not expose UI, command, owner workflow, projection, notification,
+or live planning behavior.
+
+### Controlling lineage and fixed recovery state
+
+The accepted preimplementation planning checkpoint for this recovery is commit
+`94f89409631b345d1058dd16a85aaae2f8e26885`, with HEAD, upstream, and live
+remote all exact and ahead/behind `0/0` at the time the one-time RED and
+one-time GREEN were run.
+
+Original Task 2B brief lineage:
+
+- first complete candidate brief SHA-256
+  `968c2dad19e77c68ac44c5f3da770da1931e799c247e973f3dd057fcf6dc6c49`,
+  registry SHA-256
+  `f9f7e9ae5e90a1fd4cc1bccd3cd06f84f25ecc64cb95b826f68e36ca6560c8db`;
+- corrected candidate brief SHA-256
+  `8802606e5d5e25d05ed322dde66381eabfa3d30fb2a170ff2b727be7d7dacbd5`,
+  registry SHA-256
+  `35f03cfad537050f780cbc74fe0190975611660b54e1d3bb9b3f8607ffa1eb34`;
+- final accepted brief SHA-256
+  `5e1f416cee20ffbd4337beed155f7c04d144c9bd91f25a9e1d2294c18710d954`,
+  root registry SHA-256
+  `e40a565fd97722fc44fc72697a71138cdbf37aadda4abc392791ef8008951802`.
+
+The valid one-time RED is retained under
+`/tmp/release-radar-rr-r10-task2b-red.ZvNHEi`. Its retained evidence metadata
+is:
+
+- parent directory mode `700`;
+- `red.log` mode `600`, size `373840`, SHA-256
+  `e2ecbe942744ec8485dabde2653a1f85b422c51b4839d42e52a661429b4f34b9`;
+- `red-sanitized.log` mode `600`, size `166546`, SHA-256
+  `a3573c4982544e309afb5b6b7ed0cfc08a0c0f4fa8802a2aa16175485e92d7af`;
+- `red.xcresult` directory retained.
+
+The failed one-time GREEN is retained under
+`/tmp/release-radar-rr-r10-task2b-green.YczYQm`. Its retained evidence metadata
+is:
+
+- parent directory mode `700`;
+- `store-green.log` mode `600`, size `449226`, SHA-256
+  `135c9b47b363d29a24e831408bbbf577eb2dfd24d6f899c5bd74c0ade3fa83a6`;
+- `store-green.xcresult` directory retained;
+- structured result summary: `43` Store tests total, `30` passed, `13` failed
+  unique test identifiers, `0` skipped, `0` expected failures.
+
+The recovery ledger may record `17` failure records or `8` unexpected failures
+only if a fresh read-only `xcresulttool` extraction from
+`store-green.xcresult` directly supports those exact scalar counts. The
+recovery authority must not infer them from raw logs, copy raw logs, copy raw
+JSON, or record them from memory. If the direct structured extraction does not
+support those counts, the ledger must record only the supported scalar fields
+above and the failure matrix below.
+
+The original RED and GREEN one-run fences are consumed. No RED rerun, original
+GREEN retry, regression run, diff check, postimplementation review, staging,
+implementation checkpoint, or Task 3 release may occur until this recovery
+amendment has been independently reviewed and committed as described below.
+
+### Retained implementation inventory
+
+The current uncommitted Task 2B implementation must be preserved exactly until
+a reviewed recovery edit is authorized. Before any recovery edit, the
+coordinator and recovery writer must verify these five retained blob IDs:
+
+| Path | Required retained blob |
+| --- | --- |
+| `ReleaseRadarCore/Models/TicketTaskModels.swift` | `49f365dd1e074d4d2b716384756e71a3c5fb1ce1` |
+| `ReleaseRadarCore/Store/DeliveryStore.swift` | `d930ab18794a959b44cad4293cee24647a1af8f6` |
+| `ReleaseRadarCore/Store/StoreMigrations.swift` | `6fad7835211cace656e854aa0249f8775280a6dd` |
+| `ReleaseRadarTests/StoreAcceptanceTests.swift` | `87d5ee313570069c6a5e237cf5b91e2aa10935e9` |
+| `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift` | `d5d2bd7411bf7b10892b93ee57f62cc76c47492a` |
+
+Read-only verification command:
+
+```bash
+set -euo pipefail
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "87d5ee313570069c6a5e237cf5b91e2aa10935e9"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/StoreAcceptanceTests.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard ReleaseRadarCore/Models/TicketTaskModels.swift)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+```
+
+If any retained blob differs, this amendment does not authorize recovery
+implementation. A fresh diagnostic/recovery brief must explain the divergence
+and receive new independent review.
+
+### Failure-to-root-cause matrix
+
+| Failing identifier | Required classification | Root cause | Authorized correction |
+| --- | --- | --- | --- |
+| `StoreAcceptanceTests/testExactVersionElevenFixtureMigratesToVersionTwelveWithoutInference()` | Required test/harness defect | The seeded v11 graph inserted `plan_legacy_continuation = 1`, which the accepted v11 trigger rejects because direct continuation grants are migration-only. | Seed representative v11 rows with omitted/default `plan_legacy_continuation` or explicit `0` only; add a seed assertion that no raw-seeded v11 row has nonzero continuation. |
+| `StoreAcceptanceTests/testVersionTwelveMigrationFailureRollsBackToExactVersionElevenStateAndRecovers()` | Required test/harness defect | Same invalid v11 continuation seed occurs before the late-v12 collision path is exercised. | Use the corrected v11 seed before injecting the late-v12 trigger collision. |
+| `StoreAcceptanceTests/testExactVersionTenFixtureMigratesToVersionElevenWithoutInference()` | Required test defect | Stale schema-11 assertion after opening the current store; Task 2B current schema is v12. | Change current-store post-open expectations and wording to schema 12/current while preserving v10 semantic snapshot assertions. |
+| `StoreAcceptanceTests/testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit()` | Required test defect | Stale schema-11 assertion after relaunching through current migrations. | Expect schema 12 for the live database and keep the pre-migration snapshot version expectation unchanged. |
+| `StoreAcceptanceTests/testVersionElevenManifestRejectsMissingOrCounterfeitPlanningObjects()` | Required harness defect | `makeVersionElevenDatabaseURL()` opens `DeliveryStore`, which migrates the database to v12 before the helper asserts v11. | Make the helper return a verified unopened schema-v11 fixture copy and never open `DeliveryStore` inside that helper. |
+| `StoreAcceptanceTests/testVersionElevenMigrationFailureRollsBackToExactVersionTenStateAndRecovers()` | Required test defect | Stale schema-11 assertion after recovering through the current migration path. | Expect schema 12 after successful recovery and relaunch while preserving exact v10 snapshot equality. |
+| `StoreAcceptanceTests/testVersionFourMigrationBackfillsOnlyUnambiguousActivePhase()` | Required harness defect | Downgrade helper removes v11 objects only; v12 task tables remain and collide when current migration reruns. | Drop v12 task triggers, indexes, and tables before removing v11 schema and lowering `user_version`; expect final schema 12. |
+| `StoreAcceptanceTests/testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity()` | Required harness defect | Same v12 leftover collision; final schema expectation is also stale. | Use the expanded downgrade helper and expect final schema 12 while preserving v7 snapshot assertions. |
+| `StoreAcceptanceTests/testVersionNineAlertRulesMigrateExactlyAndOwnerChangesAuditOnce()` | Required harness defect | Same v12 leftover collision; final schema expectation is also stale. | Use the expanded downgrade helper and expect final schema 12 while preserving alert-rule and audit assertions. |
+| `StoreAcceptanceTests/testVersionNineMigratesToVersionTenWithExactlyOneLifecycleSingleton()` | Required harness defect | Same v12 leftover collision; final schema expectation is also stale. | Use the expanded downgrade helper and expect final schema 12 while preserving lifecycle singleton assertions. |
+| `StoreAcceptanceTests/testVersionTenMissingLifecycleSingletonIsUnavailableAndRecoverable()` | Required test defect | Unavailable/recovery message and database-version assertion still describe schema 11 after current schema has advanced to 12. | Update the failure message and post-failure original database version expectation to schema 12 while preserving missing-singleton recovery assertions. |
+| `StoreAcceptanceTests/testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects()` | Required harness defect | The counterfeit helper rewrites `sqlite_schema`/`sqlite_master` directly; SQLite rejects catalog mutation. | Replace direct catalog rewriting with supported SQLite DDL reconstruction that creates missing/counterfeit objects through ordinary `DROP`, `ALTER TABLE`, `CREATE TABLE`, `CREATE INDEX`, and `CREATE TRIGGER` statements only. |
+| `StoreAcceptanceTests/testVersionTwelveTaskSchemaEnforcesCompositeOwnershipAndInvariants()` | Required test defect | The test expects a successful duplicate label in the same `(project_id, ticket_id)` ownership scope even though stable label uniqueness is required. | Make the successful historical/active task use a distinct label, then make the duplicate-label probe reuse an existing label with `expectSuccess: false`. |
+
+Failure counts for this recovery: Required product implementation defects
+currently identified: `0`. Required test/harness/recovery defects:
+`13` failing identifiers across `6` correction/root-cause categories:
+v11 continuation seeding, stale current-version assertions, schema-v11 fixture
+helper construction, legacy downgrade cleanup, supported-SQLite counterfeit
+manifest setup, and task-label uniqueness probing. Optional: `0`.
+Out-of-scope: `0`.
+
+No product defect is currently identified from the GREEN failure evidence.
+Product correctness remains unapproved because the accepted GREEN and
+regression evidence do not yet exist.
+
+### Authorized recovery writer scope
+
+After the pre-resumption gate and independent GO dispositions below, exactly
+one fresh recovery writer may modify only:
+
+- `ReleaseRadarTests/StoreAcceptanceTests.swift`
+
+No recovery writer may modify `ReleaseRadarCore/Models/TicketTaskModels.swift`,
+`ReleaseRadarCore/Store/DeliveryStore.swift`,
+`ReleaseRadarCore/Store/StoreMigrations.swift`,
+`ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`, fixtures,
+project files, entitlements, signing configuration, package configuration,
+scripts, generated result bundles, `/tmp` evidence, owner state, Release Radar
+state, or external services unless a fresh reviewed correction brief supersedes
+this amendment and names the exact additional file and reason.
+
+### Exact recovery implementation requirements
+
+Apply these corrections in `ReleaseRadarTests/StoreAcceptanceTests.swift` only.
+
+1. Correct the representative v11 seed.
+   - In `seedCompleteVersionElevenGraph(_:)`, remove
+     `plan_legacy_continuation` from the raw `INSERT INTO tickets` column list
+     and remove the continuation values, or keep the column and set every
+     value to `0`.
+   - Prefer omitting the column so the v11 default is exercised.
+   - Add this assertion immediately after the seed script:
+
+     ```swift
+     XCTAssertEqual(
+         try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE plan_legacy_continuation <> 0"),
+         0
+     )
+     ```
+
+   - Preserve v10-to-v11 migration tests that legitimately expect continuation
+     rows created by migration. Do not insert continuation `1` directly into a
+     schema-v11 fixture.
+
+2. Correct the task-label uniqueness probe.
+   - In `testVersionTwelveTaskSchemaEnforcesCompositeOwnershipAndInvariants`,
+     change the successful `task-3` label from `"A"` to `"A2"`.
+   - Change the duplicate-label probe `task-0` label from `"A2"` to `"A"` and
+     keep `expectSuccess: false`.
+   - Keep the active-order assertion as `"task-3,task-1"` because label
+     `"A2"` sorts before `"B"` under BINARY collation and equal `sort_order`.
+
+3. Correct the unopened schema-v11 fixture helper.
+   - Replace `makeVersionElevenDatabaseURL()` with a helper that returns
+     `try copyVerifiedVersionElevenFixture()`.
+   - Do not instantiate `DeliveryStore` inside `makeVersionElevenDatabaseURL()`.
+   - Preserve explicit unopened fixture v11 expectations in helpers and
+     manifest tests where no current-store migration has run.
+
+4. Correct the legacy downgrade helper.
+   - Expand `removeVersionElevenSchema(_:)` or rename it to
+     `removeCurrentSchemaAfterVersionTen(_:)`.
+   - Before dropping v11 objects, drop v12 objects in dependency-safe order:
+
+     ```sql
+     DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
+     DROP TRIGGER IF EXISTS ticket_task_plans_reject_ticket_delete;
+     DROP TRIGGER IF EXISTS ticket_tasks_reject_delete;
+     DROP TRIGGER IF EXISTS ticket_task_plans_reject_delete;
+     DROP TRIGGER IF EXISTS ticket_tasks_reject_label_update;
+     DROP TRIGGER IF EXISTS ticket_tasks_reject_identity_update;
+     DROP INDEX IF EXISTS ticket_tasks_active_order_index;
+     DROP INDEX IF EXISTS ticket_tasks_label_unique;
+     DROP INDEX IF EXISTS ticket_task_plans_ticket_unique;
+     DROP TABLE IF EXISTS ticket_tasks;
+     DROP TABLE IF EXISTS ticket_task_plans;
+     ```
+
+   - Then perform the existing v11 drops. Use `IF EXISTS` for v11 drops where
+     the test setup can validly start from more than one legacy shape.
+   - Update call sites if the helper is renamed.
+
+5. Correct stale current-version assertions and messages.
+   - Expectations after opening or reopening `DeliveryStore` on the current
+     schema must expect `PRAGMA user_version = 12`.
+   - Update at least these current-store assertions/messages:
+     `testExactVersionTenFixtureMigratesToVersionElevenWithoutInference`,
+     `testVersionElevenMigrationFailureRollsBackToExactVersionTenStateAndRecovers`,
+     `testVersionFourMigrationBackfillsOnlyUnambiguousActivePhase`,
+     `testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity`,
+     `testVersionNineAlertRulesMigrateExactlyAndOwnerChangesAuditOnce`,
+     `testVersionNineMigratesToVersionTenWithExactlyOneLifecycleSingleton`,
+     `testVersionTenMissingLifecycleSingletonIsUnavailableAndRecoverable`, and
+     `testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit`.
+   - Do not change explicit unopened fixture expectations that intentionally
+     prove a copied schema-v10 or schema-v11 fixture remains at its pinned
+     version before migration.
+
+6. Replace direct SQLite catalog rewriting.
+   - Delete or stop using `rewriteSchemaSQL`.
+   - Do not use `PRAGMA writable_schema`, `UPDATE sqlite_schema`, `UPDATE
+     sqlite_master`, `DELETE FROM sqlite_schema`, `DELETE FROM sqlite_master`,
+     or any equivalent direct catalog mutation.
+   - Create missing and counterfeit v12 manifest cases with supported SQLite
+     DDL only.
+   - For missing-object cases, ordinary `DROP TRIGGER IF EXISTS`, `DROP INDEX
+     IF EXISTS`, and dependency-aware `DROP TABLE IF EXISTS` setup is allowed.
+   - For counterfeit table cases, use one of these supported strategies:
+     - start from a fresh schema-v11 fixture copy, apply a test-local v12 DDL
+       script that creates all required v12 objects except the deliberately
+       counterfeit table, set `PRAGMA user_version = 12`, and reopen
+       `DeliveryStore`; or
+     - on an empty v12 database, disable foreign keys for setup, drop dependent
+       v12 triggers/indexes, drop the target empty table and dependent empty
+       child table when required, recreate the target table with counterfeit
+       SQL, recreate enough dependent required v12 objects with ordinary
+       `CREATE` statements so the only intended mismatch is the counterfeit
+       SQL, re-enable foreign keys, and reopen `DeliveryStore`.
+   - For counterfeit trigger cases, use ordinary `DROP TRIGGER IF EXISTS` plus
+     `CREATE TRIGGER` with a wrong body that still parses.
+   - Every counterfeit setup must prove the target object exists before reopen
+     and must fail closed through `DeliveryStore.availability`, not by throwing
+     during harness setup.
+
+### Corrected test strategy
+
+Do not rerun RED. The retained RED is valid and consumed.
+
+After this amendment has been reviewed, committed, pushed, and the committed
+planning gate below has passed exactly once, the recovery writer must perform
+one implementation edit pass and then run exactly one successor GREEN-recovery
+Store fence from a fresh mode-700 parent. This is not a retry of the original
+GREEN; it is a new recovery-authorized GREEN fence with the original failed
+GREEN retained as historical evidence.
+
+If the successor GREEN-recovery Store fence fails for any reason, stop before
+regression, `git diff --check`, review, staging, checkpoint, retry, or Task 3.
+The failure must be diagnosed in a new reviewed recovery artifact.
+
+If and only if the successor GREEN-recovery Store fence passes, run exactly one
+combined Store plus plugin-lifecycle regression fence from a separate fresh
+mode-700 parent. If that regression fails for any reason, stop before
+postimplementation review, staging, checkpoint, retry, or Task 3.
+
+### Successor GREEN-recovery Store fence
+
+Run exactly once after the authorized `StoreAcceptanceTests.swift` recovery
+edit. Use a fresh parent path and verify it is mode `700`.
+
+```bash
+set -euo pipefail
+umask 077
+RR_TASK2B_RECOVERY_GREEN_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-green-recovery.XXXXXX)"
+chmod 700 "$RR_TASK2B_RECOVERY_GREEN_PARENT"
+test "$(/usr/bin/stat -f '%Lp' "$RR_TASK2B_RECOVERY_GREEN_PARENT")" = "700"
+RR_TASK2B_RECOVERY_GREEN_DERIVED="$RR_TASK2B_RECOVERY_GREEN_PARENT/DerivedData"
+RR_TASK2B_RECOVERY_GREEN_RESULT="$RR_TASK2B_RECOVERY_GREEN_PARENT/store-green-recovery.xcresult"
+RR_TASK2B_RECOVERY_GREEN_LOG="$RR_TASK2B_RECOVERY_GREEN_PARENT/store-green-recovery.log"
+RR_TASK2B_RECOVERY_GREEN_SUMMARY="$RR_TASK2B_RECOVERY_GREEN_PARENT/store-green-recovery-summary.json"
+RR_TASK2B_RECOVERY_GREEN_TESTS="$RR_TASK2B_RECOVERY_GREEN_PARENT/store-green-recovery-tests.json"
+RR_TASK2B_SECRET_MARKER='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+for RR_TASK2B_ABSENT in \
+  "$RR_TASK2B_RECOVERY_GREEN_DERIVED" \
+  "$RR_TASK2B_RECOVERY_GREEN_RESULT" \
+  "$RR_TASK2B_RECOVERY_GREEN_LOG" \
+  "$RR_TASK2B_RECOVERY_GREEN_SUMMARY" \
+  "$RR_TASK2B_RECOVERY_GREEN_TESTS"; do
+  test ! -e "$RR_TASK2B_ABSENT"
+  test ! -L "$RR_TASK2B_ABSENT"
+done
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_TASK2B_RECOVERY_GREEN_DERIVED" \
+  -resultBundlePath "$RR_TASK2B_RECOVERY_GREEN_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests >"$RR_TASK2B_RECOVERY_GREEN_LOG" 2>&1
+RR_TASK2B_RECOVERY_GREEN_STATUS=$?
+set -e
+test -f "$RR_TASK2B_RECOVERY_GREEN_LOG"
+test ! -L "$RR_TASK2B_RECOVERY_GREEN_LOG"
+test "$(/usr/bin/stat -f '%HT' "$RR_TASK2B_RECOVERY_GREEN_LOG")" = "Regular File"
+test "$(/usr/bin/stat -f '%Lp' "$RR_TASK2B_RECOVERY_GREEN_LOG")" = "600"
+test "$(dirname "$(realpath "$RR_TASK2B_RECOVERY_GREEN_LOG")")" = "$(realpath "$RR_TASK2B_RECOVERY_GREEN_PARENT")"
+RR_TASK2B_RECOVERY_GREEN_LOG_SCAN_STATUS=0
+rg --quiet --pcre2 "$RR_TASK2B_SECRET_MARKER" "$RR_TASK2B_RECOVERY_GREEN_LOG" >/dev/null 2>&1 || \
+  RR_TASK2B_RECOVERY_GREEN_LOG_SCAN_STATUS=$?
+test "$RR_TASK2B_RECOVERY_GREEN_LOG_SCAN_STATUS" = "1"
+test "$RR_TASK2B_RECOVERY_GREEN_STATUS" = "0"
+test -d "$RR_TASK2B_RECOVERY_GREEN_RESULT"
+test ! -L "$RR_TASK2B_RECOVERY_GREEN_RESULT"
+test "$(/usr/bin/stat -f '%HT' "$RR_TASK2B_RECOVERY_GREEN_RESULT")" = "Directory"
+test "$(dirname "$(realpath "$RR_TASK2B_RECOVERY_GREEN_RESULT")")" = "$(realpath "$RR_TASK2B_RECOVERY_GREEN_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_TASK2B_RECOVERY_GREEN_RESULT" --compact >"$RR_TASK2B_RECOVERY_GREEN_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_TASK2B_RECOVERY_GREEN_RESULT" --compact >"$RR_TASK2B_RECOVERY_GREEN_TESTS"
+)
+for RR_TASK2B_RESULT_FILE in \
+  "$RR_TASK2B_RECOVERY_GREEN_LOG" \
+  "$RR_TASK2B_RECOVERY_GREEN_SUMMARY" \
+  "$RR_TASK2B_RECOVERY_GREEN_TESTS"; do
+  test -f "$RR_TASK2B_RESULT_FILE"
+  test ! -L "$RR_TASK2B_RESULT_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_TASK2B_RESULT_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_TASK2B_RESULT_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_TASK2B_RESULT_FILE")")" = "$(realpath "$RR_TASK2B_RECOVERY_GREEN_PARENT")"
+done
+RR_TASK2B_RECOVERY_GREEN_SCAN_STATUS=0
+rg --quiet --pcre2 "$RR_TASK2B_SECRET_MARKER" \
+  "$RR_TASK2B_RECOVERY_GREEN_LOG" "$RR_TASK2B_RECOVERY_GREEN_SUMMARY" "$RR_TASK2B_RECOVERY_GREEN_TESTS" >/dev/null 2>&1 || \
+  RR_TASK2B_RECOVERY_GREEN_SCAN_STATUS=$?
+test "$RR_TASK2B_RECOVERY_GREEN_SCAN_STATUS" = "1"
+python3 - "$RR_TASK2B_RECOVERY_GREEN_SUMMARY" "$RR_TASK2B_RECOVERY_GREEN_TESTS" <<'PYTHON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    summary = json.load(source)
+with open(sys.argv[2], encoding="utf-8") as source:
+    document = json.load(source)
+
+expected = {
+    "result": "Passed",
+    "totalTestCount": 43,
+    "passedTests": 43,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected summary field {key}: {summary.get(key)!r}")
+if summary.get("testFailures") != []:
+    raise SystemExit("testFailures must be empty")
+
+cases = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        for child in value.values():
+            visit(child)
+    elif isinstance(value, list):
+        for child in value:
+            visit(child)
+
+visit(document)
+if len(cases) != 43 or len({identifier for identifier, _ in cases}) != 43:
+    raise SystemExit("expected exactly 43 unique Store test cases")
+if any(result != "Passed" for _, result in cases):
+    raise SystemExit("every Store test case must pass")
+store = [identifier for identifier, _ in cases if identifier.startswith("StoreAcceptanceTests/")]
+if len(store) != 43 or len(store) != len(cases):
+    raise SystemExit("unexpected suite in Store-only result")
+PYTHON
+```
+
+Expected: exactly `43/43` Store tests pass, with zero failures, zero skips,
+zero expected failures, zero failure records, mode-`600` retained summary/test
+files, and privacy scan status `1` for no secret/private-key matches. The
+coordinator may record only sanitized scalar facts.
+
+### Combined Store plus plugin-lifecycle regression fence
+
+Run exactly once only after the successor GREEN-recovery Store fence passes.
+Use a new mode-700 parent distinct from RED, original GREEN, and recovery
+GREEN evidence.
+
+```bash
+set -euo pipefail
+umask 077
+RR_TASK2B_RECOVERY_REGRESSION_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-regression-recovery.XXXXXX)"
+chmod 700 "$RR_TASK2B_RECOVERY_REGRESSION_PARENT"
+test "$(/usr/bin/stat -f '%Lp' "$RR_TASK2B_RECOVERY_REGRESSION_PARENT")" = "700"
+RR_TASK2B_RECOVERY_REGRESSION_DERIVED="$RR_TASK2B_RECOVERY_REGRESSION_PARENT/DerivedData"
+RR_TASK2B_RECOVERY_REGRESSION_RESULT="$RR_TASK2B_RECOVERY_REGRESSION_PARENT/regression-recovery.xcresult"
+RR_TASK2B_RECOVERY_REGRESSION_LOG="$RR_TASK2B_RECOVERY_REGRESSION_PARENT/regression-recovery.log"
+RR_TASK2B_RECOVERY_REGRESSION_SUMMARY="$RR_TASK2B_RECOVERY_REGRESSION_PARENT/regression-recovery-summary.json"
+RR_TASK2B_RECOVERY_REGRESSION_TESTS="$RR_TASK2B_RECOVERY_REGRESSION_PARENT/regression-recovery-tests.json"
+RR_TASK2B_SECRET_MARKER='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+for RR_TASK2B_ABSENT in \
+  "$RR_TASK2B_RECOVERY_REGRESSION_DERIVED" \
+  "$RR_TASK2B_RECOVERY_REGRESSION_RESULT" \
+  "$RR_TASK2B_RECOVERY_REGRESSION_LOG" \
+  "$RR_TASK2B_RECOVERY_REGRESSION_SUMMARY" \
+  "$RR_TASK2B_RECOVERY_REGRESSION_TESTS"; do
+  test ! -e "$RR_TASK2B_ABSENT"
+  test ! -L "$RR_TASK2B_ABSENT"
+done
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_TASK2B_RECOVERY_REGRESSION_DERIVED" \
+  -resultBundlePath "$RR_TASK2B_RECOVERY_REGRESSION_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests \
+  -only-testing:ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests >"$RR_TASK2B_RECOVERY_REGRESSION_LOG" 2>&1
+RR_TASK2B_RECOVERY_REGRESSION_STATUS=$?
+set -e
+test -f "$RR_TASK2B_RECOVERY_REGRESSION_LOG"
+test ! -L "$RR_TASK2B_RECOVERY_REGRESSION_LOG"
+test "$(/usr/bin/stat -f '%HT' "$RR_TASK2B_RECOVERY_REGRESSION_LOG")" = "Regular File"
+test "$(/usr/bin/stat -f '%Lp' "$RR_TASK2B_RECOVERY_REGRESSION_LOG")" = "600"
+test "$(dirname "$(realpath "$RR_TASK2B_RECOVERY_REGRESSION_LOG")")" = "$(realpath "$RR_TASK2B_RECOVERY_REGRESSION_PARENT")"
+RR_TASK2B_RECOVERY_REGRESSION_LOG_SCAN_STATUS=0
+rg --quiet --pcre2 "$RR_TASK2B_SECRET_MARKER" "$RR_TASK2B_RECOVERY_REGRESSION_LOG" >/dev/null 2>&1 || \
+  RR_TASK2B_RECOVERY_REGRESSION_LOG_SCAN_STATUS=$?
+test "$RR_TASK2B_RECOVERY_REGRESSION_LOG_SCAN_STATUS" = "1"
+test "$RR_TASK2B_RECOVERY_REGRESSION_STATUS" = "0"
+test -d "$RR_TASK2B_RECOVERY_REGRESSION_RESULT"
+test ! -L "$RR_TASK2B_RECOVERY_REGRESSION_RESULT"
+test "$(/usr/bin/stat -f '%HT' "$RR_TASK2B_RECOVERY_REGRESSION_RESULT")" = "Directory"
+test "$(dirname "$(realpath "$RR_TASK2B_RECOVERY_REGRESSION_RESULT")")" = "$(realpath "$RR_TASK2B_RECOVERY_REGRESSION_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_TASK2B_RECOVERY_REGRESSION_RESULT" --compact >"$RR_TASK2B_RECOVERY_REGRESSION_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_TASK2B_RECOVERY_REGRESSION_RESULT" --compact >"$RR_TASK2B_RECOVERY_REGRESSION_TESTS"
+)
+for RR_TASK2B_RESULT_FILE in \
+  "$RR_TASK2B_RECOVERY_REGRESSION_LOG" \
+  "$RR_TASK2B_RECOVERY_REGRESSION_SUMMARY" \
+  "$RR_TASK2B_RECOVERY_REGRESSION_TESTS"; do
+  test -f "$RR_TASK2B_RESULT_FILE"
+  test ! -L "$RR_TASK2B_RESULT_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_TASK2B_RESULT_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_TASK2B_RESULT_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_TASK2B_RESULT_FILE")")" = "$(realpath "$RR_TASK2B_RECOVERY_REGRESSION_PARENT")"
+done
+RR_TASK2B_RECOVERY_REGRESSION_SCAN_STATUS=0
+rg --quiet --pcre2 "$RR_TASK2B_SECRET_MARKER" \
+  "$RR_TASK2B_RECOVERY_REGRESSION_LOG" "$RR_TASK2B_RECOVERY_REGRESSION_SUMMARY" "$RR_TASK2B_RECOVERY_REGRESSION_TESTS" >/dev/null 2>&1 || \
+  RR_TASK2B_RECOVERY_REGRESSION_SCAN_STATUS=$?
+test "$RR_TASK2B_RECOVERY_REGRESSION_SCAN_STATUS" = "1"
+python3 - "$RR_TASK2B_RECOVERY_REGRESSION_SUMMARY" "$RR_TASK2B_RECOVERY_REGRESSION_TESTS" <<'PYTHON'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    summary = json.load(source)
+with open(sys.argv[2], encoding="utf-8") as source:
+    document = json.load(source)
+
+expected = {
+    "result": "Passed",
+    "totalTestCount": 64,
+    "passedTests": 64,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected summary field {key}: {summary.get(key)!r}")
+if summary.get("testFailures") != []:
+    raise SystemExit("testFailures must be empty")
+
+cases = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        for child in value.values():
+            visit(child)
+    elif isinstance(value, list):
+        for child in value:
+            visit(child)
+
+visit(document)
+if len(cases) != 64 or len({identifier for identifier, _ in cases}) != 64:
+    raise SystemExit("expected exactly 64 unique selected test cases")
+if any(result != "Passed" for _, result in cases):
+    raise SystemExit("every selected test case must pass")
+store = [identifier for identifier, _ in cases if identifier.startswith("StoreAcceptanceTests/")]
+plugin = [identifier for identifier, _ in cases if identifier.startswith("CodexPluginLifecycleAcceptanceTests/")]
+if len(store) != 43 or len(plugin) != 21 or len(store) + len(plugin) != len(cases):
+    raise SystemExit("unexpected selected suite split")
+PYTHON
+```
+
+Expected: exactly `64/64` selected tests pass, with exact `43/21`
+Store/plugin split, zero failures, zero skips, zero expected failures, zero
+failure records, mode-`600` retained summary/test files, and privacy scan
+status `1` for no secret/private-key matches. The coordinator may record only
+sanitized scalar facts.
+
+### Pre-resumption planning checkpoint gate
+
+Before any recovery edit, build, test, executable run, staging, commit, push,
+or owner/external action, fresh independent Architecture, QA/Test, TPM,
+Delivery Management, and Security/Privacy reviewers must each return GO with
+Required `0` on this amended brief and registry entry. Delivery Management
+must additionally review the actual coordinator ledger literal hash bindings
+and exact checkpoint inventory before staging.
+
+After final exact-hash reviews and before staging, the coordinator must update
+`docs/delivery/progress.md` with reviewer dispositions and exactly one literal
+field for each of these two non-circular bindings:
+
+```text
+- RR-R10 Task 2B recovery final reviewed brief SHA-256: `<64 lowercase hex>`
+- RR-R10 Task 2B recovery final reviewed registry SHA-256: `<64 lowercase hex>`
+```
+
+The two ledger fields must bind the reviewed current worktree bytes of this
+brief and `docs/delivery/task-briefs/SHA256SUMS`. This brief must not contain
+its own final SHA-256 as a required literal because that would be
+self-referential.
+
+Run this precommit gate exactly once after the coordinator ledger update and
+before staging:
+
+```bash
+set -euo pipefail
+RR_TASK2B_BASE=94f89409631b345d1058dd16a85aaae2f8e26885
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git rev-parse HEAD)" = "$RR_TASK2B_BASE"
+test "$(git rev-parse @{u})" = "$RR_TASK2B_BASE"
+test "$(git ls-remote origin refs/heads/codex/release-radar-mvp | awk '{print $1}')" = "$RR_TASK2B_BASE"
+test "$(git rev-list --left-right --count HEAD...@{u} | tr '\t' ' ')" = "0 0"
+git diff --cached --exit-code
+
+RR_TASK2B_LEDGER_SHAS="$(python3 - "$RR_TASK2B_LEDGER" <<'PYTHON'
+import re
+import sys
+
+ledger = open(sys.argv[1], encoding="utf-8").read()
+patterns = {
+    "brief": r"^- RR-R10 Task 2B recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+values = []
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger, flags=re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected exactly one {name} SHA ledger field, found {len(matches)}")
+    values.append(matches[0])
+print(" ".join(values))
+PYTHON
+)"
+RR_TASK2B_LEDGER_BRIEF_SHA="${RR_TASK2B_LEDGER_SHAS%% *}"
+RR_TASK2B_LEDGER_REGISTRY_SHA="${RR_TASK2B_LEDGER_SHAS##* }"
+test "$RR_TASK2B_LEDGER_BRIEF_SHA" = "$(shasum -a 256 "$RR_TASK2B_BRIEF" | awk '{print $1}')"
+test "$RR_TASK2B_LEDGER_REGISTRY_SHA" = "$(shasum -a 256 "$RR_TASK2B_REGISTRY" | awk '{print $1}')"
+test "$(awk -v path="$RR_TASK2B_BRIEF" '$2 == path { count += 1 } END { print count + 0 }' "$RR_TASK2B_REGISTRY")" = "1"
+shasum -a 256 -c "$RR_TASK2B_REGISTRY"
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "87d5ee313570069c6a5e237cf5b91e2aa10935e9"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift docs/delivery/progress.md docs/delivery/task-briefs/SHA256SUMS docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+```
+
+The planning checkpoint commit may stage exactly this brief,
+`docs/delivery/task-briefs/SHA256SUMS`, and `docs/delivery/progress.md`.
+The five retained implementation paths must remain unstaged and must still
+match the retained blob inventory.
+
+After staging, run this exact checkpoint assembly gate before committing:
+
+```bash
+set -euo pipefail
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git diff --cached --name-only | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER" | LC_ALL=C sort)"
+git diff --exit-code -- "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER"
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "87d5ee313570069c6a5e237cf5b91e2aa10935e9"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+```
+
+After the planning commit, push to `origin/codex/release-radar-mvp`. Then run
+this committed post-push recovery gate exactly once. This gate verifies the
+committed bytes without altering the worktree.
+
+```bash
+set -euo pipefail
+RR_TASK2B_BASE=94f89409631b345d1058dd16a85aaae2f8e26885
+RR_TASK2B_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_TASK2B_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2B_LEDGER=docs/delivery/progress.md
+
+test "$(git rev-parse HEAD^)" = "$RR_TASK2B_BASE"
+test "$(git diff-tree --no-commit-id --name-only -r HEAD | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER" | LC_ALL=C sort)"
+test "$(git rev-parse HEAD)" = "$(git rev-parse @{u})"
+test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/codex/release-radar-mvp | awk '{print $1}')"
+test "$(git rev-list --left-right --count HEAD...@{u} | tr '\t' ' ')" = "0 0"
+
+python3 - "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER" <<'PYTHON'
+import hashlib
+import re
+import subprocess
+import sys
+
+brief_path, registry_path, ledger_path = sys.argv[1:4]
+
+def committed_text(path):
+    return subprocess.check_output(["git", "show", f"HEAD:{path}"], text=True)
+
+def committed_bytes(path):
+    return subprocess.check_output(["git", "show", f"HEAD:{path}"])
+
+ledger = committed_text(ledger_path)
+patterns = {
+    "brief": r"^- RR-R10 Task 2B recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+ledger_values = {}
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger, flags=re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected exactly one committed {name} SHA ledger field, found {len(matches)}")
+    ledger_values[name] = matches[0]
+
+if hashlib.sha256(committed_bytes(brief_path)).hexdigest() != ledger_values["brief"]:
+    raise SystemExit("committed brief hash does not match committed ledger literal")
+if hashlib.sha256(committed_bytes(registry_path)).hexdigest() != ledger_values["registry"]:
+    raise SystemExit("committed registry hash does not match committed ledger literal")
+
+registry = committed_text(registry_path)
+task2b_count = 0
+for line_number, line in enumerate(registry.splitlines(), start=1):
+    if not line:
+        continue
+    parts = line.split("  ", 1)
+    if len(parts) != 2:
+        raise SystemExit(f"registry line {line_number} is not two-space separated")
+    digest, path = parts
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise SystemExit(f"registry line {line_number} has invalid digest")
+    actual = hashlib.sha256(committed_bytes(path)).hexdigest()
+    if actual != digest:
+        raise SystemExit(f"registry mismatch for {path}")
+    if path == brief_path:
+        task2b_count += 1
+if task2b_count != 1:
+    raise SystemExit(f"expected exactly one Task 2B registry entry, found {task2b_count}")
+PYTHON
+
+git diff --exit-code -- "$RR_TASK2B_BRIEF" "$RR_TASK2B_REGISTRY" "$RR_TASK2B_LEDGER"
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "87d5ee313570069c6a5e237cf5b91e2aa10935e9"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git diff --cached --name-only)" = ""
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+```
+
+Only after this committed recovery planning gate passes may the coordinator
+release the fresh recovery writer for the single-file test-harness edit and
+the one-time successor GREEN-recovery Store fence. No test, build, executable
+run, regression, diff-check, implementation review, implementation staging,
+implementation commit, or Task 3 release is permitted before this committed
+recovery gate passes.
+
+### Postimplementation boundary and required reviews
+
+After the authorized recovery writer completes the single-file edit and the
+two one-time fences above pass, no further product or test edit is authorized.
+Run `git diff --check` once, verify the schema-v10/schema-v11 fixture manifests
+remain byte-identical, and preserve all `/tmp` evidence. Then obtain fresh
+independent Code Review, QA/Test, Architecture, Security/Privacy, TPM, and
+Delivery Management GO with Required `0`.
+
+The postimplementation checkpoint may stage and commit only:
+
+- the five Task 2B implementation paths named in this brief;
+- coordinator-owned `docs/delivery/progress.md`.
+
+It must not stage this planning amendment again unless the coordinator makes a
+new reviewed planning correction. It must not stage raw logs, raw result
+bundles, temporary summaries, fixtures, scripts, project files, owner data,
+Release Radar state, or external-service artifacts.
+
+Task 3, live task-plan creation, RR-R10 command behavior, owner UI, projection,
+notification, bridge/MCP behavior, and all external mutations remain closed
+until the postimplementation checkpoint is committed, pushed, and verified at
+exact local/upstream/live remote equality with ahead/behind `0/0`.
+
+### Activity, audit, privacy, and evidence retention
+
+This recovery authorizes no production activity or audit event. It authorizes
+only repository planning documentation, later single-file test-harness repair,
+and local test evidence. No Release Radar SQLite write, direct SQLite owner
+database access, owner bundle launch, bridge launch, notification dispatch,
+Pushover access, provider access, or credential inspection is authorized.
+
+Raw logs, raw result bundles, raw extracted JSON, owner data, secret matches,
+private-key matches, and matching lines must not be copied into durable
+artifacts. Durable summaries may contain only sanitized scalar facts: command
+identity, paths, modes, sizes, SHA-256 hashes, result status, suite
+cardinality, supported failure counts, failing identifiers, root-cause
+classification, role-review dispositions, and scan statuses.
+
+Temporary evidence retained and not deleted:
+
+- `/tmp/release-radar-rr-r10-task2b-red.ZvNHEi`;
+- `/tmp/release-radar-rr-r10-task2b-green.YczYQm`.
+
+Future recovery GREEN and regression evidence must also remain under fresh
+mode-700 `/tmp` parents, must not be staged, and must not be deleted without
+explicit owner authorization.
+
+### Recovery acceptance criteria
+
+- This amended brief and root registry are reviewed by Architecture, QA/Test,
+  TPM, Delivery Management, and Security/Privacy with GO/Required `0`.
+- Delivery Management reviews the actual ledger literal hash bindings and
+  checkpoint inventory before staging.
+- Coordinator `progress.md` contains exactly one final reviewed brief SHA
+  field and exactly one final reviewed registry SHA field, and both literal
+  values match the actual current worktree hashes before staging and the
+  committed hashes after push.
+- The planning checkpoint stages exactly this brief, the task-brief registry,
+  and coordinator `progress.md`, while the five retained implementation paths
+  remain unstaged and match the blob inventory above.
+- The committed recovery planning gate passes exactly once after push and
+  remote equality proof, with parent exactly
+  `94f89409631b345d1058dd16a85aaae2f8e26885`, commit inventory exactly
+  brief/registry/progress, full committed registry verification, clean doc
+  worktree, and exact retained implementation inventory still unstaged.
+- Recovery implementation modifies only
+  `ReleaseRadarTests/StoreAcceptanceTests.swift`.
+- The v11 seed no longer performs direct continuation grants.
+- The duplicate-label test probes stable label reuse as a rejection, not as a
+  successful insert.
+- The schema-v11 helper returns an unopened verified fixture copy.
+- Legacy downgrade setup removes v12 task objects before lowering schema
+  versions.
+- Current-store migration tests expect schema 12 after `DeliveryStore` opens
+  or relaunches; unopened pinned fixture expectations remain v10/v11.
+- Counterfeit manifest tests use supported SQLite DDL only and never rewrite
+  `sqlite_schema` or `sqlite_master`.
+- The successor GREEN-recovery Store fence runs once and passes exactly
+  `43/43`.
+- The combined Store plus plugin-lifecycle regression fence runs once after
+  GREEN-recovery success and passes exactly `64/64` with split `43/21`.
+- Failure at any recovery fence stops work before retry, regression when
+  GREEN failed, diff check, review, staging, checkpoint, or Task 3.
+- Postimplementation independent Code Review, QA/Test, Architecture,
+  Security/Privacy, TPM, and Delivery Management return GO/Required `0`.
+- All RED, failed GREEN, recovery GREEN, and regression evidence remains
+  temporary, retained, unstaged, privacy-scanned before summary, and not
+  deleted.

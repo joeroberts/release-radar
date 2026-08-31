@@ -1047,13 +1047,121 @@ Deliver the signed native macOS MVP described by
 - RR-R10 Task 2B temporary planning evidence: Bash-fence validation directory
   `/tmp/rr-task2b-bash-fences.ADf22R` is temporary, non-authoritative,
   unstaged, untransmitted, retained, and not deleted.
-- Next eligible RR-R10 work: **Stage exactly the final Task 2B brief, root
-  task-brief registry, and this ledger; commit them as the single direct child
-  of `a08c88c5818f5ea6dbb6932fa336b7bd88b88ddd`; push and prove HEAD,
-  upstream, and live remote equality with ahead/behind `0/0` and a clean
-  worktree. Only then run the committed planning gate once and release a fresh
-  serialized Implementer for the one-time RED.** Task 3 remains closed until
-  Task 2B's fully reviewed implementation checkpoint is remote-exact.
+- RR-R10 Task 2B accepted planning checkpoint: commit
+  `94f89409631b345d1058dd16a85aaae2f8e26885` is the single direct child of
+  Task 2A checkpoint `a08c88c5818f5ea6dbb6932fa336b7bd88b88ddd`
+  and contains exactly the final Task 2B brief, root task-brief registry, and
+  this ledger. It was pushed to `origin/codex/release-radar-mvp`; fresh fetch
+  and live `git ls-remote` readback matched HEAD and upstream exactly with
+  ahead/behind `0/0`, and the worktree was clean. A coordinator line-range
+  extraction accidentally truncated the committed planning gate at a
+  continued shell command; it exited `2` after checksum checks and caused no
+  repository, build, test, fixture, owner, Release Radar, or external effect.
+  The exact complete committed fence then ran once, exited `0`, verified all
+  19 registered briefs and the SchemaV11 fixture, and released only the fresh
+  serialized Task 2B Implementer.
+- RR-R10 Task 2B consumed RED evidence: fresh Implementer
+  `/root/task2b_implementer` added only the authorized tests before running the
+  registered RED fence exactly once. It failed only at the expected missing
+  Ticket Task model/audit-scope boundary. The retained parent
+  `/tmp/release-radar-rr-r10-task2b-red.ZvNHEi` is mode `700`; `red.log` is a
+  mode-`600`, 373,840-byte regular file at SHA-256
+  `e2ecbe942744ec8485dabde2653a1f85b422c51b4839d42e52a661429b4f34b9`;
+  `red-sanitized.log` is a mode-`600`, 166,546-byte regular file at SHA-256
+  `a3573c4982544e309afb5b6b7ed0cfc08a0c0f4fa8802a2aa16175485e92d7af`;
+  and `red.xcresult` is retained. The quiet credential/private-key scan status
+  was `1`, meaning no match. RED is consumed and must not rerun.
+- RR-R10 Task 2B retained implementation and failed GREEN: the Implementer
+  created the public Ticket Task models and modified only the four authorized
+  tracked source/test files. The one-time GREEN fence then ran from restricted
+  mode-`700` parent `/tmp/release-radar-rr-r10-task2b-green.YczYQm` and failed,
+  so no retry or regression ran. `store-green.log` is a mode-`600`,
+  449,226-byte regular file at SHA-256
+  `135c9b47b363d29a24e831408bbbf577eb2dfd24d6f899c5bd74c0ade3fa83a6`;
+  `store-green.xcresult` is retained; and the quiet log privacy scan status was
+  `1`. Fresh structured result inspection supports exactly 43 Store tests:
+  30 passed, 13 failed unique identifiers, 0 skipped, and 0 expected failures.
+  It does not support recording 17 failure records or 8 unexpected failures,
+  so those counts are omitted.
+- RR-R10 Task 2B failed identifiers and recovery classification: the exact 13
+  failing identifiers were
+  `testExactVersionElevenFixtureMigratesToVersionTwelveWithoutInference`,
+  `testVersionTwelveMigrationFailureRollsBackToExactVersionElevenStateAndRecovers`,
+  `testExactVersionTenFixtureMigratesToVersionElevenWithoutInference`,
+  `testMigrationSnapshotAndRelaunchPreserveCommittedDeliveryAndAudit`,
+  `testVersionElevenManifestRejectsMissingOrCounterfeitPlanningObjects`,
+  `testVersionElevenMigrationFailureRollsBackToExactVersionTenStateAndRecovers`,
+  `testVersionFourMigrationBackfillsOnlyUnambiguousActivePhase`,
+  `testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity`,
+  `testVersionNineAlertRulesMigrateExactlyAndOwnerChangesAuditOnce`,
+  `testVersionNineMigratesToVersionTenWithExactlyOneLifecycleSingleton`,
+  `testVersionTenMissingLifecycleSingletonIsUnavailableAndRecoverable`,
+  `testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects`, and
+  `testVersionTwelveTaskSchemaEnforcesCompositeOwnershipAndInvariants`.
+  Read-only diagnosis mapped them to six required test/harness categories:
+  invalid schema-v11 continuation seeding, stale current-version assertions,
+  an opened rather than pinned schema-v11 fixture helper, legacy downgrade
+  cleanup that retained schema-v12 objects, unsupported direct SQLite catalog
+  rewriting, and a duplicate-label success oracle. Required product defects
+  identified: `0`. Product correctness remains unapproved pending the
+  successor GREEN and regression.
+- RR-R10 Task 2B retained implementation blobs: the five implementation paths
+  remain unstaged and unchanged at
+  `ReleaseRadarCore/Models/TicketTaskModels.swift`
+  `49f365dd1e074d4d2b716384756e71a3c5fb1ce1`,
+  `ReleaseRadarCore/Store/DeliveryStore.swift`
+  `d930ab18794a959b44cad4293cee24647a1af8f6`,
+  `ReleaseRadarCore/Store/StoreMigrations.swift`
+  `6fad7835211cace656e854aa0249f8775280a6dd`,
+  `ReleaseRadarTests/StoreAcceptanceTests.swift`
+  `87d5ee313570069c6a5e237cf5b91e2aa10935e9`, and
+  `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`
+  `d5d2bd7411bf7b10892b93ee57f62cc76c47492a`.
+- RR-R10 Task 2B GREEN-recovery planning: first fresh recovery Planning agent
+  `/root/task2b_green_recovery_planning` hit model capacity before producing
+  analysis or an artifact and made no change. Replacement Planning agent
+  `/root/task2b_green_recovery_planning_replacement` diagnosed the retained
+  structured result read-only, returned direct-continuation **NO-GO**, and
+  amended the canonical Task 2B brief. Its first amendment at SHA-256
+  `03366abfef47e47f8f8e5b3c17a0502baf4d0232ff87a4b366d881ce6d47520e`
+  with registry SHA-256
+  `3d53db44fa4cef59b0ffd79130ad70210a0282e344cc97ed8d7bf0088960ca2c`
+  received Architecture **GO with Required 0, Optional 1**, QA/Test and
+  Security/Privacy **GO with Required 0**, and TPM **NO-GO with Required 1**
+  because the planning checkpoint did not bind its exact reviewed bytes. The
+  planner added non-circular ledger hash bindings plus precommit, staged, and
+  committed post-push gates and corrected the six-category count.
+- RR-R10 Task 2B recovery final reviewed brief SHA-256: `01a4a13081f2c7f37e800a6be53cc19e471960925acd7fe62cb69c07ad333379`
+- RR-R10 Task 2B recovery final reviewed registry SHA-256: `9ac9eef010404426c000ea36f99a20f7e5f717ce1978c2796c708cdb6feb917d`
+- RR-R10 Task 2B GREEN-recovery exact-hash closure: Architecture reviewer
+  `/root/task2b_arch_review_replacement`, QA/Test verifier
+  `/root/task2b_qa_review_replacement`, TPM reviewer
+  `/root/task2b_tpm_review`, Security/Privacy verifier
+  `/root/task2b_security_review`, and Delivery Management reviewer
+  `/root/task2b_delivery_review_final` each independently reviewed the final
+  amended brief and registry and returned **GO with Required 0, Optional 0,
+  and Out-of-scope 0**. They verified all 13 identifiers and six repair
+  categories; supported SQLite DDL reconstruction with no catalog writes; zero
+  identified product defects without premature product approval; exact
+  retained blobs/evidence; ledger byte bindings; precommit, three-document
+  staging, and post-push gates; fresh single-file successor ownership; no RED
+  rerun or original GREEN retry; one successor GREEN followed only on success
+  by one regression; evidence privacy; and Task 3/no-live-plan closure.
+- RR-R10 Task 2B recovery boundary: the original RED and GREEN are consumed.
+  No RED rerun, original GREEN retry, regression, diff check,
+  postimplementation review, implementation staging, Task 3 release,
+  owner-state access, Release Radar mutation, or external mutation occurred.
+  All RED/GREEN and planning-validation temporary artifacts remain unstaged,
+  untransmitted, retained, and undeleted.
+- Next eligible RR-R10 work: **Run the registered precommit recovery gate once;
+  if it passes, stage exactly the final Task 2B brief, root registry, and this
+  ledger, run the staged assembly gate, commit as the direct child of
+  `94f89409631b345d1058dd16a85aaae2f8e26885`, push, prove exact remote
+  equality, and run the committed post-push gate once. Only then release a
+  fresh recovery writer to edit only
+  `ReleaseRadarTests/StoreAcceptanceTests.swift` and run the one-time successor
+  GREEN.** Task 3 remains closed until Task 2B's independently accepted
+  implementation checkpoint is remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
