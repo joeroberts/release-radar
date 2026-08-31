@@ -1,0 +1,64 @@
+{
+  "capture": {
+    "command_argv": [
+      "xcodebuild",
+      "test",
+      "-project",
+      "ReleaseRadar.xcodeproj",
+      "-scheme",
+      "ReleaseRadar",
+      "-destination",
+      "platform=macOS",
+      "-derivedDataPath",
+      "/tmp/release-radar-rr-r10-task2a-red.hEFKt4/DerivedData",
+      "-resultBundlePath",
+      "/tmp/release-radar-rr-r10-task2a-red.hEFKt4/red.xcresult",
+      "-only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment"
+    ],
+    "execution_count": 1,
+    "temporary_capture_provenance_authoritative": false,
+    "xcresulttool_schema_version": "0.1.0",
+    "xcresulttool_version": "24757"
+  },
+  "evidence_schema_version": 1,
+  "privacy": {
+    "contains_owner_data": false,
+    "excluded_fields": [
+      "device_identifiers",
+      "device_names",
+      "hardware_metadata",
+      "owner_data",
+      "user_paths"
+    ]
+  },
+  "result": {
+    "expected_failures": 0,
+    "export_inventory": [
+      "manifest.json"
+    ],
+    "failed_tests": 1,
+    "failure_count": 1,
+    "failure_kind": "XCTUnwrap",
+    "failure_text": "XCTUnwrap failed: expected non-nil value of type \"String\"",
+    "green_executed": false,
+    "has_media_attachments": false,
+    "manifest": [],
+    "passed_tests": 0,
+    "schema_v11_destination_absent": true,
+    "skipped_tests": 0,
+    "status": "Failed",
+    "store_acceptance_tests_restoration": {
+      "accepted_commit": "b711229a109c1a58c9616e4ff907afb18cd4f958",
+      "accepted_git_blob": "7041bd69a9a8349e7164eaee21a11858e9ebd87d",
+      "restored_to_accepted_blob": true
+    },
+    "test_identifier": "StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment()",
+    "total_tests": 1
+  },
+  "source_sha256": {
+    "implementer_report": "19bf2b8c989e4c381e76c64fa7a92bff172e2b165c2b7a9e7e18874185707d20",
+    "red_details": "4f35b2c3d09c0cf684b600f28c6690a36cd49e24f6abec4c6be6aa295b1f5c9c",
+    "red_manifest": "ace810d7e2cbb4f8c40ce09dc8e191ae466adb4e1a7d49c59f2215b411d38b05",
+    "red_summary": "b82976f48fca9e7dc3ff2f68c97eb2e3d5575e3cf41c7cd4f8c2f1d04ed9e4e3"
+  }
+}

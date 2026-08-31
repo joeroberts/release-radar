@@ -1,10 +1,11 @@
 # RR-R10 Task 2A Brief: Genuine Schema-v11 Fixture
 
-**Status:** Canonical planning contract complete. Implementation remains closed
-until this exact registered brief is independently reviewed by Architecture,
-TPM, QA/Test, and Delivery Management and every role returns GO with Required
-0. Because this fixture freezes the authoritative local-storage boundary,
-Security/Privacy also reviews the brief before implementation.
+**Status:** Corrected canonical planning contract. Continuation from the
+durable sanitized RED evidence packet remains closed until this exact
+registered brief is independently reviewed by Architecture, TPM, QA/Test, and
+Delivery Management and every role returns GO with Required 0. Because this
+fixture freezes the authoritative local-storage boundary, Security/Privacy also
+reviews the correction before a fresh Implementer begins GREEN.
 
 ## Size assessment and checkpoint decision
 
@@ -15,8 +16,9 @@ privacy-empty schema-v11 database, and prove its exact identity. It is below the
 owner's roughly-eight-hour split threshold and has one review surface, so no
 further split is warranted.
 
-Task 2A produces only the schema-v11 fixture and its local checksum. It adds no
-product behavior or API and does not begin Task 2B.
+Task 2A implementation produces only the schema-v11 fixture and its local
+checksum. Its corrected planning checkpoint also persists one sanitized RED
+evidence packet. It adds no product behavior or API and does not begin Task 2B.
 
 ## Objective and user-visible outcome
 
@@ -82,13 +84,16 @@ decide whether those boundaries are complete.
   Radar mutation and does not repeat either request.
 - No Ticket Tasks plan exists yet. Task 2A must not create, infer, revise, or
   complete one. The 16-row live plan remains a Task 7A action.
-- This exact brief and its root checksum entry must be independently reviewed
-  by Architecture, TPM, QA/Test, Delivery Management, and Security/Privacy.
-  Every role must return GO with Required 0 before the RED source edit.
+- This exact corrected brief and its root checksum entry must be independently
+  reviewed by Architecture, TPM, QA/Test, Delivery Management, and
+  Security/Privacy. Every role must return GO with Required 0 before a fresh
+  Implementer resumes from the durable RED evidence packet and begins GREEN.
 - The coordinator records the exact brief SHA and reviewer dispositions in
-  `docs/delivery/progress.md`. The canonical brief, root checksum registry, and
-  coordinator-owned release evidence must be committed, pushed, and verified
-  at exact local/remote equality before an Implementer writes the RED test.
+  `docs/delivery/progress.md`. The canonical brief, root checksum registry,
+  sanitized RED evidence packet, and coordinator-owned release evidence must be
+  committed, pushed, and verified at exact local/remote equality before a fresh
+  Implementer reapplies the exact temporary generator source for GREEN. The RED
+  test must not be rerun.
 - One fresh serialized Implementer owns only the temporary generator edit and
   the two fixture artifacts. No concurrent writer may modify
   `StoreAcceptanceTests.swift` or either fixture directory.
@@ -104,13 +109,19 @@ decide whether those boundaries are complete.
   pinned digest before RED and again after all Task 2A work.
 - Verify the five Task 1B product/test paths are byte-identical to their
   accepted commit before RED.
-- Temporarily add exactly one gated XCTest attachment generator and its
-  generator-local throwing v10 verification/copy boundary to
-  `ReleaseRadarTests/StoreAcceptanceTests.swift`.
-- Run the selected generator once without its gate and inspect the preserved
-  RED result bundle to prove exactly 1/1 selected test failed specifically at
-  the missing `RR_SCHEMA_V11_FIXTURE_EXPORT` `XCTUnwrap`, with zero skipped or
-  expected failures and zero retained attachments.
+- Reapply exactly one gated XCTest attachment generator and its generator-local
+  throwing v10 verification/copy boundary to
+  `ReleaseRadarTests/StoreAcceptanceTests.swift` only after the corrected
+  planning checkpoint is remote-exact and the durable sanitized RED evidence
+  packet passes its exact recovery gate.
+- Accept only
+  `docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json` as RED
+  recovery authority. It proves exactly one execution of the exact selected-
+  test command, Failed 1/1 specifically at the missing
+  `RR_SCHEMA_V11_FIXTURE_EXPORT` `XCTUnwrap`, zero passed/skipped/expected
+  failures, no media attachment, an empty top-level export manifest, GREEN not
+  run, restored Task 1B test source, and absent `SchemaV11`. Do not rerun RED,
+  regenerate its summary/details, or repeat its attachment export.
 - Run the gated attachment generator exactly once through the already-proven
   sandbox-safe format-2 `.xctestrun` path.
 - Start from a test-local copy of the accepted v10 fixture, open it through
@@ -163,6 +174,7 @@ Durable implementation outputs:
 
 Durable planning outputs, completed before implementation:
 
+- `docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json`
 - `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md`
 - `docs/delivery/task-briefs/SHA256SUMS`
 
@@ -214,6 +226,13 @@ The repository uses file-system-synchronized Xcode groups, so no
   exclusively created unique temporary parent. No-follow metadata checks reject
   symlinks, and canonical-path checks reject any containment escape before a
   file is read or copied.
+- The repository-owned RED evidence packet is stable, privacy-sanitized JSON.
+  It contains only the exact command/tool identity, required outcome facts,
+  hashes of the four reviewed source captures, accepted-source restoration,
+  destination absence, and explicit privacy exclusions. Device identifiers,
+  device names, other hardware metadata, owner data, and user paths are omitted.
+  The packet is the sole RED recovery authority after its corrected planning
+  checkpoint; temporary capture files are non-authoritative and disposable.
 - `SchemaV11` must be wholly absent, including as a broken symlink. Its existing
   canonical parent must be the repository fixture directory; the parent process
   creates `SchemaV11` once with plain `mkdir` and writes the validated bytes
@@ -264,10 +283,12 @@ generator. Add no durable helper, dependency, or harness.
 
 ### Temporary generator source
 
-Temporarily add `import Darwin` beside the existing imports, then add this
-generator-local throwing verification/copy boundary and one test inside
-`StoreAcceptanceTests` before RED. Do not alter the existing helper, add
-another generator, or add a shipping/debug fixture mode:
+The first Implementer temporarily added `import Darwin` plus this generator-
+local throwing verification/copy boundary and one test before the preserved
+RED, then removed them byte-exactly. After the corrected checkpoint and RED
+recovery gate pass, the fresh Implementer reapplies this exact source solely
+for GREEN. Do not alter the existing helper, add another generator, run the
+absent-gate RED again, or add a shipping/debug fixture mode:
 
 ```swift
 private struct Task2AGeneratorInput {
@@ -449,7 +470,7 @@ before `DeliveryStore` can open an unverified input. Remove the import, helper,
 struct, and test byte-exactly after the one accepted GREEN run; no part is a
 durable helper change.
 
-### Pre-RED immutable-boundary checks
+### Corrected pre-GREEN immutable-boundary checks
 
 Run from the repository root:
 
@@ -457,6 +478,8 @@ Run from the repository root:
 set -euo pipefail
 RR_TASK2A_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md
 RR_TASK2A_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2A_RED_EVIDENCE=docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json
+RR_TASK2A_LEDGER=docs/delivery/progress.md
 RR_TASK2A_BRANCH=codex/release-radar-mvp
 RR_TASK2A_REPO_ROOT="$(git rev-parse --show-toplevel)"
 test "$(pwd -P)" = "$(realpath "$RR_TASK2A_REPO_ROOT")"
@@ -471,14 +494,22 @@ test "$(printf '%s\n' "$RR_TASK2A_REMOTE_LINE" | awk '{print $1}')" = \
   "$RR_TASK2A_PLANNING_SHA"
 
 git diff --exit-code "$RR_TASK2A_PLANNING_SHA" -- \
-  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY"
+  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY" "$RR_TASK2A_RED_EVIDENCE" \
+  "$RR_TASK2A_LEDGER"
 git diff --cached --exit-code "$RR_TASK2A_PLANNING_SHA" -- \
-  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY"
-git diff --exit-code -- "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY"
+  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY" "$RR_TASK2A_RED_EVIDENCE" \
+  "$RR_TASK2A_LEDGER"
+git diff --exit-code -- \
+  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY" "$RR_TASK2A_RED_EVIDENCE" \
+  "$RR_TASK2A_LEDGER"
 test "$(git hash-object "$RR_TASK2A_BRIEF")" = \
   "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_BRIEF")"
 test "$(git hash-object "$RR_TASK2A_REGISTRY")" = \
   "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_REGISTRY")"
+test "$(git hash-object "$RR_TASK2A_RED_EVIDENCE")" = \
+  "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_RED_EVIDENCE")"
+test "$(git hash-object "$RR_TASK2A_LEDGER")" = \
+  "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_LEDGER")"
 
 test "$(awk -v path="$RR_TASK2A_BRIEF" \
   '$2 == path { count += 1 } END { print count + 0 }' \
@@ -523,14 +554,30 @@ test ! -L "$RR_TASK2A_FIXTURE_DIR"
 `stat` is intentionally used without `-L`, so its type check is an `lstat`-
 style no-follow check. Any failure stops before the temporary generator edit.
 This executable gate directly proves the exact Task 2A brief digest, exactly
-one equal registry entry, the full root registry, byte identity of both
-planning files to the remotely exact planning checkpoint, and the wholly
-absent destination. Do not repair an accepted dependency inside Task 2A.
+one equal registry entry, the full root registry, and byte identity of all four
+corrected planning-checkpoint paths—the brief, registry, durable RED packet,
+and coordinator ledger—to the remotely exact commit, plus the wholly absent
+destination. Do not repair an accepted dependency inside Task 2A.
 
-### RED: prove the missing gate fails before attachment
+### Durable RED evidence recovery: prove the missing gate failed before attachment
 
-After adding the exact temporary test, run it without injecting the export
-gate and retain the explicit result bundle:
+The missing-gate RED already ran exactly once. The privacy-sanitized repository
+packet at
+`docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json` is the sole
+continuation authority after the corrected planning checkpoint. Its source
+hashes identify the reviewed capture inputs, but those original temporary
+summary/details/manifest/report files, result bundle, DerivedData, and export
+directory are non-authoritative provenance and are not recovery inputs. Their
+loss does not block continuation once this exact packet is committed and
+remote-exact.
+
+The packet records the exact one-run command, `xcresulttool` version 24757 and
+schema 0.1.0, direct selected-test result facts, and the schema-valid empty top-
+level `AttachmentDetails` array. A fresh Implementer must not run `xcodebuild`,
+regenerate RED summary/details, or repeat `xcresulttool export` for RED.
+
+Run this repository-only recovery gate before reapplying the temporary source
+for GREEN. The SHA-256 literal below is the packet's only pin in this brief:
 
 ```bash
 set -euo pipefail
@@ -544,110 +591,146 @@ rr_task2a_require_file() {
   test ! -L "$1"
   test "$(/usr/bin/stat -f '%HT' "$1")" = "Regular File"
 }
-rr_task2a_require_beneath() {
-  case "$(realpath "$2")" in
-    ("$(realpath "$1")"/*) ;;
-    (*) exit 1 ;;
-  esac
-}
+RR_TASK2A_REPO_ROOT="$(git rev-parse --show-toplevel)"
+test "$(pwd -P)" = "$(realpath "$RR_TASK2A_REPO_ROOT")"
+RR_TASK2A_EVIDENCE_PARENT="$RR_TASK2A_REPO_ROOT/docs/delivery/evidence"
+RR_TASK2A_RED_EVIDENCE="$RR_TASK2A_EVIDENCE_PARENT/2026-08-30-rr-r10-task-2a-red-evidence.json"
+RR_TASK2A_RED_EVIDENCE_SHA=95bfa880903408d20ef7fbaaa8051ef6a2908a45d2ada9f6d01e8ba9d89cdea5
+rr_task2a_require_directory "$RR_TASK2A_EVIDENCE_PARENT"
+test "$(realpath "$RR_TASK2A_EVIDENCE_PARENT")" = \
+  "$(realpath "$RR_TASK2A_REPO_ROOT")/docs/delivery/evidence"
+rr_task2a_require_file "$RR_TASK2A_RED_EVIDENCE"
+test "$(realpath "$RR_TASK2A_RED_EVIDENCE")" = \
+  "$(realpath "$RR_TASK2A_EVIDENCE_PARENT")/2026-08-30-rr-r10-task-2a-red-evidence.json"
+test "$(shasum -a 256 "$RR_TASK2A_RED_EVIDENCE" | awk '{print $1}')" = \
+  "$RR_TASK2A_RED_EVIDENCE_SHA"
+/usr/bin/plutil -convert json -o - "$RR_TASK2A_RED_EVIDENCE" >/dev/null
 
-RR_TASK2A_RED_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2a-red.XXXXXX)"
-rr_task2a_require_directory "$RR_TASK2A_RED_PARENT"
-RR_TASK2A_RED="$RR_TASK2A_RED_PARENT/DerivedData"
-RR_TASK2A_RED_RESULT="$RR_TASK2A_RED_PARENT/red.xcresult"
-RR_TASK2A_RED_SUMMARY="$RR_TASK2A_RED_PARENT/red-summary.json"
-RR_TASK2A_RED_DETAILS="$RR_TASK2A_RED_PARENT/red-details.json"
-RR_TASK2A_RED_EXPORT="$RR_TASK2A_RED_PARENT/red-export"
-test ! -e "$RR_TASK2A_RED" && test ! -L "$RR_TASK2A_RED"
-test ! -e "$RR_TASK2A_RED_RESULT" && test ! -L "$RR_TASK2A_RED_RESULT"
-test ! -e "$RR_TASK2A_RED_SUMMARY" && test ! -L "$RR_TASK2A_RED_SUMMARY"
-test ! -e "$RR_TASK2A_RED_DETAILS" && test ! -L "$RR_TASK2A_RED_DETAILS"
-test ! -e "$RR_TASK2A_RED_EXPORT" && test ! -L "$RR_TASK2A_RED_EXPORT"
-unset RR_SCHEMA_V11_FIXTURE_EXPORT
-test -z "${RR_SCHEMA_V11_FIXTURE_EXPORT+x}"
-test "$(rg --fixed-strings \
-  'let exportGate = try XCTUnwrap(environment["RR_SCHEMA_V11_FIXTURE_EXPORT"])' \
-  ReleaseRadarTests/StoreAcceptanceTests.swift | wc -l | tr -d ' ')" = "1"
-if xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
-  -destination 'platform=macOS' -derivedDataPath "$RR_TASK2A_RED" \
-  -resultBundlePath "$RR_TASK2A_RED_RESULT" \
-  -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment; then
-  exit 1
-fi
-rr_task2a_require_directory "$RR_TASK2A_RED_RESULT"
-rr_task2a_require_beneath "$RR_TASK2A_RED_PARENT" "$RR_TASK2A_RED_RESULT"
-(
-  set -C
-  xcrun xcresulttool get test-results summary \
-    --path "$RR_TASK2A_RED_RESULT" --compact > "$RR_TASK2A_RED_SUMMARY"
-)
-rr_task2a_require_file "$RR_TASK2A_RED_SUMMARY"
-rr_task2a_require_beneath "$RR_TASK2A_RED_PARENT" "$RR_TASK2A_RED_SUMMARY"
-test "$(plutil -extract result raw "$RR_TASK2A_RED_SUMMARY")" = "Failed"
-test "$(plutil -extract totalTestCount raw "$RR_TASK2A_RED_SUMMARY")" = "1"
-test "$(plutil -extract passedTests raw "$RR_TASK2A_RED_SUMMARY")" = "0"
-test "$(plutil -extract failedTests raw "$RR_TASK2A_RED_SUMMARY")" = "1"
-test "$(plutil -extract skippedTests raw "$RR_TASK2A_RED_SUMMARY")" = "0"
-test "$(plutil -extract expectedFailures raw "$RR_TASK2A_RED_SUMMARY")" = "0"
-test "$(plutil -extract testFailures raw -expect array \
-  "$RR_TASK2A_RED_SUMMARY")" = "1"
-test "$(plutil -extract testFailures.0.testIdentifierString raw \
-  "$RR_TASK2A_RED_SUMMARY")" = \
+test "$(plutil -extract evidence_schema_version raw "$RR_TASK2A_RED_EVIDENCE")" = "1"
+test "$(plutil -extract capture.execution_count raw "$RR_TASK2A_RED_EVIDENCE")" = "1"
+test "$(plutil -extract capture.temporary_capture_provenance_authoritative raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "false"
+test "$(plutil -extract capture.xcresulttool_version raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "24757"
+test "$(plutil -extract capture.xcresulttool_schema_version raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "0.1.0"
+
+test "$(plutil -extract capture.command_argv raw -expect array \
+  "$RR_TASK2A_RED_EVIDENCE")" = "13"
+test "$(plutil -extract capture.command_argv.0 raw "$RR_TASK2A_RED_EVIDENCE")" = "xcodebuild"
+test "$(plutil -extract capture.command_argv.1 raw "$RR_TASK2A_RED_EVIDENCE")" = "test"
+test "$(plutil -extract capture.command_argv.2 raw "$RR_TASK2A_RED_EVIDENCE")" = "-project"
+test "$(plutil -extract capture.command_argv.3 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "ReleaseRadar.xcodeproj"
+test "$(plutil -extract capture.command_argv.4 raw "$RR_TASK2A_RED_EVIDENCE")" = "-scheme"
+test "$(plutil -extract capture.command_argv.5 raw "$RR_TASK2A_RED_EVIDENCE")" = "ReleaseRadar"
+test "$(plutil -extract capture.command_argv.6 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "-destination"
+test "$(plutil -extract capture.command_argv.7 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "platform=macOS"
+test "$(plutil -extract capture.command_argv.8 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "-derivedDataPath"
+test "$(plutil -extract capture.command_argv.9 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "/tmp/release-radar-rr-r10-task2a-red.hEFKt4/DerivedData"
+test "$(plutil -extract capture.command_argv.10 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "-resultBundlePath"
+test "$(plutil -extract capture.command_argv.11 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "/tmp/release-radar-rr-r10-task2a-red.hEFKt4/red.xcresult"
+test "$(plutil -extract capture.command_argv.12 raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  "-only-testing:ReleaseRadarTests/StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment"
+
+test "$(plutil -extract source_sha256.red_summary raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = \
+  "b82976f48fca9e7dc3ff2f68c97eb2e3d5575e3cf41c7cd4f8c2f1d04ed9e4e3"
+test "$(plutil -extract source_sha256.red_details raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = \
+  "4f35b2c3d09c0cf684b600f28c6690a36cd49e24f6abec4c6be6aa295b1f5c9c"
+test "$(plutil -extract source_sha256.red_manifest raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = \
+  "ace810d7e2cbb4f8c40ce09dc8e191ae466adb4e1a7d49c59f2215b411d38b05"
+test "$(plutil -extract source_sha256.implementer_report raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = \
+  "19bf2b8c989e4c381e76c64fa7a92bff172e2b165c2b7a9e7e18874185707d20"
+
+test "$(plutil -extract result.status raw "$RR_TASK2A_RED_EVIDENCE")" = "Failed"
+test "$(plutil -extract result.total_tests raw "$RR_TASK2A_RED_EVIDENCE")" = "1"
+test "$(plutil -extract result.passed_tests raw "$RR_TASK2A_RED_EVIDENCE")" = "0"
+test "$(plutil -extract result.failed_tests raw "$RR_TASK2A_RED_EVIDENCE")" = "1"
+test "$(plutil -extract result.skipped_tests raw "$RR_TASK2A_RED_EVIDENCE")" = "0"
+test "$(plutil -extract result.expected_failures raw "$RR_TASK2A_RED_EVIDENCE")" = "0"
+test "$(plutil -extract result.failure_count raw "$RR_TASK2A_RED_EVIDENCE")" = "1"
+test "$(plutil -extract result.failure_kind raw "$RR_TASK2A_RED_EVIDENCE")" = "XCTUnwrap"
+test "$(plutil -extract result.failure_text raw "$RR_TASK2A_RED_EVIDENCE")" = \
+  'XCTUnwrap failed: expected non-nil value of type "String"'
+test "$(plutil -extract result.test_identifier raw "$RR_TASK2A_RED_EVIDENCE")" = \
   'StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment()'
-case "$(plutil -extract testFailures.0.failureText raw \
-  "$RR_TASK2A_RED_SUMMARY")" in
-  (*XCTUnwrap*) ;;
-  (*) exit 1 ;;
-esac
-(
-  set -C
-  xcrun xcresulttool get test-results test-details \
-    --test-id 'StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment()' \
-    --path "$RR_TASK2A_RED_RESULT" --compact > "$RR_TASK2A_RED_DETAILS"
-)
-rr_task2a_require_file "$RR_TASK2A_RED_DETAILS"
-rr_task2a_require_beneath "$RR_TASK2A_RED_PARENT" "$RR_TASK2A_RED_DETAILS"
-test "$(plutil -extract testIdentifier raw "$RR_TASK2A_RED_DETAILS")" = \
-  'StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment()'
-test "$(plutil -extract testResult raw "$RR_TASK2A_RED_DETAILS")" = "Failed"
-test "$(plutil -extract hasMediaAttachments raw "$RR_TASK2A_RED_DETAILS")" = "false"
-xcrun xcresulttool export attachments \
-  --test-id 'StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment()' \
-  --path "$RR_TASK2A_RED_RESULT" \
-  --output-path "$RR_TASK2A_RED_EXPORT"
-rr_task2a_require_directory "$RR_TASK2A_RED_EXPORT"
-rr_task2a_require_beneath "$RR_TASK2A_RED_PARENT" "$RR_TASK2A_RED_EXPORT"
-RR_TASK2A_RED_MANIFEST="$RR_TASK2A_RED_EXPORT/manifest.json"
-rr_task2a_require_file "$RR_TASK2A_RED_MANIFEST"
-rr_task2a_require_beneath "$RR_TASK2A_RED_EXPORT" "$RR_TASK2A_RED_MANIFEST"
-test "$(plutil -extract 0.testIdentifier raw "$RR_TASK2A_RED_MANIFEST")" = \
-  'StoreAcceptanceTests/testGenerateExactVersionElevenFixtureAttachment()'
-if plutil -extract 1.testIdentifier raw \
-  "$RR_TASK2A_RED_MANIFEST" >/dev/null 2>&1; then
-  exit 1
-fi
-test "$(plutil -extract 0.attachments raw -expect array \
-  "$RR_TASK2A_RED_MANIFEST")" = "0"
-test "$(find "$RR_TASK2A_RED_EXPORT" -mindepth 1 -maxdepth 1 -print | \
-  wc -l | tr -d ' ')" = "1"
+test "$(plutil -extract result.has_media_attachments raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "false"
+test "$(plutil -extract result.manifest raw -expect array \
+  "$RR_TASK2A_RED_EVIDENCE")" = "0"
+test "$(plutil -extract result.export_inventory raw -expect array \
+  "$RR_TASK2A_RED_EVIDENCE")" = "1"
+test "$(plutil -extract result.export_inventory.0 raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "manifest.json"
+test "$(plutil -extract result.green_executed raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "false"
+test "$(plutil -extract result.schema_v11_destination_absent raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "true"
+
+test "$(plutil -extract privacy.contains_owner_data raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "false"
+test "$(plutil -extract privacy.excluded_fields raw -expect array \
+  "$RR_TASK2A_RED_EVIDENCE")" = "5"
+test "$(plutil -extract privacy.excluded_fields.0 raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "device_identifiers"
+test "$(plutil -extract privacy.excluded_fields.1 raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "device_names"
+test "$(plutil -extract privacy.excluded_fields.2 raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "hardware_metadata"
+test "$(plutil -extract privacy.excluded_fields.3 raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "owner_data"
+test "$(plutil -extract privacy.excluded_fields.4 raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "user_paths"
+
+RR_TASK2A_ACCEPTED_COMMIT="$(plutil -extract \
+  result.store_acceptance_tests_restoration.accepted_commit raw \
+  "$RR_TASK2A_RED_EVIDENCE")"
+RR_TASK2A_ACCEPTED_BLOB="$(plutil -extract \
+  result.store_acceptance_tests_restoration.accepted_git_blob raw \
+  "$RR_TASK2A_RED_EVIDENCE")"
+test "$RR_TASK2A_ACCEPTED_COMMIT" = "b711229a109c1a58c9616e4ff907afb18cd4f958"
+test "$RR_TASK2A_ACCEPTED_BLOB" = "7041bd69a9a8349e7164eaee21a11858e9ebd87d"
+test "$(plutil -extract \
+  result.store_acceptance_tests_restoration.restored_to_accepted_blob raw \
+  "$RR_TASK2A_RED_EVIDENCE")" = "true"
+RR_TASK2A_TEST_SOURCE=ReleaseRadarTests/StoreAcceptanceTests.swift
+test "$(git rev-parse "$RR_TASK2A_ACCEPTED_COMMIT:$RR_TASK2A_TEST_SOURCE")" = \
+  "$RR_TASK2A_ACCEPTED_BLOB"
+test "$(git hash-object "$RR_TASK2A_TEST_SOURCE")" = "$RR_TASK2A_ACCEPTED_BLOB"
 RR_TASK2A_FIXTURE_DIR="$PWD/ReleaseRadarTests/Fixtures/SchemaV11"
 test ! -e "$RR_TASK2A_FIXTURE_DIR"
 test ! -L "$RR_TASK2A_FIXTURE_DIR"
 ```
 
-Accepted RED requires every assertion above: the preserved result says Failed
-exactly 1/1, the only failure identifier is the selected generator, its failure
-text contains `XCTUnwrap`, the gate is demonstrably absent at a source line that
-names `RR_SCHEMA_V11_FIXTURE_EXPORT`, skipped and expected-failure counts are
-zero, `hasMediaAttachments` is false, the attachment export manifest contains
-the selected test and zero attachments, and the durable `SchemaV11` directory
-is wholly absent. A compile error, fixture checksum error, unrelated test
-failure, environment failure, different failure text/count, or any attachment
-is not an accepted RED.
+Accepted RED requires every assertion above. The exact durable packet proves
+one execution, exact command/tool identity, Failed exactly 1/1, zero passed/
+skipped/expected failures, sole selected-test `XCTUnwrap` failure,
+`hasMediaAttachments=false`, an exact empty top-level manifest, one-file export
+inventory, GREEN not run, restored accepted source, and absent durable
+destination. It contains no device identifiers/names, other hardware metadata,
+owner data, or user paths. Its command's `/tmp` arguments and source hashes are
+capture provenance only; no temporary object is opened by this gate.
 
-Do not rerun the RED after it proves this boundary once.
+Any packet path/type/canonicalization/digest/JSON/field mismatch is not accepted
+evidence and stops continuation. It does not authorize another RED run. RED is
+complete and must never be rerun for Task 2A.
 
 ### GREEN: one sandbox-safe attachment generation
+
+After the corrected planning checkpoint is remote-exact and the durable RED
+evidence gate passes, a fresh Implementer reapplies the exact temporary import,
+helper, struct, and generator test from this brief. This continues the same
+test-first cycle at GREEN; it does not authorize another absent-gate execution.
 
 Use a new absent DerivedData path. Build without running tests, locate exactly
 one fresh Release Radar format-2 `.xctestrun`, assert the exact nested target
@@ -1159,14 +1242,17 @@ regular non-symlink SchemaV11 artifacts are implementation outputs.
 ### Post-task planning-authority recheck
 
 After every fixture, SQLite, regression, and source-restoration check, repeat
-the planning authority gate before review or staging. This must still resolve
-to the original remotely exact planning checkpoint; an implementation commit
-must not yet exist:
+the four-path planning-authority gate before review or staging. The brief,
+registry, durable RED packet, and coordinator ledger must still resolve to the
+corrected remotely exact planning checkpoint; an implementation commit must not
+yet exist:
 
 ```bash
 set -euo pipefail
 RR_TASK2A_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md
 RR_TASK2A_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_TASK2A_RED_EVIDENCE=docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json
+RR_TASK2A_LEDGER=docs/delivery/progress.md
 RR_TASK2A_BRANCH=codex/release-radar-mvp
 RR_TASK2A_PLANNING_SHA="$(git log -1 --format=%H -- "$RR_TASK2A_BRIEF")"
 test -n "$RR_TASK2A_PLANNING_SHA"
@@ -1177,14 +1263,22 @@ test "$(printf '%s\n' "$RR_TASK2A_REMOTE_LINE" | wc -l | tr -d ' ')" = "1"
 test "$(printf '%s\n' "$RR_TASK2A_REMOTE_LINE" | awk '{print $1}')" = \
   "$RR_TASK2A_PLANNING_SHA"
 git diff --exit-code "$RR_TASK2A_PLANNING_SHA" -- \
-  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY"
+  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY" "$RR_TASK2A_RED_EVIDENCE" \
+  "$RR_TASK2A_LEDGER"
 git diff --cached --exit-code "$RR_TASK2A_PLANNING_SHA" -- \
-  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY"
-git diff --exit-code -- "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY"
+  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY" "$RR_TASK2A_RED_EVIDENCE" \
+  "$RR_TASK2A_LEDGER"
+git diff --exit-code -- \
+  "$RR_TASK2A_BRIEF" "$RR_TASK2A_REGISTRY" "$RR_TASK2A_RED_EVIDENCE" \
+  "$RR_TASK2A_LEDGER"
 test "$(git hash-object "$RR_TASK2A_BRIEF")" = \
   "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_BRIEF")"
 test "$(git hash-object "$RR_TASK2A_REGISTRY")" = \
   "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_REGISTRY")"
+test "$(git hash-object "$RR_TASK2A_RED_EVIDENCE")" = \
+  "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_RED_EVIDENCE")"
+test "$(git hash-object "$RR_TASK2A_LEDGER")" = \
+  "$(git rev-parse "$RR_TASK2A_PLANNING_SHA:$RR_TASK2A_LEDGER")"
 test "$(awk -v path="$RR_TASK2A_BRIEF" \
   '$2 == path { count += 1 } END { print count + 0 }' \
   "$RR_TASK2A_REGISTRY")" = "1"
@@ -1204,17 +1298,22 @@ not update planning artifacts during implementation to make this gate pass.
 
 ## Happy path
 
-The remote-exact planning/registry and immutable dependency checks pass. The
-preserved absent-gate RED proves Failed 1/1 only at the named `XCTUnwrap`, with
-no skip, expected failure, attachment, or durable destination. The format-2
-`.xctestrun` injects only the exact export gate; the temporary throwing boundary
-verifies the exact v10 manifest and bytes before exclusive copy and schema-10
-inspection, then one selected GREEN test migrates through the accepted Task 1B
-store, closes every SQLite owner, and attaches the standalone bytes. Fresh
-result inspection proves Passed 1/1 before the complete temporary edit is
-removed byte-exactly to `b711229...`. The parent exports exactly one contained,
-non-symlink passing attachment, creates the absent fixture directory once,
-copies with exclusive no-clobber output, and creates only the fixture and
+The remote-exact corrected planning/registry/evidence checkpoint and immutable
+dependency checks pass. The exact repository packet proves the one RED
+execution, exact command/tool identity, Failed 1/1 only at the named
+`XCTUnwrap`, zero passed/skipped/expected failures,
+`hasMediaAttachments=false`, exact empty top-level manifest, one-file export
+inventory, GREEN not run, accepted-source restoration, and absent durable
+destination. No temporary capture is consulted and no RED command or export is
+rerun. The fresh Implementer reapplies the exact temporary source and the
+format-2 `.xctestrun` injects only the exact export gate; the temporary throwing
+boundary verifies the exact v10 manifest and bytes before exclusive copy and
+schema-10 inspection, then one selected GREEN test migrates through the
+accepted Task 1B store, closes every SQLite owner, and attaches the standalone
+bytes. Fresh result inspection proves Passed 1/1 before the complete temporary
+edit is removed byte-exactly to `b711229...`. The parent exports exactly one
+contained, non-symlink passing attachment, creates the absent fixture directory
+once, copies with exclusive no-clobber output, and creates only the fixture and
 checksum. Direct checks prove the complete v11 contract, fresh regression
 evidence proves Passed 58/58, the planning-authority gate still passes, and
 independent reviewers accept the exact artifacts before the implementation
@@ -1222,11 +1321,12 @@ checkpoint is committed, pushed, and remotely verified.
 
 ## Non-happy paths and recovery
 
-- If the planning checkpoint is not exact local/remote HEAD, either planning
-  file differs from that checkpoint in the index or worktree, the Task 2A entry
-  is absent/duplicated/wrong, or any entry in the full root registry fails,
-  stop before RED. The identical post-task gate must also pass; do not rewrite
-  planning authority during implementation.
+- If the planning checkpoint is not exact local/remote HEAD, any of its four
+  paths differs from that checkpoint in the combined worktree, cached index,
+  unstaged worktree, or exact blob identity, the Task 2A entry is absent/
+  duplicated/wrong, or any entry in the full root registry fails, stop before
+  GREEN. The identical post-task gate must also pass; do not rewrite planning
+  authority during implementation.
 - If any accepted artifact hash, Task 1A digest, or Task 1B ancestry/path
   identity differs, stop before RED. Do not repair an accepted dependency
   inside Task 2A.
@@ -1234,9 +1334,13 @@ checkpoint is committed, pushed, and remotely verified.
   is not the regular non-symlink canonical repository fixture directory, stop.
   Do not overwrite, delete, follow, or regenerate it until provenance is
   resolved through the reviewed workflow.
-- If RED is not Failed exactly 1/1 at the named `XCTUnwrap` while the named gate
-  is absent, if it has a skip/expected failure, or if test details report any
-  media attachment, return NO-GO and diagnose before changing the approach.
+- If the durable RED evidence packet is missing, a symlink, outside its exact
+  canonical repository path, not valid JSON, digest-mismatched, or differs in
+  any required field, stop. If the current test source is not the packet's
+  accepted Task 1B blob or `SchemaV11` is no longer absent, stop. None of these
+  failures authorizes rerunning RED or its attachment export. Missing or
+  changed original temporary capture files do not block once the exact packet
+  is committed; they are not recovery authority.
 - If the temporary throwing boundary cannot parse the exact one-line v10
   manifest, match both pinned and computed digests before destination creation,
   exclusively write unchanged bytes, or prove copied schema version 10 before
@@ -1277,13 +1381,13 @@ checkpoint is committed, pushed, and remotely verified.
 Task 2A is repository-only and creates no Release Radar audit, Activity row,
 review item, notification, bridge receipt, ticket evidence, task-plan revision,
 or task completion. Required evidence is both full-registry/planning-authority
-transcripts, immutable-dependency transcript, RED Failed 1/1 summary/failure
-text/detail with no attachment, GREEN Passed 1/1 summary/detail, attachment
-manifest and containment/type checks, exact accepted-source restoration proof,
-direct SQLite assertions, fixture byte size and SHA-256, final directory
-inventory/sidecar proof, fresh Passed 58/58 regression summary, independent
-dispositions, exact Git checkpoint, push, and remote-SHA equality recorded by
-Delivery Management.
+transcripts; immutable-dependency transcript; the exact durable RED packet path,
+digest, valid/stable JSON, privacy exclusions, and complete field-gate result;
+GREEN Passed 1/1 summary/detail; GREEN attachment manifest and containment/type
+checks; exact accepted-source restoration proof; direct SQLite assertions;
+fixture byte size and SHA-256; final directory inventory/sidecar proof; fresh
+Passed 58/58 regression summary; independent dispositions; exact Git
+checkpoint, push, and remote-SHA equality recorded by Delivery Management.
 
 The existing blocker/start audit IDs are read-only dependency evidence. They
 must not be replayed or supplemented in this task.
@@ -1293,17 +1397,25 @@ must not be replayed or supplemented in this task.
 - [ ] The accepted design, ADR, and plan hashes match exactly.
 - [ ] Task 1A commit/digest and Task 1B commit/path identity are verified and
       unchanged before RED and after implementation.
-- [ ] This brief and its root checksum entry are canonical, and preimplementation
+- [ ] This corrected brief and its root checksum entry are canonical, and
       Architecture, TPM, QA/Test, Delivery Management, and Security/Privacy
-      reviews are GO with Required 0 on the exact brief SHA.
-- [ ] Before RED, the executable planning-authority gate proves the planning
-      checkpoint is local/remote exact, the brief and registry are byte-identical
-      to it in staged and unstaged state, exactly one Task 2A registry entry
-      equals the computed brief SHA, and the full root registry verifies.
-- [ ] The missing-gate RED result is preserved and reports Failed exactly 1/1,
-      with its sole failure at the `RR_SCHEMA_V11_FIXTURE_EXPORT` `XCTUnwrap`,
-      zero skipped/expected failures, no media attachment, and a wholly absent
-      durable `SchemaV11` directory.
+      correction reviews are GO with Required 0 on the exact brief SHA before
+      any GREEN continuation.
+- [ ] The already-recorded pre-RED planning-authority evidence proves its
+      planning checkpoint was local/remote exact. Before GREEN continuation,
+      the corrected executable gate proves the brief, registry, durable RED
+      packet, and coordinator ledger are byte-identical to their new local/
+      remote-exact checkpoint in combined, cached/index, unstaged/worktree, and
+      exact planning-commit blob state; exactly one Task 2A registry entry
+      equals the computed brief SHA; and the full root registry verifies.
+- [ ] RED is not rerun. The exact durable sanitized evidence packet is a regular
+      non-symlink at its canonical repository path, matches its pinned digest,
+      parses as JSON, and passes every required field assertion. It proves one
+      exact execution, selected test Failed 1/1, zero passed/skipped/expected
+      failures, sole `RR_SCHEMA_V11_FIXTURE_EXPORT` `XCTUnwrap`,
+      `hasMediaAttachments=false`, empty top-level manifest, one-file export
+      inventory, GREEN not run, restored Task 1B test-source blob, and absent
+      `SchemaV11`, while excluding all prohibited private metadata.
 - [ ] The temporary generator uses its own throwing boundary—not
       `copyVerifiedVersionTenFixture()`—to parse the exact local v10 manifest,
       match pinned and computed source digests before any destination exists,
@@ -1358,20 +1470,31 @@ must not be replayed or supplemented in this task.
 
 Before implementation:
 
-- Architecture verifies accepted v11 provenance, exact manifest identity,
-  single-file fixture semantics, and no v12/Ticket Tasks scope.
-- QA/Test verifies the RED failure identity and exact 1/1/no-attachment counts,
-  fresh GREEN 1/1 inspection before source removal, accepted-commit source
-  restoration before export, attachment cardinality, direct inventory/default/
-  privacy checks, and fresh final 58/58 result-bundle evidence.
-- Security/Privacy verifies the throwing manifest/digest/copy/schema-10 boundary,
-  test-local-only migration, privacy-empty bytes, closed-store copy, no-follow
-  path types, canonical containment, exclusive durable copy, exact directory
+- Architecture verifies accepted v11 provenance, the `xcresulttool` 24757 /
+  schema-0.1.0 empty-top-level-array RED contract represented by the durable
+  packet, unchanged exactly-one-attachment GREEN manifest contract, single-file
+  fixture semantics, and no v12/Ticket Tasks scope.
+- QA/Test verifies the exact durable packet digest and all field assertions,
+  exact Failed 1/1/no-pass/no-skip/no-expected-failure counts, direct selected-
+  test identity, `hasMediaAttachments=false`, exact empty top-level RED export
+  manifest, one-file export cardinality, source restoration, destination
+  absence, and no-rerun boundary; fresh GREEN 1/1 inspection before source
+  removal; GREEN attachment cardinality; direct inventory/default/privacy
+  checks; and fresh final 58/58 result-bundle evidence.
+- Security/Privacy verifies the packet is stable parseable JSON at the exact
+  regular non-symlink canonical repository path, matches the pinned digest,
+  contains only the necessary capture facts/source hashes, excludes device
+  identifiers/names, user paths, owner data, and other hardware metadata, and
+  makes all temporary inputs non-authoritative. It also verifies the throwing
+  manifest/digest/copy/schema-10 boundary, test-local-only migration, privacy-
+  empty bytes, closed-store copy, exclusive durable copy, exact directory
   inventory/sidecar absence, sandbox preservation, and no owner-data path.
 - TPM verifies dependency order, 3–5-hour sizing, bounded scope, and that Task
   2B plus every live Ticket Tasks action remains closed.
 - Delivery Management verifies both executable full-registry/exact-one-entry
-  planning-authority gates, exact hashes, writer serialization, durable path
+  planning-authority gates, exact four-path corrected checkpoint including
+  coordinator-ledger combined/cached/unstaged/blob identity, durable packet
+  digest/field gate and no-rerun boundary, writer serialization, durable path
   placement, evidence, and Git/remote gates.
 
 After implementation, a fresh Code Reviewer and fresh QA verifier independently
@@ -1391,11 +1514,15 @@ Delivery Management must record:
 - exact design/ADR/plan hashes; Task 1A commit and fixture digest; Task 1B
   commit, ancestry, and five-path identity; unchanged RR-R10 In-progress
   dependency state; and confirmation that no live task plan exists
-- exact pre-RED planning-file staged/unstaged/commit identity, local/remote SHA,
-  full registry, destination-absence, and immutable dependency checks/results
-- the named temporary generator, exact absent-gate RED command/result/failure
-  identifier/text, Failed 1/1 and zero skip/expected-failure counts, test-detail
-  no-attachment result, and proof no durable fixture directory was created
+- exact four-path corrected-checkpoint combined/cached/unstaged/planning-commit
+  blob identity for the brief, registry, durable RED packet, and coordinator
+  ledger; local/remote SHA; full registry; destination absence; and immutable
+  dependency checks/results
+- the durable RED evidence packet's exact canonical repository path and digest;
+  valid stable JSON; privacy exclusions; every exact command/tool/source-hash/
+  result/manifest/inventory/GREEN/source-restoration/destination field; proof
+  RED and its export were not rerun; and confirmation that temporary capture
+  files are non-authoritative and need not remain
 - exact temporary throwing verifier evidence: one-line v10 manifest, pinned and
   computed digests before destination creation, exclusive unique test temp copy,
   copied digest, and copied schema version 10 before `DeliveryStore`
@@ -1429,11 +1556,14 @@ Delivery Management must record:
 
 ## Task-specific completion and Git/remote boundary
 
-Before RED, the coordinator's preimplementation checkpoint contains only the
-canonical planning artifacts and coordinator-owned review evidence:
+The original pre-RED checkpoint already contained only the canonical planning
+artifacts and coordinator-owned review evidence. Before GREEN continuation,
+the coordinator creates a corrected planning checkpoint containing exactly
+these four durable paths:
 
 ```text
 docs/delivery/progress.md
+docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json
 docs/delivery/task-briefs/SHA256SUMS
 docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md
 ```

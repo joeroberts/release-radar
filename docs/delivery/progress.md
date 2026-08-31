@@ -538,11 +538,99 @@ Deliver the signed native macOS MVP described by
   Release Radar mutation occurred. RR-R10 remains authoritatively recorded In
   progress with zero blockers and no live Ticket Tasks plan; Task 2B and every
   later task remain dependency-blocked.
-- Next eligible RR-R10 work: **Commit and push only this planning ledger entry,
-  the root task-brief checksum registry, and the exact Task 2A brief, then prove
-  live remote equality and ahead/behind `0/0`.** Only after that checkpoint may
-  one fresh serialized Implementer begin Task 2A “Generate and verify the
-  genuine schema-v11 fixture” with the brief's fail-closed RED/GREEN workflow.
+- RR-R10 Task 2A initial planning checkpoint: commit
+  `0d2ff4db91d6c12d8b9454cf52c538ef1042a0c6` contains exactly the approved
+  ledger entry, registered Task 2A brief, and root task-brief checksum update.
+  It was pushed to `origin/codex/release-radar-mvp`; fresh fetch and live remote
+  readback returned that exact SHA with ahead/behind `0/0`, a clean worktree,
+  the three accepted controlling hashes unchanged, and all 17 registered briefs
+  verified.
+- RR-R10 Task 2A single RED execution: fresh serialized Implementer
+  `/root/task2a_implementer` passed every immutable-boundary gate, temporarily
+  added the exact brief-provided generator, and ran the absent-gate selected
+  test once. The result correctly reported Failed 1/1, zero passed, skipped,
+  or expected failures, the exact selected test, sole `XCTUnwrap` missing-gate
+  failure, and `hasMediaAttachments=false`. Xcode 24757/schema 0.1.0 exported
+  an empty top-level attachment manifest `[]`, not the brief's expected test
+  entry with an empty attachments array. The Implementer stopped before GREEN,
+  export, fixture creation, or regression; restored
+  `ReleaseRadarTests/StoreAcceptanceTests.swift` byte-identically to accepted
+  Task 1B blob `7041bd69a9a8349e7164eaee21a11858e9ebd87d`; left
+  `SchemaV11` wholly absent; and left a clean worktree. No product, owner state,
+  Release Radar state, installation, or live task plan changed, and RED was not
+  rerun.
+- RR-R10 Task 2A RED-contract diagnosis and first correction: direct inspection
+  of the preserved summary, details, exporter help/schema, and manifest proved
+  that the implementation failure was in the planning assertion, not the test.
+  Planning agent `/root/task2a_red_contract_planner` corrected the manifest
+  contract at brief SHA-256
+  `0acabe474ddb2cdc0380d86b06333c2fd996ad43d675a71f75a6c617f161e6f7`.
+  Architecture `/root/task2a_red_arch_review` returned GO, Required 0,
+  Optional 1; QA/Test `/root/task2a_red_qa_review` and TPM
+  `/root/task2a_red_tpm_review` each returned GO, Required 0, Optional 0.
+  Security/Privacy `/root/task2a_red_security_review` returned NO-GO,
+  Required 1 because volatile `/tmp` evidence was the sole continuation
+  authority. Delivery Management `/root/task2a_red_delivery_review` returned
+  NO-GO, Required 1 because this coordinator ledger had not yet recorded the
+  corrected contract. All roles agreed the empty-manifest defect itself was
+  addressed and GREEN remained closed.
+- RR-R10 Task 2A durable RED-evidence correction: the same Planning agent
+  created privacy-sanitized canonical packet
+  `docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json` at SHA-256
+  `95bfa880903408d20ef7fbaaa8051ef6a2908a45d2ada9f6d01e8ba9d89cdea5`.
+  It durably records the single RED command and tool version, exact result
+  facts, empty manifest and one-file export inventory, source restoration,
+  absent destination, and the reviewed capture-source hashes: summary
+  `b82976f48fca9e7dc3ff2f68c97eb2e3d5575e3cf41c7cd4f8c2f1d04ed9e4e3`,
+  details `4f35b2c3d09c0cf684b600f28c6690a36cd49e24f6abec4c6be6aa295b1f5c9c`,
+  manifest `ace810d7e2cbb4f8c40ce09dc8e191ae466adb4e1a7d49c59f2215b411d38b05`,
+  and Implementer report
+  `19bf2b8c989e4c381e76c64fa7a92bff172e2b165c2b7a9e7e18874185707d20`.
+  It excludes device identifiers/names, hardware metadata, owner data, and user
+  paths; temporary capture files are non-authoritative and disposable. The
+  first durable-packet revision of the brief was SHA-256
+  `a66cf3a29f5186e421502ea2e8d26afc4e12fb6ddbafc5438c49b8dd4008e2a3`,
+  pins that packet exactly once, forbids RED rerun/re-export, and leaves GREEN's
+  exactly-one-attachment contract unchanged. Architecture
+  `/root/task2a_red_arch_closure`, QA/Test `/root/task2a_red_qa_closure`, and
+  Security/Privacy `/root/task2a_red_security_closure` each returned GO with
+  Required 0, Optional 0 on that complete contract and found the manifest,
+  volatility, privacy, and ledger findings addressed. TPM
+  `/root/task2a_red_tpm_closure` returned NO-GO, Required 1 because both
+  executable planning-authority gates omitted `docs/delivery/progress.md` from
+  their base, index, worktree, and blob-identity checks even though the declared
+  checkpoint contained four paths. Planning added that exact ledger identity
+  boundary to both gates without changing the evidence packet or any RED,
+  GREEN, product, fixture, or accepted dependency contract. The final corrected
+  brief is SHA-256
+  `9b3601afe91045479ded8ca38371ee254685d512fb5759a38f452d447949806a`;
+  its registry entry and all 17 registered briefs verify. Final exact-hash
+  closure reviews by Architecture `/root/task2a_red_arch_closure`, QA/Test
+  `/root/task2a_red_qa_closure`, Security/Privacy
+  `/root/task2a_red_security_closure`, and TPM
+  `/root/task2a_red_tpm_closure` each returned **GO with Required 0, Optional
+  0, and Out-of-scope 0**. They independently confirmed every prior finding
+  addressed, the unchanged evidence digest and GREEN contract, both complete
+  four-path executable gates, immutable dependencies, privacy/sandbox
+  boundaries, and the no-RED-rerun rule. Current changes are limited to this
+  ledger, the evidence packet, corrected brief, and root brief registry.
+  RR-R10 remains In progress with zero blockers and no live Ticket Tasks plan;
+  Task 2B and every later task remain dependency-blocked.
+- RR-R10 Task 2A corrected pre-GREEN Delivery Management closure: independent
+  Delivery Management agent `/root/task2a_red_delivery_review` reviewed the
+  complete final four-path checkpoint and returned **GO with Required 0,
+  Optional 0, and Out-of-scope 0**. It confirmed its prior missing-ledger
+  finding and TPM's prior four-path-gate finding addressed; verified the exact
+  brief/evidence hashes, all 17 registered briefs, immutable dependencies,
+  durable RED facts, privacy boundary, exact worktree inventory, unchanged
+  RR-R10 state, and Task 2B closure; and released only the four declared paths
+  for the corrected planning checkpoint.
+- Next eligible RR-R10 work: **Commit and push only this ledger, the evidence
+  packet, the corrected brief, and root task-brief registry, then prove exact
+  remote equality with ahead/behind `0/0` and run the complete four-path
+  planning-authority gate.** Only after that checkpoint may one fresh serialized
+  Implementer pass the durable RED recovery gate, reapply the exact temporary
+  generator, and continue at GREEN once. RED and its export must not run again.
   Task 2B remains closed until Task 2A implementation is independently accepted,
   committed, pushed, and remote-exact.
 - Next eligible work: **None for RR-R9.**
