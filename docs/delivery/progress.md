@@ -799,19 +799,64 @@ Deliver the signed native macOS MVP described by
   deterministic read-only continuation. A prior reused Delivery Management
   agent stalled, was interrupted without returning a verdict, and made no
   repository change; the replacement completed the full review.
-- Next eligible RR-R10 work: **Stage, inspect, commit, and push only this
-  ledger, the final corrected Task 2A0 brief, and root brief registry; prove
-  the correction commit is the single direct child of
-  `fccab15dacef8ad4452743a7e75ebf8773304cf3`, equals upstream and live remote,
-  and is ahead/behind `0/0`. Keep the authorized project diff and both
-  SchemaV11 artifacts unstaged and do not run any build or generator.** Only
-  after that exact correction checkpoint may the coordinator run Task 2A0
-  Step 7 once. Fresh independent postimplementation Code Review, QA,
-  Architecture, Security/Privacy, TPM, and Delivery Management GO with
-  Required 0 then gate the project-plus-ledger implementation checkpoint.
-  Task 2A's immutable generator RED/export/GREEN remain closed, its 58-test
-  regression remains paused, and Task 2B and every later RR-R10 task remain
-  dependency-blocked.
+- RR-R10 Task 2A0 correction checkpoint and Step 7: commit
+  `5696a43ab8aee9368031cde03f0977b2077091bf` is the single direct child of
+  `fccab15dacef8ad4452743a7e75ebf8773304cf3` and contains exactly the final
+  corrected Task 2A0 brief, root task-brief registry, and this ledger. The
+  brief remains SHA-256
+  `db34c56d5c312a82b35e5a07434a94db2388d567e75ac1e8085d307d69dce733`
+  and the registry remains SHA-256
+  `3cea0629458fd85c86990e57e59c6ce2506c5a6ddc98cb0411971ff7563e2845`.
+  The checkpoint was pushed; fresh fetch and live `git ls-remote` readback
+  matched HEAD and upstream exactly at that SHA with ahead/behind `0/0`.
+  Only afterward, the coordinator extracted the first Bash fence under the
+  final brief's `### Step 7:` heading and piped it to `/bin/bash` exactly once.
+  Step 7 exited `0` after `1.006562917` seconds; stdout contained only the 18
+  registered task-brief paths suffixed `: OK` followed by
+  `release-radar-v10.sqlite: OK` and `release-radar-v11.sqlite: OK`, and stderr
+  was empty. No second Step 7, build, RED, GREEN, generator, attachment export,
+  or regression invocation occurred. The gate reconfirmed the exact checkpoint
+  ancestry/inventory and remote equality, empty index, sole one-line project
+  diff, two untracked SchemaV11 artifacts, immutable scheme/entitlements/test
+  source, fixture identities, retained log modes/hashes and sanitized marker
+  predicates, SchemaV10 bundled-manifest identity, and every exact ledger fact.
+- RR-R10 Task 2A0 postimplementation closure: fresh Code Reviewer
+  `/root/task2a0_post_code_review`, QA/Test verifier
+  `/root/task2a0_post_qa_review`, Architecture reviewer
+  `/root/task2a0_post_arch_review`, Security/Privacy verifier
+  `/root/task2a0_post_security_review`, TPM reviewer
+  `/root/task2a0_post_tpm_review`, and Delivery Management reviewer
+  `/root/task2a0_post_delivery_review` each independently returned **GO with
+  Required 0, Optional 0, and Out-of-scope 0**. Architecture requires no ADR.
+  They verified project baseline blob
+  `736654a040a90603ad322068fa48fa428acca3fb`, current blob
+  `2b984d44e5b73602bf04b18b761d308761de789c`, exact reconstructed byte
+  equality, valid project parse, the sole authorized
+  `Fixtures/SchemaV11/SHA256SUMS` exception addition, all eight preserved
+  plugin exceptions, absent SchemaV10 exception and preserved bundle identity,
+  accepted test-source blob
+  `7041bd69a9a8349e7164eaee21a11858e9ebd87d`, exact fixture hashes and local
+  checksum results, unchanged scheme/entitlements/persistence/schema/data/
+  sandbox/signing/public contracts, and the retained RED/GREEN evidence without
+  rerunning it or exposing raw logs. The index remained empty; the only tracked
+  implementation delta was `ReleaseRadar.xcodeproj/project.pbxproj`, and both
+  SchemaV11 artifacts remained untracked and byte-identical. No owner, app,
+  bridge, board, ticket, Accepted-ticket, task-plan, notification, external,
+  source, fixture, accepted-artifact, scheme, entitlement, Task 2B, staging,
+  commit, or push mutation occurred during Step 7 or independent review.
+  Delivery Management authorizes the implementation checkpoint to contain
+  exactly the project file and this coordinator-owned ledger; temporary
+  evidence and both SchemaV11 artifacts remain excluded, unstaged,
+  untransmitted, and undeleted absent owner authorization.
+- Next eligible RR-R10 work: **Stage, inspect, commit, and push exactly
+  `ReleaseRadar.xcodeproj/project.pbxproj` and this ledger; prove the Task 2A0
+  implementation checkpoint equals upstream and live remote with ahead/behind
+  `0/0`. Keep both SchemaV11 artifacts and every temporary evidence artifact
+  unstaged and run no build, generator, export, or test.** Only after that
+  remote-exact checkpoint may a fresh coordinator resume Task 2A's existing
+  58-test regression continuation. Task 2B and every later RR-R10 task remain
+  dependency-blocked until Task 2A itself is accepted, committed, pushed, and
+  remote-exact.
 - Next eligible work: **None for RR-R9.**
   The registered controlling correction brief is
   `docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md`
