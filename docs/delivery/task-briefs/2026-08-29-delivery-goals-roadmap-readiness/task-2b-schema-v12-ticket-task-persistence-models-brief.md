@@ -5485,3 +5485,871 @@ durable artifact.
   correction plus accepted two-record RED. The original Required manifest
   finding closes only through the accepted GREEN/regression evidence. Optional
   remains `0`; out-of-scope remains `0`.
+
+## Aggregate-RED recovery amendment — 2026-08-31
+
+This amendment is the controlling recovery authority after the fresh
+Implementer applied the reviewed method-local `continueAfterFailure`
+save/set/deferred-restore change and ran the corrected focused RED exactly
+once under `/bin/bash`, but this runner again ended the test method at the
+first intentional `XCTFail`. It preserves every accepted Task 2B product,
+schema-v12, model, fixture, shared-index-repair, privacy, and evidence-retention
+contract above. It supersedes only the prior amendment's two-failure RED
+strategy, continuation override, recovery prefixes, and downstream fences
+where they conflict with this section.
+
+Direct continuation is **NO-GO**. No code or test edit, build, test, executable
+gate, staging, commit, push, owner-state access, Release Radar mutation,
+external mutation, live Ticket Tasks plan, Task 3 work, or retained-evidence
+mutation is authorized until this exact amendment and its updated root
+registry entry receive the five independent preimplementation GO/Required `0`
+reviews and the three-document planning checkpoint below is committed, pushed,
+and remote-exact.
+
+### Diagnosis and proportional recovery
+
+The second run independently disproves the prior harness hypothesis. The
+method-local XCTestCase property was saved, set to `true` immediately before
+the two counterfeit probes, and restored with `defer`; the exact test blob was
+`b8151da891cfe24a6522b7f7621f61c011a8cb93`. Nevertheless, the runner recorded
+only the first partial-index `XCTFail` and ended the method before the NOCASE
+probe. In this runner, multiple intentional assertion failures inside one test
+method are therefore not a reliable RED protocol, regardless of the inherited
+continuation property.
+
+The smallest evidence-backed correction is not another continuation setting
+or classifier workaround. The existing test must execute both already-authored
+supported-DDL probes without asserting when either defective store remains
+available, collect exactly which counterfeits were incorrectly accepted, and
+make one deterministic `XCTFail` after both probes. That one failure contains
+two distinct fixed markers only when both current defects were observed. The
+ineffective continuation override is removed. This stops procedural escalation:
+there is no new test method, helper, runner configuration, expected-failure
+mechanism, retry, validator, dependency, or product requirement.
+
+Classification:
+
+- Required original index-manifest finding: `1`, unchanged and still open;
+- Required aggregate-RED harness correction: `1`;
+- Required new product behavior: `0`;
+- Optional: `0`;
+- Out of scope: `0`.
+
+### Objective and user-visible outcome
+
+Exercise both existing partial and NOCASE `ticket_tasks_label_unique`
+counterfeits before issuing one intentional RED assertion. After that exact RED
+passes its classifier, apply only the already-reviewed uniform
+`hasExpectedIndexes` repair, then prove exact Store `43/43` and conditional
+Store/plugin-lifecycle `64/64` with a `43/21` split.
+
+The user-visible outcome is unchanged: canonical schema-v12 stores remain
+available, while a same-named critical index that is partial or uses non-BINARY
+key collation fails closed through existing migration recovery. This amendment
+adds no schema DDL, public API, task-plan command, policy, projection, UI,
+Activity event, audit event, notification, bridge/MCP surface, owner workflow,
+or live task plan.
+
+### Controlling references and dependency gate
+
+The controlling authorities remain:
+
+- `docs/design/release-radar-ticket-tasks-design.md`, accepted SHA-256
+  `c1def10263d0a71dac042472faa8113d0ba7ecfc896c0ab2d64854911922ab08`;
+- `docs/architecture/ADR-005-ticket-task-work-plans.md`, accepted SHA-256
+  `6c3c35d62249c0d267c353c7f4c7d7d9adb738be3cd0c9d4f2753b101ff6eab5`;
+- `docs/superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md`,
+  accepted SHA-256
+  `2c3b40e99ff2f280fad574a9c2f939d4e959c77bdded95b9c44070a1b34bfea1`;
+- the accepted Task 1A, Task 1B, Task 2A0, Task 2A, and earlier Task 2B
+  authorities and immutable schema-v10/schema-v11 fixtures hash-pinned above;
+  and
+- `docs/delivery/progress.md` as the only delivery ledger.
+
+The fixed recovery base is commit
+`606cb20c02eac183214923c8cacf3e7b4829bc84`, subject
+`docs: authorize Task 2B RED classifier recovery`, the direct child of
+`38ec1631f2982963fc5648dce6e4946cacf62744`. It contains exactly the prior
+canonical brief, root registry, and coordinator ledger and was independently
+verified at exact HEAD/upstream/live-remote equality with ahead/behind `0/0`.
+Its accepted brief SHA-256 is
+`ef4906c121a83cb1ddf469903eff177402b262244d19a530b6287ea530b71c18`;
+its accepted root-registry SHA-256 is
+`e07ec624ed9821d6b2dd382ee12b12ee1d1f4dccc5f2c0bb6c18f72258c0a582`.
+
+Task 3 remains dependency-blocked until the aggregate RED, GREEN, conditional
+regression, six postimplementation reviews, bounded implementation checkpoint,
+push, and exact local/upstream/live-remote reconciliation complete.
+
+### Retained second RED evidence and exact state
+
+The prior classifier-recovery RED ran exactly once under `/bin/bash`; no
+product edit, GREEN, regression, or later test occurred. Its restricted parent
+is retained without mutation at
+`/tmp/release-radar-rr-r10-task2b-index-manifest-red-classifier-recovery.ztP5C7`:
+
+- parent directory: mode `700`;
+- `red-classifier-recovery.log`: regular non-symlink mode `600`, 441,362
+  bytes, SHA-256
+  `76cd9dd2fb421520dd8dbe9d4f9221ddfca5c7db9feb18edeb79e5e7cf0f1af2`;
+- `red-classifier-recovery-summary.json`: regular non-symlink mode `600`,
+  1,181 bytes, SHA-256
+  `507e1e3770fd436cff3ff90900d72242777a2ecb6f96a9782c54b3e27bc0675b`;
+- `red-classifier-recovery-tests.json`: regular non-symlink mode `600`, 1,325
+  bytes, SHA-256
+  `03f00135d40eae07bbd23d5d6d8188146b099132f61b5fba7e56135f4bfef33d`;
+- `red-classifier-recovery-inventory.txt`: regular non-symlink mode `600`,
+  263 bytes, SHA-256
+  `5c55b99c4060f12111c9efeb42ced62f6ab2c643e0d7f0a826ad2b1445e4a914`;
+- `red-classifier-recovery.xcresult`: contained mode-`700` directory with
+  2,414 regular files, 142,609,094 total regular-file bytes, and SHA-256
+  `7a1d2a5a766a01399c66d579555c0b005bbc01171004fd9ec7634dbf597c6ac3`
+  over its path-sorted per-file SHA-256 manifest; and
+- independent quiet credential/private-key scan status `1` for no match
+  across the four scalar/text files.
+
+Structured evidence reports `Failed`, exactly one selected test, one failed,
+zero passed/skipped/expected-failure tests, and exactly one failure record and
+message: `Expected partial ticket_tasks_label_unique index to fail closed` at
+`StoreAcceptanceTests.swift:510`. The raw log and structured results contain
+no NOCASE failure. The retained original `jflpkq` RED metadata and the two
+historical Bash-compatibility disclosures remain exactly as recorded in the
+preceding amendment and ledger; neither old RED may be rerun, renamed,
+overwritten, or deleted.
+
+The exact implementation inventory before this amendment is:
+
+| Path | Required current blob |
+| --- | --- |
+| `ReleaseRadarCore/Models/TicketTaskModels.swift` | `49f365dd1e074d4d2b716384756e71a3c5fb1ce1` |
+| `ReleaseRadarCore/Store/DeliveryStore.swift` | `d930ab18794a959b44cad4293cee24647a1af8f6` |
+| `ReleaseRadarCore/Store/StoreMigrations.swift` | `6fad7835211cace656e854aa0249f8775280a6dd` |
+| `ReleaseRadarTests/StoreAcceptanceTests.swift` | `b8151da891cfe24a6522b7f7621f61c011a8cb93` |
+| `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift` | `d5d2bd7411bf7b10892b93ee57f62cc76c47492a` |
+
+The index is empty. The four tracked implementation files remain modified and
+the model remains the sole untracked path. `StoreMigrations.swift` is still
+the pre-repair blob above. No old classifier-recovery GREEN/regression prefix
+exists, and no path may exist under these new prefixes before its authorized
+fence:
+
+- `/tmp/release-radar-rr-r10-task2b-index-manifest-red-aggregate-recovery.*`;
+- `/tmp/release-radar-rr-r10-task2b-index-manifest-green-aggregate-recovery.*`;
+- `/tmp/release-radar-rr-r10-task2b-index-manifest-regression-aggregate-recovery.*`.
+
+Any blob, path-count, evidence hash, mode, privacy, branch, lineage, index,
+worktree inventory, remote, or prefix mismatch stops without normalization,
+repair, evidence mutation, or retry.
+
+### In scope, out of scope, and affected subsystems
+
+After the committed planning release gate passes, one fresh serialized
+Implementer may modify only, in this order:
+
+1. `ReleaseRadarTests/StoreAcceptanceTests.swift`, only inside the existing
+   `testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects()` method,
+   to remove the ineffective continuation override and aggregate the two
+   already-authored counterfeit outcomes exactly as below; then
+2. only after a valid aggregate RED,
+   `ReleaseRadarCore/Store/StoreMigrations.swift`, only for the previously
+   reviewed shared metadata validation.
+
+The Store suite remains exactly 43 methods. The supported DDL, separate
+temporary stores, metadata setup assertions, recovery assertions, helper
+behavior, and all other Task 2B tests remain unchanged.
+
+Out of scope is every new test method/helper, schema DDL, canonical index
+definition, model, `DeliveryStore`, plugin-lifecycle test, fixture or manifest,
+project/scheme, dependency, signing, entitlement, sandbox, script, generated
+file, owner database/app, Release Radar state, live plan, Task 3 surface,
+notification, provider, bridge/MCP surface, and external action.
+
+### Data, persistence, security, privacy, and activity evidence
+
+The test-only aggregation changes no production data or persistence. Each
+counterfeit still uses its own temporary database, both are fully probed before
+the sole intentional assertion, and an unexpected setup, DDL, metadata,
+recovery-detail, thrown-error, extra assertion, privacy, mode, containment,
+count, or parser failure invalidates the RED. The later production edit changes
+only fail-closed manifest validation and adds no row or data migration.
+
+Every new fence must be invoked explicitly with `/bin/bash`. Each owns one new
+unique mode-`700` parent. Immediately after `xcodebuild` status capture, the
+raw log and scalar inventory must be proven contained, regular, non-symlink
+mode-`600` files and quietly privacy-scanned with exact status `1` before
+build-status evaluation, result inspection, extraction, or classification.
+Extracted JSON receives the same validation and scan before parsing. All old
+and new `/tmp` evidence is private, temporary, retained, unstaged,
+untransmitted, and undeleted.
+
+No Activity or audit event is emitted by this test or migration-repair slice.
+The only durable activity evidence is sanitized scalar delivery evidence in
+`docs/delivery/progress.md`; raw logs, result bundles, JSON, owner data, and
+matching sensitive lines never enter the repository.
+
+### Exact aggregate harness edit
+
+Inside the existing manifest test, replace the continuation override and both
+tail-case `XCTFail` calls exactly as follows:
+
+```diff
+-        let previousContinueAfterFailure = continueAfterFailure
+-        continueAfterFailure = true
+-        defer { continueAfterFailure = previousContinueAfterFailure }
+-
++        var acceptedCounterfeitMarkers: [String] = []
+         let partialLabelIndexURL = try makeVersionTwelveDatabaseURL()
+@@
+         } else {
+-            XCTFail("Expected partial ticket_tasks_label_unique index to fail closed")
++            acceptedCounterfeitMarkers.append(
++                "RR_TASK2B_INDEX_MANIFEST_RED_PARTIAL_ACCEPTED"
++            )
+         }
+@@
+         } else {
+-            XCTFail("Expected NOCASE ticket_tasks_label_unique index to fail closed")
++            acceptedCounterfeitMarkers.append(
++                "RR_TASK2B_INDEX_MANIFEST_RED_NOCASE_ACCEPTED"
++            )
++        }
++        if !acceptedCounterfeitMarkers.isEmpty {
++            XCTFail(acceptedCounterfeitMarkers.joined(separator: " "))
+         }
+```
+
+Do not set or read `continueAfterFailure` anywhere in the method. Do not catch
+errors or turn setup/recovery assertions into collected markers. With the
+current defective shared validator, both stores remain available, both markers
+are collected in probe order, and one final failure is exactly:
+
+```text
+RR_TASK2B_INDEX_MANIFEST_RED_PARTIAL_ACCEPTED RR_TASK2B_INDEX_MANIFEST_RED_NOCASE_ACCEPTED
+```
+
+Applied to exact preimage blob
+`b8151da891cfe24a6522b7f7621f61c011a8cb93`, that diff must produce exactly
+156,791 bytes and Git blob
+`4507928ba00113f0781658252c189b2975ac7b9f`. This exact post-edit blob, not
+marker presence alone, is the source boundary for RED, GREEN, regression,
+review, staging, and completion. Any other blob proves an unrelated or
+inexact test/DDL/metadata/recovery change and stops before test execution.
+
+After the production repair, both stores return migration recovery, the marker
+array stays empty, and the same test passes. If only one counterfeit is
+accepted, the RED classifier rejects the run because one required marker is
+absent. That is a non-happy-path stop, not authorization to weaken the
+classifier or retry.
+
+### Preimplementation reviews and planning release gate
+
+Fresh independent Architecture, QA/Test, Security/Privacy, TPM, and Delivery
+Management reviewers must review the exact final brief and updated registry
+bytes and each return GO with Required `0`. Delivery Management must also
+review the actual ledger, both retained RED parents, exact evidence metadata,
+current inventory, unique prefixes, three-document checkpoint inventory, and
+Task 3 closure. This Planning agent cannot approve its own amendment.
+
+After those reviews, Delivery Management must add exactly one of each line to
+the actual ledger before staging:
+
+```text
+- RR-R10 Task 2B aggregate-RED recovery final reviewed brief SHA-256: `<64 lowercase hex>`
+- RR-R10 Task 2B aggregate-RED recovery final reviewed registry SHA-256: `<64 lowercase hex>`
+```
+
+The planning checkpoint must be the single direct child of
+`606cb20c02eac183214923c8cacf3e7b4829bc84` and contain exactly this brief,
+`docs/delivery/task-briefs/SHA256SUMS`, and `docs/delivery/progress.md`. The five
+implementation paths remain unstaged. Commit and push that approved planning
+checkpoint, prove exact HEAD/upstream/live-remote equality with ahead/behind
+`0/0`, then run this release gate exactly once under `/bin/bash`:
+
+```bash
+set -euo pipefail
+RR_IMA_BASE=606cb20c02eac183214923c8cacf3e7b4829bc84
+RR_IMA_BRANCH=codex/release-radar-mvp
+RR_IMA_BRIEF=docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
+RR_IMA_REGISTRY=docs/delivery/task-briefs/SHA256SUMS
+RR_IMA_LEDGER=docs/delivery/progress.md
+RR_IMA_HEAD="$(git rev-parse HEAD)"
+test "$(git rev-parse "$RR_IMA_HEAD^")" = "$RR_IMA_BASE"
+test "$(git branch --show-current)" = "$RR_IMA_BRANCH"
+test "$(git rev-parse '@{u}')" = "$RR_IMA_HEAD"
+test "$(git rev-list --left-right --count HEAD...'@{u}')" = $'0\t0'
+RR_IMA_REMOTE="$(git ls-remote --exit-code origin "refs/heads/$RR_IMA_BRANCH")"
+test "$(printf '%s\n' "$RR_IMA_REMOTE" | wc -l | tr -d ' ')" = "1"
+test "$(printf '%s\n' "$RR_IMA_REMOTE" | awk '{print $1}')" = "$RR_IMA_HEAD"
+test "$(git diff-tree --no-commit-id --name-only -r "$RR_IMA_HEAD" | LC_ALL=C sort)" = "$(printf '%s\n' "$RR_IMA_BRIEF" "$RR_IMA_REGISTRY" "$RR_IMA_LEDGER" | LC_ALL=C sort)"
+git diff --exit-code "$RR_IMA_HEAD" -- "$RR_IMA_BRIEF" "$RR_IMA_REGISTRY" "$RR_IMA_LEDGER"
+test "$(git diff --cached --name-only)" = ""
+
+python3 - "$RR_IMA_BRIEF" "$RR_IMA_REGISTRY" "$RR_IMA_LEDGER" <<'PYTHON'
+import hashlib
+import pathlib
+import re
+import sys
+
+brief, registry, ledger = map(pathlib.Path, sys.argv[1:])
+patterns = {
+    "brief": r"^- RR-R10 Task 2B aggregate-RED recovery final reviewed brief SHA-256: `([0-9a-f]{64})`$",
+    "registry": r"^- RR-R10 Task 2B aggregate-RED recovery final reviewed registry SHA-256: `([0-9a-f]{64})`$",
+}
+ledger_text = ledger.read_text(encoding="utf-8")
+for name, pattern in patterns.items():
+    matches = re.findall(pattern, ledger_text, re.MULTILINE)
+    if len(matches) != 1:
+        raise SystemExit(f"expected one aggregate-RED {name} binding")
+    target = brief if name == "brief" else registry
+    if hashlib.sha256(target.read_bytes()).hexdigest() != matches[0]:
+        raise SystemExit(f"aggregate-RED {name} binding mismatch")
+
+task2b = 0
+for number, line in enumerate(registry.read_text(encoding="utf-8").splitlines(), 1):
+    parts = line.split("  ", 1)
+    if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
+        raise SystemExit(f"invalid registry line {number}")
+    target = pathlib.Path(parts[1])
+    if hashlib.sha256(target.read_bytes()).hexdigest() != parts[0]:
+        raise SystemExit(f"registry mismatch for {target}")
+    task2b += target == brief
+if task2b != 1:
+    raise SystemExit("Task 2B registry entry must be unique")
+PYTHON
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "b8151da891cfe24a6522b7f7621f61c011a8cb93"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+
+RR_IMA_RED_OLD="$(compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-red.*' || true)"
+test "$(printf '%s\n' "$RR_IMA_RED_OLD" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+test "$RR_IMA_RED_OLD" = "/tmp/release-radar-rr-r10-task2b-index-manifest-red.jflpkq"
+test "$(shasum -a 256 "$RR_IMA_RED_OLD/index-manifest-red.log" | awk '{print $1}')" = "0479bb772521cfa87aa5b9bbf9872526871bc0edbafc085995bca2b2227fe40c"
+RR_IMA_RED_CLASSIFIER="$(compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-red-classifier-recovery.*' || true)"
+test "$(printf '%s\n' "$RR_IMA_RED_CLASSIFIER" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+test "$RR_IMA_RED_CLASSIFIER" = "/tmp/release-radar-rr-r10-task2b-index-manifest-red-classifier-recovery.ztP5C7"
+test "$(shasum -a 256 "$RR_IMA_RED_CLASSIFIER/red-classifier-recovery.log" | awk '{print $1}')" = "76cd9dd2fb421520dd8dbe9d4f9221ddfca5c7db9feb18edeb79e5e7cf0f1af2"
+test "$(shasum -a 256 "$RR_IMA_RED_CLASSIFIER/red-classifier-recovery-summary.json" | awk '{print $1}')" = "507e1e3770fd436cff3ff90900d72242777a2ecb6f96a9782c54b3e27bc0675b"
+test "$(shasum -a 256 "$RR_IMA_RED_CLASSIFIER/red-classifier-recovery-tests.json" | awk '{print $1}')" = "03f00135d40eae07bbd23d5d6d8188146b099132f61b5fba7e56135f4bfef33d"
+test "$(shasum -a 256 "$RR_IMA_RED_CLASSIFIER/red-classifier-recovery-inventory.txt" | awk '{print $1}')" = "5c55b99c4060f12111c9efeb42ced62f6ab2c643e0d7f0a826ad2b1445e4a914"
+for RR_IMA_ABSENT in \
+  '/tmp/release-radar-rr-r10-task2b-index-manifest-green.*' \
+  '/tmp/release-radar-rr-r10-task2b-index-manifest-regression.*' \
+  '/tmp/release-radar-rr-r10-task2b-index-manifest-green-classifier-recovery.*' \
+  '/tmp/release-radar-rr-r10-task2b-index-manifest-regression-classifier-recovery.*' \
+  '/tmp/release-radar-rr-r10-task2b-index-manifest-red-aggregate-recovery.*' \
+  '/tmp/release-radar-rr-r10-task2b-index-manifest-green-aggregate-recovery.*' \
+  '/tmp/release-radar-rr-r10-task2b-index-manifest-regression-aggregate-recovery.*'; do
+  if compgen -G "$RR_IMA_ABSENT" >/dev/null; then exit 1; fi
+done
+```
+
+Any failure stops before writer release, edit, test, retry, or later action.
+
+### Aggregate focused RED fence
+
+The fresh Implementer first applies only the exact test edit above, then runs
+this complete fence exactly once under `/bin/bash`:
+
+```bash
+set -euo pipefail
+umask 077
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-red-aggregate-recovery.*' >/dev/null; then exit 1; fi
+RR_IMA_RED_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-index-manifest-red-aggregate-recovery.XXXXXX)"
+chmod 700 "$RR_IMA_RED_PARENT"
+test "$(/usr/bin/stat -f '%HT' "$RR_IMA_RED_PARENT")" = "Directory"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_RED_PARENT")" = "700"
+RR_IMA_RED_DERIVED="$RR_IMA_RED_PARENT/DerivedData"
+RR_IMA_RED_RESULT="$RR_IMA_RED_PARENT/red-aggregate-recovery.xcresult"
+RR_IMA_RED_LOG="$RR_IMA_RED_PARENT/red-aggregate-recovery.log"
+RR_IMA_RED_SUMMARY="$RR_IMA_RED_PARENT/red-aggregate-recovery-summary.json"
+RR_IMA_RED_TESTS="$RR_IMA_RED_PARENT/red-aggregate-recovery-tests.json"
+RR_IMA_RED_INVENTORY="$RR_IMA_RED_PARENT/red-aggregate-recovery-inventory.txt"
+RR_IMA_SECRET='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+test "$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)" = "6fad7835211cace656e854aa0249f8775280a6dd"
+RR_IMA_RED_TEST_BLOB="$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)"
+test "$RR_IMA_RED_TEST_BLOB" = "4507928ba00113f0781658252c189b2975ac7b9f"
+test "$(/usr/bin/stat -f '%z' ReleaseRadarTests/StoreAcceptanceTests.swift)" = "156791"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --cached --name-only)" = ""
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+
+python3 - ReleaseRadarTests/StoreAcceptanceTests.swift <<'PYTHON'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+required = (
+    "        var acceptedCounterfeitMarkers: [String] = []\n",
+    '                "RR_TASK2B_INDEX_MANIFEST_RED_PARTIAL_ACCEPTED"\n',
+    '                "RR_TASK2B_INDEX_MANIFEST_RED_NOCASE_ACCEPTED"\n',
+    "        if !acceptedCounterfeitMarkers.isEmpty {\n",
+    '            XCTFail(acceptedCounterfeitMarkers.joined(separator: " "))\n',
+)
+for marker in required:
+    if source.count(marker) != 1:
+        raise SystemExit(f"aggregate source marker mismatch: {marker!r}")
+for forbidden in (
+    "previousContinueAfterFailure",
+    "continueAfterFailure = true",
+    "Expected partial ticket_tasks_label_unique index to fail closed",
+    "Expected NOCASE ticket_tasks_label_unique index to fail closed",
+):
+    if forbidden in source:
+        raise SystemExit(f"obsolete aggregate source remains: {forbidden}")
+PYTHON
+
+(
+  set -C
+  printf '%s\n' \
+    "models=49f365dd1e074d4d2b716384756e71a3c5fb1ce1" \
+    "delivery_store=d930ab18794a959b44cad4293cee24647a1af8f6" \
+    "migrations=6fad7835211cace656e854aa0249f8775280a6dd" \
+    "store_tests=$RR_IMA_RED_TEST_BLOB" \
+    "plugin_tests=d5d2bd7411bf7b10892b93ee57f62cc76c47492a" >"$RR_IMA_RED_INVENTORY"
+)
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_IMA_RED_DERIVED" \
+  -resultBundlePath "$RR_IMA_RED_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests/testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects >"$RR_IMA_RED_LOG" 2>&1
+RR_IMA_RED_STATUS=$?
+set -e
+
+for RR_IMA_FILE in "$RR_IMA_RED_LOG" "$RR_IMA_RED_INVENTORY"; do
+  test -f "$RR_IMA_FILE"; test ! -L "$RR_IMA_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_IMA_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IMA_FILE")")" = "$(realpath "$RR_IMA_RED_PARENT")"
+done
+RR_IMA_SCAN=0
+rg --quiet --pcre2 "$RR_IMA_SECRET" "$RR_IMA_RED_LOG" "$RR_IMA_RED_INVENTORY" >/dev/null 2>&1 || RR_IMA_SCAN=$?
+test "$RR_IMA_SCAN" = "1"
+test "$RR_IMA_RED_STATUS" -ne "0"
+test -d "$RR_IMA_RED_RESULT"; test ! -L "$RR_IMA_RED_RESULT"
+test "$(/usr/bin/stat -f '%HT' "$RR_IMA_RED_RESULT")" = "Directory"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_RED_RESULT")" = "700"
+test "$(dirname "$(realpath "$RR_IMA_RED_RESULT")")" = "$(realpath "$RR_IMA_RED_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_IMA_RED_RESULT" --compact >"$RR_IMA_RED_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_IMA_RED_RESULT" --compact >"$RR_IMA_RED_TESTS"
+)
+for RR_IMA_FILE in "$RR_IMA_RED_SUMMARY" "$RR_IMA_RED_TESTS"; do
+  test -f "$RR_IMA_FILE"; test ! -L "$RR_IMA_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_IMA_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IMA_FILE")")" = "$(realpath "$RR_IMA_RED_PARENT")"
+done
+RR_IMA_SCAN=0
+rg --quiet --pcre2 "$RR_IMA_SECRET" "$RR_IMA_RED_LOG" "$RR_IMA_RED_INVENTORY" "$RR_IMA_RED_SUMMARY" "$RR_IMA_RED_TESTS" >/dev/null 2>&1 || RR_IMA_SCAN=$?
+test "$RR_IMA_SCAN" = "1"
+
+python3 - "$RR_IMA_RED_SUMMARY" "$RR_IMA_RED_TESTS" <<'PYTHON'
+import json
+import sys
+
+summary = json.load(open(sys.argv[1], encoding="utf-8"))
+tests = json.load(open(sys.argv[2], encoding="utf-8"))
+expected = {
+    "result": "Failed", "totalTestCount": 1, "passedTests": 0,
+    "failedTests": 1, "skippedTests": 0, "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected aggregate RED {key}: {summary.get(key)!r}")
+failures = summary.get("testFailures")
+if not isinstance(failures, list) or len(failures) != 1:
+    raise SystemExit("aggregate RED must have exactly one failure record")
+markers = (
+    "RR_TASK2B_INDEX_MANIFEST_RED_PARTIAL_ACCEPTED",
+    "RR_TASK2B_INDEX_MANIFEST_RED_NOCASE_ACCEPTED",
+)
+failure_text = failures[0].get("failureText", "")
+for marker in markers:
+    if failure_text.count(marker) != 1:
+        raise SystemExit(f"aggregate RED failure mismatch: {marker}")
+cases = []
+messages = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        if value.get("nodeType") == "Failure Message":
+            messages.append(value.get("name", ""))
+        for child in value.values(): visit(child)
+    elif isinstance(value, list):
+        for child in value: visit(child)
+visit(tests)
+expected_case = (
+    "StoreAcceptanceTests/testVersionTwelveManifestRejectsMissingOrCounterfeitTaskObjects()",
+    "Failed",
+)
+if cases != [expected_case]:
+    raise SystemExit(f"unexpected aggregate RED cases: {cases!r}")
+if len(messages) != 1:
+    raise SystemExit(f"aggregate RED must contain one failure message: {messages!r}")
+for marker in markers:
+    if messages[0].count(marker) != 1:
+        raise SystemExit(f"aggregate RED test-tree mismatch: {marker}")
+PYTHON
+```
+
+Valid RED is exactly one failed existing test and exactly one intentional
+failure record/message containing each fixed marker once, with no unrelated
+failure. Any other result consumes this fence and stops before product edit,
+GREEN, regression, diff check, review, staging, checkpoint, or retry.
+
+### Preserved minimal production repair
+
+Only after the aggregate RED fence passes completely, modify only
+`StoreMigrations.hasExpectedIndexes` exactly as already reviewed:
+
+1. add `partial = 0` to the existing `pragma_index_list` name/unique match;
+2. require `coll == "BINARY"` for every existing `key = 1` row checked by
+   offset;
+3. preserve table/name association, unique flag, key count, key names, key
+   order, and descending-direction checks; and
+4. remove only the redundant schema-v12 special-case collation queries for
+   positions 4 and 5 of `ticket_tasks_active_order_index`.
+
+Do not change the critical-index descriptor, canonical DDL, SQL normalization,
+or special-case either counterfeit by name. The Store test blob captured by
+the aggregate RED must remain unchanged through GREEN and regression.
+
+### Full Store aggregate-recovery GREEN fence
+
+After the minimal production edit, run exactly once under `/bin/bash`:
+
+```bash
+set -euo pipefail
+umask 077
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-green-aggregate-recovery.*' >/dev/null; then exit 1; fi
+RR_IMA_RED_PARENT="$(compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-red-aggregate-recovery.*' || true)"
+test "$(printf '%s\n' "$RR_IMA_RED_PARENT" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+RR_IMA_RED_INVENTORY="$RR_IMA_RED_PARENT/red-aggregate-recovery-inventory.txt"
+RR_IMA_RED_TEST_BLOB="$(awk -F= '$1 == "store_tests" {print $2}' "$RR_IMA_RED_INVENTORY")"
+test "$RR_IMA_RED_TEST_BLOB" = "4507928ba00113f0781658252c189b2975ac7b9f"
+
+RR_IMA_GREEN_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-index-manifest-green-aggregate-recovery.XXXXXX)"
+chmod 700 "$RR_IMA_GREEN_PARENT"
+test "$(/usr/bin/stat -f '%HT' "$RR_IMA_GREEN_PARENT")" = "Directory"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_GREEN_PARENT")" = "700"
+RR_IMA_GREEN_DERIVED="$RR_IMA_GREEN_PARENT/DerivedData"
+RR_IMA_GREEN_RESULT="$RR_IMA_GREEN_PARENT/green-aggregate-recovery.xcresult"
+RR_IMA_GREEN_LOG="$RR_IMA_GREEN_PARENT/green-aggregate-recovery.log"
+RR_IMA_GREEN_SUMMARY="$RR_IMA_GREEN_PARENT/green-aggregate-recovery-summary.json"
+RR_IMA_GREEN_TESTS="$RR_IMA_GREEN_PARENT/green-aggregate-recovery-tests.json"
+RR_IMA_GREEN_INVENTORY="$RR_IMA_GREEN_PARENT/green-aggregate-recovery-inventory.txt"
+RR_IMA_SECRET='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+
+test "$(git hash-object ReleaseRadarCore/Models/TicketTaskModels.swift)" = "49f365dd1e074d4d2b716384756e71a3c5fb1ce1"
+test "$(git hash-object ReleaseRadarCore/Store/DeliveryStore.swift)" = "d930ab18794a959b44cad4293cee24647a1af8f6"
+RR_IMA_GREEN_MIGRATIONS_BLOB="$(git hash-object ReleaseRadarCore/Store/StoreMigrations.swift)"
+test "$RR_IMA_GREEN_MIGRATIONS_BLOB" != "6fad7835211cace656e854aa0249f8775280a6dd"
+case "$RR_IMA_GREEN_MIGRATIONS_BLOB" in (*[!0-9a-f]*|'') exit 1;; esac
+test "${#RR_IMA_GREEN_MIGRATIONS_BLOB}" = "40"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "4507928ba00113f0781658252c189b2975ac7b9f"
+test "$(/usr/bin/stat -f '%z' ReleaseRadarTests/StoreAcceptanceTests.swift)" = "156791"
+test "$(git hash-object ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift)" = "d5d2bd7411bf7b10892b93ee57f62cc76c47492a"
+test "$(git diff --cached --name-only)" = ""
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+(
+  set -C
+  printf '%s\n' \
+    "models=49f365dd1e074d4d2b716384756e71a3c5fb1ce1" \
+    "delivery_store=d930ab18794a959b44cad4293cee24647a1af8f6" \
+    "migrations=$RR_IMA_GREEN_MIGRATIONS_BLOB" \
+    "store_tests=$RR_IMA_RED_TEST_BLOB" \
+    "plugin_tests=d5d2bd7411bf7b10892b93ee57f62cc76c47492a" >"$RR_IMA_GREEN_INVENTORY"
+)
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_IMA_GREEN_DERIVED" \
+  -resultBundlePath "$RR_IMA_GREEN_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests >"$RR_IMA_GREEN_LOG" 2>&1
+RR_IMA_GREEN_STATUS=$?
+set -e
+
+for RR_IMA_FILE in "$RR_IMA_GREEN_LOG" "$RR_IMA_GREEN_INVENTORY"; do
+  test -f "$RR_IMA_FILE"; test ! -L "$RR_IMA_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_IMA_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IMA_FILE")")" = "$(realpath "$RR_IMA_GREEN_PARENT")"
+done
+RR_IMA_SCAN=0
+rg --quiet --pcre2 "$RR_IMA_SECRET" "$RR_IMA_GREEN_LOG" "$RR_IMA_GREEN_INVENTORY" >/dev/null 2>&1 || RR_IMA_SCAN=$?
+test "$RR_IMA_SCAN" = "1"
+test "$RR_IMA_GREEN_STATUS" = "0"
+test -d "$RR_IMA_GREEN_RESULT"; test ! -L "$RR_IMA_GREEN_RESULT"
+test "$(/usr/bin/stat -f '%HT' "$RR_IMA_GREEN_RESULT")" = "Directory"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_GREEN_RESULT")" = "700"
+test "$(dirname "$(realpath "$RR_IMA_GREEN_RESULT")")" = "$(realpath "$RR_IMA_GREEN_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_IMA_GREEN_RESULT" --compact >"$RR_IMA_GREEN_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_IMA_GREEN_RESULT" --compact >"$RR_IMA_GREEN_TESTS"
+)
+for RR_IMA_FILE in "$RR_IMA_GREEN_SUMMARY" "$RR_IMA_GREEN_TESTS"; do
+  test -f "$RR_IMA_FILE"; test ! -L "$RR_IMA_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_IMA_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IMA_FILE")")" = "$(realpath "$RR_IMA_GREEN_PARENT")"
+done
+RR_IMA_SCAN=0
+rg --quiet --pcre2 "$RR_IMA_SECRET" "$RR_IMA_GREEN_LOG" "$RR_IMA_GREEN_INVENTORY" "$RR_IMA_GREEN_SUMMARY" "$RR_IMA_GREEN_TESTS" >/dev/null 2>&1 || RR_IMA_SCAN=$?
+test "$RR_IMA_SCAN" = "1"
+
+python3 - "$RR_IMA_GREEN_SUMMARY" "$RR_IMA_GREEN_TESTS" <<'PYTHON'
+import json
+import sys
+
+summary = json.load(open(sys.argv[1], encoding="utf-8"))
+tests = json.load(open(sys.argv[2], encoding="utf-8"))
+expected = {
+    "result": "Passed", "totalTestCount": 43, "passedTests": 43,
+    "failedTests": 0, "skippedTests": 0, "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected GREEN {key}: {summary.get(key)!r}")
+if summary.get("testFailures") != []:
+    raise SystemExit("GREEN failure records must be empty")
+cases = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        for child in value.values(): visit(child)
+    elif isinstance(value, list):
+        for child in value: visit(child)
+visit(tests)
+if len(cases) != 43 or len({case[0] for case in cases}) != 43:
+    raise SystemExit("GREEN must contain 43 unique Store tests")
+if any(not case[0].startswith("StoreAcceptanceTests/") or case[1] != "Passed" for case in cases):
+    raise SystemExit("GREEN contains a non-Store or non-passing case")
+PYTHON
+```
+
+Expected: exact structured Store `43/43`, zero failure records, unchanged RED
+Store-test blob, and a captured actual final migration blob. Any failure stops
+before regression, diff check, review, staging, checkpoint, or retry.
+
+### Conditional selected aggregate-recovery regression fence
+
+Run exactly once under `/bin/bash` if and only if GREEN passes completely:
+
+```bash
+set -euo pipefail
+umask 077
+if compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-regression-aggregate-recovery.*' >/dev/null; then exit 1; fi
+RR_IMA_GREEN_PARENT="$(compgen -G '/tmp/release-radar-rr-r10-task2b-index-manifest-green-aggregate-recovery.*' || true)"
+test "$(printf '%s\n' "$RR_IMA_GREEN_PARENT" | sed '/^$/d' | wc -l | tr -d ' ')" = "1"
+RR_IMA_FINAL_INVENTORY="$RR_IMA_GREEN_PARENT/green-aggregate-recovery-inventory.txt"
+test "$(awk -F= '$1 == "store_tests" {print $2}' "$RR_IMA_FINAL_INVENTORY")" = "4507928ba00113f0781658252c189b2975ac7b9f"
+test "$(git hash-object ReleaseRadarTests/StoreAcceptanceTests.swift)" = "4507928ba00113f0781658252c189b2975ac7b9f"
+test "$(/usr/bin/stat -f '%z' ReleaseRadarTests/StoreAcceptanceTests.swift)" = "156791"
+for RR_IMA_PAIR in \
+  "ReleaseRadarCore/Models/TicketTaskModels.swift:models" \
+  "ReleaseRadarCore/Store/DeliveryStore.swift:delivery_store" \
+  "ReleaseRadarCore/Store/StoreMigrations.swift:migrations" \
+  "ReleaseRadarTests/StoreAcceptanceTests.swift:store_tests" \
+  "ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift:plugin_tests"; do
+  RR_IMA_PATH="${RR_IMA_PAIR%%:*}"; RR_IMA_KEY="${RR_IMA_PAIR##*:}"
+  RR_IMA_EXPECTED="$(awk -F= -v key="$RR_IMA_KEY" '$1 == key {print $2}' "$RR_IMA_FINAL_INVENTORY")"
+  test "$(git hash-object "$RR_IMA_PATH")" = "$RR_IMA_EXPECTED"
+done
+test "$(git diff --cached --name-only)" = ""
+test "$(git diff --name-only -- | LC_ALL=C sort)" = "$(printf '%s\n' ReleaseRadarCore/Store/DeliveryStore.swift ReleaseRadarCore/Store/StoreMigrations.swift ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift ReleaseRadarTests/StoreAcceptanceTests.swift | LC_ALL=C sort)"
+test "$(git ls-files --others --exclude-standard | LC_ALL=C sort)" = "ReleaseRadarCore/Models/TicketTaskModels.swift"
+
+RR_IMA_REG_PARENT="$(mktemp -d /tmp/release-radar-rr-r10-task2b-index-manifest-regression-aggregate-recovery.XXXXXX)"
+chmod 700 "$RR_IMA_REG_PARENT"
+test "$(/usr/bin/stat -f '%HT' "$RR_IMA_REG_PARENT")" = "Directory"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_REG_PARENT")" = "700"
+RR_IMA_REG_DERIVED="$RR_IMA_REG_PARENT/DerivedData"
+RR_IMA_REG_RESULT="$RR_IMA_REG_PARENT/regression-aggregate-recovery.xcresult"
+RR_IMA_REG_LOG="$RR_IMA_REG_PARENT/regression-aggregate-recovery.log"
+RR_IMA_REG_SUMMARY="$RR_IMA_REG_PARENT/regression-aggregate-recovery-summary.json"
+RR_IMA_REG_TESTS="$RR_IMA_REG_PARENT/regression-aggregate-recovery-tests.json"
+RR_IMA_SECRET='(BEGIN[[:space:]]+(RSA |EC |OPENSSH |DSA |PRIVATE )?PRIVATE KEY|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9A-Za-z-]+|gh[pousr]_[0-9A-Za-z_]{36,}|sk-[A-Za-z0-9_-]{20,})'
+
+set +e
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$RR_IMA_REG_DERIVED" \
+  -resultBundlePath "$RR_IMA_REG_RESULT" \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/StoreAcceptanceTests \
+  -only-testing:ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests >"$RR_IMA_REG_LOG" 2>&1
+RR_IMA_REG_STATUS=$?
+set -e
+
+for RR_IMA_FILE in "$RR_IMA_REG_LOG" "$RR_IMA_FINAL_INVENTORY"; do
+  test -f "$RR_IMA_FILE"; test ! -L "$RR_IMA_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_IMA_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_FILE")" = "600"
+done
+test "$(dirname "$(realpath "$RR_IMA_REG_LOG")")" = "$(realpath "$RR_IMA_REG_PARENT")"
+test "$(dirname "$(realpath "$RR_IMA_FINAL_INVENTORY")")" = "$(realpath "$RR_IMA_GREEN_PARENT")"
+RR_IMA_SCAN=0
+rg --quiet --pcre2 "$RR_IMA_SECRET" "$RR_IMA_REG_LOG" "$RR_IMA_FINAL_INVENTORY" >/dev/null 2>&1 || RR_IMA_SCAN=$?
+test "$RR_IMA_SCAN" = "1"
+test "$RR_IMA_REG_STATUS" = "0"
+test -d "$RR_IMA_REG_RESULT"; test ! -L "$RR_IMA_REG_RESULT"
+test "$(/usr/bin/stat -f '%HT' "$RR_IMA_REG_RESULT")" = "Directory"
+test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_REG_RESULT")" = "700"
+test "$(dirname "$(realpath "$RR_IMA_REG_RESULT")")" = "$(realpath "$RR_IMA_REG_PARENT")"
+(
+  set -C
+  xcrun xcresulttool get test-results summary --path "$RR_IMA_REG_RESULT" --compact >"$RR_IMA_REG_SUMMARY"
+  xcrun xcresulttool get test-results tests --path "$RR_IMA_REG_RESULT" --compact >"$RR_IMA_REG_TESTS"
+)
+for RR_IMA_FILE in "$RR_IMA_REG_SUMMARY" "$RR_IMA_REG_TESTS"; do
+  test -f "$RR_IMA_FILE"; test ! -L "$RR_IMA_FILE"
+  test "$(/usr/bin/stat -f '%HT' "$RR_IMA_FILE")" = "Regular File"
+  test "$(/usr/bin/stat -f '%Lp' "$RR_IMA_FILE")" = "600"
+  test "$(dirname "$(realpath "$RR_IMA_FILE")")" = "$(realpath "$RR_IMA_REG_PARENT")"
+done
+RR_IMA_SCAN=0
+rg --quiet --pcre2 "$RR_IMA_SECRET" "$RR_IMA_REG_LOG" "$RR_IMA_FINAL_INVENTORY" "$RR_IMA_REG_SUMMARY" "$RR_IMA_REG_TESTS" >/dev/null 2>&1 || RR_IMA_SCAN=$?
+test "$RR_IMA_SCAN" = "1"
+
+python3 - "$RR_IMA_REG_SUMMARY" "$RR_IMA_REG_TESTS" <<'PYTHON'
+import json
+import sys
+
+summary = json.load(open(sys.argv[1], encoding="utf-8"))
+tests = json.load(open(sys.argv[2], encoding="utf-8"))
+expected = {
+    "result": "Passed", "totalTestCount": 64, "passedTests": 64,
+    "failedTests": 0, "skippedTests": 0, "expectedFailures": 0,
+}
+for key, value in expected.items():
+    if summary.get(key) != value:
+        raise SystemExit(f"unexpected regression {key}: {summary.get(key)!r}")
+if summary.get("testFailures") != []:
+    raise SystemExit("regression failure records must be empty")
+cases = []
+def visit(value):
+    if isinstance(value, dict):
+        if value.get("nodeType") == "Test Case":
+            cases.append((value.get("nodeIdentifier"), value.get("result")))
+        for child in value.values(): visit(child)
+    elif isinstance(value, list):
+        for child in value: visit(child)
+visit(tests)
+if len(cases) != 64 or len({case[0] for case in cases}) != 64:
+    raise SystemExit("regression must contain 64 unique tests")
+if any(case[1] != "Passed" for case in cases):
+    raise SystemExit("every selected regression case must pass")
+store = [case for case in cases if case[0].startswith("StoreAcceptanceTests/")]
+plugin = [case for case in cases if case[0].startswith("CodexPluginLifecycleAcceptanceTests/")]
+if len(store) != 43 or len(plugin) != 21 or len(store) + len(plugin) != 64:
+    raise SystemExit("regression must have exact 43/21 suite split")
+PYTHON
+```
+
+Expected: exact structured `64/64`, exact `43/21` Store/plugin-lifecycle
+split, zero failure records, and unchanged final five-blob inventory. Any
+failure stops before diff check, review, staging, checkpoint, or retry.
+
+### Postimplementation reviews, checkpoint, and ledger contract
+
+Only after both new passing fences may the coordinator run one authoritative
+`git diff --check` and the accepted schema-v10/schema-v11 fixture checksum and
+byte-diff checks. Then obtain fresh independent Code Review, QA/Test,
+Architecture, Security/Privacy, TPM, and Delivery Management GO with Required
+`0`. The Implementer may not review or approve its own work.
+
+The implementation checkpoint may stage exactly the five Task 2B
+implementation paths plus coordinator-owned `docs/delivery/progress.md`. It
+must read the final five-blob inventory from the retained GREEN scalar report
+and require every staged implementation blob to match it, including the exact
+Store-test blob `4507928ba00113f0781658252c189b2975ac7b9f`. It must not
+stage this amendment or registry again, fixtures, raw evidence, scripts,
+generated files, project files, owner data, Release Radar state, or external
+artifacts. Task 3 remains closed until that checkpoint is committed, pushed,
+and exact at local/upstream/live remote with ahead/behind `0/0`.
+
+The coordinator ledger must record sanitized scalar facts only:
+
+- exact `606cb20...` base and planning-checkpoint inventory/remote equality;
+- both retained RED parents' exact scalar evidence metadata and privacy scans;
+- the disproved continuation hypothesis, root cause, and Required/Optional/
+  out-of-scope classification;
+- final reviewed brief/registry hashes and all five preimplementation reviews;
+- pre-edit five blobs, exact aggregate-only test edit, and exact 156,791-byte
+  Store-test blob `4507928ba00113f0781658252c189b2975ac7b9f`;
+- aggregate RED evidence modes/sizes/hashes/tree digest, one-test/one-failure/
+  two-marker classification, and privacy scans;
+- final migration/test blobs and Store GREEN `43/43` evidence;
+- conditional regression `64/64` with exact `43/21` split;
+- fixture/diff-check outcomes, all six postimplementation reviews, final
+  checkpoint inventory, exact remote equality, retained evidence, open risks,
+  and Task 3 gate state.
+
+Raw logs, extracted JSON, result bundles, owner data, matching sensitive lines,
+credentials, secrets, and private keys must never enter the ledger or another
+durable artifact.
+
+### Aggregate-RED recovery acceptance criteria
+
+- This exact amendment and one matching root-registry entry receive fresh
+  Architecture, QA/Test, Security/Privacy, TPM, and Delivery Management
+  GO/Required `0` before the three-document planning checkpoint.
+- The planning checkpoint is the direct child of `606cb20...`, contains
+  exactly brief/registry/progress, is pushed and remote-exact at `0/0`, and its
+  `/bin/bash` release gate passes once before implementation resumes.
+- Both consumed RED parents remain retained and unchanged; neither consumed
+  fence is rerun. The second RED's exact one-record result disproves the local
+  continuation strategy and is truthfully disclosed.
+- The five pre-edit implementation blobs match exactly. No old or new GREEN/
+  regression evidence and no aggregate prefix exists before eligibility.
+- The test edit removes the continuation override, changes only the two
+  intentional failure branches to marker collection, runs both existing
+  supported-DDL probes, and issues one final failure after both probes. No test
+  method/helper or Store-count change occurs. The exact post-edit source is
+  156,791 bytes and Git blob
+  `4507928ba00113f0781658252c189b2975ac7b9f`; every later boundary pins it.
+- The new uniquely prefixed RED runs once under `/bin/bash` and proves exactly
+  one failed existing test with exactly one intentional failure record/message
+  containing the partial and NOCASE markers once each and no unrelated failure.
+- Production remains unchanged until valid RED. The subsequent migration edit
+  is only the accepted uniform nonpartial/BINARY shared-validator repair plus
+  redundant-special-guard removal.
+- The new uniquely prefixed Store GREEN runs once and passes exact `43/43`;
+  only then the regression runs once and passes exact `64/64` with `43/21`
+  split.
+- Every new fence validates and quietly privacy-scans raw log/inventory
+  immediately after status capture and before status/result/extraction/
+  classification; extracted JSON is validated and scanned before parsing.
+- Any gate, edit-boundary, build, test, extraction, parser, count, marker,
+  mode, containment, hash, privacy, fixture, or inventory mismatch stops with
+  no retry and retains all evidence.
+- No schema DDL, model, `DeliveryStore`, plugin test, fixture, project,
+  signing, sandbox, owner, Release Radar, live-plan, Task 3, or external state
+  change occurs.
+- One authoritative postimplementation diff check and exact fixture checks
+  pass only after both passing fences, followed by all six independent
+  GO/Required `0` reviews and the bounded remote-exact implementation
+  checkpoint.
+- The Required aggregate harness finding closes only through the accepted
+  one-failure/two-marker RED. The original Required manifest finding closes
+  only through accepted GREEN/regression evidence. Optional remains `0`; out
+  of scope remains `0`.
