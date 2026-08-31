@@ -89,6 +89,23 @@ management roles.
 An agent may not review, approve, or independently verify its own
 implementation.
 
+## Execution Authorization Boundaries
+
+- “Consider,” “discuss,” “evaluate,” or “recommend” authorizes no tool use or
+  changes unless the owner explicitly requests inspection.
+- Eligibility does not constitute authorization.
+- `STOP` immediately prohibits further tools, writes, tests, subagents, Git
+  operations, Release Radar mutations, and external actions.
+- Only an explicit owner resume naming the task and authorized action clears a
+  stop. “Approved” alone does not resume stopped work.
+- After the first failure of a mechanism, permit one bounded diagnosis and
+  correction only when implementation remains authorized.
+- A second failure of the same mechanism stops the task.
+- A bounded fix receives only affected-role re-review; it does not restart the
+  full review matrix.
+- After implementation begins, returning to planning requires explicit owner
+  authorization.
+
 ## Execution Gates
 
 For each implementation slice:
