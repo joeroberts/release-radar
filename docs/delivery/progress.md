@@ -2,16 +2,17 @@
 
 ## Current state
 
-- Outcome: M1A Proportional Delivery Governance Amendment
-- Active task: None — the local M1A amendment awaits owner approval
-- Last complete task: M0–M1 planning package approved and committed locally
-- Authorization: M1A documentation and its local commit only; M2 and RR-R10
-  Task 4B remain unauthorized
+- Outcome: M1A Proportional Delivery Governance Amendment complete
+- Active task: None
+- Last complete task: M1A owner approval and documentation closeout
+- Authorization: M1A closeout documentation and its local commit only; M2 and
+  RR-R10 Task 4B remain unauthorized
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Current blockers and risks: Owner approval is required before any later work
-- Next eligible action: Owner review and approval or rejection of M1A
-- State: AWAITING OWNER APPROVAL
+- Current blockers and risks: Separate owner authorization is required before
+  M2A or any later work
+- Next eligible work: M2A catalog contract and validator, unopened
+- State: COMPLETE — AWAITING NEXT AUTHORIZATION
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
@@ -37,7 +38,7 @@ or Git operations.
 
 ## M1A proportional delivery governance
 
-- Status: Amendment complete locally and awaiting owner approval.
+- Status: Owner-approved and complete.
 - Decision: root `AGENTS.md` and ADR-007 replace mandatory all-role ceremony
   with risk-triggered review and direct verification for unopened work.
 - M0–M1 remains completed and unchanged. Its product, architecture, security,
@@ -45,7 +46,7 @@ or Git operations.
 - M2 and RR-R10 Task 4B remain unauthorized.
 - Verification: direct documentation and diff validation completed; no
   application tests or application actions were run.
-- Next action: owner review and approval or rejection of M1A only.
+- Next action: separate owner authorization for M2A, if desired.
 
 ## Managed Repository Documentation Contract M0-M1 gate
 

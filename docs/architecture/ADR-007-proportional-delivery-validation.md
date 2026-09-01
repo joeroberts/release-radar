@@ -1,6 +1,6 @@
 # ADR-007: Proportional Delivery Validation
 
-- Status: Proposed; owner approval pending
+- Status: Accepted; owner-approved
 - Date: 2026-09-01
 
 ## Context
