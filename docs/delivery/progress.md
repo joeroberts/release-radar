@@ -5,12 +5,10 @@
 - Outcome: RR-R10
 - Active task: None
 - Last complete task: Task 3 implementation independently accepted
-- Next eligible task: Task 4A after Task 3 terminal Git equality
-- Next authorized action: Complete the owner-authorized Task 3 checkpoint
-  commit/push/equality; then await explicit owner direction for Task 4A
-- State: CHECKPOINT_PENDING
-- Last completed task Git checkpoint: Pending this Task 3 checkpoint; prior
-  Task 2B checkpoint `f122b61603d1b8f467f039b27810b8816c8e4686`
+- Next eligible task: Task 4A
+- Next authorized action: NONE — await explicit owner direction for Task 4A
+- State: READY
+- Last completed task Git checkpoint: `e7b8d725178663b4d70b6984fbfdda3dcdffaf4a`
 - Active brief: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md`
 - Active brief SHA-256: `6edfa5890250aad0db56b55235c55a1795a301797fb38e6b19efe4e7a695019c`
 - Retry state: N/A
@@ -59,7 +57,7 @@ or Git operations.
 
 ## Task 3 implementation gate
 
-- Status: Complete and independently accepted; terminal Git equality pending.
+- Status: Complete, independently accepted, and terminally remote-exact.
 - Planning base/checkpoint: `80a639cccf04d59a116194a1300e55d03ea0ed32`,
   verified exact at local HEAD, upstream, and live remote with ahead/behind
   `0/0` before implementation began.
@@ -100,5 +98,8 @@ or Git operations.
 - Checkpoint inventory: the two implementation files above plus this ledger
   only. Temporary DerivedData and result bundles are excluded.
 - Open risk: None. No app launch/install, owner-data access, Release Radar
-  mutation, or external mutation occurred. Task 4A remains closed until this
-  checkpoint is exact locally/upstream/live remote with ahead/behind `0/0`.
+  mutation, or external mutation occurred.
+- Terminal checkpoint: `e7b8d725178663b4d70b6984fbfdda3dcdffaf4a`
+  was pushed and verified exact at local HEAD, upstream, and live remote with
+  ahead/behind `0/0` and a clean worktree. Task 4A is eligible but remains
+  closed pending explicit owner authorization.
