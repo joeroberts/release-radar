@@ -2,14 +2,17 @@
 
 ## Current state
 
-- Outcome: RR-R10
-- Active task: None
+- Outcome: Managed Repository Documentation Contract M1 approval decision
+- Active task: None — durable M1 package awaits owner approval
 - Last complete task: Task 4A implementation independently accepted
-- Next eligible task: Task 4B planning, separately authorization-gated
-- Next authorized action: NONE — await explicit owner direction for Task 4B
-- State: READY
+- Next eligible task: M2A catalog-contract planning refresh, only after owner
+  approval of M1 and separate authorization
+- Next authorized action: Owner approval or rejection of the M1 package only;
+  no implementation action is authorized
+- State: AWAITING OWNER APPROVAL
 - Last completed task Git checkpoint: `910b9653b661c6088d025bc6f6aea71271cff3b0`
-- Active brief: None — Task 4B remains unopened
+- Planning base: `653cdfd647590bfefbb23b556d48bd5970846a97`
+- Active brief: None — M2 and Task 4B remain unopened
 - Active brief SHA-256: N/A
 - Retry state: N/A
 - Owner stopped: No
@@ -27,10 +30,92 @@ or Git operations.
 - [Accepted Ticket Tasks design](../design/release-radar-ticket-tasks-design.md)
 - [ADR-005: Ticket task work plans](../architecture/ADR-005-ticket-task-work-plans.md)
 - [Accepted RR-R10 implementation plan](../superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md)
+- [Managed Repository Documentation Contract program plan](../design/managed-repository-documentation-contract.md)
+- [ADR-006: Managed repository documentation contract](../architecture/ADR-006-managed-repository-documentation-contract.md)
+- [MDCP M2-M8 task briefs](task-briefs/2026-09-01-managed-repository-documentation-contract/)
 - [Task 2A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md)
 - [Task 2B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md)
 - [Task 3 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md)
 - [Task 4A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md)
+
+## Managed Repository Documentation Contract M0-M1 gate
+
+- Status: M0 complete; durable M1 package complete and independently reviewed;
+  owner approval pending. M1 approval will not authorize M2, tests, app launch,
+  installation,
+  owner-data access, storage migration, guidance activation, document moves,
+  evidence mutation, Task 4B, Git operations, or external issue changes.
+- Worktree/base verification: the exact authorized root was the Git top level;
+  branch `codex/managed-documentation-contract-planning` was active; HEAD was
+  `653cdfd647590bfefbb23b556d48bd5970846a97`; initial status was clean; the
+  accepted RR-R10 Task 4A implementation checkpoint remains
+  `910b9653b661c6088d025bc6f6aea71271cff3b0`.
+- Issue #2 owner disposition: the exact `653cdfd` versions of
+  `docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json`
+  (`95bfa880903408d20ef7fbaaa8051ef6a2908a45d2ada9f6d01e8ba9d89cdea5`),
+  `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md`
+  (`711abe4edee9ac86951e9e41c40170f9fbb67123e2f44216e0203cec85595292`),
+  and `docs/delivery/task-briefs/SHA256SUMS`
+  (`7205890306b278548d09a67320e2ff6d9b04a0104980a4ca4410a3410229da6d`)
+  are accepted as operative RR-R10 output. Session-level authorship remains
+  unknown; acceptance neither infers authorship nor retroactively approves the
+  post-hold changes. The attribution incident remains historical evidence, the
+  preservation hold is resolved, and external GitHub Issue #2 remains open and
+  unmodified. Accepted RR-R10 file content/entries were not rewritten merely to
+  resolve the issue.
+- Priority/dependency decision: MDCP has priority after M1. RR-R10 Task 4B is a
+  separate bounded command-exposure task and remains eligible but unopened.
+  GitHub Issue #1 is the later separate generic Ticket Tasks onboarding/adoption
+  workflow and owns guidance v3.
+- Compatibility gate: Task 4B cannot resume until every M2-M5 brief is
+  independently accepted at exact clean checkpoint `MDCP-COMPAT-1`, freezing
+  shared command/query, evidence, importer, guidance, bundled-skill, tool-schema,
+  fixture, and acceptance-test contracts. Task 4B then requires a refreshed
+  plan and separate owner authorization. M6-M8 may consume but not reopen the
+  frozen contract; a required reopening pauses both programs and MDCP retains
+  priority until a replacement checkpoint is accepted.
+- Architecture direction: one Core-owned path/catalog contract; orthogonal
+  artifact kind/lifecycle/authority; stable artifact IDs; deterministic indexes;
+  legacy v1, read-only v1 staging, managed v2, and managed-unavailable modes;
+  exhaustive managed/path evidence locators; exact project-root binding;
+  canonical accepted catalog snapshots and typed audited catalog transitions;
+  explicit root rebinding; and no repository documentation as delivery-state
+  authority.
+- Migration/adoption boundary: additive schema migration preserves every
+  existing evidence row as legacy, leaves projects unbound, and performs no
+  repository inference. Managed adoption happens only after exact root/catalog
+  binding and read-only inventory through catalog-digest-bound, typed, audited,
+  idempotent requests. Catalog changes remain pending until a validated typed
+  acceptance transition commits. Ambiguous and arbitrary evidence remains
+  legacy.
+- Planning inventory: this ledger,
+  `docs/design/managed-repository-documentation-contract.md`,
+  `docs/architecture/ADR-006-managed-repository-documentation-contract.md`,
+  the 13 briefs under
+  `docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/`,
+  and their appended entries in `docs/delivery/task-briefs/SHA256SUMS` only.
+- Planning: `/root/m1_planning` — final exact-byte GO; Required 0, Optional 0,
+  Out of scope 0. Milestone ownership, trust-phase recovery, Issue #2, and
+  Task 4B/Issue #1 sequencing are coherent.
+- Architecture: `/root/m1_architecture` — final exact-byte GO; Required 0,
+  Optional 0, Out of scope 0. Root-bound accepted snapshots, catalog
+  transitions, evidence identity, rebind, and recovery contracts are coherent.
+- TPM: `/root/m1_tpm` — final exact-byte GO; Required 0, Optional 0, Out of
+  scope 0. `MDCP-COMPAT-1`, authorization gates, frozen-test ownership, and
+  post-acceptance correction sequencing are coherent.
+- QA/Test: `/root/m1_qa` — final exact-byte GO; Required 0, Optional 0, Out of
+  scope 0. Migration, failure, replay, relaunch, root, transition, UI/readback,
+  and unrelated-state coverage is testable and owned by bounded briefs.
+- Delivery Management: `/root/m1_delivery` — final exact-byte GO; Required 0,
+  Optional 0, Out of scope 0. Quiescence, release tokens, uncertain outcomes,
+  recovery, ledger evidence, and live-use release gates are coherent.
+- Security/Privacy: `/root/m1_security` — final exact-byte GO; Required 0,
+  Optional 0, Out of scope 0. Authorized-root/no-follow boundaries, exact root
+  and digest trust, bookmark/receipt redaction, backup custody, and atomic
+  mutation/recovery rules are adequate for M1.
+- No application code, tests, app launch, owner-data access, storage migration,
+  guidance activation, repository document move, evidence mutation, deletion,
+  external mutation, commit, or push occurred during M0-M1.
 
 ## Task 4A planning gate
 
