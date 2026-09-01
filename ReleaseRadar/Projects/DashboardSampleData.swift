@@ -85,13 +85,30 @@ enum DashboardSampleData {
                 bindings: [.text(phaseID.rawValue), .text(projectID.rawValue)]
             )
             for ticket in tickets {
+                let stagedLane = ticket.lane == .accepted ? TicketLane.backlog : ticket.lane
                 try connection.execute(
                     "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",
                     bindings: [
                         .text(ticket.id), .text(projectID.rawValue), .text(phaseID.rawValue),
-                        .text(ticket.outcome), .text(ticket.lane.rawValue),
+                        .text(ticket.outcome), .text(stagedLane.rawValue),
                     ]
                 )
+                if ticket.lane == .accepted {
+                    try TicketTaskPlanningPolicy.assertCanAcceptTicket(
+                        projectID: projectID,
+                        ticketID: TicketID(rawValue: ticket.id),
+                        expectedRevision: nil,
+                        connection: connection
+                    )
+                    try connection.execute(
+                        "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
+                        bindings: [
+                            .text(TicketLane.accepted.rawValue),
+                            .text(projectID.rawValue),
+                            .text(ticket.id),
+                        ]
+                    )
+                }
             }
             for (offset, dependency) in dependencies.enumerated() {
                 try connection.execute(

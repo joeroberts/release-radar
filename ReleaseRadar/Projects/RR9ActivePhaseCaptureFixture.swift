@@ -299,13 +299,30 @@ enum RR9ActivePhaseCaptureFixture {
         lane: TicketLane,
         connection: SQLiteConnection
     ) throws {
+        let stagedLane = lane == .accepted ? TicketLane.backlog : lane
         try connection.execute(
             "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",
             bindings: [
                 .text(ticketID.rawValue), .text(projectID.rawValue), .text(phaseID.rawValue),
-                .text(outcome), .text(lane.rawValue),
+                .text(outcome), .text(stagedLane.rawValue),
             ]
         )
+        if lane == .accepted {
+            try TicketTaskPlanningPolicy.assertCanAcceptTicket(
+                projectID: projectID,
+                ticketID: ticketID,
+                expectedRevision: nil,
+                connection: connection
+            )
+            try connection.execute(
+                "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
+                bindings: [
+                    .text(TicketLane.accepted.rawValue),
+                    .text(projectID.rawValue),
+                    .text(ticketID.rawValue),
+                ]
+            )
+        }
     }
 }
 #endif

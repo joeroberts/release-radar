@@ -8,6 +8,238 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         let release = DispatchSemaphore(value: 0)
     }
 
+    func testAcceptedUpsertRejectsAbsentAndExistingTicketsBeforeEffects() async throws {
+        enum Scenario {
+            case absent
+            case existingNoPlan
+            case existingPlan
+        }
+
+        for scenario in [Scenario.absent, .existingNoPlan, .existingPlan] {
+            let fixture = try await makeFixture()
+            if case .existingPlan = scenario {
+                try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed task plan") { connection in
+                    _ = try TicketTaskPlanningPolicy.revisePlan(
+                        projectID: .init(rawValue: "project-1"),
+                        ticketID: .init(rawValue: "RR-03"),
+                        expectedRevision: nil,
+                        additions: [
+                            .init(id: .init(rawValue: "task-1"), label: "Task 1", title: "Complete task", sortOrder: 0),
+                        ],
+                        definitionRevisions: [],
+                        supersededTaskIDs: [],
+                        connection: connection
+                    )
+                }
+            }
+            let before = try await Self.activePhaseSnapshot(fixture.store)
+            let ticketID: String
+            if case .absent = scenario {
+                ticketID = "RR-NEW"
+            } else {
+                ticketID = "RR-03"
+            }
+            let result = await fixture.dispatcher.dispatch(.init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: UUID(),
+                projectRoot: fixture.projectRoot.path,
+                reason: "Reject Accepted upsert",
+                command: .upsertTicket(
+                    ticketID: ticketID,
+                    phaseID: "phase-1",
+                    outcome: "Must remain unchanged",
+                    lane: .accepted
+                )
+            ))
+
+            guard case .invalidEnvelope? = result.error else {
+                XCTFail("Expected invalidEnvelope, got \(String(describing: result.error))")
+                continue
+            }
+            let after = try await Self.activePhaseSnapshot(fixture.store)
+            XCTAssertEqual(after, before)
+        }
+    }
+
+    func testAcceptedTransitionEmbeddedNULPrefixesRejectBeforeProjectLookupWithIdenticalError() async throws {
+        let fixture = try await makeFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed cross-project ticket") { connection in
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('other-phase', 'project-2', 'Other')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('OTHER-TICKET', 'project-2', 'other-phase', 'Other', 'backlog')")
+        }
+        let registry = CountingAuthorizedProjectRegistry(project: .init(
+            projectID: .init(rawValue: "project-1"),
+            canonicalRoot: fixture.projectRoot,
+            authorizedRoots: [fixture.projectRoot]
+        ))
+        let dispatcher = AgentCommandDispatcher(store: fixture.store, projectRegistry: registry)
+        let before = try await Self.activePhaseSnapshot(fixture.store)
+        var errors: [AgentCommandError] = []
+
+        for ticketID in ["RR-03\0suffix", "OTHER-TICKET\0suffix", "MISSING\0suffix"] {
+            let result = await dispatcher.dispatch(.init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: UUID(),
+                projectRoot: fixture.projectRoot.path,
+                reason: "Reject malformed Accepted ticket ID",
+                command: .transitionTicket(ticketID: ticketID, lane: .accepted)
+            ))
+            if let error = result.error {
+                errors.append(error)
+            } else {
+                XCTFail("Expected malformed Accepted ticket ID to reject")
+            }
+        }
+
+        XCTAssertEqual(errors.count, 3)
+        XCTAssertTrue(errors.allSatisfy { $0 == errors.first })
+        guard case .invalidEnvelope? = errors.first else {
+            return XCTFail("Expected identical invalidEnvelope errors, got \(errors)")
+        }
+        let resolveCount = await registry.resolveCount()
+        let after = try await Self.activePhaseSnapshot(fixture.store)
+        XCTAssertEqual(resolveCount, 0)
+        XCTAssertEqual(after, before)
+    }
+
+    func testAcceptedTransitionAppliesTaskPlanRevisionMatrixAtomically() async throws {
+        struct Scenario {
+            let name: String
+            let lane: TicketLane
+            let plan: Task4APlanState
+            let revision: Int64?
+            let succeeds: Bool
+        }
+        let scenarios = [
+            Scenario(name: "no plan omitted", lane: .backlog, plan: .none, revision: nil, succeeds: true),
+            Scenario(name: "no plan present", lane: .backlog, plan: .none, revision: 1, succeeds: false),
+            Scenario(name: "loaded plan omitted", lane: .backlog, plan: .pending, revision: nil, succeeds: false),
+            Scenario(name: "loaded plan stale", lane: .backlog, plan: .pending, revision: 2, succeeds: false),
+            Scenario(name: "pending exact", lane: .backlog, plan: .pending, revision: 1, succeeds: false),
+            Scenario(name: "completed exact", lane: .needsReview, plan: .completed, revision: 2, succeeds: true),
+            Scenario(name: "terminal", lane: .accepted, plan: .none, revision: nil, succeeds: false),
+        ]
+
+        for (index, scenario) in scenarios.enumerated() {
+            let fixture = try await makeFixture()
+            try await seedAcceptanceTicket(
+                store: fixture.store,
+                ticketID: "TASK4A-\(index)",
+                lane: scenario.lane,
+                plan: scenario.plan
+            )
+            let before = try await Self.task4AAcceptanceSnapshot(fixture.store)
+            let requestID = UUID()
+            let result = await fixture.dispatcher.dispatch(.init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: requestID,
+                projectRoot: fixture.projectRoot.path,
+                reason: "Task 4A matrix \(scenario.name)",
+                command: .transitionTicket(
+                    ticketID: "TASK4A-\(index)",
+                    lane: .accepted,
+                    ticketTaskPlanRevision: scenario.revision
+                )
+            ))
+            let after = try await Self.task4AAcceptanceSnapshot(fixture.store)
+
+            if scenario.succeeds {
+                XCTAssertNil(result.error, scenario.name)
+                XCTAssertEqual(after.ticketLanes["TASK4A-\(index)"], TicketLane.accepted.rawValue, scenario.name)
+                XCTAssertEqual(after.planRows, before.planRows, scenario.name)
+                XCTAssertEqual(after.taskRows, before.taskRows, scenario.name)
+                XCTAssertEqual(after.auditCount, before.auditCount + 1, scenario.name)
+                XCTAssertEqual(after.requestCount, before.requestCount + 1, scenario.name)
+            } else {
+                XCTAssertNotNil(result.error, scenario.name)
+                XCTAssertEqual(after, before, scenario.name)
+            }
+        }
+    }
+
+    func testTransitionRevisionMisuseRejectsBeforeProjectLookup() async throws {
+        let fixture = try await makeFixture()
+        let registry = CountingAuthorizedProjectRegistry(project: .init(
+            projectID: .init(rawValue: "project-1"),
+            canonicalRoot: fixture.projectRoot,
+            authorizedRoots: [fixture.projectRoot]
+        ))
+        let dispatcher = AgentCommandDispatcher(store: fixture.store, projectRegistry: registry)
+        let before = try await Self.task4AAcceptanceSnapshot(fixture.store)
+
+        for (lane, revision) in [(TicketLane.backlog, Int64(1)), (.inProgress, 1), (.needsReview, 1), (.blocked, 1), (.accepted, 0), (.accepted, -1)] {
+            let result = await dispatcher.dispatch(.init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: UUID(),
+                projectRoot: fixture.projectRoot.path,
+                reason: "Reject structurally invalid revision",
+                command: .transitionTicket(
+                    ticketID: "RR-03",
+                    lane: lane,
+                    ticketTaskPlanRevision: revision
+                )
+            ))
+            guard case .invalidEnvelope? = result.error else {
+                XCTFail("Expected invalidEnvelope for \(lane.rawValue)/\(revision)")
+                continue
+            }
+        }
+
+        let after = try await Self.task4AAcceptanceSnapshot(fixture.store)
+        let resolveCount = await registry.resolveCount()
+        XCTAssertEqual(resolveCount, 0)
+        XCTAssertEqual(after, before)
+    }
+
+    func testLegacyTransitionCodableAndCanonicalReceiptReplayRemainCompatible() async throws {
+        let fixture = try await makeFixture()
+        let legacyCommandData = Data(#"{"transitionTicket":{"ticketID":"RR-03","lane":"backlog"}}"#.utf8)
+        let decoded = try JSONDecoder().decode(AgentCommand.self, from: legacyCommandData)
+        XCTAssertEqual(
+            decoded,
+            .transitionTicket(ticketID: "RR-03", lane: .backlog, ticketTaskPlanRevision: nil)
+        )
+        let encoded = try JSONEncoder().encode(decoded)
+        let encodedObject = try XCTUnwrap(try JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        let transitionObject = try XCTUnwrap(encodedObject["transitionTicket"] as? [String: Any])
+        XCTAssertNil(transitionObject["ticketTaskPlanRevision"])
+
+        let requestID = UUID(uuidString: "11111111-1111-4111-8111-111111111119")!
+        let originalResult = AgentCommandResult(
+            entityIDs: ["RR-03"],
+            auditEventID: .init(rawValue: "legacy-transition-audit"),
+            error: nil
+        )
+        let legacyBody = try JSONSerialization.data(withJSONObject: [
+            "version": 1,
+            "projectRoot": fixture.projectRoot.path,
+            "reason": "Replay legacy canonical transition",
+            "command": [
+                "transitionTicket": ["ticketID": "RR-03", "lane": "backlog"],
+            ],
+        ], options: [.sortedKeys])
+        let originalResultData = try JSONEncoder().encode(originalResult)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed legacy receipt") { connection in
+            try connection.execute(
+                "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES (?, ?, ?, '2026-08-31T12:00:00Z')",
+                bindings: [.text(requestID.uuidString), .blob(legacyBody), .blob(originalResultData)]
+            )
+        }
+        let before = try await Self.task4AAcceptanceSnapshot(fixture.store)
+
+        let replay = await fixture.dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: requestID,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Replay legacy canonical transition",
+            command: decoded
+        ))
+
+        let after = try await Self.task4AAcceptanceSnapshot(fixture.store)
+        XCTAssertEqual(replay, originalResult)
+        XCTAssertEqual(after, before)
+    }
+
     func testValidTransitionCommitsAuditAndDurableReplayReturnsOriginalResult() async throws {
         let fixture = try await makeFixture()
         let requestID = UUID(uuidString: "11111111-1111-4111-8111-111111111111")!
@@ -811,11 +1043,32 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
     private struct ActivePhaseSnapshot: Equatable {
         let phases: [String]
         let tickets: [String]
+        let taskPlans: [String]
+        let ticketTasks: [String]
         let phaseDependencies: [String]
         let ticketDependencies: [String]
         let activeRows: [String]
         let auditRows: [String]
         let requestRows: [String]
+    }
+
+    private struct Task4AAcceptanceSnapshot: Equatable {
+        let ticketLanes: [String: String]
+        let planRows: [String]
+        let taskRows: [String]
+        let phasePlanRows: [String]
+        let goalRows: [String]
+        let goalAssignmentRows: [String]
+        let occurrenceRows: [String]
+        let notificationRows: [String]
+        let auditCount: Int64
+        let requestCount: Int64
+    }
+
+    private enum Task4APlanState: Equatable, Sendable {
+        case none
+        case pending
+        case completed
     }
 
     private func makeActivePhaseFixture() async throws -> Fixture {
@@ -862,6 +1115,39 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         return Fixture(databaseURL: databaseURL, projectRoot: projectRoot, store: store, registry: registry, dispatcher: dispatcher)
     }
 
+    private func seedAcceptanceTicket(
+        store: DeliveryStore,
+        ticketID: String,
+        lane: TicketLane,
+        plan: Task4APlanState
+    ) async throws {
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed Task 4A matrix ticket") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, 'project-1', 'phase-1', 'Task 4A matrix', ?)",
+                bindings: [.text(ticketID), .text(lane.rawValue)]
+            )
+            guard plan != .none else { return }
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: .init(rawValue: "project-1"),
+                ticketID: .init(rawValue: ticketID),
+                expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "task-1"), label: "Task 1", title: "Complete task", sortOrder: 0)],
+                definitionRevisions: [],
+                supersededTaskIDs: [],
+                connection: connection
+            )
+            if plan == .completed {
+                _ = try TicketTaskPlanningPolicy.completeTask(
+                    projectID: .init(rawValue: "project-1"),
+                    ticketID: .init(rawValue: ticketID),
+                    taskID: .init(rawValue: "task-1"),
+                    expectedRevision: 1,
+                    connection: connection
+                )
+            }
+        }
+    }
+
     private func counts(_ store: DeliveryStore) async throws -> [Int64] {
         try await store.read { connection in
             [
@@ -883,6 +1169,14 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
                 tickets: try Self.textRows(
                     connection,
                     sql: "SELECT id || '|' || project_id || '|' || phase_id || '|' || outcome || '|' || lane AS value FROM tickets ORDER BY project_id, id"
+                ),
+                taskPlans: try Self.textRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || ticket_id || '|' || revision || '|' || created_at || '|' || updated_at AS value FROM ticket_task_plans ORDER BY project_id, ticket_id"
+                ),
+                ticketTasks: try Self.textRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || ticket_id || '|' || id || '|' || label || '|' || title || '|' || sort_order || '|' || completion || '|' || lifecycle || '|' || created_at || '|' || updated_at || '|' || COALESCE(completed_at, '') || '|' || COALESCE(superseded_at, '') AS value FROM ticket_tasks ORDER BY project_id, ticket_id, id"
                 ),
                 phaseDependencies: try Self.textRows(
                     connection,
@@ -908,6 +1202,35 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         }
     }
 
+    private static func task4AAcceptanceSnapshot(_ store: DeliveryStore) async throws -> Task4AAcceptanceSnapshot {
+        try await store.read { connection in
+            var ticketLanes: [String: String] = [:]
+            var offset: Int64 = 0
+            while let row = try connection.row(
+                "SELECT id, lane FROM tickets WHERE project_id = 'project-1' ORDER BY id LIMIT 1 OFFSET ?",
+                bindings: [.integer(offset)]
+            ) {
+                guard case let .text(id)? = row["id"], case let .text(lane)? = row["lane"] else {
+                    throw ActivePhaseTestError.missingTextValue
+                }
+                ticketLanes[id] = lane
+                offset += 1
+            }
+            return Task4AAcceptanceSnapshot(
+                ticketLanes: ticketLanes,
+                planRows: try textRows(connection, sql: "SELECT project_id || '|' || ticket_id || '|' || revision || '|' || created_at || '|' || updated_at AS value FROM ticket_task_plans ORDER BY project_id, ticket_id"),
+                taskRows: try textRows(connection, sql: "SELECT project_id || '|' || ticket_id || '|' || id || '|' || label || '|' || title || '|' || sort_order || '|' || completion || '|' || lifecycle || '|' || created_at || '|' || updated_at || '|' || COALESCE(completed_at, '') || '|' || COALESCE(superseded_at, '') AS value FROM ticket_tasks ORDER BY project_id, ticket_id, id"),
+                phasePlanRows: try textRows(connection, sql: "SELECT project_id || '|' || phase_id || '|' || state || '|' || revision || '|' || COALESCE(ready_revision, -1) AS value FROM phase_plans ORDER BY project_id, phase_id"),
+                goalRows: try textRows(connection, sql: "SELECT project_id || '|' || phase_id || '|' || id || '|' || title || '|' || outcome || '|' || lifecycle || '|' || sort_order AS value FROM delivery_goals ORDER BY project_id, phase_id, id"),
+                goalAssignmentRows: try textRows(connection, sql: "SELECT project_id || '|' || phase_id || '|' || goal_id || '|' || ticket_id AS value FROM delivery_goal_ticket_assignments ORDER BY project_id, ticket_id"),
+                occurrenceRows: try textRows(connection, sql: "SELECT subject_key || '|' || project_id || '|' || event_kind || '|' || subject_id || '|' || generation || '|' || is_active AS value FROM notification_occurrences ORDER BY subject_key"),
+                notificationRows: try textRows(connection, sql: "SELECT id || '|' || fingerprint || '|' || state || '|' || COALESCE(project_id, '') || '|' || COALESCE(event_kind, '') || '|' || COALESCE(subject_id, '') || '|' || COALESCE(occurrence, -1) AS value FROM notification_events ORDER BY id"),
+                auditCount: try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1,
+                requestCount: try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1
+            )
+        }
+    }
+
     private static func textRows(_ connection: SQLiteConnection, sql: String) throws -> [String] {
         var values: [String] = []
         var offset: Int64 = 0
@@ -921,6 +1244,24 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         return values
     }
 
+}
+
+private actor CountingAuthorizedProjectRegistry: AuthorizedProjectRegistry {
+    private let project: AuthorizedProject
+    private var count = 0
+
+    init(project: AuthorizedProject) {
+        self.project = project
+    }
+
+    func resolve(projectRoot: String) async -> AuthorizedProject? {
+        count += 1
+        return project
+    }
+
+    func resolveCount() -> Int {
+        count
+    }
 }
 
 private enum ActivePhaseTestError: Error {

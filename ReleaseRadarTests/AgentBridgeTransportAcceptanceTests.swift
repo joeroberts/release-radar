@@ -312,6 +312,40 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             [.text("in_progress"), .integer(1), .integer(1), .integer(1)]
         )
 
+        let guardedRequestID = UUID(uuidString: "77777777-7777-4777-8777-777777777779")!
+        let guardedArguments: [String: Any] = [
+            "version": 1,
+            "requestID": guardedRequestID.uuidString,
+            "projectRoot": fixture.projectRoot.path,
+            "reason": "Accept a completed plan through the packaged signed transport",
+            "ticketID": "RR-PLAN",
+            "lane": "accepted",
+            "ticketTaskPlanRevision": 2,
+        ]
+        let guardedFirst = try Self.runTool(
+            packagedTool,
+            tool: "release_radar_transition_ticket",
+            arguments: guardedArguments
+        )
+        let guardedFirstResult = try decodeCommandResult(guardedFirst)
+        XCTAssertNil(guardedFirstResult.error)
+        XCTAssertEqual(mcpIsError(guardedFirst), false)
+        let guardedReplay = try Self.runTool(
+            packagedTool,
+            tool: "release_radar_transition_ticket",
+            arguments: guardedArguments
+        )
+        XCTAssertEqual(try decodeCommandResult(guardedReplay), guardedFirstResult)
+        let guardedState = try await fixture.store.read { connection in
+            [
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-PLAN'") ?? "missing",
+                String(try connection.scalarInt("SELECT revision FROM ticket_task_plans WHERE ticket_id = 'RR-PLAN'") ?? -1),
+                String(try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = ?", bindings: [.text(guardedRequestID.uuidString)]) ?? -1),
+                String(try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = 'Accept a completed plan through the packaged signed transport'") ?? -1),
+            ]
+        }
+        XCTAssertEqual(guardedState, ["accepted", "2", "1", "1"])
+
         let activePhaseRequestID = UUID(uuidString: "77777777-7777-4777-8777-777777777778")!
         let activePhaseArguments: [String: Any] = [
             "version": 1,
@@ -609,6 +643,12 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             ("number review ticketID", "release_radar_request_review", base.merging(["id": "review-invalid", "kind": "agent_request", "summary": "Invalid", "ticketID": 42]) { _, new in new }),
             ("object review ticketID", "release_radar_request_review", base.merging(["id": "review-invalid", "kind": "agent_request", "summary": "Invalid", "ticketID": ["bad": "type"]]) { _, new in new }),
             ("null review ticketID", "release_radar_request_review", base.merging(["id": "review-invalid", "kind": "agent_request", "summary": "Invalid", "ticketID": NSNull()]) { _, new in new }),
+            ("Boolean transition revision", "release_radar_transition_ticket", base.merging(["ticketTaskPlanRevision": true]) { _, new in new }),
+            ("fractional transition revision", "release_radar_transition_ticket", base.merging(["ticketTaskPlanRevision": 1.5]) { _, new in new }),
+            ("null transition revision", "release_radar_transition_ticket", base.merging(["ticketTaskPlanRevision": NSNull()]) { _, new in new }),
+            ("zero transition revision", "release_radar_transition_ticket", base.merging(["ticketTaskPlanRevision": 0]) { _, new in new }),
+            ("negative transition revision", "release_radar_transition_ticket", base.merging(["ticketTaskPlanRevision": -1]) { _, new in new }),
+            ("out-of-Int transition revision", "release_radar_transition_ticket", base.merging(["ticketTaskPlanRevision": NSNumber(value: UInt64.max)]) { _, new in new }),
         ]
 
         for (name, tool, arguments) in cases {
@@ -642,6 +682,23 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-2', 'project-1', 'Launch')")
             try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-1', 'phase-1')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-03', 'project-1', 'phase-1', 'Signed bridge', 'backlog')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-PLAN', 'project-1', 'phase-1', 'Guarded signed bridge', 'needs_review')")
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: .init(rawValue: "project-1"),
+                ticketID: .init(rawValue: "RR-PLAN"),
+                expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "transport-task"), label: "Transport", title: "Prove exact revision", sortOrder: 0)],
+                definitionRevisions: [],
+                supersededTaskIDs: [],
+                connection: connection
+            )
+            _ = try TicketTaskPlanningPolicy.completeTask(
+                projectID: .init(rawValue: "project-1"),
+                ticketID: .init(rawValue: "RR-PLAN"),
+                taskID: .init(rawValue: "transport-task"),
+                expectedRevision: 1,
+                connection: connection
+            )
         }
         return .init(databaseURL: databaseURL, projectRoot: projectRoot, store: store)
     }
@@ -757,6 +814,9 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
               let transitionSchema = transition["inputSchema"] as? [String: Any],
               let transitionProperties = transitionSchema["properties"] as? [String: Any],
               let transitionRequired = transitionSchema["required"] as? [String],
+              let upsert = tools.first(where: { $0["name"] as? String == "release_radar_upsert_ticket" }),
+              let upsertSchema = upsert["inputSchema"] as? [String: Any],
+              let upsertProperties = upsertSchema["properties"] as? [String: Any],
               let activePhase = tools.first(where: { $0["name"] as? String == "release_radar_set_active_phase" }),
               let activePhaseSchema = activePhase["inputSchema"] as? [String: Any]
         else { return false }
@@ -773,9 +833,13 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             "required": ["version", "requestID", "projectRoot", "reason", "phaseID"],
             "additionalProperties": false,
         ]
-        return Set(transitionProperties.keys) == ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "ticketID", "lane"]
+        let revisionSchema: [String: Any] = ["type": "integer", "minimum": 1]
+        return Set(transitionProperties.keys) == ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "ticketID", "lane", "ticketTaskPlanRevision"]
             && Set(transitionRequired) == ["version", "requestID", "projectRoot", "reason", "ticketID", "lane"]
+            && NSDictionary(dictionary: transitionProperties["ticketTaskPlanRevision"] as? [String: Any] ?? [:]).isEqual(to: revisionSchema)
             && transitionSchema["additionalProperties"] as? Bool == false
+            && upsertProperties["ticketTaskPlanRevision"] == nil
+            && upsertSchema["additionalProperties"] as? Bool == false
             && NSDictionary(dictionary: activePhaseSchema).isEqual(to: expectedActivePhaseSchema)
     }
 

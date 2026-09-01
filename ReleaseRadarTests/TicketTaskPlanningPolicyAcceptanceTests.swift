@@ -7,6 +7,42 @@ final class TicketTaskPlanningPolicyAcceptanceTests: XCTestCase {
     private let otherProjectID = ProjectID(rawValue: "other-project")
     private let actor = DeliveryActor(id: "ticket-task-policy-tests")
 
+    func testAcceptanceRejectsMissingTicketWithoutEffects() async throws {
+        let fixture = try await makeFixture()
+        try await assertRejected(
+            fixture.store,
+            equals: .invalidTicketTaskMutation(.ticketNotFound)
+        ) {
+            try await self.readAcceptance(fixture.store, ticket: "TASK-MISSING", expected: nil)
+        }
+    }
+
+    func testAcceptanceReadsTransactionLocalStagedTicketAndCallerFinalizesLane() async throws {
+        let fixture = try await makeFixture()
+        let stagedProjectID = projectID
+        try await fixture.store.transact(actor: actor, reason: "Stage and accept ticket") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('TASK-STAGED', 'task-project', 'task-phase', 'Staged', 'backlog')"
+            )
+            try TicketTaskPlanningPolicy.assertCanAcceptTicket(
+                projectID: stagedProjectID,
+                ticketID: .init(rawValue: "TASK-STAGED"),
+                expectedRevision: nil,
+                connection: connection
+            )
+            try connection.execute(
+                "UPDATE tickets SET lane = 'accepted' WHERE project_id = 'task-project' AND id = 'TASK-STAGED'"
+            )
+        }
+
+        let lane = try await fixture.store.read { connection in
+            try connection.scalarText(
+                "SELECT lane FROM tickets WHERE project_id = 'task-project' AND id = 'TASK-STAGED'"
+            )
+        }
+        XCTAssertEqual(lane, TicketLane.accepted.rawValue)
+    }
+
     func testNoPlanAcceptanceRequiresNilRevisionAndHasNoEffects() async throws {
         let fixture = try await makeFixture()
         let before = try await snapshot(fixture.store)

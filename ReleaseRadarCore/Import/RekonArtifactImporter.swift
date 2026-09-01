@@ -323,6 +323,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     }
                     continue
                 }
+                let stagedLane = ticket.lane == .accepted ? TicketLane.backlog : ticket.lane
                 try connection.execute(
                     "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",
                     bindings: [
@@ -330,9 +331,21 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                         .text(projectID),
                         .text(ticket.phaseID.rawValue),
                         .text(ticket.outcome),
-                        .text(ticket.lane.rawValue),
+                        .text(stagedLane.rawValue),
                     ]
                 )
+                if ticket.lane == .accepted {
+                    try TicketTaskPlanningPolicy.assertCanAcceptTicket(
+                        projectID: project,
+                        ticketID: ticket.id,
+                        expectedRevision: nil,
+                        connection: connection
+                    )
+                    try connection.execute(
+                        "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
+                        bindings: [.text(TicketLane.accepted.rawValue), .text(projectID), .text(ticket.id.rawValue)]
+                    )
+                }
                 availableTicketIDs.insert(ticket.id)
             }
 

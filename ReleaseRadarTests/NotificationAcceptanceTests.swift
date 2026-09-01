@@ -5,6 +5,124 @@ import XCTest
 @testable import ReleaseRadar
 
 final class NotificationAcceptanceTests: XCTestCase {
+    func testAcceptedUpsertCreatesNoAttentionNotificationAuditOrReceiptEffects() async throws {
+        for ticketID in ["RR-NEW", "RR-09"] {
+            let fixture = try await makeFixture(firstDashboardOpened: true)
+            let before = try await fixture.store.read { connection in
+                (
+                    try connection.scalarInt("SELECT COUNT(*) FROM tickets"),
+                    try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-09'"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM notification_occurrences"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM notification_events"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests")
+                )
+            }
+            let result = await fixture.dispatcher.dispatch(.init(
+                version: AgentCommandDispatcher.commandEnvelopeVersion,
+                requestID: UUID(),
+                projectRoot: fixture.projectRoot.path,
+                reason: "Reject Accepted upsert without effects",
+                command: .upsertTicket(
+                    ticketID: ticketID,
+                    phaseID: "phase-1",
+                    outcome: "Must remain unchanged",
+                    lane: .accepted
+                )
+            ))
+            guard case .invalidEnvelope? = result.error else {
+                XCTFail("Expected invalidEnvelope, got \(String(describing: result.error))")
+                continue
+            }
+            let after = try await fixture.store.read { connection in
+                (
+                    try connection.scalarInt("SELECT COUNT(*) FROM tickets"),
+                    try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-09'"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM notification_occurrences"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM notification_events"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                    try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests")
+                )
+            }
+            XCTAssertEqual(after.0, before.0)
+            XCTAssertEqual(after.1, before.1)
+            XCTAssertEqual(after.2, before.2)
+            XCTAssertEqual(after.3, before.3)
+            XCTAssertEqual(after.4, before.4)
+            XCTAssertEqual(after.5, before.5)
+        }
+    }
+
+    func testGuardedAcceptancePreservesOccurrenceOnRejectionAndDeactivatesOnceOnSuccess() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await transition(
+            .needsReview,
+            requestID: "90909090-9090-4090-8090-909090909071",
+            fixture: fixture
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed completed notification task plan") { connection in
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: .init(rawValue: "project-1"),
+                ticketID: .init(rawValue: "RR-09"),
+                expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "notification-task"), label: "Notify", title: "Complete guarded acceptance", sortOrder: 0)],
+                definitionRevisions: [],
+                supersededTaskIDs: [],
+                connection: connection
+            )
+            _ = try TicketTaskPlanningPolicy.completeTask(
+                projectID: .init(rawValue: "project-1"),
+                ticketID: .init(rawValue: "RR-09"),
+                taskID: .init(rawValue: "notification-task"),
+                expectedRevision: 1,
+                connection: connection
+            )
+        }
+        let beforeRejected = try await task4ANotificationSnapshot(fixture.store)
+
+        let rejected = await fixture.dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(uuidString: "90909090-9090-4090-8090-909090909072")!,
+            projectRoot: fixture.projectRoot.path,
+            reason: "Reject stale guarded acceptance",
+            command: .transitionTicket(
+                ticketID: "RR-09",
+                lane: .accepted,
+                ticketTaskPlanRevision: 1
+            )
+        ))
+
+        XCTAssertNotNil(rejected.error)
+        let afterRejected = try await task4ANotificationSnapshot(fixture.store)
+        XCTAssertEqual(afterRejected, beforeRejected)
+
+        let requestID = "90909090-9090-4090-8090-909090909073"
+        try await transition(
+            .accepted,
+            requestID: requestID,
+            ticketTaskPlanRevision: 2,
+            fixture: fixture
+        )
+        let afterAccepted = try await task4ANotificationSnapshot(fixture.store)
+        XCTAssertEqual(afterAccepted.lane, TicketLane.accepted.rawValue)
+        XCTAssertEqual(afterAccepted.planRevision, beforeRejected.planRevision)
+        XCTAssertEqual(afterAccepted.taskRows, beforeRejected.taskRows)
+        XCTAssertEqual(afterAccepted.isOccurrenceActive, 0)
+        XCTAssertEqual(afterAccepted.occurrenceGeneration, beforeRejected.occurrenceGeneration)
+        XCTAssertEqual(afterAccepted.notificationCount, beforeRejected.notificationCount)
+        XCTAssertEqual(afterAccepted.auditCount, beforeRejected.auditCount + 1)
+        XCTAssertEqual(afterAccepted.requestCount, beforeRejected.requestCount + 1)
+
+        try await transition(
+            .accepted,
+            requestID: requestID,
+            ticketTaskPlanRevision: 2,
+            fixture: fixture
+        )
+        let afterReplay = try await task4ANotificationSnapshot(fixture.store)
+        XCTAssertEqual(afterReplay, afterAccepted)
+    }
+
     func testAgentReviewOccurrenceIsAtomicAndReplayDoesNotDuplicateIt() async throws {
         let fixture = try await makeFixture(firstDashboardOpened: true)
         let requestID = UUID(uuidString: "90909090-9090-4090-8090-909090909001")!
@@ -937,15 +1055,48 @@ final class NotificationAcceptanceTests: XCTestCase {
         XCTAssertEqual(acceptedAfterCommit, true)
     }
 
-    private func transition(_ lane: TicketLane, requestID: String, fixture: Fixture) async throws {
+    private func transition(
+        _ lane: TicketLane,
+        requestID: String,
+        ticketTaskPlanRevision: Int64? = nil,
+        fixture: Fixture
+    ) async throws {
         let result = await fixture.dispatcher.dispatch(.init(
             version: 1,
             requestID: UUID(uuidString: requestID)!,
             projectRoot: fixture.projectRoot.path,
             reason: "Transition RR-09 to \(lane.rawValue)",
-            command: .transitionTicket(ticketID: "RR-09", lane: lane)
+            command: .transitionTicket(
+                ticketID: "RR-09",
+                lane: lane,
+                ticketTaskPlanRevision: ticketTaskPlanRevision
+            )
         ))
         XCTAssertNil(result.error)
+    }
+
+    private func task4ANotificationSnapshot(_ store: DeliveryStore) async throws -> Task4ANotificationSnapshot {
+        try await store.read { connection in
+            var taskRows: [String] = []
+            var offset: Int64 = 0
+            while let value = try connection.scalarText(
+                "SELECT id || '|' || completion || '|' || lifecycle || '|' || updated_at || '|' || COALESCE(completed_at, '') || '|' || COALESCE(superseded_at, '') FROM ticket_tasks WHERE project_id = 'project-1' AND ticket_id = 'RR-09' ORDER BY id LIMIT 1 OFFSET ?",
+                bindings: [.integer(offset)]
+            ) {
+                taskRows.append(value)
+                offset += 1
+            }
+            return Task4ANotificationSnapshot(
+                lane: try connection.scalarText("SELECT lane FROM tickets WHERE project_id = 'project-1' AND id = 'RR-09'"),
+                planRevision: try connection.scalarInt("SELECT revision FROM ticket_task_plans WHERE project_id = 'project-1' AND ticket_id = 'RR-09'"),
+                taskRows: taskRows,
+                isOccurrenceActive: try connection.scalarInt("SELECT is_active FROM notification_occurrences WHERE project_id = 'project-1' AND event_kind = 'ticket_needs_review' AND subject_id = 'RR-09'"),
+                occurrenceGeneration: try connection.scalarInt("SELECT generation FROM notification_occurrences WHERE project_id = 'project-1' AND event_kind = 'ticket_needs_review' AND subject_id = 'RR-09'"),
+                notificationCount: try connection.scalarInt("SELECT COUNT(*) FROM notification_events") ?? -1,
+                auditCount: try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1,
+                requestCount: try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1
+            )
+        }
     }
 
     private func notificationState(
@@ -997,6 +1148,17 @@ final class NotificationAcceptanceTests: XCTestCase {
             dispatcher: AgentCommandDispatcher(store: store, projectRegistry: registry)
         )
     }
+}
+
+private struct Task4ANotificationSnapshot: Equatable {
+    let lane: String?
+    let planRevision: Int64?
+    let taskRows: [String]
+    let isOccurrenceActive: Int64?
+    let occurrenceGeneration: Int64?
+    let notificationCount: Int64
+    let auditCount: Int64
+    let requestCount: Int64
 }
 
 private actor RR9CoordinatorOrderRecorder {

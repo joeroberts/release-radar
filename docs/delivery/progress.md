@@ -3,15 +3,15 @@
 ## Current state
 
 - Outcome: RR-R10
-- Active task: Task 4A planning independently accepted; implementation gated
+- Active task: Task 4A implementation independently accepted; Git checkpoint pending
 - Last complete task: Task 3 implementation independently accepted
-- Next eligible task: Task 4A implementation after test authorization
-- Next authorized action: NONE — await explicit Task 4A testing authorization
-- State: GATED
+- Next eligible task: Task 4A implementation checkpoint
+- Next authorized action: Create and push the owner-authorized Task 4A checkpoint
+- State: CHECKPOINTING
 - Last completed task Git checkpoint: `e7b8d725178663b4d70b6984fbfdda3dcdffaf4a`
 - Active brief: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md`
 - Active brief SHA-256: `779c448c852d69dd53f8782fbc87fc560f2b15bfc05084a17f3020a8c4b211b4`
-- Retry state: N/A
+- Retry state: All bounded Task 4A correction cycles closed
 - Owner stopped: No
 
 This file is the current authoritative delivery state. Archived files are
@@ -34,9 +34,11 @@ or Git operations.
 
 ## Task 4A planning gate
 
-- Status: Planning complete and independently accepted. The owner has approved
-  implementation and Git operations, but implementation remains closed pending
-  the planning checkpoint below and separate test authorization.
+- Status: Planning complete and independently accepted. Planning checkpoint
+  `ab445fb327df03a1518e85fa6146bc3bf69de2fb` was pushed and verified exact at
+  local HEAD, upstream, and live remote with ahead/behind `0/0` before
+  implementation began. The owner separately authorized implementation,
+  testing, the disclosed LaunchAgent side effect, and Git operations.
 - Planning agent: `/root/task4a_planner`.
 - Brief SHA-256:
   `779c448c852d69dd53f8782fbc87fc560f2b15bfc05084a17f3020a8c4b211b4`.
@@ -69,15 +71,119 @@ or Git operations.
   commands/tools/concurrency remain closed.
 - Planning inventory: the Task 4A brief,
   `docs/delivery/task-briefs/SHA256SUMS`, and this ledger only.
-- Implementation release gate: Git operations are owner-authorized; commit/push
-  only the three planning paths and verify clean exact local, upstream, and
-  live-remote equality with ahead/behind `0/0`. Obtain explicit Task 4A test
-  authorization after disclosing the existing packaged transport suite's
-  transient LaunchAgent registration/unregistration; then release a fresh
-  Implementer with no overlapping writer across the declared 15 paths.
+- Implementation release gate: Satisfied. The planning inventory was committed
+  alone, exact remote equality was verified, test authorization was obtained,
+  and a fresh Implementer worked within the declared 15-path ceiling.
 - No implementation, tests, Git operations, app launch/install, owner-data
   access, Release Radar mutation, external action, or temporary artifact was
   created during planning.
+
+## Task 4A implementation gate
+
+- Status: Implementation complete and independently accepted; the authorized
+  implementation checkpoint is pending.
+- Planning base/checkpoint: `ab445fb327df03a1518e85fa6146bc3bf69de2fb`,
+  verified exact at local HEAD, upstream, and live remote with ahead/behind
+  `0/0` before implementation began.
+- Implementer: `/root/task4a_implementer`.
+- Candidate binary diff SHA-256:
+  `9c219573cb1040bcdbc354f7403ce88f22bb89675cacdb9f4a990f3349b993b9`.
+- Production inventory and SHA-256:
+  - `ReleaseRadar/App/AppModel.swift` —
+    `3485211c44d041beb3e108caffe28d54373e224a9543d64be301482189d07471`
+  - `ReleaseRadar/Projects/DashboardSampleData.swift` —
+    `245c5f5fe77b66c0d2160eec427a70ad1365899377fb00a4e27eb4cf7b344a5a`
+  - `ReleaseRadar/Projects/RR9ActivePhaseCaptureFixture.swift` —
+    `f3b885b855f0d8694bfd08c50db51326f2dbd36c11fea2c722733d11af3d0e18`
+  - `ReleaseRadarAgentTools/main.swift` —
+    `660676c897e8f8a76a8c2a41d6d7bb3d9aade021ab220871d4e5c8bc90b05c43`
+  - `ReleaseRadarCore/AgentBridge/AgentCommand.swift` —
+    `e95db7a839776010754f56cd978638a0c6612eda7a178d7e9a28d9a039e72bad`
+  - `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift` —
+    `e147fb77b862b3d16da67e151364b5ded2f992778074424f3a62ab52bb7848e0`
+  - `ReleaseRadarCore/Import/RekonArtifactImporter.swift` —
+    `2e73e0b756fa304547f66b29619d44ca5a9a1508827d87ec113ec764f91b90cb`
+- Test inventory and SHA-256:
+  - `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift` —
+    `70ce3a2e529770181b2353ebe5a62e9070493afbec72c6fbcdd959a18e078c31`
+  - `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift` —
+    `486b974a263f15f08d000b8db75e2b51ee4cb82b6063f5d84a264f58b0e4fb76`
+  - `ReleaseRadarTests/AppRouteTests.swift` —
+    `808db8f9d89a8a734436f55db3360a8464af44a106057373d25620aa3922f954`
+  - `ReleaseRadarTests/NotificationAcceptanceTests.swift` —
+    `882d0be909bcba33665eb94cda98d6170eb32362116d24016a6beb989a042962`
+  - `ReleaseRadarTests/RekonImportAcceptanceTests.swift` —
+    `26c911b0033b61ced360058bc61d17491012c9fc229184b5953aecf9f76b1b69`
+  - `ReleaseRadarTests/ReviewAndGraphAcceptanceTests.swift` —
+    `286e7d48a09f4e8d9e8f7014787c0fc6305e7b43ae0e81a0bf5ffc68ec373bf3`
+  - `ReleaseRadarTests/TicketTaskPlanningPolicyAcceptanceTests.swift` —
+    `46c24e1e7861ee8c0dffa9f6f9a8770afab7358865b59bdcfdded4287f2c3ea4`
+- The fifteenth declared path,
+  `ReleaseRadarCore/Planning/TicketTaskPlanningPolicy.swift`, remained
+  byte-identical at SHA-256
+  `828e7569a1be2854a6c795c11618d6b60a1fd4149290e52634eca8766663b54c`.
+- Implemented behavior: every Accepted entry point now invokes the Task 3
+  planning assertion in the same transaction before the final lane write;
+  Accepted upserts and malformed embedded-NUL ticket IDs are rejected before
+  lookup or side effects; revision is optional, Accepted-only, and positive;
+  the owner AppModel path preserves bounded authorization, attribution, and
+  reload behavior; and Rekon, sample, and RR9 Debug creation stage through
+  Backlog before assertion and Accepted finalization.
+- Test-first evidence: valid Stage 1 behavioral RED executed `162` tests with
+  `156` passing and the six intended failures covering Accepted upsert,
+  embedded-NUL preflight, Rekon, sample, and RR9 Debug bypasses. Valid Stage 2
+  interface RED was the attributable missing transition-revision/AppModel
+  surface compile failure and therefore executed zero tests as designed.
+- Stop/resume evidence: Stage 1 first exposed an async XCTest-autoclosure test
+  defect, then a second non-Sendable fixture compile defect triggered the
+  required stop. The owner explicitly resumed its bounded correction. The
+  next run exposed the sample snapshot fixture's invalid `goal_links` query
+  and triggered the required stop; the owner explicitly resumed the bounded
+  diagnosis and correction now verified here. Stage 2 had one bounded
+  test-autoclosure correction, and the first GREEN compile had one bounded
+  actor-isolation correction. No production behavior was weakened to clear a
+  harness or fixture failure.
+- Implementer GREEN passed all `174/174` selected tests with zero failures or
+  skips. After Code Review and QA identified missing direct finalization,
+  rollback-snapshot, and planned-upsert snapshot evidence, one bounded
+  test-only correction across four already-declared test files again passed
+  `174/174`; production remained frozen.
+- Fresh independent QA repeated the seven-suite `xcodebuild test` selection
+  from fresh DerivedData and passed `174/174`, split as policy `32`, bridge
+  `24`, transport `5`, Rekon import `16`, App routes `59`, review/graph `12`,
+  and notifications `26`, with zero failures, skips, or expected failures.
+- Debug/package verification: a fresh `xcodebuild build` succeeded; code-sign
+  verification passed; the app, helper, bridge, and launchd plist were
+  present; direct packaged-helper initialize/tools-list returned exactly `13`
+  tools; transition exposes only an optional integer revision with minimum
+  `1`; upsert exposes no revision; and the helper TeamIdentifier is
+  `2UA854NLX4`. The transient LaunchAgent and Mach service were absent after
+  test cleanup, and the service probe exited `113`.
+- Code Review: `/root/task4a_code_review` — initial NO-GO, Required 3,
+  Optional 0, Out-of-scope 0; affected-role re-review after the bounded
+  test-only correction returned GO, Required 0, Optional 0, Out-of-scope 0.
+- QA/Test: `/root/task4a_qa_verifier` — initial NO-GO, Required 1, Optional 0,
+  Out-of-scope 0; affected-role rerun returned GO, Required 0, Optional 0,
+  Out-of-scope 0 with fresh `174/174` GREEN.
+- Architecture: `/root/task4a_architecture_postreview` — GO, Required 0,
+  Optional 0, Out-of-scope 0.
+- Security/Privacy: `/root/task4a_security_verifier` — GO, Required 0,
+  Optional 0, Out-of-scope 0.
+- TPM: `/root/task4a_tpm_postreview` — GO, Required 0, Optional 0,
+  Out-of-scope 0.
+- Delivery Management: `/root/task4a_delivery_postreview` — GO, Required 0,
+  Optional 0, Out-of-scope 1 for the nonblocking existing-test warning below.
+- Checkpoint inventory: the fourteen changed candidate files above plus this
+  ledger only. The approved brief, checksum index, and unchanged policy file
+  are excluded. Ephemeral DerivedData, result bundles, and logs are excluded
+  and remain pending owner-authorized post-checkpoint deletion.
+- Nonblocking observation: independent QA saw one existing QoS priority-
+  inversion warning in the admission-deadline test. It did not fail a test or
+  recur as a main-thread responsiveness failure and is outside Task 4A.
+- Open risk: None blocking Task 4A. Task 4B commands, tools, concurrency,
+  schema, persistence, model, UI, project, and dependency work remain closed.
+  No app install/launch, owner-data access, network access, external
+  notification, Release Radar mutation, or other external action occurred.
 
 ## Task 3 planning gate
 

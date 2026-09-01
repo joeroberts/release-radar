@@ -363,6 +363,46 @@ final class AppModel {
         activePhaseSelectionStatuses[projectID] ?? .idle
     }
 
+    func transitionTicket(
+        projectID: ProjectID,
+        ticketID: TicketID,
+        to lane: TicketLane,
+        ticketTaskPlanRevision: Int64? = nil
+    ) async throws -> AgentCommandResult {
+        if lane == .accepted, ticketID.rawValue.contains("\0") {
+            return .init(
+                entityIDs: [],
+                auditEventID: nil,
+                error: .invalidEnvelope("Accepted transition ticketID is invalid")
+            )
+        }
+        let requestID = requestIDGenerator()
+        let store = self.store
+        let result = try await projectOnboarding.withAuthorizedProject(projectID: projectID) { project in
+            await AgentCommandDispatcher(
+                store: store,
+                projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+            ).dispatch(
+                AgentCommandEnvelope(
+                    version: AgentCommandDispatcher.commandEnvelopeVersion,
+                    requestID: requestID,
+                    projectRoot: project.canonicalRoot.path,
+                    reason: "Owner transitioned ticket \(ticketID.rawValue) to \(lane.rawValue)",
+                    command: .transitionTicket(
+                        ticketID: ticketID.rawValue,
+                        lane: lane,
+                        ticketTaskPlanRevision: ticketTaskPlanRevision
+                    )
+                ),
+                origin: .ownerApp
+            )
+        }
+        if result.error == nil {
+            await reloadDashboardAfterCommittedAgentCommand()
+        }
+        return result
+    }
+
     func setActivePhase(projectID: ProjectID, phaseID: PhaseID) async {
         guard dashboard?.projects.first(where: { $0.id == projectID })?.activePhaseID != phaseID else {
             return

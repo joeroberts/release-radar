@@ -200,10 +200,18 @@ private struct MCPServer {
                 "lane": try string("lane", in: arguments),
             ])
         case "release_radar_transition_ticket":
-            return ("transitionTicket", [
+            var value: [String: Any] = [
                 "ticketID": try string("ticketID", in: arguments),
                 "lane": try string("lane", in: arguments),
-            ])
+            ]
+            if arguments["ticketTaskPlanRevision"] != nil {
+                let revision = try integer("ticketTaskPlanRevision", in: arguments)
+                guard revision > 0, let exactRevision = Int64(exactly: revision) else {
+                    throw ToolFailure.invalidRequest("ticketTaskPlanRevision must be a positive integer")
+                }
+                value["ticketTaskPlanRevision"] = exactRevision
+            }
+            return ("transitionTicket", value)
         case "release_radar_set_active_phase":
             return ("setActivePhase", [
                 "phaseID": try string("phaseID", in: arguments),
@@ -305,7 +313,11 @@ private struct MCPServer {
             definition(
                 "release_radar_transition_ticket",
                 required: ["ticketID", "lane"],
-                fields: ["ticketID": string, "lane": lane]
+                fields: [
+                    "ticketID": string,
+                    "lane": lane,
+                    "ticketTaskPlanRevision": ["type": "integer", "minimum": 1],
+                ]
             ),
             definition(
                 "release_radar_set_active_phase",

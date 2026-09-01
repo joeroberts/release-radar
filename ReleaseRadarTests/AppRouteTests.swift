@@ -4,6 +4,52 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class AppRouteTests: XCTestCase {
+#if DEBUG
+    func testRR9AcceptedHistoryRollsBackWhenAPlanAppearsAfterStagedInsertion() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RR9Task4A-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        _ = await store.availability
+        try await store.transact(actor: .init(id: "test-trigger"), reason: "Install scoped trigger") { connection in
+            try connection.execute(
+                """
+                CREATE TRIGGER task4a_rr9_plan_after_insert
+                AFTER INSERT ON tickets WHEN NEW.id = 'RR9-HISTORY'
+                BEGIN
+                    INSERT INTO ticket_task_plans (project_id, ticket_id, revision, created_at, updated_at)
+                    VALUES (NEW.project_id, NEW.id, 1, '2026-08-31T12:00:00Z', '2026-08-31T12:00:00Z');
+                    INSERT INTO ticket_tasks
+                        (project_id, ticket_id, id, label, title, sort_order, completion, lifecycle, created_at, updated_at)
+                    VALUES
+                        (NEW.project_id, NEW.id, 'injected-task', 'Injected', 'Injected pending task', 0,
+                         'pending', 'active', '2026-08-31T12:00:00Z', '2026-08-31T12:00:00Z');
+                END
+                """
+            )
+        }
+        let before = try await Self.task4ARR9Snapshot(store)
+
+        do {
+            try await RR9ActivePhaseCaptureFixture.seedIfNeeded(
+                in: store,
+                rootDirectory: directory.appendingPathComponent("roots", isDirectory: true),
+                scenario: .crossPhaseDetail
+            )
+            XCTFail("Expected the injected plan to reject the Accepted RR9 history")
+        } catch {
+            XCTAssertEqual(
+                error as? TicketTaskPlanningPolicyError,
+                .ticketTaskPlanRevisionConflict(expected: nil, current: 1)
+            )
+        }
+
+        let after = try await Self.task4ARR9Snapshot(store)
+        XCTAssertEqual(after, before)
+    }
+#endif
+
     func testSampleLaunchPolicyRequiresExplicitNonEmptyDebugCapture() {
         XCTAssertFalse(AppLaunchConfiguration.shouldSeedSampleData(arguments: [], isDebugBuild: true))
         XCTAssertFalse(AppLaunchConfiguration.shouldSeedSampleData(
@@ -1345,6 +1391,146 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testOwnerTicketTransitionAppliesAcceptanceMatrixAndReloadsOnlyAfterSuccess() async throws {
+        struct Scenario {
+            let name: String
+            let lane: TicketLane
+            let plan: Task4AOwnerPlanState
+            let revision: Int64?
+            let succeeds: Bool
+        }
+        let scenarios = [
+            Scenario(name: "no plan omitted", lane: .backlog, plan: .none, revision: nil, succeeds: true),
+            Scenario(name: "no plan present", lane: .backlog, plan: .none, revision: 1, succeeds: false),
+            Scenario(name: "loaded plan omitted", lane: .backlog, plan: .pending, revision: nil, succeeds: false),
+            Scenario(name: "loaded plan stale", lane: .backlog, plan: .pending, revision: 2, succeeds: false),
+            Scenario(name: "pending exact", lane: .backlog, plan: .pending, revision: 1, succeeds: false),
+            Scenario(name: "completed exact", lane: .needsReview, plan: .completed, revision: 2, succeeds: true),
+            Scenario(name: "terminal", lane: .accepted, plan: .none, revision: nil, succeeds: false),
+        ]
+
+        for scenario in scenarios {
+            let fixture = try await makeRR9OwnerFixture()
+            try await Self.prepareTask4AOwnerTicket(
+                store: fixture.store,
+                lane: scenario.lane,
+                plan: scenario.plan
+            )
+            let requestIDs = RR9RequestIDCounter()
+            let dashboardLoads = RR9DashboardLoadCounter()
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                dashboardLoader: { store in
+                    dashboardLoads.record()
+                    return try await DashboardProjection.load(from: store)
+                },
+                requestIDGenerator: { requestIDs.next() },
+                externalServicesSuppressed: true
+            )
+            let before = try await Self.task4AOwnerTransitionState(fixture.store)
+
+            let result = try await model.transitionTicket(
+                projectID: fixture.projectID,
+                ticketID: .init(rawValue: "ROAD-1"),
+                to: .accepted,
+                ticketTaskPlanRevision: scenario.revision
+            )
+            let after = try await Self.task4AOwnerTransitionState(fixture.store)
+
+            XCTAssertEqual(requestIDs.count, 1, scenario.name)
+            if scenario.succeeds {
+                XCTAssertNil(result.error, scenario.name)
+                XCTAssertEqual(after.lane, TicketLane.accepted.rawValue, scenario.name)
+                XCTAssertEqual(after.requestCount, before.requestCount + 1, scenario.name)
+                XCTAssertEqual(after.auditCount, before.auditCount + 1, scenario.name)
+                XCTAssertEqual(after.actorID, "release-radar-owner", scenario.name)
+                XCTAssertEqual(dashboardLoads.count, 1, scenario.name)
+            } else {
+                XCTAssertNotNil(result.error, scenario.name)
+                XCTAssertEqual(after, before, scenario.name)
+                XCTAssertEqual(dashboardLoads.count, 0, scenario.name)
+            }
+        }
+    }
+
+    @MainActor
+    func testOwnerTicketTransitionPreflightsEmbeddedNULBeforeRequestAuthorizationAndReload() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasBookmark: false)
+        let requestIDs = RR9RequestIDCounter()
+        let dashboardLoads = RR9DashboardLoadCounter()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            dashboardLoader: { store in
+                dashboardLoads.record()
+                return try await DashboardProjection.load(from: store)
+            },
+            requestIDGenerator: { requestIDs.next() },
+            externalServicesSuppressed: true
+        )
+        let before = try await Self.task4AOwnerTransitionState(fixture.store)
+        var errors: [AgentCommandError] = []
+
+        for ticketID in ["ROAD-1\0suffix", "OTHER-TICKET\0suffix", "MISSING\0suffix"] {
+            let result = try await model.transitionTicket(
+                projectID: fixture.projectID,
+                ticketID: .init(rawValue: ticketID),
+                to: .accepted
+            )
+            if let error = result.error {
+                errors.append(error)
+            } else {
+                XCTFail("Expected embedded-NUL owner transition to reject")
+            }
+        }
+
+        let after = try await Self.task4AOwnerTransitionState(fixture.store)
+        XCTAssertEqual(errors.count, 3)
+        XCTAssertTrue(errors.allSatisfy { $0 == errors.first })
+        guard case .invalidEnvelope? = errors.first else {
+            return XCTFail("Expected identical invalidEnvelope errors, got \(errors)")
+        }
+        XCTAssertEqual(requestIDs.count, 0)
+        XCTAssertEqual(dashboardLoads.count, 0)
+        XCTAssertEqual(after, before)
+    }
+
+    @MainActor
+    func testOwnerTicketTransitionAuthorizationFailureCreatesNoCommandOrReload() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasBookmark: false)
+        let requestIDs = RR9RequestIDCounter()
+        let dashboardLoads = RR9DashboardLoadCounter()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            dashboardLoader: { store in
+                dashboardLoads.record()
+                return try await DashboardProjection.load(from: store)
+            },
+            requestIDGenerator: { requestIDs.next() },
+            externalServicesSuppressed: true
+        )
+        let before = try await Self.task4AOwnerTransitionState(fixture.store)
+
+        do {
+            _ = try await model.transitionTicket(
+                projectID: fixture.projectID,
+                ticketID: .init(rawValue: "ROAD-1"),
+                to: .accepted
+            )
+            XCTFail("Expected missing bookmark authorization failure")
+        } catch {
+            XCTAssertEqual(error as? ProjectAuthorizationError, .bookmarkMissing)
+        }
+
+        let after = try await Self.task4AOwnerTransitionState(fixture.store)
+        XCTAssertEqual(requestIDs.count, 1)
+        XCTAssertEqual(dashboardLoads.count, 0)
+        XCTAssertEqual(after, before)
+    }
+
+    @MainActor
     func testOwnerActivePhaseSelectionPublishesCoherentProjectionAndPersistsAcrossModelRelaunch() async throws {
         let fixture = try await makeRR9OwnerFixture()
         let requestIDs = RR9RequestIDCounter()
@@ -2051,7 +2237,9 @@ final class AppRouteTests: XCTestCase {
 
         await model.loadDashboard()
         let first = model.dashboard
+        let firstSeedState = try await Self.task4ARR9NormalAcceptanceState(store)
         await model.loadDashboard()
+        let secondSeedState = try await Self.task4ARR9NormalAcceptanceState(store)
 
         XCTAssertEqual(model.dashboard, first)
         XCTAssertEqual(model.selection, .phaseBoard(RR9ActivePhaseCaptureFixture.primaryProjectID))
@@ -2072,6 +2260,13 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(state.0, 7)
         XCTAssertEqual(state.1, 6)
         XCTAssertEqual(state.2, 0)
+        XCTAssertEqual(firstSeedState.acceptedTicketIDs, ["RR9-HISTORY"])
+        XCTAssertTrue(firstSeedState.planRows.isEmpty)
+        XCTAssertTrue(firstSeedState.taskRows.isEmpty)
+        XCTAssertEqual(firstSeedState.seedAuditRows, [
+            "rr9-capture-seed-audit|release-radar.rr9-capture-seed||none|Seed RR-R9 active phase capture fixture|rr9-capture-primary|phase|phase-current",
+        ])
+        XCTAssertEqual(secondSeedState, firstSeedState)
         XCTAssertFalse(model.dashboard?.projects.contains { $0.id == DashboardSampleData.projectID } == true)
     }
 
@@ -2296,6 +2491,130 @@ final class AppRouteTests: XCTestCase {
         return (model, store)
     }
 
+#if DEBUG
+    private static func task4ARR9Snapshot(_ store: DeliveryStore) async throws -> [String] {
+        try await store.read { connection in
+            var rows: [String] = []
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'projects|' || quote(id) || '|' || quote(name) || '|' || quote(first_dashboard_opened) AS value FROM projects ORDER BY id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'project_roots|' || quote(id) || '|' || quote(project_id) || '|' || quote(path) AS value FROM project_roots ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'project_bookmarks|' || quote(project_id) || '|' || quote(path) || '|' || quote(bookmark_data) || '|' || quote(is_stale) AS value FROM project_bookmarks ORDER BY project_id, path"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'phases|' || quote(id) || '|' || quote(project_id) || '|' || quote(name) AS value FROM phases ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'project_active_phases|' || quote(project_id) || '|' || quote(phase_id) AS value FROM project_active_phases ORDER BY project_id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'tickets|' || quote(id) || '|' || quote(project_id) || '|' || quote(phase_id) || '|' || quote(outcome) || '|' || quote(lane) AS value FROM tickets ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'ticket_task_plans|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(revision) || '|' || quote(created_at) || '|' || quote(updated_at) AS value FROM ticket_task_plans ORDER BY project_id, ticket_id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'ticket_tasks|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(id) || '|' || quote(label) || '|' || quote(title) || '|' || quote(sort_order) || '|' || quote(completion) || '|' || quote(lifecycle) || '|' || quote(created_at) || '|' || quote(updated_at) || '|' || quote(completed_at) || '|' || quote(superseded_at) AS value FROM ticket_tasks ORDER BY project_id, ticket_id, id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'phase_dependencies|' || quote(id) || '|' || quote(project_id) || '|' || quote(phase_id) || '|' || quote(depends_on_phase_id) AS value FROM phase_dependencies ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'ticket_dependencies|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(depends_on_ticket_id) AS value FROM ticket_dependencies ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.rr9TextRows(
+                connection,
+                sql: "SELECT 'audit_events|' || quote(id) || '|' || quote(actor_id) || '|' || quote(thread_id) || '|' || quote(thread_attribution) || '|' || quote(reason) || '|' || quote(created_at) || '|' || quote(project_id) || '|' || quote(entity_type) || '|' || quote(entity_id) AS value FROM audit_events ORDER BY id"
+            ))
+            return rows
+        }
+    }
+#endif
+
+    private static func task4ARR9NormalAcceptanceState(
+        _ store: DeliveryStore
+    ) async throws -> Task4ARR9NormalAcceptanceState {
+        try await store.read { connection in
+            Task4ARR9NormalAcceptanceState(
+                acceptedTicketIDs: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT id AS value FROM tickets WHERE lane = 'accepted' ORDER BY project_id, id"
+                ),
+                planRows: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || ticket_id || '|' || revision AS value FROM ticket_task_plans ORDER BY project_id, ticket_id"
+                ),
+                taskRows: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || ticket_id || '|' || id AS value FROM ticket_tasks ORDER BY project_id, ticket_id, id"
+                ),
+                seedAuditRows: try Self.rr9TextRows(
+                    connection,
+                    sql: "SELECT id || '|' || actor_id || '|' || COALESCE(thread_id, '') || '|' || thread_attribution || '|' || reason || '|' || COALESCE(project_id, '') || '|' || COALESCE(entity_type, '') || '|' || COALESCE(entity_id, '') AS value FROM audit_events WHERE id = 'rr9-capture-seed-audit' ORDER BY id"
+                )
+            )
+        }
+    }
+
+    private static func prepareTask4AOwnerTicket(
+        store: DeliveryStore,
+        lane: TicketLane,
+        plan: Task4AOwnerPlanState
+    ) async throws {
+        try await store.transact(actor: .init(id: "fixture"), reason: "Prepare owner acceptance matrix") { connection in
+            try connection.execute(
+                "UPDATE tickets SET lane = ? WHERE project_id = 'rr9-owner-project' AND id = 'ROAD-1'",
+                bindings: [.text(lane.rawValue)]
+            )
+            guard plan != .none else { return }
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: .init(rawValue: "rr9-owner-project"),
+                ticketID: .init(rawValue: "ROAD-1"),
+                expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "owner-task"), label: "Owner", title: "Complete owner task", sortOrder: 0)],
+                definitionRevisions: [],
+                supersededTaskIDs: [],
+                connection: connection
+            )
+            if plan == .completed {
+                _ = try TicketTaskPlanningPolicy.completeTask(
+                    projectID: .init(rawValue: "rr9-owner-project"),
+                    ticketID: .init(rawValue: "ROAD-1"),
+                    taskID: .init(rawValue: "owner-task"),
+                    expectedRevision: 1,
+                    connection: connection
+                )
+            }
+        }
+    }
+
+    private static func task4AOwnerTransitionState(_ store: DeliveryStore) async throws -> Task4AOwnerTransitionState {
+        try await store.read { connection in
+            Task4AOwnerTransitionState(
+                lane: try connection.scalarText("SELECT lane FROM tickets WHERE project_id = 'rr9-owner-project' AND id = 'ROAD-1'"),
+                planRevision: try connection.scalarInt("SELECT revision FROM ticket_task_plans WHERE project_id = 'rr9-owner-project' AND ticket_id = 'ROAD-1'"),
+                pendingTaskCount: try connection.scalarInt("SELECT COUNT(*) FROM ticket_tasks WHERE project_id = 'rr9-owner-project' AND ticket_id = 'ROAD-1' AND completion = 'pending'") ?? -1,
+                completedTaskCount: try connection.scalarInt("SELECT COUNT(*) FROM ticket_tasks WHERE project_id = 'rr9-owner-project' AND ticket_id = 'ROAD-1' AND completion = 'completed'") ?? -1,
+                auditCount: try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? -1,
+                requestCount: try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
+                actorID: try connection.scalarText("SELECT actor_id FROM audit_events WHERE entity_type = 'ticket' AND entity_id = 'ROAD-1' ORDER BY rowid DESC LIMIT 1")
+            )
+        }
+    }
+
     @MainActor
     private func makeRR9OwnerFixture(
         hasBookmark: Bool = true,
@@ -2413,6 +2732,13 @@ final class AppRouteTests: XCTestCase {
 
 }
 
+private struct Task4ARR9NormalAcceptanceState: Equatable {
+    let acceptedTicketIDs: [String]
+    let planRows: [String]
+    let taskRows: [String]
+    let seedAuditRows: [String]
+}
+
 private struct RR9OwnerFixture {
     let databaseURL: URL
     let projectRoot: URL
@@ -2423,6 +2749,22 @@ private struct RR9OwnerFixture {
     let store: DeliveryStore
     let bookmarks: RR9RouteBookmarkStore
     let onboarding: FolderProjectOnboarding
+}
+
+private enum Task4AOwnerPlanState: Equatable, Sendable {
+    case none
+    case pending
+    case completed
+}
+
+private struct Task4AOwnerTransitionState: Equatable {
+    let lane: String?
+    let planRevision: Int64?
+    let pendingTaskCount: Int64
+    let completedTaskCount: Int64
+    let auditCount: Int64
+    let requestCount: Int64
+    let actorID: String?
 }
 
 private struct RR9SelectionState: Equatable {
@@ -2448,6 +2790,17 @@ private final class RR9RequestIDCounter: @unchecked Sendable {
     func next() -> UUID {
         lock.withLock { generated += 1 }
         return UUID()
+    }
+}
+
+private final class RR9DashboardLoadCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var loads = 0
+
+    var count: Int { lock.withLock { loads } }
+
+    func record() {
+        lock.withLock { loads += 1 }
     }
 }
 

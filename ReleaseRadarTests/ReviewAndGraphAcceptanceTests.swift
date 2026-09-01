@@ -7,6 +7,42 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
     private var databaseURL: URL!
     private var projectRoot: URL!
 
+    func testSampleAcceptedSeedRollsBackWhenAPlanAppearsAfterStagedInsertion() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        _ = await store.availability
+        try await store.transact(actor: .init(id: "test-trigger"), reason: "Install scoped trigger") { connection in
+            try connection.execute(
+                """
+                CREATE TRIGGER task4a_sample_plan_after_insert
+                AFTER INSERT ON tickets WHEN NEW.id = 'VD2-07'
+                BEGIN
+                    INSERT INTO ticket_task_plans (project_id, ticket_id, revision, created_at, updated_at)
+                    VALUES (NEW.project_id, NEW.id, 1, '2026-08-31T12:00:00Z', '2026-08-31T12:00:00Z');
+                    INSERT INTO ticket_tasks
+                        (project_id, ticket_id, id, label, title, sort_order, completion, lifecycle, created_at, updated_at)
+                    VALUES
+                        (NEW.project_id, NEW.id, 'injected-task', 'Injected', 'Injected pending task', 0,
+                         'pending', 'active', '2026-08-31T12:00:00Z', '2026-08-31T12:00:00Z');
+                END
+                """
+            )
+        }
+        let before = try await Self.task4ASampleSnapshot(store)
+
+        do {
+            try await DashboardSampleData.seedIfNeeded(in: store)
+            XCTFail("Expected the injected plan to reject the Accepted sample seed")
+        } catch {
+            XCTAssertEqual(
+                error as? TicketTaskPlanningPolicyError,
+                .ticketTaskPlanRevisionConflict(expected: nil, current: 1)
+            )
+        }
+
+        let after = try await Self.task4ASampleSnapshot(store)
+        XCTAssertEqual(after, before)
+    }
+
     override func setUpWithError() throws {
         databaseURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("release-radar-review-graph-\(UUID().uuidString).sqlite")
@@ -130,6 +166,9 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
     func testFreshSampleSeedSuppliesTheSupportedReviewInbox() async throws {
         let store = DeliveryStore(databaseURL: databaseURL)
         try await DashboardSampleData.seedIfNeeded(in: store)
+        let firstAcceptance = try await Self.task4ANormalSampleAcceptanceState(store)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let secondAcceptance = try await Self.task4ANormalSampleAcceptanceState(store)
 
         let inbox = try await ReviewInboxProjection.load(
             from: store,
@@ -144,6 +183,20 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
             .excludedTask,
             .agentReviewRequest,
         ])
+        let expectedAcceptedTicketIDs = [
+            "CORE-01", "CORE-02", "CORE-03", "CORE-04", "CORE-05", "CORE-06",
+            "RR-01", "RR-02", "RR-03", "RR-04",
+            "UX-D07", "UX-D08", "UX-D09",
+            "VD2-03", "VD2-04", "VD2-05", "VD2-06", "VD2-07",
+        ]
+        let expectedAuditRows = [
+            "rr06-dashboard-seed-audit|release-radar.sample-seed||none|Seed RR-06 dashboard examples including VD2-07c|rekon-pursuit|ticket|VD2-07c",
+        ]
+        XCTAssertEqual(firstAcceptance.acceptedTicketIDs, expectedAcceptedTicketIDs)
+        XCTAssertTrue(firstAcceptance.planRows.isEmpty)
+        XCTAssertTrue(firstAcceptance.taskRows.isEmpty)
+        XCTAssertEqual(firstAcceptance.seedAuditRows, expectedAuditRows)
+        XCTAssertEqual(secondAcceptance, firstAcceptance)
     }
 
     func testDependencyGraphProjectsTransitiveDirectionAndPreciseMultiEdgeEndpoints() async throws {
@@ -554,6 +607,122 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         return store
     }
 
+    private static func task4ASampleSnapshot(_ store: DeliveryStore) async throws -> [String] {
+        try await store.read { connection in
+            var rows: [String] = []
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'projects|' || quote(id) || '|' || quote(name) || '|' || quote(first_dashboard_opened) AS value FROM projects ORDER BY id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'phases|' || quote(id) || '|' || quote(project_id) || '|' || quote(name) AS value FROM phases ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'project_active_phases|' || quote(project_id) || '|' || quote(phase_id) AS value FROM project_active_phases ORDER BY project_id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'tickets|' || quote(id) || '|' || quote(project_id) || '|' || quote(phase_id) || '|' || quote(outcome) || '|' || quote(lane) AS value FROM tickets ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'ticket_task_plans|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(revision) || '|' || quote(created_at) || '|' || quote(updated_at) AS value FROM ticket_task_plans ORDER BY project_id, ticket_id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'ticket_tasks|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(id) || '|' || quote(label) || '|' || quote(title) || '|' || quote(sort_order) || '|' || quote(completion) || '|' || quote(lifecycle) || '|' || quote(created_at) || '|' || quote(updated_at) || '|' || quote(completed_at) || '|' || quote(superseded_at) AS value FROM ticket_tasks ORDER BY project_id, ticket_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'ticket_dependencies|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(depends_on_ticket_id) AS value FROM ticket_dependencies ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'blockers|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(summary) || '|' || quote(resolved_at) AS value FROM blockers ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'evidence|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(path) || '|' || quote(is_available) AS value FROM evidence ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'observed_threads|' || quote(id) || '|' || quote(project_id) || '|' || quote(status) || '|' || quote(last_observed_at) AS value FROM observed_threads ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'observed_goals|' || quote(id) || '|' || quote(project_id) || '|' || quote(thread_id) || '|' || quote(status) || '|' || quote(text) || '|' || quote(last_observed_at) AS value FROM observed_goals ORDER BY project_id, id, thread_id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'thread_links|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(thread_id) AS value FROM thread_links ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'ticket_goal_links|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(thread_id) || '|' || quote(goal_id) AS value FROM ticket_goal_links ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'completion_records|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(summary) || '|' || quote(created_at) AS value FROM completion_records ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'review_items|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(kind) || '|' || quote(summary) || '|' || quote(status) AS value FROM review_items ORDER BY project_id, id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'notification_events|' || quote(id) || '|' || quote(fingerprint) || '|' || quote(state) || '|' || quote(ticket_id) || '|' || quote(goal_id) || '|' || quote(provider_receipt) || '|' || quote(acknowledged_at) || '|' || quote(project_id) || '|' || quote(event_kind) || '|' || quote(subject_id) || '|' || quote(occurrence) || '|' || quote(title) || '|' || quote(message) || '|' || quote(created_at) || '|' || quote(attempt_count) || '|' || quote(attempt_started_at) || '|' || quote(completed_at) || '|' || quote(failure_code) AS value FROM notification_events ORDER BY id"
+            ))
+            rows.append(contentsOf: try Self.task4ATextRows(
+                connection,
+                sql: "SELECT 'audit_events|' || quote(id) || '|' || quote(actor_id) || '|' || quote(thread_id) || '|' || quote(thread_attribution) || '|' || quote(reason) || '|' || quote(created_at) || '|' || quote(project_id) || '|' || quote(entity_type) || '|' || quote(entity_id) AS value FROM audit_events ORDER BY id"
+            ))
+            return rows
+        }
+    }
+
+    private static func task4ANormalSampleAcceptanceState(
+        _ store: DeliveryStore
+    ) async throws -> Task4ANormalSampleAcceptanceState {
+        try await store.read { connection in
+            Task4ANormalSampleAcceptanceState(
+                acceptedTicketIDs: try Self.task4ATextRows(
+                    connection,
+                    sql: "SELECT id AS value FROM tickets WHERE project_id = 'rekon-pursuit' AND lane = 'accepted' ORDER BY id"
+                ),
+                planRows: try Self.task4ATextRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || ticket_id || '|' || revision AS value FROM ticket_task_plans ORDER BY project_id, ticket_id"
+                ),
+                taskRows: try Self.task4ATextRows(
+                    connection,
+                    sql: "SELECT project_id || '|' || ticket_id || '|' || id AS value FROM ticket_tasks ORDER BY project_id, ticket_id, id"
+                ),
+                seedAuditRows: try Self.task4ATextRows(
+                    connection,
+                    sql: "SELECT id || '|' || actor_id || '|' || COALESCE(thread_id, '') || '|' || thread_attribution || '|' || reason || '|' || COALESCE(project_id, '') || '|' || COALESCE(entity_type, '') || '|' || COALESCE(entity_id, '') AS value FROM audit_events WHERE id = 'rr06-dashboard-seed-audit' ORDER BY id"
+                )
+            )
+        }
+    }
+
+    nonisolated private static func task4ATextRows(
+        _ connection: SQLiteConnection,
+        sql: String
+    ) throws -> [String] {
+        var values: [String] = []
+        var offset: Int64 = 0
+        while let row = try connection.row("\(sql) LIMIT 1 OFFSET ?", bindings: [.integer(offset)]) {
+            guard case let .text(value)? = row["value"] else {
+                throw ReviewAndGraphTask4ATestError.missingSnapshotText
+            }
+            values.append(value)
+            offset += 1
+        }
+        return values
+    }
+
     @MainActor
     private func envelope(reason: String, command: AgentCommand) -> AgentCommandEnvelope {
         AgentCommandEnvelope(
@@ -565,6 +734,17 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
             command: command
         )
     }
+}
+
+private struct Task4ANormalSampleAcceptanceState: Equatable {
+    let acceptedTicketIDs: [String]
+    let planRows: [String]
+    let taskRows: [String]
+    let seedAuditRows: [String]
+}
+
+private enum ReviewAndGraphTask4ATestError: Error {
+    case missingSnapshotText
 }
 
 private struct ReviewBookmarkStore: ProjectBookmarkStoring {

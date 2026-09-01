@@ -127,7 +127,18 @@ public actor AgentCommandDispatcher {
             commandFieldsAreValid = valid(phaseID, maximum: 256) && valid(name)
         case let .upsertTicket(ticketID, phaseID, outcome, _):
             commandFieldsAreValid = valid(ticketID, maximum: 256) && valid(phaseID, maximum: 256) && valid(outcome)
-        case let .transitionTicket(ticketID, _):
+        case let .transitionTicket(ticketID, lane, ticketTaskPlanRevision):
+            if lane == .accepted, ticketID.contains("\0") {
+                return .invalidEnvelope("Accepted transition ticketID is invalid")
+            }
+            if let ticketTaskPlanRevision {
+                guard lane == .accepted else {
+                    return .invalidEnvelope("ticketTaskPlanRevision is valid only for Accepted transitions")
+                }
+                guard ticketTaskPlanRevision >= 1 else {
+                    return .invalidEnvelope("ticketTaskPlanRevision must be at least 1")
+                }
+            }
             commandFieldsAreValid = valid(ticketID, maximum: 256)
         case let .setActivePhase(phaseID):
             commandFieldsAreValid = valid(phaseID, maximum: 256)
@@ -164,6 +175,9 @@ public actor AgentCommandDispatcher {
         guard commandFieldsAreValid else {
             return .invalidEnvelope("command identifiers and text must be non-empty and bounded")
         }
+        if case let .upsertTicket(_, _, _, lane) = envelope.command, lane == .accepted {
+            return .invalidEnvelope("Accepted tickets must use transitionTicket")
+        }
         return nil
     }
 
@@ -193,7 +207,7 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
         case let .upsertTicket(ticketID, _, _, _):
             return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
-        case let .transitionTicket(ticketID, _):
+        case let .transitionTicket(ticketID, _, _):
             return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
         case let .setActivePhase(phaseID):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
@@ -216,7 +230,7 @@ public actor AgentCommandDispatcher {
         let entity: (AuditEntityType, String) = switch command {
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
-        case let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _): (.ticket, ticketID)
+        case let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
         case let .setDependency(id, kind, _, _):
             (kind == .ticket ? .ticketDependency : .phaseDependency, id)
         case let .recordBlocker(id, _, _), let .resolveBlocker(id): (.blocker, id)
@@ -271,8 +285,16 @@ public actor AgentCommandDispatcher {
                 projectID: projectID,
                 connection: connection
             )
-        case let .transitionTicket(ticketID, lane):
+        case let .transitionTicket(ticketID, lane, ticketTaskPlanRevision):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            if lane == .accepted {
+                try TicketTaskPlanningPolicy.assertCanAcceptTicket(
+                    projectID: projectID,
+                    ticketID: TicketID(rawValue: ticketID),
+                    expectedRevision: ticketTaskPlanRevision,
+                    connection: connection
+                )
+            }
             let previousLane = try connection.scalarText(
                 "SELECT lane FROM tickets WHERE id = ? AND project_id = ?",
                 bindings: [.text(ticketID), .text(projectID.rawValue)]
