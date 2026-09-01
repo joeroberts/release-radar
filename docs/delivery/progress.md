@@ -3,14 +3,14 @@
 ## Current state
 
 - Outcome: RR-R10
-- Active task: None
+- Active task: Task 4A planning independently accepted; implementation gated
 - Last complete task: Task 3 implementation independently accepted
-- Next eligible task: Task 4A
-- Next authorized action: NONE — await explicit owner direction for Task 4A
-- State: READY
+- Next eligible task: Task 4A implementation after test authorization
+- Next authorized action: NONE — await explicit Task 4A testing authorization
+- State: GATED
 - Last completed task Git checkpoint: `e7b8d725178663b4d70b6984fbfdda3dcdffaf4a`
-- Active brief: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md`
-- Active brief SHA-256: `6edfa5890250aad0db56b55235c55a1795a301797fb38e6b19efe4e7a695019c`
+- Active brief: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md`
+- Active brief SHA-256: `779c448c852d69dd53f8782fbc87fc560f2b15bfc05084a17f3020a8c4b211b4`
 - Retry state: N/A
 - Owner stopped: No
 
@@ -30,6 +30,54 @@ or Git operations.
 - [Task 2A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md)
 - [Task 2B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md)
 - [Task 3 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md)
+- [Task 4A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md)
+
+## Task 4A planning gate
+
+- Status: Planning complete and independently accepted. The owner has approved
+  implementation and Git operations, but implementation remains closed pending
+  the planning checkpoint below and separate test authorization.
+- Planning agent: `/root/task4a_planner`.
+- Brief SHA-256:
+  `779c448c852d69dd53f8782fbc87fc560f2b15bfc05084a17f3020a8c4b211b4`.
+- Architecture: `/root/task4a_architecture_review` — GO, Required 0,
+  Optional 0, Out-of-scope 0 on the initial brief; explicitly accepted the
+  staged-create, revisionless-writer, AppModel callback, compatibility,
+  transaction, trigger, file-scope, and Task 4B boundary decisions. The later
+  bounded QA/Security corrections did not alter those decisions, so only the
+  affected roles re-reviewed under the repository rule.
+- QA/Test: `/root/task4a_qa_review` — initial NO-GO, Required 1, Optional 2,
+  Out-of-scope 0; the brief was corrected to require executable Stage 1
+  behavioral RED before the attributable Stage 2 interface compile RED, exact
+  trigger error/rollback evidence plus source review, limited policy coverage,
+  and disclosure of the existing transport suite's transient LaunchAgent
+  registration. Affected-role re-review of the exact final brief returned GO,
+  Required 0, Optional 0, Out-of-scope 0.
+- Security/Privacy: `/root/task4a_security_review` — initial NO-GO, Required 1,
+  Optional 0, Out-of-scope 0; the brief was corrected to reject embedded-NUL
+  Accepted ticket IDs before dispatcher project lookup and AppModel
+  authorization/request/reload, with indistinguishable zero-effect coverage.
+  Affected-role re-review of the exact final brief returned GO, Required 0,
+  Optional 0, Out-of-scope 0.
+- TPM: `/root/task4a_tpm_review` — GO, Required 0, Optional 0, Out-of-scope 0.
+- Delivery Management: `/root/task4a_delivery_review` — GO, Required 0,
+  Optional 0, Out-of-scope 0.
+- Resolved planning boundaries: creation-only Accepted writers use
+  transaction-local Backlog staging, the Task 3 assertion with nil revision,
+  then Accepted finalization; Rekon/sample/Debug remain revisionless; the
+  owner AppModel path gains one internal revision-aware callback; Task 4B
+  commands/tools/concurrency remain closed.
+- Planning inventory: the Task 4A brief,
+  `docs/delivery/task-briefs/SHA256SUMS`, and this ledger only.
+- Implementation release gate: Git operations are owner-authorized; commit/push
+  only the three planning paths and verify clean exact local, upstream, and
+  live-remote equality with ahead/behind `0/0`. Obtain explicit Task 4A test
+  authorization after disclosing the existing packaged transport suite's
+  transient LaunchAgent registration/unregistration; then release a fresh
+  Implementer with no overlapping writer across the declared 15 paths.
+- No implementation, tests, Git operations, app launch/install, owner-data
+  access, Release Radar mutation, external action, or temporary artifact was
+  created during planning.
 
 ## Task 3 planning gate
 
