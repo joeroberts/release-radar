@@ -19,16 +19,3 @@ db34c56d5c312a82b35e5a07434a94db2388d567e75ac1e8085d307d69dce733  docs/delivery/
 4d9b22670fb82a8285b16cdb36d4631204f667d78ecfa81e13a148ac130ef299  docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md
 6edfa5890250aad0db56b55235c55a1795a301797fb38e6b19efe4e7a695019c  docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md
 779c448c852d69dd53f8782fbc87fc560f2b15bfc05084a17f3020a8c4b211b4  docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md
-cb10b28606b2e231b656280096ed304e8d6f22901e6fee60579f9bce2c5ae119  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md
-f4772d566c3b4d43e65b5973f3be8f9c447eac690df4ae0ed548f1efebcadae2  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m2b-deterministic-index-tool-brief.md
-551b390a1b69f6d10444d79153345e07b79b7ebb04a4beb492c3f145a94b2f6a  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m2c-central-path-contract-v1-preview-brief.md
-a2e3ab6175b1c53a0440960672c64e9311856ad4f758a506f6ec008ffd82b76b  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3a-managed-evidence-identity-brief.md
-f60a0e2c61c7abc9919b806824c4dae0058366d340e3fd482840bdc9895ee533  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3a0-schema-v12-fixture-brief.md
-00039fca092ce5826546dbfc29c6af5c6ec15c43fa2df3e469417d2615321445  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3b-evidence-inventory-reconciliation-brief.md
-90b57e2655bcefe6cfb9960283c703baaf13bb19e444db31c2f6efd0a02cd54a  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3c-readback-root-relocation-brief.md
-48d974c3f0bc897cb2687f19c90fec5d02fc158c450b6ec01ab952b92261ffb8  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md
-a9152923cd190d1dd50e10721e24aebdfdab9aef30d6d9b0149dde0318aed8f7  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md
-74dae7f80f96f1db8fe3b84c3afe0ee78f0ae84b8b919ab80daaec4eee474584  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md
-d415dfa447ec4f2e550133f13b050322c662a6669c77c311cf59b1aa14a2c6e8  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md
-fc980b1ce50a53d7cd4659fc0b97d5396f69f4030259aabdce24e24ed80f8332  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md
-f19527d4d7433758bcccc9eff46e1973478ad054f2dafcf2aa9f85c756e561e9  docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md

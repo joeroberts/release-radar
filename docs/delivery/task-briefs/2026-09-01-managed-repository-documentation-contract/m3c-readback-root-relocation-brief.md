@@ -14,6 +14,7 @@ rebind so managed evidence survives a folder move without row repair.
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-001-release-radar-boundaries.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - `docs/design/mockups/phase_board.png`
 - `docs/design/mockups/needs_review.png`
 - Accepted M3A-M3B contracts
@@ -44,9 +45,8 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- M3B independently accepted.
-- UX review of exact presentation states before implementation.
-- Security/Privacy approval of bookmark/root transaction and recovery.
+- M3B completed and accepted.
+- Separate owner authorization for M3C.
 
 ## Anticipated files
 
@@ -118,7 +118,9 @@ arbitrary legacy preservation, no generic prefix rewrite, and relaunch.
 
 ## Reviews and completion evidence
 
-Required post-implementation reviews: Code Review, QA, Architecture, UX,
-Security/Privacy, TPM, and Delivery Management. Record root/evidence semantic
-snapshots, RED/GREEN/relaunch results, accessibility and screenshot comparison,
-audit redaction, review verdicts, and M4 eligibility in the ledger.
+Required risk-triggered reviews: Code Review, QA, Architecture, and
+Security/Privacy. TPM participates only if sequencing or dependencies materially
+change. Planning is not an approval role. Delivery Management records concise
+readback, relaunch, accessibility, screenshot, and audit-redaction evidence plus
+residual risks and next eligible work; it is not an approval. Completion does
+not authorize M4.

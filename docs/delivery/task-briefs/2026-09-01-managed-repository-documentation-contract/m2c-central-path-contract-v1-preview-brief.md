@@ -14,6 +14,7 @@ preserving all legacy guidance-v1, onboarding, importer, and evidence behavior.
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-002-codex-plugin-lifecycle.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Accepted M2A-M2B contracts
 - `docs/design/agent-driven-delivery-dashboard-design.md`, current Onboarding
   contract
@@ -39,9 +40,8 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- M2A-M2B independently accepted.
-- UX/Architecture approve the staged-catalog presentation as a refinement of
-  existing onboarding status, not a new workflow.
+- M2A-M2B completed and accepted.
+- Separate owner authorization for M2C.
 
 ## Anticipated files
 
@@ -89,7 +89,8 @@ recognized application dependency.
 
 ## Reviews and completion evidence
 
-Required post-implementation reviews: Code Review, QA, Architecture, UX,
-Security/Privacy, TPM, and Delivery Management. Record exact agreement tests,
-legacy regressions, candidate inventory, reviews, and M3A0 eligibility in the
-ledger.
+Required risk-triggered reviews: Code Review, QA, Architecture, and
+Security/Privacy. TPM participates only if sequencing or dependencies materially
+change. Planning is not an approval role. Delivery Management records concise
+verification, residual risks, and next eligible work; it is not an approval.
+Completion does not authorize M3A0.

@@ -13,6 +13,7 @@ read-only failures before any index, evidence, or delivery behavior changes.
 
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - `docs/architecture/ADR-001-release-radar-boundaries.md`
 - `docs/delivery/progress.md`
 
@@ -47,10 +48,8 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- Owner-approved M1 package and ADR-006.
-- Fresh Planning, Architecture, QA, TPM, Delivery, and Security/Privacy release
-  of this exact brief.
-- Exact clean implementation base recorded in `docs/delivery/progress.md`.
+- Owner-approved M1 package and accepted ADR-006 and ADR-007.
+- Separate owner authorization for M2A.
 
 ## Anticipated files
 
@@ -109,7 +108,8 @@ not create a fixture DSL or custom test framework.
 
 ## Reviews and completion evidence
 
-Required post-implementation reviews: Code Review, QA, Architecture, TPM,
-Delivery Management, and Security/Privacy. The ledger records the exact file
-inventory, RED/GREEN commands and counts, review verdicts, residual risks, and
-the next eligible brief. Presence of this brief does not open M2A.
+Required risk-triggered reviews: Code Review, QA, Architecture, and
+Security/Privacy. TPM participates only if sequencing or dependencies materially
+change. Planning is not an approval role. Delivery Management records concise
+verification, residual risks, and next eligible work; it is not an approval.
+Completion does not authorize M2B.

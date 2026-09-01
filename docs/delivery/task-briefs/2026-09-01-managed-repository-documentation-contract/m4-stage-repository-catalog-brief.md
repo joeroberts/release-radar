@@ -14,6 +14,7 @@ content artifacts remain byte-exact and accepted checksum entries remain intact.
 
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Accepted M2-M3 candidate and repository tool
 - `AGENTS.md` and `docs/delivery/progress.md`
 
@@ -98,8 +99,9 @@ only separately authorized appended entries.
 
 ## Reviews and completion evidence
 
-Required reviews: Planning, Architecture, QA, Delivery Management, TPM, and
-Security/Privacy. Record temporary-inventory disposition, owner decisions,
-tool checks, held-file/manifest comparison, repository candidate analysis,
-exact diff, and
-M5 eligibility in `docs/delivery/progress.md`.
+Required risk-triggered reviews: one Documentation reviewer and the catalog
+validator. TPM participates only if sequencing or dependencies materially
+change. Planning is not an approval role. Delivery Management records concise
+tool results, held-file/manifest comparison, owner decisions, residual risks,
+and next eligible work; it is not an approval. Completion does not authorize
+M5.

@@ -2,17 +2,17 @@
 
 ## Current state
 
-- Outcome: M1A Proportional Delivery Governance Amendment complete
-- Active task: None
-- Last complete task: M1A owner approval and documentation closeout
-- Authorization: M1A closeout documentation and its local commit only; M2 and
-  RR-R10 Task 4B remain unauthorized
+- Outcome: M1A propagation correction
+- Active task: None — the local correction awaits owner review
+- Last complete task: M1A governance approval and closeout
+- Authorization: M1A propagation documentation and its local commit only; M2
+  and RR-R10 Task 4B remain unauthorized
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Current blockers and risks: Separate owner authorization is required before
-  M2A or any later work
-- Next eligible work: M2A catalog contract and validator, unopened
-- State: COMPLETE — AWAITING NEXT AUTHORIZATION
+- Current blockers and risks: Owner review is required before this correction
+  closes; separate authorization is required before M2A or later work
+- Next eligible action: Owner review of the M1A propagation correction
+- State: AWAITING OWNER REVIEW
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
@@ -36,97 +36,23 @@ or Git operations.
 - [Task 3 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md)
 - [Task 4A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md)
 
-## M1A proportional delivery governance
+## Managed Repository Documentation Contract M0–M1A
 
-- Status: Owner-approved and complete.
-- Decision: root `AGENTS.md` and ADR-007 replace mandatory all-role ceremony
-  with risk-triggered review and direct verification for unopened work.
-- M0–M1 remains completed and unchanged. Its product, architecture, security,
-  dependency, test, and acceptance requirements remain controlling.
+- M1 completed at checkpoint `cc96681`.
+- M1A governance completed through accepted
+  [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md).
+- Controlling references: the
+  [managed-documentation design](../design/managed-repository-documentation-contract.md),
+  [ADR-006](../architecture/ADR-006-managed-repository-documentation-contract.md),
+  and ADR-007.
+- Issue #2 files were accepted as operative RR-R10 output. Session authorship
+  remains unknown, the preservation hold is resolved, and the external issue
+  remains unchanged.
+- The managed-documentation program retains priority over RR-R10 Task 4B.
+- ADR-007 governs proportional validation for unopened work. This correction
+  aligns the design, milestone briefs, checksum registry, and ledger with it.
 - M2 and RR-R10 Task 4B remain unauthorized.
-- Verification: direct documentation and diff validation completed; no
-  application tests or application actions were run.
-- Next action: separate owner authorization for M2A, if desired.
-
-## Managed Repository Documentation Contract M0-M1 gate
-
-- Status: M0–M1 complete; the durable package was independently reviewed,
-  owner-approved, and committed locally. M1 approval did not authorize M2,
-  tests, app launch,
-  installation,
-  owner-data access, storage migration, guidance activation, document moves,
-  evidence mutation, Task 4B, Git operations, or external issue changes.
-- Worktree/base verification: the exact authorized root was the Git top level;
-  branch `codex/managed-documentation-contract-planning` was active; HEAD was
-  `653cdfd647590bfefbb23b556d48bd5970846a97`; initial status was clean; the
-  accepted RR-R10 Task 4A implementation checkpoint remains
-  `910b9653b661c6088d025bc6f6aea71271cff3b0`.
-- Issue #2 owner disposition: the exact `653cdfd` versions of
-  `docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json`
-  (`95bfa880903408d20ef7fbaaa8051ef6a2908a45d2ada9f6d01e8ba9d89cdea5`),
-  `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md`
-  (`711abe4edee9ac86951e9e41c40170f9fbb67123e2f44216e0203cec85595292`),
-  and `docs/delivery/task-briefs/SHA256SUMS`
-  (`7205890306b278548d09a67320e2ff6d9b04a0104980a4ca4410a3410229da6d`)
-  are accepted as operative RR-R10 output. Session-level authorship remains
-  unknown; acceptance neither infers authorship nor retroactively approves the
-  post-hold changes. The attribution incident remains historical evidence, the
-  preservation hold is resolved, and external GitHub Issue #2 remains open and
-  unmodified. Accepted RR-R10 file content/entries were not rewritten merely to
-  resolve the issue.
-- Priority/dependency decision: MDCP has priority after M1. RR-R10 Task 4B is a
-  separate bounded command-exposure task and remains eligible but unopened.
-  GitHub Issue #1 is the later separate generic Ticket Tasks onboarding/adoption
-  workflow and owns guidance v3.
-- Compatibility gate: Task 4B cannot resume until every M2-M5 brief is
-  independently accepted at exact clean checkpoint `MDCP-COMPAT-1`, freezing
-  shared command/query, evidence, importer, guidance, bundled-skill, tool-schema,
-  fixture, and acceptance-test contracts. Task 4B then requires a refreshed
-  plan and separate owner authorization. M6-M8 may consume but not reopen the
-  frozen contract; a required reopening pauses both programs and MDCP retains
-  priority until a replacement checkpoint is accepted.
-- Architecture direction: one Core-owned path/catalog contract; orthogonal
-  artifact kind/lifecycle/authority; stable artifact IDs; deterministic indexes;
-  legacy v1, read-only v1 staging, managed v2, and managed-unavailable modes;
-  exhaustive managed/path evidence locators; exact project-root binding;
-  canonical accepted catalog snapshots and typed audited catalog transitions;
-  explicit root rebinding; and no repository documentation as delivery-state
-  authority.
-- Migration/adoption boundary: additive schema migration preserves every
-  existing evidence row as legacy, leaves projects unbound, and performs no
-  repository inference. Managed adoption happens only after exact root/catalog
-  binding and read-only inventory through catalog-digest-bound, typed, audited,
-  idempotent requests. Catalog changes remain pending until a validated typed
-  acceptance transition commits. Ambiguous and arbitrary evidence remains
-  legacy.
-- Planning inventory: this ledger,
-  `docs/design/managed-repository-documentation-contract.md`,
-  `docs/architecture/ADR-006-managed-repository-documentation-contract.md`,
-  the 13 briefs under
-  `docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/`,
-  and their appended entries in `docs/delivery/task-briefs/SHA256SUMS` only.
-- Planning: `/root/m1_planning` — final exact-byte GO; Required 0, Optional 0,
-  Out of scope 0. Milestone ownership, trust-phase recovery, Issue #2, and
-  Task 4B/Issue #1 sequencing are coherent.
-- Architecture: `/root/m1_architecture` — final exact-byte GO; Required 0,
-  Optional 0, Out of scope 0. Root-bound accepted snapshots, catalog
-  transitions, evidence identity, rebind, and recovery contracts are coherent.
-- TPM: `/root/m1_tpm` — final exact-byte GO; Required 0, Optional 0, Out of
-  scope 0. `MDCP-COMPAT-1`, authorization gates, frozen-test ownership, and
-  post-acceptance correction sequencing are coherent.
-- QA/Test: `/root/m1_qa` — final exact-byte GO; Required 0, Optional 0, Out of
-  scope 0. Migration, failure, replay, relaunch, root, transition, UI/readback,
-  and unrelated-state coverage is testable and owned by bounded briefs.
-- Delivery Management: `/root/m1_delivery` — final exact-byte GO; Required 0,
-  Optional 0, Out of scope 0. Quiescence, release tokens, uncertain outcomes,
-  recovery, ledger evidence, and live-use release gates are coherent.
-- Security/Privacy: `/root/m1_security` — final exact-byte GO; Required 0,
-  Optional 0, Out of scope 0. Authorized-root/no-follow boundaries, exact root
-  and digest trust, bookmark/receipt redaction, backup custody, and atomic
-  mutation/recovery rules are adequate for M1.
-- No application code, tests, app launch, owner-data access, storage migration,
-  guidance activation, repository document move, evidence mutation, deletion,
-  external mutation, commit, or push occurred during M0-M1.
+- Next action: owner review of this correction.
 
 ## Task 4A planning gate
 

@@ -16,6 +16,7 @@ succeeds and the owner explicitly releases live use.
 
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Exact `MDCP-COMPAT-1` candidate
 - Accepted M6 owner-state baseline and M7 repository checkpoint
 
@@ -42,7 +43,7 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- M7 independently accepted and repository check mode clean.
+- M7 completed and accepted with repository check mode clean.
 - The M7 continued-quiescence handoff is intact; any resumed writer requires
   recovery and a fresh M7 release token before M8 proceeds.
 - Exact owner authorization for live app/state operations.
@@ -151,9 +152,10 @@ or weaken tests.
 
 ## Reviews and completion evidence
 
-Required terminal reviews: QA, Architecture, Security/Privacy, TPM, Delivery
-Management, Planning, and Code Review for any closeout diff. Record exact test
-commands/counts, repository checks, candidate/runtime identity, readback and
-relaunch evidence, screenshot/accessibility result, semantic comparison, final
-diff, residual risks, and next eligible Task 4B refresh or Issue #1 sequencing
-decision. Completion is a stop condition.
+Required risk-triggered review: Runtime QA. Architecture or Security/Privacy
+participates only for an unresolved deviation affecting its boundary. TPM
+participates only if sequencing or dependencies materially change. Planning is
+not an approval role. Delivery Management records concise runtime, readback,
+relaunch, accessibility, state-comparison, residual-risk, and next-work evidence;
+it is not an approval. Completion is a stop condition and does not authorize
+Task 4B or Issue #1.

@@ -1,6 +1,7 @@
 # Release Radar Managed Repository Documentation Contract
 
-- Status: M1 package independently reviewed; owner approval pending
+- Status: M1 owner-approved; ADR-007 accepted; M1A propagation correction
+  pending owner review
 - Date: 2026-09-01
 - Program: MDCP
 - Planning base: `653cdfd647590bfefbb23b556d48bd5970846a97`
@@ -118,9 +119,8 @@ directed that the accepted artifacts not be investigated, replaced,
 regenerated, or rewritten merely to resolve Issue #2. The preservation hold is
 resolved. The external GitHub issue remains open and unmodified.
 
-M1 may append checksums for its newly authorized briefs to the shared checksum
-manifest; it must preserve all accepted RR-R10 entries. The checkpoint hash
-above remains the attribution incident's immutable baseline.
+The checkpoint hash above remains the attribution incident's immutable
+baseline.
 
 ### Issue #1, Task 4B, and program priority
 
@@ -449,9 +449,17 @@ root rows remain ineligible. No partial rebind or prefix rewrite is allowed.
 
 ### M1 — durable planning package
 
-This document, ADR-006, the M2-M8 briefs, checksum entries, and the delivery
-ledger are the complete M1 inventory. M1 approval authorizes neither M2 nor
-Task 4B.
+This document, ADR-006, the M2-M8 briefs, and the delivery ledger are the
+complete M1 inventory. M1 approval authorizes neither M2 nor Task 4B.
+
+### M1A — proportional delivery validation
+
+Accepted ADR-007 governs validation for M2-M8 and supersedes the original
+mandatory full-role review clauses, mutable-brief checksums, exact-brief hashes,
+and validation-of-validation ceremony for unopened work. The substantive
+product, architecture, security, dependency, test, and acceptance requirements
+remain controlling. The M1 review record below remains unchanged because it
+truthfully records the reviews that occurred.
 
 ### M2 — repository contract foundation
 
@@ -613,12 +621,16 @@ Record the terminal current state and next eligible work.
 
 ## Review and approval state
 
+The following paragraph is the unchanged historical M1 review record. Its
+pending-approval statement reflects that checkpoint and is superseded by the
+current status above.
+
 Planning, Architecture, TPM, QA, Delivery Management, and Security/Privacy each
 reviewed the exact substantive M1 package and returned GO with Required 0,
 Optional 0, and Out of scope 0. The resulting status-only ledger update records
 those verdicts; owner approval remains pending.
 
-Owner approval of M1 accepts this planning direction only. M2, Task 4B, app
+The owner subsequently approved M1 and accepted ADR-007. M2, Task 4B, app
 launch, tests, storage migration, guidance activation, document movement,
 evidence mutation, Git commit/push, and external issue changes each remain
 separately authorization-gated.

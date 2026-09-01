@@ -15,6 +15,7 @@ replay, and no unrelated state changes.
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-001-release-radar-boundaries.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Accepted M3A evidence locator/resolver contract
 
 ## Scope
@@ -45,10 +46,8 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- M3A independently accepted.
-- Architecture and Security/Privacy approve query/command boundaries and audit
-  redaction.
-- QA accepts before/after semantic snapshots before implementation.
+- M3A completed and accepted.
+- Separate owner authorization for M3B.
 
 ## Anticipated files
 
@@ -161,7 +160,9 @@ catalog rejects before delivery mutation.
 
 ## Reviews and completion evidence
 
-Required post-implementation reviews: Code Review, QA, Architecture,
-Security/Privacy, TPM, and Delivery Management. Record public schemas/tool
-inventory, Task 4B overlap, RED/GREEN and semantic snapshots, rollback/replay
-evidence, reviews, and M3C eligibility in the ledger.
+Required risk-triggered reviews: Code Review, QA, Architecture, and
+Security/Privacy. TPM participates only if sequencing or dependencies materially
+change. Planning is not an approval role. Delivery Management records concise
+contract, test, rollback/replay, and Task 4B-overlap evidence plus residual
+risks and next eligible work; it is not an approval. Completion does not
+authorize M3C.

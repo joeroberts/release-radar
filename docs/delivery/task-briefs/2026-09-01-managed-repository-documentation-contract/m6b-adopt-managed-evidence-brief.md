@@ -13,6 +13,7 @@ evidence on the legacy path model while all delivery state remains unchanged.
 
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Exact M6A inventory version/digest and owner-approved reconciliation map
 - Accepted M3B command/replay contract
 
@@ -81,7 +82,9 @@ notifications, roots, and unrelated evidence.
 
 ## Reviews and completion evidence
 
-Required reviews: QA, Architecture, Security/Privacy, TPM, and Delivery
-Management. Record exact authorized request bodies/IDs safely, catalog digest,
-audit/receipt IDs, before/after semantic comparison, replay/relaunch results,
-remaining legacy inventory, and M7 eligibility in the ledger.
+Required risk-triggered reviews: Code Review, QA, Architecture, and
+Security/Privacy. TPM participates only if sequencing or dependencies materially
+change. Planning is not an approval role. Delivery Management records concise
+authorization, semantic comparison, replay/relaunch, and remaining-legacy
+evidence plus residual risks and next eligible work; it is not an approval.
+Completion does not authorize M7.

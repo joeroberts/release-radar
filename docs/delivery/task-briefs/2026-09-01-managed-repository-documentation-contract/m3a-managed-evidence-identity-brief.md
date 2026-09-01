@@ -15,6 +15,7 @@ API behavior.
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-001-release-radar-boundaries.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Accepted M2 catalog snapshot and M3A0 schema-v12 fixture
 
 ## Scope
@@ -42,9 +43,8 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- Exact accepted M3A0 schema-v12 fixture.
-- Architecture approval of schema constraints and Codable compatibility.
-- Security/Privacy approval of resolver/root boundaries.
+- Accepted immutable M3A0 schema-v12 fixture.
+- Separate owner authorization for M3A.
 
 ## Anticipated files
 
@@ -106,7 +106,8 @@ variants and the binding model and reject missing or mixed locator payloads.
 
 ## Reviews and completion evidence
 
-Required post-implementation reviews: Code Review, QA, Architecture,
-Security/Privacy, TPM, and Delivery Management. Record schema manifests,
-fixture checksum, before/after semantic comparison, RED/GREEN and rollback
-commands, review verdicts, and M3B eligibility in the ledger.
+Required risk-triggered reviews: Code Review, QA, Architecture, and
+Security/Privacy. TPM participates only if sequencing or dependencies materially
+change. Planning is not an approval role. Delivery Management records concise
+schema, migration, rollback, and fixture verification plus residual risks and
+next eligible work; it is not an approval. Completion does not authorize M3B.

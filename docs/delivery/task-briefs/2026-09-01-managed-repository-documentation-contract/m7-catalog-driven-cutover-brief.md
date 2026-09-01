@@ -15,6 +15,7 @@ delivery context, preserve historical narrative, and remove active
 
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Accepted M4 catalog and M6 managed-evidence readback
 - Root `AGENTS.md` and `docs/delivery/progress.md`
 
@@ -153,11 +154,9 @@ fixtures to prove new-path resolution; live owner application readback is M8.
 
 ## Reviews and completion evidence
 
-Required reviews: Planning, Architecture, QA, Security/Privacy, TPM, Delivery
-Management, and independent documentation diff review. Record move map,
-fresh inventory/release-token authorization, quiescence evidence, catalog
-transition check, pre-M7 checkpoint, old/new validator results, any authorized
-recovery, links/checksums/index checks, active-reference scan, offline
-resolution, old accepted/new pending catalog digests, progress compaction/
-archive pointer, continued-quiescence handoff, review verdicts, and M8
-eligibility in the ledger.
+Required risk-triggered reviews: one Documentation reviewer, the repository
+validator, and application-readback QA. TPM participates only if sequencing or
+dependencies materially change. Planning is not an approval role. Delivery
+Management records concise authorization, quiescence, transition, validation,
+recovery, and readback evidence plus residual risks and next eligible work; it
+is not an approval. Completion does not authorize M8.

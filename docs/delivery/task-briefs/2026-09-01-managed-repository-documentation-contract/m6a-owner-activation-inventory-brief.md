@@ -14,6 +14,7 @@ and produce a complete read-only evidence inventory before any adoption.
 
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Exact accepted `MDCP-COMPAT-1` candidate and M4 catalog
 - Separately owner-approved backup/restore/install runbook
 
@@ -43,8 +44,7 @@ Out of scope:
 - `MDCP-COMPAT-1` accepted and still valid; Task 4B cannot substitute a newer
   candidate.
 - Exact owner authorization naming every live action.
-- Independent Architecture, QA, Security/Privacy, TPM, and Delivery approval of
-  the runbook and semantic snapshot.
+- Separately owner-approved backup, restore, installation, and recovery runbook.
 
 ## Anticipated files/state
 
@@ -99,7 +99,9 @@ original request. No second invented request or partial repair is permitted.
 
 ## Reviews and completion evidence
 
-Required live reviews: QA, Architecture, Security/Privacy, TPM, and Delivery
-Management. Record authorization, candidate identity, backup/restore identity,
-semantic snapshots, migration/relaunch/readback, handoff audit, inventory
-digest, proposed exact M6B set, and remaining legacy records in the ledger.
+Required risk-triggered reviews: QA, Architecture, and Security/Privacy. TPM
+participates only if sequencing or dependencies materially change. Planning is
+not an approval role. Delivery Management records concise authorization,
+migration, recovery, relaunch, readback, and inventory evidence plus residual
+risks and next eligible work; it is not an approval. Completion does not
+authorize M6B.

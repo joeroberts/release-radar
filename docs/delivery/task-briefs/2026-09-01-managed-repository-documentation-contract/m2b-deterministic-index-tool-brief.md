@@ -14,6 +14,7 @@ or uncontrolled file rewriting.
 
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Accepted M2A catalog API and error contract
 - `docs/delivery/progress.md`
 
@@ -41,9 +42,8 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- M2A independently accepted at an exact checkpoint.
-- Architecture approves the executable boundary and file inventory.
-- QA accepts golden fixtures before implementation.
+- M2A completed and accepted.
+- Separate owner authorization for M2B.
 
 ## Anticipated files
 
@@ -93,7 +93,7 @@ injected late failure with verified bounded restoration of prior index bytes.
 
 ## Reviews and completion evidence
 
-Required post-implementation reviews: Code Review, QA, Architecture, TPM,
-Delivery Management, and Security/Privacy. Record exact target/files, golden
-fixture digest, RED/GREEN evidence, no-change failure proof, reviews, and next
-eligible M2C in the delivery ledger.
+Required risk-triggered reviews: Code Review and QA. TPM participates only if
+sequencing or dependencies materially change. Planning is not an approval role.
+Delivery Management records concise verification, residual risks, and next
+eligible work; it is not an approval. Completion does not authorize M2C.

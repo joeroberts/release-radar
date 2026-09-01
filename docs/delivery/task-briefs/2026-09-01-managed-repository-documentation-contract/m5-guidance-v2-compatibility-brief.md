@@ -16,6 +16,7 @@ use their legacy physical paths, then freeze every shared contract as
 - `docs/design/release-radar-codex-plugin-lifecycle-design.md`
 - `docs/architecture/ADR-002-codex-plugin-lifecycle.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+- `docs/architecture/ADR-007-proportional-delivery-validation.md`
 - Accepted M2-M4 artifacts
 
 ## Scope
@@ -42,10 +43,9 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- M2-M4 independently accepted.
-- Exact complete shared-surface inventory before RED.
-- Architecture, QA, Security/Privacy, TPM, Planning, and Delivery approval of
-  the final compatibility matrix.
+- M2-M4 completed and accepted.
+- Complete shared-contract surface identified before RED.
+- Separate owner authorization for M5.
 
 ## Anticipated files
 
@@ -108,7 +108,9 @@ the v2 candidate.
 
 ## Reviews and completion evidence
 
-Required reviews: Code Review, QA, Architecture, Planning, Security/Privacy,
-TPM, and Delivery Management. The ledger records all tests, exact candidate and
-plugin identity, shared-file/schema freeze, review verdicts, M6 authorization
-gate, and Task 4B refresh requirement.
+Required risk-triggered reviews: Code Review, QA, UX, and Architecture. TPM
+participates only if sequencing or dependencies materially change. Planning is
+not an approval role. Delivery Management records concise compatibility-test,
+candidate, plugin, and frozen-contract evidence plus residual risks and next
+eligible work; it is not an approval. Completion does not authorize M6 or Task
+4B.
