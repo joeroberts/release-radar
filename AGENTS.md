@@ -68,23 +68,29 @@ Radar deliverables.
 - List any remaining temporary files and request authorization before deleting
   them.
 
-## Independent Delivery Model
+## Risk-Triggered Delivery Model
 
-Release Radar uses independent agents as its default delivery model. The
-primary agent coordinates scope, integration, and handoffs; it does not replace
-the independent planning, architecture, TPM, QA, review, security, or delivery
-management roles.
+Delivery roles are capabilities selected according to actual task risk; they
+are not mandatory participants in every task. Every material implementation
+must receive independent review by someone other than its implementer.
 
-| Role | Responsibility |
-| --- | --- |
-| Planning agent | Converts approved product and architecture artifacts into granular, test-first task briefs with explicit dependencies and acceptance criteria. |
-| Architect agent | Owns architecture decisions, data and security contracts, interfaces, and ADRs. It does not approve its own implementation. |
-| TPM agent | Owns roadmap sequencing, dependency gates, risks, milestone readiness, and scope control. |
-| QA/test agent | Defines fixture and test strategy before implementation and independently verifies every slice and milestone against acceptance criteria. |
-| Delivery manager agent | Maintains the progress ledger, opens only dependency-safe work, records decisions and evidence, and escalates blockers. |
-| Implementer agent | Delivers one bounded vertical slice and its targeted tests. |
-| Code reviewer agent | Independently reviews one implementation task for specification compliance, regressions, and code quality. |
-| Security/privacy verifier | Independently verifies high-risk capabilities, including local storage and recovery, AI routing, Gmail and Calendar integrations, documents, and research providers. |
+- Ordinary documentation requires one independent reviewer and applicable
+  documentation validation.
+- Ordinary code behavior requires focused tests and one independent code or QA
+  review.
+- Architecture review is required only for public contracts, persistence
+  schemas, accepted architecture decisions, or cross-component boundaries.
+- Security/Privacy review is required only for authorization, owner data,
+  credentials, external content, evidence relocation, root or symlink
+  containment, destructive operations, or external mutations.
+- UX review is required only for user-facing workflows, guidance, errors,
+  accessibility, or presentation.
+- TPM review is required for initial sequencing and dependencies or a material
+  scope or sequencing change.
+- Delivery Management records current state and evidence; it is not an
+  additional technical approval.
+- Reviewers explicitly requested by the owner remain required for the task in
+  which they were requested.
 
 An agent may not review, approve, or independently verify its own
 implementation.
@@ -98,83 +104,81 @@ implementation.
   operations, Release Radar mutations, and external actions.
 - Only an explicit owner resume naming the task and authorized action clears a
   stop. “Approved” alone does not resume stopped work.
-- After the first failure of a mechanism, permit one bounded diagnosis and
-  correction only when implementation remains authorized.
-- A second failure of the same mechanism stops the task.
-- A bounded fix receives only affected-role re-review; it does not restart the
-  full review matrix.
+- Owner data, application state, and external mutations require explicit owner
+  authorization. Authorization for local repository work does not authorize
+  them.
+- Destructive actions require explicit authorization, exact target resolution,
+  and the least destructive practical method.
+- Release Radar remains the exclusive writer of its SQLite store. Agents and
+  repository tools must not edit SQLite directly; authorized state changes use
+  supported, typed, audited application operations.
 - After implementation begins, returning to planning requires explicit owner
   authorization.
 
 ## Execution Gates
 
-For each implementation slice:
+1. **Start:** Authorization, scope, dependencies, and material risks are clear.
+2. **Implement:** Use test-first development for behavior changes and run
+   focused repository-native checks.
+3. **Complete:** Directly verify the changed behavior and obtain the independent
+   review required by the risk rules.
 
-1. A Planning agent produces a granular, test-first task brief.
-2. The Architect, TPM, QA/test agent, and Delivery Manager independently review
-   the plan before implementation begins.
-3. The TPM and Delivery Manager release only the next eligible,
-   dependency-safe task.
-4. A fresh Implementer completes the bounded task and its targeted tests.
-5. A separate Code Reviewer and QA verifier review the completed task.
-6. The Architect reviews architectural effects. Record approved deviations
-   through the repository's ADR process.
-7. The TPM and Delivery Manager record completion evidence and open the next
-   dependency-safe task.
-8. At each milestone, conduct independent architecture, security/privacy, and
-   QA reviews before proceeding.
+- A successful direct test or independent review is terminal unless it
+  identifies a defect.
+- Do not review a review.
+- Do not checksum review reports or mutable plans and briefs.
+- Do not create evidence solely to prove that another validation occurred.
+- Do not repeat worktree, branch, commit-parent, or remote-equality checks
+  around every intermediate action.
+- Stop repeated attempts only when substantially identical attempts produce no
+  new evidence, continuing would expand scope, or continuing risks damage.
+- An in-scope correction may proceed under existing authorization unless it
+  expands scope, introduces a new side effect, or touches owner or external
+  state.
 
-Keep the process proportional to the task, but do not bypass role independence
-or a required approval because an implementation appears straightforward.
+Review matrices, mutable-document checksums, exact-brief hashes, commit-parent formulas, repeated remote-equality gates, and validation-of-validation requirements recorded in plans or briefs before the M1A proportional-delivery decision do not control unopened work. Their product requirements, architecture and security boundaries, dependencies, tests, and acceptance criteria remain controlling. Any exception to this proportional model requires explicit owner approval identifying the concrete risk it addresses.
 
 ## Task Briefs
 
-Every implementation task brief must include:
+Task briefs are required only for multi-step, cross-subsystem, destructive,
+migration, security-sensitive, or otherwise high-risk work. A brief contains
+only:
 
-- Objective and user-visible outcome
-- Controlling product and design references
-- Explicit in-scope and out-of-scope boundaries
-- Dependencies and release gate
-- Affected subsystem and anticipated files
-- Data, persistence, security, and privacy implications
-- Test fixtures and test strategy defined before implementation
-- Happy-path and non-happy-path behavior
-- Activity or audit evidence requirements
+- Objective and outcome
+- Scope and exclusions
+- Dependencies
+- Material risks
+- Test strategy
 - Acceptance criteria
-- Required independent reviews
-- Completion evidence expected in the progress ledger
+- Risk-triggered reviews
 
-Do not begin implementation from a vague roadmap label alone.
+Briefs must not reproduce entire designs or ADRs, reviewer transcripts, exact
+commit-parent choreography, long inventories of unchanged files,
+mutable-document checksums, or validation evidence whose only purpose is
+proving another validation.
 
 ## Progress Ledger
 
 Use `docs/delivery/progress.md` as the durable delivery source of truth. Do not
 create a competing ledger.
 
-For every task or milestone, record:
+Record only:
 
-- Status and dependency-gate state
-- Assigned independent role or agent
-- Completed implementation
-- Test commands and results
-- QA verification evidence
-- Code-review outcome
-- Architecture review and ADR references
-- Security/privacy verification when applicable
-- Product and mockup acceptance evidence
-- Open blockers and risks
-- Scope or sequencing decisions
-- The next eligible task
+- Current outcome and active task
+- Current authorization state
+- Controlling plan or brief
+- Current blockers and risks
+- Concise verification result or link
+- Next eligible work
 
-Code or compilation alone does not make a task complete.
+Do not add complete review transcripts, exhaustive command output, candidate
+hashes, repeated Git-state evidence, or detailed closed-task chronology. Code
+or compilation alone does not make a task complete.
 
 ## Agent Lifecycle and Concurrency
 
-- Treat independent agents as ephemeral. After receiving and durably recording
-  an agent's requested output, release it when the environment provides a
-  lifecycle control; do not keep it assigned for unrelated work.
-- Do not reuse an Implementer as the reviewer, QA verifier, architecture
-  approver, or security/privacy verifier of its own work.
+- Do not reuse an Implementer as the independent reviewer or verifier of its
+  own work.
 - Do not run parallel agents against the same subsystem, files, or shared
   mutable state without an explicit integration plan.
 - Parallelize only work with clearly separated ownership boundaries.
@@ -199,12 +203,14 @@ that materially contradicts the approved design is also incomplete.
 
 ## Security and Privacy Verification
 
-Require independent security/privacy verification for capabilities involving:
+Require independent Security/Privacy review only for capabilities involving:
 
 - Local storage, folder authorization, recovery, or data deletion
 - AI model selection, routing, prompts, or transmitted content
 - Gmail or Calendar data and permissions
-- Documents, attachments, previews, or exports
+- Application behavior that reads, transmits, relocates, previews, exports, or
+  persists owner or untrusted document content. Ordinary Markdown changes do
+  not automatically require Security/Privacy review.
 - Research providers or other external data sources
 - Authentication, credentials, tokens, entitlements, or sandbox access
 
@@ -229,6 +235,8 @@ repository's ordinary files and tools.
 - Verify the changed behavior, its immediate integration boundary, the reported
   failure mode, relevant persistence and recovery behavior, and the applicable
   acceptance criteria.
+- Verify applicable security boundaries directly; process evidence or reviewer
+  opinion does not substitute for exercising the relevant protection.
 - When UI inspection is available, verify the running application through
   accessibility state and screenshots and compare it with the relevant design
   reference.

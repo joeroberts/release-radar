@@ -2,20 +2,16 @@
 
 ## Current state
 
-- Outcome: Managed Repository Documentation Contract M1 approval decision
-- Active task: None — durable M1 package awaits owner approval
-- Last complete task: Task 4A implementation independently accepted
-- Next eligible task: M2A catalog-contract planning refresh, only after owner
-  approval of M1 and separate authorization
-- Next authorized action: Owner approval or rejection of the M1 package only;
-  no implementation action is authorized
+- Outcome: M1A Proportional Delivery Governance Amendment
+- Active task: None — the local M1A amendment awaits owner approval
+- Last complete task: M0–M1 planning package approved and committed locally
+- Authorization: M1A documentation and its local commit only; M2 and RR-R10
+  Task 4B remain unauthorized
+- Controlling decision: root `AGENTS.md` and
+  [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
+- Current blockers and risks: Owner approval is required before any later work
+- Next eligible action: Owner review and approval or rejection of M1A
 - State: AWAITING OWNER APPROVAL
-- Last completed task Git checkpoint: `910b9653b661c6088d025bc6f6aea71271cff3b0`
-- Planning base: `653cdfd647590bfefbb23b556d48bd5970846a97`
-- Active brief: None — M2 and Task 4B remain unopened
-- Active brief SHA-256: N/A
-- Retry state: N/A
-- Owner stopped: No
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
@@ -32,16 +28,30 @@ or Git operations.
 - [Accepted RR-R10 implementation plan](../superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md)
 - [Managed Repository Documentation Contract program plan](../design/managed-repository-documentation-contract.md)
 - [ADR-006: Managed repository documentation contract](../architecture/ADR-006-managed-repository-documentation-contract.md)
+- [ADR-007: Proportional delivery validation](../architecture/ADR-007-proportional-delivery-validation.md)
 - [MDCP M2-M8 task briefs](task-briefs/2026-09-01-managed-repository-documentation-contract/)
 - [Task 2A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md)
 - [Task 2B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md)
 - [Task 3 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md)
 - [Task 4A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md)
 
+## M1A proportional delivery governance
+
+- Status: Amendment complete locally and awaiting owner approval.
+- Decision: root `AGENTS.md` and ADR-007 replace mandatory all-role ceremony
+  with risk-triggered review and direct verification for unopened work.
+- M0–M1 remains completed and unchanged. Its product, architecture, security,
+  dependency, test, and acceptance requirements remain controlling.
+- M2 and RR-R10 Task 4B remain unauthorized.
+- Verification: direct documentation and diff validation completed; no
+  application tests or application actions were run.
+- Next action: owner review and approval or rejection of M1A only.
+
 ## Managed Repository Documentation Contract M0-M1 gate
 
-- Status: M0 complete; durable M1 package complete and independently reviewed;
-  owner approval pending. M1 approval will not authorize M2, tests, app launch,
+- Status: M0–M1 complete; the durable package was independently reviewed,
+  owner-approved, and committed locally. M1 approval did not authorize M2,
+  tests, app launch,
   installation,
   owner-data access, storage migration, guidance activation, document moves,
   evidence mutation, Task 4B, Git operations, or external issue changes.
