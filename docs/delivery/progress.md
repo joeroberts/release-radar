@@ -3,15 +3,15 @@
 ## Current state
 
 - Outcome: RR-R10
-- Active task: Task 4A implementation independently accepted; Git checkpoint pending
-- Last complete task: Task 3 implementation independently accepted
-- Next eligible task: Task 4A implementation checkpoint
-- Next authorized action: Create and push the owner-authorized Task 4A checkpoint
-- State: CHECKPOINTING
-- Last completed task Git checkpoint: `e7b8d725178663b4d70b6984fbfdda3dcdffaf4a`
-- Active brief: `docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md`
-- Active brief SHA-256: `779c448c852d69dd53f8782fbc87fc560f2b15bfc05084a17f3020a8c4b211b4`
-- Retry state: All bounded Task 4A correction cycles closed
+- Active task: None
+- Last complete task: Task 4A implementation independently accepted
+- Next eligible task: Task 4B planning, separately authorization-gated
+- Next authorized action: NONE — await explicit owner direction for Task 4B
+- State: READY
+- Last completed task Git checkpoint: `910b9653b661c6088d025bc6f6aea71271cff3b0`
+- Active brief: None — Task 4B remains unopened
+- Active brief SHA-256: N/A
+- Retry state: N/A
 - Owner stopped: No
 
 This file is the current authoritative delivery state. Archived files are
@@ -80,8 +80,7 @@ or Git operations.
 
 ## Task 4A implementation gate
 
-- Status: Implementation complete and independently accepted; the authorized
-  implementation checkpoint is pending.
+- Status: Complete, independently accepted, and terminally remote-exact.
 - Planning base/checkpoint: `ab445fb327df03a1518e85fa6146bc3bf69de2fb`,
   verified exact at local HEAD, upstream, and live remote with ahead/behind
   `0/0` before implementation began.
@@ -174,9 +173,9 @@ or Git operations.
 - Delivery Management: `/root/task4a_delivery_postreview` — GO, Required 0,
   Optional 0, Out-of-scope 1 for the nonblocking existing-test warning below.
 - Checkpoint inventory: the fourteen changed candidate files above plus this
-  ledger only. The approved brief, checksum index, and unchanged policy file
-  are excluded. Ephemeral DerivedData, result bundles, and logs are excluded
-  and remain pending owner-authorized post-checkpoint deletion.
+  ledger only, committed as `910b9653b661c6088d025bc6f6aea71271cff3b0`.
+  The approved brief, checksum index, unchanged policy file, ephemeral
+  DerivedData, result bundles, and logs were excluded.
 - Nonblocking observation: independent QA saw one existing QoS priority-
   inversion warning in the admission-deadline test. It did not fail a test or
   recur as a main-thread responsiveness failure and is outside Task 4A.
@@ -184,6 +183,13 @@ or Git operations.
   schema, persistence, model, UI, project, and dependency work remain closed.
   No app install/launch, owner-data access, network access, external
   notification, Release Radar mutation, or other external action occurred.
+- Temporary-artifact disposition: after the implementation checkpoint, an
+  exact `/tmp` inventory for the Task 4A prefix returned no matching paths, so
+  no deletion action was necessary and no Task 4A temporary artifact remains.
+- Terminal checkpoint: `910b9653b661c6088d025bc6f6aea71271cff3b0`
+  was pushed and verified exact at local HEAD, upstream, and live remote with
+  ahead/behind `0/0` and a clean worktree. Task 4B is next eligible but remains
+  closed pending separate owner authorization.
 
 ## Task 3 planning gate
 
