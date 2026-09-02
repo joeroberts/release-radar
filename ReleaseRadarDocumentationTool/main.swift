@@ -3,6 +3,19 @@ import Foundation
 import ReleaseRadarCore
 
 let arguments = Array(CommandLine.arguments.dropFirst())
+if arguments == ["--help"] || arguments == ["-h"] {
+    let executable = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+    let reference = executable.deletingLastPathComponent().deletingLastPathComponent()
+        .appendingPathComponent("Resources/catalog-v1.md")
+    print("""
+    Usage: ReleaseRadarDocumentationTool <check|write> --root <absolute-repository-root>
+    check validates the catalog, files and generated indexes without writing.
+    write updates only generated index blocks; requires owner authorization.
+    Neither command binds a repository, accepts a catalog, or changes delivery state.
+    Catalog v1 reference: \(reference.path)
+    """)
+    exit(0)
+}
 guard arguments.count == 3, ["check", "write"].contains(arguments[0]),
       arguments[1] == "--root", arguments[2].hasPrefix("/"),
       !arguments[2].utf8.contains(0) else {

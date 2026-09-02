@@ -98,7 +98,7 @@ private struct InventoryCapture: Sendable {
                 }
                 return .init(evidence: record, phaseID: pair.1, resolvedPath: path, resolvedAvailable: true,
                              lifecycle: artifact?.lifecycle, authority: artifact?.authorityLevel, candidateArtifactID: artifact?.artifactID,
-                             rejection: artifact == nil ? .evidenceConflict : nil)
+                             rejection: nil)
             } catch { return row(pair, error: DocumentationCatalogContext.map(error)) }
         }
         try catalog.reader.verifyStable()

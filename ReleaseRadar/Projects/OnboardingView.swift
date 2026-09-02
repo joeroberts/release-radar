@@ -54,7 +54,13 @@ struct CodexPromptHandoff: Sendable {
         let root = projectRoot.standardizedFileURL.resolvingSymlinksInPath().path
         let rootBinding = "The exact Release Radar-authorized repository root is `\(root)`. Confirm that this Codex task's canonical repository root exactly matches it. If it does not match, stop before writing any file or calling Release Radar and tell the owner to open a task rooted at that exact folder."
         let handoff = if case let .handoffIncomplete(version) = state { auditRepairPrompt(version: version) } else { setupPrompt }
-        return rootBinding + "\n\n" + handoff
+        let contents = Bundle.main.bundleURL.appendingPathComponent("Contents")
+        let tooling = """
+        Documentation checker: \(contents.appendingPathComponent("Helpers/ReleaseRadarDocumentationTool").path)
+        Catalog v1 reference: \(contents.appendingPathComponent("Resources/catalog-v1.md").path)
+        Use the checker with `check --root <exact authorized root>` (quote paths). Its `--help` describes usage. These installed resources require no Release Radar source checkout. They do not authorize preparation, guidance changes, binding or catalog acceptance beyond the handoff above.
+        """
+        return rootBinding + "\n\n" + handoff + "\n\n" + tooling
     }
 
     @MainActor

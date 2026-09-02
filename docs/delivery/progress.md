@@ -2,59 +2,60 @@
 
 ## Current outcome and authorization
 
-RR-R10 Task11B is complete in the installed app. Original request
-`CE03A579-0CF1-4FC3-91D6-CB6F7A82A3E1` committed task-plan revision17
-(from16), audit `B16E76CE-65E5-45E2-9D72-9E2D56D5F156`, after implementation/
-evidence commit `bcc53fe` was pushed. The retained Task11A app is installed at
-`/Applications/ReleaseRadar.app`, schema14/24 tools, with matching strict
-signature and candidate CDHash `cd5e6016f9b82577fc53ab9a51cad5755551b13b`.
+RR-R10 Task 11B installed-workflow repair is verified under the owner's explicit
+2026-09-02 authorization: review requirements, repair installed defects, validate,
+document, commit/push, PR and merge in the new dedicated worktree. PR #16
+(`dbe18bd`) is the available baseline. The canonical checkout's extensive dirty
+documentation and AGENTS.md changes are preserved.
 
-The owner explicitly resumed and directed immediate closeout using existing
-results, removing additional tests, UI passes, reviews, backups and rehearsal
-gates. Canonical/bound closeout is reconciled. Source integration is tracked by
-[PR #16](https://github.com/joeroberts/release-radar/pull/16). No further product work, acceptance operation or cleanup is authorized.
-The coordinator retains the caller hold until closeout is acknowledged.
+The [repair brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md)
+retains the completed bounded scope alongside the original RR-R10 requirements.
+The [original Task 11B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-final-outcome-brief.md)
+and [installation evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md)
+retain prior execution and owner overrides; their closeout hold is superseded.
 
-## Installed outcome and evidence
+Task 11B previously completed at revision 17, audit
+`B16E76CE-65E5-45E2-9D72-9E2D56D5F156`. The coordinator subsequently accepted
+RR-R10 under explicit owner override, request
+`7832A18A-394F-4F2B-9F76-0F908A6E1B47`, audit
+`76F82263-C066-42C3-A991-1D0220F1AA6C`. Fresh installed accessibility readback
+confirms all 16 task rows checked, RR-R10 Accepted and RR-DG-R10 Active.
+No completed task definition, ticket lane or Delivery Goal is being reopened.
+RR-R10 is distinct from roadmap Help ticket RR-RM10.
 
-The approved full goal apply/finalize requests committed and replayed at
-phase-plan revision1 for both phases. Actual roadmap AX showed Ready,11/11
-covered,0 unassigned, six named goals and selected RR-DG1 Planned. The goal
-finalization outcome is RR-DG-R10 Active and six roadmap goals Planned.
-The Task11B-only completion leaves RR-R10 In progress; it does not accept the
-ticket or any Delivery Goal. RR-R10 is distinct from roadmap ticket RR-RM10.
+## Current verification and risks
 
-The last complete pre-completion inventory was435 audits/133 receipts with
-accepted catalog230 at
-`e5555da4f02526220c1890a8568b175c82249dbe384ecd337c5d535ed4e23b4d`.
-Prior audits, task-plan state and unrelated owner fields were preserved; catalog/
-binding, goal planning, continuation metadata and audit/receipt changes match
-the approved operations. Background audit additions remain unattributed and
-retained. Task completion subsequently committed the exact revision17 result.
+The corrected signed app is installed at `/Applications/ReleaseRadar.app`,
+CDHash `79ed0fff8e93bc5486f3c532b188e7493d99d40c`. It bundles the runnable
+documentation checker and catalog-v1 reference, exposes their actual paths,
+and no longer falsely rejects valid uncatalogued file-path evidence.
+Fresh RED reproduced both defects; GREEN passed five focused tests. Signed
+Release build, strict bundle signatures, installed example write/check and
+actual UI/inventory readback passed. Independent source and installed review:
+Required 0, Optional 0. Canonical documentation and generated indexes validate.
+Catalog acceptance request `45ED5DAF-5761-4AC4-8699-F814DCF132DE` committed audit
+`E04A0021-5909-43E8-8E09-E37BA5C3657C`; complete app readback confirms catalog v1
+digest `78d0ca8953f896dea11c507c042125b085bcf31bd315fdd497a935a23b217715`.
+The source integration and merge record is
+[PR #17](https://github.com/joeroberts/release-radar/pull/17).
+See the [repair evidence](evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md).
 
-The [Task11B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-final-outcome-brief.md)
-and [evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md) are completed/
-non-authoritative. The [supporting operation record](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md)
-retains actual execution and owner overrides. All stable artifact identities,
-including the completed [rendering repair](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/rendering-test-repair-brief.md),
-are preserved. Final catalog request `6F9B6E0B-1105-476F-B840-F570E3DFB5D6`
-committed audit `206FC620-2114-4C68-A7D7-4C5EC78C3808`, accepting230 artifacts
-at `fc15cd1fd686811914dd0c9498141284c3fc64bdd66dfe50544db54d5aab58ba`.
-[PR #16](https://github.com/joeroberts/release-radar/pull/16) is the integration
-and merge record for this closeout.
+RekonUILib's existing AGENTS.md evidence now resolves without conflict, with
+unchanged binding, roots, preservation groups, audits and receipts. Release
+Radar preserves the same owner-state groups and historical audit/receipt rows.
+Its pre-existing RR-R7 `.app` directory evidence remains rejected as unsafePath;
+that unrelated record is preserved, not hidden or path-repaired.
 
-## Verification limits and next work
+Unaffected prior E2E, rendering, goal/replay and candidate evidence is retained;
+no full-suite rerun, new backup, restore rehearsal or cleanup is authorized.
+The connector responded successfully in this task without configuration changes.
+No owner SQLite access, repository rebinding, evidence rewriting or new task/
+goal/completion/acceptance operation occurred during the product repair.
 
-Retained E2E14/14, affected tests2/2, integrated rendering4/4, candidate/code and
-risk reviews are accepted. Two service selectors passed once; three cancelled
-reruns reuse their accepted Task7A results. No new full-scheme invocation is
-claimed. A final installed UI pass and new post-install independent review were
-not performed by explicit owner direction. Earlier failures and all original
-requests/results remain recorded in the evidence.
+## Next eligible work
 
-No successor is opened. Later RR-R10 ticket and Delivery Goal acceptance remain
-owner work, not implied by Task11B completion. [Issue #9](https://github.com/joeroberts/release-radar/issues/9)
-remains deferred. Prior keyboard/VoiceOver/text-sizing limits remain unchanged.
-Protected custody persists through at least2026-10-02; existing backups, the old
-app, disposable copy, retained stash, build results and diagnostics remain
-untouched. No cleanup is authorized.
+No successor product work is opened. Authorization covers this repair and its
+PR #17 source closeout only; no additional implementation or review is required.
+Do not mutate RekonUILib or Pursuit to work around Release Radar defects.
+[Issue #9](https://github.com/joeroberts/release-radar/issues/9) remains deferred.
+Existing protected records, backups, build output and diagnostics remain intact.
