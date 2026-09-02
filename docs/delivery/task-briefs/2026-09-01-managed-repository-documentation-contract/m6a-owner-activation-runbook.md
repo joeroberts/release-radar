@@ -1,14 +1,13 @@
 # M6A owner activation runbook
 
-**Status: Exact remaining activation package owner-approved; execution paused
-at deployed-catalog validation.**
-Initial preflight, broker recovery, and disposable backup/migration/restoration
-proof are complete. The approved repository revision is deployed at unchanged
-document paths. Seven pre-existing Finder metadata files fail the catalog's
-prohibited-content rule; their exact quarantine proposal awaits approval.
-No app/plugin installation, owner migration, v2 handoff, binding, or adoption
-has run. Existing approval remains valid for the remaining known actions.
-Deliver M6A, then stop before M6B as requested.
+**Status: M6A accepted; stop after delivery before M6B.**
+The exact app/plugin is installed, owner storage is schema 13, and v2 guidance
+and the accepted binding persist. The seven original legacy rows are unchanged;
+only the approved ticketless handoff row and two audit/receipt pairs were added.
+Seven pre-existing Finder metadata files were quarantined under separate owner
+approval; their protected copies remain retained. No adoption or document move
+occurred. Deliver M6A, then stop before M6B as requested. This operator contract
+remains active for later preservation/recovery without authorizing later work.
 
 This supporting procedure accompanies the [M6A brief](m6a-owner-activation-inventory-brief.md).
 Exact owner locations, inventory, requests, custody, and approvals belong in
@@ -46,10 +45,11 @@ Paths below are relative to `ReleaseRadar.app`.
 
 Verified app and documentation-checker copies are retained as temporary build
 outputs under `.build/mdcp-compat-2/`. The checker requires its adjacent
-`ReleaseRadarCore.framework`. The replacement has not been installed. Its
-approved exact-store read-only launch returned complete inventory and unchanged stored state, then exited.
+`ReleaseRadarCore.framework`. The replacement is installed with these exact
+verified identities. Its approved owner-store migration, v2 handoff, binding,
+and read-only relaunch returned complete inventory and preserved original state.
 The prior candidate is retained separately as an older temporary build input.
-Revalidate the selected bundle before approving its installation;
+Revalidate the selected bundle before any later installation;
 a rebuilt or changed bundle needs a newly recorded exact identity.
 
 ## Inputs required before live approval
@@ -92,7 +92,8 @@ with those results before requesting approval for steps 4–7 and recovery.
 The owner has approved the recommended target/protected-location/retention
 defaults for that initial preflight. The protected companion and separate pre-/post-recovery backups are complete.
 Read-only typed discovery established the exact saved project/root identities,
-schema 10, seven legacy path records, and no binding. The corrected signed-app query is complete; no migration has occurred.
+schema 10, seven legacy path records, and no binding. That preserved baseline
+preceded the now-completed owner migration and activation.
 
 ## Broker recovery — authorized and completed
 
@@ -127,7 +128,7 @@ workaround occurred.
 The protected companion now contains the complete remaining operation package,
 original/deployed/activated guidance copies and exact diffs, the full canonical
 catalog, and complete handoff/binding requests for replay. Its final repository
-activation revision is recorded after this documentation preparation is pushed;
+activation revision was recorded after documentation preparation was pushed;
 the application source remains the exact compatibility checkpoint above.
 The owner approved the package with deployment revision
 `534b47c43f4d38e18d2cf951cedaa1925cb8329c`.
@@ -136,14 +137,14 @@ Catalog target: repository `e7475429-ef51-4368-ad9e-61d9073d5a4f`, version **1**
 digest `3872999314072d41cb7d0ce213e953d11c5c0e8d817d7ac60ad98736dad27a9a`,
 **193** artifacts. The M6A brief and runbook are active operator documents
 through later preservation/recovery; this does not authorize M6B or later
-execution. The selected root's clean checkout predates this catalog.
-The requested deployment is a normal fast-forward of its existing branch to
-the exact accepted preparation revision, with no document moves. It includes
+execution. The selected root's previously clean checkout was deployed by a
+normal fast-forward of its existing branch to the exact accepted preparation
+revision, with no document moves. It includes
 the previously accepted proportional instruction policy, exposed separately
 in the protected deployment diff. The later guidance handoff preserves every
 deployed instruction byte outside the exact appended v2 block.
 
-The package requests disposable schema-10 backup/readback, copy-only migration
+The approved package covered disposable schema-10 backup/readback, copy-only migration
 to schema 13, original-schema restoration proof, exact app/plugin installation,
 owner migration, handoff, binding/replay, and read-only relaunch acceptance.
 It names each process transition, protected failed-state destination, expected
@@ -157,8 +158,20 @@ closeout syncs the approved guidance and concise ledger into development, and
 the completion ledger into the selected root after handoff. Any resulting
 approved owner-checkout guidance/ledger changes are retained and disclosed for
 the next session. Ordinary writers stay closed. No adoption or M6B execution
-is included. The owner's original live-operation gate has been satisfied for this package;
-unexpected owner-root contents still require their exact disposition.
+is included. The owner's original live-operation gate was satisfied for this
+package. The later exact Finder metadata quarantine was separately approved
+and verified before installation resumed.
+
+Completed acceptance: disposable schema-10 → schema-13 → restored-schema-10
+proof, exact installed candidate/plugin checks, owner schema-13 unbound baseline,
+v2 handoff, exact binding and identical replay, then byte-preserving read-only
+relaunch. Seven original rows, roots/bookmarks and unrelated domains remain
+exact. Both new receipts and audits match the two approved requests. The
+protected reconciliation proposal names five exact catalog candidates and
+three retained legacy rows, with no ambiguous candidates. One original
+directory locator remains unresolved; the source-file and root-guidance rows
+remain available legacy files outside the catalog. Current independent-review
+and delivery results are recorded in the ledger.
 
 ## Plugin installation limitation
 
@@ -169,7 +182,7 @@ receipt. The app can consequently report Modified/Needs repair despite exact
 installed plugin bytes. Its managed receipt update uses the normal app
 lifecycle coordinator, whose startup also enables unrelated writers.
 
-The proposed owner-approved choice is the supported external CLI install:
+The executed owner-approved choice was the supported external CLI install:
 verify exact installed identity/version/digest and enabled configuration,
 preserve the old receipt, and record "exact plugin installed; managed receipt
 unchanged; repair deferred." The frozen documentation command boundary does
@@ -178,7 +191,8 @@ managed update and offers explicit Reinstall; any such repair remains separate
 work after controlled acceptance and owner release. Do not call the external
 install a successful managed lifecycle update, silently start normal services,
 edit the receipt, bypass helper authentication, or add a maintenance feature
-inside M6A. This proposed choice still needs exact live authorization.
+inside M6A. This exact choice received live authorization and was verified;
+the managed receipt remains unchanged.
 
 The fixed supported CLI sequence is `plugin marketplace add <verified bundled
 marketplace> --json` only when that marketplace is absent, then `plugin add

@@ -1,8 +1,8 @@
 # MDCP M6A Brief: Owner Activation, Migration, and Read-Only Inventory
 
-**Status:** Active operator contract. Initial preflight and broker recovery are
-complete. Remaining exact installation, migration, deployment, handoff, binding,
-and recovery actions require the owner's concrete runbook approval. This
+**Status:** Active operator contract. The owner approved the exact runbook and
+metadata quarantine; installation, migration, deployment, handoff, binding,
+and relaunch readback are verified. Current closeout status is in the ledger. This
 contract remains applicable to preservation/recovery through M8; that lifecycle
 status authorizes no later slice. Deliver M6A, then stop for a new session.
 
@@ -17,7 +17,7 @@ and produce a complete read-only evidence inventory before any adoption.
 - `docs/design/managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
 - `docs/architecture/ADR-007-proportional-delivery-validation.md`
-- Exact accepted `MDCP-COMPAT-1` candidate and M4 catalog
+- Exact accepted replacement `MDCP-COMPAT-2` candidate and unchanged accepted catalog
 - Separately owner-approved backup/restore/install runbook
 
 ## Scope
@@ -43,8 +43,8 @@ Out of scope:
 
 ## Dependencies and release gate
 
-- `MDCP-COMPAT-1` accepted and still valid; Task 4B cannot substitute a newer
-  candidate.
+- `MDCP-COMPAT-2` accepted for the bounded M2A reader correction, replacing
+  `MDCP-COMPAT-1`; Task 4B cannot substitute a newer candidate.
 - Exact owner authorization naming every live action.
 - Separately owner-approved backup, restore, installation, and recovery runbook.
 
