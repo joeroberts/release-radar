@@ -18,10 +18,15 @@ enum DashboardLayout {
 
 struct DashboardProjection: Equatable, Sendable {
     let projects: [ProjectDashboardProjection]
-    let boards: [ProjectID: PhaseBoardProjection]
+    let boards: [PhaseBoardKey: PhaseBoardProjection]
 
     func board(for projectID: ProjectID) -> PhaseBoardProjection? {
-        boards[projectID]
+        guard let phaseID = projects.first(where: { $0.id.rawValue.utf8.elementsEqual(projectID.rawValue.utf8) })?.activePhaseID else { return nil }
+        return board(for: projectID, phaseID: phaseID)
+    }
+
+    func board(for projectID: ProjectID, phaseID: PhaseID) -> PhaseBoardProjection? {
+        boards[PhaseBoardKey(projectID: projectID, phaseID: phaseID)]
     }
 
     static func load(
@@ -55,7 +60,7 @@ struct DashboardProjection: Equatable, Sendable {
                 bindings: [.text(OnboardingReviewMarkerKind.pending.rawValue)]
             )
             var projects: [ProjectDashboardProjection] = []
-            var boards: [ProjectID: PhaseBoardProjection] = [:]
+            var boards: [PhaseBoardKey: PhaseBoardProjection] = [:]
 
             for projectRow in projectRows {
                 let projectID = ProjectID(rawValue: try projectRow.text("id"))
@@ -70,96 +75,108 @@ struct DashboardProjection: Equatable, Sendable {
                         name: try $0.text("name")
                     )
                 }
-                guard let activePhaseID = try projectRow.nullableText("active_phase_id"),
-                      let phaseRow = try connection.row(
-                        "SELECT id, name FROM phases WHERE project_id = ? AND id = ?",
-                        bindings: [.text(projectID.rawValue), .text(activePhaseID)]
-                      ) else {
-                    projects.append(.init(
-                        id: projectID,
-                        name: projectName,
-                        activePhaseID: nil,
-                        activePhaseName: "No active phase",
-                        phases: phases,
-                        goalContext: goalContext,
-                        currentWorkCount: 0,
-                        attentionCount: 0,
-                        evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == nil }.map(EvidenceProjection.init)
-                    ))
-                    continue
+                let activePhaseID = try projectRow.nullableText("active_phase_id").map(PhaseID.init(rawValue:))
+                let activePhase = phases.first { phase in
+                    activePhaseID.map { phase.id.rawValue.utf8.elementsEqual($0.rawValue.utf8) } == true
                 }
-
-                let phaseID = PhaseID(rawValue: try phaseRow.text("id"))
-                let ticketRows = try connection.dashboardRows(
-                    "SELECT id, outcome, lane FROM tickets WHERE project_id = ? AND phase_id = ? ORDER BY rowid",
-                    bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
-                )
-                let taskPlans = TicketTaskPlanProjection.load(
-                    connection, projectID: projectID, phaseID: phaseID,
-                    ticketIDs: try ticketRows.map { TicketID(rawValue: try $0.text("id")) },
-                    query: taskRows
-                )
-                var cardsByLane = Dictionary(uniqueKeysWithValues: TicketLane.allCases.map { ($0, [TicketCardProjection]()) })
-                var details: [TicketID: TicketDetailProjection] = [:]
-
-                for ticketRow in ticketRows {
-                    let ticketID = TicketID(rawValue: try ticketRow.text("id"))
-                    guard let lane = TicketLane(rawValue: try ticketRow.text("lane")) else {
-                        throw DashboardProjectionError.invalidLane(try ticketRow.text("lane"))
-                    }
-                    let outcome = try ticketRow.text("outcome")
-                    let dependencyCount = Int(try connection.scalarInt(
-                        "SELECT COUNT(*) FROM ticket_dependencies WHERE project_id = ? AND ticket_id = ?",
-                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
-                    ) ?? 0)
-                    let blockerCount = Int(try connection.scalarInt(
-                        "SELECT COUNT(*) FROM blockers WHERE project_id = ? AND ticket_id = ? AND resolved_at IS NULL",
-                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
-                    ) ?? 0)
-                    let card = TicketCardProjection(
-                        id: ticketID,
-                        outcome: outcome,
-                        dependencyCount: dependencyCount,
-                        blockerCount: blockerCount,
-                        taskPlan: taskPlans[ticketID] ?? .unavailable(recovery: .init())
-                    )
-                    cardsByLane[lane, default: []].append(card)
-                    details[ticketID] = try connection.ticketDetail(
-                        projectID: projectID,
-                        ticketID: ticketID,
-                        outcome: outcome,
-                        taskPlan: card.taskPlan,
-                        evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == ticketID }.map(EvidenceProjection.init)
-                    )
-                }
-
-                let lanes = TicketLane.allCases.map {
-                    DashboardLaneProjection(lane: $0, cards: cardsByLane[$0] ?? [])
-                }
-                let currentWorkCount = lanes
-                    .filter { $0.lane != .accepted }
-                    .reduce(0) { $0 + $1.count }
-                let attentionCount = lanes
-                    .filter { $0.lane == .needsReview || $0.lane == .blocked }
-                    .reduce(0) { $0 + $1.count }
+                let activeLanes = try connection.dashboardRows(
+                    "SELECT lane FROM tickets WHERE project_id = ? AND phase_id = ?",
+                    bindings: [.text(projectID.rawValue), activePhase.map { .text($0.id.rawValue) } ?? .null]
+                ).map { try $0.text("lane") }
                 let project = ProjectDashboardProjection(
-                    id: projectID,
-                    name: projectName,
-                    activePhaseID: phaseID,
-                    activePhaseName: try phaseRow.text("name"),
-                    phases: phases,
-                    goalContext: goalContext,
-                    currentWorkCount: currentWorkCount,
-                    attentionCount: attentionCount,
+                    id: projectID, name: projectName,
+                    activePhaseID: activePhase?.id, activePhaseName: activePhase?.name ?? "No active phase",
+                    phases: phases, goalContext: goalContext,
+                    currentWorkCount: activeLanes.filter { $0 != TicketLane.accepted.rawValue }.count,
+                    attentionCount: activeLanes.filter { $0 == TicketLane.needsReview.rawValue || $0 == TicketLane.blocked.rawValue }.count,
                     evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == nil }.map(EvidenceProjection.init)
                 )
                 projects.append(project)
-                boards[projectID] = PhaseBoardProjection(
-                    project: project,
-                    phaseID: phaseID,
-                    lanes: lanes,
-                    details: details
-                )
+
+                for phase in phases {
+                    let phaseID = phase.id
+                    let ticketRows = try connection.dashboardRows(
+                        "SELECT id, outcome, lane, plan_legacy_continuation FROM tickets WHERE project_id = ? AND phase_id = ? ORDER BY rowid",
+                        bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+                    )
+                    guard let plan = try DeliveryPlanningPolicy.loadPlan(projectID: projectID, phaseID: phaseID, connection: connection) else {
+                        throw DeliveryPlanningPolicyError.phasePlanNotFound
+                    }
+                    let assignments = try DeliveryPlanningPolicy.loadAssignments(projectID: projectID, phaseID: phaseID, connection: connection)
+                    let goals = try DeliveryPlanningPolicy.loadGoals(projectID: projectID, phaseID: phaseID, connection: connection).map { goal in
+                        DeliveryGoalSummaryProjection(
+                            goalID: goal.id, title: goal.title, outcome: goal.outcome, lifecycle: goal.lifecycle,
+                            doneCriteria: try DeliveryPlanningPolicy.loadCriteria(projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection).map(\.text),
+                            ticketIDs: assignments.filter { $0.goalID.rawValue.utf8.elementsEqual(goal.id.rawValue.utf8) }.map(\.ticketID)
+                        )
+                    }
+                    let goalsByID = Dictionary(uniqueKeysWithValues: goals.map { ($0.id, $0) })
+                    let goalsByTicket = Dictionary(uniqueKeysWithValues: assignments.compactMap { assignment -> (TicketID, TicketDeliveryGoalProjection)? in
+                        guard let goal = goalsByID[Data(assignment.goalID.rawValue.utf8)], goal.lifecycle != .superseded else { return nil }
+                        return (assignment.ticketID, TicketDeliveryGoalProjection(goalID: goal.goalID, title: goal.title, outcome: goal.outcome,
+                            lifecycle: goal.lifecycle, doneCriteria: goal.doneCriteria))
+                    })
+                    let upcomingIDs = try ticketRows.filter { try $0.text("lane") != TicketLane.accepted.rawValue }
+                        .map { TicketID(rawValue: try $0.text("id")) }
+                    let coveredCount = upcomingIDs.filter { goalsByTicket[$0] != nil }.count
+                    let phasePlan = PhasePlanProjection(state: plan.state, revision: plan.revision, readyRevision: plan.readyRevision,
+                        upcomingCount: upcomingIDs.count, coveredUpcomingCount: coveredCount,
+                        unassignedUpcomingCount: upcomingIDs.count - coveredCount)
+                    let taskPlans = TicketTaskPlanProjection.load(
+                        connection, projectID: projectID, phaseID: phaseID,
+                        ticketIDs: try ticketRows.map { TicketID(rawValue: try $0.text("id")) },
+                        query: taskRows
+                    )
+                    var cardsByLane = Dictionary(uniqueKeysWithValues: TicketLane.allCases.map { ($0, [TicketCardProjection]()) })
+                    var details: [TicketID: TicketDetailProjection] = [:]
+
+                    for ticketRow in ticketRows {
+                        let ticketID = TicketID(rawValue: try ticketRow.text("id"))
+                        guard let lane = TicketLane(rawValue: try ticketRow.text("lane")) else {
+                            throw DashboardProjectionError.invalidLane(try ticketRow.text("lane"))
+                        }
+                        let outcome = try ticketRow.text("outcome")
+                        let dependencyCount = Int(try connection.scalarInt(
+                            "SELECT COUNT(*) FROM ticket_dependencies WHERE project_id = ? AND ticket_id = ?",
+                            bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                        ) ?? 0)
+                        let blockerCount = Int(try connection.scalarInt(
+                            "SELECT COUNT(*) FROM blockers WHERE project_id = ? AND ticket_id = ? AND resolved_at IS NULL",
+                            bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                        ) ?? 0)
+                        let card = TicketCardProjection(
+                            id: ticketID,
+                            outcome: outcome,
+                            dependencyCount: dependencyCount,
+                            blockerCount: blockerCount,
+                            taskPlan: taskPlans[ticketID] ?? .unavailable(recovery: .init()),
+                            deliveryGoal: goalsByTicket[ticketID]
+                        )
+                        cardsByLane[lane, default: []].append(card)
+                        details[ticketID] = try connection.ticketDetail(
+                            projectID: projectID,
+                            ticketID: ticketID,
+                            outcome: outcome,
+                            taskPlan: card.taskPlan,
+                            deliveryGoal: card.deliveryGoal,
+                            isLegacyContinuation: try ticketRow.integer("plan_legacy_continuation") != 0 && (lane == .inProgress || lane == .needsReview),
+                            evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == ticketID }.map(EvidenceProjection.init)
+                        )
+                    }
+
+                    let lanes = TicketLane.allCases.map {
+                        DashboardLaneProjection(lane: $0, cards: cardsByLane[$0] ?? [])
+                    }
+                    boards[PhaseBoardKey(projectID: projectID, phaseID: phaseID)] = PhaseBoardProjection(
+                        project: project,
+                        phaseID: phaseID,
+                        phaseName: phase.name,
+                        phasePlan: phasePlan,
+                        deliveryGoals: goals,
+                        lanes: lanes,
+                        details: details
+                    )
+                }
             }
 
             return DashboardProjection(projects: projects, boards: boards)
@@ -206,11 +223,125 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
     }
 }
 
+struct PhaseBoardKey: Hashable, Sendable {
+    let projectID: ProjectID
+    let phaseID: PhaseID
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.projectID.rawValue.utf8.elementsEqual(rhs.projectID.rawValue.utf8)
+            && lhs.phaseID.rawValue.utf8.elementsEqual(rhs.phaseID.rawValue.utf8)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(Data(projectID.rawValue.utf8))
+        hasher.combine(Data(phaseID.rawValue.utf8))
+    }
+}
+
+struct PhasePlanProjection: Equatable, Sendable {
+    let state: PhasePlanState
+    let revision: Int64
+    let readyRevision: Int64?
+    let upcomingCount: Int
+    let coveredUpcomingCount: Int
+    let unassignedUpcomingCount: Int
+
+    var isDeliveryComplete: Bool {
+        state == .ready && readyRevision == revision && upcomingCount == 0 && unassignedUpcomingCount == 0
+    }
+}
+
+struct DeliveryGoalSummaryProjection: Equatable, Sendable, Identifiable {
+    let goalID: DeliveryGoalID
+    let title: String
+    let outcome: String
+    let lifecycle: DeliveryGoalLifecycle
+    let doneCriteria: [String]
+    let ticketIDs: [TicketID]
+
+    // SQLite uses BINARY identity; Swift String equality normalizes Unicode.
+    var id: Data { Data(goalID.rawValue.utf8) }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id && lhs.title == rhs.title && lhs.outcome == rhs.outcome
+            && lhs.lifecycle == rhs.lifecycle && lhs.doneCriteria == rhs.doneCriteria && lhs.ticketIDs == rhs.ticketIDs
+    }
+}
+
+struct TicketDeliveryGoalProjection: Equatable, Sendable, Identifiable {
+    let goalID: DeliveryGoalID
+    let title: String
+    let outcome: String
+    let lifecycle: DeliveryGoalLifecycle
+    let doneCriteria: [String]
+
+    var id: Data { Data(goalID.rawValue.utf8) }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id && lhs.title == rhs.title && lhs.outcome == rhs.outcome
+            && lhs.lifecycle == rhs.lifecycle && lhs.doneCriteria == rhs.doneCriteria
+    }
+}
+
+enum DeliveryGoalFilter: Hashable, Sendable {
+    case all
+    case goal(DeliveryGoalID)
+    case unassigned
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        switch (lhs, rhs) {
+        case (.all, .all), (.unassigned, .unassigned): true
+        case let (.goal(a), .goal(b)): a.rawValue.utf8.elementsEqual(b.rawValue.utf8)
+        default: false
+        }
+    }
+
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .all: hasher.combine(0)
+        case let .goal(id): hasher.combine(1); hasher.combine(Data(id.rawValue.utf8))
+        case .unassigned: hasher.combine(2)
+        }
+    }
+}
+
 struct PhaseBoardProjection: Equatable, Sendable {
     let project: ProjectDashboardProjection
     let phaseID: PhaseID
+    let phaseName: String
+    let phasePlan: PhasePlanProjection
+    let deliveryGoals: [DeliveryGoalSummaryProjection]
     let lanes: [DashboardLaneProjection]
     let details: [TicketID: TicketDetailProjection]
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        PhaseBoardKey(projectID: lhs.project.id, phaseID: lhs.phaseID) == PhaseBoardKey(projectID: rhs.project.id, phaseID: rhs.phaseID)
+            && lhs.project == rhs.project && lhs.phaseName == rhs.phaseName && lhs.phasePlan == rhs.phasePlan
+            && lhs.deliveryGoals == rhs.deliveryGoals && lhs.lanes == rhs.lanes && lhs.details == rhs.details
+    }
+
+    var isActivePhase: Bool {
+        project.activePhaseID.map { phaseID.rawValue.utf8.elementsEqual($0.rawValue.utf8) } == true
+    }
+    var filterableDeliveryGoals: [DeliveryGoalSummaryProjection] {
+        deliveryGoals.filter { $0.lifecycle != .superseded }
+    }
+
+    func filtered(by filter: DeliveryGoalFilter) -> PhaseBoardProjection {
+        let filteredLanes = lanes.map { lane in
+            DashboardLaneProjection(lane: lane.lane, cards: lane.cards.filter { card in
+                switch filter {
+                case .all: true
+                case let .goal(id): card.deliveryGoal?.id == Data(id.rawValue.utf8)
+                case .unassigned: lane.lane != .accepted && card.deliveryGoal == nil
+                }
+            })
+        }
+        let visibleIDs = Set(filteredLanes.flatMap { $0.cards.map(\.id) })
+        return PhaseBoardProjection(project: project, phaseID: phaseID, phaseName: phaseName,
+            phasePlan: phasePlan, deliveryGoals: deliveryGoals, lanes: filteredLanes,
+            details: details.filter { visibleIDs.contains($0.key) })
+    }
 
     func lane(_ lane: TicketLane) -> DashboardLaneProjection? {
         lanes.first { $0.lane == lane }
@@ -235,6 +366,7 @@ struct TicketCardProjection: Equatable, Sendable, Identifiable {
     let dependencyCount: Int
     let blockerCount: Int
     var taskPlan: TicketTaskPlanProjection = .noPlan
+    var deliveryGoal: TicketDeliveryGoalProjection? = nil
 
     var activeTaskCount: Int? {
         guard case let .loaded(plan) = taskPlan else { return nil }
@@ -257,6 +389,10 @@ struct TicketDetailProjection: Equatable, Sendable {
     let auditHistory: [String]
     let notificationHistory: [String]
     var taskPlan: TicketTaskPlanProjection = .noPlan
+    var deliveryGoal: TicketDeliveryGoalProjection? = nil
+    var isLegacyContinuation = false
+
+    var codexExecutionGoal: GoalContextProjection { goalContext }
 }
 
 enum GoalLinkQuality: String, Equatable, Sendable {
@@ -337,6 +473,8 @@ private extension SQLiteConnection {
         ticketID: TicketID,
         outcome: String,
         taskPlan: TicketTaskPlanProjection,
+        deliveryGoal: TicketDeliveryGoalProjection?,
+        isLegacyContinuation: Bool,
         evidence: [EvidenceProjection]
     ) throws -> TicketDetailProjection {
         let requires = try dashboardRows(
@@ -374,8 +512,37 @@ private extension SQLiteConnection {
             bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
         ).map { try $0.text("summary") }
         let auditHistory = try dashboardRows(
-            "SELECT reason FROM audit_events WHERE reason LIKE ? ORDER BY created_at DESC",
-            bindings: [.text("%\(ticketID.rawValue)%")]
+            """
+            SELECT reason FROM audit_events
+            WHERE project_id = ? AND (
+                (entity_type IN ('ticket', 'ticket_task_plan') AND entity_id = ?)
+                OR (entity_type = 'blocker' AND entity_id IN (
+                    SELECT id FROM blockers WHERE project_id = audit_events.project_id AND ticket_id = ?
+                ))
+                OR (entity_type = 'evidence' AND entity_id IN (
+                    SELECT id FROM evidence WHERE project_id = audit_events.project_id AND ticket_id = ?
+                ))
+                OR (entity_type = 'review_item' AND entity_id IN (
+                    SELECT id FROM review_items WHERE project_id = audit_events.project_id AND ticket_id = ?
+                ))
+                OR (entity_type = 'completion' AND entity_id IN (
+                    SELECT id FROM completion_records WHERE project_id = audit_events.project_id AND ticket_id = ?
+                ))
+                OR (entity_type = 'ticket_dependency' AND entity_id IN (
+                    SELECT id FROM ticket_dependencies WHERE project_id = audit_events.project_id
+                      AND (ticket_id = ? OR depends_on_ticket_id = ?)
+                ))
+                OR (entity_type = 'thread_link' AND entity_id IN (
+                    SELECT id FROM thread_links WHERE project_id = audit_events.project_id AND ticket_id = ?
+                ))
+                OR EXISTS (
+                    SELECT 1 FROM delivery_goal_assignment_events AS assignment
+                    WHERE assignment.project_id = audit_events.project_id
+                      AND assignment.audit_event_id = audit_events.id AND assignment.ticket_id = ?
+                )
+            ) ORDER BY created_at DESC, id
+            """,
+            bindings: [.text(projectID.rawValue)] + Array(repeating: .text(ticketID.rawValue), count: 9)
         ).map { try $0.text("reason") }
         let notificationHistory = try dashboardRows(
             "SELECT fingerprint, state FROM notification_events WHERE ticket_id = ? ORDER BY rowid",
@@ -421,7 +588,9 @@ private extension SQLiteConnection {
             evidence: evidence,
             auditHistory: auditHistory,
             notificationHistory: notificationHistory,
-            taskPlan: taskPlan
+            taskPlan: taskPlan,
+            deliveryGoal: deliveryGoal,
+            isLegacyContinuation: isLegacyContinuation
         )
     }
 

@@ -35,6 +35,10 @@ struct ProjectActivityItem: Equatable, Identifiable, Sendable {
     let runtimeState: RuntimeStateLanguage?
     let notificationState: NotificationDeliveryState?
     let notificationStatusText: String?
+    var phaseID: PhaseID? = nil
+    var deliveryGoalID: DeliveryGoalID? = nil
+    var originatingThreadID: String? = nil
+    var assignmentEvents: [DeliveryGoalAssignmentEventRecord] = []
 
     var freshnessText: String? {
         observedAt.map { "Last seen \($0.formatted(date: .abbreviated, time: .shortened))" }
@@ -45,10 +49,14 @@ struct ProjectActivityProjection: Equatable, Sendable {
     let projectID: ProjectID
     let items: [ProjectActivityItem]
 
+    func items(for ticketID: TicketID) -> [ProjectActivityItem] {
+        items.filter { $0.ticketID == ticketID || $0.assignmentEvents.contains { $0.ticketID == ticketID } }
+    }
+
     static func load(from store: DeliveryStore, projectID: ProjectID) async throws -> ProjectActivityProjection {
         try await store.read { connection in
             let ticketRows = try connection.activityRows(
-                "SELECT id, lane FROM tickets WHERE project_id = ? ORDER BY rowid",
+                "SELECT id, lane, phase_id FROM tickets WHERE project_id = ? ORDER BY rowid",
                 bindings: [.text(projectID.rawValue)]
             )
             let ticketLanes: [TicketID: TicketLane] = try Dictionary(
@@ -60,6 +68,19 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     return (id, lane)
                 }
             )
+            let ticketPhases = try Dictionary(uniqueKeysWithValues: ticketRows.map {
+                (TicketID(rawValue: try $0.activityText("id")), PhaseID(rawValue: try $0.activityText("phase_id")))
+            })
+            let goalPhases = try Dictionary(uniqueKeysWithValues: connection.activityRows(
+                "SELECT id, phase_id FROM delivery_goals WHERE project_id = ? ORDER BY id",
+                bindings: [.text(projectID.rawValue)]
+            ).map { (Data(try $0.activityText("id").utf8), PhaseID(rawValue: try $0.activityText("phase_id"))) })
+            var assignmentsByAudit: [AuditEventID: [DeliveryGoalAssignmentEventRecord]] = [:]
+            for ticketID in ticketLanes.keys.sorted(by: { $0.rawValue.utf8.lexicographicallyPrecedes($1.rawValue.utf8) }) {
+                for event in try DeliveryPlanningPolicy.loadAssignmentHistory(projectID: projectID, ticketID: ticketID, connection: connection) {
+                    assignmentsByAudit[event.auditEventID, default: []].append(event)
+                }
+            }
             let reviewRows = try connection.activityRows(
                 "SELECT id, ticket_id, summary, status FROM review_items WHERE project_id = ? AND status <> 'open' ORDER BY rowid",
                 bindings: [.text(projectID.rawValue)]
@@ -98,7 +119,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
             )
             let auditRows = try connection.activityRows(
                 """
-                SELECT id, reason, created_at, entity_type, entity_id
+                SELECT id, reason, created_at, entity_type, entity_id, thread_id
                 FROM audit_events
                 WHERE project_id = ?
                 ORDER BY created_at DESC
@@ -123,7 +144,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 else { return nil }
 
                 switch entityType {
-                case .ticket:
+                case .ticket, .ticketTaskPlan:
                     return TicketID(rawValue: entityID)
                 case .reviewItem:
                     return reviewTicketIDs[entityID]
@@ -143,17 +164,41 @@ struct ProjectActivityProjection: Equatable, Sendable {
 
             var items = try auditRows.map { row in
                 let ticketID = ticketID(for: row)
+                let auditID = AuditEventID(rawValue: try row.activityText("id"))
+                let assignmentEvents = assignmentsByAudit[auditID] ?? []
+                let entityType = row.activityOptionalText("entity_type").flatMap(AuditEntityType.init(rawValue:))
+                let entityID = row.activityOptionalText("entity_id")
+                let phaseID: PhaseID?
+                let title: String
+                switch entityType {
+                case .phasePlan:
+                    phaseID = entityID.map(PhaseID.init(rawValue:))
+                    title = "Delivery Goal plan updated"
+                case .deliveryGoal:
+                    phaseID = entityID.flatMap { goalPhases[Data($0.utf8)] }
+                    title = "Delivery Goal updated"
+                case .phase:
+                    phaseID = entityID.map(PhaseID.init(rawValue:))
+                    title = "Delivery record updated"
+                default:
+                    phaseID = assignmentEvents.first?.phaseID ?? ticketID.flatMap { ticketPhases[$0] }
+                    title = "Delivery record updated"
+                }
                 return ProjectActivityItem(
-                    id: "audit-\(try row.activityText("id"))",
+                    id: "audit-\(auditID.rawValue)",
                     source: .audit,
-                    title: "Delivery record updated",
+                    title: title,
                     detail: try row.activityText("reason"),
                     observedAt: formatter.date(from: try row.activityText("created_at")),
                     ticketID: ticketID,
                     deliveryLane: lane(for: ticketID),
                     runtimeState: nil,
                     notificationState: nil,
-                    notificationStatusText: nil
+                    notificationStatusText: nil,
+                    phaseID: phaseID,
+                    deliveryGoalID: entityType == .deliveryGoal ? entityID.map(DeliveryGoalID.init(rawValue:)) : nil,
+                    originatingThreadID: row.activityOptionalText("thread_id"),
+                    assignmentEvents: assignmentEvents
                 )
             }
             items += try runtimeRows.map { row in
@@ -227,7 +272,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
             }
             items.sort {
                 switch ($0.observedAt, $1.observedAt) {
-                case let (lhs?, rhs?): lhs > rhs
+                case let (lhs?, rhs?): lhs == rhs ? $0.id < $1.id : lhs > rhs
                 case (_?, nil): true
                 case (nil, _?): false
                 case (nil, nil): $0.id < $1.id

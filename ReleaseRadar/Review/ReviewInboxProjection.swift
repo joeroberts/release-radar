@@ -66,6 +66,7 @@ struct ReviewInboxProjection: Equatable, Sendable {
     let projectID: ProjectID
     let openItems: [ReviewItemProjection]
     let completedItems: [ReviewItemProjection]
+    var deliveryGoalAcceptances: [DeliveryGoalAcceptanceReviewProjection] = []
 
     static func load(from store: DeliveryStore, projectID: ProjectID) async throws -> ReviewInboxProjection {
         try await store.read { connection in
@@ -83,12 +84,74 @@ struct ReviewInboxProjection: Equatable, Sendable {
                     status: status
                 )
             }
+            let awaiting = try connection.rows(
+                """
+                SELECT goals.id, goals.phase_id, phases.name AS phase_name
+                FROM delivery_goals AS goals
+                JOIN phases ON phases.project_id = goals.project_id AND phases.id = goals.phase_id
+                WHERE goals.project_id = ? AND goals.lifecycle = 'awaiting_acceptance'
+                ORDER BY phases.name COLLATE NOCASE, phases.id, goals.sort_order, goals.id COLLATE BINARY
+                """, bindings: [.text(projectID.rawValue)]
+            )
+            let acceptances = try awaiting.map { row in
+                let phaseID = PhaseID(rawValue: try row.reviewText("phase_id"))
+                let goalID = DeliveryGoalID(rawValue: try row.reviewText("id"))
+                guard let plan = try DeliveryPlanningPolicy.loadPlan(projectID: projectID, phaseID: phaseID, connection: connection),
+                      let goal = try DeliveryPlanningPolicy.loadGoal(projectID: projectID, goalID: goalID, connection: connection)
+                else { throw ReviewInboxProjectionError.missingColumn("Delivery Goal plan") }
+                return DeliveryGoalAcceptanceReviewProjection(
+                    projectID: projectID, phaseID: phaseID, phaseName: try row.reviewText("phase_name"),
+                    goalID: goalID, title: goal.title, outcome: goal.outcome,
+                    doneCriteria: try DeliveryPlanningPolicy.loadCriteria(projectID: projectID, phaseID: phaseID, goalID: goalID, connection: connection).map(\.text),
+                    ticketIDs: try DeliveryPlanningPolicy.loadAssignments(projectID: projectID, phaseID: phaseID, connection: connection)
+                        .filter { $0.goalID.rawValue.utf8.elementsEqual(goalID.rawValue.utf8) }.map(\.ticketID),
+                    expectedPlanRevision: plan.revision
+                )
+            }
             return ReviewInboxProjection(
                 projectID: projectID,
                 openItems: items.filter { $0.status == .open },
-                completedItems: items.filter { $0.status != .open }
+                completedItems: items.filter { $0.status != .open },
+                deliveryGoalAcceptances: acceptances
             )
         }
+    }
+}
+
+/// Derived owner attention, never a persisted import-review row or acceptance authority.
+struct DeliveryGoalAcceptanceReviewProjection: Equatable, Identifiable, Sendable {
+    struct ID: Hashable, Sendable {
+        let projectID: ProjectID
+        let phaseID: PhaseID
+        let goalID: DeliveryGoalID
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            PhaseBoardKey(projectID: lhs.projectID, phaseID: lhs.phaseID) == PhaseBoardKey(projectID: rhs.projectID, phaseID: rhs.phaseID)
+                && lhs.goalID.rawValue.utf8.elementsEqual(rhs.goalID.rawValue.utf8)
+        }
+
+        func hash(into hasher: inout Hasher) {
+            hasher.combine(PhaseBoardKey(projectID: projectID, phaseID: phaseID))
+            hasher.combine(Data(goalID.rawValue.utf8))
+        }
+    }
+
+    let projectID: ProjectID
+    let phaseID: PhaseID
+    let phaseName: String
+    let goalID: DeliveryGoalID
+    let title: String
+    let outcome: String
+    let doneCriteria: [String]
+    let ticketIDs: [TicketID]
+    let expectedPlanRevision: Int64
+
+    var id: ID { ID(projectID: projectID, phaseID: phaseID, goalID: goalID) }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id && lhs.phaseName == rhs.phaseName && lhs.title == rhs.title && lhs.outcome == rhs.outcome
+            && lhs.doneCriteria == rhs.doneCriteria && lhs.ticketIDs == rhs.ticketIDs
+            && lhs.expectedPlanRevision == rhs.expectedPlanRevision
     }
 }
 
