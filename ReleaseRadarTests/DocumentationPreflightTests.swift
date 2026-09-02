@@ -3,6 +3,26 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class DocumentationPreflightTests: XCTestCase {
+    func testVersionFourteenPreflightIsReadOnlyAndRejectsVersionShapeMismatch() async throws {
+        let directory = try temporaryDirectory()
+        let db = directory.appendingPathComponent("store.sqlite")
+        let store = DeliveryStore(databaseURL: db)
+        guard case .available = await store.availability else { return XCTFail("Expected current synthetic store") }
+        let before = try files(directory)
+        let preflight = try DeliveryStore(existingReadOnlyDatabaseURL: db)
+        let version = await preflight.schemaVersionForDocumentation
+        XCTAssertEqual(version, 14)
+        XCTAssertEqual(try files(directory), before)
+        let raw = try SQLiteConnection(url: db)
+        // A historical version must have its historical event-to-ticket shape.
+        for incompatibleVersion in [11, 12, 13, 15] {
+            try raw.execute("PRAGMA user_version = \(incompatibleVersion)")
+            let unchanged = try files(directory)
+            XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: db))
+            XCTAssertEqual(try files(directory), unchanged)
+        }
+    }
+
     func testFrozenSupportedSchemasOpenWithoutMigrationOrEffects() async throws {
         for version in [10, 11, 12] {
             let directory = try temporaryDirectory()
@@ -38,8 +58,10 @@ final class DocumentationPreflightTests: XCTestCase {
         XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: parentLink.appendingPathComponent("store.sqlite")))
         let fake = directory.appendingPathComponent("fake.sqlite")
         let raw = try SQLiteConnection(url: fake)
-        try raw.execute("PRAGMA user_version = 13")
-        XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: fake))
+        for version in [13, 14] {
+            try raw.execute("PRAGMA user_version = \(version)")
+            XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: fake))
+        }
     }
 
     func testUncheckpointedWALFailsClosedWithoutSidecarWrites() async throws {
@@ -93,7 +115,7 @@ final class DocumentationPreflightTests: XCTestCase {
         let migrated = DeliveryStore(databaseURL: db)
         let afterResult = await AgentQueryDispatcher(store: migrated, bookmarkStore: bookmarks).dispatch(query)
         let after = try XCTUnwrap(afterResult.inventory)
-        XCTAssertEqual(after.schemaVersion, 13)
+        XCTAssertEqual(after.schemaVersion, Int(StoreMigrations.currentVersion))
         XCTAssertEqual(before.evidence.map(\.evidence), after.evidence.map(\.evidence))
         XCTAssertEqual(before.roots, after.roots)
         XCTAssertEqual(before.audits, after.audits)

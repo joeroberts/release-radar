@@ -3686,6 +3686,21 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "bf4b1c0f-ec77-4641-b23d-efdfc5cbe467",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }

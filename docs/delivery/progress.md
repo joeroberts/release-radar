@@ -9,34 +9,41 @@
 - RR-R10 Tasks 1A/1B/2A/2B/3/4A/4B/5 are delivered. The coordinator verified
   [Task 5 PR #6](https://github.com/joeroberts/release-radar/pull/6) merged into
   `codex/release-radar-mvp` at 2026-09-02T11:35:34Z, merge `cdc3e6e`.
-- Task 6 is implemented, directly verified and independently reviewed in its
-  isolated worktree on
-  `codex/rr-r10-task-6`, based on that merge. Coordinator
-  `01a06184-6387-7c42-878e-695db0481a18` accepted the canonical brief, initial
-  sequencing and existing-evidence interpretation on 2026-09-02 under owner
-  delegation. Focused validation, independent review, commit/push/PR/merge
-  are authorized and released for delivery. High-risk/destructive owner or
-  shared-state actions require the human owner. Task 7 remains unopened.
+- Task 6 PR #7 merged into `codex/release-radar-mvp` at
+  2026-09-02T11:57:19Z, merge `16c81a318672ad1e66c14a75e943992441768234`.
+- Task 7 is open in isolated branch `codex/rr-r10-task-7` from that merge.
+  Coordinator `01a06184-6387-7c42-878e-695db0481a18` accepted the canonical
+  brief and initial sequencing on 2026-09-02 under owner delegation.
+  Implementation, focused validation and independent review are complete.
+  Commit/push/PR/merge are authorized; integration is the remaining delivery
+  step. Task 7A remains unopened.
+- A focused synthetic test reproduced the v11 assignment-history foreign-key
+  conflict with the required Backlog phase move, even after explicit
+  unassignment. The [Task 7 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md)
+  contains the narrow forward-v14 correction accepted by the coordinator under
+  owner delegation on 2026-09-02. Repository-only implementation and synthetic
+  validation are released; no owner/shared-state action is authorized.
 - The original bound checkout, older deployed app and intentional dirty
   documentation remain preserved. No owner installation, live bootstrap,
   catalog deployment/acceptance or shared service operation is authorized here.
 
 ## Controlling work and verification
 
-- Completed [Task 6 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md)
-  records the policy/test scope. Debug build-for-testing passed. The focused
-  run passed 17 new policy, 50 Store and 32 Task policy tests (99 total).
-  Independent Code/QA, Architecture, Security/Privacy and documentation review
-  identified one required byte-identity defect. Two regression tests reproduced
-  it; the bounded UTF-8 identity correction passed all 19 policy tests and
-  independent correction review. No Required finding remains. Native
-  documentation and diff checks pass. Only the affected policy suite was rerun;
-  the successful 82 existing checks remain terminal.
-- The policy preserves exact revisions, coverage and assignment/audit history,
-  enforces current Ready and owner-origin acceptance, and adopts only explicit
-  migration-continuation work into its Draft goal during finalization. Linked
-  child evidence marked unavailable blocks acceptance; absent evidence adds no
-  requirement. No ticket writer routing or bridge commands were added.
+- [Task 7 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md)
+  controls the complete writer integration and accepted v14 amendment.
+  Native Debug builds and focused synthetic tests pass: 32 policy, 32 bridge,
+  44 importer/onboarding/sample/capture integration, and 59 store/preflight
+  cases across the initial and directly affected correction runs. These cover
+  the full ticket lane matrix, task-revision acceptance, start/dependency/
+  blocker gates, migration continuation, structural invalidation, assignment
+  history across phase moves, managed-import authorization/identity, and
+  v14 preservation/rollback/recovery. Independent Code/QA, Architecture,
+  Security/Privacy and documentation review found no Required defects. Native
+  documentation and diff checks pass. No review of reviews was performed.
+- Task 6's completed [policy brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md)
+  retains its accepted scope and evidence. Its exact UTF-8 identities,
+  revision/coverage rules, explicit continuation adoption and existing-evidence
+  interpretation remain intact; absent linked evidence adds no obligation.
 - [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) controls
   remaining scope. The completed [Task 5 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md)
   retains its delivered scope. The coordinator accepted the brief and bounded Core/AppModel support on
@@ -72,7 +79,14 @@
   authorized deployment to the exact bound root and typed acceptance. The
   live bound checkout has not been changed; no managed-current claim is made
   for the development catalog. Task 5 evidence and the completed Task 6 brief
-  are also repository-prepared additions pending that separate acceptance.
+  and the Task 7 brief are also repository-prepared additions pending that
+  separate acceptance.
+- The Task 7 development candidate uses schema v14. Its forward migration
+  preserves assignment history while allowing governed Backlog phase moves.
+  The installed v13 store has not been migrated. Task 7A must explicitly cover
+  v13-to-v14 installation, consistent pre-migration snapshots and exact
+  recovery. Older binaries refuse newer schemas; old-binary runtime opening
+  was not exercised here, and no downgrade or live recovery was performed.
 - Whole transport/lifecycle test classes can change the shared macOS bridge.
   Future tasks must retain the brief's safe-selector discipline; Task 4B's
   completed controlled run does not authorize later shared-service operations.
@@ -110,8 +124,11 @@ and inert XCTest host output are retained. Production code, tests and the
 accepted brief are durable repository files; no deliverable exists only in
 scratch storage. No cleanup was performed or authorized.
 
-Task 6 implementation is complete; PR integration is the remaining delivery
-step. Task 7 is next eligible only after the coordinator verifies Task 6's merge
-and opens that checkpoint. The new
-tools remain development-only until Tasks 5, 6 and 7 are accepted; Task 7A owns
-the later owner installation and live bootstrap.
+Task 6 is merged. Task 7 implementation, direct verification and independent
+review are complete; PR integration remains. Task 7A remains eligible only after
+Task 7 delivery and coordinator integration verification. Task 7 temporary
+native build logs, DerivedData and inert-host results are retained in
+`.build/rr-r10-task7`; synthetic test and XCTest-host directories are retained.
+No cleanup is authorized. The brief, reproduction test and delivery records
+are durable repository files. Development catalog changes remain pending
+separate deployment and acceptance; no live synchronization is claimed.

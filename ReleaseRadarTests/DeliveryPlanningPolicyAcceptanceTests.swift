@@ -8,6 +8,258 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
     private static let phase = PhaseID(rawValue: "phase")
     private let actor = DeliveryActor(id: "delivery-policy-test")
 
+    func testGovernedBacklogPhaseMovePreservesAssignmentHistory() async throws {
+        let store = try await readyFixture()
+        _ = try await revise(store, revision: 1, unassigned: ["t"])
+        let dispatcher = AgentCommandDispatcher(
+            store: store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(projectID: Self.project, canonicalRoot: URL(fileURLWithPath: "/synthetic-task7"),
+                      authorizedRoots: [URL(fileURLWithPath: "/synthetic-task7")])
+            ]))
+        let result = await dispatcher.dispatch(.init(
+            version: 1, requestID: UUID(), projectRoot: "/synthetic-task7", reason: "Move Backlog work",
+            command: .upsertTicket(ticketID: "t", phaseID: "other", outcome: "Outcome", lane: .backlog)))
+        XCTAssertNil(result.error, "A governed Backlog move must preserve historical assignments")
+        let state = try await store.read { db in
+            (try db.scalarText("SELECT phase_id FROM tickets WHERE id='t'"),
+             try db.scalarInt("SELECT COUNT(*) FROM delivery_goal_assignment_events WHERE ticket_id='t'"))
+        }
+        XCTAssertEqual(state.0, "other")
+        XCTAssertEqual(state.1, 2, "Historical assignment and removal must remain available")
+    }
+
+    func testGovernedPhaseAndTicketStructuralWritesAdvanceOnlyRealChanges() async throws {
+        let store = try await fixture(ticketCount: 0)
+        try await succeeds(store, .upsertPhase(phaseID: "new", name: "New"))
+        var result = try await store.read {
+            try XCTUnwrap(DeliveryPlanningPolicy.loadPlan(projectID: Self.project, phaseID: .init(rawValue: "new"), connection: $0))
+        }
+        XCTAssertEqual(result.state, .draft)
+        XCTAssertEqual(result.revision, 0)
+        try await succeeds(store, .upsertTicket(ticketID: "new-ticket", phaseID: "new", outcome: "Outcome", lane: .backlog))
+        try await succeeds(store, .upsertPhase(phaseID: "new", name: "Renamed"))
+        try await succeeds(store, .upsertTicket(ticketID: "new-ticket", phaseID: "new", outcome: "Outcome", lane: .backlog))
+        result = try await store.read {
+            try XCTUnwrap(DeliveryPlanningPolicy.loadPlan(projectID: Self.project, phaseID: .init(rawValue: "new"), connection: $0))
+        }
+        XCTAssertEqual(result.revision, 1)
+        try await succeeds(store, .upsertTicket(ticketID: "new-ticket", phaseID: "new", outcome: "Changed", lane: .backlog))
+        let changed = try await store.read {
+            try XCTUnwrap(DeliveryPlanningPolicy.loadPlan(projectID: Self.project, phaseID: .init(rawValue: "new"), connection: $0))
+        }
+        XCTAssertEqual(changed.revision, 2)
+    }
+
+    func testTicketCreationAndBacklogCannotBypassStartGateThroughEitherCommand() async throws {
+        let store = try await fixture()
+        for lane in TicketLane.allCases where lane != .backlog {
+            try await rejectsCommand(store, .upsertTicket(ticketID: "new", phaseID: "phase", outcome: "New", lane: lane))
+            try await rejectsCommand(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Outcome", lane: lane))
+            try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: lane))
+        }
+        for command in [AgentCommand.requestReview(id: "review", ticketID: "t", kind: "review", summary: "Review"),
+                        .recordCompletion(id: "completion", ticketID: "t", summary: "Done")] {
+            try await rejectsCommand(store, command)
+        }
+    }
+
+    func testReadyStartActivatesGoalAndOrdinaryProgressSurvivesStructuralInvalidation() async throws {
+        let store = try await readyFixture()
+        let ready = try await plan(store)
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+        let active = try await goals(store)
+        XCTAssertEqual(active[0].lifecycle, .active)
+        XCTAssertNotNil(active[0].activatedAt)
+        let afterStart = try await plan(store)
+        XCTAssertEqual(afterStart, ready)
+        try await succeeds(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Changed outcome", lane: .inProgress))
+        let draft = try await plan(store)
+        XCTAssertEqual(draft.state, .draft)
+        XCTAssertEqual(draft.revision, 2)
+        try await succeeds(store, .requestReview(id: "review", ticketID: "t", kind: "review", summary: "Review"))
+        try await succeeds(store, .recordCompletion(id: "completion", ticketID: "t", summary: "Done"))
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .needsReview))
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .accepted))
+        let finalPlan = try await plan(store)
+        XCTAssertEqual(finalPlan, draft)
+        for lane in TicketLane.allCases {
+            try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: lane))
+            try await rejectsCommand(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Changed", lane: lane))
+        }
+    }
+
+    func testStartAndBlockedResumeRequireAcceptedDependenciesAndNoBlockers() async throws {
+        for source in [TicketLane.backlog, .blocked] {
+            let store = try await readyFixture()
+            try await seed(store, "UPDATE tickets SET lane='\(source.rawValue)' WHERE id='t'")
+            try await succeeds(store, .recordBlocker(id: "block", ticketID: "t", summary: "Waiting"))
+            try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+            try await succeeds(store, .resolveBlocker(blockerID: "block"))
+            try await succeeds(store, .setDependency(id: "dependency", kind: .ticket, subjectID: "t", dependsOnID: "other-phase-ticket"))
+            try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+            try await seed(store, "UPDATE tickets SET lane='accepted' WHERE id='other-phase-ticket'")
+            try await succeeds(store, .setDependency(id: "phase-dependency", kind: .phase, subjectID: "phase", dependsOnID: "other"))
+            try await seed(store, "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('other-pending','p','other','Waiting','backlog')")
+            try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+            try await seed(store, "UPDATE tickets SET lane='accepted' WHERE id='other-pending'")
+            try await succeeds(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+            let p = try await plan(store)
+            XCTAssertEqual(p.revision, 1)
+        }
+    }
+
+    func testFullTicketLaneMatrixRetainsFormalMovementAndTerminality() async throws {
+        for from in TicketLane.allCases {
+            for to in TicketLane.allCases {
+                let store = try await readyFixture()
+                try await seed(store, "UPDATE tickets SET lane='\(from.rawValue)' WHERE id='t'")
+                let command = AgentCommand.transitionTicket(ticketID: "t", lane: to)
+                if from == .accepted || (from == .backlog && to != .backlog && to != .inProgress) {
+                    try await rejectsCommand(store, command)
+                } else {
+                    try await succeeds(store, command)
+                }
+                let p = try await plan(store)
+                XCTAssertEqual(p.revision, 1)
+            }
+        }
+    }
+
+    func testMissingAssignmentTerminalGoalAndDraftResumeFailWithoutEffects() async throws {
+        let unassigned = try await fixture()
+        try await seed(unassigned, "UPDATE tickets SET lane='in_progress' WHERE id='t'")
+        try await rejectsCommand(unassigned, .transitionTicket(ticketID: "t", lane: .needsReview))
+        try await rejectsCommand(unassigned, .recordCompletion(id: "done", ticketID: "t", summary: "Done"))
+        for state in ["draft", "accepted", "superseded"] {
+            let store = try await readyFixture()
+            try await seed(store, "UPDATE delivery_goals SET lifecycle='\(state)' WHERE id='g'")
+            try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+        }
+        let blocked = try await readyFixture()
+        try await seed(blocked, "UPDATE tickets SET lane='blocked' WHERE id='t'")
+        _ = try await revise(blocked, revision: 1, goals: [goal("g", title: "Changed")])
+        try await rejectsCommand(blocked, .transitionTicket(ticketID: "t", lane: .inProgress))
+    }
+
+    func testBacklogMoveInvalidatesBothPlansAndRetainsSourceAssignmentHistory() async throws {
+        let store = try await readyFixture()
+        try await succeeds(store, .upsertTicket(ticketID: "t", phaseID: "other", outcome: "Moved", lane: .backlog))
+        let oldPlan = try await plan(store)
+        XCTAssertEqual(oldPlan.state, .draft)
+        XCTAssertEqual(oldPlan.revision, 2)
+        let state = try await store.read { db in
+            (try DeliveryPlanningPolicy.loadPlan(projectID: Self.project, phaseID: .init(rawValue: "other"), connection: db),
+             try DeliveryPlanningPolicy.loadAssignmentHistory(projectID: Self.project, ticketID: .init(rawValue: "t"), connection: db),
+             try db.scalarInt("SELECT COUNT(*) FROM delivery_goal_ticket_assignments WHERE ticket_id='t'"))
+        }
+        XCTAssertEqual(state.0?.revision, 1)
+        XCTAssertEqual(state.1.map(\.action), ["assigned", "unassigned"])
+        XCTAssertEqual(state.1.map(\.phaseID.rawValue), ["phase", "phase"])
+        XCTAssertEqual(state.2, 0)
+        for source in [TicketLane.inProgress, .needsReview, .blocked, .accepted] {
+            try await seed(store, "UPDATE tickets SET lane='\(source.rawValue)' WHERE id='t'")
+            try await rejectsCommand(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Move", lane: .backlog))
+        }
+    }
+
+    func testTaskGateComposesWithReadinessWithoutInvalidatingPhasePlan() async throws {
+        let store = try await readyFixture()
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+        let before = try await plan(store)
+        try await succeeds(store, .reviseTicketTaskPlan(ticketID: "t", additions: [
+            .init(id: .init(rawValue: "task"), label: "Task", title: "Complete work", sortOrder: 0)]))
+        try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .accepted, ticketTaskPlanRevision: 1))
+        try await succeeds(store, .completeTicketTask(ticketID: "t", taskID: "task", expectedRevision: 1))
+        try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .accepted, ticketTaskPlanRevision: 1))
+        try await rejectsCommand(store, .transitionTicket(ticketID: "t", lane: .accepted))
+        try await rejectsCommand(store, .upsertTicket(ticketID: "t", phaseID: "phase", outcome: "Outcome", lane: .accepted))
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .accepted, ticketTaskPlanRevision: 2))
+        let after = try await plan(store)
+        XCTAssertEqual(after, before)
+    }
+
+    func testReworkStartsOnlyAfterRefinalizationAndReactivatesAwaitingGoal() async throws {
+        let store = try await readyFixture()
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .inProgress))
+        try await succeeds(store, .transitionTicket(ticketID: "t", lane: .accepted))
+        _ = try await transition(store, to: .awaitingAcceptance)
+        try await succeeds(store, .upsertTicket(ticketID: "rework", phaseID: "phase", outcome: "Owner rework", lane: .backlog))
+        try await rejectsCommand(store, .transitionTicket(ticketID: "rework", lane: .inProgress))
+        _ = try await revise(store, revision: 2, assignments: [assignment("rework", "g")])
+        _ = try await finalize(store, revision: 3)
+        try await succeeds(store, .transitionTicket(ticketID: "rework", lane: .inProgress))
+        let current = try await goals(store)
+        XCTAssertEqual(current[0].lifecycle, .active)
+    }
+
+    func testMigrationContinuationCanCompleteButBacklogOrBlockedCannotRestartIt() async throws {
+        for id in ["ticket-active", "ticket-review"] {
+            let (store, _) = try migratedFixture()
+            let project = ProjectID(rawValue: "project-main")
+            try await store.transact(actor: actor, reason: "Continue migrated work") { db in
+                try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(projectID: project, ticketID: .init(rawValue: id), connection: db)
+                try DeliveryPlanningPolicy.transitionTicket(projectID: project, ticketID: .init(rawValue: id), to: .accepted, connection: db)
+            }
+            let (returned, _) = try migratedFixture()
+            try await returned.transact(actor: actor, reason: "Pause migrated work") {
+                try DeliveryPlanningPolicy.transitionTicket(projectID: project, ticketID: .init(rawValue: id), to: .blocked, connection: $0)
+            }
+            try await rejected(returned) {
+                try await returned.transact(actor: self.actor, reason: "No Blocked bypass") {
+                    try DeliveryPlanningPolicy.transitionTicket(projectID: project, ticketID: .init(rawValue: id), to: .inProgress, connection: $0)
+                }
+            }
+            try await returned.transact(actor: actor, reason: "Return migrated work") {
+                try DeliveryPlanningPolicy.transitionTicket(projectID: project, ticketID: .init(rawValue: id), to: .backlog, connection: $0)
+            }
+            let flag = try await returned.read { try $0.scalarInt("SELECT plan_legacy_continuation FROM tickets WHERE id=?", bindings: [.text(id)]) }
+            XCTAssertEqual(flag, 0)
+            try await rejected(returned) {
+                try await returned.transact(actor: self.actor, reason: "No restart bypass") {
+                    try DeliveryPlanningPolicy.transitionTicket(projectID: project, ticketID: .init(rawValue: id), to: .inProgress, connection: $0)
+                }
+            }
+        }
+    }
+
+    func testCoreAcceptedUpsertIsUnconditionallyClosedAndLateAuditFailureRollsBackMove() async throws {
+        let store = try await readyFixture()
+        for id in ["t", "new"] {
+            try await rejected(store) {
+                try await store.transact(actor: self.actor, reason: "No direct Accepted upsert") { db in
+                    try DeliveryPlanningPolicy.upsertTicket(projectID: Self.project, ticketID: .init(rawValue: id), phaseID: Self.phase,
+                        outcome: "Outcome", lane: .accepted, auditEventID: .init(rawValue: "unused"), connection: db)
+                }
+            }
+        }
+        let existingAudit = try await store.read { try XCTUnwrap($0.scalarText("SELECT id FROM audit_events LIMIT 1")) }
+        try await rejected(store) {
+            try await store.transact(actor: self.actor, reason: "Late duplicate audit", auditEventID: .init(rawValue: existingAudit)) { db in
+                try DeliveryPlanningPolicy.upsertTicket(projectID: Self.project, ticketID: .init(rawValue: "t"), phaseID: .init(rawValue: "other"),
+                    outcome: "Moved", lane: .backlog, auditEventID: .init(rawValue: existingAudit), connection: db)
+            }
+        }
+    }
+
+    func testByteDistinctPhaseMoveAndCrossProjectIdentityRejectsWithoutEffects() async throws {
+        let store = try await fixture(ticketCount: 0)
+        let composed = "\u{e9}", decomposed = "e\u{301}"
+        for phase in [composed, decomposed] {
+            try await succeeds(store, .upsertPhase(phaseID: phase, name: phase))
+        }
+        try await succeeds(store, .upsertTicket(ticketID: "unicode", phaseID: composed, outcome: "Outcome", lane: .backlog))
+        try await succeeds(store, .upsertTicket(ticketID: "unicode", phaseID: decomposed, outcome: "Outcome", lane: .backlog))
+        let moved = try await store.read { try $0.scalarText("SELECT phase_id FROM tickets WHERE id='unicode'") }
+        XCTAssertEqual(moved.map { Data($0.utf8) }, Data(decomposed.utf8))
+        let plans = try await store.read { db in
+            try [composed, decomposed].map { try XCTUnwrap(DeliveryPlanningPolicy.loadPlan(projectID: Self.project, phaseID: .init(rawValue: $0), connection: db)).revision }
+        }
+        XCTAssertEqual(plans, [2, 1])
+        try await rejectsCommand(store, .upsertPhase(phaseID: "foreign-phase", name: "Overwrite"))
+        try await rejectsCommand(store, .upsertTicket(ticketID: "foreign-ticket", phaseID: "phase", outcome: "Overwrite", lane: .backlog))
+    }
+
     func testRevisionFinalizationAndStructuralInvalidationPreserveOmittedGoals() async throws {
         let store = try await fixture()
         let initial = try await plan(store)
@@ -549,6 +801,25 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
         return directory.appendingPathComponent("test.sqlite")
     }
 
+    private func dispatch(_ store: DeliveryStore, _ command: AgentCommand) async -> AgentCommandResult {
+        let root = URL(fileURLWithPath: "/synthetic-task7")
+        let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: Self.project, canonicalRoot: root, authorizedRoots: [root])]))
+        return await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path,
+                                               reason: "Task 7 policy integration", command: command))
+    }
+    private func succeeds(_ store: DeliveryStore, _ command: AgentCommand, file: StaticString = #filePath, line: UInt = #line) async throws {
+        let result = await dispatch(store, command)
+        XCTAssertNil(result.error, file: file, line: line)
+    }
+    private func rejectsCommand(_ store: DeliveryStore, _ command: AgentCommand, file: StaticString = #filePath, line: UInt = #line) async throws {
+        let before = try await snapshot(store)
+        let result = await dispatch(store, command)
+        XCTAssertNotNil(result.error, file: file, line: line)
+        let after = try await snapshot(store)
+        XCTAssertEqual(after, before, file: file, line: line)
+    }
+
     private func goal(
         _ id: String, title: String = "Goal", outcome: String = "Complete outcome", criteria: [String] = ["Delivered"],
         order: Int = 0
@@ -608,7 +879,7 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
             try [
                 "phase_plans", "delivery_goals", "delivery_goal_done_criteria", "delivery_goal_ticket_assignments",
                 "delivery_goal_assignment_events", "tickets", "ticket_task_plans", "ticket_tasks", "audit_events",
-                "agent_command_requests", "notification_events", "review_items", "observed_goals", "ticket_goal_links",
+                "agent_command_requests", "notification_events", "notification_occurrences", "review_items", "completion_records", "observed_goals", "ticket_goal_links",
             ].map { try db.rows("SELECT * FROM \($0) ORDER BY rowid") }
         }
     }

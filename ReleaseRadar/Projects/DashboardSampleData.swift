@@ -66,49 +66,38 @@ enum DashboardSampleData {
         }
         guard !exists else { return }
 
+        let auditEventID = AuditEventID(rawValue: "rr06-dashboard-seed-audit")
         try await store.transact(
             actor: DeliveryActor(id: "release-radar.sample-seed"),
             reason: "Seed RR-06 dashboard examples including VD2-07c",
-            auditEventID: AuditEventID(rawValue: "rr06-dashboard-seed-audit"),
+            auditEventID: auditEventID,
             auditScope: AuditScope(projectID: projectID, entityType: .ticket, entityID: "VD2-07c")
         ) { connection in
             try connection.execute(
                 "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0)",
                 bindings: [.text(projectID.rawValue), .text("Rekon Pursuit")]
             )
-            try connection.execute(
-                "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?)",
-                bindings: [.text(phaseID.rawValue), .text(projectID.rawValue), .text("Post-MVP refinement")]
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: projectID,
+                phaseID: phaseID,
+                name: "Post-MVP refinement",
+                mode: .governed,
+                connection: connection
             )
             try connection.execute(
                 "INSERT INTO project_active_phases (phase_id, project_id) VALUES (?, ?)",
                 bindings: [.text(phaseID.rawValue), .text(projectID.rawValue)]
             )
             for ticket in tickets {
-                let stagedLane = ticket.lane == .accepted ? TicketLane.backlog : ticket.lane
-                try connection.execute(
-                    "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",
-                    bindings: [
-                        .text(ticket.id), .text(projectID.rawValue), .text(phaseID.rawValue),
-                        .text(ticket.outcome), .text(stagedLane.rawValue),
-                    ]
+                try DeliveryPlanningPolicy.upsertTicket(
+                    projectID: projectID,
+                    ticketID: TicketID(rawValue: ticket.id),
+                    phaseID: phaseID,
+                    outcome: ticket.outcome,
+                    lane: .backlog,
+                    auditEventID: auditEventID,
+                    connection: connection
                 )
-                if ticket.lane == .accepted {
-                    try TicketTaskPlanningPolicy.assertCanAcceptTicket(
-                        projectID: projectID,
-                        ticketID: TicketID(rawValue: ticket.id),
-                        expectedRevision: nil,
-                        connection: connection
-                    )
-                    try connection.execute(
-                        "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
-                        bindings: [
-                            .text(TicketLane.accepted.rawValue),
-                            .text(projectID.rawValue),
-                            .text(ticket.id),
-                        ]
-                    )
-                }
             }
             for (offset, dependency) in dependencies.enumerated() {
                 try connection.execute(
@@ -118,6 +107,37 @@ enum DashboardSampleData {
                         .text(dependency.0), .text(dependency.1),
                     ]
                 )
+            }
+            guard let plan = try DeliveryPlanningPolicy.loadPlan(
+                projectID: projectID, phaseID: phaseID, connection: connection
+            ) else { throw DeliveryPlanningPolicyError.phasePlanNotFound }
+            let goalID = DeliveryGoalID(rawValue: "rr10-sample-refinement")
+            let revised = try DeliveryPlanningPolicy.applyRevision(
+                projectID: projectID,
+                phaseID: phaseID,
+                expectedRevision: plan.revision,
+                goalUpserts: [.init(
+                    id: goalID,
+                    title: "Post-MVP refinement",
+                    outcome: "Deliver the dashboard refinement outcomes represented by the sample board.",
+                    doneCriteria: ["Every assigned refinement ticket is accepted."],
+                    sortOrder: 0
+                )],
+                assignments: tickets.map { .init(goalID: goalID, ticketID: .init(rawValue: $0.id)) },
+                unassignedTicketIDs: [],
+                supersededGoalIDs: [],
+                auditEventID: auditEventID,
+                connection: connection
+            )
+            try DeliveryPlanningPolicy.finalizePlan(
+                projectID: projectID, phaseID: phaseID, expectedRevision: revised.revision, connection: connection
+            )
+            // Accepted dependencies precede their dependants in reverse seed order.
+            for ticket in tickets.reversed() where ticket.lane == .accepted {
+                try transitionSeedTicket(ticket, connection: connection)
+            }
+            for ticket in tickets where ticket.lane != .accepted && ticket.lane != .backlog {
+                try transitionSeedTicket(ticket, connection: connection)
             }
             try connection.execute(
                 "INSERT INTO blockers (id, project_id, ticket_id, summary) VALUES (?, ?, ?, ?)",
@@ -182,6 +202,11 @@ enum DashboardSampleData {
                 ("agent-review", "VD2-07c", "agent_review_request", "Agent requested owner validation"),
             ]
             for review in reviewItems {
+                if review.2 == "agent_review_request", let ticketID = review.1 {
+                    try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
+                        projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection
+                    )
+                }
                 try connection.execute(
                     "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, ?, ?, ?, 'open')",
                     bindings: [
@@ -193,6 +218,9 @@ enum DashboardSampleData {
                     ]
                 )
             }
+            try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
+                projectID: projectID, ticketID: .init(rawValue: "UX-D10"), connection: connection
+            )
             try connection.execute(
                 "INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES (?, ?, ?, ?, ?)",
                 bindings: [
@@ -202,6 +230,23 @@ enum DashboardSampleData {
                     .text("Agent completed export confirmation and requested validation."),
                     .text("2026-08-23T22:18:00Z"),
                 ]
+            )
+        }
+    }
+
+    private static func transitionSeedTicket(_ ticket: TicketSeed, connection: SQLiteConnection) throws {
+        let ticketID = TicketID(rawValue: ticket.id)
+        try DeliveryPlanningPolicy.transitionTicket(
+            projectID: projectID, ticketID: ticketID, to: .inProgress, connection: connection
+        )
+        if ticket.lane == .accepted {
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: ticketID, to: .needsReview, connection: connection
+            )
+        }
+        if ticket.lane != .inProgress {
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: ticketID, to: ticket.lane, connection: connection
             )
         }
     }

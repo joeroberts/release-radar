@@ -2414,6 +2414,16 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(firstSeedState.acceptedTicketIDs, ["RR9-HISTORY"])
         XCTAssertTrue(firstSeedState.planRows.isEmpty)
         XCTAssertTrue(firstSeedState.taskRows.isEmpty)
+        let planning = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_plans p WHERE EXISTS (SELECT 1 FROM tickets t WHERE t.project_id = p.project_id AND t.phase_id = p.phase_id) AND (p.state <> 'ready' OR p.ready_revision <> p.revision)"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets t LEFT JOIN delivery_goal_ticket_assignments a ON a.project_id = t.project_id AND a.phase_id = t.phase_id AND a.ticket_id = t.id WHERE a.ticket_id IS NULL"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE plan_legacy_continuation <> 0")
+            )
+        }
+        XCTAssertEqual(planning.0, 0)
+        XCTAssertEqual(planning.1, 0)
+        XCTAssertEqual(planning.2, 0)
         XCTAssertEqual(firstSeedState.seedAuditRows, [
             "rr9-capture-seed-audit|release-radar.rr9-capture-seed||none|Seed RR-R9 active phase capture fixture|rr9-capture-primary|phase|phase-current",
         ])

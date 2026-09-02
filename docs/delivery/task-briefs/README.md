@@ -153,6 +153,7 @@ Leaf: no child collections.
 | edf26376-b869-41d0-99de-5d848a51dd9a | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md) | document | nonAuthoritative | completed | none | none |
 | 709a940d-b43d-484c-859d-8c88c0592f27 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md) | document | nonAuthoritative | completed | none | none |
 | 9bb82f9f-8b26-45ff-b2da-f4a3a19f670c | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md) | document | nonAuthoritative | completed | none | none |
+| bf4b1c0f-ec77-4641-b23d-efdfc5cbe467 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

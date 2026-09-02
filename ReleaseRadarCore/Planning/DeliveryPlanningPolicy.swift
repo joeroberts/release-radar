@@ -9,6 +9,7 @@ public enum DeliveryPlanningPolicyError: Error, LocalizedError, Equatable, Senda
     case phasePlanNotFound
     case planRevisionConflict(expected: Int64, current: Int64)
     case phasePlanNotReady
+    case ticketGoalRequired(TicketID)
     case phasePlanIncomplete(PhasePlanReadinessFailure)
     case goalPhaseMismatch(DeliveryGoalID)
     case goalNotFound(DeliveryGoalID)
@@ -22,7 +23,8 @@ public enum DeliveryPlanningPolicyError: Error, LocalizedError, Equatable, Senda
         switch self {
         case .phasePlanNotFound: "The phase plan does not exist. Refresh the project."
         case .planRevisionConflict: "The phase plan changed. Refresh its revision before retrying."
-        case .phasePlanNotReady: "Finalize the current phase plan before changing the Delivery Goal lifecycle."
+        case .phasePlanNotReady: "Finalize the current phase plan before starting work or changing the Delivery Goal lifecycle."
+        case .ticketGoalRequired: "Assign the ticket to one actionable Delivery Goal in its phase before continuing work."
         case .phasePlanIncomplete:
             "Complete the listed Delivery Goals and assign every upcoming ticket before finalizing."
         case .goalPhaseMismatch:
@@ -44,6 +46,223 @@ public enum DeliveryPlanningPolicyError: Error, LocalizedError, Equatable, Senda
 public enum DeliveryPlanningPolicy {
     public static let maximumGoalOperationsPerRevision = 64
     public static let maximumAssignmentOperationsPerRevision = 512
+
+    public static func upsertPhase(
+        projectID: ProjectID, phaseID: PhaseID, name: String,
+        mode: PhaseCreationMode, connection: SQLiteConnection
+    ) throws {
+        try validateID(projectID.rawValue)
+        try validateID(phaseID.rawValue)
+        try validateText(name)
+        guard try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id=?", bindings: [.text(projectID.rawValue)]) == 1 else {
+            throw invalid("The project does not exist. Refresh the project.")
+        }
+        let owner = try connection.scalarText("SELECT project_id FROM phases WHERE id=?", bindings: [.text(phaseID.rawValue)])
+        if let owner {
+            guard identityKey(owner) == identityKey(projectID.rawValue) else {
+                throw invalid("The phase belongs to another project.")
+            }
+            try connection.execute("UPDATE phases SET name=? WHERE project_id=? AND id=?",
+                                   bindings: [.text(name)] + identity(projectID, phaseID))
+            return
+        }
+        try connection.execute("INSERT INTO phases (id,project_id,name) VALUES (?,?,?)",
+                               bindings: [.text(phaseID.rawValue), .text(projectID.rawValue), .text(name)])
+        // The immutable v11 trigger creates Legacy unassessed. Only a new
+        // governed phase is promoted to Draft; imports never reset old plans.
+        if mode == .governed {
+            try invalidatePlan(projectID, phaseID, 0, operationTimestamp(), connection)
+        }
+    }
+
+    public static func upsertTicket(
+        projectID: ProjectID, ticketID: TicketID, phaseID: PhaseID,
+        outcome: String, lane: TicketLane, auditEventID: AuditEventID,
+        connection: SQLiteConnection
+    ) throws {
+        try validateID(projectID.rawValue)
+        try validateID(ticketID.rawValue)
+        try validateID(phaseID.rawValue)
+        try validateText(outcome)
+        guard lane != .accepted else {
+            throw invalid("Accepted tickets must use the exact-revision ticket transition.")
+        }
+        guard try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id=? AND id=?",
+                                       bindings: identity(projectID, phaseID)) == 1 else {
+            throw invalid("The destination phase does not belong to this project.")
+        }
+        let current = try connection.row("SELECT project_id,phase_id,outcome,lane FROM tickets WHERE id=?",
+                                         bindings: [.text(ticketID.rawValue)])
+        guard let current else {
+            guard lane == .backlog else { throw invalid("Create new tickets in Backlog, then finalize their phase plan before starting.") }
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,?,?,?,'backlog')",
+                                   bindings: [.text(ticketID.rawValue)] + identity(projectID, phaseID) + [.text(outcome)])
+            try advanceTicketPlan(projectID, phaseID, connection)
+            return
+        }
+        guard identityKey(try requiredText(current, "project_id")) == identityKey(projectID.rawValue) else {
+            throw invalid("The ticket belongs to another project.")
+        }
+        let oldPhase = PhaseID(rawValue: try requiredText(current, "phase_id"))
+        let oldLane = try requiredText(current, "lane")
+        guard oldLane != TicketLane.accepted.rawValue else { throw invalid("Accepted tickets are immutable. Create new Backlog work.") }
+        let moved = identityKey(oldPhase.rawValue) != identityKey(phaseID.rawValue)
+        if moved {
+            guard oldLane == TicketLane.backlog.rawValue, lane == .backlog else {
+                throw invalid("Only Backlog tickets may move phases, and they must remain in Backlog.")
+            }
+            let source = try currentPlan(projectID, oldPhase, connection)
+            guard source.revision < Int64.max else { throw invalid("The phase plan revision cannot advance further.") }
+            try changeAssignment(projectID, oldPhase, ticketID, nil, source.revision + 1, auditEventID, connection)
+            try advanceTicketPlan(projectID, oldPhase, connection)
+        }
+        let outcomeChanged = identityKey(try requiredText(current, "outcome")) != identityKey(outcome)
+        if moved || outcomeChanged {
+            try connection.execute("UPDATE tickets SET phase_id=?,outcome=? WHERE project_id=? AND id=?",
+                                   bindings: [.text(phaseID.rawValue), .text(outcome), .text(projectID.rawValue), .text(ticketID.rawValue)])
+            try advanceTicketPlan(projectID, phaseID, connection)
+        }
+        if oldLane != lane.rawValue {
+            try transitionTicket(projectID: projectID, ticketID: ticketID, to: lane, connection: connection)
+        }
+    }
+
+    public static func transitionTicket(
+        projectID: ProjectID, ticketID: TicketID, to lane: TicketLane,
+        ticketTaskPlanRevision: Int64? = nil, connection: SQLiteConnection
+    ) throws {
+        let ticket = try requireTicket(projectID, ticketID, connection)
+        let from = try requiredText(ticket, "lane")
+        guard from != TicketLane.accepted.rawValue else { throw invalid("Accepted tickets are terminal. Create new Backlog work.") }
+        guard ticketTaskPlanRevision == nil || lane == .accepted else {
+            throw invalid("A task-plan revision is valid only for an Accepted transition.")
+        }
+        if from == TicketLane.backlog.rawValue, lane != .backlog, lane != .inProgress {
+            throw invalid("Backlog work must enter In progress through the phase readiness gate first.")
+        }
+        let phase = PhaseID(rawValue: try requiredText(ticket, "phase_id"))
+        if lane == .backlog {
+            try clearContinuation(projectID, ticketID, connection)
+        } else if from == TicketLane.backlog.rawValue ||
+                    (from == TicketLane.blocked.rawValue && lane != .blocked) {
+            let plan = try currentPlan(projectID, phase, connection)
+            guard plan.state == .ready, plan.readyRevision == plan.revision else {
+                throw DeliveryPlanningPolicyError.phasePlanNotReady
+            }
+            let goal = try actionableGoal(projectID, phase, ticketID, allowingRework: from == TicketLane.backlog.rawValue, connection)
+            try assertDependenciesSatisfied(projectID, phase, ticketID, connection)
+            if goal.lifecycle == .planned || goal.lifecycle == .awaitingAcceptance {
+                try writeLifecycle(projectID, goal.id, .active, operationTimestamp(), connection)
+            }
+        } else if from != TicketLane.blocked.rawValue {
+            try assertContinuingWork(projectID, ticketID, ticket, connection)
+        }
+        if lane == .accepted {
+            try TicketTaskPlanningPolicy.assertCanAcceptTicket(
+                projectID: projectID, ticketID: ticketID, expectedRevision: ticketTaskPlanRevision, connection: connection)
+        }
+        try connection.execute("UPDATE tickets SET lane=? WHERE project_id=? AND id=?",
+                               bindings: [.text(lane.rawValue), .text(projectID.rawValue), .text(ticketID.rawValue)])
+    }
+
+    public static func assertCanRecordReviewOrCompletion(
+        projectID: ProjectID, ticketID: TicketID, connection: SQLiteConnection
+    ) throws {
+        let ticket = try requireTicket(projectID, ticketID, connection)
+        let lane = try requiredText(ticket, "lane")
+        guard lane != TicketLane.backlog.rawValue else { throw invalid("Start the Backlog ticket before recording completion or requesting review.") }
+        // Accepted legacy records remain usable as historical evidence; this
+        // assertion never edits a ticket or reopens its completed work.
+        if lane != TicketLane.accepted.rawValue {
+            try assertContinuingWork(projectID, ticketID, ticket, connection)
+        }
+    }
+
+    private static func currentPlan(_ project: ProjectID, _ phase: PhaseID, _ db: SQLiteConnection) throws -> PhasePlanRecord {
+        guard let plan = try loadPlan(projectID: project, phaseID: phase, connection: db) else {
+            throw DeliveryPlanningPolicyError.phasePlanNotFound
+        }
+        return plan
+    }
+
+    private static func advanceTicketPlan(_ project: ProjectID, _ phase: PhaseID, _ db: SQLiteConnection) throws {
+        let plan = try currentPlan(project, phase, db)
+        guard plan.revision < Int64.max else { throw invalid("The phase plan revision cannot advance further.") }
+        try invalidatePlan(project, phase, plan.revision + 1, operationTimestamp(), db, preservingLegacy: plan.state == .legacyUnassessed)
+    }
+
+    private static func requireTicket(_ project: ProjectID, _ ticket: TicketID, _ db: SQLiteConnection) throws -> [String: SQLiteValue] {
+        try validateID(project.rawValue)
+        try validateID(ticket.rawValue)
+        guard let row = try db.row("SELECT phase_id,lane,plan_legacy_continuation FROM tickets WHERE project_id=? AND id=?",
+                                   bindings: [.text(project.rawValue), .text(ticket.rawValue)]) else {
+            throw invalid("The ticket does not belong to this project. Refresh the ticket.")
+        }
+        return row
+    }
+
+    private static func actionableGoal(
+        _ project: ProjectID, _ phase: PhaseID, _ ticket: TicketID,
+        allowingRework: Bool = false, _ db: SQLiteConnection
+    ) throws -> DeliveryGoalRecord {
+        guard let id = try db.scalarText("SELECT goal_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND phase_id=? AND ticket_id=?",
+                                        bindings: identity(project, phase) + [.text(ticket.rawValue)]) else {
+            throw DeliveryPlanningPolicyError.ticketGoalRequired(ticket)
+        }
+        let goal = try requireGoal(project, phase, .init(rawValue: id), db)
+        guard goal.lifecycle == .planned || goal.lifecycle == .active || (allowingRework && goal.lifecycle == .awaitingAcceptance) else {
+            throw DeliveryPlanningPolicyError.goalNotActionable(goal.id)
+        }
+        return goal
+    }
+
+    private static func assertContinuingWork(
+        _ project: ProjectID, _ ticket: TicketID, _ row: [String: SQLiteValue], _ db: SQLiteConnection
+    ) throws {
+        let phase = PhaseID(rawValue: try requiredText(row, "phase_id"))
+        let lane = try requiredText(row, "lane")
+        if integer(row["plan_legacy_continuation"]) == 1,
+           [TicketLane.inProgress.rawValue, TicketLane.needsReview.rawValue].contains(lane) {
+            // Only migration grants this flag. Explicit assignment to a terminal
+            // goal never authorizes work, even before adoption is finalized.
+            if let id = try db.scalarText("SELECT goal_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND ticket_id=?",
+                                         bindings: [.text(project.rawValue), .text(ticket.rawValue)]) {
+                let goal = try requireGoal(project, phase, .init(rawValue: id), db)
+                guard goal.lifecycle != .accepted, goal.lifecycle != .superseded else {
+                    throw DeliveryPlanningPolicyError.goalNotActionable(goal.id)
+                }
+            }
+            return
+        }
+        _ = try actionableGoal(project, phase, ticket, db)
+    }
+
+    private static func assertDependenciesSatisfied(
+        _ project: ProjectID, _ phase: PhaseID, _ ticket: TicketID, _ db: SQLiteConnection
+    ) throws {
+        let unresolved = try db.scalarInt("SELECT COUNT(*) FROM blockers WHERE project_id=? AND ticket_id=? AND resolved_at IS NULL",
+                                          bindings: [.text(project.rawValue), .text(ticket.rawValue)]) ?? 0
+        guard unresolved == 0 else { throw invalid("Resolve the ticket's blockers before starting or resuming work.") }
+        let ticketDependencies = try db.scalarInt("""
+            SELECT COUNT(*) FROM ticket_dependencies d JOIN tickets t
+              ON t.project_id=d.project_id AND t.id=d.depends_on_ticket_id
+            WHERE d.project_id=? AND d.ticket_id=? AND t.lane<>'accepted'
+            """, bindings: [.text(project.rawValue), .text(ticket.rawValue)]) ?? 0
+        let phaseDependencies = try db.scalarInt("""
+            SELECT COUNT(*) FROM phase_dependencies d JOIN tickets t
+              ON t.project_id=d.project_id AND t.phase_id=d.depends_on_phase_id
+            WHERE d.project_id=? AND d.phase_id=? AND t.lane<>'accepted'
+            """, bindings: identity(project, phase)) ?? 0
+        guard ticketDependencies == 0, phaseDependencies == 0 else {
+            throw invalid("Accept every prerequisite ticket and all tickets in prerequisite phases before starting or resuming work.")
+        }
+    }
+
+    private static func validateText(_ value: String) throws {
+        guard !blank(value), value.utf8.count <= 4_096, !value.utf8.contains(0) else {
+            throw invalid("Supply nonempty text of at most 4096 UTF-8 bytes without a NUL character.")
+        }
+    }
 
     @discardableResult
     public static func applyRevision(
@@ -444,11 +663,12 @@ public enum DeliveryPlanningPolicy {
     }
 
     private static func invalidatePlan(
-        _ project: ProjectID, _ phase: PhaseID, _ revision: Int64, _ timestamp: String, _ db: SQLiteConnection
+        _ project: ProjectID, _ phase: PhaseID, _ revision: Int64, _ timestamp: String, _ db: SQLiteConnection,
+        preservingLegacy: Bool = false
     ) throws {
         try db.execute(
-            "UPDATE phase_plans SET state='draft',revision=?,ready_revision=NULL,updated_at=?,finalized_at=NULL WHERE project_id=? AND phase_id=?",
-            bindings: [.integer(revision), .text(timestamp)] + identity(project, phase))
+            "UPDATE phase_plans SET state=?,revision=?,ready_revision=NULL,updated_at=?,finalized_at=NULL WHERE project_id=? AND phase_id=?",
+            bindings: [.text(preservingLegacy ? "legacy_unassessed" : "draft"), .integer(revision), .text(timestamp)] + identity(project, phase))
     }
 
     private static func markReady(

@@ -3,7 +3,7 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class RekonImportAcceptanceTests: XCTestCase {
-    func testAcceptedImportFailsClosedWhenAPlanAppearsAfterStagedInsertion() async throws {
+    func testSourceAcceptedImportRemainsBacklogWhenATaskPlanAppearsAfterInsertion() async throws {
         let fixture = try RekonImportFixture(testCase: self)
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
         try await fixture.seedProject(in: store)
@@ -26,73 +26,102 @@ final class RekonImportAcceptanceTests: XCTestCase {
         }
         let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
         let preview = try importer.preview(fixture.root)
-        let before = try await Self.task4AImportSnapshot(store)
-
-        do {
-            try await importer.apply(preview, to: fixture.projectID)
-            XCTFail("Expected the injected plan to reject the Accepted import")
-        } catch {
-            XCTAssertEqual(
-                error as? TicketTaskPlanningPolicyError,
-                .ticketTaskPlanRevisionConflict(expected: nil, current: 1)
+        try await importer.apply(preview, to: fixture.projectID)
+        let state = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT lane FROM tickets WHERE id = 'TASK-A'"),
+                try connection.scalarInt("SELECT revision FROM ticket_task_plans WHERE ticket_id = 'TASK-A'"),
+                try connection.scalarText("SELECT completion FROM ticket_tasks WHERE ticket_id = 'TASK-A'")
             )
         }
-
-        let after = try await Self.task4AImportSnapshot(store)
-        XCTAssertEqual(after, before)
+        XCTAssertEqual(state.0, "backlog")
+        XCTAssertEqual(state.1, 1)
+        XCTAssertEqual(state.2, "pending", "Import cannot infer completion from the source lane")
     }
 
-    private static func task4AImportSnapshot(_ store: DeliveryStore) async throws -> [String] {
+    func testEverySourceLaneImportsAsBacklogWithStableReviewFactsAndNoPlans() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        let tasks = TicketLane.allCases.map { lane in
+            ["id": "source-\(lane.rawValue)", "title": "Imported \(lane.rawValue)",
+             "phaseId": "phase-main", "status": lane.rawValue]
+        }
+        let artifact: [String: Any] = [
+            "schemaVersion": 1, "activePhaseId": "phase-main",
+            "phases": [["id": "phase-main", "label": "Main delivery"]], "tasks": tasks,
+        ]
+        try JSONSerialization.data(withJSONObject: artifact).write(to: fixture.artifactURL)
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+        let preview = try importer.preview(fixture.root)
+        try await importer.apply(preview, to: fixture.projectID)
+        let first = try await Self.task7ImportPlanningState(store)
+        try await importer.apply(preview, to: fixture.projectID)
+        let second = try await Self.task7ImportPlanningState(store)
+
+        XCTAssertEqual(first, second, "Reimport must preserve plan revisions and stable review identities")
+        XCTAssertEqual(first.filter { $0.hasPrefix("ticket|") }, TicketLane.allCases.map {
+            "ticket|source-\($0.rawValue)|backlog|0"
+        }.sorted())
+        XCTAssertEqual(first.filter { $0.hasPrefix("phase|") }, ["phase|phase-main|legacy_unassessed|5"])
+        XCTAssertEqual(first.filter { $0.hasPrefix("review|") }.count, 4)
+        for lane in TicketLane.allCases where lane != .backlog {
+            XCTAssertTrue(first.contains { $0.hasPrefix("review|") && $0.contains("source-\(lane.rawValue)|") && $0.contains("source lane \(lane.rawValue)") })
+        }
+        XCTAssertFalse(first.contains { $0.hasPrefix("task-plan|") || $0.hasPrefix("goal|") })
+    }
+
+    func testReimportPreservesReadyProgressAndInvalidatesOnlyNewTicketStructure() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+        let preview = try importer.preview(fixture.root)
+        try await importer.apply(preview, to: fixture.projectID)
+        let projectID = fixture.projectID
+        let phaseID = PhaseID(rawValue: "phase-main")
+        let auditEventID = AuditEventID(rawValue: "import-planning-fixture")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Plan imported work", auditEventID: auditEventID) { connection in
+            let plan = try XCTUnwrap(DeliveryPlanningPolicy.loadPlan(projectID: projectID, phaseID: phaseID, connection: connection))
+            let goalID = DeliveryGoalID(rawValue: "import-goal")
+            let revised = try DeliveryPlanningPolicy.applyRevision(
+                projectID: projectID, phaseID: phaseID, expectedRevision: plan.revision,
+                goalUpserts: [.init(id: goalID, title: "Imported delivery", outcome: "Reconcile imported work.", doneCriteria: ["Accept each ticket."], sortOrder: 0)],
+                assignments: ["TASK-A", "TASK-B", "TASK-C"].map { .init(goalID: goalID, ticketID: .init(rawValue: $0)) },
+                unassignedTicketIDs: [], supersededGoalIDs: [], auditEventID: auditEventID, connection: connection
+            )
+            try DeliveryPlanningPolicy.finalizePlan(projectID: projectID, phaseID: phaseID, expectedRevision: revised.revision, connection: connection)
+            for lane in [TicketLane.inProgress, .needsReview, .accepted] {
+                try DeliveryPlanningPolicy.transitionTicket(projectID: projectID, ticketID: .init(rawValue: "TASK-A"), to: lane, connection: connection)
+            }
+            try connection.execute("UPDATE review_items SET status = 'resolved' WHERE kind = 'source_lane' AND ticket_id = 'TASK-A'")
+        }
+        let before = try await Self.task7ImportPlanningState(store)
+        try await importer.apply(preview, to: fixture.projectID)
+        let after = try await Self.task7ImportPlanningState(store)
+        XCTAssertEqual(after, before, "Identical import must retain owner progress, resolved source facts and Ready")
+
+        var artifact = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixture.artifactURL)) as? [String: Any])
+        var tasks = try XCTUnwrap(artifact["tasks"] as? [[String: Any]])
+        tasks.append(["id": "TASK-D", "title": "New imported work", "phaseId": "phase-main", "status": "backlog"])
+        artifact["tasks"] = tasks
+        try JSONSerialization.data(withJSONObject: artifact).write(to: fixture.artifactURL)
+        try await importer.apply(try importer.preview(fixture.root), to: fixture.projectID)
+        let changed = try await Self.task7ImportPlanningState(store)
+        XCTAssertTrue(changed.contains("ticket|TASK-A|accepted|0"))
+        XCTAssertTrue(changed.contains("ticket|TASK-D|backlog|0"))
+        XCTAssertTrue(changed.contains("phase|phase-main|draft|5"))
+        XCTAssertTrue(changed.contains("phase|phase-next|legacy_unassessed|0"))
+        XCTAssertFalse(changed.contains { $0.hasPrefix("task-plan|") })
+    }
+
+    private static func task7ImportPlanningState(_ store: DeliveryStore) async throws -> [String] {
         try await store.read { connection in
-            var rows: [String] = []
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'phases|' || quote(id) || '|' || quote(project_id) || '|' || quote(name) AS value FROM phases ORDER BY project_id, id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'project_active_phases|' || quote(project_id) || '|' || quote(phase_id) AS value FROM project_active_phases ORDER BY project_id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'tickets|' || quote(id) || '|' || quote(project_id) || '|' || quote(phase_id) || '|' || quote(outcome) || '|' || quote(lane) AS value FROM tickets ORDER BY project_id, id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'ticket_task_plans|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(revision) || '|' || quote(created_at) || '|' || quote(updated_at) AS value FROM ticket_task_plans ORDER BY project_id, ticket_id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'ticket_tasks|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(id) || '|' || quote(label) || '|' || quote(title) || '|' || quote(sort_order) || '|' || quote(completion) || '|' || quote(lifecycle) || '|' || quote(created_at) || '|' || quote(updated_at) || '|' || quote(completed_at) || '|' || quote(superseded_at) AS value FROM ticket_tasks ORDER BY project_id, ticket_id, id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'phase_dependencies|' || quote(id) || '|' || quote(project_id) || '|' || quote(phase_id) || '|' || quote(depends_on_phase_id) AS value FROM phase_dependencies ORDER BY project_id, id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'ticket_dependencies|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(depends_on_ticket_id) AS value FROM ticket_dependencies ORDER BY project_id, id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'evidence|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(path) || '|' || quote(is_available) AS value FROM evidence ORDER BY project_id, id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'review_items|' || quote(id) || '|' || quote(project_id) || '|' || quote(ticket_id) || '|' || quote(kind) || '|' || quote(summary) || '|' || quote(status) AS value FROM review_items ORDER BY project_id, id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'notification_occurrences|' || quote(subject_key) || '|' || quote(project_id) || '|' || quote(event_kind) || '|' || quote(subject_id) || '|' || quote(generation) || '|' || quote(is_active) AS value FROM notification_occurrences ORDER BY subject_key"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'notification_events|' || quote(id) || '|' || quote(fingerprint) || '|' || quote(state) || '|' || quote(ticket_id) || '|' || quote(goal_id) || '|' || quote(provider_receipt) || '|' || quote(acknowledged_at) || '|' || quote(project_id) || '|' || quote(event_kind) || '|' || quote(subject_id) || '|' || quote(occurrence) || '|' || quote(title) || '|' || quote(message) || '|' || quote(created_at) || '|' || quote(attempt_count) || '|' || quote(attempt_started_at) || '|' || quote(completed_at) || '|' || quote(failure_code) AS value FROM notification_events ORDER BY id"
-            ))
-            rows.append(contentsOf: try Self.task4ATextRows(
-                connection,
-                sql: "SELECT 'audit_events|' || quote(id) || '|' || quote(actor_id) || '|' || quote(thread_id) || '|' || quote(thread_attribution) || '|' || quote(reason) || '|' || quote(created_at) || '|' || quote(project_id) || '|' || quote(entity_type) || '|' || quote(entity_id) AS value FROM audit_events ORDER BY id"
-            ))
+            var rows = try Self.task4ATextRows(connection, sql: "SELECT 'ticket|' || id || '|' || lane || '|' || plan_legacy_continuation AS value FROM tickets ORDER BY id")
+            rows += try Self.task4ATextRows(connection, sql: "SELECT 'phase|' || phase_id || '|' || state || '|' || revision AS value FROM phase_plans ORDER BY phase_id")
+            rows += try Self.task4ATextRows(connection, sql: "SELECT 'review|' || id || '|' || ticket_id || '|' || summary || '|' || status AS value FROM review_items WHERE kind = 'source_lane' ORDER BY id")
+            rows += try Self.task4ATextRows(connection, sql: "SELECT 'task-plan|' || ticket_id AS value FROM ticket_task_plans ORDER BY ticket_id")
+            rows += try Self.task4ATextRows(connection, sql: "SELECT 'goal|' || id AS value FROM delivery_goals ORDER BY id")
             return rows
         }
     }
@@ -162,11 +191,11 @@ final class RekonImportAcceptanceTests: XCTestCase {
         let secondAcceptance = try await Self.task4ANormalImportAcceptanceState(store)
 
         let expectedAudit = "release-radar-importer||none|Import recognized Rekon delivery records|project-import|project|project-import"
-        XCTAssertEqual(firstAcceptance.acceptedTicketRows, ["TASK-A|accepted"])
+        XCTAssertTrue(firstAcceptance.acceptedTicketRows.isEmpty)
         XCTAssertTrue(firstAcceptance.planRows.isEmpty)
         XCTAssertTrue(firstAcceptance.taskRows.isEmpty)
         XCTAssertEqual(firstAcceptance.importAuditRows, [expectedAudit])
-        XCTAssertEqual(secondAcceptance.acceptedTicketRows, ["TASK-A|accepted"])
+        XCTAssertTrue(secondAcceptance.acceptedTicketRows.isEmpty)
         XCTAssertTrue(secondAcceptance.planRows.isEmpty)
         XCTAssertTrue(secondAcceptance.taskRows.isEmpty)
         XCTAssertEqual(secondAcceptance.importAuditRows, [expectedAudit, expectedAudit])
@@ -188,7 +217,7 @@ final class RekonImportAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.2, 1)
         XCTAssertEqual(state.3, 1)
         XCTAssertEqual(state.4, 4)
-        XCTAssertEqual(state.5, 3)
+        XCTAssertEqual(state.5, 6)
         XCTAssertEqual(state.6, 0)
         XCTAssertEqual(try Data(contentsOf: fixture.artifactURL), sourceBytes)
     }
@@ -248,7 +277,7 @@ final class RekonImportAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(DISTINCT fingerprint) FROM notification_events WHERE project_id = 'project-import'")
             )
         }
-        XCTAssertEqual(state.0, 4)
+        XCTAssertEqual(state.0, 7)
         XCTAssertEqual(state.1, 1)
         XCTAssertEqual(state.2, 1)
     }

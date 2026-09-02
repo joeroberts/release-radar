@@ -240,7 +240,7 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         for scenario in 0..<5 {
             let f = try await makeFixture()
             let initialPlan: Task4APlanState = scenario == 0 ? .none : scenario == 1 ? .completed : .pending
-            try await seedAcceptanceTicket(store: f.store, ticketID: "RACE", lane: .backlog, plan: initialPlan)
+            try await seedAcceptanceTicket(store: f.store, ticketID: "RACE", lane: .needsReview, plan: initialPlan)
             let revision: Int64 = scenario == 1 ? 2 : 1
             let first: AgentCommand = scenario >= 3
                 ? (scenario == 3
@@ -295,7 +295,7 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
                 XCTAssertEqual(state.0, scenario == 0 ? nil : revision)
                 XCTAssertEqual(state.1, scenario == 0 ? 0 : 1)
             } else {
-                XCTAssertEqual(after.ticketLanes["RACE"], "backlog")
+                XCTAssertEqual(after.ticketLanes["RACE"], "needs_review")
                 XCTAssertEqual(state.0, scenario == 0 ? 1 : revision + 1)
                 XCTAssertEqual(state.1, scenario == 0 || scenario == 2 || scenario == 4 ? 1 : 2)
                 XCTAssertEqual(state.2, scenario == 2 || scenario == 4 ? 0 : scenario == 3 ? 2 : 1)
@@ -420,11 +420,11 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
             let succeeds: Bool
         }
         let scenarios = [
-            Scenario(name: "no plan omitted", lane: .backlog, plan: .none, revision: nil, succeeds: true),
-            Scenario(name: "no plan present", lane: .backlog, plan: .none, revision: 1, succeeds: false),
-            Scenario(name: "loaded plan omitted", lane: .backlog, plan: .pending, revision: nil, succeeds: false),
-            Scenario(name: "loaded plan stale", lane: .backlog, plan: .pending, revision: 2, succeeds: false),
-            Scenario(name: "pending exact", lane: .backlog, plan: .pending, revision: 1, succeeds: false),
+            Scenario(name: "no plan omitted", lane: .needsReview, plan: .none, revision: nil, succeeds: true),
+            Scenario(name: "no plan present", lane: .needsReview, plan: .none, revision: 1, succeeds: false),
+            Scenario(name: "loaded plan omitted", lane: .needsReview, plan: .pending, revision: nil, succeeds: false),
+            Scenario(name: "loaded plan stale", lane: .needsReview, plan: .pending, revision: 2, succeeds: false),
+            Scenario(name: "pending exact", lane: .needsReview, plan: .pending, revision: 1, succeeds: false),
             Scenario(name: "completed exact", lane: .needsReview, plan: .completed, revision: 2, succeeds: true),
             Scenario(name: "terminal", lane: .accepted, plan: .none, revision: nil, succeeds: false),
         ]
@@ -972,6 +972,12 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         ]
 
         for (index, command) in commands.enumerated() {
+            if index == 7 {
+                try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed review-ready work") { connection in
+                    try Self.seedGovernedAssignment("RR-04", phase: "phase-2", connection: connection)
+                    try connection.execute("UPDATE tickets SET lane='in_progress' WHERE id='RR-04'")
+                }
+            }
             let result = await fixture.dispatcher.dispatch(.init(
                 version: 1,
                 requestID: UUID(uuidString: String(format: "22222222-2222-4222-8222-%012d", index + 1))!,
@@ -1194,6 +1200,9 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
 
     func testDifferingRequestIDReuseFailsWithoutChangingOriginalMutation() async throws {
         let fixture = try await makeFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed started work") {
+            try $0.execute("UPDATE tickets SET lane='needs_review' WHERE id='RR-03'")
+        }
         let requestID = UUID(uuidString: "55555555-5555-4555-8555-555555555555")!
         let accepted = AgentCommandEnvelope(
             version: 1,
@@ -1410,6 +1419,9 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
             if seedDelivery {
                 try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
                 try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-03', 'project-1', 'phase-1', 'Typed bridge', 'backlog')")
+                // Test-only structural precondition: bridge behavior is exercised
+                // against a valid plan; these rows do not grant legacy continuation.
+                try Self.seedGovernedAssignment("RR-03", phase: "phase-1", connection: connection)
             }
             try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('verified-thread', 'project-1', 'running', '2026-08-23T12:00:00Z')")
             try connection.execute("INSERT INTO review_items (id, project_id, kind, summary) VALUES ('import-review-resolve', 'project-1', 'import', 'Resolve me')")
@@ -1435,6 +1447,7 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
                 "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, 'project-1', 'phase-1', 'Task 4A matrix', ?)",
                 bindings: [.text(ticketID), .text(lane.rawValue)]
             )
+            try Self.seedGovernedAssignment(ticketID, phase: "phase-1", connection: connection)
             guard plan != .none else { return }
             _ = try TicketTaskPlanningPolicy.revisePlan(
                 projectID: .init(rawValue: "project-1"),
@@ -1455,6 +1468,20 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
                 )
             }
         }
+    }
+
+    private static func seedGovernedAssignment(_ ticket: String, phase: String, connection: SQLiteConnection) throws {
+        let goal = "fixture-goal-" + phase
+        try connection.execute("""
+            INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at,activated_at)
+            VALUES ('project-1',?,?,'Fixture goal','Complete fixture','active',0,'2026-09-02T12:00:00Z','2026-09-02T12:00:00Z','2026-09-02T12:00:00Z')
+            ON CONFLICT(project_id,id) DO NOTHING
+            """, bindings: [.text(phase), .text(goal)])
+        try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id,phase_id,goal_id,sort_order,criterion) VALUES ('project-1',?,?,0,'Delivered') ON CONFLICT DO NOTHING",
+                               bindings: [.text(phase), .text(goal)])
+        try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('project-1',?,?,?)",
+                               bindings: [.text(phase), .text(goal), .text(ticket)])
+        try connection.execute("UPDATE phase_plans SET state='ready',ready_revision=revision,finalized_at='2026-09-02T12:00:00Z' WHERE project_id='project-1' AND phase_id=?", bindings: [.text(phase)])
     }
 
     private func counts(_ store: DeliveryStore) async throws -> [Int64] {

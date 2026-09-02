@@ -272,9 +272,11 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
 
         let projectID = project.rawValue
         let rootPath = preview.sourceRoot.path
+        let auditEventID = AuditEventID(rawValue: UUID().uuidString)
         try await store.transact(
             actor: .init(id: "release-radar-importer"),
             reason: "Import recognized Rekon delivery records",
+            auditEventID: auditEventID,
             auditScope: .init(projectID: project, entityType: .project, entityID: projectID)
         ) { connection in
             guard try connection.scalarInt(
@@ -324,9 +326,12 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     }
                     continue
                 }
-                try connection.execute(
-                    "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?)",
-                    bindings: [.text(phase.id.rawValue), .text(projectID), .text(phase.name)]
+                try DeliveryPlanningPolicy.upsertPhase(
+                    projectID: project,
+                    phaseID: phase.id,
+                    name: phase.name,
+                    mode: .legacyUnassessedImport,
+                    connection: connection
                 )
                 availablePhaseIDs.insert(phase.id)
             }
@@ -357,8 +362,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                 ) {
                     if existing["project_id"] == .text(projectID),
                        existing["phase_id"] == .text(ticket.phaseID.rawValue),
-                       existing["outcome"] == .text(ticket.outcome),
-                       existing["lane"] == .text(ticket.lane.rawValue) {
+                       existing["outcome"] == .text(ticket.outcome) {
                         availableTicketIDs.insert(ticket.id)
                     } else {
                         reviews.append(.conflict(
@@ -368,30 +372,25 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                     }
                     continue
                 }
-                let stagedLane = ticket.lane == .accepted ? TicketLane.backlog : ticket.lane
-                try connection.execute(
-                    "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",
-                    bindings: [
-                        .text(ticket.id.rawValue),
-                        .text(projectID),
-                        .text(ticket.phaseID.rawValue),
-                        .text(ticket.outcome),
-                        .text(stagedLane.rawValue),
-                    ]
+                try DeliveryPlanningPolicy.upsertTicket(
+                    projectID: project,
+                    ticketID: ticket.id,
+                    phaseID: ticket.phaseID,
+                    outcome: ticket.outcome,
+                    lane: .backlog,
+                    auditEventID: auditEventID,
+                    connection: connection
                 )
-                if ticket.lane == .accepted {
-                    try TicketTaskPlanningPolicy.assertCanAcceptTicket(
-                        projectID: project,
-                        ticketID: ticket.id,
-                        expectedRevision: nil,
-                        connection: connection
-                    )
-                    try connection.execute(
-                        "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
-                        bindings: [.text(TicketLane.accepted.rawValue), .text(projectID), .text(ticket.id.rawValue)]
-                    )
-                }
                 availableTicketIDs.insert(ticket.id)
+            }
+
+            for ticket in preview.tickets where availableTicketIDs.contains(ticket.id) && ticket.lane != .backlog {
+                reviews.append(.init(
+                    sourceID: ticket.id.rawValue,
+                    ticketID: ticket.id,
+                    kind: .sourceLane,
+                    summary: "Task \(ticket.id.rawValue) has source lane \(ticket.lane.rawValue); imported work starts in Backlog and needs owner reconciliation."
+                ))
             }
 
             var phaseDependencyAdjacency = try Self.loadDependencyAdjacency(
