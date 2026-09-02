@@ -23,8 +23,11 @@ verified. The owner confirmed ordinary lower-row scrolling in the stacked
 viewport and explicitly deferred its height/scroll-affordance improvements to
 [Issue #9](https://github.com/joeroberts/release-radar/issues/9). This is owner
 observation, not physical scrolling verification by the independent reviewer.
-Task 7A remains Pending at plan revision 11 until first commit/push and its
-completion gate; no presentation repair is included here.
+Independent live acceptance found no Required findings. After first commit
+`ac6197c` was pushed and remote-verified, Task 7A completed at revision 12 and
+the original phase was restored with exact audited replay. Final catalog
+acceptance/replay and complete readback passed. Git handoff and exact live
+results are recorded in the ledger; no presentation repair is included here.
 Current state and verification are recorded
 in the existing [progress ledger](../../progress.md).
 The [bounded runbook](task-7a-install-bootstrap-runbook.md) adapts the existing

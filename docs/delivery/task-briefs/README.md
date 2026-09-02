@@ -154,7 +154,7 @@ Leaf: no child collections.
 | 709a940d-b43d-484c-859d-8c88c0592f27 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md) | document | nonAuthoritative | completed | none | none |
 | 9bb82f9f-8b26-45ff-b2da-f4a3a19f670c | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md) | document | nonAuthoritative | completed | none | none |
 | bf4b1c0f-ec77-4641-b23d-efdfc5cbe467 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md) | document | nonAuthoritative | completed | none | none |
-| bc74c88a-cc63-4deb-8b2b-63ed254a476f | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md) | document | supporting | active | none | none |
+| bc74c88a-cc63-4deb-8b2b-63ed254a476f | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md) | document | nonAuthoritative | completed | none | none |
 | 7856796b-eb43-47cd-b897-20234cd94131 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md) | document | supporting | active | none | none |
 
 ### Children
