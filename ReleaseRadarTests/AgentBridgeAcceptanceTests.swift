@@ -8,6 +8,315 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         let release = DispatchSemaphore(value: 0)
     }
 
+    func testTicketTaskCommandsDecodeAndReturnTheCommittedRevision() async throws {
+        let fixture = try await makeFixture()
+        let commands = [
+            #"{"reviseTicketTaskPlan":{"ticketID":"RR-03","additions":[{"id":"task-1","label":"Task 1","title":"Implement command","sortOrder":0}]}}"#,
+            #"{"completeTicketTask":{"ticketID":"RR-03","taskID":"task-1","expectedRevision":1}}"#,
+        ]
+        for (index, json) in commands.enumerated() {
+            let command = try XCTUnwrap(try? JSONDecoder().decode(AgentCommand.self, from: Data(json.utf8)), "The task command must decode")
+            let envelope = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+                                                assertedThreadID: "task-4b", reason: "Deliver task command", command: command)
+            let result = await fixture.dispatcher.dispatch(envelope)
+            XCTAssertNil(result.error)
+            let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result)) as! [String: Any]
+            XCTAssertEqual(object["ticketTaskPlanRevision"] as? Int, index + 1)
+            let replay = await fixture.dispatcher.dispatch(envelope)
+            XCTAssertEqual(replay, result)
+            let persisted = try await fixture.store.read { c in
+                (try c.scalarInt("SELECT revision FROM ticket_task_plans WHERE ticket_id = 'RR-03'"),
+                 try c.scalarInt("SELECT COUNT(*) FROM audit_events WHERE entity_type = 'ticket_task_plan'"),
+                 try c.scalarInt("SELECT COUNT(*) FROM agent_command_requests"))
+            }
+            XCTAssertEqual(persisted.0, Int64(index + 1))
+            XCTAssertEqual(persisted.1, Int64(index + 1))
+            XCTAssertEqual(persisted.2, Int64(index + 1))
+        }
+    }
+
+    func testTaskPlanRevisionsPersistAuditReceiptsAndReplayAcrossRelaunch() async throws {
+        let f = try await makeFixture()
+        let commands: [AgentCommand] = [
+            .reviseTicketTaskPlan(ticketID: "RR-03", additions: [taskDraft("one"), taskDraft("two", order: 1)]),
+            .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1,
+                                  additions: [taskDraft("three", order: 2)],
+                                  definitionRevisions: [.init(id: .init(rawValue: "one"), title: "Revise definition", sortOrder: 3)],
+                                  supersededTaskIDs: [.init(rawValue: "two")]),
+            .completeTicketTask(ticketID: "RR-03", taskID: "one", expectedRevision: 2),
+            .completeTicketTask(ticketID: "RR-03", taskID: "three", expectedRevision: 3),
+        ]
+        var requests: [(AgentCommandEnvelope, AgentCommandResult)] = []
+        for (index, command) in commands.enumerated() {
+            XCTAssertEqual(try JSONDecoder().decode(AgentCommand.self, from: JSONEncoder().encode(command)), command)
+            let request = taskEnvelope(f, command)
+            let result = await f.dispatcher.dispatch(request)
+            XCTAssertNil(result.error)
+            XCTAssertEqual(result.ticketTaskPlanRevision, Int64(index + 1))
+            let stored = try await f.store.read { c in
+                let row = try c.row("SELECT result_data FROM agent_command_requests WHERE request_id = ?", bindings: [.text(request.requestID.uuidString)])
+                guard case let .blob(data)? = row?["result_data"] else { throw ActivePhaseTestError.missingTextValue }
+                let audit = try c.row("SELECT actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id FROM audit_events WHERE id = ?", bindings: [.text(result.auditEventID!.rawValue)])
+                return (try JSONDecoder().decode(AgentCommandResult.self, from: data), audit)
+            }
+            XCTAssertEqual(stored.0, result)
+            XCTAssertEqual(stored.1?["actor_id"], .text("release-radar-agent"))
+            XCTAssertEqual(stored.1?["thread_id"], .text("task-4b"))
+            XCTAssertEqual(stored.1?["thread_attribution"], .text("asserted"))
+            XCTAssertEqual(stored.1?["project_id"], .text("project-1"))
+            XCTAssertEqual(stored.1?["entity_type"], .text("ticket_task_plan"))
+            XCTAssertEqual(stored.1?["entity_id"], .text("RR-03"))
+            requests.append((request, result))
+        }
+        let before = try await Self.task4AAcceptanceSnapshot(f.store)
+        let reopened = AgentCommandDispatcher(store: DeliveryStore(databaseURL: f.databaseURL), projectRegistry: f.registry)
+        for (request, result) in requests {
+            let replay = await reopened.dispatch(request)
+            XCTAssertEqual(replay, result)
+            let reused = AgentCommandEnvelope(version: 1, requestID: request.requestID, projectRoot: request.projectRoot,
+                                               assertedThreadID: request.assertedThreadID, reason: "Changed intent", command: request.command)
+            let rejection = await reopened.dispatch(reused)
+            XCTAssertEqual(rejection.error, .requestIDReused)
+        }
+        let after = try await Self.task4AAcceptanceSnapshot(f.store)
+        XCTAssertEqual(after, before)
+        XCTAssertEqual(after.ticketLanes["RR-03"], "backlog")
+        let history = try await f.store.read { c in
+            try Self.textRows(c, sql: "SELECT id || '|' || label || '|' || completion || '|' || lifecycle AS value FROM ticket_tasks ORDER BY id")
+        }
+        XCTAssertEqual(history, ["one|one|completed|active", "three|three|completed|active", "two|two|pending|superseded"])
+    }
+
+    func testTaskCommandRejectionsHaveTypedErrorsAndNoEffects() async throws {
+        let f = try await makeFixture()
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed foreign ticket") { c in
+            try c.execute("INSERT INTO phases (id, project_id, name) VALUES ('foreign-phase', 'project-2', 'Foreign')")
+            try c.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('FOREIGN', 'project-2', 'foreign-phase', 'Foreign', 'backlog')")
+        }
+        for ticket in ["missing", "FOREIGN"] {
+            let before = try await Self.task4AAcceptanceSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, .reviseTicketTaskPlan(ticketID: ticket, additions: [taskDraft("one")])))
+            XCTAssertEqual(result.error, .invalidTicketTaskMutation("ticketNotFound"))
+            let after = try await Self.task4AAcceptanceSnapshot(f.store)
+            XCTAssertEqual(after, before)
+        }
+        let missingPlan = await f.dispatcher.dispatch(taskEnvelope(f, .completeTicketTask(ticketID: "RR-03", taskID: "one", expectedRevision: 1)))
+        XCTAssertEqual(missingPlan.error, .ticketTaskPlanNotFound)
+        let created = await f.dispatcher.dispatch(taskEnvelope(f, .reviseTicketTaskPlan(ticketID: "RR-03", additions: [taskDraft("one"), taskDraft("two") ])))
+        XCTAssertNil(created.error)
+        let cases: [(AgentCommand, AgentCommandError)] = [
+            (.reviseTicketTaskPlan(ticketID: "RR-03", additions: [taskDraft("new")]), .ticketTaskPlanAlreadyExists),
+            (.completeTicketTask(ticketID: "RR-03", taskID: "two", expectedRevision: 2), .ticketTaskPlanRevisionConflict(expected: 2, current: 1)),
+            (.reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 2, additions: [taskDraft("new")]), .ticketTaskPlanRevisionConflict(expected: 2, current: 1)),
+            (.completeTicketTask(ticketID: "RR-03", taskID: "missing", expectedRevision: 1), .ticketTaskNotFound(.init(rawValue: "missing"))),
+            (.reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1), .invalidTicketTaskMutation("emptyOperationSet")),
+            (.reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1, supersededTaskIDs: [.init(rawValue: "one"), .init(rawValue: "two")]), .ticketTaskReplacementRequired),
+        ]
+        for (command, expected) in cases {
+            let before = try await Self.task4AAcceptanceSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            XCTAssertEqual(result.error, expected)
+            XCTAssertNil(result.auditEventID)
+            XCTAssertNil(result.ticketTaskPlanRevision)
+            XCTAssertEqual(try JSONDecoder().decode(AgentCommandResult.self, from: JSONEncoder().encode(result)), result)
+            let after = try await Self.task4AAcceptanceSnapshot(f.store)
+            XCTAssertEqual(after, before)
+        }
+        let invalidOperations: [AgentCommand] = [
+            .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1, additions: [taskDraft("duplicate"), taskDraft("duplicate")]),
+            .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1, definitionRevisions: [.init(id: .init(rawValue: "one"), title: "Changed", sortOrder: nil)], supersededTaskIDs: [.init(rawValue: "one")]),
+            .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1, definitionRevisions: [.init(id: .init(rawValue: "one"), title: "Implement one", sortOrder: nil)]),
+            .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1, additions: [taskDraft("one")]),
+        ]
+        for command in invalidOperations {
+            let before = try await Self.task4AAcceptanceSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            guard case .invalidTicketTaskMutation? = result.error else { return XCTFail("Expected task rejection: \(result)") }
+            let after = try await Self.task4AAcceptanceSnapshot(f.store)
+            XCTAssertEqual(after, before)
+        }
+        let complete = await f.dispatcher.dispatch(taskEnvelope(f, .completeTicketTask(ticketID: "RR-03", taskID: "one", expectedRevision: 1)))
+        XCTAssertEqual(complete.ticketTaskPlanRevision, 2)
+        let before = try await Self.task4AAcceptanceSnapshot(f.store)
+        for command in [AgentCommand.completeTicketTask(ticketID: "RR-03", taskID: "one", expectedRevision: 2),
+                        .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 2, definitionRevisions: [.init(id: .init(rawValue: "one"), title: "Rewrite history", sortOrder: nil)])] {
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            XCTAssertEqual(result.error, .ticketTaskImmutable(.init(rawValue: "one")))
+        }
+        let after = try await Self.task4AAcceptanceSnapshot(f.store)
+        XCTAssertEqual(after, before)
+    }
+
+    func testTaskCommandBoundsAtAggregateAndEncodedByteLimits() async throws {
+        for count in [63, 64, 65] {
+            let f = try await makeFixture()
+            let command = AgentCommand.reviseTicketTaskPlan(ticketID: "RR-03", additions: (0..<count).map { taskDraft("task-\($0)") })
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            XCTAssertEqual(result.error == nil, count <= 64)
+            let rows = try await f.store.read { try $0.scalarInt("SELECT COUNT(*) FROM ticket_tasks") }
+            XCTAssertEqual(rows, count <= 64 ? Int64(count) : 0)
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        for limit in [65_535, 65_536, 65_537] {
+            let f = try await makeFixture()
+            var additions = (0..<16).map { taskDraft("task-\($0)", title: String(repeating: "x", count: 4_096)) }
+            let full = AgentCommand.reviseTicketTaskPlan(ticketID: "RR-03", additions: additions)
+            let excess = try encoder.encode(full).count - limit
+            XCTAssertTrue((1..<4_096).contains(excess))
+            additions[15] = taskDraft("task-15", title: String(repeating: "x", count: 4_096 - excess))
+            let command = AgentCommand.reviseTicketTaskPlan(ticketID: "RR-03", additions: additions)
+            XCTAssertEqual(try encoder.encode(command).count, limit)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            XCTAssertEqual(result.error == nil, limit <= 65_536)
+            let rows = try await f.store.read { try $0.scalarInt("SELECT COUNT(*) FROM ticket_tasks") }
+            XCTAssertEqual(rows, limit <= 65_536 ? 16 : 0)
+        }
+    }
+
+    func testTaskCommandUTF8BoundsAndMalformedTypedFieldsRejectWithoutEffects() async throws {
+        for multibyte in [false, true] {
+            for field in ["id", "label", "title"] {
+                let maximum = field == "title" ? 4_096 : 256
+                for bytes in [maximum - 1, maximum, maximum + 1] {
+                    let f = try await makeFixture()
+                    let value = multibyte ? String(repeating: "é", count: bytes / 2) + (bytes % 2 == 1 ? "a" : "") : String(repeating: "a", count: bytes)
+                    XCTAssertEqual(value.utf8.count, bytes)
+                    let draft = TicketTaskDraft(id: .init(rawValue: field == "id" ? value : "one"), label: field == "label" ? value : "One", title: field == "title" ? value : "Implement task", sortOrder: 0)
+                    let result = await f.dispatcher.dispatch(taskEnvelope(f, .reviseTicketTaskPlan(ticketID: "RR-03", additions: [draft])))
+                    XCTAssertEqual(result.error == nil, bytes <= maximum, "\(field) \(bytes) multibyte=\(multibyte)")
+                    let rows = try await f.store.read { try $0.scalarInt("SELECT COUNT(*) FROM ticket_tasks") }
+                    XCTAssertEqual(rows, bytes <= maximum ? 1 : 0)
+                }
+            }
+        }
+        let f = try await makeFixture()
+        let before = try await Self.task4AAcceptanceSnapshot(f.store)
+        for command in [AgentCommand.completeTicketTask(ticketID: "RR-03", taskID: "one", expectedRevision: 0),
+                        .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: -1, additions: [taskDraft("one")]),
+                        .reviseTicketTaskPlan(ticketID: "RR-03\0suffix", additions: [taskDraft("one")]),
+                        .reviseTicketTaskPlan(ticketID: "RR-03", additions: [taskDraft("one", order: -1)])] {
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            XCTAssertNotNil(result.error)
+        }
+        let denied = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: f.projectRoot.deletingLastPathComponent().path,
+                                         reason: "Reject unauthorized root", command: .reviseTicketTaskPlan(ticketID: "RR-03", additions: [taskDraft("one")]))
+        let result = await f.dispatcher.dispatch(denied)
+        XCTAssertEqual(result.error, .unauthorizedProjectRoot)
+        let after = try await Self.task4AAcceptanceSnapshot(f.store)
+        XCTAssertEqual(after, before)
+    }
+
+    func testTaskMutationsRollBackAfterLateReceiptFailure() async throws {
+        for kind in 0..<3 {
+            let f = try await makeFixture()
+            if kind > 0 {
+                let result = await f.dispatcher.dispatch(taskEnvelope(f, .reviseTicketTaskPlan(ticketID: "RR-03", additions: [taskDraft("one")])))
+                XCTAssertNil(result.error)
+            }
+            try await f.store.transact(actor: .init(id: "fixture"), reason: "Inject late failure") { c in
+                try c.execute("CREATE TRIGGER task4b_fail BEFORE INSERT ON agent_command_requests BEGIN SELECT RAISE(ABORT, 'Injected late failure'); END")
+            }
+            let before = try await Self.task4AAcceptanceSnapshot(f.store)
+            let commands: [AgentCommand] = [.reviseTicketTaskPlan(ticketID: "RR-03", additions: [taskDraft("one")]),
+                .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1, additions: [taskDraft("two")]),
+                .completeTicketTask(ticketID: "RR-03", taskID: "one", expectedRevision: 1)]
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, commands[kind]))
+            guard case .internalFailure? = result.error else { return XCTFail("Expected injected late failure: \(result)") }
+            XCTAssertNil(result.ticketTaskPlanRevision)
+            let after = try await Self.task4AAcceptanceSnapshot(f.store)
+            XCTAssertEqual(after, before)
+        }
+    }
+
+    func testLegacyResultJSONOmitsTaskRevision() throws {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        let data = Data(#"{"auditEventID":"audit","entityIDs":["ticket"]}"#.utf8)
+        let result = try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        XCTAssertNil(result.ticketTaskPlanRevision)
+        XCTAssertEqual(try encoder.encode(result), data)
+    }
+
+    func testConcurrentAcceptanceAndTaskCommandsCommitOneCoherentWinner() async throws {
+        for scenario in 0..<5 {
+            let f = try await makeFixture()
+            let initialPlan: Task4APlanState = scenario == 0 ? .none : scenario == 1 ? .completed : .pending
+            try await seedAcceptanceTicket(store: f.store, ticketID: "RACE", lane: .backlog, plan: initialPlan)
+            let revision: Int64 = scenario == 1 ? 2 : 1
+            let first: AgentCommand = scenario >= 3
+                ? (scenario == 3
+                   ? .reviseTicketTaskPlan(ticketID: "RACE", expectedRevision: revision, additions: [taskDraft("left")])
+                   : .completeTicketTask(ticketID: "RACE", taskID: "task-1", expectedRevision: revision))
+                : .transitionTicket(ticketID: "RACE", lane: .accepted, ticketTaskPlanRevision: scenario == 0 ? nil : revision)
+            let second: AgentCommand = switch scenario {
+            case 0: .reviseTicketTaskPlan(ticketID: "RACE", additions: [taskDraft("right")])
+            case 1: .reviseTicketTaskPlan(ticketID: "RACE", expectedRevision: revision, additions: [taskDraft("right")], supersededTaskIDs: [.init(rawValue: "task-1")])
+            case 2, 4: .completeTicketTask(ticketID: "RACE", taskID: "task-1", expectedRevision: revision)
+            default: .reviseTicketTaskPlan(ticketID: "RACE", expectedRevision: revision, additions: [taskDraft("right")])
+            }
+            let before = try await Self.task4AAcceptanceSnapshot(f.store)
+            let gate = StoreQueueGate()
+            let store = f.store
+            let blocker = Task.detached {
+                try await store.read { _ in
+                    gate.entered.signal()
+                    guard gate.release.wait(timeout: .now() + 5) == .success else { throw ActivePhaseTestError.missingTextValue }
+                }
+            }
+            XCTAssertEqual(gate.entered.wait(timeout: .now() + 2), .success)
+            let other = AgentCommandDispatcher(store: store, projectRegistry: f.registry)
+            let firstRequest = taskEnvelope(f, first), secondRequest = taskEnvelope(f, second)
+            async let left = f.dispatcher.dispatch(firstRequest)
+            async let right = other.dispatch(secondRequest)
+            gate.release.signal()
+            let results = await [left, right]
+            try await blocker.value
+            XCTAssertEqual(results.filter { $0.error == nil }.count, 1, "scenario \(scenario): \(results)")
+            let winner = try XCTUnwrap(results.first { $0.error == nil })
+            let loser = try XCTUnwrap(results.first { $0.error != nil })
+            XCTAssertNil(loser.auditEventID)
+            XCTAssertNil(loser.ticketTaskPlanRevision)
+            let after = try await Self.task4AAcceptanceSnapshot(store)
+            XCTAssertEqual(after.auditCount, before.auditCount + 1)
+            XCTAssertEqual(after.requestCount, before.requestCount + 1)
+            XCTAssertEqual(after.phasePlanRows, before.phasePlanRows)
+            XCTAssertEqual(after.goalRows, before.goalRows)
+            XCTAssertEqual(after.goalAssignmentRows, before.goalAssignmentRows)
+            XCTAssertEqual(after.occurrenceRows, before.occurrenceRows)
+            XCTAssertEqual(after.notificationRows, before.notificationRows)
+            let state = try await store.read { c in
+                (try c.scalarInt("SELECT revision FROM ticket_task_plans WHERE ticket_id = 'RACE'"),
+                 try c.scalarInt("SELECT COUNT(*) FROM ticket_tasks WHERE ticket_id = 'RACE'"),
+                 try c.scalarInt("SELECT COUNT(*) FROM ticket_tasks WHERE ticket_id = 'RACE' AND lifecycle = 'active' AND completion = 'pending'"),
+                 try c.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id = ?", bindings: [.text((results[0].error == nil ? secondRequest : firstRequest).requestID.uuidString)]))
+            }
+            XCTAssertEqual(state.3, 0)
+            if winner.ticketTaskPlanRevision == nil {
+                XCTAssertEqual(after.ticketLanes["RACE"], "accepted")
+                XCTAssertEqual(state.0, scenario == 0 ? nil : revision)
+                XCTAssertEqual(state.1, scenario == 0 ? 0 : 1)
+            } else {
+                XCTAssertEqual(after.ticketLanes["RACE"], "backlog")
+                XCTAssertEqual(state.0, scenario == 0 ? 1 : revision + 1)
+                XCTAssertEqual(state.1, scenario == 0 || scenario == 2 || scenario == 4 ? 1 : 2)
+                XCTAssertEqual(state.2, scenario == 2 || scenario == 4 ? 0 : scenario == 3 ? 2 : 1)
+            }
+            // Replaying the loser after observing the winner still cannot
+            // acquire a receipt or change the winning transaction's state.
+            let rejected = await other.dispatch(results[0].error == nil ? secondRequest : firstRequest)
+            XCTAssertNotNil(rejected.error)
+            let afterRetry = try await Self.task4AAcceptanceSnapshot(store)
+            XCTAssertEqual(afterRetry, after)
+        }
+    }
+
+    private func taskDraft(_ id: String, title: String? = nil, order: Int = 0) -> TicketTaskDraft {
+        .init(id: .init(rawValue: id), label: id, title: title ?? "Implement \(id)", sortOrder: order)
+    }
+
+    private func taskEnvelope(_ f: Fixture, _ command: AgentCommand) -> AgentCommandEnvelope {
+        .init(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path, assertedThreadID: "task-4b", reason: "Deliver task command", command: command)
+    }
+
     func testAcceptedUpsertRejectsAbsentAndExistingTicketsBeforeEffects() async throws {
         enum Scenario {
             case absent

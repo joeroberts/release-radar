@@ -34,6 +34,8 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case upsertPhase(phaseID: String, name: String)
     case upsertTicket(ticketID: String, phaseID: String, outcome: String, lane: TicketLane)
     case transitionTicket(ticketID: String, lane: TicketLane, ticketTaskPlanRevision: Int64? = nil)
+    case reviseTicketTaskPlan(ticketID: String, expectedRevision: Int64? = nil, additions: [TicketTaskDraft]? = nil, definitionRevisions: [TicketTaskDefinitionRevision]? = nil, supersededTaskIDs: [TicketTaskID]? = nil)
+    case completeTicketTask(ticketID: String, taskID: String, expectedRevision: Int64)
     case setActivePhase(phaseID: String)
     case setDependency(id: String, kind: DependencyKind, subjectID: String, dependsOnID: String)
     case recordBlocker(id: String, ticketID: String, summary: String)
@@ -62,6 +64,14 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case requestIDReused
     case appUnavailable
     case documentation(DocumentationOperationError)
+    case ticketTaskPlanNotFound
+    case ticketTaskPlanAlreadyExists
+    case ticketTaskPlanRevisionConflict(expected: Int64?, current: Int64)
+    case ticketTaskNotFound(TicketTaskID)
+    case ticketTaskImmutable(TicketTaskID)
+    case ticketTaskIncomplete(pendingTaskIDs: [TicketTaskID])
+    case ticketTaskReplacementRequired
+    case invalidTicketTaskMutation(String)
     case outcomeUnknown
     case internalFailure(String)
 }
@@ -71,12 +81,14 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let auditEventID: AuditEventID?
     public let error: AgentCommandError?
     public let inventory: EvidenceInventory?
+    public let ticketTaskPlanRevision: Int64?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
         self.inventory = inventory
+        self.ticketTaskPlanRevision = ticketTaskPlanRevision
     }
 }
 

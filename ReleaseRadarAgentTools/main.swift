@@ -197,6 +197,56 @@ private struct MCPServer {
         arguments: [String: Any]
     ) throws -> (String, [String: Any]) {
         switch tool {
+        case "release_radar_revise_ticket_task_plan":
+            try requireTaskFields(arguments, allowed: ["ticketID", "expectedRevision", "additions", "definitionRevisions", "supersededTaskIDs"])
+            var value: [String: Any] = ["ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256)]
+            if arguments["expectedRevision"] != nil {
+                value["expectedRevision"] = try positiveRevision("expectedRevision", in: arguments)
+            }
+            var operationCount = 0
+            for key in ["additions", "definitionRevisions"] {
+                guard let raw = arguments[key] else { continue }
+                guard let records = raw as? [[String: Any]] else {
+                    throw ToolFailure.invalidRequest("\(key) must be an array of task records")
+                }
+                operationCount += records.count
+                let allowed: Set<String> = key == "additions" ? ["id", "label", "title", "sortOrder"] : ["id", "title", "sortOrder"]
+                value[key] = try records.map { record -> [String: Any] in
+                    guard Set(record.keys).isSubset(of: allowed) else {
+                        throw ToolFailure.invalidRequest("Unsupported fields in \(key) record")
+                    }
+                    var task: [String: Any] = ["id": try taskString("id", in: record, maximumBytes: 256)]
+                    if key == "additions" {
+                        task["label"] = try taskString("label", in: record, maximumBytes: 256)
+                    }
+                    if key == "additions" || record["title"] != nil {
+                        task["title"] = try taskString("title", in: record, maximumBytes: 4_096)
+                    }
+                    if key == "additions" || record["sortOrder"] != nil {
+                        let order = try integer("sortOrder", in: record)
+                        guard order >= 0 else { throw ToolFailure.invalidRequest("sortOrder must be a nonnegative integer") }
+                        task["sortOrder"] = order
+                    }
+                    return task
+                }
+            }
+            if let raw = arguments["supersededTaskIDs"] {
+                guard let ids = raw as? [String] else {
+                    throw ToolFailure.invalidRequest("supersededTaskIDs must be an array of task ID strings")
+                }
+                operationCount += ids.count
+                for id in ids { _ = try taskString("supersededTaskIDs", in: ["supersededTaskIDs": id], maximumBytes: 256) }
+                value["supersededTaskIDs"] = ids
+            }
+            guard operationCount <= 64 else { throw ToolFailure.invalidRequest("A task plan revision may contain at most 64 aggregate operations") }
+            return try boundedTaskCommand("reviseTicketTaskPlan", value: value)
+        case "release_radar_complete_ticket_task":
+            try requireTaskFields(arguments, allowed: ["ticketID", "taskID", "expectedRevision"])
+            return try boundedTaskCommand("completeTicketTask", value: [
+                "ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256),
+                "taskID": try taskString("taskID", in: arguments, maximumBytes: 256),
+                "expectedRevision": try positiveRevision("expectedRevision", in: arguments),
+            ])
         case "release_radar_bind_documentation_repository":
             return ("bindDocumentationRepository", ["target": try documentationTarget(arguments)])
         case "release_radar_accept_documentation_catalog":
@@ -293,6 +343,38 @@ private struct MCPServer {
         }
     }
 
+    private static func requireTaskFields(_ arguments: [String: Any], allowed: Set<String>) throws {
+        let envelopeFields: Set<String> = ["version", "requestID", "projectRoot", "reason", "assertedThreadID"]
+        guard Set(arguments.keys).isSubset(of: allowed.union(envelopeFields)) else {
+            throw ToolFailure.invalidRequest("Unsupported task command fields")
+        }
+    }
+
+    private static func taskString(_ key: String, in arguments: [String: Any], maximumBytes: Int) throws -> String {
+        let value = try string(key, in: arguments)
+        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              value.utf8.count <= maximumBytes else {
+            throw ToolFailure.invalidRequest("\(key) must be nonblank and at most \(maximumBytes) UTF-8 bytes")
+        }
+        return value
+    }
+
+    private static func positiveRevision(_ key: String, in arguments: [String: Any]) throws -> Int64 {
+        let value = try integer(key, in: arguments)
+        guard value > 0, let revision = Int64(exactly: value) else {
+            throw ToolFailure.invalidRequest("\(key) must be a positive Int64 integer")
+        }
+        return revision
+    }
+
+    private static func boundedTaskCommand(_ name: String, value: [String: Any]) throws -> (String, [String: Any]) {
+        let data = try JSONSerialization.data(withJSONObject: [name: value], options: [.sortedKeys])
+        guard data.count <= 65_536 else {
+            throw ToolFailure.invalidRequest("The sorted-key encoded task command exceeds 65,536 bytes")
+        }
+        return (name, value)
+    }
+
     private static func documentationTarget(_ arguments: [String: Any]) throws -> [String: Any] {
         guard let target = arguments["target"] as? [String: Any], Set(target.keys) == ["projectID", "rootID", "repositoryID", "catalogVersion", "catalogDigest"] else {
             throw ToolFailure.invalidRequest("target requires exact project/root/repository/version/digest")
@@ -344,6 +426,18 @@ private struct MCPServer {
         let adoption: [String: Any] = ["type": "array", "minItems": 1, "maxItems": 128,
             "items": ["type": "object", "additionalProperties": false, "required": ["evidenceID", "expectedPath", "expectedTicketID", "artifactID"],
                       "properties": ["evidenceID": string, "expectedPath": string, "expectedTicketID": ["type": ["string", "null"]], "artifactID": string]]]
+        let taskID: [String: Any] = ["type": "string", "minLength": 1, "maxLength": 256, "description": "Nonblank, at most 256 UTF-8 bytes."]
+        let taskTitle: [String: Any] = ["type": "string", "minLength": 1, "maxLength": 4_096, "description": "Nonblank, at most 4,096 UTF-8 bytes."]
+        let taskOrder: [String: Any] = ["type": "integer", "minimum": 0, "maximum": Int.max]
+        let taskRevision: [String: Any] = ["type": "integer", "minimum": 1, "maximum": Int64.max]
+        let taskDraft: [String: Any] = [
+            "type": "object", "additionalProperties": false, "required": ["id", "label", "title", "sortOrder"],
+            "properties": ["id": taskID, "label": taskID, "title": taskTitle, "sortOrder": taskOrder],
+        ]
+        let taskDefinitionRevision: [String: Any] = [
+            "type": "object", "additionalProperties": false, "required": ["id"],
+            "properties": ["id": taskID, "title": taskTitle, "sortOrder": taskOrder],
+        ]
         return [
             ["name": "release_radar_inventory_evidence", "description": "Read a complete authorized project evidence inventory. Oversized or unavailable inventory fails closed; no rows are silently omitted.",
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
@@ -420,13 +514,32 @@ private struct MCPServer {
                 required: ["reviewItemID"],
                 fields: ["reviewItemID": string]
             ),
+            definition(
+                "release_radar_revise_ticket_task_plan",
+                required: ["ticketID"],
+                fields: [
+                    "ticketID": taskID,
+                    "expectedRevision": taskRevision,
+                    "additions": ["type": "array", "maxItems": 64, "items": taskDraft],
+                    "definitionRevisions": ["type": "array", "maxItems": 64, "items": taskDefinitionRevision],
+                    "supersededTaskIDs": ["type": "array", "maxItems": 64, "items": taskID],
+                ],
+                description: "Revise a ticket task plan with at most 64 aggregate operations and a sorted-key encoded command of at most 65,536 bytes. Omitted operation arrays make no changes. New tasks are Active and Pending."
+            ),
+            definition(
+                "release_radar_complete_ticket_task",
+                required: ["ticketID", "taskID", "expectedRevision"],
+                fields: ["ticketID": taskID, "taskID": taskID, "expectedRevision": taskRevision],
+                description: "Complete one ticket task at the exact current plan revision and return the audited committed revision. This does not move the ticket or a Delivery Goal."
+            ),
         ]
     }
 
     private static func definition(
         _ name: String,
         required: [String],
-        fields: [String: [String: Any]]
+        fields: [String: [String: Any]],
+        description: String = "Apply one approved, audited Release Radar delivery mutation."
     ) -> [String: Any] {
         var properties: [String: Any] = [
             "version": ["type": "integer", "const": ReleaseRadarBridgeTransport.commandEnvelopeVersion],
@@ -438,7 +551,7 @@ private struct MCPServer {
         properties.merge(fields) { _, commandField in commandField }
         return [
             "name": name,
-            "description": "Apply one approved, audited Release Radar delivery mutation.",
+            "description": description,
             "inputSchema": [
                 "type": "object",
                 "properties": properties,

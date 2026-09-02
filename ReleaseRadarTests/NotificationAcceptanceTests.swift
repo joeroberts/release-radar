@@ -5,6 +5,54 @@ import XCTest
 @testable import ReleaseRadar
 
 final class NotificationAcceptanceTests: XCTestCase {
+    func testTaskOnlyCommandsLeaveAttentionNotificationsAndDeliveryContextUnchanged() async throws {
+        let f = try await makeFixture(firstDashboardOpened: true)
+        try await transition(.needsReview, requestID: UUID().uuidString, fixture: f)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed unrelated delivery context") { c in
+            try c.execute("INSERT INTO evidence (id, project_id, ticket_id, path, is_available) VALUES ('proof', 'project-1', 'RR-09', '/fixture/proof', 1)")
+            try c.execute("INSERT INTO review_items (id, project_id, ticket_id, kind, summary) VALUES ('review', 'project-1', 'RR-09', 'agent_request', 'Review delivery')")
+            try c.execute("UPDATE phase_plans SET state = 'draft', revision = 1 WHERE project_id = 'project-1' AND phase_id = 'phase-1'")
+            try c.execute("INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES ('project-1', 'phase-1', 'goal', 'Goal', 'Deliver', 'planned', 0, '2026-09-02T00:00:00Z', '2026-09-02T00:00:00Z')")
+        }
+        let before = try await task4ANotificationSnapshot(f.store)
+        let context = try await task4BDeliveryContext(f.store)
+        let commands: [AgentCommand] = [
+            .reviseTicketTaskPlan(ticketID: "RR-09", additions: [.init(id: .init(rawValue: "one"), label: "One", title: "Implement command", sortOrder: 0)]),
+            .reviseTicketTaskPlan(ticketID: "RR-09", expectedRevision: 1, additions: [.init(id: .init(rawValue: "two"), label: "Two", title: "Complete replacement", sortOrder: 0)], supersededTaskIDs: [.init(rawValue: "one")]),
+            .reviseTicketTaskPlan(ticketID: "RR-09", expectedRevision: 2, definitionRevisions: [.init(id: .init(rawValue: "two"), title: "Verify replacement", sortOrder: nil)]),
+            .completeTicketTask(ticketID: "RR-09", taskID: "two", expectedRevision: 3),
+        ]
+        for (index, command) in commands.enumerated() {
+            let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path, reason: "Change task only", command: command)
+            let result = await f.dispatcher.dispatch(request)
+            XCTAssertNil(result.error)
+            XCTAssertEqual(result.ticketTaskPlanRevision, Int64(index + 1))
+            let replay = await f.dispatcher.dispatch(request)
+            XCTAssertEqual(replay, result)
+            let after = try await task4ANotificationSnapshot(f.store)
+            XCTAssertEqual(after.lane, before.lane)
+            XCTAssertEqual(after.isOccurrenceActive, before.isOccurrenceActive)
+            XCTAssertEqual(after.occurrenceGeneration, before.occurrenceGeneration)
+            XCTAssertEqual(after.notificationCount, before.notificationCount)
+            let currentContext = try await task4BDeliveryContext(f.store)
+            XCTAssertEqual(currentContext, context)
+        }
+        let complete = try await task4ANotificationSnapshot(f.store)
+        let rejection = await f.dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path, reason: "Reject repeated completion", command: .completeTicketTask(ticketID: "RR-09", taskID: "two", expectedRevision: 4)))
+        XCTAssertNotNil(rejection.error)
+        let unchanged = try await task4ANotificationSnapshot(f.store)
+        XCTAssertEqual(unchanged, complete)
+    }
+
+    private func task4BDeliveryContext(_ store: DeliveryStore) async throws -> [String] {
+        try await store.read { c in
+            [try c.scalarText("SELECT state || '|' || revision || '|' || COALESCE(ready_revision, -1) FROM phase_plans WHERE phase_id = 'phase-1'") ?? "missing",
+             try c.scalarText("SELECT title || '|' || outcome || '|' || lifecycle FROM delivery_goals WHERE id = 'goal'") ?? "missing",
+             try c.scalarText("SELECT path || '|' || ticket_id || '|' || is_available FROM evidence WHERE id = 'proof'") ?? "missing",
+             try c.scalarText("SELECT kind || '|' || summary || '|' || status FROM review_items WHERE id = 'review'") ?? "missing"]
+        }
+    }
+
     func testAcceptedUpsertCreatesNoAttentionNotificationAuditOrReceiptEffects() async throws {
         for ticketID in ["RR-NEW", "RR-09"] {
             let fixture = try await makeFixture(firstDashboardOpened: true)
