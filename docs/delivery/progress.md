@@ -2,19 +2,12 @@
 
 ## Current outcome and authorization
 
-MDCP and RR-R10 through Task 9 are delivered. Task 9
-[PR #12](https://github.com/joeroberts/release-radar/pull/12) merged at
-`ea2f0f0a4cf36e7bf5de89ee030b5f98eafadf34`; the coordinator independently
-verified its merge, live completion and brief/catalog closeout. Its 39 focused
-tests and independent review (Required 0) remain terminal. The completed
-[Task 9 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-9-delivery-projections-brief.md)
-retains the delivery record.
-Task 7A custody is preserved in the
-[Historical Task 7A closeout](archive/2026-09-02-rr-r10-task-7a-closeout.md).
-
-Task 10 implementation and live completion are accepted on
-`codex/rr-r10-task-10`; its single integration is tracked by
-[PR #13](https://github.com/joeroberts/release-radar/pull/13).
+MDCP and RR-R10 through Task 10 are delivered.
+Task 10 [PR #13](https://github.com/joeroberts/release-radar/pull/13) merged at
+`609881fe79ec37180057fc6ed36b6ba49afaa8ab`; the coordinator verified its merge,
+exact live completion and canonical reconciliation.
+Task 11A is authorized and active on `codex/rr-r10-task-11a`, controlled by its
+[integration/staging brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md).
 The [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) remains
 controlling; the [Task 10 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md)
 is completed and non-authoritative.
@@ -26,18 +19,21 @@ are outside this checkpoint.
 
 ## Active verification and delivery
 
-Task 10 implementation, direct checks and independent QA/UX plus
-Security/Privacy review are accepted with Required 0 after two bounded
-selection corrections.
-Nine focused tests pass across the final model/native runs, including the two
-mounted-view RED/GREEN regressions. Wide/compact external AX and keyboard checks
-and synthetic Needs Review acceptance are recorded in the
+Task 11A's five new integration cases and nine focused existing cases have
+passed; Debug and Release builds passed. The exact signed candidate is retained
+in protected custody with no installation or owner-app launch. The
+[integration/staging handoff](evidence/2026-09-02-rr-r10-task-11a-integration-staging.md)
+records direct evidence and limits. Independent QA accepted the integration/
+staging checkpoint with Required 0; the live row remains Pending until reviewed
+implementation push and the exact revision-15 baseline check. Temporary
+outputs remain under `.build/rr-r10-task11a` and native synthetic directories.
+
+Task 10 direct checks and independent QA/UX plus Security/Privacy review are
+accepted with Required 0; its focused tests and runtime evidence remain in the
 [Task 10 verification](evidence/2026-09-02-rr-r10-task-10-ui.md).
-Keyboard navigation was restored OFF after each authorized check. Task 10's
-typed completion and preservation checks are recorded below. Task 9 projections
-remain unchanged. Temporary outputs are
-retained under `.build/rr-r10-task10` and native synthetic test directories;
-no cleanup is authorized.
+Its exact live completion/preservation baseline is below. Prior temporary
+outputs remain retained with no cleanup authorization. Task 7A custody remains
+in the [Historical Task 7A closeout](archive/2026-09-02-rr-r10-task-7a-closeout.md).
 
 Development documentation changes remain pending later authorized bound-root
 deployment and catalog acceptance. They do not change the installed accepted
@@ -76,7 +72,7 @@ closed.
   Acceptance audit `E89F7619-BF0A-45BE-94B0-DA2CA6F71D28` replayed exactly.
   Task 7A, Task 8, Task 9 and Task 10 briefs are completed/non-authoritative in the development
   catalog. The Task 7A recovery runbook remains supporting material. The
-  development catalog has 222 artifacts and remains pending deployment and
+  development catalog has 226 artifacts and remains pending deployment and
   acceptance. Owner state may change during ordinary use.
 
 ## Remaining limits and next work
@@ -93,6 +89,7 @@ Protected requests, backups, old app and quarantines retain their recorded
 custody through at least 2026-10-02. Temporary outputs remain retained; no
 cleanup is authorized. The older dirty bound checkout remains preserved.
 
-Task 11A remains unopened. The coordinator may release it only after verifying
-Task 10's direct validation, independent acceptance, exact live completion,
-same-branch documentation/brief reconciliation and single PR merge.
+Task 11B remains unopened. The coordinator may release it only after verifying
+Task 11A's direct integration/staging validation, independent acceptance, exact
+live completion, same-branch reconciliation and single PR merge. Its high-risk
+installation/owner-data actions require their own concrete human approval.

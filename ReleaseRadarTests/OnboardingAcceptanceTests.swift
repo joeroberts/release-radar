@@ -4,6 +4,103 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class OnboardingAcceptanceTests: XCTestCase {
+    func testTask11AOnboardingImportCreatesNoTaskPlansAndPreservesManagedEvidenceOnReimport() async throws {
+        for managed in [false, true] {
+            let fixture = try FolderFixture()
+            // Onboarding's production importer resolves persisted bookmark bytes;
+            // use real local bookmarks, not TestBookmarkStore's path-only bytes.
+            let bookmarks = ProjectBookmarkStore()
+            let template = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+                .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs")
+            try FileManager.default.copyItem(at: template, to: fixture.root.appendingPathComponent("docs"))
+            try Data((managed ? RepositoryDocumentContract.managedGuidanceBlock : RepositoryDocumentContract.legacyManagedGuidanceBlock).utf8)
+                .write(to: fixture.root.appendingPathComponent("AGENTS.md"))
+            let delivery = fixture.root.appendingPathComponent("docs/delivery")
+            try FileManager.default.createDirectory(at: delivery, withIntermediateDirectories: true)
+            let artifactURL = delivery.appendingPathComponent("dashboard-status.json")
+            let tasks = TicketLane.allCases.map { lane -> [String: Any] in
+                ["id": "source-\(lane.rawValue)", "title": "Imported \(lane.rawValue)", "phaseId": "import-phase",
+                 "status": lane.rawValue, "evidence": ["href": "../../plans/draft.md"]]
+            }
+            let artifact: [String: Any] = ["schemaVersion": 1, "activePhaseId": "import-phase",
+                                            "phases": [["id": "import-phase", "label": "Imported phase"]], "tasks": tasks]
+            let source = try JSONSerialization.data(withJSONObject: artifact, options: [.sortedKeys])
+            try source.write(to: artifactURL)
+            let catalogURL = fixture.root.appendingPathComponent("docs/catalog.json")
+            var catalog = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: catalogURL)) as? [String: Any])
+            var collections = try XCTUnwrap(catalog["collections"] as? [[String: Any]])
+            collections.append(["collectionID": "delivery", "path": "docs/delivery", "parentCollection": "docs", "purpose": "Seed delivery",
+                                "allowedContents": ["seed"], "prohibitedContents": ["temp"], "firstRead": "seed", "isLeaf": true])
+            catalog["collections"] = collections
+            var artifacts = try XCTUnwrap(catalog["artifacts"] as? [[String: Any]])
+            artifacts.append(["artifactID": "seed", "path": "docs/delivery/dashboard-status.json", "kind": "document", "lifecycle": "active",
+                              "authorityLevel": "supporting", "parentCollection": "delivery", "supersedes": [],
+                              "applicationSensitivity": ["importer"], "checksum": ["policy": "notApplicable"]])
+            catalog["artifacts"] = artifacts
+            try JSONSerialization.data(withJSONObject: catalog, options: [.sortedKeys]).write(to: catalogURL)
+            let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: fixture.root)
+            let store = DeliveryStore(databaseURL: fixture.databaseURL)
+            let onboarding = FolderProjectOnboarding(store: store, bookmarkStore: bookmarks,
+                                                    worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root]))
+            let preview = try await onboarding.inspect(folder: fixture.root)
+            let projectID = try await onboarding.prepare(.init(preview: preview, projectName: "Import integration"))
+            let project = AuthorizedProject(projectID: projectID, canonicalRoot: fixture.root, authorizedRoots: [fixture.root])
+            let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project]), bookmarkStore: bookmarks)
+            let importer = RekonArtifactImporter(store: store, project: project, bookmarkStore: bookmarks)
+            let importPreview = try importer.preview(fixture.root)
+            if managed {
+                let before = try await attachmentDatabaseSnapshot(store: store)
+                do { try await importer.apply(importPreview, to: projectID); XCTFail("Unbound managed import must reject") }
+                catch { XCTAssertEqual(error as? RekonImportError, .documentation(.bindingMissing)) }
+                let after = try await attachmentDatabaseSnapshot(store: store)
+                XCTAssertEqual(after, before)
+                let rootID = try await store.read { try XCTUnwrap($0.scalarText("SELECT id FROM project_roots WHERE project_id=?", bindings: [.text(projectID.rawValue)])) }
+                let bound = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: fixture.root.path, reason: "Bind synthetic managed repository",
+                                                             command: .bindDocumentationRepository(target: .init(projectID: projectID.rawValue, rootID: rootID,
+                                                                 repositoryID: snapshot.catalog.repositoryID, catalogVersion: snapshot.version, catalogDigest: snapshot.digest))))
+                XCTAssertNil(bound.error)
+            }
+            _ = try await onboarding.prepare(.init(preview: preview, projectName: "Import integration", importRecognizedArtifacts: true))
+            let imported = try await store.read { c in
+                (try c.rows("SELECT id,lane,plan_legacy_continuation FROM tickets ORDER BY id"),
+                 try c.scalarInt("SELECT COUNT(*) FROM ticket_task_plans"),
+                 try c.scalarInt("SELECT COUNT(*) FROM ticket_tasks"),
+                 try c.scalarInt("SELECT COUNT(*) FROM delivery_goals"),
+                 try c.scalarInt("SELECT COUNT(*) FROM review_items WHERE kind='source_lane'"),
+                 try c.rows("SELECT path,artifact_id FROM evidence"),
+                 try c.scalarInt("SELECT COUNT(*) FROM notification_events"))
+            }
+            XCTAssertEqual(imported.0, ["accepted", "backlog", "blocked", "in_progress", "needs_review"].map {
+                ["id": .text("source-\($0)"), "lane": .text("backlog"), "plan_legacy_continuation": .integer(0)]
+            })
+            XCTAssertEqual(imported.1, 0); XCTAssertEqual(imported.2, 0); XCTAssertEqual(imported.3, 0)
+            XCTAssertEqual(imported.4, 4); XCTAssertEqual(imported.6, 0)
+            XCTAssertFalse(imported.5.isEmpty)
+            for row in imported.5 {
+                XCTAssertEqual(row["artifact_id"], managed ? .text("draft") : .null)
+                XCTAssertEqual(row["path"], managed ? .null : .text(fixture.root.appendingPathComponent("docs/plans/draft.md").path))
+            }
+            let additionalTables = ["project_documentation_bindings", "ticket_task_plans", "ticket_tasks"]
+            let beforeReimport = try await attachmentDatabaseSnapshot(store: store, additionalTables: additionalTables)
+            try await importer.apply(try importer.preview(fixture.root), to: projectID)
+            let afterReimport = try await attachmentDatabaseSnapshot(store: store, additionalTables: additionalTables)
+            // Import has its own audit; delivery/evidence identity is idempotent.
+            for table in ["tickets", "phases", "evidence", "project_documentation_bindings", "ticket_task_plans", "ticket_tasks", "review_items"] {
+                XCTAssertEqual(try XCTUnwrap(afterReimport[table]), try XCTUnwrap(beforeReimport[table]), table)
+            }
+            XCTAssertEqual(try Data(contentsOf: artifactURL), source)
+            XCTAssertEqual(try RepositoryDocumentValidator().validateCurrent(authorizedRoot: fixture.root).digest, snapshot.digest)
+            if managed {
+                let relaunched = DeliveryStore(databaseURL: fixture.databaseURL)
+                let result = await AgentQueryDispatcher(store: relaunched, bookmarkStore: bookmarks).dispatch(
+                    .init(version: 1, projectRoot: fixture.root.path, query: .inventoryEvidence(projectID: projectID.rawValue, rootID: nil)))
+                let inventory = try XCTUnwrap(result.inventory)
+                XCTAssertTrue(inventory.isComplete)
+                XCTAssertTrue(inventory.evidence.allSatisfy { $0.evidence.locator == .managedDocument(artifactID: "draft") && $0.resolvedAvailable })
+            }
+        }
+    }
+
     func testCentralizedHandoffPromptPinsV2SetupAndLegacyAuditRepair() {
         let root = URL(fileURLWithPath: "/Users/example/Project", isDirectory: true)
         let binding = "The exact Release Radar-authorized repository root is `/Users/example/Project`. Confirm that this Codex task's canonical repository root exactly matches it. If it does not match, stop before writing any file or calling Release Radar and tell the owner to open a task rooted at that exact folder."
@@ -1465,9 +1562,10 @@ final class OnboardingAcceptanceTests: XCTestCase {
     }
 
     private func attachmentDatabaseSnapshot(
-        store: DeliveryStore
+        store: DeliveryStore,
+        additionalTables: [String] = []
     ) async throws -> [String: [[String: SQLiteValue]]] {
-        let tables = attachmentSnapshotTables
+        let tables = attachmentSnapshotTables + additionalTables
         return try await store.read { connection in
             var snapshot: [String: [[String: SQLiteValue]]] = [:]
             for table in tables {
