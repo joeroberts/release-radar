@@ -809,7 +809,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 13,
+              tools.count == 19,
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
               let transitionSchema = transition["inputSchema"] as? [String: Any],
               let transitionProperties = transitionSchema["properties"] as? [String: Any],

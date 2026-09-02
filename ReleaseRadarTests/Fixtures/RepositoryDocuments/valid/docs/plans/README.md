@@ -1,0 +1,2 @@
+# Plans
+[Current](current.md)

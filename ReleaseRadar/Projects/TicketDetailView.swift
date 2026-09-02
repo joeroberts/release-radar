@@ -53,22 +53,7 @@ struct TicketDetailView: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(detail.evidence) { evidence in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(evidence.label)
-                                Text(evidence.path)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                if let failure = FailureStatePresentation(
-                                    evidenceLabel: evidence.label,
-                                    isAvailable: evidence.isAvailable
-                                ) {
-                                    FailureStateView(presentation: failure, style: .compact)
-                                } else {
-                                    Label("Available", systemImage: "checkmark.circle")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.green)
-                                }
-                            }
+                            EvidenceDetailView(evidence: evidence)
                         }
                     }
                 }

@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 12
+    static let currentVersion: Int64 = 13
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -54,6 +54,9 @@ enum StoreMigrations {
             }
             if version < 12 {
                 try connection.executeScript(schemaVersion12)
+            }
+            if version < 13 {
+                try connection.executeScript(schemaVersion13)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -129,6 +132,11 @@ enum StoreMigrations {
                 "project_active_phases_phase_index",
             ]
         )
+    }
+
+    static func recognizesDocumentationPreflightSchema(_ connection: SQLiteConnection, version: Int64) throws -> Bool {
+        guard (10...currentVersion).contains(version) else { return false }
+        return try hasRequiredSchema(connection, throughVersion: version)
     }
 
     private static func hasExpectedCurrentSchema(_ connection: SQLiteConnection) throws -> Bool {
@@ -231,6 +239,14 @@ enum StoreMigrations {
                     bindings: [.text(table.name)]
                 ), normalizedSQL(actualSQL) == normalizedSQL(table.sql)
                 else { return false }
+            }
+        }
+        if version >= 13 {
+            for table in [("evidence", evidenceTableSQL), ("project_documentation_bindings", documentationBindingsTableSQL)] {
+                guard let actualSQL = try connection.scalarText(
+                    "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
+                    bindings: [.text(table.0)]
+                ), normalizedSQL(actualSQL) == normalizedSQL(table.1) else { return false }
             }
         }
         return try connection.row("PRAGMA foreign_key_check") == nil
@@ -406,6 +422,10 @@ enum StoreMigrations {
     ]
 
     private static let addedTables: [(version: Int64, name: String, columns: [String])] = [
+        (13, "project_documentation_bindings", [
+            "project_id", "root_id", "repository_id", "accepted_catalog_version",
+            "accepted_catalog_digest", "accepted_catalog",
+        ]),
         (2, "completion_records", ["id", "project_id", "ticket_id", "summary", "created_at"]),
         (2, "agent_command_requests", ["request_id", "request_body", "result_data", "created_at"]),
         (3, "project_bookmarks", ["project_id", "path", "bookmark_data", "is_stale"]),
@@ -446,6 +466,7 @@ enum StoreMigrations {
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
+        (13, "evidence", "artifact_id"),
         (2, "audit_events", "thread_attribution"),
         (2, "blockers", "resolved_at"),
         (2, "review_items", "status"),
@@ -468,6 +489,9 @@ enum StoreMigrations {
     ]
 
     private static let criticalObjects: [(version: Int64, type: String, name: String)] = [
+        (13, "index", "project_roots_project_identity_unique"),
+        (13, "index", "project_documentation_bindings_repository_unique"),
+        (13, "index", "project_documentation_bindings_root_unique"),
         (1, "trigger", "reject_phase_dependency_cycle_insert"),
         (1, "trigger", "reject_phase_dependency_cycle_update"),
         (1, "trigger", "reject_ticket_dependency_cycle_insert"),
@@ -702,6 +726,12 @@ enum StoreMigrations {
         isUnique: Bool,
         columns: [(name: String, descending: Bool)]
     )] = [
+        (13, "project_roots_project_identity_unique", "project_roots", true,
+         [("project_id", false), ("id", false)]),
+        (13, "project_documentation_bindings_repository_unique", "project_documentation_bindings", true,
+         [("repository_id", false)]),
+        (13, "project_documentation_bindings_root_unique", "project_documentation_bindings", true,
+         [("root_id", false)]),
         (4, "audit_events_project_entity_index", "audit_events", false,
          [("project_id", false), ("entity_type", false), ("entity_id", false), ("created_at", false)]),
         (5, "project_active_phases_phase_index", "project_active_phases", false, [("phase_id", false)]),
@@ -742,6 +772,8 @@ enum StoreMigrations {
         target: String,
         onDelete: String
     )] = [
+        (13, "project_documentation_bindings", "project_id", "projects", "id", "CASCADE"),
+        (13, "project_documentation_bindings", "project_id,root_id", "project_roots", "project_id,id", "NO ACTION"),
         (1, "project_roots", "project_id", "projects", "id", "CASCADE"),
         (1, "phases", "project_id", "projects", "id", "CASCADE"),
         (1, "tickets", "project_id", "projects", "id", "CASCADE"),
@@ -809,6 +841,48 @@ enum StoreMigrations {
       ON phases.project_id = projects.id
      AND phases.id = projects.active_phase_id
     WHERE projects.active_phase_id IS NOT NULL;
+    """
+
+    private static let evidenceTableSQL = """
+    CREATE TABLE evidence (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        ticket_id TEXT,
+        path TEXT,
+        is_available INTEGER NOT NULL DEFAULT 1 CHECK (is_available IN (0, 1)),
+        artifact_id TEXT,
+        CHECK ((path IS NOT NULL AND artifact_id IS NULL) OR
+               (path IS NULL AND typeof(artifact_id) = 'text' AND length(artifact_id) BETWEEN 1 AND 128)),
+        UNIQUE(project_id, path),
+        UNIQUE(project_id, artifact_id),
+        FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id) ON DELETE CASCADE
+    )
+    """
+
+    private static let documentationBindingsTableSQL = """
+    CREATE TABLE project_documentation_bindings (
+        project_id TEXT PRIMARY KEY NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        root_id TEXT NOT NULL,
+        repository_id TEXT NOT NULL CHECK (typeof(repository_id) = 'text' AND length(repository_id) = 36 AND repository_id = lower(repository_id)),
+        accepted_catalog_version INTEGER NOT NULL CHECK (typeof(accepted_catalog_version) = 'integer' AND accepted_catalog_version > 0),
+        accepted_catalog_digest TEXT NOT NULL CHECK (length(accepted_catalog_digest) = 64 AND accepted_catalog_digest NOT GLOB '*[^0-9a-f]*'),
+        accepted_catalog BLOB NOT NULL CHECK (typeof(accepted_catalog) = 'blob' AND length(accepted_catalog) BETWEEN 1 AND 4194304),
+        FOREIGN KEY(project_id, root_id) REFERENCES project_roots(project_id, id)
+    )
+    """
+
+    // Catalog-agnostic: every old locator, ID, association, and availability is copied
+    // exactly. No root/bookmark is opened and no repository binding is inferred.
+    private static let schemaVersion13 = """
+    ALTER TABLE evidence RENAME TO evidence_v12;
+    \(evidenceTableSQL);
+    INSERT INTO evidence (id, project_id, ticket_id, path, is_available)
+        SELECT id, project_id, ticket_id, path, is_available FROM evidence_v12;
+    DROP TABLE evidence_v12;
+    CREATE UNIQUE INDEX project_roots_project_identity_unique ON project_roots(project_id, id);
+    \(documentationBindingsTableSQL);
+    CREATE UNIQUE INDEX project_documentation_bindings_root_unique ON project_documentation_bindings(root_id);
+    CREATE UNIQUE INDEX project_documentation_bindings_repository_unique ON project_documentation_bindings(repository_id);
     """
 
     private static let schemaVersion1 = """

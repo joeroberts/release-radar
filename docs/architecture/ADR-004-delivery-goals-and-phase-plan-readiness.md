@@ -65,7 +65,7 @@ phase-plan readiness record in additive store schema version 11.
 
 The complete state, mutation, migration, repair, UI, error, and verification
 contract is defined by
-`docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md`.
+`docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md`.
 
 ## Phase and goal states
 

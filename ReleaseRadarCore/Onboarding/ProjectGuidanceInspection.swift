@@ -10,42 +10,93 @@ public enum ProjectGuidanceState: Equatable, Sendable {
     case unavailable
 }
 
+/// Read-only observation. Only typed binding/catalog acceptance enables managed operations.
+public enum ProjectDocumentationState: Equatable, Sendable {
+    case legacy(ProjectGuidanceState)
+    case stagedCatalog(hasAuditedHandoff: Bool, preview: StagedCatalogPreview)
+    case managed(hasAuditedHandoff: Bool, catalogVersion: Int, catalogDigest: String)
+    case managedUnavailable(hasAuditedHandoff: Bool, reason: DocumentationOperationError, validationError: RepositoryDocumentError.Code?)
+
+    public var guidanceState: ProjectGuidanceState {
+        switch self {
+        case let .legacy(state): state
+        case .stagedCatalog:
+            .outdated(installed: RepositoryDocumentContract.legacyGuidanceVersion, current: RepositoryDocumentContract.guidanceVersion)
+        case let .managed(audited, _, _), let .managedUnavailable(audited, _, _):
+            audited ? .current(version: RepositoryDocumentContract.guidanceVersion) : .handoffIncomplete(version: RepositoryDocumentContract.guidanceVersion)
+        }
+    }
+}
+
+public enum StagedCatalogPreview: Equatable, Sendable {
+    case valid(version: Int, digest: String)
+    case invalid(RepositoryDocumentError)
+}
+
 public struct ProjectGuidanceObservation: Equatable, Sendable {
     public let projectRoot: URL?
-    public let state: ProjectGuidanceState
+    public let documentationState: ProjectDocumentationState
+    public var state: ProjectGuidanceState { documentationState.guidanceState }
 
     public init(projectRoot: URL?, state: ProjectGuidanceState) {
         self.projectRoot = projectRoot
-        self.state = state
+        self.documentationState = .legacy(state)
+    }
+
+    public init(projectRoot: URL?, documentationState: ProjectDocumentationState) {
+        self.projectRoot = projectRoot
+        self.documentationState = documentationState
     }
 }
 
 public enum ProjectGuidanceInspection {
-    public static let currentVersion = 1
-    public static let handoffEvidenceIDPrefix = "release-radar-handoff:v1:"
-    public static let managedBlock = """
-    <!-- release-radar-guidance:v1:start -->
-    ## Release Radar tracking
+    public static func inspectDocumentation(rootURL: URL, hasAuditedHandoff: Bool = false) -> ProjectDocumentationState {
+        inspectDocumentation(rootURL: rootURL, hasAuditedHandoff: hasAuditedHandoff, context: nil)
+    }
 
-    This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, or changing tracked delivery state, invoke the installed `release-radar` skill and follow it.
+    static func inspectDocumentation(rootURL: URL, hasAuditedHandoff: Bool, context: DocumentationRootContext?) -> ProjectDocumentationState {
+        let guidance = inspect(rootURL: rootURL, hasAuditedHandoff: hasAuditedHandoff)
+        let managed = guidance == .current(version: currentVersion) || guidance == .handoffIncomplete(version: currentVersion)
+        let legacy = guidance == .outdated(installed: RepositoryDocumentContract.legacyGuidanceVersion, current: currentVersion)
+        guard managed || legacy else { return .legacy(guidance) }
+        do {
+            let reader = try RepositoryDocumentReader(rootURL: rootURL, limits: .init(), afterRead: nil)
+            if managed, try RepositoryDocumentationMode.read(reader) != .managedV2 { throw DocumentationOperationError.guidanceUnavailable }
+            do {
+                _ = try reader.read(RepositoryDocumentContract.catalogPath, catalog: true)
+            } catch let error as RepositoryDocumentError where error.code == .missingFile && !managed {
+                return .legacy(guidance)
+            }
+            let snapshot = try RepositoryDocumentValidator().validateCurrent(reader: reader)
+            if managed {
+                guard let context else { throw DocumentationOperationError.bindingMissing }
+                guard context.root == rootURL else { throw DocumentationOperationError.rootMismatch }
+                try context.requireAccepted(snapshot)
+                return .managed(hasAuditedHandoff: hasAuditedHandoff, catalogVersion: snapshot.version, catalogDigest: snapshot.digest)
+            }
+            return .stagedCatalog(hasAuditedHandoff: hasAuditedHandoff, preview: .valid(version: snapshot.version, digest: snapshot.digest))
+        } catch let error as RepositoryDocumentError {
+            if managed { return .managedUnavailable(hasAuditedHandoff: hasAuditedHandoff, reason: .catalogInvalid, validationError: error.code) }
+            return .stagedCatalog(hasAuditedHandoff: hasAuditedHandoff, preview: .invalid(error))
+        } catch {
+            if managed { return .managedUnavailable(hasAuditedHandoff: hasAuditedHandoff, reason: DocumentationCatalogContext.map(error), validationError: nil) }
+            return .stagedCatalog(hasAuditedHandoff: hasAuditedHandoff, preview: .invalid(.init(.readFailed)))
+        }
+    }
 
-    - `docs/delivery/progress.md` is the repository's durable delivery source of truth.
-    - Codex may update repository tracking documents under owner authorization.
-    - Release Radar is the only writer of its SQLite database. Use its existing typed MCP mutations; never edit that database directly.
-    - Do not claim synchronization without both a successful audited MCP result and direct readback of the corresponding repository files.
-    - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state.
-    <!-- release-radar-guidance:end -->
-    """
+    public static let currentVersion = RepositoryDocumentContract.guidanceVersion
+    public static let handoffEvidenceIDPrefix = RepositoryDocumentContract.handoffEvidenceIDPrefix
+    public static let managedBlock = RepositoryDocumentContract.managedGuidanceBlock
 
-    private static let startPrefix = "<!-- release-radar-guidance:v"
-    private static let startSuffix = ":start -->"
-    private static let endMarker = "<!-- release-radar-guidance:end -->"
+    private static let startPrefix = RepositoryDocumentContract.guidanceStartPrefix
+    private static let startSuffix = RepositoryDocumentContract.guidanceStartSuffix
+    private static let endMarker = RepositoryDocumentContract.guidanceEndMarker
 
     public static func inspect(
         rootURL: URL,
         hasAuditedHandoff: Bool = false
     ) -> ProjectGuidanceState {
-        let agentsURL = rootURL.appendingPathComponent("AGENTS.md", isDirectory: false)
+        let agentsURL = rootURL.appendingPathComponent(RepositoryDocumentContract.guidancePath, isDirectory: false)
         var metadata = stat()
         let status: Int32 = agentsURL.withUnsafeFileSystemRepresentation { path in
             guard let path else { return Int32(-1) }
@@ -71,7 +122,7 @@ public enum ProjectGuidanceInspection {
             lines[$0].hasPrefix(startPrefix) && lines[$0].hasSuffix(startSuffix)
         }
         let ends = lines.indices.filter { lines[$0] == endMarker }
-        let markerLines = lines.indices.filter { lines[$0].contains("release-radar-guidance") }
+        let markerLines = lines.indices.filter { lines[$0].contains(RepositoryDocumentContract.guidanceMarkerName) }
         guard !markerLines.isEmpty else {
             return .missing
         }
@@ -86,11 +137,12 @@ public enum ProjectGuidanceInspection {
             return .needsRepair
         }
         guard installedVersion <= currentVersion else { return .needsRepair }
+        let observedBlock = lines[starts[0]...ends[0]].joined(separator: "\n")
         guard installedVersion == currentVersion else {
+            if installedVersion == RepositoryDocumentContract.legacyGuidanceVersion,
+               observedBlock != RepositoryDocumentContract.legacyManagedGuidanceBlock { return .needsRepair }
             return .outdated(installed: installedVersion, current: currentVersion)
         }
-
-        let observedBlock = lines[starts[0]...ends[0]].joined(separator: "\n")
         return observedBlock == managedBlock ? .current(version: currentVersion) : .needsRepair
     }
 }

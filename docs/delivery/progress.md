@@ -1,265 +1,82 @@
 # Release Radar delivery state
 
-## Current state
+## Current outcome and authorization
 
-- Outcome: RR-R10
-- Active task: None
-- Last complete task: Task 4A implementation independently accepted
-- Next eligible task: Task 4B planning, separately authorization-gated
-- Next authorized action: NONE — await explicit owner direction for Task 4B
-- State: READY
-- Last completed task Git checkpoint: `910b9653b661c6088d025bc6f6aea71271cff3b0`
-- Active brief: None — Task 4B remains unopened
-- Active brief SHA-256: N/A
-- Retry state: N/A
-- Owner stopped: No
+- MDCP is complete and ordinary live use was owner-approved on 2026-09-02.
+  M6B adopted five evidence locators; M7 deployed the six stable-ID document
+  moves; M8 accepted the catalog and verified exact replay/relaunch. Delivery
+  checkpoints are `b9b1932`, `004e2d2`, `d1b974a` and final closeout `a66bf9a`.
+- RR-R10 Tasks 1A/1B/2A/2B/3/4A are delivered. Ten checkpoints remain:
+  4B, 5, 6, 7, 7A, 8, 9, 10, 11A and 11B, then explicit ticket/Delivery Goal
+  acceptance and terminal reconciliation. Stable task identities and the full
+  product outcome are unchanged.
+- On 2026-09-02 the owner approved the alignment review findings and authorized
+  a focused remaining-plan revision and Task 4B brief. This repository planning
+  slice is complete with native documentation validation and independent
+  review accepted, Required 0 and Optional 0.
+  Task 4B implementation, owner installation, catalog deployment/acceptance and
+  other live mutations are not authorized by that planning approval.
+- Repository work uses `codex/managed-documentation-contract-planning` in its
+  associated development worktree. The original bound checkout retains its
+  deployment branch/commit and authorized MDCP documentation delta.
 
-This file is the current authoritative delivery state. Archived files are
-historical evidence only.
+## Controlling work and verification
 
-Eligibility does not mean authorization. `Owner stopped: No` does not authorize
-work. The owner must explicitly authorize inspection, implementation, testing,
-or Git operations.
+- [Revised RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md)
+  and [Task 4B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md)
+  apply the current schema/tool baseline, bridge-test isolation, managed import
+  and evidence preservation, catalog release path and ADR-007 review policy.
+  The linked Ticket Tasks design now distinguishes completed handoff history
+  from current entry conditions.
+- Task 4B's bounded test scope includes updating the existing MDCP callback
+  assertion that the new task tool is absent. It preserves all six MDCP tools;
+  the intended inventory is 19 existing plus two new tools.
+- Native catalog/index/link/checksum validation and `git diff --check` pass.
+  All 194 existing artifact IDs/paths and the 16 task labels/titles/order are
+  preserved; the catalog adds only the brief and historical progress record.
+  Completed MDCP brief lifecycle metadata and status headers are reconciled.
+  The correction passed native current-tree/transition checks and independent
+  documentation review; no runtime tests were rerun.
+  Independent review accepted the plan, brief and authorization/preservation
+  boundaries. No product code, runtime tests or owner-state operations are
+  part of this planning slice.
 
-## Evidence index
+## Live baseline and remaining risks
 
-- [Historical progress through RR-R10 Task 2B](archive/2026-08-31-progress-through-rr-r10-task-2b.md)
-- [Accepted Ticket Tasks design](../design/release-radar-ticket-tasks-design.md)
-- [ADR-005: Ticket task work plans](../architecture/ADR-005-ticket-task-work-plans.md)
-- [Accepted RR-R10 implementation plan](../superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md)
-- [Task 2A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md)
-- [Task 2B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md)
-- [Task 3 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md)
-- [Task 4A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md)
+- Accepted application baseline: `MDCP-COMPAT-2` (`b365aff`), signed app/plugin
+  0.1.6, schema v13, guidance v2. The last accepted bound-root catalog is v1
+  with 194 artifacts; all eight evidence IDs/locators/associations and unrelated
+  delivery state were preserved at M8. Ordinary live use may subsequently
+  change owner state, so future installs require fresh authorized readback.
+- This development candidate adds the Task 4B brief and a historical progress
+  record, and corrects completed MDCP brief lifecycle metadata. The branch
+  preserves the missing activation revision before the completion revision;
+  later catalog deployment must accept those revisions in order. The M6A
+  runbook remains a supporting preservation/recovery reference. This catalog
+  is repository-prepared only, pending separately
+  authorized deployment to the exact bound root and typed acceptance. The
+  live bound checkout has not been changed; no managed-current claim is made
+  for the development catalog.
+- Whole transport/lifecycle test classes can change the shared macOS bridge.
+  Task 4B's brief supplies safe development selections; required packaged
+  transport acceptance still needs an isolated service/session or separately
+  authorized quiescence and restoration.
+- The M8 runtime limits remain documented in the historical record, including
+  the unchanged legacy directory-locator discrepancy. No accepted MDCP work
+  is reopened by this planning refresh. Issue #1 remains unopened and the
+  held Issue #2 artifacts remain unchanged.
 
-## Task 4A planning gate
+## Retention and next work
 
-- Status: Planning complete and independently accepted. Planning checkpoint
-  `ab445fb327df03a1518e85fa6146bc3bf69de2fb` was pushed and verified exact at
-  local HEAD, upstream, and live remote with ahead/behind `0/0` before
-  implementation began. The owner separately authorized implementation,
-  testing, the disclosed LaunchAgent side effect, and Git operations.
-- Planning agent: `/root/task4a_planner`.
-- Brief SHA-256:
-  `779c448c852d69dd53f8782fbc87fc560f2b15bfc05084a17f3020a8c4b211b4`.
-- Architecture: `/root/task4a_architecture_review` — GO, Required 0,
-  Optional 0, Out-of-scope 0 on the initial brief; explicitly accepted the
-  staged-create, revisionless-writer, AppModel callback, compatibility,
-  transaction, trigger, file-scope, and Task 4B boundary decisions. The later
-  bounded QA/Security corrections did not alter those decisions, so only the
-  affected roles re-reviewed under the repository rule.
-- QA/Test: `/root/task4a_qa_review` — initial NO-GO, Required 1, Optional 2,
-  Out-of-scope 0; the brief was corrected to require executable Stage 1
-  behavioral RED before the attributable Stage 2 interface compile RED, exact
-  trigger error/rollback evidence plus source review, limited policy coverage,
-  and disclosure of the existing transport suite's transient LaunchAgent
-  registration. Affected-role re-review of the exact final brief returned GO,
-  Required 0, Optional 0, Out-of-scope 0.
-- Security/Privacy: `/root/task4a_security_review` — initial NO-GO, Required 1,
-  Optional 0, Out-of-scope 0; the brief was corrected to reject embedded-NUL
-  Accepted ticket IDs before dispatcher project lookup and AppModel
-  authorization/request/reload, with indistinguishable zero-effect coverage.
-  Affected-role re-review of the exact final brief returned GO, Required 0,
-  Optional 0, Out-of-scope 0.
-- TPM: `/root/task4a_tpm_review` — GO, Required 0, Optional 0, Out-of-scope 0.
-- Delivery Management: `/root/task4a_delivery_review` — GO, Required 0,
-  Optional 0, Out-of-scope 0.
-- Resolved planning boundaries: creation-only Accepted writers use
-  transaction-local Backlog staging, the Task 3 assertion with nil revision,
-  then Accepted finalization; Rekon/sample/Debug remain revisionless; the
-  owner AppModel path gains one internal revision-aware callback; Task 4B
-  commands/tools/concurrency remain closed.
-- Planning inventory: the Task 4A brief,
-  `docs/delivery/task-briefs/SHA256SUMS`, and this ledger only.
-- Implementation release gate: Satisfied. The planning inventory was committed
-  alone, exact remote equality was verified, test authorization was obtained,
-  and a fresh Implementer worked within the declared 15-path ceiling.
-- No implementation, tests, Git operations, app launch/install, owner-data
-  access, Release Radar mutation, external action, or temporary artifact was
-  created during planning.
+The [Historical closeout and review record](archive/2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md)
+preserves prior delivery details and the seven alignment findings. Earlier
+history remains in [Historical progress through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md).
+Exact owner approvals, requests, inventories and recovery copies remain in the
+owner-designated protected companion, retained through at least 2026-10-02.
+Existing M6A/M7/M8 temporary builds, test outputs and isolated host directories
+retain their recorded custody terms; none were deleted. This planning slice
+creates no new temporary files.
 
-## Task 4A implementation gate
-
-- Status: Complete, independently accepted, and terminally remote-exact.
-- Planning base/checkpoint: `ab445fb327df03a1518e85fa6146bc3bf69de2fb`,
-  verified exact at local HEAD, upstream, and live remote with ahead/behind
-  `0/0` before implementation began.
-- Implementer: `/root/task4a_implementer`.
-- Candidate binary diff SHA-256:
-  `9c219573cb1040bcdbc354f7403ce88f22bb89675cacdb9f4a990f3349b993b9`.
-- Production inventory and SHA-256:
-  - `ReleaseRadar/App/AppModel.swift` —
-    `3485211c44d041beb3e108caffe28d54373e224a9543d64be301482189d07471`
-  - `ReleaseRadar/Projects/DashboardSampleData.swift` —
-    `245c5f5fe77b66c0d2160eec427a70ad1365899377fb00a4e27eb4cf7b344a5a`
-  - `ReleaseRadar/Projects/RR9ActivePhaseCaptureFixture.swift` —
-    `f3b885b855f0d8694bfd08c50db51326f2dbd36c11fea2c722733d11af3d0e18`
-  - `ReleaseRadarAgentTools/main.swift` —
-    `660676c897e8f8a76a8c2a41d6d7bb3d9aade021ab220871d4e5c8bc90b05c43`
-  - `ReleaseRadarCore/AgentBridge/AgentCommand.swift` —
-    `e95db7a839776010754f56cd978638a0c6612eda7a178d7e9a28d9a039e72bad`
-  - `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift` —
-    `e147fb77b862b3d16da67e151364b5ded2f992778074424f3a62ab52bb7848e0`
-  - `ReleaseRadarCore/Import/RekonArtifactImporter.swift` —
-    `2e73e0b756fa304547f66b29619d44ca5a9a1508827d87ec113ec764f91b90cb`
-- Test inventory and SHA-256:
-  - `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift` —
-    `70ce3a2e529770181b2353ebe5a62e9070493afbec72c6fbcdd959a18e078c31`
-  - `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift` —
-    `486b974a263f15f08d000b8db75e2b51ee4cb82b6063f5d84a264f58b0e4fb76`
-  - `ReleaseRadarTests/AppRouteTests.swift` —
-    `808db8f9d89a8a734436f55db3360a8464af44a106057373d25620aa3922f954`
-  - `ReleaseRadarTests/NotificationAcceptanceTests.swift` —
-    `882d0be909bcba33665eb94cda98d6170eb32362116d24016a6beb989a042962`
-  - `ReleaseRadarTests/RekonImportAcceptanceTests.swift` —
-    `26c911b0033b61ced360058bc61d17491012c9fc229184b5953aecf9f76b1b69`
-  - `ReleaseRadarTests/ReviewAndGraphAcceptanceTests.swift` —
-    `286e7d48a09f4e8d9e8f7014787c0fc6305e7b43ae0e81a0bf5ffc68ec373bf3`
-  - `ReleaseRadarTests/TicketTaskPlanningPolicyAcceptanceTests.swift` —
-    `46c24e1e7861ee8c0dffa9f6f9a8770afab7358865b59bdcfdded4287f2c3ea4`
-- The fifteenth declared path,
-  `ReleaseRadarCore/Planning/TicketTaskPlanningPolicy.swift`, remained
-  byte-identical at SHA-256
-  `828e7569a1be2854a6c795c11618d6b60a1fd4149290e52634eca8766663b54c`.
-- Implemented behavior: every Accepted entry point now invokes the Task 3
-  planning assertion in the same transaction before the final lane write;
-  Accepted upserts and malformed embedded-NUL ticket IDs are rejected before
-  lookup or side effects; revision is optional, Accepted-only, and positive;
-  the owner AppModel path preserves bounded authorization, attribution, and
-  reload behavior; and Rekon, sample, and RR9 Debug creation stage through
-  Backlog before assertion and Accepted finalization.
-- Test-first evidence: valid Stage 1 behavioral RED executed `162` tests with
-  `156` passing and the six intended failures covering Accepted upsert,
-  embedded-NUL preflight, Rekon, sample, and RR9 Debug bypasses. Valid Stage 2
-  interface RED was the attributable missing transition-revision/AppModel
-  surface compile failure and therefore executed zero tests as designed.
-- Stop/resume evidence: Stage 1 first exposed an async XCTest-autoclosure test
-  defect, then a second non-Sendable fixture compile defect triggered the
-  required stop. The owner explicitly resumed its bounded correction. The
-  next run exposed the sample snapshot fixture's invalid `goal_links` query
-  and triggered the required stop; the owner explicitly resumed the bounded
-  diagnosis and correction now verified here. Stage 2 had one bounded
-  test-autoclosure correction, and the first GREEN compile had one bounded
-  actor-isolation correction. No production behavior was weakened to clear a
-  harness or fixture failure.
-- Implementer GREEN passed all `174/174` selected tests with zero failures or
-  skips. After Code Review and QA identified missing direct finalization,
-  rollback-snapshot, and planned-upsert snapshot evidence, one bounded
-  test-only correction across four already-declared test files again passed
-  `174/174`; production remained frozen.
-- Fresh independent QA repeated the seven-suite `xcodebuild test` selection
-  from fresh DerivedData and passed `174/174`, split as policy `32`, bridge
-  `24`, transport `5`, Rekon import `16`, App routes `59`, review/graph `12`,
-  and notifications `26`, with zero failures, skips, or expected failures.
-- Debug/package verification: a fresh `xcodebuild build` succeeded; code-sign
-  verification passed; the app, helper, bridge, and launchd plist were
-  present; direct packaged-helper initialize/tools-list returned exactly `13`
-  tools; transition exposes only an optional integer revision with minimum
-  `1`; upsert exposes no revision; and the helper TeamIdentifier is
-  `2UA854NLX4`. The transient LaunchAgent and Mach service were absent after
-  test cleanup, and the service probe exited `113`.
-- Code Review: `/root/task4a_code_review` — initial NO-GO, Required 3,
-  Optional 0, Out-of-scope 0; affected-role re-review after the bounded
-  test-only correction returned GO, Required 0, Optional 0, Out-of-scope 0.
-- QA/Test: `/root/task4a_qa_verifier` — initial NO-GO, Required 1, Optional 0,
-  Out-of-scope 0; affected-role rerun returned GO, Required 0, Optional 0,
-  Out-of-scope 0 with fresh `174/174` GREEN.
-- Architecture: `/root/task4a_architecture_postreview` — GO, Required 0,
-  Optional 0, Out-of-scope 0.
-- Security/Privacy: `/root/task4a_security_verifier` — GO, Required 0,
-  Optional 0, Out-of-scope 0.
-- TPM: `/root/task4a_tpm_postreview` — GO, Required 0, Optional 0,
-  Out-of-scope 0.
-- Delivery Management: `/root/task4a_delivery_postreview` — GO, Required 0,
-  Optional 0, Out-of-scope 1 for the nonblocking existing-test warning below.
-- Checkpoint inventory: the fourteen changed candidate files above plus this
-  ledger only, committed as `910b9653b661c6088d025bc6f6aea71271cff3b0`.
-  The approved brief, checksum index, unchanged policy file, ephemeral
-  DerivedData, result bundles, and logs were excluded.
-- Nonblocking observation: independent QA saw one existing QoS priority-
-  inversion warning in the admission-deadline test. It did not fail a test or
-  recur as a main-thread responsiveness failure and is outside Task 4A.
-- Open risk: None blocking Task 4A. Task 4B commands, tools, concurrency,
-  schema, persistence, model, UI, project, and dependency work remain closed.
-  No app install/launch, owner-data access, network access, external
-  notification, Release Radar mutation, or other external action occurred.
-- Temporary-artifact disposition: after the implementation checkpoint, an
-  exact `/tmp` inventory for the Task 4A prefix returned no matching paths, so
-  no deletion action was necessary and no Task 4A temporary artifact remains.
-- Terminal checkpoint: `910b9653b661c6088d025bc6f6aea71271cff3b0`
-  was pushed and verified exact at local HEAD, upstream, and live remote with
-  ahead/behind `0/0` and a clean worktree. Task 4B is next eligible but remains
-  closed pending separate owner authorization.
-
-## Task 3 planning gate
-
-- Status: Planning complete and independently accepted; Git operations and
-  implementation owner-approved, with Implementer release gated on exact
-  planning-checkpoint remote equality.
-- Planning agent: `/root/task3_planner`.
-- Architecture: `/root/task3_architecture_review` — GO, Required 0,
-  Optional 1, Out-of-scope 0; explicitly approved omission of the unused
-  policy-level `auditEventID` parameter.
-- TPM: `/root/task3_tpm_review` — GO, Required 0, Optional 0,
-  Out-of-scope 0.
-- QA/Test: `/root/task3_qa_review` — GO, Required 0, Optional 0,
-  Out-of-scope 0.
-- Security/Privacy: `/root/task3_security_review` — GO, Required 0,
-  Optional 0, Out-of-scope 2.
-- Delivery Management: `/root/task3_delivery_review` — GO, Required 0,
-  Optional 0, Out-of-scope 0.
-- Planning inventory: the Task 3 brief, `docs/delivery/task-briefs/SHA256SUMS`,
-  and this ledger only.
-- Planning checkpoint: commit/push authorized. Exact local/upstream equality is
-  required before a fresh Implementer begins. No implementation, tests, app or
-  owner-data access, Release Radar mutation, or external mutation occurred
-  before this checkpoint.
-
-## Task 3 implementation gate
-
-- Status: Complete, independently accepted, and terminally remote-exact.
-- Planning base/checkpoint: `80a639cccf04d59a116194a1300e55d03ea0ed32`,
-  verified exact at local HEAD, upstream, and live remote with ahead/behind
-  `0/0` before implementation began.
-- Implementer: `/root/task3_implementer`.
-- Implementation inventory and SHA-256:
-  - `ReleaseRadarCore/Planning/TicketTaskPlanningPolicy.swift` —
-    `828e7569a1be2854a6c795c11618d6b60a1fd4149290e52634eca8766663b54c`
-  - `ReleaseRadarTests/TicketTaskPlanningPolicyAcceptanceTests.swift` —
-    `ecc270116ec4ab49fde59dcef696f76171b7fa2ff135a4226e04df47105e48ba`
-- Test-first evidence: the selected RED exited `65` only because the policy and
-  typed errors were absent after one bounded test-only correction. Final
-  Implementer GREEN passed `73/73`, split `30` policy and `43` Store tests,
-  with zero failures or skips. Fresh independent QA repeated the same selection
-  and passed `73/73` with the same `30/43` split and zero failures or skips.
-- Coverage: creation/revision/completion and `64`-operation limits; ASCII and
-  multibyte UTF-8 boundaries; exact BINARY ID/label semantics; completion and
-  lifecycle orthogonality; immutable history; acceptance revision/completeness;
-  canonical ordering; task-only adjacent-state preservation; store-owned audit
-  atomicity; late-audit rollback; and non-disclosing owner/error precedence.
-- Stop/resume evidence: the first required stop followed the second failed
-  GREEN mechanism; the owner explicitly resumed bounded diagnosis of the
-  shared fixture, which removed an invalid migration-only fixture flag. The
-  second required stop followed the resulting `27/29` policy run; the owner
-  explicitly resumed diagnosis of the two named failures, both corrected as
-  test defects. No tool, edit, test, or Git action occurred while stopped.
-- Code Review: `/root/task3_code_review` — GO, Required 0, Optional 0,
-  Out-of-scope 0 after affected-role closure.
-- QA/Test: `/root/task3_qa_verifier` — GO, Required 0, Optional 0,
-  Out-of-scope 0 after independent `73/73` GREEN.
-- Architecture: `/root/task3_architecture_postreview` — GO, Required 0,
-  Optional 0, Out-of-scope 0.
-- Security/Privacy: `/root/task3_security_verifier` — GO, Required 0,
-  Optional 0, Out-of-scope 0 after affected-role closure.
-- TPM: `/root/task3_tpm_postreview` — GO, Required 0, Optional 0,
-  Out-of-scope 0.
-- Delivery Management: `/root/task3_delivery_postreview` — GO, Required 0,
-  Optional 0, Out-of-scope 0.
-- Checkpoint inventory: the two implementation files above plus this ledger
-  only. Temporary DerivedData and result bundles are excluded.
-- Open risk: None. No app launch/install, owner-data access, Release Radar
-  mutation, or external mutation occurred.
-- Terminal checkpoint: `e7b8d725178663b4d70b6984fbfdda3dcdffaf4a`
-  was pushed and verified exact at local HEAD, upstream, and live remote with
-  ahead/behind `0/0` and a clean worktree. Task 4A is eligible but remains
-  closed pending explicit owner authorization.
+After this planning slice is delivered, Task 4B is the next eligible feature
+under its separate implementation authorization. Complete the required
+controlled transport checks before claiming that future slice complete.

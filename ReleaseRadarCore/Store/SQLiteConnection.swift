@@ -23,13 +23,13 @@ public final class SQLiteConnection: @unchecked Sendable {
     private let root: SQLiteConnection?
     private let lease: SQLiteConnectionLease?
 
-    init(url: URL) throws {
+    init(url: URL, immutableReadOnly: Bool = false, createIfMissing: Bool = true) throws {
         root = nil
         lease = nil
         let result = sqlite3_open_v2(
-            url.path,
+            immutableReadOnly ? url.absoluteString + "?mode=ro&immutable=1" : url.path,
             &database,
-            SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
+            immutableReadOnly ? SQLITE_OPEN_READONLY | SQLITE_OPEN_URI | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW : (createIfMissing ? SQLITE_OPEN_CREATE : SQLITE_OPEN_NOFOLLOW) | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
             nil
         )
         guard result == SQLITE_OK else {
@@ -40,7 +40,7 @@ public final class SQLiteConnection: @unchecked Sendable {
         }
         do {
             sqlite3_busy_timeout(database, 5_000)
-            try execute("PRAGMA foreign_keys = ON")
+            if !immutableReadOnly { try execute("PRAGMA foreign_keys = ON") }
         } catch {
             sqlite3_close(database)
             database = nil
@@ -99,6 +99,29 @@ public final class SQLiteConnection: @unchecked Sendable {
             resultRow[name] = value(in: statement, at: index)
         }
         return resultRow
+    }
+
+    // Fixed app projections use bounded cursor reads rather than repeated OFFSET queries.
+    func rows(_ sql: String, bindings: [SQLiteValue] = [], maximum: Int = 10_000) throws -> [[String: SQLiteValue]] {
+        try validateLease()
+        let statement = try prepare(sql)
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_stmt_readonly(statement) != 0 else {
+            throw SQLiteError(code: SQLITE_READONLY, message: "Projection requires a read-only statement")
+        }
+        try bind(bindings, to: statement)
+        var rows: [[String: SQLiteValue]] = []
+        while true {
+            let result = sqlite3_step(statement)
+            if result == SQLITE_DONE { return rows }
+            guard result == SQLITE_ROW else { throw currentError(code: result) }
+            guard rows.count < maximum else { throw DocumentationOperationError.inventoryTooLarge }
+            var row: [String: SQLiteValue] = [:]
+            for index in 0..<sqlite3_column_count(statement) {
+                row[String(cString: sqlite3_column_name(statement, index))] = value(in: statement, at: index)
+            }
+            rows.append(row)
+        }
     }
 
     public func scalarText(

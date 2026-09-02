@@ -1,0 +1,3482 @@
+{
+  "version": 1,
+  "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+  "retiredArtifactIDs": [],
+  "collections": [
+    {
+      "collectionID": "docs",
+      "path": "docs",
+      "purpose": "Release Radar documentation, current authority, and retained history",
+      "allowedContents": [
+        "Catalog and navigation indexes",
+        "Architecture, design, brand, and delivery collections"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "c48466fb-a4fd-4f9e-96bf-967dfa173216",
+      "firstRead": "c48466fb-a4fd-4f9e-96bf-967dfa173216"
+    },
+    {
+      "collectionID": "architecture",
+      "path": "docs/architecture",
+      "parentCollection": "docs",
+      "purpose": "Accepted architecture and delivery-policy decisions",
+      "allowedContents": [
+        "Architecture decision records"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "firstRead": "fd278d0d-b43f-4145-9033-2906f32a6ab8"
+    },
+    {
+      "collectionID": "brand",
+      "path": "docs/brand",
+      "parentCollection": "docs",
+      "purpose": "Approved V1 brand direction and retained design references",
+      "allowedContents": [
+        "Brand guidance",
+        "Historical raster and vector references"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "37012d12-2f27-4282-a8ab-8e21d3c6eb14",
+      "firstRead": "37012d12-2f27-4282-a8ab-8e21d3c6eb14"
+    },
+    {
+      "collectionID": "delivery",
+      "path": "docs/delivery",
+      "parentCollection": "docs",
+      "purpose": "Current delivery status and durable task/evidence history",
+      "allowedContents": [
+        "Current progress ledger",
+        "Task briefs",
+        "Verification evidence",
+        "Historical archive",
+        "Implementation plans"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "36ea9572-06fb-4faf-b999-f8ad4fd701c2",
+      "firstRead": "450e84de-703b-4dcd-ad1a-7fddfee0d1d9"
+    },
+    {
+      "collectionID": "delivery.archive",
+      "path": "docs/delivery/archive",
+      "parentCollection": "delivery",
+      "purpose": "Historical delivery records; never current task eligibility",
+      "allowedContents": [
+        "Archive navigation",
+        "Preserved historical records",
+        "Accepted checksum manifest"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "9f08525c-3dbb-487d-9a70-24ebff25443c",
+      "firstRead": "9f08525c-3dbb-487d-9a70-24ebff25443c"
+    },
+    {
+      "collectionID": "delivery.archive.sdd",
+      "path": "docs/delivery/archive/sdd",
+      "parentCollection": "delivery.archive",
+      "purpose": "Historical SDD delivery packages",
+      "allowedContents": [
+        "Archived MVP and remediation collections"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "e0afb183-d383-45f9-9f50-7c6d544a795e"
+    },
+    {
+      "collectionID": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp",
+      "parentCollection": "delivery.archive.sdd",
+      "purpose": "Historical 2026-08-23-release-radar-mvp delivery records",
+      "allowedContents": [
+        "Preserved historical documents and verification evidence"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": true
+    },
+    {
+      "collectionID": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation",
+      "parentCollection": "delivery.archive.sdd",
+      "purpose": "Historical 2026-08-25-release-radar-remediation delivery records",
+      "allowedContents": [
+        "Preserved historical documents and verification evidence"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": true
+    },
+    {
+      "collectionID": "delivery.archive.temporary-artifacts",
+      "path": "docs/delivery/archive/temporary-artifacts",
+      "parentCollection": "delivery.archive",
+      "purpose": "Canonical copies of historical temporary delivery material",
+      "allowedContents": [
+        "Dated historical collections"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "6184aa60-a028-4dbd-869b-15cb5cc222ee"
+    },
+    {
+      "collectionID": "delivery.archive.temporary-artifacts.2026-08-25",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25",
+      "parentCollection": "delivery.archive.temporary-artifacts",
+      "purpose": "Historical delivery and proposal records retained on 2026-08-25",
+      "allowedContents": [
+        "Onboarding, tracking, UX proposal, and repair history"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "e055e3c7-0dd2-46c6-8545-1ba18cb19651"
+    },
+    {
+      "collectionID": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25",
+      "purpose": "Historical existing-project-onboarding delivery records",
+      "allowedContents": [
+        "Preserved historical documents and verification evidence"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": true
+    },
+    {
+      "collectionID": "delivery.archive.temporary-artifacts.2026-08-25.initialize-project-tracking",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/initialize-project-tracking",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25",
+      "purpose": "Historical initialize-project-tracking delivery records",
+      "allowedContents": [
+        "Preserved historical documents and verification evidence"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": true
+    },
+    {
+      "collectionID": "delivery.archive.temporary-artifacts.2026-08-25.project-planning-ux",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/project-planning-ux",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25",
+      "purpose": "Historical project-planning-ux delivery records",
+      "allowedContents": [
+        "Preserved historical documents and verification evidence"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": true
+    },
+    {
+      "collectionID": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25",
+      "purpose": "Historical sqlite23-repair delivery records",
+      "allowedContents": [
+        "Preserved historical documents and verification evidence"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials",
+        "Current execution authority"
+      ],
+      "isLeaf": true
+    },
+    {
+      "collectionID": "delivery.evidence",
+      "path": "docs/delivery/evidence",
+      "parentCollection": "delivery",
+      "purpose": "Durable verification evidence from delivered work",
+      "allowedContents": [
+        "Runtime screenshots",
+        "Immutable test evidence"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs",
+      "path": "docs/delivery/task-briefs",
+      "parentCollection": "delivery",
+      "purpose": "Reviewed task scopes; current progress determines the open task",
+      "allowedContents": [
+        "Dated task-brief collections",
+        "Accepted pre-M1 checksum manifest"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "a8065da2-31dc-45b8-a8a1-f711ae82bd5a",
+      "firstRead": "a8065da2-31dc-45b8-a8a1-f711ae82bd5a",
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-08-23-release-radar-mvp",
+      "path": "docs/delivery/task-briefs/2026-08-23-release-radar-mvp",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Task scopes for 2026-08-23-release-radar-mvp; current progress determines eligibility",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-08-25-release-radar-remediation",
+      "path": "docs/delivery/task-briefs/2026-08-25-release-radar-remediation",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Task scopes for 2026-08-25-release-radar-remediation; current progress determines eligibility",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-08-27-codex-plugin-lifecycle",
+      "path": "docs/delivery/task-briefs/2026-08-27-codex-plugin-lifecycle",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Task scopes for 2026-08-27-codex-plugin-lifecycle; current progress determines eligibility",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-08-28-codex-repository-handoff-correction",
+      "path": "docs/delivery/task-briefs/2026-08-28-codex-repository-handoff-correction",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Task scopes for 2026-08-28-codex-repository-handoff-correction; current progress determines eligibility",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Task scopes for 2026-08-29-delivery-goals-roadmap-readiness; current progress determines eligibility",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-08-29-release-radar-active-phase-selection",
+      "path": "docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Task scopes for 2026-08-29-release-radar-active-phase-selection; current progress determines eligibility",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Task scopes for 2026-09-01-managed-repository-documentation-contract; current progress determines eligibility",
+      "allowedContents": [
+        "Reviewed task briefs",
+        "Activation runbooks"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "firstRead": "011f16aa-fb30-458e-947b-56a8097415fb",
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "design",
+      "path": "docs/design",
+      "parentCollection": "docs",
+      "purpose": "Accepted product contracts and clearly classified proposals",
+      "allowedContents": [
+        "Product design documents",
+        "Visual study sources",
+        "Mockup collection"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": false,
+      "indexArtifactID": "da877bf9-71c1-4b8b-8431-298121a2f41e",
+      "firstRead": "98f5320c-208e-4ca1-aacf-c8df5701a1d4"
+    },
+    {
+      "collectionID": "design.mockups",
+      "path": "docs/design/mockups",
+      "parentCollection": "design",
+      "purpose": "Accepted visual references, proposal evidence, and superseded mockups",
+      "allowedContents": [
+        "Raster design references"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true
+    },
+    {
+      "collectionID": "delivery.plans",
+      "path": "docs/delivery/plans",
+      "parentCollection": "delivery",
+      "purpose": "Current implementation plans; progress determines task eligibility",
+      "allowedContents": [
+        "Implementation plans"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "cd044b85-6519-4330-ae3c-dc0d9c20a65e",
+      "archiveDestination": "delivery.archive"
+    }
+  ],
+  "artifacts": [
+    {
+      "artifactID": "c48466fb-a4fd-4f9e-96bf-967dfa173216",
+      "path": "docs/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "docs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fd278d0d-b43f-4145-9033-2906f32a6ab8",
+      "path": "docs/architecture/ADR-001-release-radar-boundaries.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "architecture.boundaries",
+      "parentCollection": "architecture",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "de35fa8c-3615-4b7f-a028-100aaadaeaf8",
+      "path": "docs/architecture/ADR-002-codex-plugin-lifecycle.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "architecture.codex-plugin-lifecycle",
+      "parentCollection": "architecture",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance",
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "f7cd9af5-0cd1-4707-b05e-007222e0ca8a",
+      "path": "docs/architecture/ADR-003-active-phase-selection.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "architecture.active-phase-selection",
+      "parentCollection": "architecture",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "6369c974-23ac-467b-90b7-0c0d0ad426fd",
+      "path": "docs/architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "architecture.delivery-goals-readiness",
+      "parentCollection": "architecture",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "9c1cf54c-99cf-4348-af72-1aedc07deb02",
+      "path": "docs/architecture/ADR-005-ticket-task-work-plans.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "architecture.ticket-tasks",
+      "parentCollection": "architecture",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "874c6a9a-f7e9-444e-b38d-c32ceb18a536",
+      "path": "docs/architecture/ADR-006-managed-repository-documentation-contract.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "architecture.managed-documentation",
+      "parentCollection": "architecture",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance",
+        "importer",
+        "evidence",
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a3918ee6-cc82-40f2-ae84-2d59571b2020",
+      "path": "docs/architecture/ADR-007-proportional-delivery-validation.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.validation-policy",
+      "parentCollection": "architecture",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "37012d12-2f27-4282-a8ab-8e21d3c6eb14",
+      "path": "docs/brand/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.brand",
+      "parentCollection": "brand",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a357e108-aae8-4f15-a44a-3bad0e98c9d5",
+      "path": "docs/brand/release-radar-icon-v1.png",
+      "kind": "designAsset",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "brand",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "69ed9247-6243-4511-bf52-594c98e9d649",
+      "path": "docs/brand/release-radar-icon-v1.svg",
+      "kind": "designAsset",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "brand",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "9484b9ea-9656-471a-92ee-cd0aac9f000a",
+      "path": "docs/brand/release-radar-lockup-v1.png",
+      "kind": "designAsset",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "brand",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "36ea9572-06fb-4faf-b999-f8ad4fd701c2",
+      "path": "docs/delivery/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "347a1392-285b-4c82-8b6f-a61832501e54",
+      "path": "docs/delivery/archive/2026-08-31-progress-through-rr-r10-task-2b.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "9f08525c-3dbb-487d-9a70-24ebff25443c",
+      "path": "docs/delivery/archive/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4",
+      "path": "docs/delivery/archive/SHA256SUMS",
+      "kind": "checksumManifest",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fdef6208-0c3a-44eb-b15d-986ea6815813",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/progress.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "066d4383-95ea-4f58-96a4-5f5ca00bbfac",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/review-50dab32..c3e5f79.diff",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "bc7f5bdf-92a5-414d-98ff-083c51c09f52",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/review-7a37012..50dab32.diff",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "71188108-a8a0-438b-9581-3f51310c1ca4",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-1-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "91b86511-d99e-4734-9a8c-031ef27ec153",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-2-fix-1-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "35ca4ff4-f32a-4629-b6d4-cfc57dc1d7f4",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-2-fix-2-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "09b65c27-df06-4657-a66c-70e7bbd205d1",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-2-recovery-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "73f31df2-557b-4347-aefc-63240071454c",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-2-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "69169c33-3d8e-44a8-b34b-16a6cb209d00",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-2-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "f6fc4fef-bd1d-43df-ae8e-74743adc24fa",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-3-fix-1-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "3cb8114b-b39e-4e54-9f36-cbc7a1b4198b",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-3-fix-2-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "52ba49b1-c71d-461e-9fad-8c46911a019c",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-3-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "e69a92b1-9b7e-4ccb-943d-f3a0c16a155d",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-3-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "ea9b9612-8f20-4eb7-9434-7406cfbbd507",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-4-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "a6767bae-6d1c-41ff-8adf-7937819ce215",
+      "path": "docs/delivery/archive/sdd/2026-08-23-release-radar-mvp/task-5-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "9d982ce0-1ca7-4e82-94d1-f04a7e9a54a8",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation/progress.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "bfbff192-4e3a-491e-b1c4-aae4fbfd8d64",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation/task-1-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "297b73ba-4f3a-4eb2-b44f-de80a244c05f",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation/task-2-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "c1a92106-ba13-4b67-b372-630612e44204",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation/task-3-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "a76ec70d-6e60-4147-8e76-39aa02a6013f",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation/task-4-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "1d400a71-ed4b-42ff-8861-acbc6a7f72e2",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation/task-5-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "dc1e0f96-bcab-4333-99a5-e086636c37b2",
+      "path": "docs/delivery/archive/sdd/2026-08-25-release-radar-remediation/task-6-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "e0afb183-d383-45f9-9f50-7c6d544a795e",
+      "path": "docs/delivery/archive/sdd/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.sdd",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "e055e3c7-0dd2-46c6-8545-1ba18cb19651",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "89be1b98-82f6-438a-a4b9-8fb208492110",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-arch-post.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "f139dd10-1bc1-4e5d-a2de-cff85071e6df",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-architecture.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "aba49567-31cf-48e0-98ee-d1882967aa25",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-code-review-final.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "fe29be97-4a67-4c1c-af75-bad9b263c099",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-code-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "95bc8456-59e5-4b85-a1e4-266e2fa2de55",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-delivery-final.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "362d37ce-4fe8-494b-bcd5-93c51e9f37f4",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-delivery.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "091140e4-3964-4330-bfae-9697752214c9",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-planning.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "2086640a-050d-4006-8c96-1cd79355966f",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-qa-final.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "11126dd1-0ee4-4642-b164-5a1687e67f41",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-qa-post.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "00b7705c-0736-47f2-a276-bf9ed8a59035",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-qa.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "99a408a2-2c57-48fc-ac0a-e6a0a01f2c6b",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-security-post.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "e320c825-b962-490e-91fc-25bcad8b8ed0",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-security.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "44ce10d0-47cb-4f4c-937a-0e804dceac91",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-tpm-final.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "aaa40b50-6d28-4afc-8b21-0ecdbaab0ab7",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/existing-project-onboarding/rr-existing-onboarding-tpm.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.existing-project-onboarding",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "94e3e90b-fa1e-4aac-ba83-61fd565a9808",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/initialize-project-tracking/release-radar-7a-implementer-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.initialize-project-tracking",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "94abcafd-bd68-486a-bc1a-c1a7fca21158",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/initialize-project-tracking/release-radar-7b-implementer-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.initialize-project-tracking",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "d4c921f4-9c75-4bc6-ad52-e28dcec360a1",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/project-planning-ux/release-radar-project-planning-ux-proposal-v2.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.project-planning-ux",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "6d9c5c37-f7d3-483b-b535-4d6e29252f08",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/project-planning-ux/release-radar-project-planning-ux-proposal-v3.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.project-planning-ux",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "14d898a3-5f93-42b4-ac74-6031305b2490",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/project-planning-ux/release-radar-project-planning-ux-proposal-v4.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.project-planning-ux",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "cee08a53-b249-4f7d-a450-72cebc71fc78",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/project-planning-ux/release-radar-project-planning-ux-proposal-v5.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.project-planning-ux",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "b4a64583-b36c-4176-aab3-c12076ea960d",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/project-planning-ux/release-radar-project-planning-ux-proposal.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.project-planning-ux",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "4e9df3fc-94e8-4953-b78a-7876053e6f14",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-arch-engineering-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "62235f0d-4704-44ae-8912-ec809a29bfe5",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-artifact-qa.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "3bff8f82-137a-4e89-98cb-e7689a37a8a0",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-artifact-security.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "3dc1b4c8-438c-4fcc-829a-a11b5b2af2a5",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-code-rereview-fix1.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "60b6243e-3615-45e5-9808-9079fb159922",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-code-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "761f6b7c-b35f-45a5-bebd-392bc74230be",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-delivery-engineering-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "a3dcce8e-b323-4689-9e79-63c16a2f8566",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-delivery-owner-validation-decision.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "aa2747b7-9d2e-445c-a102-d054b2fe3a09",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-delivery-packaging-authorization.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "dc6d9302-7da1-4245-8dc6-b98859ba883e",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-implementer-report.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "351a4739-124c-47d6-bacc-56e51e70b098",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-packaging-execution-evidence.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "bf50a257-6cd5-4b04-ac38-c540ac17e347",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-qa-rereview-fix1.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "88652304-d5a4-4263-8466-3a41adffc636",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-qa-rereview-fix2.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "cfdac8ce-09f3-4813-a49c-929c5bf3837e",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-qa-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "b2f6f592-b43b-4aca-902a-7348515809e7",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-red-arch-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "5c2fd025-fce9-43d7-8dd3-a732e09ab7f4",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-red-qa-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "f0093226-86cc-4f39-a347-9fdba5f6d114",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-red-security-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "76946d5b-58a2-4342-a80c-91d020362bd3",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-repair-brief.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "dbb49d3d-70d6-4384-96aa-4756e97c1cb0",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-review-package-fix1.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "a528b0e8-dc00-410f-904f-46884d8154ef",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-review-package-fix2.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "1b21cbc6-c292-4202-ba04-479c0fbd975c",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-review-package.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "fe5c1e80-ede4-45e6-86c2-80e25f5b4e59",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-security-rereview-fix1.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "3ad97170-ecc5-4735-862c-8f8fb9685332",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-security-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "e1197837-8974-48db-8b0e-63c9e06e0a1c",
+      "path": "docs/delivery/archive/temporary-artifacts/2026-08-25/sqlite23-repair/release-radar-sqlite23-tpm-engineering-review.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts.2026-08-25.sqlite23-repair",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "31277e5a-3a64-4c1f-bc15-26d6f4a935d4"
+      }
+    },
+    {
+      "artifactID": "6184aa60-a028-4dbd-869b-15cb5cc222ee",
+      "path": "docs/delivery/archive/temporary-artifacts/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive.temporary-artifacts",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "96b10404-6291-4cc8-beb9-c0e2e1dff704",
+      "path": "docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "0199bdf8-78d1-460e-abe2-519f0fd34e0b",
+      "path": "docs/delivery/evidence/mdcp-m2c-onboarding-repair-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "2497cc96-d6c8-42ea-87b3-1f6b7cabda8b",
+      "path": "docs/delivery/evidence/mdcp-m2c-onboarding-staged-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ab3b7be3-fc39-48cf-8101-0fc4d24845ac",
+      "path": "docs/delivery/evidence/mdcp-m2c-overview-repair-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "c7e61a92-4787-4f7d-93de-79b271e163e2",
+      "path": "docs/delivery/evidence/mdcp-m2c-overview-staged-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "c57db624-74d1-439c-83f6-03033273c2fb",
+      "path": "docs/delivery/evidence/mdcp-m3c-confirmation-1100.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ed21cbac-018c-40d2-b681-96015909e9db",
+      "path": "docs/delivery/evidence/mdcp-m3c-confirmation-620.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "2f2246aa-e957-454f-9c9b-faf80cb410c6",
+      "path": "docs/delivery/evidence/mdcp-m3c-evidence-1100.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "849e2bb8-5267-4bf0-8261-d5046970abaa",
+      "path": "docs/delivery/evidence/mdcp-m3c-evidence-620.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "52cf86e7-e8fc-44eb-9558-aab94983f70b",
+      "path": "docs/delivery/evidence/mdcp-m3c-maintenance-read-only.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ca37c279-0dbb-4061-b379-bc557159e907",
+      "path": "docs/delivery/evidence/mdcp-m3c-phase-less-overview.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "2168caea-798e-4895-acad-27b249b57bf6",
+      "path": "docs/delivery/evidence/mdcp-m5-onboarding-unavailable-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "9f047ff0-f55e-47bb-a46d-5b40d9f51146",
+      "path": "docs/delivery/evidence/mdcp-m5-onboarding-unavailable-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fb8da0f4-d5e9-4631-b571-5f5ff6c2f017",
+      "path": "docs/delivery/evidence/mdcp-m5-overview-current-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ef0a5b3e-c4de-4007-92ac-36d4cb2ecc5c",
+      "path": "docs/delivery/evidence/mdcp-m5-overview-update-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a14ff940-cfc1-4735-974b-895ab63f1364",
+      "path": "docs/delivery/evidence/rr-r9-active-phase-board-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "b445b788-23e7-4630-a4d1-648845c1ebcc",
+      "path": "docs/delivery/evidence/rr-r9-active-phase-board-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "0ad29467-a31f-4574-9a98-05b2188a540f",
+      "path": "docs/delivery/evidence/rr-r9-active-phase-overview.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "7e761c7f-890f-46f8-80ac-17139b378c52",
+      "path": "docs/delivery/evidence/rr-r9-active-phase-recovery.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "f3745dd3-d7c2-48d2-b4b4-66e977c22067",
+      "path": "docs/delivery/evidence/rr06-fix1-overview.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "60bfe86b-4516-4c2b-bb2d-af7270316152",
+      "path": "docs/delivery/evidence/rr06-fix1-projects.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "596cc16a-071c-483e-9ca8-67e7b3d20c6b",
+      "path": "docs/delivery/evidence/rr06-owner-narrow.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "0df8831b-ca74-470f-97b5-03bc346ecb21",
+      "path": "docs/delivery/evidence/rr06-owner-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "bb97491f-4fd6-42a1-b19f-e16d635af1ad",
+      "path": "docs/delivery/evidence/rr07-activity.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "1afeecc9-08fc-4299-8d5d-3eb562a4c40d",
+      "path": "docs/delivery/evidence/rr07-dependencies.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "d3584218-3f79-4f1e-bcb8-1078dcc88854",
+      "path": "docs/delivery/evidence/rr07-needs-review.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "11bbbbe0-5784-4d8b-b552-705d5b033979",
+      "path": "docs/delivery/evidence/rr07-settings.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "887bdd6c-12b6-49e6-878e-51666796e566",
+      "path": "docs/delivery/evidence/rr10-activity.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "56d21a68-625e-4cef-ae0c-2804acff28fb",
+      "path": "docs/delivery/evidence/rr10-board-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "c1dd4c3a-5460-48b8-b3d7-99645bee278c",
+      "path": "docs/delivery/evidence/rr10-dependencies.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "7b8828f1-697e-4140-9c9b-f5b3da58408d",
+      "path": "docs/delivery/evidence/rr10-needs-review.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "e0a1bf9e-5a4c-4a0d-ae90-bda8d9a93083",
+      "path": "docs/delivery/evidence/rr10-notifications.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "3dae8a2b-fa2a-4472-a09b-ad00971e947e",
+      "path": "docs/delivery/evidence/rr10-onboarding-failure.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "199a56ed-2513-436b-ad69-36e4d45eef7c",
+      "path": "docs/delivery/evidence/rr10-projects-overview-board-detail.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "dfa76052-348a-42ae-ae62-4044c29a40b7",
+      "path": "docs/delivery/evidence/rr10-settings.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "450e84de-703b-4dcd-ad1a-7fddfee0d1d9",
+      "path": "docs/delivery/progress.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.current-state",
+      "parentCollection": "delivery",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance",
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "f020c938-e160-4aa6-8506-6b4ec74a0de0",
+      "path": "docs/delivery/task-briefs/2026-08-23-release-radar-mvp/task-1-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "f340454f-d73e-4b53-af27-d268640e00d0",
+      "path": "docs/delivery/task-briefs/2026-08-23-release-radar-mvp/task-2-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "40acd42a-78ae-4eee-aa6d-01e2dba08e92",
+      "path": "docs/delivery/task-briefs/2026-08-23-release-radar-mvp/task-3-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-23-release-radar-mvp",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "f46d5ba0-7300-4c67-96a9-ced30c049b38",
+      "path": "docs/delivery/task-briefs/2026-08-25-release-radar-remediation/task-1-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "44d69b23-e8ed-4b69-b282-ab6da4009c7a",
+      "path": "docs/delivery/task-briefs/2026-08-25-release-radar-remediation/task-2-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "cedf858c-22fb-4fc4-9f10-671a049b920b",
+      "path": "docs/delivery/task-briefs/2026-08-25-release-radar-remediation/task-3-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "a4b240e1-33b6-4d81-88c0-eee719366721",
+      "path": "docs/delivery/task-briefs/2026-08-25-release-radar-remediation/task-4-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "f2ff69df-b6ec-433c-a6f8-499d3b7d240d",
+      "path": "docs/delivery/task-briefs/2026-08-25-release-radar-remediation/task-5-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "24a28665-5b56-409f-b829-4350c0887371",
+      "path": "docs/delivery/task-briefs/2026-08-25-release-radar-remediation/task-6-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-25-release-radar-remediation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "3fb8fea0-9ffa-4d47-abcb-5a5c26ae5a4b",
+      "path": "docs/delivery/task-briefs/2026-08-27-codex-plugin-lifecycle/task-1-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-27-codex-plugin-lifecycle",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "e366d34f-4b76-4458-bed3-25bd93400d4b",
+      "path": "docs/delivery/task-briefs/2026-08-28-codex-repository-handoff-correction/task-1-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-28-codex-repository-handoff-correction",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "362c407f-7d7b-488b-9204-91c8b0103265",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1a-schema-v10-fixture-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence",
+        "fixture"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "8cec7739-107d-4180-94aa-c9956515226d",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1b-v11-persistence-models-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "2bf0c300-f961-48a0-8351-4278bf27397f",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a-schema-v11-fixture-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence",
+        "fixture"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "856bfbb7-9835-4435-839b-4dc3290cacb2",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2a0-xcode-fixture-manifest-membership-prerequisite-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence",
+        "fixture"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "d216d1ba-5c5f-4e68-8ee8-8fe74041b07a",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-2b-schema-v12-ticket-task-persistence-models-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "4a630e58-ff66-43cb-9c54-89dd9d6c13c8",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "0d74594e-6d13-48dc-b634-f1f17cf84383",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "ae5da424-6f01-4cf4-b1ba-70139de6efb4",
+      "path": "docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-1-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-release-radar-active-phase-selection",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "48bf4113-6967-4c9f-a64a-4e9146774afe",
+      "path": "docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-2-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-release-radar-active-phase-selection",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "1f44ebad-e24c-4a83-8fa3-a21255eefc47",
+      "path": "docs/delivery/task-briefs/2026-08-29-release-radar-active-phase-selection/task-3-test-host-isolation-correction-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-release-radar-active-phase-selection",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4"
+      }
+    },
+    {
+      "artifactID": "82355cfa-0ee1-4c00-bd41-52b22644e3f4",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fcee4578-9eb4-4788-9e00-fe5c3e2ad0c1",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m2b-deterministic-index-tool-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "953f31c6-4844-4b6a-ab5d-051a70dd9ed0",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m2c-central-path-contract-v1-preview-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ae719f13-6dca-48b1-972d-c7d725dd8b50",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3a-managed-evidence-identity-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "df35073f-6a52-4535-9add-bb720826eac7",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3a0-schema-v12-fixture-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence",
+        "fixture"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "6003a8f1-8851-45f4-953f-d2655ca377fd",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3b-evidence-inventory-reconciliation-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fcb88ba6-7169-45fb-b80a-849d5616f126",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m3c-readback-root-relocation-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "011f16aa-fb30-458e-947b-56a8097415fb",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "c44ceed1-073d-455b-bb79-fe345f455a1f",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "e47faa43-b783-46de-931f-cc98456224fd",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "bdb0f78b-3c1d-4ce2-8272-27cc5bf88ddd",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "34b9a03b-8249-4468-ac45-bc916038fc47",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "c1b4b005-b1e4-452f-bfa2-9099999eb7e1",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "49eedb35-c8d8-420e-9212-2121b30950d2",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a8065da2-31dc-45b8-a8a1-f711ae82bd5a",
+      "path": "docs/delivery/task-briefs/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "importer",
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a5c1293d-7b06-4bb9-acd6-6e9f1d0a35c4",
+      "path": "docs/delivery/task-briefs/SHA256SUMS",
+      "kind": "checksumManifest",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "da877bf9-71c1-4b8b-8431-298121a2f41e",
+      "path": "docs/design/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "98f5320c-208e-4ca1-aacf-c8df5701a1d4",
+      "path": "docs/design/agent-driven-delivery-dashboard-design.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.dashboard",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "37a68186-3912-480d-a755-de5cfdfecb9f",
+      "path": "docs/design/cloudkit-iphone-companion-draft.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "eddbab98-7db3-48d5-9015-4e1b7fd54cdf",
+      "path": "docs/design/delivery-dashboard-seven-mockups.html",
+      "kind": "designAsset",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "5790258e-3166-423e-a5b9-45cd6d8a530d",
+      "path": "docs/design/managed-repository-documentation-contract.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.managed-documentation",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance",
+        "importer",
+        "evidence",
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "99310ee7-5191-44f3-936f-cd658a7f2d24",
+      "path": "docs/design/mockups/activity.png",
+      "kind": "designAsset",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "2bdc0e4b-d6fe-4d3f-a228-ea14e5976891",
+      "path": "docs/design/mockups/alerts.png",
+      "kind": "designAsset",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "32e6ba81-f6d9-48be-9e76-b08e56b5dc60",
+      "path": "docs/design/mockups/dependencies.png",
+      "kind": "designAsset",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "cef27517-0dc5-4938-b3d3-1c5986b927fe",
+      "path": "docs/design/mockups/full_logo.png",
+      "kind": "designAsset",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "99aa5b55-8e43-4aa7-8949-4508b17d0f4f",
+      "path": "docs/design/mockups/goal_to_work_flow.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "602ec52b-90d6-4d90-ac46-bc1f21746e5e",
+      "path": "docs/design/mockups/goals.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "b274e6b9-ca94-44cd-9567-f075e29caf2e",
+      "path": "docs/design/mockups/goals_compact.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fe8db03b-54a7-4398-9ea7-9bd00f243e0a",
+      "path": "docs/design/mockups/goals_data_states.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fb7b5e1c-3541-4ce8-9cd0-80a14a4e4f29",
+      "path": "docs/design/mockups/history.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ba9fefd2-55eb-44ae-992f-b21ad10a197f",
+      "path": "docs/design/mockups/history_compact.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "7faa2ee4-07ad-4f20-ace6-58c6cc231964",
+      "path": "docs/design/mockups/icon.png",
+      "kind": "designAsset",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "15da1e7b-53c5-4bb2-867b-47efc43486f9",
+      "path": "docs/design/mockups/needs_review.png",
+      "kind": "designAsset",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "525d606f-8cc2-48fa-a5fd-8fbbe5698f4b",
+      "path": "docs/design/mockups/onboarding_state.png",
+      "kind": "designAsset",
+      "lifecycle": "superseded",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "3a8a3e7b-5510-42cb-8a9a-ae6180db10a3",
+      "path": "docs/design/mockups/phase_board.png",
+      "kind": "designAsset",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "12882659-ebf5-4541-b5a7-3e1f22a4230e",
+      "path": "docs/design/mockups/settings.png",
+      "kind": "designAsset",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "1264ec5e-b7ef-49b9-840c-6808f1ce4184",
+      "path": "docs/design/mockups/work_board.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "66b3610b-3e68-46b0-88f0-2b9ea206066d",
+      "path": "docs/design/mockups/work_board_compact.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "466140f5-f952-474b-8c65-aad1a1727b2e",
+      "path": "docs/design/release-radar-active-phase-selection-design.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.active-phase-selection",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a428dba8-6027-43e5-91d8-5c677ef34841",
+      "path": "docs/design/release-radar-codex-plugin-lifecycle-design.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.codex-plugin-lifecycle",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance",
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "eacc4905-ad05-4c51-aecc-6fd32fcb7b9b",
+      "path": "docs/design/release-radar-delivery-goals-phase-board-design.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.delivery-goals-presentation",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "cb2f2641-c86c-4a72-b3fe-e2fc3b700f6d",
+      "path": "docs/design/release-radar-project-planning-ux-proposal.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "8d761556-f57d-4271-90a7-17c59348660b",
+      "path": "docs/design/release-radar-ticket-tasks-design.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.ticket-task-presentation",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a1208906-0e77-4e17-8b0f-74d51231a2cd",
+      "path": "docs/design/release-radar-ux-redesign-study.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "3619538f-28d6-4114-b132-9e6ee3f8aa6d",
+      "path": "docs/design/release-radar-ux-redesign.html",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "acb2bdfe-b052-40bc-aac7-80742791aa50",
+      "path": "docs/delivery/archive/2026-08-23-release-radar-mvp.md",
+      "kind": "document",
+      "lifecycle": "superseded",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "b7ad406a-3131-4eaa-8f8b-fbee0fcd26dc",
+      "path": "docs/delivery/archive/2026-08-25-release-radar-remediation.md",
+      "kind": "document",
+      "lifecycle": "superseded",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "0ff7a384-fbb1-4ff1-bb0b-fbbd27b466a3",
+      "path": "docs/delivery/archive/2026-08-27-codex-plugin-lifecycle.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "cd044b85-6519-4330-ae3c-dc0d9c20a65e",
+      "path": "docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.rr-r10-implementation",
+      "parentCollection": "delivery.plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "7d88279f-a192-4b4e-83ab-36e144a734dd",
+      "path": "docs/delivery/archive/2026-08-29-release-radar-active-phase-selection.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7",
+      "path": "docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.delivery-goals-readiness",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "d8f875e8-c5ec-486b-9e76-068003c5fa01",
+      "path": "docs/delivery/archive/2026-09-02-progress-through-mdcp-m6b.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "eb5a4f12-727d-4547-bc47-aa3cb9f26c64",
+      "path": "docs/delivery/archive/2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "edf26376-b869-41d0-99de-5d848a51dd9a",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.rr-r10-task-4b",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    }
+  ]
+}

@@ -42,8 +42,10 @@ enum CodexPromptCopyResult: Equatable, Sendable {
 }
 
 struct CodexPromptHandoff: Sendable {
-    private static let setupPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. You are authorizing this task to create or update only the Release Radar managed guidance block in the authorized repository's root AGENTS.md, and to create docs/delivery/progress.md only if it is absent, while preserving every other instruction and all existing delivery content. Follow the skill's repository handoff: write and read back the permitted repository guidance first, record that exact AGENTS.md with the existing ticketless Release Radar evidence mutation, preserve the complete request across uncertain outcomes, and report any pending audit or discrepancy instead of guessing."
-    private static let auditRepairPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. Release Radar reports this repository's guidance handoff incomplete: the v1 managed block already matches, but its required ticketless evidence record is absent. You are authorizing this task to read back the exact root AGENTS.md and complete the handoff through the skill's audited repair path without changing unrelated repository instructions, delivery documentation, or delivery state. Preserve the complete request across uncertain outcomes and report any pending audit or discrepancy instead of guessing."
+    private static let setupPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. You are authorizing this task to create or update only the exact Release Radar guidance v2 managed block in the authorized repository's root \(RepositoryDocumentContract.guidancePath), while preserving every other instruction and all existing delivery content. Require an existing catalogued \(RepositoryDocumentContract.progressPath), preserve it byte-for-byte, and validate the existing \(RepositoryDocumentContract.catalogPath) and generated indexes with the repository documentation check; stop before any handoff write and report missing or invalid prerequisites for separately authorized preparation, without creating a ledger or catalog, moving documents, binding a repository, or accepting a catalog. Use the supported read-only inventory to preserve the exact existing handoff evidence ID when one matches this project's ticketless root \(RepositoryDocumentContract.guidancePath); reject incomplete, ambiguous, or mismatched results. Follow the skill's repository handoff: write and read back the permitted guidance, record that exact file with the existing ticketless evidence mutation, retain the complete request across uncertain outcomes, and report pending audit or discrepancies."
+    private static func auditRepairPrompt(version: Int) -> String {
+        "Explicitly invoke and follow the installed $release-radar:release-radar skill. Release Radar reports this repository's guidance handoff incomplete: the v\(version) managed block already matches, but its required ticketless evidence record is absent. You are authorizing this task to read back the exact root \(RepositoryDocumentContract.guidancePath) and complete the handoff through the skill's audited repair path without changing unrelated repository instructions, delivery documentation, or delivery state. Preserve the complete request across uncertain outcomes and report any pending audit or discrepancy instead of guessing."
+    }
     static let copyButtonAccessibilityLabel = "Copy Codex prompt"
     static let copyButtonAccessibilityIdentifier = "onboarding-copy-codex-prompt"
     static let clipboardDisclosure = "Only the prompt is copied. It remains on the clipboard until replaced."
@@ -51,7 +53,7 @@ struct CodexPromptHandoff: Sendable {
     static func prompt(for state: ProjectGuidanceState, projectRoot: URL) -> String {
         let root = projectRoot.standardizedFileURL.resolvingSymlinksInPath().path
         let rootBinding = "The exact Release Radar-authorized repository root is `\(root)`. Confirm that this Codex task's canonical repository root exactly matches it. If it does not match, stop before writing any file or calling Release Radar and tell the owner to open a task rooted at that exact folder."
-        let handoff = if case .handoffIncomplete = state { auditRepairPrompt } else { setupPrompt }
+        let handoff = if case let .handoffIncomplete(version) = state { auditRepairPrompt(version: version) } else { setupPrompt }
         return rootBinding + "\n\n" + handoff
     }
 
@@ -174,9 +176,15 @@ struct OnboardingView: View {
         onAttachFolder: (@MainActor (URL, ProjectID) async throws -> AttachFolderOutcome)? = nil,
         onReloadAfterFolderAttachment: (@MainActor (ProjectID) async -> Bool)? = nil,
         pasteboardWriter: @escaping @MainActor (String) -> Bool = CodexPromptHandoff.writeToGeneralPasteboard,
+        initialPreview: OnboardingPreview? = nil,
         onFinished: @escaping @MainActor (ProjectID) async -> Void
     ) {
         _onboarding = State(initialValue: FolderProjectOnboarding(store: store))
+        if let initialPreview {
+            _preview = State(initialValue: initialPreview)
+            _workflow = State(initialValue: .initialize)
+            _projectName = State(initialValue: initialPreview.selectedFolder.lastPathComponent)
+        }
         self.navigationTitle = navigationTitle
         self.onCancel = onCancel
         self.onOpenExisting = onOpenExisting
@@ -324,9 +332,15 @@ struct OnboardingView: View {
                 recognizedArtifactPreview(importPreview)
             }
 
-            let guidance = ProjectGuidancePresentation(state: preview.projectGuidanceState)
+            let guidance = ProjectGuidancePresentation(documentationState: preview.documentationState)
             LabeledContent("Release Radar guidance", value: guidance.status)
                 .accessibilityIdentifier("onboarding-project-guidance-status")
+            if preview.documentationState != .legacy(preview.projectGuidanceState) {
+                Text(guidance.detail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("onboarding-documentation-detail")
+            }
 
             let confirmation = InitializeProjectConfirmation(
                 projectName: projectName,

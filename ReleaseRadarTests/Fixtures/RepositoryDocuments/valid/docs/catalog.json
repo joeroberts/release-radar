@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "repositoryID": "9141d1ea-3342-4462-9e06-6934d816c03f",
+  "retiredArtifactIDs": [
+    "retired-document"
+  ],
+  "collections": [
+    {
+      "collectionID": "docs",
+      "path": "docs",
+      "purpose": "Repository documentation",
+      "allowedContents": [
+        "indexes",
+        "plans"
+      ],
+      "prohibitedContents": [
+        "temporary files"
+      ],
+      "firstRead": "root-index",
+      "indexArtifactID": "root-index",
+      "isLeaf": false
+    },
+    {
+      "collectionID": "plans",
+      "path": "docs/plans",
+      "parentCollection": "docs",
+      "purpose": "Current decisions",
+      "allowedContents": [
+        "plans"
+      ],
+      "prohibitedContents": [
+        "temporary files"
+      ],
+      "firstRead": "current",
+      "indexArtifactID": "plans-index",
+      "isLeaf": false,
+      "archiveDestination": "archive"
+    },
+    {
+      "collectionID": "archive",
+      "path": "docs/archive",
+      "parentCollection": "docs",
+      "purpose": "Historical documents",
+      "allowedContents": [
+        "historical documents"
+      ],
+      "prohibitedContents": [
+        "controllers"
+      ],
+      "isLeaf": true
+    }
+  ],
+  "artifacts": [
+    {
+      "artifactID": "root-index",
+      "path": "docs/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "docs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "plans-index",
+      "path": "docs/plans/README.md",
+      "kind": "collectionIndex",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "current",
+      "path": "docs/plans/current.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery",
+      "parentCollection": "plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "draft",
+      "path": "docs/plans/draft.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "evidence",
+      "path": "docs/plans/evidence.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "required",
+        "manifestArtifactID": "checksums"
+      }
+    },
+    {
+      "artifactID": "checksums",
+      "path": "docs/plans/SHA256SUMS",
+      "kind": "checksumManifest",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "history",
+      "path": "docs/archive/history.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    }
+  ]
+}

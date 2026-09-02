@@ -32,7 +32,9 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     private var registeredHere = false
 
     private init(
-        dispatcher: AgentCommandDispatcher,
+        dispatcher: AgentCommandDispatcher?,
+        queries: AgentQueryDispatcher,
+        maintenanceMode: DocumentationMaintenanceMode? = nil,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
         afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void,
         afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
@@ -40,6 +42,8 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         service = .agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
         callback = AgentBridgeAppCallback(
             dispatcher: dispatcher,
+            queries: queries,
+            maintenanceMode: maintenanceMode,
             beforeDispatch: beforeDispatch,
             afterDispatchBeforeReply: afterDispatchBeforeReply,
             afterReply: afterReply
@@ -59,6 +63,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         )
         let host = AgentBridgeApplicationHost(
             dispatcher: dispatcher,
+            queries: AgentQueryDispatcher(store: store),
             beforeDispatch: beforeDispatch,
             afterDispatchBeforeReply: afterDispatchBeforeReply,
             afterReply: afterReply
@@ -72,6 +77,16 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             try? host.rollbackRegistration()
             throw error
         }
+    }
+
+    static func startDocumentationMaintenance(store: DeliveryStore, mode: DocumentationMaintenanceMode) async throws -> AgentBridgeApplicationHost {
+        let dispatcher = mode == .readOnly ? nil : AgentCommandDispatcher(store: store, projectRegistry: PersistedAuthorizedProjectRegistry(store: store))
+        let host = AgentBridgeApplicationHost(dispatcher: dispatcher, queries: AgentQueryDispatcher(store: store), maintenanceMode: mode,
+                                               beforeDispatch: { _ in }, afterDispatchBeforeReply: { _, _ in }, afterReply: { _, _ in })
+        // Maintenance never registers, installs, unregisters or repairs a service.
+        guard host.service.status == .enabled else { throw AgentBridgeApplicationError.notFound }
+        try await host.connect()
+        return host
     }
 
     func disconnectCallback() {
@@ -185,19 +200,25 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
 
 }
 
-private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unchecked Sendable {
-    private let dispatcher: AgentCommandDispatcher
+final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unchecked Sendable {
+    private let dispatcher: AgentCommandDispatcher?
+    private let queries: AgentQueryDispatcher
+    private let maintenanceMode: DocumentationMaintenanceMode?
     private let beforeDispatch: @Sendable (AgentCommandEnvelope) async -> Void
     private let afterDispatchBeforeReply: @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
     private let afterReply: @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
 
     init(
-        dispatcher: AgentCommandDispatcher,
+        dispatcher: AgentCommandDispatcher?,
+        queries: AgentQueryDispatcher,
+        maintenanceMode: DocumentationMaintenanceMode? = nil,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
         afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void,
         afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
     ) {
         self.dispatcher = dispatcher
+        self.queries = queries
+        self.maintenanceMode = maintenanceMode
         self.beforeDispatch = beforeDispatch
         self.afterDispatchBeforeReply = afterDispatchBeforeReply
         self.afterReply = afterReply
@@ -211,6 +232,19 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
     ) {
         let replyGate = AgentBridgeDataReply(reply)
         let now = Date().timeIntervalSince1970
+        if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any], object["query"] != nil {
+            guard wireVersion == ReleaseRadarBridgeTransport.wireVersion, data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
+                  admissionDeadline > now, admissionDeadline - now <= ReleaseRadarBridgeTransport.maximumDeadlineInterval,
+                  Set(object.keys).isSubset(of: ["version", "projectRoot", "query"]),
+                  let query = try? JSONDecoder().decode(AgentQueryEnvelope.self, from: data) else {
+                replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData()); return
+            }
+            Task {
+                let result = await queries.dispatch(query, admissionDeadline: admissionDeadline)
+                replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.appUnavailableResultData())
+            }
+            return
+        }
         guard wireVersion == ReleaseRadarBridgeTransport.wireVersion,
               data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
               admissionDeadline > now,
@@ -227,13 +261,19 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
             return
         }
 
+        guard let dispatcher, maintenanceMode != .readOnly,
+              maintenanceMode == nil || Self.permitsDocumentationMaintenance(envelope) else {
+            replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData()); return
+        }
         Task {
             await beforeDispatch(envelope)
             guard admissionDeadline > Date().timeIntervalSince1970 else {
                 replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
                 return
             }
-            let result = await dispatcher.dispatch(envelope, admissionDeadline: admissionDeadline)
+            let result = maintenanceMode == .commands
+                ? await dispatcher.dispatchDocumentationMaintenance(envelope, admissionDeadline: admissionDeadline)
+                : await dispatcher.dispatch(envelope, admissionDeadline: admissionDeadline)
             await afterDispatchBeforeReply(envelope, result)
             replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.outcomeUnknownResultData())
             Task {
@@ -241,6 +281,18 @@ private final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC
             }
         }
     }
+    static func permitsDocumentationMaintenance(_ envelope: AgentCommandEnvelope) -> Bool {
+        if envelope.command.isDocumentationMutation { return true }
+        if case let .addEvidence(id, ticket, path) = envelope.command {
+            let root = URL(fileURLWithPath: envelope.projectRoot)
+            let exactPath = root.appendingPathComponent(RepositoryDocumentContract.guidancePath).path
+            return ticket == nil && path == exactPath
+                && id.hasPrefix(RepositoryDocumentContract.handoffEvidenceIDPrefix)
+                && id.count > RepositoryDocumentContract.handoffEvidenceIDPrefix.count
+        }
+        return false
+    }
+
 }
 
 private final class AgentBridgeDataReply: @unchecked Sendable {

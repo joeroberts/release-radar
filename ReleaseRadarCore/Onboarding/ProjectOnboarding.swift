@@ -20,7 +20,8 @@ public struct OnboardingPreview: Equatable, Sendable {
     public let authorizedWorktreeURLs: [URL]
     public let worktreesRequiringAuthorization: [URL]
     public let recognizedArtifactPreview: ImportPreview?
-    public let projectGuidanceState: ProjectGuidanceState
+    public let documentationState: ProjectDocumentationState
+    public var projectGuidanceState: ProjectGuidanceState { documentationState.guidanceState }
     public let pendingProjectID: ProjectID?
     public let completedProjectID: ProjectID?
 
@@ -33,6 +34,7 @@ public struct OnboardingPreview: Equatable, Sendable {
         worktreesRequiringAuthorization: [URL],
         recognizedArtifactPreview: ImportPreview? = nil,
         projectGuidanceState: ProjectGuidanceState = .missing,
+        documentationState: ProjectDocumentationState? = nil,
         pendingProjectID: ProjectID? = nil,
         completedProjectID: ProjectID? = nil
     ) {
@@ -43,7 +45,7 @@ public struct OnboardingPreview: Equatable, Sendable {
         self.authorizedWorktreeURLs = authorizedWorktreeURLs
         self.worktreesRequiringAuthorization = worktreesRequiringAuthorization
         self.recognizedArtifactPreview = recognizedArtifactPreview
-        self.projectGuidanceState = projectGuidanceState
+        self.documentationState = documentationState ?? .legacy(projectGuidanceState)
         self.pendingProjectID = pendingProjectID
         self.completedProjectID = completedProjectID
     }
@@ -236,7 +238,8 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 let path = Self.canonical(descriptor.workingDirectory)
                 return !roots.contains(where: { Self.contains(path, within: $0) })
             }
-            let projectID = ProjectID(rawValue: Self.projectID(for: authorizedSelected))
+            let projectIdentity = try await projectIdentity(forRoot: authorizedSelected)
+            let projectID = try await projectID(forRoot: authorizedSelected) ?? ProjectID(rawValue: Self.projectID(for: authorizedSelected))
             let authorizedProject = AuthorizedProject(
                 projectID: projectID,
                 canonicalRoot: authorizedSelected,
@@ -250,11 +253,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 projectID: projectID,
                 rootURL: authorizedSelected
             )
-            let projectGuidanceState = ProjectGuidanceInspection.inspect(
-                rootURL: authorizedSelected,
-                hasAuditedHandoff: hasAuditedHandoff
-            )
-            let projectIdentity = try await projectIdentity(forRoot: authorizedSelected)
+            let documentationState = await documentationState(projectID: projectID, rootURL: authorizedSelected, hasAuditedHandoff: hasAuditedHandoff)
             return .init(
                 selectedFolder: authorizedSelected,
                 gitRoot: GitWorktreeDiscovery.discoverGitRoot(at: authorizedSelected) ?? worktrees.first,
@@ -263,7 +262,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 authorizedWorktreeURLs: authorized,
                 worktreesRequiringAuthorization: outsideWorktrees,
                 recognizedArtifactPreview: recognizedArtifactPreview,
-                projectGuidanceState: projectGuidanceState,
+                documentationState: documentationState,
                 pendingProjectID: projectIdentity.pending,
                 completedProjectID: projectIdentity.completed
             )
@@ -357,14 +356,29 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 )
                 return ProjectGuidanceObservation(
                     projectRoot: project.canonicalRoot,
-                    state: ProjectGuidanceInspection.inspect(
-                        rootURL: project.canonicalRoot,
-                        hasAuditedHandoff: hasAuditedHandoff
-                    )
+                    documentationState: await documentationState(projectID: project.projectID, rootURL: project.canonicalRoot, hasAuditedHandoff: hasAuditedHandoff)
                 )
             }
         } catch {
             return ProjectGuidanceObservation(projectRoot: nil, state: .unavailable)
+        }
+    }
+
+    private func documentationState(projectID: ProjectID, rootURL: URL, hasAuditedHandoff: Bool) async -> ProjectDocumentationState {
+        do {
+            let context = try await store.documentationRead { c in
+                try DocumentationRootContext.read(c, path: rootURL.path, projectID: projectID.rawValue, schemaVersion: store.schemaVersionForDocumentation)
+            }
+            return ProjectGuidanceInspection.inspectDocumentation(rootURL: rootURL, hasAuditedHandoff: hasAuditedHandoff, context: context)
+        } catch {
+            let observation = ProjectGuidanceInspection.inspectDocumentation(rootURL: rootURL, hasAuditedHandoff: hasAuditedHandoff)
+            // A new folder has no persisted root yet. Catalog validation still runs,
+            // while a malformed saved binding must retain its precise recovery reason.
+            if case .managedUnavailable(_, .bindingMissing, _) = observation,
+               DocumentationCatalogContext.map(error) != .rootUnavailable {
+                return .managedUnavailable(hasAuditedHandoff: hasAuditedHandoff, reason: DocumentationCatalogContext.map(error), validationError: nil)
+            }
+            return observation
         }
     }
 
@@ -373,9 +387,9 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         rootURL: URL
     ) async throws -> Bool {
         let agentsPath = Self.canonical(rootURL)
-            .appendingPathComponent("AGENTS.md", isDirectory: false)
+            .appendingPathComponent(RepositoryDocumentContract.guidancePath, isDirectory: false)
             .path
-        return try await store.read { connection in
+        return try await store.documentationRead { connection in
             try connection.scalarInt(
                 """
                 SELECT COUNT(*)
@@ -410,7 +424,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
         ) { connection in
             guard try connection.scalarText(
-                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY rowid LIMIT 1",
+                "SELECT path FROM project_roots WHERE project_id = ? AND (NOT EXISTS (SELECT 1 FROM project_documentation_bindings WHERE project_id = project_roots.project_id) OR id = (SELECT root_id FROM project_documentation_bindings WHERE project_id = project_roots.project_id)) ORDER BY rowid LIMIT 1",
                 bindings: [.text(projectID.rawValue)]
             ) == rootPath else {
                 throw ProjectAuthorizationError.projectRootMismatch
@@ -650,7 +664,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 bindings: [.text(projectID.rawValue)]
             ) == 1
             let rootPath = try connection.scalarText(
-                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY rowid LIMIT 1",
+                "SELECT path FROM project_roots WHERE project_id = ? AND (NOT EXISTS (SELECT 1 FROM project_documentation_bindings WHERE project_id = project_roots.project_id) OR id = (SELECT root_id FROM project_documentation_bindings WHERE project_id = project_roots.project_id)) ORDER BY rowid LIMIT 1",
                 bindings: [.text(projectID.rawValue)]
             )
             let bookmarkCount = try connection.scalarInt(

@@ -50,7 +50,7 @@ The following artifacts controlled this design investigation:
 | docs/delivery/progress.md | Current delivery truth, accepted baseline, unphased Back/Forward exemplar, and owner-only acceptance gate |
 | docs/design/agent-driven-delivery-dashboard-design.md | Product goals, app-owned authority, five-lane execution model, owner read-only boundary, onboarding, failure, and detail requirements |
 | docs/architecture/ADR-001-release-radar-boundaries.md | Local-first app boundary, sole database writer, five lanes, typed mutation boundary, archive constraints, sandbox, and prohibited alternatives |
-| docs/superpowers/plans/2026-08-23-release-radar-mvp.md | Approved MVP task and navigation boundaries |
+| docs/delivery/archive/2026-08-23-release-radar-mvp.md | Historical MVP task and navigation background; non-authoritative |
 | docs/brand/README.md | Approved Release Radar identity and visual-direction constraints |
 | docs/design/mockups/phase_board.png | Phase-scoped five-lane execution reference |
 | docs/design/mockups/dependencies.png | Phase-scoped selected ticket dependency-path reference |

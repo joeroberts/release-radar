@@ -51,8 +51,9 @@ or makes an incomplete checkpoint a finished RR-R9 delivery.
 - `docs/architecture/ADR-003-active-phase-selection.md`, the accepted owner
   exception, current-request publication ordering, model guard, and
   cross-phase dependency-reference contract
-- `docs/superpowers/plans/2026-08-23-release-radar-mvp.md`, especially RR-02,
-  RR-03, RR-06, and RR-10 boundaries
+- Historical background: `docs/delivery/archive/2026-08-23-release-radar-mvp.md`
+  records the original RR-02, RR-03, RR-06, and RR-10 boundaries; current
+  architecture and this accepted design govern execution
 
 If a source or index conflicts with current application source, tests, signed
 package behavior, or this approved RR-R9 outcome, the implementation must stop

@@ -47,12 +47,12 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.5")
+        XCTAssertEqual(package.version, "0.1.6")
         XCTAssertEqual(
             package.version,
             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         )
-        XCTAssertEqual(package.digest, "822da35f80e6c47a4c907353ea5aca99d954bd929c6456518b907b38cc2c69cf")
+        XCTAssertEqual(package.digest, "dad143d88e77af7e2ed4523c17c31a24fdd8810e87d02a2ccfe2c39ba5558f8c")
     }
 
     func testBundledSkillDefinesOwnerAuthorizedAuditedRepositoryHandoff() throws {
@@ -84,7 +84,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("parent, child, or different folder"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("stop before writing any file or calling Release Radar"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("preserve every existing byte"))
-        XCTAssertTrue(skill.contains("release-radar-guidance:v1:start"))
+        XCTAssertTrue(skill.contains("release-radar-guidance:v2:start"))
         XCTAssertTrue(skill.contains("release-radar-guidance:end"))
         XCTAssertTrue(skill.contains("## Release Radar tracking"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("append"))
@@ -92,14 +92,14 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("root `AGENTS.md`"))
         XCTAssertTrue(skill.contains("only when"))
         XCTAssertTrue(skill.contains("docs/delivery/progress.md"))
-        XCTAssertTrue(skill.contains("## Release Radar handoff"))
-        XCTAssertTrue(skill.contains("- Guidance version: `1`"))
-        XCTAssertTrue(skill.contains("- Release Radar audit: Pending"))
+        XCTAssertTrue(skill.contains("existing catalogued `docs/delivery/progress.md`"))
+        XCTAssertTrue(skill.contains("preserve it byte-for-byte throughout this handoff"))
+        for rule in ["release_radar_inventory_evidence", "existing handoff evidence ID unchanged", "isComplete", "v1-to-v2 upgrade", "release_radar_bind_documentation_repository", "release_radar_accept_documentation_catalog", "release_radar_add_managed_evidence", "release_radar_adopt_managed_evidence", "release_radar_relocate_legacy_evidence", "docs/delivery/plans/", "never recreate", "modified current block"] { XCTAssertTrue(skill.contains(rule), rule) }
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("symlink"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("non-regular"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("every existing path component"))
-        XCTAssertTrue(skill.localizedCaseInsensitiveContains("write the permitted repository files first"))
-        XCTAssertTrue(skill.localizedCaseInsensitiveContains("changed either permitted repository file"))
+        XCTAssertTrue(skill.localizedCaseInsensitiveContains("write the permitted guidance first"))
+        XCTAssertTrue(skill.localizedCaseInsensitiveContains("changed the managed guidance block"))
         XCTAssertTrue(skill.contains("release-radar-handoff:v1:"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("handoff incomplete"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("already matches"))
@@ -382,7 +382,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-owner' AND reason = 'Install Release Radar Codex plugin'")
             )
         }
-        XCTAssertEqual(schemaVersion, 12)
+        XCTAssertEqual(schemaVersion, StoreMigrations.currentVersion)
         XCTAssertEqual(persisted.0, 1)
         XCTAssertEqual(persisted.1, 1)
     }

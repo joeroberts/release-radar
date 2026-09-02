@@ -3,7 +3,7 @@
 - Status: Owner-confirmed direction; implementation pending
 - Date: 2026-08-29
 - Governing specification:
-  `docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md`
+  `docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md`
 
 ## Visual baseline
 

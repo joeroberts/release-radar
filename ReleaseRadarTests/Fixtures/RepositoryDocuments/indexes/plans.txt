@@ -1,0 +1,31 @@
+# Human heading
+
+<!-- release-radar-docs:v1:start -->
+
+## Collection: plans
+
+- Path: [docs/plans](.)
+- Purpose: Current decisions
+- Allowed contents: plans
+- Prohibited contents: temporary files
+- First read: [current](current.md)
+- Archive destination: [archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| plans-index | [docs/plans/README.md](README.md) | collectionIndex | supporting | active | none | none |
+| checksums | [docs/plans/SHA256SUMS](SHA256SUMS) | checksumManifest | nonAuthoritative | completed | none | none |
+| current | [docs/plans/current.md](current.md) | document | controlling &#40;delivery&#41; | active | none | none |
+| draft | [docs/plans/draft.md](draft.md) | document | supporting | proposed | none | none |
+| evidence | [docs/plans/evidence.md](evidence.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+
+### Children
+
+No child collections.
+
+<!-- release-radar-docs:end -->
+
+Human footer.

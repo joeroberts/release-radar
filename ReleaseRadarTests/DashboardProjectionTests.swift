@@ -18,6 +18,17 @@ final class DashboardProjectionTests: XCTestCase {
         super.tearDown()
     }
 
+    func testManagedRowWithNoPersistedPathDoesNotBreakDashboard() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Managed evidence fixture") { c in
+            try c.execute("INSERT INTO evidence (id, project_id, ticket_id, artifact_id, path) VALUES ('managed', 'rekon-pursuit', 'VD2-07c', 'draft', NULL)")
+        }
+        let projection = try await DashboardProjection.load(from: store)
+        let detail = try XCTUnwrap(projection.board(for: DashboardSampleData.projectID)?.detail(for: .init(rawValue: "VD2-07c")))
+        XCTAssertEqual(detail.evidence.count, 2)
+    }
+
     func testSeededBoardProjectsEveryTicketIntoExactlyOneOrderedLane() async throws {
         let store = DeliveryStore(databaseURL: databaseURL)
         try await DashboardSampleData.seedIfNeeded(in: store)

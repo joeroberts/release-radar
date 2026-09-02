@@ -154,6 +154,13 @@ private struct MCPServer {
 
     private static func makeEnvelope(tool: String, arguments: [String: Any]) throws -> Data {
         let version = try integer("version", in: arguments)
+        if tool == "release_radar_inventory_evidence" {
+            var query: [String: Any] = [:]
+            for key in ["projectID", "rootID"] { if let value = try optionalString(key, in: arguments) { query[key] = value } }
+            let data = try JSONSerialization.data(withJSONObject: ["version": version, "projectRoot": try string("projectRoot", in: arguments), "query": ["inventoryEvidence": query]])
+            guard data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes else { throw ToolFailure.invalidRequest("Inventory query exceeds the transport limit") }
+            return data
+        }
         let requestID = try string("requestID", in: arguments)
         guard UUID(uuidString: requestID) != nil else {
             throw ToolFailure.invalidRequest("requestID must be a UUID")
@@ -190,6 +197,25 @@ private struct MCPServer {
         arguments: [String: Any]
     ) throws -> (String, [String: Any]) {
         switch tool {
+        case "release_radar_bind_documentation_repository":
+            return ("bindDocumentationRepository", ["target": try documentationTarget(arguments)])
+        case "release_radar_accept_documentation_catalog":
+            return ("acceptDocumentationCatalog", ["target": try documentationTarget(arguments), "priorCatalogVersion": try integer("priorCatalogVersion", in: arguments), "priorCatalogDigest": try string("priorCatalogDigest", in: arguments)])
+        case "release_radar_add_managed_evidence":
+            var value: [String: Any] = ["target": try documentationTarget(arguments), "id": try string("id", in: arguments), "artifactID": try string("artifactID", in: arguments)]
+            if let ticket = try optionalString("ticketID", in: arguments) { value["ticketID"] = ticket }
+            return ("addManagedEvidence", value)
+        case "release_radar_adopt_managed_evidence":
+            guard let items = arguments["adoptions"] as? [[String: Any]], (1...128).contains(items.count) else { throw ToolFailure.invalidRequest("adoptions must contain 1...128 exact records") }
+            for item in items {
+                guard Set(item.keys) == ["evidenceID", "expectedPath", "expectedTicketID", "artifactID"], item["expectedTicketID"] is String || item["expectedTicketID"] is NSNull else { throw ToolFailure.invalidRequest("Each adoption requires exact evidence/path/artifact and nullable expectedTicketID") }
+                for key in ["evidenceID", "expectedPath", "artifactID"] { _ = try string(key, in: item) }
+            }
+            return ("adoptManagedEvidence", ["target": try documentationTarget(arguments), "adoptions": items])
+        case "release_radar_relocate_legacy_evidence":
+            var value: [String: Any] = [:]
+            for key in ["projectID", "rootID", "evidenceID", "expectedPath", "newPath"] { value[key] = try string(key, in: arguments) }
+            return ("relocateLegacyEvidence", value)
         case "release_radar_upsert_phase":
             return ("upsertPhase", ["phaseID": try string("phaseID", in: arguments), "name": try string("name", in: arguments)])
         case "release_radar_upsert_ticket":
@@ -267,6 +293,15 @@ private struct MCPServer {
         }
     }
 
+    private static func documentationTarget(_ arguments: [String: Any]) throws -> [String: Any] {
+        guard let target = arguments["target"] as? [String: Any], Set(target.keys) == ["projectID", "rootID", "repositoryID", "catalogVersion", "catalogDigest"] else {
+            throw ToolFailure.invalidRequest("target requires exact project/root/repository/version/digest")
+        }
+        for key in ["projectID", "rootID", "repositoryID", "catalogDigest"] { _ = try string(key, in: target) }
+        _ = try integer("catalogVersion", in: target)
+        return target
+    }
+
     private static func string(_ key: String, in arguments: [String: Any]) throws -> String {
         guard let value = arguments[key] as? String else {
             throw ToolFailure.invalidRequest("Missing string argument: \(key)")
@@ -303,7 +338,22 @@ private struct MCPServer {
             "type": "string",
             "enum": ["backlog", "in_progress", "needs_review", "blocked", "accepted"],
         ]
+        let target: [String: Any] = ["type": "object", "additionalProperties": false,
+            "required": ["projectID", "rootID", "repositoryID", "catalogVersion", "catalogDigest"],
+            "properties": ["projectID": string, "rootID": string, "repositoryID": ["type": "string", "format": "uuid"], "catalogVersion": ["type": "integer", "const": 1], "catalogDigest": ["type": "string", "pattern": "^[0-9a-f]{64}$"]]]
+        let adoption: [String: Any] = ["type": "array", "minItems": 1, "maxItems": 128,
+            "items": ["type": "object", "additionalProperties": false, "required": ["evidenceID", "expectedPath", "expectedTicketID", "artifactID"],
+                      "properties": ["evidenceID": string, "expectedPath": string, "expectedTicketID": ["type": ["string", "null"]], "artifactID": string]]]
         return [
+            ["name": "release_radar_inventory_evidence", "description": "Read a complete authorized project evidence inventory. Oversized or unavailable inventory fails closed; no rows are silently omitted.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false, "required": ["version", "projectRoot"],
+                             "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string, "projectID": string, "rootID": string]]],
+            definition("release_radar_bind_documentation_repository", required: ["target"], fields: ["target": target]),
+            definition("release_radar_accept_documentation_catalog", required: ["target", "priorCatalogVersion", "priorCatalogDigest"], fields: ["target": target, "priorCatalogVersion": ["type": "integer", "const": 1], "priorCatalogDigest": string]),
+            definition("release_radar_add_managed_evidence", required: ["target", "id", "artifactID"], fields: ["target": target, "id": string, "ticketID": string, "artifactID": string]),
+            definition("release_radar_adopt_managed_evidence", required: ["target", "adoptions"], fields: ["target": target, "adoptions": adoption]),
+            definition("release_radar_relocate_legacy_evidence", required: ["projectID", "rootID", "evidenceID", "expectedPath", "newPath"], fields: ["projectID": string, "rootID": string, "evidenceID": string, "expectedPath": string, "newPath": string]),
             definition("release_radar_upsert_phase", required: ["phaseID", "name"], fields: ["phaseID": string, "name": string]),
             definition(
                 "release_radar_upsert_ticket",

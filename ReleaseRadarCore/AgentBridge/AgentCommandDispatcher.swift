@@ -10,10 +10,34 @@ public actor AgentCommandDispatcher {
 
     private let store: DeliveryStore
     private let projectRegistry: any AuthorizedProjectRegistry
+    private let bookmarkStore: any ProjectBookmarkStoring
 
-    public init(store: DeliveryStore, projectRegistry: any AuthorizedProjectRegistry) {
+    public init(store: DeliveryStore, projectRegistry: any AuthorizedProjectRegistry, bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore()) {
         self.store = store
         self.projectRegistry = projectRegistry
+        self.bookmarkStore = bookmarkStore
+    }
+
+    /// Fixed maintenance admits documentation operations and the existing exact
+    /// root-guidance handoff only; ordinary delivery commands have no route here.
+    public func dispatchDocumentationMaintenance(_ envelope: AgentCommandEnvelope, admissionDeadline: TimeInterval? = nil) async -> AgentCommandResult {
+        if envelope.command.isDocumentationMutation { return await dispatch(envelope, admissionDeadline: admissionDeadline) }
+        guard case let .addEvidence(id, ticket, path) = envelope.command,
+              ticket == nil, id.hasPrefix(RepositoryDocumentContract.handoffEvidenceIDPrefix),
+              id.count > RepositoryDocumentContract.handoffEvidenceIDPrefix.count,
+              path == URL(fileURLWithPath: envelope.projectRoot).appendingPathComponent(RepositoryDocumentContract.guidancePath).path else {
+            return .init(entityIDs: [], auditEventID: nil, error: .documentation(.invalidRequest))
+        }
+        do {
+            let context = try await store.documentationRead { try DocumentationRootContext.read($0, path: envelope.projectRoot) }
+            return try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
+                try context.verifyAuthorization(resolved)
+                let reader = try RepositoryDocumentReader(rootURL: resolved.url, limits: .init(), afterRead: nil)
+                _ = try reader.read(RepositoryDocumentContract.guidancePath)
+                try reader.verifyStable()
+                return await self.dispatch(envelope, admissionDeadline: admissionDeadline)
+            }
+        } catch { return .init(entityIDs: [], auditEventID: nil, error: .documentation(DocumentationCatalogContext.map(error))) }
     }
 
     public func dispatch(
@@ -23,6 +47,13 @@ public actor AgentCommandDispatcher {
     ) async -> AgentCommandResult {
         if let error = validate(envelope) {
             return .init(entityIDs: [], auditEventID: nil, error: error)
+        }
+        if envelope.command.isDocumentationMutation {
+            guard let body = try? canonicalRequestBody(envelope) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .documentation(.invalidRequest))
+            }
+            return await DocumentationCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
+                .dispatch(envelope, requestBody: body, origin: origin, admissionDeadline: admissionDeadline)
         }
         guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
             return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
@@ -123,6 +154,8 @@ public actor AgentCommandDispatcher {
         }
         let commandFieldsAreValid: Bool
         switch envelope.command {
+        case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
+            commandFieldsAreValid = (try? envelope.command.validateDocumentation()) != nil
         case let .upsertPhase(phaseID, name):
             commandFieldsAreValid = valid(phaseID, maximum: 256) && valid(name)
         case let .upsertTicket(ticketID, phaseID, outcome, _):
@@ -203,6 +236,8 @@ public actor AgentCommandDispatcher {
 
     private func resultForCommand(_ command: AgentCommand, auditEventID: AuditEventID) -> AgentCommandResult {
         switch command {
+        case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
+            return .init(entityIDs: command.documentationIDs, auditEventID: auditEventID, error: nil)
         case let .upsertPhase(phaseID, _):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
         case let .upsertTicket(ticketID, _, _, _):
@@ -228,6 +263,7 @@ public actor AgentCommandDispatcher {
 
     private static func auditScope(for command: AgentCommand, projectID: ProjectID) -> AuditScope {
         let entity: (AuditEntityType, String) = switch command {
+        case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence: (.project, projectID.rawValue)
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
         case let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
@@ -252,6 +288,8 @@ public actor AgentCommandDispatcher {
     ) throws {
         let projectID = project.projectID
         switch command {
+        case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
+            throw DocumentationOperationError.invalidRequest
         case let .upsertPhase(phaseID, name):
             try requireWritableID(phaseID, table: "phases", projectID: projectID, connection: connection)
             try connection.execute(
@@ -350,6 +388,7 @@ public actor AgentCommandDispatcher {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             }
             let resolvedPath = try authorizedEvidencePath(path, project: project)
+            try rejectCataloguedLegacyPath(resolvedPath, project: project)
             try requireWritableID(id, table: "evidence", projectID: projectID, connection: connection)
             try connection.execute(
                 "INSERT INTO evidence (id, project_id, ticket_id, path, is_available) VALUES (?, ?, ?, ?, 1) ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, path = excluded.path, is_available = 1",
@@ -528,6 +567,25 @@ public actor AgentCommandDispatcher {
         return resolved.path
     }
 
+    private static func rejectCataloguedLegacyPath(_ path: String, project: AuthorizedProject) throws {
+        // Genuinely arbitrary evidence keeps its established behavior. This guard
+        // only closes the legacy route into the managed documentation namespace.
+        for root in project.authorizedRoots where path.hasPrefix(root.path + "/docs/") {
+            let catalog = try DocumentationCatalogContext(root: root)
+            switch catalog.mode {
+            case .legacy: return
+            case .unavailable: throw DocumentationOperationError.guidanceUnavailable
+            case .managedV2:
+                guard let snapshot = catalog.snapshot else { throw DocumentationOperationError.catalogInvalid }
+                let relative = String(path.dropFirst(root.path.count + 1))
+                if snapshot.catalog.artifacts.contains(where: { $0.path == relative }) {
+                    throw DocumentationOperationError.managedCommandRequired
+                }
+            }
+            try catalog.reader.verifyStable()
+        }
+    }
+
     private static func contains(_ candidate: URL, within root: URL) -> Bool {
         let candidateComponents = candidate.pathComponents
         let rootComponents = root.pathComponents
@@ -576,6 +634,7 @@ public actor AgentCommandDispatcher {
     }
 
     private static func map(_ error: Error) -> AgentCommandError {
+        if let error = error as? DocumentationOperationError { return .documentation(error) }
         if let validation = error as? CommandValidation {
             switch validation {
             case let .invalidReference(message): return .invalidReference(message)
