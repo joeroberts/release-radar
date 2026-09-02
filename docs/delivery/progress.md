@@ -2,18 +2,19 @@
 
 ## Current outcome and authorization
 
-MDCP and RR-R10 through Task 8 are delivered. Task 8
-[PR #11](https://github.com/joeroberts/release-radar/pull/11) merged at
-`41daf211de8e5d7fbacce794d12f5df98d515093`; the coordinator independently
-verified its merge, live completion and brief/catalog closeout. Its 49 focused
-tests, independent review and 21-tool compatibility checks remain terminal.
+MDCP and RR-R10 through Task 9 are delivered. Task 9
+[PR #12](https://github.com/joeroberts/release-radar/pull/12) merged at
+`ea2f0f0a4cf36e7bf5de89ee030b5f98eafadf34`; the coordinator independently
+verified its merge, live completion and brief/catalog closeout. Its 39 focused
+tests and independent review (Required 0) remain terminal. The completed
+[Task 9 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-9-delivery-projections-brief.md)
+retains the delivery record.
 Task 7A custody is preserved in the
 [Historical Task 7A closeout](archive/2026-09-02-rr-r10-task-7a-closeout.md).
 
-Task 9 implementation, independent review and live completion are complete on
-`codex/rr-r10-task-9`; the single PR merge remains the delivery step. Work follows the
+Task 10 is active on `codex/rr-r10-task-10`. Work follows the
 [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) and
-[Task 9 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-9-delivery-projections-brief.md).
+[Task 10 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md).
 The coordinator owns scope and sequencing under owner delegation.
 Authorization covers planning, implementation, focused validation, independent
 review, commit/push/PR/merge and exact live task completion with same-branch
@@ -22,25 +23,17 @@ are outside this checkpoint.
 
 ## Active verification and delivery
 
-Task 9 implementation `e0a8cf599e1e369fa1706bef0c6cd445bed160e4` is pushed and
-directly verified: 39 focused native XCTest cases
-pass (18 DashboardProjectionTests, 18 ReviewAndGraphAcceptanceTests and three
-ManagedEvidencePresentationTests), plus Debug build, documentation check and
-diff whitespace check. Tests cover all-phase/active separation, exact coverage,
-filtering, tasks/evidence recovery, derived acceptance lifecycle and replay.
-Missing-API RED, saved-review refresh failure, byte-distinct identity and
-ticket-audit regressions were observed before their corresponding corrections;
-synthetic fixture setup errors were corrected without relaxing production rules.
-
-Independent Code/QA review, including the changed projection contracts and
-evidence/authority boundaries, reports Required 0. The two required findings
-were corrected: exact UTF-8 identities now survive maps/filters/review IDs,
-and ticket-owned audits retain relational attribution without prose inference.
-The coordinator approved the one AppModel initializer argument needed to retain
-unrelated goal attention on a saved review decision with failed refresh.
-No shared-service tests, installation, Task 10 UI controls or owner acceptance
-actions were added. Temporary outputs are retained under `.build/rr-r10-task9`
-and native synthetic test directories; no cleanup is authorized.
+Task 10 implementation, direct checks and independent QA/UX plus
+Security/Privacy review are accepted with Required 0 after two bounded
+selection corrections.
+Nine focused tests pass across the final model/native runs, including the two
+mounted-view RED/GREEN regressions. Wide/compact external AX and keyboard checks
+and synthetic Needs Review acceptance are recorded in the
+[Task 10 verification](evidence/2026-09-02-rr-r10-task-10-ui.md).
+Keyboard navigation was restored OFF after each authorized check. Live Task 10
+completion is not yet claimed. Task 9 projections remain unchanged. Temporary outputs are
+retained under `.build/rr-r10-task10` and native synthetic test directories;
+no cleanup is authorized.
 
 Development documentation changes remain pending later authorized bound-root
 deployment and catalog acceptance. They do not change the installed accepted
@@ -77,7 +70,7 @@ closed.
   Acceptance audit `E89F7619-BF0A-45BE-94B0-DA2CA6F71D28` replayed exactly.
   Task 7A, Task 8 and Task 9 briefs are completed/non-authoritative in the development
   catalog. The Task 7A recovery runbook remains supporting material. The
-  development catalog has 216 artifacts and remains pending deployment and
+  development catalog has 222 artifacts and remains pending deployment and
   acceptance. Owner state may change during ordinary use.
 
 ## Remaining limits and next work
@@ -94,7 +87,6 @@ Protected requests, backups, old app and quarantines retain their recorded
 custody through at least 2026-10-02. Temporary outputs remain retained; no
 cleanup is authorized. The older dirty bound checkout remains preserved.
 
-Task 10 remains unopened. Task 9 direct validation, independent review, exact
-live completion and same-branch documentation/brief reconciliation are complete.
-The coordinator may release Task 10 only after verifying the single Task 9 PR
-merge and this closeout. This record does not authorize Task 10 execution.
+Task 11A remains unopened. The coordinator may release it only after verifying
+Task 10's direct validation, independent acceptance, exact live completion,
+same-branch documentation/brief reconciliation and single PR merge.

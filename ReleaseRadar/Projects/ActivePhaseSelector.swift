@@ -61,6 +61,8 @@ struct ActivePhaseSelector: View {
     let onSelect: (PhaseID) async -> Void
     let onReload: () async -> Void
     let onReauthorize: (URL) async -> Void
+    var phaseToActivate: ProjectPhaseProjection? = nil
+    @State private var confirmingActivePhase = false
 
     private var presentation: ActivePhaseSelectorPresentation {
         ActivePhaseSelectorPresentation(project: project, status: status)
@@ -68,6 +70,18 @@ struct ActivePhaseSelector: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if let phaseToActivate {
+                Button("Make active phase") { confirmingActivePhase = true }
+                    .disabled(presentation.isSaving || isWaitingForReload)
+                    .accessibilityIdentifier("make-active-phase")
+                    .accessibilityHint("Explicitly make \(phaseToActivate.name) the project's active working context.")
+                    .confirmationDialog("Make \(phaseToActivate.name) the active phase?", isPresented: $confirmingActivePhase, titleVisibility: .visible) {
+                        Button("Make active phase") { Task { await onSelect(phaseToActivate.id) } }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("This changes the persisted active phase from \(project.activePhaseName). Ticket lanes and history are unchanged.")
+                    }
+            } else {
             Picker("Active phase", selection: selection) {
                 Text("No active phase")
                     .tag(Optional<PhaseID>.none)
@@ -83,9 +97,15 @@ struct ActivePhaseSelector: View {
             .accessibilityIdentifier(surface.accessibilityIdentifier)
             .accessibilityValue(presentation.accessibilityValue)
             .accessibilityHint(presentation.accessibilityHelp)
+            }
 
             statusView
         }
+    }
+
+    private var isWaitingForReload: Bool {
+        if case .savedNeedsReload = status { return true }
+        return false
     }
 
     private var selection: Binding<PhaseID?> {
