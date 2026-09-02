@@ -2,74 +2,74 @@
 
 ## Current outcome and authorization
 
-- M2–M8 are accepted. M6B adopted five exact evidence locators; M7 deployed six
-  stable-ID document moves, complete indexes, current references and archived
-  closed progress. Delivery checkpoints: M6B `b9b1932`, M7 `004e2d2`, and
-  M8 runtime acceptance `d1b974a`.
-- M8 runtime acceptance is complete, including independent QA with no
-  required or optional findings. On 2026-09-02, after successful readback and
-  review, the owner explicitly approved release for ordinary live use.
-  MDCP is complete.
-- The owner approved the exact adoption, cutover, bound-checkout deployment,
-  catalog-acceptance request, replay, backup and controlled readback packages.
-  Repository delivery uses `codex/managed-documentation-contract-planning` in
-  its associated development worktree. The original bound checkout retains its
-  deployment branch and commit with only the authorized documentation delta.
-- Controlling scope: [M7 brief](task-briefs/2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md),
-  [M8 brief](task-briefs/2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md),
-  [managed documentation design](../design/managed-repository-documentation-contract.md),
-  [ADR-006](../architecture/ADR-006-managed-repository-documentation-contract.md)
-  and [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md).
+- MDCP is complete and ordinary live use was owner-approved on 2026-09-02.
+  M6B adopted five evidence locators; M7 deployed the six stable-ID document
+  moves; M8 accepted the catalog and verified exact replay/relaunch. Delivery
+  checkpoints are `b9b1932`, `004e2d2`, `d1b974a` and final closeout `a66bf9a`.
+- RR-R10 Tasks 1A/1B/2A/2B/3/4A are delivered. Ten checkpoints remain:
+  4B, 5, 6, 7, 7A, 8, 9, 10, 11A and 11B, then explicit ticket/Delivery Goal
+  acceptance and terminal reconciliation. Stable task identities and the full
+  product outcome are unchanged.
+- On 2026-09-02 the owner approved the alignment review findings and authorized
+  a focused remaining-plan revision and Task 4B brief. This repository planning
+  slice is complete with native documentation validation and independent
+  review accepted, Required 0 and Optional 0.
+  Task 4B implementation, owner installation, catalog deployment/acceptance and
+  other live mutations are not authorized by that planning approval.
+- Repository work uses `codex/managed-documentation-contract-planning` in its
+  associated development worktree. The original bound checkout retains its
+  deployment branch/commit and authorized MDCP documentation delta.
 
-## Verification and remaining limits
+## Controlling work and verification
 
-- Frozen `MDCP-COMPAT-2` is `b365aff`: signed app/plugin 0.1.6. No production
-  source, schema, permission or frozen-contract change was needed.
-- Native current-tree, accepted-prior transition, index, link and checksum
-  checks pass. Deterministic rendering changes zero indexes. The catalog has
-  194 artifacts, preserving all 193 existing IDs. No active dependency on the
-  removed transitional subtree remains; historical references are retained.
-- The typed M8 operation accepted the deployed catalog. Exact replay returned
-  the original result and one audit/receipt pair. Complete readback persisted
-  across read-only relaunch. Only the accepted snapshot and the moved managed
-  plan's resolved path changed; all eight evidence IDs, locators, associations,
-  availability, roots, and 17 other preservation domains remain exact.
-- Before cutover, the owner confirmed opening the app normally. Fresh inventory
-  isolated its effect to plugin lifecycle state and one audit. That state was
-  preserved as the new baseline after independent Security acceptance.
-  Ordinary writers stayed quiesced throughout actual cutover and acceptance.
-- Native tests: 38 focused cases plus one post-cutover repository-conformance
-  case passed, with zero failures/skips. Isolated fixtures cover migration,
-  transition refusal/rollback, replay, compatibility, missing/historical
-  evidence, and root-relocation identity/recovery. Real macOS bookmark creation
-  and broker-level lost acceptance replies were not injected in this run.
-- Installed-app accessibility and screenshots show the accepted repository,
-  current/completed/superseded managed evidence and the moved canonical path.
-  Maintenance preserves the approved design's readable hierarchy and explicit
-  status labels; the normal phase-board shell was not relaunched. One existing
-  legacy directory locator remains typed unresolved while its legacy UI shows
-  stored availability. Its identity and behavior remain unchanged.
-- Read-only maintenance exited; database, sidecars and recovery snapshot stayed
-  byte-identical during relaunch/UI inspection. Ordinary live use is released
-  under the owner's final approval.
-- Independent M6B QA/Architecture/Security and M7 Documentation reviews accepted
-  their actual slices with no required findings. Independent M8 runtime QA
-  accepted the actual transition, replay, relaunch, state preservation and UI.
+- [Revised RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md)
+  and [Task 4B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md)
+  apply the current schema/tool baseline, bridge-test isolation, managed import
+  and evidence preservation, catalog release path and ADR-007 review policy.
+  The linked Ticket Tasks design now distinguishes completed handoff history
+  from current entry conditions.
+- Task 4B's bounded test scope includes updating the existing MDCP callback
+  assertion that the new task tool is absent. It preserves all six MDCP tools;
+  the intended inventory is 19 existing plus two new tools.
+- Native catalog/index/link/checksum validation and `git diff --check` pass.
+  All 194 existing catalog entries and the 16 task labels/titles/order are
+  preserved; the catalog adds only the brief and historical progress record.
+  Independent review accepted the plan, brief and authorization/preservation
+  boundaries. No product code, runtime tests or owner-state operations are
+  part of this planning slice.
 
-## Durable records and next work
+## Live baseline and remaining risks
 
-Exact approvals, requests/results, complete inventories, UI evidence and
-verified recovery copies remain in the owner-designated protected companion.
-Retain them through M8 and at least 2026-10-02; deletion needs separate approval.
-The temporary M7 candidate and M8 test outputs remain under the development
-worktree's `.build/mdcp-m7-candidate/` and `.build/mdcp-m8-tests/`; two isolated
-XCTest host directories also remain. Earlier M6A build/disposable inputs retain
-their existing custody and disposal terms.
+- Accepted application baseline: `MDCP-COMPAT-2` (`b365aff`), signed app/plugin
+  0.1.6, schema v13, guidance v2. The last accepted bound-root catalog is v1
+  with 194 artifacts; all eight evidence IDs/locators/associations and unrelated
+  delivery state were preserved at M8. Ordinary live use may subsequently
+  change owner state, so future installs require fresh authorized readback.
+- This development candidate adds the Task 4B brief and a historical progress
+  record. Its catalog is repository-prepared only, pending separately
+  authorized deployment to the exact bound root and typed acceptance. The
+  live bound checkout has not been changed; no managed-current claim is made
+  for the development catalog.
+- Whole transport/lifecycle test classes can change the shared macOS bridge.
+  Task 4B's brief supplies safe development selections; required packaged
+  transport acceptance still needs an isolated service/session or separately
+  authorized quiescence and restoration.
+- The M8 runtime limits remain documented in the historical record, including
+  the unchanged legacy directory-locator discrepancy. No accepted MDCP work
+  is reopened by this planning refresh. Issue #1 remains unopened and the
+  held Issue #2 artifacts remain unchanged.
 
-No MDCP work remains. Task 4B is the next separately authorized feature task;
-Issue #1 remains unopened. Neither is authorized by this closeout. The held Issue #2 artifacts
-remain unchanged.
+## Retention and next work
 
-[Historical delivery through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md)
-contains closed detail and the preserved Issue #2 attribution record. The
-catalog and indexes own navigation; this ledger owns delivery status.
+The [Historical closeout and review record](archive/2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md)
+preserves prior delivery details and the seven alignment findings. Earlier
+history remains in [Historical progress through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md).
+Exact owner approvals, requests, inventories and recovery copies remain in the
+owner-designated protected companion, retained through at least 2026-10-02.
+Existing M6A/M7/M8 temporary builds, test outputs and isolated host directories
+retain their recorded custody terms; none were deleted. This planning slice
+creates no new temporary files.
+
+After this planning slice is delivered, Task 4B is the next eligible feature
+under its separate implementation authorization. Complete the required
+controlled transport checks before claiming that future slice complete.

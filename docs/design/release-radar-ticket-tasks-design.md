@@ -1,10 +1,10 @@
 # Release Radar Ticket Tasks contract
 
-- Status: owner-approved direction; exact planning package pending owner acceptance
+- Status: owner-approved product contract; post-MDCP execution alignment authorized 2026-09-02
 - Date: 2026-08-30
 - Governing delivery phase: `release-radar-post-mvp-remediation`
 - Governing ticket: `RR-R10`
-- Target store migration: additive schema version 12
+- Delivered task-storage foundation: additive schema v12; current store schema v13
 - Architecture decision: `docs/architecture/ADR-005-ticket-task-work-plans.md`
 
 ## Product outcome
@@ -379,7 +379,27 @@ ADR-005 supersedes only its own earlier Ticket Tasks archive assumption; it
 does not implement the older Delivery Goals helper described by ADR-004 unless
 and until a real production exporter boundary exists.
 
-## Planning-package status and delivery-state handoff
+## Current delivery baseline
+
+Tasks 1A/1B/2A/2B/3/4A and MDCP are delivered. The existing owner store is
+schema v13 with managed documentation enabled; the v11/v12 definitions below
+remain the accepted foundation, not a future installation target. Current
+execution authorization and remaining work are recorded in
+`docs/delivery/progress.md`. Task 4B remains the next feature checkpoint.
+
+The implementation plan's post-MDCP conditions apply to remaining work:
+preserve the 19 current tools (21 after Task 4B, 24 after Task 8), existing
+result/inventory and receipt encodings, importer authorization and managed
+artifact identities, and evidence presentation during UI changes. Development
+checks isolate shared macOS bridge effects as well as the database. ADR-007
+supersedes older all-role review/hash ceremony for unopened work. Task 5's
+explicit owner UI acceptance and final owner acceptance remain required.
+
+## Historical planning-package handoff (completed)
+
+The following records the original pre-Task-2A handoff. Its package-pending
+language, schema-v10 identities and Blocked-state prerequisite are historical;
+they are not current entry conditions and must not be repeated.
 
 The product direction is owner-approved; the exact three-artifact planning
 package is pending owner acceptance. Implementation cannot begin until this
@@ -441,16 +461,27 @@ ordering adds no feature-flag system.
 
 Task 7A's first install/bootstrap and Task 11B's final install/repair apply the
 same written contract below. Before any owner installation, the Task 7A brief
-must define the exact bounded repository-owned owner-store backup/restore
-runbook using existing repository facilities, and Architecture,
-Security/Privacy, QA, TPM, and Delivery Management must independently approve
-it. This is an execution runbook, not a generalized backup framework or product
-feature. Task 11B reuses that exact approved runbook.
+adapts the existing M6A recovery procedure to the current managed v13 store and
+records the bounded runbook in the repository. Independent QA and
+Security/Privacy review cover its actual installation/recovery risks; other
+reviews follow changed boundaries under ADR-007. Owner data, complete request
+manifests and backups remain in the owner-approved protected companion.
+Task 11B reuses this procedure with a fresh baseline; no new backup framework
+or repeated initial binding/adoption is authorized.
 
 - Before installation, capture a typed and owner-UI snapshot of the active
   phase; relevant ticket lanes, outcomes, dependencies, and blockers; observed
-  goals and links; notifications; and task-plan and Delivery Goal state when
-  those models are present.
+  goals and links; notifications; task-plan and Delivery Goal state; exact
+  repository/root binding and accepted catalog; evidence IDs, managed/legacy
+  locators, associations and resolution; and guidance/plugin state. Ordinary
+  live use requires fresh authorized readback, not reuse of an old inventory.
+- Historical fixtures migrate through v11/v12/v13; installation over an existing
+  valid v13 store preserves its current schema and migration continuation.
+- Prepare new briefs/catalog/index changes in the development worktree. At the
+  authorized live checkpoint, deploy changes to the exact bound checkout and
+  accept the prior-to-candidate catalog transition before managed operations.
+  Preserve stable artifact IDs and use managed evidence commands. Content-only
+  mutable-document edits do not themselves require catalog acceptance.
 - The runbook quiesces the app and helpers, proves their process state, and
   captures the SQLite main, WAL, and SHM files as one consistent owner-store
   set. It records backup identity, verifies restoration to a disposable copy,
@@ -463,7 +494,8 @@ feature. Task 11B reuses that exact approved runbook.
   typed command body, and execution order.
 - After install, use only typed commands and owner-UI readback. Do not inspect
   SQLite directly.
-- On migration failure, corruption, unexpected persisted state, or inability to
+- Resolve uncertain mutation outcomes through exact replay before recovery.
+  On migration failure, corruption, unexpected persisted state, or inability to
   prove the required continuation invariant, execute the approved runbook's
   exact abort, app/helper quiescence, restore, relaunch, and typed/UI readback
   sequence. Never coerce or patch owner data to continue.
@@ -483,11 +515,11 @@ revision payload cannot supply completed state.
 
 RR-R10 task rows first appear in the app during Task 7A, after Tasks 5, 6, and
 7 are independently accepted and remote-exact. Before that bootstrap, the
-repository catalog is owner-approved direction pending exact-package
-acceptance, not live or inferred app-owned tracking. The handoff has already
-moved RR-R10 to In progress before Task 2A. Task 7A therefore installs the
-exact through-Task-7 candidate and proves schema-v11 migration-only legacy
-continuation plus schema-v12 preservation retain this pre-policy In-progress
+repository sequence records approved scope and delivered checkpoints, not
+live or inferred app-owned tracking. The handoff already moved RR-R10 to
+In progress before Task 2A. Task 7A installs the exact through-Task-7 candidate
+over the existing v13 store and proves the migration-granted continuation
+and task/documentation foundations preserve this pre-policy In-progress
 ticket safely. Eligibility for that continuation was already proven before the
 early In-progress mutation and Task 2A release; Task 7A re-verifies the actual
 migration result and treats any difference as an abort/restore event, not a
@@ -661,12 +693,12 @@ or any later row, or that a task completion moved the ticket lane.
   not change the count, superseded rows are absent, glyph/count are not separate
   focus/actions, long lists expose first/last without hidden `more`, and compact
   identity/metadata/hit targets do not overlap.
-- Exact planning-package owner acceptance, ledger checkpoint, remote equality,
-  authorized current-state plus exact known-schema-v10 app/helper/process
-  identity preflight, audited Blocked→In progress handoff, and independent Task
-  2A brief release all precede RED; owner approval alone cannot release it.
+- The original package approval and schema-v10 start handoff remain completed
+  history. Unopened work follows the current ledger, accepted post-MDCP
+  baseline and risk-triggered review policy; historical status does not reopen
+  work or authorize new owner mutations.
 - Task 7A makes the initial 16-row plan live while RR-R10 is In progress. Its
-  independently approved repository-owned backup/restore runbook covers
+  adapted, independently reviewed managed-v13 recovery runbook covers
   process quiescence, SQLite main/WAL/SHM consistency, backup identity,
   disposable-copy restore proof, retention, and exact abort/restore/relaunch/
   readback; Task 11B reuses it without creating a backup product/framework.
