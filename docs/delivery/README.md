@@ -41,6 +41,7 @@
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | 96b10404-6291-4cc8-beb9-c0e2e1dff704 | [docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json](evidence/2026-08-30-rr-r10-task-2a-red-evidence.json) | verificationEvidence | nonAuthoritative | completed | none | none |
+| fc2ef1e4-36f7-4f32-8e1a-e03a5e59ce7d | [docs/delivery/evidence/2026-09-02-rr-r10-task-10-ui.md](evidence/2026-09-02-rr-r10-task-10-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | a5d9d0f5-d689-405d-b175-f88534219a1f | [docs/delivery/evidence/2026-09-02-rr-r10-task-5-ui.md](evidence/2026-09-02-rr-r10-task-5-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 0199bdf8-78d1-460e-abe2-519f0fd34e0b | [docs/delivery/evidence/mdcp-m2c-onboarding-repair-compact.png](evidence/mdcp-m2c-onboarding-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 2497cc96-d6c8-42ea-87b3-1f6b7cabda8b | [docs/delivery/evidence/mdcp-m2c-onboarding-staged-wide.png](evidence/mdcp-m2c-onboarding-staged-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
@@ -56,6 +57,10 @@
 | 9f047ff0-f55e-47bb-a46d-5b40d9f51146 | [docs/delivery/evidence/mdcp-m5-onboarding-unavailable-wide.png](evidence/mdcp-m5-onboarding-unavailable-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | fb8da0f4-d5e9-4631-b571-5f5ff6c2f017 | [docs/delivery/evidence/mdcp-m5-overview-current-wide.png](evidence/mdcp-m5-overview-current-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | ef0a5b3e-c4de-4007-92ac-36d4cb2ecc5c | [docs/delivery/evidence/mdcp-m5-overview-update-compact.png](evidence/mdcp-m5-overview-update-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 94fa2ee5-a1e3-43a6-800e-78d94446f16b | [docs/delivery/evidence/rr-r10-task10-board-compact.png](evidence/rr-r10-task10-board-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| a21d7257-8f90-479a-a76b-0d69dfc04eca | [docs/delivery/evidence/rr-r10-task10-board-wide.png](evidence/rr-r10-task10-board-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| b76d1e50-d364-4dbf-b1aa-c31f675be7c7 | [docs/delivery/evidence/rr-r10-task10-filtered-wide.png](evidence/rr-r10-task10-filtered-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| a1e6528a-4baf-4814-aef8-b2080506cddc | [docs/delivery/evidence/rr-r10-task10-needs-review.png](evidence/rr-r10-task10-needs-review.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | b6fff764-f6dd-4d5f-9015-ad24aa679694 | [docs/delivery/evidence/rr-r10-task5-accessibility-compact.txt](evidence/rr-r10-task5-accessibility-compact.txt) | verificationEvidence | nonAuthoritative | completed | none | none |
 | db824e94-8967-4901-9fb5-70f882b64cf1 | [docs/delivery/evidence/rr-r10-task5-accessibility-wide.txt](evidence/rr-r10-task5-accessibility-wide.txt) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 766a793e-6b1e-4003-8f71-658f269ab46f | [docs/delivery/evidence/rr-r10-task5-compact-last-tasks.png](evidence/rr-r10-task5-compact-last-tasks.png) | verificationEvidence | nonAuthoritative | completed | none | none |

@@ -23,6 +23,7 @@ private enum ProjectionReloadOutcome: Equatable, Sendable {
 private enum ProjectionReloadContext: Equatable, Sendable {
     case ordinary
     case ownerActivePhaseCommitted(ProjectID, PhaseID, String)
+    case ownerDeliveryGoalCommitted(ProjectID)
     case agentCommandCommitted
 }
 
@@ -85,6 +86,9 @@ final class AppModel {
     private var projectRoots: [ProjectID: URL] = [:]
     private var reviewActionStates: [ProjectID: ReviewActionState] = [:]
     private var activePhaseSelectionStatuses: [ProjectID: ActivePhaseSelectionStatus] = [:]
+    // View preferences are ephemeral, byte-exact identities, never another active pointer.
+    private var viewedPhaseIDs: [Data: PhaseID] = [:]
+    private var deliveryGoalReloadRequired: Set<Data> = []
     private var performingReviewActionProjectIDs: Set<ProjectID> = []
     private var alertRulesFailureState: AlertRulesFailureState?
     private var didInitializeCodexPluginLifecycle = false
@@ -217,7 +221,8 @@ final class AppModel {
     }
 
     var needsReviewCount: Int {
-        reviewInbox(for: currentProjectID)?.openItems.count ?? 0
+        guard let inbox = reviewInbox(for: currentProjectID) else { return 0 }
+        return inbox.openItems.count + inbox.deliveryGoalAcceptances.count
     }
 
     var notificationCount: Int {
@@ -373,6 +378,89 @@ final class AppModel {
 
     func activePhaseSelectionStatus(for projectID: ProjectID) -> ActivePhaseSelectionStatus {
         activePhaseSelectionStatuses[projectID] ?? .idle
+    }
+
+    func viewedBoard(for projectID: ProjectID) -> PhaseBoardProjection? {
+        guard let dashboard else { return nil }
+        return viewedBoard(in: dashboard, for: projectID)
+    }
+
+    private func viewedBoard(in dashboard: DashboardProjection, for projectID: ProjectID) -> PhaseBoardProjection? {
+        if let phaseID = viewedPhaseIDs[Data(projectID.rawValue.utf8)],
+           let board = dashboard.board(for: projectID, phaseID: phaseID) {
+            return board
+        }
+        if let active = dashboard.board(for: projectID) { return active }
+        guard let phase = dashboard.projects.first(where: {
+            $0.id.rawValue.utf8.elementsEqual(projectID.rawValue.utf8)
+        })?.phases.first else { return nil }
+        return dashboard.board(for: projectID, phaseID: phase.id)
+    }
+
+    func viewPhase(projectID: ProjectID, phaseID: PhaseID) {
+        guard dashboardError == nil,
+              let board = dashboard?.board(for: projectID, phaseID: phaseID) else { return }
+        viewedPhaseIDs[Data(projectID.rawValue.utf8)] = phaseID
+        if board.detail(for: selectedTicketID) == nil {
+            selectedTicketID = board.lanes.flatMap(\.cards).map(\.id)
+                .min { $0.rawValue < $1.rawValue } ?? TicketID(rawValue: "")
+        }
+    }
+
+    func deliveryGoalAcceptanceNeedsReload(for projectID: ProjectID) -> Bool {
+        deliveryGoalReloadRequired.contains(Data(projectID.rawValue.utf8))
+    }
+
+    func acceptDeliveryGoal(_ item: DeliveryGoalAcceptanceReviewProjection) async {
+        let projectID = item.projectID
+        guard dashboardError == nil,
+              !scopedIsPerformingReviewAction(for: projectID),
+              !deliveryGoalAcceptanceNeedsReload(for: projectID),
+              scopedReviewAuthorizationRecovery(for: projectID) == nil,
+              reviewInboxes[projectID]?.deliveryGoalAcceptances.contains(where: { $0.id == item.id }) == true else { return }
+        performingReviewActionProjectIDs.insert(projectID)
+        reviewActionStates[projectID] = nil
+        defer { performingReviewActionProjectIDs.remove(projectID) }
+        let requestID = requestIDGenerator()
+        do {
+            let store = self.store
+            let result = try await projectOnboarding.withAuthorizedProject(projectID: projectID) { project in
+                await AgentCommandDispatcher(store: store,
+                    projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project]))
+                    .dispatch(.init(version: AgentCommandDispatcher.commandEnvelopeVersion,
+                        requestID: requestID, projectRoot: project.canonicalRoot.path,
+                        reason: "Owner accepted Delivery Goal \(item.goalID.rawValue)",
+                        command: .transitionDeliveryGoal(projectID: projectID.rawValue,
+                            phaseID: item.phaseID.rawValue, goalID: item.goalID.rawValue,
+                            expectedPlanRevision: item.expectedPlanRevision, lifecycle: .accepted)), origin: .ownerApp)
+            }
+            if let error = result.error {
+                reviewActionStates[projectID] = ReviewActionState(
+                    message: "Delivery Goal acceptance failed: \(String(describing: error))",
+                    failure: FailureStatePresentation(agentError: error), recovery: nil)
+                deliveryGoalReloadRequired.insert(Data(projectID.rawValue.utf8))
+                return
+            }
+            // Remove the committed decision immediately, even if the subsequent read fails.
+            if let inbox = reviewInboxes[projectID] {
+                reviewInboxes[projectID] = ReviewInboxProjection(projectID: inbox.projectID,
+                    openItems: inbox.openItems, completedItems: inbox.completedItems,
+                    deliveryGoalAcceptances: inbox.deliveryGoalAcceptances.filter { $0.id != item.id })
+            }
+            deliveryGoalReloadRequired.insert(Data(projectID.rawValue.utf8))
+            _ = await reloadProjectProjections(context: .ownerDeliveryGoalCommitted(projectID))
+        } catch let error as ProjectAuthorizationError {
+            presentReviewAuthorizationFailure(error, projectID: projectID)
+        } catch {
+            reviewActionStates[projectID] = ReviewActionState(
+                message: "Delivery Goal acceptance failed: \(error.localizedDescription)",
+                failure: FailureStatePresentation(agentError: .internalFailure(error.localizedDescription)), recovery: nil)
+        }
+    }
+
+    func reloadDeliveryGoalAcceptance(projectID: ProjectID) async {
+        guard !scopedIsPerformingReviewAction(for: projectID) else { return }
+        _ = await reloadProjectProjections()
     }
 
     func transitionTicket(
@@ -718,7 +806,7 @@ final class AppModel {
                 let guidance = await projectOnboarding.observeProjectGuidanceContext(projectID: project.id)
                 projectDocumentationStates[project.id] = guidance.documentationState
                 projectRoots[project.id] = guidance.projectRoot
-            case .ownerActivePhaseCommitted, .agentCommandCommitted:
+            case .ownerActivePhaseCommitted, .ownerDeliveryGoalCommitted, .agentCommandCommitted:
                 projectDocumentationStates[project.id] = self.projectDocumentationStates[project.id] ?? .legacy(.unavailable)
                 projectRoots[project.id] = self.projectRoots[project.id]
             }
@@ -726,8 +814,12 @@ final class AppModel {
             let preferredID = board.detail(for: self.selectedTicketID) == nil
                 ? board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
                 : self.selectedTicketID
-            if project.id == visibleProjectID, let preferredID {
-                selectedTicketID = preferredID
+            if project.id == visibleProjectID {
+                let visibleBoard = viewedBoard(in: dashboard, for: project.id)
+                selectedTicketID = visibleBoard?.detail(for: self.selectedTicketID) != nil
+                    ? self.selectedTicketID
+                    : visibleBoard?.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
+                        ?? TicketID(rawValue: "")
             }
             guard let preferredID else { continue }
             dependencyGraphs[project.id] = try await DependencyGraphProjection.load(
@@ -759,6 +851,10 @@ final class AppModel {
         selectedTicketID = prepared.selectedTicketID
         selectedReviewItemID = prepared.selectedReviewItemID
         dashboardError = nil
+        for projectID in prepared.reviewInboxes.keys where deliveryGoalAcceptanceNeedsReload(for: projectID) {
+            deliveryGoalReloadRequired.remove(Data(projectID.rawValue.utf8))
+            reviewActionStates[projectID] = nil
+        }
 
         for projectID in Array(activePhaseSelectionStatuses.keys) {
             let activePhaseID = prepared.dashboard.projects.first { $0.id == projectID }?.activePhaseID
@@ -777,6 +873,10 @@ final class AppModel {
         switch context {
         case let .ownerActivePhaseCommitted(projectID, phaseID, phaseName):
             activePhaseSelectionStatuses[projectID] = .savedNeedsReload(phaseID, phaseName)
+        case let .ownerDeliveryGoalCommitted(projectID):
+            let detail = "Delivery Goal acceptance was saved, but the latest project view could not be refreshed. Reload the dashboard; do not submit acceptance again."
+            presentReviewRefreshFailure(projectID: projectID, detail: detail)
+            dashboardError = detail
         case .agentCommandCommitted:
             dashboardError = "The agent action was saved, but Release Radar could not refresh the latest project view. Reload the dashboard to see the change."
         case .ordinary:

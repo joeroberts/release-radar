@@ -203,7 +203,10 @@ struct SidebarView: View {
                         },
                         onRecoverAuthorization: { folder, projectID in
                             await model.recoverReviewAuthorization(at: folder, for: projectID)
-                        }
+                        },
+                        onAcceptDeliveryGoal: { await model.acceptDeliveryGoal($0) },
+                        onReload: { await model.reloadDeliveryGoalAcceptance(projectID: inbox.projectID) },
+                        acceptanceNeedsReload: model.deliveryGoalAcceptanceNeedsReload(for: inbox.projectID)
                     )
                 } else {
                     DetailUnavailableView(title: "Needs Review", image: "checkmark.bubble")
@@ -242,7 +245,7 @@ struct SidebarView: View {
                     FailureStateView(presentation: .firstPhaseRequired, style: .full)
                 }
             case let .phaseBoard(projectID):
-                if let board = dashboard.board(for: projectID) {
+                if let board = model.viewedBoard(for: projectID) {
                     PhaseBoardView(
                         board: board,
                         selectedTicketID: $model.selectedTicketID,
@@ -255,7 +258,8 @@ struct SidebarView: View {
                         },
                         reauthorizeActivePhase: { folder in
                             await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
-                        }
+                        },
+                        viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) }
                     )
                 } else if let project = dashboard.projects.first(where: { $0.id == projectID }),
                           !project.phases.isEmpty {

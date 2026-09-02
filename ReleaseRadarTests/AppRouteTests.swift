@@ -6,6 +6,332 @@ import ReleaseRadarCore
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testTask10ViewedPhaseDoesNotChangeActivePhaseOrAuditAndSurvivesReload() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Independent project browsing fixture") { c in
+            try c.execute("INSERT INTO projects (id,name) VALUES ('other-project','Other')")
+            try c.execute("INSERT INTO phases (id,project_id,name) VALUES ('other-current','other-project','Current'),('other-next','other-project','Next')")
+        }
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
+                             externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let before = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(model.dashboard?.board(for: fixture.projectID)?.phaseID, fixture.currentPhaseID)
+        XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
+        let otherProject = ProjectID(rawValue: "other-project")
+        model.viewPhase(projectID: otherProject, phaseID: .init(rawValue: "other-next"))
+        XCTAssertEqual(model.viewedBoard(for: otherProject)?.phaseID.rawValue, "other-next")
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.viewPhase(projectID: fixture.projectID, phaseID: .init(rawValue: "unknown"))
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        await model.reloadAfterActivePhaseSelection(projectID: fixture.projectID)
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
+        XCTAssertEqual(model.viewedBoard(for: otherProject)?.phaseID.rawValue, "other-next")
+        let after = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+        XCTAssertEqual(after, before)
+
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        let committed = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
+        XCTAssertEqual(committed.activePhaseID, "phase-roadmap")
+        XCTAssertEqual(committed.selectionAudits, 1)
+        XCTAssertEqual(committed.actorID, "release-radar-owner")
+    }
+
+    @MainActor
+    func testTask10BrowsingWithoutActivePointerDoesNotEstablishOne() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasActivePointer: false)
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let before = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        XCTAssertNil(model.dashboard?.board(for: fixture.projectID))
+        let after = try await Self.rr9ReadOnlyReloadStoreSnapshot(fixture.store)
+        XCTAssertEqual(after, before)
+    }
+
+    @MainActor
+    func testTask10OwnerAcceptanceUsesTrustedOriginAndCannotRepeatFromStaleInbox() async throws {
+        let fixture = try await makeTask10AwaitingGoalFixture()
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
+                             externalServicesSuppressed: true)
+        await model.loadDashboard()
+        model.selection = .phaseBoard(fixture.projectID)
+        let item = try XCTUnwrap(model.reviewInbox(for: fixture.projectID)?.deliveryGoalAcceptances.first)
+        XCTAssertEqual(model.needsReviewCount, 1)
+        let before = try await task10GoalState(fixture.store)
+        await model.acceptDeliveryGoal(item)
+        let after = try await task10GoalState(fixture.store)
+        XCTAssertEqual(after.lifecycle, "accepted")
+        XCTAssertEqual(after.ownerAudits, before.ownerAudits + 1)
+        XCTAssertEqual(after.requests, before.requests + 1)
+        XCTAssertEqual(after.notifications, before.notifications)
+        XCTAssertEqual(model.needsReviewCount, 0)
+        await model.acceptDeliveryGoal(item)
+        let repeated = try await task10GoalState(fixture.store)
+        XCTAssertEqual(repeated, after)
+    }
+
+    @MainActor
+    func testTask10AcceptanceFailsClosedOnAuthorizationAndRevisionConflict() async throws {
+        let fixture = try await makeTask10AwaitingGoalFixture()
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
+                             externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let item = try XCTUnwrap(model.reviewInbox(for: fixture.projectID)?.deliveryGoalAcceptances.first)
+        let before = try await task10GoalState(fixture.store)
+        fixture.bookmarks.setFailureMode(.accessDenied)
+        await model.acceptDeliveryGoal(item)
+        XCTAssertNotNil(model.scopedReviewAuthorizationRecovery(for: fixture.projectID))
+        let denied = try await task10GoalState(fixture.store)
+        XCTAssertEqual(denied, before)
+        fixture.bookmarks.setFailureMode(.none)
+        await model.recoverReviewAuthorization(at: fixture.projectRoot, for: fixture.projectID)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Concurrent structural revision") { c in
+            try c.execute("UPDATE phase_plans SET revision = revision + 1, state = 'draft', ready_revision = NULL WHERE phase_id = 'phase-empty'")
+        }
+        await model.acceptDeliveryGoal(item)
+        XCTAssertTrue(model.deliveryGoalAcceptanceNeedsReload(for: fixture.projectID))
+        XCTAssertTrue(model.scopedReviewActionFailure(for: fixture.projectID)?.detail.contains("revision") == true)
+        let conflicted = try await task10GoalState(fixture.store)
+        XCTAssertEqual(conflicted, before)
+        await model.reloadDeliveryGoalAcceptance(projectID: fixture.projectID)
+        XCTAssertFalse(model.deliveryGoalAcceptanceNeedsReload(for: fixture.projectID))
+        XCTAssertEqual(model.reviewInbox(for: fixture.projectID)?.deliveryGoalAcceptances.first?.expectedPlanRevision, item.expectedPlanRevision + 1)
+    }
+
+    @MainActor
+    func testTask10SavedAcceptanceRefreshFailureBlocksDuplicateAndPreservesViewedPhase() async throws {
+        let fixture = try await makeTask10AwaitingGoalFixture()
+        let loader = RouteDashboardLoader(failingCalls: [2])
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
+            dashboardLoader: { try await loader.load(from: $0) }, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        let item = try XCTUnwrap(model.reviewInbox(for: fixture.projectID)?.deliveryGoalAcceptances.first)
+        await model.acceptDeliveryGoal(item)
+        XCTAssertTrue(model.deliveryGoalAcceptanceNeedsReload(for: fixture.projectID))
+        XCTAssertTrue(model.scopedReviewActionFailure(for: fixture.projectID)?.detail.contains("saved") == true)
+        let saved = try await task10GoalState(fixture.store)
+        await model.acceptDeliveryGoal(item)
+        let duplicate = try await task10GoalState(fixture.store)
+        XCTAssertEqual(duplicate, saved)
+        await model.reloadDeliveryGoalAcceptance(projectID: fixture.projectID)
+        XCTAssertFalse(model.deliveryGoalAcceptanceNeedsReload(for: fixture.projectID))
+        XCTAssertTrue(model.reviewInbox(for: fixture.projectID)?.deliveryGoalAcceptances.isEmpty == true)
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+    }
+
+    @MainActor
+    private func makeTask10AwaitingGoalFixture() async throws -> RR9OwnerFixture {
+        let fixture = try await makeRR9OwnerFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Synthetic completed work") { c in
+            try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('DONE-1','rr9-owner-project','phase-empty','Complete the owner outcome','backlog')")
+        }
+        let dispatcher = AgentCommandDispatcher(store: fixture.store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: fixture.projectID, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
+        ]))
+        let commands: [AgentCommand] = [
+            .applyPhasePlanRevision(projectID: fixture.projectID.rawValue, phaseID: "phase-empty", expectedRevision: 0,
+                goalUpserts: [.init(id: .init(rawValue: "complete-goal"), title: "Owner outcome", outcome: "Complete the owner outcome",
+                                   doneCriteria: ["Owner can verify the complete outcome"], sortOrder: 0)],
+                assignments: [.init(goalID: .init(rawValue: "complete-goal"), ticketID: .init(rawValue: "DONE-1"))],
+                unassignedTicketIDs: [], supersededGoalIDs: []),
+            .finalizePhasePlan(projectID: fixture.projectID.rawValue, phaseID: "phase-empty", expectedRevision: 1),
+            .transitionTicket(ticketID: "DONE-1", lane: .inProgress),
+            .transitionTicket(ticketID: "DONE-1", lane: .needsReview),
+            .transitionTicket(ticketID: "DONE-1", lane: .accepted),
+            .transitionDeliveryGoal(projectID: fixture.projectID.rawValue, phaseID: "phase-empty", goalID: "complete-goal", expectedPlanRevision: 1, lifecycle: .awaitingAcceptance)
+        ]
+        for command in commands {
+            let result = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+                reason: "Prepare synthetic owner acceptance", command: command))
+            XCTAssertNil(result.error)
+        }
+        return fixture
+    }
+
+    @MainActor
+    private func task10GoalState(_ store: DeliveryStore) async throws -> Task10GoalState {
+        try await store.read { c in
+            Task10GoalState(lifecycle: try c.scalarText("SELECT lifecycle FROM delivery_goals WHERE id='complete-goal'"),
+                ownerAudits: try c.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id='release-radar-owner' AND entity_type='delivery_goal'") ?? -1,
+                requests: try c.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
+                notifications: try c.scalarInt("SELECT COUNT(*) FROM notification_events") ?? -1)
+        }
+    }
+
+    @MainActor
+    private func makeTask10PlanningFixture() async throws -> RR9OwnerFixture {
+        let fixture = try await makeTask10AwaitingGoalFixture()
+        _ = try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Task 10 read-only task regression") { c in
+            try TicketTaskPlanningPolicy.revisePlan(projectID: fixture.projectID,
+                ticketID: .init(rawValue: "ROAD-1"), expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "road-task"), label: "Task 1", title: "Verify the complete outcome", sortOrder: 0)],
+                definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let dispatcher = AgentCommandDispatcher(store: fixture.store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: fixture.projectID, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
+        ]))
+        let organized = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+            reason: "Organize synthetic roadmap for filter verification", command: .applyPhasePlanRevision(
+                projectID: fixture.projectID.rawValue, phaseID: fixture.roadmapPhaseID.rawValue, expectedRevision: 0,
+                goalUpserts: ["road-goal-1", "road-goal-2"].enumerated().map { index, id in
+                    .init(id: .init(rawValue: id), title: "Roadmap outcome \(index + 1)", outcome: "Deliver roadmap outcome \(index + 1)",
+                          doneCriteria: ["Verify roadmap outcome \(index + 1)"], sortOrder: index)
+                }, assignments: [.init(goalID: .init(rawValue: "road-goal-1"), ticketID: .init(rawValue: "ROAD-1")),
+                                  .init(goalID: .init(rawValue: "road-goal-2"), ticketID: .init(rawValue: "ROAD-2"))],
+                unassignedTicketIDs: [], supersededGoalIDs: [])))
+        XCTAssertNil(organized.error)
+        return fixture
+    }
+
+    @MainActor
+    func testTask10PhaseSwitchResetsFilterWithoutClearingNewSelection() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        let hosting = NSHostingView(rootView: Task10BoardTestView(model: model, projectID: fixture.projectID,
+            initialFilter: .goal(.init(rawValue: "road-goal-1"))))
+        let window = NSWindow(contentRect: NSRect(x: 30, y: 30, width: 1600, height: 900),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        window.orderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.currentPhaseID)
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertEqual(model.selectedTicketID.rawValue, "CURRENT-1")
+    }
+
+    @MainActor
+    func testTask10FilteredSelectionReconcilesAfterSamePhaseReload() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
+                             externalServicesSuppressed: true)
+        await model.loadDashboard()
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.selectedTicketID = .init(rawValue: "ROAD-1")
+        let hosting = NSHostingView(rootView: Task10BoardTestView(model: model, projectID: fixture.projectID,
+            initialFilter: .goal(.init(rawValue: "road-goal-1"))))
+        let window = NSWindow(contentRect: NSRect(x: 30, y: 30, width: 1600, height: 900),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        window.orderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        // An unchanged reload must preserve the still-visible selected ticket and its task data.
+        await model.reloadAfterActivePhaseSelection(projectID: fixture.projectID)
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.lane(.backlog)?.cards.first { $0.id == model.selectedTicketID }?.activeTaskCount, 1)
+        let dispatcher = AgentCommandDispatcher(store: fixture.store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: fixture.projectID, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
+        ]))
+        let result = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+            reason: "Synthetic concurrent reassignment", command: .applyPhasePlanRevision(
+                projectID: fixture.projectID.rawValue, phaseID: fixture.roadmapPhaseID.rawValue, expectedRevision: 1,
+                goalUpserts: [], assignments: [.init(goalID: .init(rawValue: "road-goal-2"), ticketID: .init(rawValue: "ROAD-1"))],
+                unassignedTicketIDs: [], supersededGoalIDs: [])))
+        XCTAssertNil(result.error)
+        await model.reloadAfterActivePhaseSelection(projectID: fixture.projectID)
+        for _ in 0..<20 where !model.selectedTicketID.rawValue.isEmpty {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        XCTAssertEqual(model.selectedTicketID.rawValue, "", "A reload that hides selection must clear it instead of showing a different inspector")
+        XCTAssertNotNil(model.viewedBoard(for: fixture.projectID)?.detail(for: .init(rawValue: "ROAD-1")))
+    }
+
+    @MainActor
+    func testTask10NativePlanningControlsAndInspectorWideCompact() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
+                             externalServicesSuppressed: true)
+        await model.loadDashboard()
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let widths = ProcessInfo.processInfo.environment["RR_TASK10_INSPECT_WIDTH"] == "760"
+            ? [760.0] : [1600.0, 760.0]
+        for width in widths {
+            let window = NSWindow(contentRect: NSRect(x: 30, y: 30, width: width, height: 900),
+                styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.title = "RR-R10 Task 10 — isolated native acceptance"
+            window.appearance = NSAppearance(named: .darkAqua)
+            defer { window.close() }
+            model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+            model.selectedTicketID = .init(rawValue: "ROAD-1")
+            let hosting = NSHostingView(rootView: Task10BoardTestView(model: model, projectID: fixture.projectID)
+                .background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
+            hosting.appearance = NSAppearance(named: .darkAqua)
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
+            window.contentView = hosting
+            window.setContentSize(NSSize(width: width, height: 900))
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            // Activation is asynchronous; wait for the actual window readiness condition.
+            for _ in 0..<20 where !window.isKeyWindow {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            hosting.layoutSubtreeIfNeeded()
+            print("Task10 window visible=\(window.isVisible) key=\(window.isKeyWindow) main=\(window.isMainWindow) applicationActive=\(NSApp.isActive) policy=\(NSApp.activationPolicy().rawValue) windows=\(NSApp.windows.count) nativeChildren=\(hosting.accessibilityChildren()?.count ?? 0)")
+            try taskCapture(hosting, name: "task10-planning-\(Int(width))")
+            if let seconds = ProcessInfo.processInfo.environment["RR_TASK10_INSPECT_SECONDS"].flatMap(Double.init), seconds > 0 {
+                print("Task10 isolated inspection PID \(ProcessInfo.processInfo.processIdentifier), width \(width)")
+                try await Task.sleep(for: .seconds(min(seconds, 60)))
+            }
+            // Cross-process AX/keyboard checks are performed with Computer Use.
+            // In-process AXWindows returns [] in this isolated host; do not claim otherwise.
+            XCTAssertTrue(window.isVisible)
+            XCTAssertEqual(hosting.frame.width, width, accuracy: 1)
+            let board = try XCTUnwrap(model.viewedBoard(for: fixture.projectID))
+            XCTAssertEqual(board.lanes.map(\.lane), [.backlog, .inProgress, .needsReview, .blocked, .accepted])
+            XCTAssertEqual(model.dashboard?.board(for: fixture.projectID, phaseID: fixture.roadmapPhaseID)?
+                .lane(.backlog)?.cards.first { $0.id.rawValue == "ROAD-1" }?.activeTaskCount, 1)
+            try taskCapture(hosting, name: "task10-planning-\(Int(width))")
+        }
+    }
+
+    @MainActor
+    func testTask10NativeNeedsReviewAcceptance() async throws {
+        let fixture = try await makeTask10AwaitingGoalFixture()
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        model.selection = .needsReview
+        let inbox = try XCTUnwrap(model.reviewInbox(for: fixture.projectID))
+        let hosting = NSHostingView(rootView: Task10ReviewTestView(model: model, projectID: fixture.projectID)
+            .background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
+        let window = NSWindow(contentRect: NSRect(x: 30, y: 30, width: 1100, height: 850),
+                              styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        window.title = "RR-R10 Task 10 — isolated Needs Review"
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        hosting.appearance = window.appearance
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer { window.close(); NSApp.setActivationPolicy(previousPolicy) }
+        try await Task.sleep(for: .milliseconds(250))
+        try taskCapture(hosting, name: "task10-needs-review")
+        XCTAssertEqual(inbox.deliveryGoalAcceptances.count, 1)
+        if let seconds = ProcessInfo.processInfo.environment["RR_TASK10_INSPECT_SECONDS"].flatMap(Double.init), seconds > 0 {
+            print("Task10 Needs Review inspection PID \(ProcessInfo.processInfo.processIdentifier)")
+            try await Task.sleep(for: .seconds(min(seconds, 60)))
+        }
+    }
+
+    @MainActor
     func testTaskPlanNativeBoardRendering() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-TaskUI-\(UUID().uuidString)", isDirectory: true)
@@ -2910,6 +3236,13 @@ final class AppRouteTests: XCTestCase {
 
 }
 
+private struct Task10GoalState: Equatable {
+    let lifecycle: String?
+    let ownerAudits: Int64
+    let requests: Int64
+    let notifications: Int64
+}
+
 private struct Task4ARR9NormalAcceptanceState: Equatable {
     let acceptedTicketIDs: [String]
     let planRows: [String]
@@ -3360,6 +3693,42 @@ private final class TaskPlanQueryFault: @unchecked Sendable {
 }
 
 @MainActor
+private struct Task10ReviewTestView: View {
+    @Bindable var model: AppModel
+    let projectID: ProjectID
+
+    var body: some View {
+        if let inbox = model.reviewInbox(for: projectID) {
+            NeedsReviewView(inbox: inbox, selectedItemID: $model.selectedReviewItemID,
+                isPerformingAction: model.scopedIsPerformingReviewAction(for: projectID),
+                actionFailure: model.scopedReviewActionFailure(for: projectID), projectName: "RR-R9 Owner",
+                authorizationRecovery: model.scopedReviewAuthorizationRecovery(for: projectID),
+                onDecision: { _, _ in XCTFail("Not an import review action") },
+                onRecoverAuthorization: { _, _ in XCTFail("No authorization change during inspection") },
+                onAcceptDeliveryGoal: { await model.acceptDeliveryGoal($0) },
+                onReload: { await model.reloadDeliveryGoalAcceptance(projectID: projectID) },
+                acceptanceNeedsReload: model.deliveryGoalAcceptanceNeedsReload(for: projectID))
+        }
+    }
+}
+
+private struct Task10BoardTestView: View {
+    @Bindable var model: AppModel
+    let projectID: ProjectID
+    var initialFilter: DeliveryGoalFilter = .all
+
+    var body: some View {
+        if let board = model.viewedBoard(for: projectID) {
+            PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID,
+                phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
+                selectActivePhase: { await model.setActivePhase(projectID: projectID, phaseID: $0) },
+                reloadActivePhase: { await model.reloadAfterActivePhaseSelection(projectID: projectID) },
+                reauthorizeActivePhase: { _ in XCTFail("No authorization change in render check") },
+                viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) }, filter: initialFilter)
+        }
+    }
+}
+
 private struct TaskPlanBoardTestView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.colorSchemeContrast) private var contrast

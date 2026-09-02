@@ -53,7 +53,24 @@ struct PhaseBoardView: View {
     let selectActivePhase: (PhaseID) async -> Void
     let reloadActivePhase: () async -> Void
     let reauthorizeActivePhase: (URL) async -> Void
+    var viewPhase: (PhaseID) -> Void = { _ in }
     @State private var density: BoardDensity = .fullOutcomes
+    @State var filter: DeliveryGoalFilter = .all
+    @State private var selectionOutsideFilter = false
+    @FocusState private var filterSummaryFocused: Bool
+    @AccessibilityFocusState private var filterSummaryAccessibilityFocused: Bool
+
+    private var filteredBoard: PhaseBoardProjection { board.filtered(by: filter) }
+
+    private var filterSummary: String {
+        let name: String = switch filter {
+        case .all: "All goals"
+        case .unassigned: "Unassigned upcoming tickets"
+        case let .goal(id): "Delivery Goal \(id.rawValue)"
+        }
+        return "\(name): \(filteredBoard.lanes.reduce(0) { $0 + $1.count }) tickets"
+            + (selectionOutsideFilter ? ". Prior selection is outside the current filter." : "")
+    }
 
     private let minimumLaneWidth: CGFloat = 112
     private let laneSpacing: CGFloat = 8
@@ -73,6 +90,20 @@ struct PhaseBoardView: View {
 
             VStack(alignment: .leading, spacing: 16) {
                 boardHeader(laneWidth: laneWidth)
+                PhaseBoardPlanningControls(board: board, filter: $filter,
+                    phaseSelectionStatus: phaseSelectionStatus, viewPhase: viewPhase,
+                    makeActive: selectActivePhase, reload: reloadActivePhase, reauthorize: reauthorizeActivePhase)
+                HStack {
+                    Text(filterSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("board-filter-summary")
+                        .focusable()
+                        .focused($filterSummaryFocused)
+                        .accessibilityFocused($filterSummaryAccessibilityFocused)
+                    Spacer()
+                    densityPicker(laneWidth: laneWidth)
+                }
 
                 if showsSideInspector {
                     HStack(alignment: .top, spacing: 16) {
@@ -110,7 +141,21 @@ struct PhaseBoardView: View {
             .padding(24)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("phase-board")
+        .onChange(of: filter) { _, _ in reconcileFilteredSelection() }
+        .onChange(of: board) { previous, current in
+            guard PhaseBoardKey(projectID: previous.project.id, phaseID: previous.phaseID)
+                == PhaseBoardKey(projectID: current.project.id, phaseID: current.phaseID) else { return }
+            reconcileFilteredSelection()
+        }
+        .onChange(of: PhaseBoardKey(projectID: board.project.id, phaseID: board.phaseID)) { _, _ in
+            filter = .all
+            selectionOutsideFilter = false
+        }
+        .onChange(of: selectedTicketID) { _, _ in
+            if filteredBoard.detail(for: selectedTicketID) != nil { selectionOutsideFilter = false }
+        }
     }
 
     private func boardHeader(laneWidth: CGFloat) -> some View {
@@ -118,11 +163,9 @@ struct PhaseBoardView: View {
             HStack(alignment: .top, spacing: 18) {
                 boardContext
                 Spacer(minLength: 12)
-                boardControls(laneWidth: laneWidth)
             }
             VStack(alignment: .leading, spacing: 12) {
                 boardContext
-                boardControls(laneWidth: laneWidth)
             }
         }
     }
@@ -132,7 +175,7 @@ struct PhaseBoardView: View {
             Text(board.project.name)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
-            Text(board.project.activePhaseName)
+            Text(board.phaseName)
                 .font(.title2.weight(.semibold))
             Text("Lane position communicates delivery state; cards show work and constraints.")
                 .font(.subheadline)
@@ -140,16 +183,7 @@ struct PhaseBoardView: View {
         }
     }
 
-    private func boardControls(laneWidth: CGFloat) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            ActivePhaseSelector(
-                project: board.project,
-                surface: .board,
-                status: phaseSelectionStatus,
-                onSelect: selectActivePhase,
-                onReload: reloadActivePhase,
-                onReauthorize: reauthorizeActivePhase
-            )
+    private func densityPicker(laneWidth: CGFloat) -> some View {
             Picker("Card density", selection: $density) {
                 ForEach(BoardDensity.allCases) { option in
                     Text(option.displayName)
@@ -167,7 +201,15 @@ struct PhaseBoardView: View {
             .accessibilityIdentifier("board-density")
             .accessibilityValue(density.accessibilityValue(forLaneWidth: laneWidth))
             .accessibilityHint(density.accessibilityHelp(forLaneWidth: laneWidth))
-        }
+    }
+
+    private func reconcileFilteredSelection() {
+        guard !selectedTicketID.rawValue.isEmpty,
+              filteredBoard.detail(for: selectedTicketID) == nil else { return }
+        selectionOutsideFilter = true
+        selectedTicketID = TicketID(rawValue: "")
+        filterSummaryFocused = true
+        filterSummaryAccessibilityFocused = true
     }
 
     @ViewBuilder
@@ -192,7 +234,7 @@ struct PhaseBoardView: View {
         laneWidth: CGFloat
     ) -> some View {
         HStack(alignment: .top, spacing: laneSpacing) {
-            ForEach(board.lanes) { lane in
+            ForEach(filteredBoard.lanes) { lane in
                 VStack(alignment: .leading, spacing: 8) {
                     ViewThatFits(in: .horizontal) {
                         HStack {
@@ -262,8 +304,8 @@ struct PhaseBoardView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let selected = board.detail(for: selectedTicketID)
-            ?? board.details.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first {
+        if let selected = filteredBoard.detail(for: selectedTicketID)
+            ?? (selectionOutsideFilter ? nil : filteredBoard.details.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first) {
             TicketDetailView(detail: selected, reload: reloadActivePhase)
         } else {
             ContentUnavailableView("Select a ticket", systemImage: "rectangle.on.rectangle")

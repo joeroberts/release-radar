@@ -24,7 +24,24 @@ struct TicketDetailView: View {
 
                 tasksSection
 
-                detailSection("Goal context", systemImage: "scope") {
+                detailSection("Delivery Goal", systemImage: "target") {
+                    if let goal = detail.deliveryGoal {
+                        Text("\(goal.goalID.rawValue) · \(goal.title)").font(.subheadline.weight(.medium))
+                        Text(goal.lifecycle.displayName).foregroundStyle(.secondary)
+                        Text(goal.outcome)
+                        ForEach(Array(goal.doneCriteria.enumerated()), id: \.offset) { _, criterion in
+                            Label(criterion, systemImage: "checkmark.circle")
+                        }
+                    } else {
+                        Text("No Delivery Goal assigned").foregroundStyle(.secondary)
+                    }
+                    if detail.isLegacyContinuation {
+                        Text("Legacy continuation · not covered by the current phase plan")
+                            .font(.caption).foregroundStyle(.orange)
+                    }
+                }
+
+                detailSection("Codex execution goal", systemImage: "scope") {
                     Label(detail.goalContext.linkQuality.rawValue, systemImage: "checkmark.seal")
                         .foregroundStyle(detail.goalContext.linkQuality == .verified ? Color.green : Color.secondary)
                     if let status = detail.goalContext.status {
@@ -39,6 +56,9 @@ struct TicketDetailView: View {
                         Text("Last observed \(observedAt.formatted(date: .abbreviated, time: .shortened))")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
+                    }
+                    if detail.goalContext.linkQuality == .unavailable {
+                        Text("No linked Codex execution goal").foregroundStyle(.secondary)
                     }
                 }
 
