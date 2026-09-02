@@ -2,6 +2,13 @@
 
 ## Objective and outcome
 
+Completed 2026-09-02; this brief is historical and non-authoritative. The
+implementation is pushed at `e0a8cf599e1e369fa1706bef0c6cd445bed160e4`;
+39 focused tests, Debug build, documentation checks and independent review
+(Required 0) passed. Typed live Task 9 completion committed revision 14, audit
+`5C1345DD-5C85-4E91-8872-633344653DA5`, with exact replay and preserved unrelated
+state. See the [current delivery state](../../progress.md) for the merge checkpoint.
+
 Implement the complete read-projection outcome in
 [Task 9](../../plans/2026-08-29-delivery-goals-roadmap-readiness.md#task-9-project-delivery-goals-activity-and-owner-review),
 under the accepted [design](../../../design/2026-08-29-delivery-goals-roadmap-readiness-design.md)
