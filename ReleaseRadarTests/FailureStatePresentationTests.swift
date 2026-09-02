@@ -92,6 +92,18 @@ final class FailureStatePresentationTests: XCTestCase {
         XCTAssertNil(FailureStatePresentation(notificationState: .sent, statusText: "Delivered"))
     }
 
+    func testDeliveryGoalErrorsGiveExactRevisionAndActionableRecovery() throws {
+        let conflict = try XCTUnwrap(FailureStatePresentation(agentError: .planRevisionConflict(expected: 2, current: 3)))
+        XCTAssertTrue(conflict.detail.contains("revision is 3"))
+        let incomplete = try XCTUnwrap(FailureStatePresentation(agentError: .phasePlanIncomplete(.init(
+            unassignedTicketIDs: [.init(rawValue: "T-1")], incompleteGoalIDs: [.init(rawValue: "G-1")], conflictingTicketIDs: [.init(rawValue: "T-2")]))))
+        for id in ["T-1", "G-1", "T-2"] { XCTAssertTrue(incomplete.detail.contains(id)) }
+        let owner = try XCTUnwrap(FailureStatePresentation(agentError: .ownerAcceptanceRequired))
+        XCTAssertTrue(owner.detail.contains("cannot grant"))
+        let evidence = try XCTUnwrap(FailureStatePresentation(agentError: .goalAcceptanceEvidenceUnavailable([.init(rawValue: "T-3")])))
+        XCTAssertTrue(evidence.detail.contains("T-3")); XCTAssertTrue(evidence.detail.contains("Restore"))
+    }
+
     func testTypedAgentValidationAndUnknownOutcomeNeverClaimPartialState() throws {
         let validation = try XCTUnwrap(FailureStatePresentation(
             agentError: .invalidReference("Ticket MISSING was not found")

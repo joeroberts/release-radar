@@ -75,6 +75,7 @@ The live progress artifact retains its original ID and path.
 | 347a1392-285b-4c82-8b6f-a61832501e54 | [docs/delivery/archive/2026-08-31-progress-through-rr-r10-task-2b.md](2026-08-31-progress-through-rr-r10-task-2b.md) | document | nonAuthoritative | archived | none | none |
 | eb5a4f12-727d-4547-bc47-aa3cb9f26c64 | [docs/delivery/archive/2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md](2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md) | document | nonAuthoritative | archived | none | none |
 | d8f875e8-c5ec-486b-9e76-068003c5fa01 | [docs/delivery/archive/2026-09-02-progress-through-mdcp-m6b.md](2026-09-02-progress-through-mdcp-m6b.md) | document | nonAuthoritative | archived | none | none |
+| 614cd400-b180-4ace-b1de-38381fc66992 | [docs/delivery/archive/2026-09-02-rr-r10-task-7a-closeout.md](2026-09-02-rr-r10-task-7a-closeout.md) | document | nonAuthoritative | archived | none | none |
 | 9f08525c-3dbb-487d-9a70-24ebff25443c | [docs/delivery/archive/README.md](README.md) | collectionIndex | nonAuthoritative | active | none | none |
 | 31277e5a-3a64-4c1f-bc15-26d6f4a935d4 | [docs/delivery/archive/SHA256SUMS](SHA256SUMS) | checksumManifest | nonAuthoritative | archived | none | none |
 

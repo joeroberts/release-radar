@@ -197,6 +197,65 @@ private struct MCPServer {
         arguments: [String: Any]
     ) throws -> (String, [String: Any]) {
         switch tool {
+        case "release_radar_apply_phase_plan_revision":
+            try requireTaskFields(arguments, allowed: ["projectID", "phaseID", "expectedRevision", "goalUpserts", "assignments", "unassignedTicketIDs", "supersededGoalIDs"])
+            var value: [String: Any] = [
+                "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                "phaseID": try taskString("phaseID", in: arguments, maximumBytes: 256),
+                "expectedRevision": try phaseRevision("expectedRevision", in: arguments),
+            ]
+            var goalCount = 0, assignmentCount = 0
+            if let raw = arguments["goalUpserts"] {
+                guard let records = raw as? [[String: Any]] else { throw ToolFailure.invalidRequest("goalUpserts must be an array of goal records") }
+                goalCount += records.count
+                value["goalUpserts"] = try records.map { record -> [String: Any] in
+                    guard Set(record.keys) == ["id", "title", "outcome", "doneCriteria", "sortOrder"] else {
+                        throw ToolFailure.invalidRequest("goalUpserts require exact id, title, outcome, doneCriteria and sortOrder fields")
+                    }
+                    guard let criteria = record["doneCriteria"] as? [String] else { throw ToolFailure.invalidRequest("doneCriteria must be an array of strings") }
+                    let order = try integer("sortOrder", in: record)
+                    guard order >= 0 else { throw ToolFailure.invalidRequest("sortOrder must be nonnegative") }
+                    return ["id": try taskString("id", in: record, maximumBytes: 256),
+                            "title": try string("title", in: record), "outcome": try string("outcome", in: record),
+                            "doneCriteria": criteria, "sortOrder": order]
+                }
+            }
+            if let raw = arguments["assignments"] {
+                guard let records = raw as? [[String: Any]] else { throw ToolFailure.invalidRequest("assignments must be an array of assignment records") }
+                assignmentCount += records.count
+                value["assignments"] = try records.map { record -> [String: Any] in
+                    guard Set(record.keys) == ["goalID", "ticketID"] else { throw ToolFailure.invalidRequest("assignments require exact goalID and ticketID fields") }
+                    return ["goalID": try taskString("goalID", in: record, maximumBytes: 256), "ticketID": try taskString("ticketID", in: record, maximumBytes: 256)]
+                }
+            }
+            for key in ["unassignedTicketIDs", "supersededGoalIDs"] {
+                guard let raw = arguments[key] else { continue }
+                guard let ids = raw as? [String] else { throw ToolFailure.invalidRequest("\(key) must be an array of IDs") }
+                for id in ids { _ = try taskString(key, in: [key: id], maximumBytes: 256) }
+                value[key] = ids
+                if key == "supersededGoalIDs" { goalCount += ids.count } else { assignmentCount += ids.count }
+            }
+            guard goalCount <= 64, assignmentCount <= 512 else { throw ToolFailure.invalidRequest("A phase revision permits at most 64 aggregate goal and 512 aggregate assignment operations") }
+            return try boundedTaskCommand("applyPhasePlanRevision", value: value)
+        case "release_radar_finalize_phase_plan":
+            try requireTaskFields(arguments, allowed: ["projectID", "phaseID", "expectedRevision"])
+            return try boundedTaskCommand("finalizePhasePlan", value: [
+                "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                "phaseID": try taskString("phaseID", in: arguments, maximumBytes: 256),
+                "expectedRevision": try phaseRevision("expectedRevision", in: arguments),
+            ])
+        case "release_radar_transition_delivery_goal":
+            try requireTaskFields(arguments, allowed: ["projectID", "phaseID", "goalID", "expectedPlanRevision", "lifecycle"])
+            guard try string("lifecycle", in: arguments) == "awaiting_acceptance" else {
+                throw ToolFailure.invalidRequest("External lifecycle requests may only request awaiting_acceptance")
+            }
+            return try boundedTaskCommand("transitionDeliveryGoal", value: [
+                "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                "phaseID": try taskString("phaseID", in: arguments, maximumBytes: 256),
+                "goalID": try taskString("goalID", in: arguments, maximumBytes: 256),
+                "expectedPlanRevision": try phaseRevision("expectedPlanRevision", in: arguments),
+                "lifecycle": "awaiting_acceptance",
+            ])
         case "release_radar_revise_ticket_task_plan":
             try requireTaskFields(arguments, allowed: ["ticketID", "expectedRevision", "additions", "definitionRevisions", "supersededTaskIDs"])
             var value: [String: Any] = ["ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256)]
@@ -359,6 +418,14 @@ private struct MCPServer {
         return value
     }
 
+    private static func phaseRevision(_ key: String, in arguments: [String: Any]) throws -> Int64 {
+        let value = try integer(key, in: arguments)
+        guard value >= 0, let revision = Int64(exactly: value) else {
+            throw ToolFailure.invalidRequest("\(key) must be a nonnegative Int64 integer")
+        }
+        return revision
+    }
+
     private static func positiveRevision(_ key: String, in arguments: [String: Any]) throws -> Int64 {
         let value = try integer(key, in: arguments)
         guard value > 0, let revision = Int64(exactly: value) else {
@@ -437,6 +504,16 @@ private struct MCPServer {
         let taskDefinitionRevision: [String: Any] = [
             "type": "object", "additionalProperties": false, "required": ["id"],
             "properties": ["id": taskID, "title": taskTitle, "sortOrder": taskOrder],
+        ]
+        let phaseRevision: [String: Any] = ["type": "integer", "minimum": 0, "maximum": Int64.max]
+        let goalDraft: [String: Any] = [
+            "type": "object", "additionalProperties": false, "required": ["id", "title", "outcome", "doneCriteria", "sortOrder"],
+            "properties": ["id": taskID, "title": ["type": "string"], "outcome": ["type": "string"],
+                           "doneCriteria": ["type": "array", "items": string], "sortOrder": taskOrder],
+        ]
+        let assignment: [String: Any] = [
+            "type": "object", "additionalProperties": false, "required": ["goalID", "ticketID"],
+            "properties": ["goalID": taskID, "ticketID": taskID],
         ]
         return [
             ["name": "release_radar_inventory_evidence", "description": "Read a complete authorized project evidence inventory. Oversized or unavailable inventory fails closed; no rows are silently omitted.",
@@ -531,6 +608,29 @@ private struct MCPServer {
                 required: ["ticketID", "taskID", "expectedRevision"],
                 fields: ["ticketID": taskID, "taskID": taskID, "expectedRevision": taskRevision],
                 description: "Complete one ticket task at the exact current plan revision and return the audited committed revision. This does not move the ticket or a Delivery Goal."
+            ),
+            definition(
+                "release_radar_apply_phase_plan_revision",
+                required: ["projectID", "phaseID", "expectedRevision"],
+                fields: ["projectID": taskID, "phaseID": taskID, "expectedRevision": phaseRevision,
+                         "goalUpserts": ["type": "array", "maxItems": 64, "items": goalDraft],
+                         "assignments": ["type": "array", "maxItems": 512, "items": assignment],
+                         "unassignedTicketIDs": ["type": "array", "maxItems": 512, "items": taskID],
+                         "supersededGoalIDs": ["type": "array", "maxItems": 64, "items": taskID]],
+                description: "Revise a phase plan with at most 64 aggregate goal operations, 512 aggregate assignment operations and a sorted-key encoded command of at most 65,536 bytes. Omitted arrays make no changes. Returns the committed Draft revision."
+            ),
+            definition(
+                "release_radar_finalize_phase_plan",
+                required: ["projectID", "phaseID", "expectedRevision"],
+                fields: ["projectID": taskID, "phaseID": taskID, "expectedRevision": phaseRevision],
+                description: "Validate complete Delivery Goals and ticket coverage at the exact current revision, then atomically mark the phase plan Ready."
+            ),
+            definition(
+                "release_radar_transition_delivery_goal",
+                required: ["projectID", "phaseID", "goalID", "expectedPlanRevision", "lifecycle"],
+                fields: ["projectID": taskID, "phaseID": taskID, "goalID": taskID, "expectedPlanRevision": phaseRevision,
+                         "lifecycle": ["type": "string", "enum": ["awaiting_acceptance"]]],
+                description: "Request owner acceptance of an Active Delivery Goal after all assigned tickets are Accepted. Requires the current Ready plan and preserves its structural revision."
             ),
         ]
     }

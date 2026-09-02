@@ -8,6 +8,310 @@ final class AgentBridgeAcceptanceTests: XCTestCase {
         let release = DispatchSemaphore(value: 0)
     }
 
+    func testDeliveryGoalCommandsAuditAssignmentsAndReplayAcrossOrigins() async throws {
+        let f = try await goalFixture(ticketCount: 2)
+        let revision = try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0,
+            "goalUpserts": [goalDraft()], "assignments": (0..<2).map { ["goalID": "goal-1", "ticketID": "t\($0)"] }])
+        let request = taskEnvelope(f, revision)
+        let applied = await f.dispatcher.dispatch(request)
+        XCTAssertNil(applied.error)
+        XCTAssertEqual(try goalRevision(applied), 1)
+        let audit = try XCTUnwrap(applied.auditEventID)
+        let history = try await f.store.read { c in
+            (try c.rows("SELECT audit_event_id,revision,ticket_id FROM delivery_goal_assignment_events ORDER BY ticket_id"),
+             try c.row("SELECT project_id,entity_type,entity_id,actor_id FROM audit_events WHERE id=?", bindings: [.text(audit.rawValue)]))
+        }
+        XCTAssertEqual(history.0.count, 2)
+        for row in history.0 { XCTAssertEqual(row["audit_event_id"], .text(audit.rawValue)); XCTAssertEqual(row["revision"], .integer(1)) }
+        XCTAssertEqual(history.1?["project_id"], .text("project-1"))
+        XCTAssertEqual(history.1?["entity_type"], .text("phase_plan"))
+        XCTAssertEqual(history.1?["entity_id"], .text("phase-1"))
+        let finalRequest = taskEnvelope(f, try goalCommand("finalizePhasePlan", ["expectedRevision": 1]))
+        let finalized = await f.dispatcher.dispatch(finalRequest)
+        XCTAssertNil(finalized.error); XCTAssertEqual(try goalRevision(finalized), 1)
+        for ticket in ["t0", "t1"] {
+            for lane in [TicketLane.inProgress, .needsReview, .accepted] {
+                let result = await f.dispatcher.dispatch(taskEnvelope(f, .transitionTicket(ticketID: ticket, lane: lane)))
+                XCTAssertNil(result.error)
+            }
+        }
+        let awaitingRequest = taskEnvelope(f, try goalCommand("transitionDeliveryGoal", ["goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": "awaiting_acceptance"]))
+        let awaiting = await f.dispatcher.dispatch(awaitingRequest)
+        XCTAssertNil(awaiting.error); XCTAssertEqual(try goalRevision(awaiting), 1)
+        let ownerRequest = taskEnvelope(f, try goalCommand("transitionDeliveryGoal", ["goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": "accepted"]))
+        let beforeDenial = try await goalSnapshot(f.store)
+        let denied = await f.dispatcher.dispatch(ownerRequest)
+        XCTAssertEqual(String(describing: denied.error!), "ownerAcceptanceRequired")
+        let afterDenial = try await goalSnapshot(f.store); XCTAssertEqual(beforeDenial, afterDenial)
+        let accepted = await f.dispatcher.dispatch(ownerRequest, origin: .ownerApp)
+        XCTAssertNil(accepted.error); XCTAssertEqual(try goalRevision(accepted), 1)
+        let ownerAuditID = try XCTUnwrap(accepted.auditEventID)
+        let ownerAudit = try await f.store.read { try $0.row("SELECT actor_id,entity_type,entity_id FROM audit_events WHERE id=?", bindings: [.text(ownerAuditID.rawValue)]) }
+        XCTAssertEqual(ownerAudit?["actor_id"], .text("release-radar-owner"))
+        XCTAssertEqual(ownerAudit?["entity_type"], .text("delivery_goal"))
+        XCTAssertEqual(ownerAudit?["entity_id"], .text("goal-1"))
+        let acceptedState = try await f.store.read { c in
+            (try c.scalarText("SELECT lifecycle FROM delivery_goals WHERE id='goal-1'"),
+             try c.scalarInt("SELECT revision FROM phase_plans WHERE phase_id='phase-1'"),
+             try c.scalarInt("SELECT COUNT(*) FROM tickets WHERE lane='accepted'"),
+             try c.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id=?", bindings: [.text(ownerAuditID.rawValue)]),
+             try c.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id=?", bindings: [.text(ownerRequest.requestID.uuidString)]))
+        }
+        XCTAssertEqual(acceptedState.0, "accepted"); XCTAssertEqual(acceptedState.1, 1)
+        XCTAssertEqual(acceptedState.2, 2); XCTAssertEqual(acceptedState.3, 1); XCTAssertEqual(acceptedState.4, 1)
+        let beforeReplay = try await goalSnapshot(f.store)
+        let reopened = AgentCommandDispatcher(store: DeliveryStore(databaseURL: f.databaseURL), projectRegistry: f.registry)
+        for (envelope, result, origin) in [(request, applied, AgentCommandOrigin.externalAgent), (finalRequest, finalized, .externalAgent), (awaitingRequest, awaiting, .externalAgent), (ownerRequest, accepted, .ownerApp)] {
+            let replay = await reopened.dispatch(envelope, origin: origin)
+            XCTAssertEqual(replay, result)
+            let changed = AgentCommandEnvelope(version: 1, requestID: envelope.requestID, projectRoot: envelope.projectRoot,
+                assertedThreadID: envelope.assertedThreadID, reason: "Changed body", command: envelope.command)
+            let reused = await reopened.dispatch(changed, origin: origin)
+            XCTAssertEqual(reused.error, .requestIDReused)
+            let stored = try await f.store.read { try $0.row("SELECT request_body FROM agent_command_requests WHERE request_id=?", bindings: [.text(envelope.requestID.uuidString)]) }
+            let body: [String: Any] = ["version": 1, "projectRoot": envelope.projectRoot, "assertedThreadID": envelope.assertedThreadID!, "reason": envelope.reason,
+                "command": try JSONSerialization.jsonObject(with: JSONEncoder().encode(envelope.command))]
+            XCTAssertEqual(stored?["request_body"], .blob(try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])))
+        }
+        let externalReuse = await reopened.dispatch(ownerRequest)
+        XCTAssertNotNil(externalReuse.error); XCTAssertNil(externalReuse.auditEventID); XCTAssertTrue(externalReuse.entityIDs.isEmpty)
+        let ownerReuse = await reopened.dispatch(awaitingRequest, origin: .ownerApp)
+        XCTAssertEqual(ownerReuse.error, .requestIDReused); XCTAssertNil(ownerReuse.auditEventID)
+        let afterReplay = try await goalSnapshot(f.store); XCTAssertEqual(afterReplay, beforeReplay)
+    }
+
+    func testDeliveryGoalLifecycleReplayRequiresAuthoritativeAuditAssociation() async throws {
+        for association in ["missing-result-audit", "missing-audit-row", "wrong-actor", "wrong-project", "wrong-entity"] {
+            let f = try await goalFixture()
+            try await prepareAwaitingGoal(f)
+            let request = taskEnvelope(f, try goalCommand("transitionDeliveryGoal", ["goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": "accepted"]))
+            let accepted = await f.dispatcher.dispatch(request, origin: .ownerApp)
+            XCTAssertNil(accepted.error)
+            let audit = try XCTUnwrap(accepted.auditEventID)
+            // Test-only corruption of this disposable store; production receipts/audits
+            // remain protected from transaction callbacks.
+            do {
+                let c = try SQLiteConnection(url: f.databaseURL)
+                if association == "missing-result-audit" || association == "missing-audit-row" {
+                    let replacement = AgentCommandResult(entityIDs: accepted.entityIDs, auditEventID: association == "missing-result-audit" ? nil : .init(rawValue: "missing"), error: nil)
+                    try c.execute("UPDATE agent_command_requests SET result_data=? WHERE request_id=?", bindings: [.blob(try JSONEncoder().encode(replacement)), .text(request.requestID.uuidString)])
+                } else {
+                    let column = association == "wrong-actor" ? "actor_id" : (association == "wrong-project" ? "project_id" : "entity_id")
+                    let value = association == "wrong-actor" ? "release-radar-agent" : (association == "wrong-project" ? "project-2" : "other-goal")
+                    try c.execute("UPDATE audit_events SET \(column)=? WHERE id=?", bindings: [.text(value), .text(audit.rawValue)])
+                }
+            }
+            let before = try await goalSnapshot(f.store)
+            let replay = await f.dispatcher.dispatch(request, origin: .ownerApp)
+            XCTAssertEqual(replay.error, .requestIDReused, association)
+            XCTAssertNil(replay.auditEventID); XCTAssertTrue(replay.entityIDs.isEmpty)
+            let after = try await goalSnapshot(f.store); XCTAssertEqual(after, before)
+        }
+    }
+
+    func testDeliveryGoalCommandsRejectStaleDraftCoupledAndIncompleteChangesAtomically() async throws {
+        let f = try await goalFixture()
+        let incomplete = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("finalizePhasePlan", ["expectedRevision": 0])))
+        guard case let .phasePlanIncomplete(details)? = incomplete.error else { return XCTFail("Expected actionable readiness details") }
+        XCTAssertEqual(details.unassignedTicketIDs, [.init(rawValue: "t0")])
+        let created = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0, "goalUpserts": [goalDraft()], "assignments": [["goalID": "goal-1", "ticketID": "t0"]]])))
+        XCTAssertNil(created.error)
+        let cases: [(String, [String: Any], String)] = [
+            ("applyPhasePlanRevision", ["expectedRevision": 0, "goalUpserts": [goalDraft("other")]], "planRevisionConflict"),
+            ("applyPhasePlanRevision", ["expectedRevision": 1], "invalidPlanMutation"),
+            ("applyPhasePlanRevision", ["expectedRevision": 1, "projectID": "project-2", "goalUpserts": [goalDraft("other")]], "crossProjectReference"),
+            ("finalizePhasePlan", ["expectedRevision": 0], "planRevisionConflict"),
+            ("transitionDeliveryGoal", ["goalID": "goal-1", "expectedPlanRevision": 0, "lifecycle": "awaiting_acceptance"], "planRevisionConflict"),
+            ("transitionDeliveryGoal", ["goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": "awaiting_acceptance"], "phasePlanNotReady"),
+        ]
+        for (name, fields, error) in cases {
+            let before = try await goalSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand(name, fields)))
+            XCTAssertTrue(String(describing: result.error).contains(error), "\(result)")
+            XCTAssertNil(result.auditEventID)
+            let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after)
+        }
+        let finalized = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("finalizePhasePlan", ["expectedRevision": 1])))
+        XCTAssertNil(finalized.error)
+        for lifecycle in ["draft", "planned", "active", "superseded", "awaiting_acceptance"] {
+            let before = try await goalSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("transitionDeliveryGoal", ["goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": lifecycle])))
+            XCTAssertTrue(String(describing: result.error).contains("invalidGoalTransition"))
+            let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after)
+        }
+    }
+
+    func testDeliveryGoalCommandsRollbackAuditFailure() async throws {
+        for command in ["applyPhasePlanRevision", "finalizePhasePlan", "transitionDeliveryGoal"] {
+            let f = try await goalFixture()
+            var fields: [String: Any] = ["expectedRevision": 0, "goalUpserts": [goalDraft()], "assignments": [["goalID": "goal-1", "ticketID": "t0"]]]
+            if command != "applyPhasePlanRevision" {
+                let applied = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("applyPhasePlanRevision", fields)))
+                XCTAssertNil(applied.error)
+                fields = ["expectedRevision": 1]
+            }
+            if command == "transitionDeliveryGoal" {
+                try await prepareAwaitingGoal(f, alreadyApplied: true)
+                fields = ["goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": "accepted"]
+            }
+            let faultConnection = try SQLiteConnection(url: f.databaseURL)
+            try faultConnection.execute("CREATE TRIGGER task8_audit_failure BEFORE INSERT ON audit_events BEGIN SELECT RAISE(ABORT,'injected audit failure'); END")
+            let before = try await goalSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand(command, fields)), origin: .ownerApp)
+            XCTAssertNotNil(result.error); XCTAssertNil(result.auditEventID)
+            let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after)
+        }
+    }
+
+    func testDeliveryGoalCommandAggregateAndEncodedByteBoundaries() async throws {
+        for count in [63, 64, 65] {
+            let f = try await goalFixture()
+            let before = try await goalSnapshot(f.store)
+            let command = try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0, "goalUpserts": (0..<count).map { goalDraft("g\($0)") }])
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            if count <= 64 { XCTAssertNil(result.error); XCTAssertEqual(try goalRevision(result), 1) }
+            else { XCTAssertNotNil(result.error); let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after) }
+        }
+        for count in [511, 512, 513] {
+            let f = try await goalFixture(ticketCount: count)
+            let before = try await goalSnapshot(f.store)
+            let command = try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0, "goalUpserts": [goalDraft()],
+                "assignments": (0..<count).map { ["goalID": "goal-1", "ticketID": "t\($0)"] }])
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            if count <= 512 {
+                XCTAssertNil(result.error); XCTAssertEqual(try goalRevision(result), 1)
+                let remove = try goalCommand("applyPhasePlanRevision", ["expectedRevision": 1, "unassignedTicketIDs": (0..<count).map { "t\($0)" }])
+                let removed = await f.dispatcher.dispatch(taskEnvelope(f, remove))
+                XCTAssertNil(removed.error); XCTAssertEqual(try goalRevision(removed), 2)
+            } else { XCTAssertNotNil(result.error); let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after) }
+        }
+        for fields: [String: Any] in [
+            ["goalUpserts": [goalDraft()], "supersededGoalIDs": (0..<64).map { "g\($0)" }],
+            ["assignments": [["goalID": "goal-1", "ticketID": "t0"]], "unassignedTicketIDs": (1...512).map { "t\($0)" }],
+        ] {
+            let f = try await goalFixture()
+            let before = try await goalSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("applyPhasePlanRevision", fields.merging(["expectedRevision": 0]) { _, new in new })))
+            guard case .invalidEnvelope? = result.error else { return XCTFail("Aggregate limit must reject before policy: \(result)") }
+            let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after)
+        }
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        for bytes in [65_535, 65_536, 65_537] {
+            let f = try await goalFixture()
+            let empty = try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0, "goalUpserts": [goalDraft(title: "")]])
+            let padding = bytes - (try encoder.encode(empty).count)
+            let title = String(repeating: "é", count: padding / 2) + String(repeating: "a", count: padding % 2)
+            let command = try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0, "goalUpserts": [goalDraft(title: title)]])
+            XCTAssertEqual(try encoder.encode(command).count, bytes)
+            let before = try await goalSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, command))
+            if bytes <= 65_536 { XCTAssertNil(result.error); XCTAssertEqual(try goalRevision(result), 1) }
+            else { XCTAssertNotNil(result.error); let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after) }
+        }
+    }
+
+    func testDeliveryGoalOmissionsPreserveMembershipAndCrossPhaseEditsReject() async throws {
+        let f = try await goalFixture()
+        let initial = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0,
+            "goalUpserts": [goalDraft(), goalDraft("other-goal")], "assignments": [["goalID": "goal-1", "ticketID": "t0"]]])))
+        XCTAssertNil(initial.error)
+        let revised = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("applyPhasePlanRevision", ["expectedRevision": 1,
+            "goalUpserts": [goalDraft(title: "Revised definition")]])))
+        XCTAssertNil(revised.error); XCTAssertEqual(revised.phasePlanRevision, 2)
+        let membership = try await f.store.read { c in
+            (try c.scalarInt("SELECT COUNT(*) FROM delivery_goals"),
+             try c.scalarText("SELECT goal_id FROM delivery_goal_ticket_assignments WHERE ticket_id='t0'"),
+             try c.scalarInt("SELECT COUNT(*) FROM delivery_goal_assignment_events"),
+             try c.scalarText("SELECT lifecycle FROM delivery_goals WHERE id='other-goal'"))
+        }
+        XCTAssertEqual(membership.0, 2); XCTAssertEqual(membership.1, "goal-1")
+        XCTAssertEqual(membership.2, 1); XCTAssertEqual(membership.3, "draft")
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed another phase") { c in
+            try c.execute("INSERT INTO phases(id,project_id,name) VALUES ('other-phase','project-1','Other')")
+            try c.execute("INSERT INTO tickets(id,project_id,phase_id,outcome,lane) VALUES ('foreign','project-1','other-phase','Other','backlog')")
+        }
+        for fields: [String: Any] in [
+            ["expectedRevision": 2, "assignments": [["goalID": "goal-1", "ticketID": "foreign"]]],
+            ["expectedRevision": 0, "phaseID": "other-phase", "goalUpserts": [goalDraft(title: "Move goal")]],
+        ] {
+            let before = try await goalSnapshot(f.store)
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("applyPhasePlanRevision", fields)))
+            XCTAssertNotNil(result.error); XCTAssertNil(result.auditEventID)
+            let after = try await goalSnapshot(f.store); XCTAssertEqual(before, after)
+        }
+    }
+
+    private func goalCommand(_ name: String, _ fields: [String: Any]) throws -> AgentCommand {
+        let values: [String: Any] = ["projectID": "project-1", "phaseID": "phase-1"]
+        return try JSONDecoder().decode(AgentCommand.self, from: JSONSerialization.data(withJSONObject: [name: values.merging(fields) { _, new in new }]))
+    }
+
+    private func goalDraft(_ id: String = "goal-1", title: String = "Complete delivery") -> [String: Any] {
+        ["id": id, "title": title, "outcome": "Delivered", "doneCriteria": ["Verified"], "sortOrder": 0]
+    }
+
+    private func goalRevision(_ result: AgentCommandResult) throws -> Int64? {
+        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result)) as? [String: Any]
+        return (object?["phasePlanRevision"] as? NSNumber)?.int64Value
+    }
+
+    private func goalFixture(ticketCount: Int = 1) async throws -> Fixture {
+        let f = try await makeFixture(seedDelivery: false)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed unassessed phase") { c in
+            try c.execute("INSERT INTO phases (id,project_id,name) VALUES ('phase-1','project-1','Phase')")
+            for n in 0..<ticketCount {
+                try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,'project-1','phase-1','Outcome','backlog')", bindings: [.text("t\(n)")])
+            }
+        }
+        return f
+    }
+
+    private func prepareAwaitingGoal(_ f: Fixture, alreadyApplied: Bool = false) async throws {
+        if !alreadyApplied {
+            let applied = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("applyPhasePlanRevision", ["expectedRevision": 0, "goalUpserts": [goalDraft()], "assignments": [["goalID": "goal-1", "ticketID": "t0"]]])))
+            XCTAssertNil(applied.error)
+        }
+        let finalized = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("finalizePhasePlan", ["expectedRevision": 1])))
+        XCTAssertNil(finalized.error)
+        for lane in [TicketLane.inProgress, .needsReview, .accepted] {
+            let result = await f.dispatcher.dispatch(taskEnvelope(f, .transitionTicket(ticketID: "t0", lane: lane)))
+            XCTAssertNil(result.error)
+        }
+        let awaiting = await f.dispatcher.dispatch(taskEnvelope(f, try goalCommand("transitionDeliveryGoal", ["goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": "awaiting_acceptance"])))
+        XCTAssertNil(awaiting.error)
+    }
+
+    private func goalSnapshot(_ store: DeliveryStore) async throws -> [[[String: SQLiteValue]]] {
+        try await store.read { c in
+            try ["phase_plans", "delivery_goals", "delivery_goal_done_criteria", "delivery_goal_ticket_assignments", "delivery_goal_assignment_events", "tickets", "audit_events", "agent_command_requests"].map {
+                try c.rows("SELECT * FROM \($0) ORDER BY rowid")
+            }
+        }
+    }
+
+    func testDeliveryGoalCommandWireShapesAreAdditive() throws {
+        let commands: [[String: Any]] = [
+            ["applyPhasePlanRevision": ["projectID": "project-1", "phaseID": "phase-1", "expectedRevision": 0,
+                "goalUpserts": [["id": "goal-1", "title": "Complete delivery", "outcome": "Delivered", "doneCriteria": ["Verified"], "sortOrder": 0]],
+                "assignments": [["goalID": "goal-1", "ticketID": "RR-03"]]]],
+            ["finalizePhasePlan": ["projectID": "project-1", "phaseID": "phase-1", "expectedRevision": 1]],
+            ["transitionDeliveryGoal": ["projectID": "project-1", "phaseID": "phase-1", "goalID": "goal-1", "expectedPlanRevision": 1, "lifecycle": "awaiting_acceptance"]],
+        ]
+        for object in commands {
+            let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+            let command = try? JSONDecoder().decode(AgentCommand.self, from: data)
+            XCTAssertNotNil(command, "The additive command must decode: \(object.keys)")
+            if let command {
+                let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+                XCTAssertEqual(try encoder.encode(command), data)
+            }
+        }
+        let old = Data(#"{"entityIDs":["RR-03"]}"#.utf8)
+        let result = try JSONDecoder().decode(AgentCommandResult.self, from: old)
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        XCTAssertEqual(try encoder.encode(result), old)
+    }
+
     func testTicketTaskCommandsDecodeAndReturnTheCommittedRevision() async throws {
         let fixture = try await makeFixture()
         let commands = [

@@ -48,6 +48,11 @@ public actor AgentCommandDispatcher {
         if let error = validate(envelope) {
             return .init(entityIDs: [], auditEventID: nil, error: error)
         }
+        // Owner acceptance must be authorized before consulting durable receipts.
+        if case .transitionDeliveryGoal(_, _, _, _, .accepted) = envelope.command,
+           case .externalAgent = origin {
+            return .init(entityIDs: [], auditEventID: nil, error: .ownerAcceptanceRequired)
+        }
         if envelope.command.isDocumentationMutation {
             guard let body = try? canonicalRequestBody(envelope) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .documentation(.invalidRequest))
@@ -94,11 +99,22 @@ public actor AgentCommandDispatcher {
                         else {
                             throw DispatchControl.requestIDReused
                         }
+                        if case .transitionDeliveryGoal = envelope.command {
+                            guard priorResult.error == nil, let priorAuditID = priorResult.auditEventID,
+                                  let audit = try connection.row(
+                                    "SELECT actor_id,project_id,entity_type,entity_id FROM audit_events WHERE id=?",
+                                    bindings: [.text(priorAuditID.rawValue)]),
+                                  audit["actor_id"] == .text(actor.id),
+                                  audit["project_id"] == .text(auditScope.projectID.rawValue),
+                                  audit["entity_type"] == .text(auditScope.entityType.rawValue),
+                                  audit["entity_id"] == .text(auditScope.entityID)
+                            else { throw DispatchControl.requestIDReused }
+                        }
                         throw DispatchControl.replay(priorResult)
                     }
 
-                    let taskRevision = try Self.apply(envelope.command, project: project, auditEventID: auditEventID, connection: connection)
-                    let result = Self.resultForCommand(envelope.command, auditEventID: auditEventID, ticketTaskPlanRevision: taskRevision)
+                    let revision = try Self.apply(envelope.command, project: project, origin: origin, auditEventID: auditEventID, connection: connection)
+                    let result = Self.resultForCommand(envelope.command, auditEventID: auditEventID, revision: revision)
                     let resultData = try JSONEncoder().encode(result)
                     try connection.execute(
                         "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES (?, ?, ?, ?)",
@@ -156,6 +172,14 @@ public actor AgentCommandDispatcher {
         }
         let commandFieldsAreValid: Bool
         switch envelope.command {
+        case let .applyPhasePlanRevision(projectID, phaseID, revision, goals, assignments, unassigned, superseded):
+            commandFieldsAreValid = valid(projectID, maximum: 256) && !projectID.contains("\0")
+                && valid(phaseID, maximum: 256) && !phaseID.contains("\0") && revision >= 0
+                && (goals?.count ?? 0) + (superseded?.count ?? 0) <= DeliveryPlanningPolicy.maximumGoalOperationsPerRevision
+                && (assignments?.count ?? 0) + (unassigned?.count ?? 0) <= DeliveryPlanningPolicy.maximumAssignmentOperationsPerRevision
+        case let .finalizePhasePlan(projectID, phaseID, revision), let .transitionDeliveryGoal(projectID, phaseID, _, revision, _):
+            commandFieldsAreValid = valid(projectID, maximum: 256) && !projectID.contains("\0")
+                && valid(phaseID, maximum: 256) && !phaseID.contains("\0") && revision >= 0
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             commandFieldsAreValid = (try? envelope.command.validateDocumentation()) != nil
         case let .upsertPhase(phaseID, name):
@@ -257,12 +281,16 @@ public actor AgentCommandDispatcher {
         return try encoder.encode(body)
     }
 
-    private static func resultForCommand(_ command: AgentCommand, auditEventID: AuditEventID, ticketTaskPlanRevision: Int64?) -> AgentCommandResult {
+    private static func resultForCommand(_ command: AgentCommand, auditEventID: AuditEventID, revision: Int64?) -> AgentCommandResult {
         switch command {
+        case let .applyPhasePlanRevision(_, phaseID, _, _, _, _, _), let .finalizePhasePlan(_, phaseID, _):
+            return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil, phasePlanRevision: revision)
+        case let .transitionDeliveryGoal(_, _, goalID, _, _):
+            return .init(entityIDs: [goalID], auditEventID: auditEventID, error: nil, phasePlanRevision: revision)
         case let .reviseTicketTaskPlan(ticketID, _, _, _, _):
-            return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: ticketTaskPlanRevision)
+            return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: revision)
         case let .completeTicketTask(ticketID, taskID, _):
-            return .init(entityIDs: [ticketID, taskID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: ticketTaskPlanRevision)
+            return .init(entityIDs: [ticketID, taskID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: revision)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             return .init(entityIDs: command.documentationIDs, auditEventID: auditEventID, error: nil)
         case let .upsertPhase(phaseID, _):
@@ -290,6 +318,8 @@ public actor AgentCommandDispatcher {
 
     private static func auditScope(for command: AgentCommand, projectID: ProjectID) -> AuditScope {
         let entity: (AuditEntityType, String) = switch command {
+        case let .applyPhasePlanRevision(_, phaseID, _, _, _, _, _), let .finalizePhasePlan(_, phaseID, _): (.phasePlan, phaseID)
+        case let .transitionDeliveryGoal(_, _, goalID, _, _): (.deliveryGoal, goalID)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence: (.project, projectID.rawValue)
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
@@ -312,11 +342,35 @@ public actor AgentCommandDispatcher {
     private static func apply(
         _ command: AgentCommand,
         project: AuthorizedProject,
+        origin: AgentCommandOrigin,
         auditEventID: AuditEventID,
         connection: SQLiteConnection
     ) throws -> Int64? {
         let projectID = project.projectID
         switch command {
+        case let .applyPhasePlanRevision(assertedProjectID, phaseID, expectedRevision, goals, assignments, unassigned, superseded):
+            guard Data(assertedProjectID.utf8) == Data(projectID.rawValue.utf8) else {
+                throw CommandValidation.crossProject("The phase plan belongs to another project.")
+            }
+            return try DeliveryPlanningPolicy.applyRevision(
+                projectID: projectID, phaseID: .init(rawValue: phaseID), expectedRevision: expectedRevision,
+                goalUpserts: goals ?? [], assignments: assignments ?? [], unassignedTicketIDs: unassigned ?? [],
+                supersededGoalIDs: superseded ?? [], auditEventID: auditEventID, connection: connection).revision
+        case let .finalizePhasePlan(assertedProjectID, phaseID, expectedRevision):
+            guard Data(assertedProjectID.utf8) == Data(projectID.rawValue.utf8) else {
+                throw CommandValidation.crossProject("The phase plan belongs to another project.")
+            }
+            return try DeliveryPlanningPolicy.finalizePlan(
+                projectID: projectID, phaseID: .init(rawValue: phaseID), expectedRevision: expectedRevision,
+                connection: connection).revision
+        case let .transitionDeliveryGoal(assertedProjectID, phaseID, goalID, expectedPlanRevision, lifecycle):
+            guard Data(assertedProjectID.utf8) == Data(projectID.rawValue.utf8) else {
+                throw CommandValidation.crossProject("The Delivery Goal belongs to another project.")
+            }
+            _ = try DeliveryPlanningPolicy.transitionGoal(
+                projectID: projectID, phaseID: .init(rawValue: phaseID), goalID: .init(rawValue: goalID),
+                expectedPlanRevision: expectedPlanRevision, to: lifecycle, origin: origin, connection: connection)
+            return expectedPlanRevision
         case let .reviseTicketTaskPlan(ticketID, expectedRevision, additions, definitionRevisions, supersededTaskIDs):
             return try TicketTaskPlanningPolicy.revisePlan(
                 projectID: projectID, ticketID: .init(rawValue: ticketID), expectedRevision: expectedRevision,
@@ -671,6 +725,23 @@ public actor AgentCommandDispatcher {
         // Preserve the existing Accepted-transition error contract. Only the
         // additive task commands expose these task-policy rejection categories.
         switch command {
+        case .applyPhasePlanRevision, .finalizePhasePlan, .transitionDeliveryGoal:
+            if let error = error as? DeliveryPlanningPolicyError {
+                switch error {
+                case .phasePlanNotFound: return .phasePlanNotFound
+                case let .planRevisionConflict(expected, current): return .planRevisionConflict(expected: expected, current: current)
+                case .phasePlanNotReady: return .phasePlanNotReady
+                case let .ticketGoalRequired(id): return .ticketGoalRequired(id)
+                case let .phasePlanIncomplete(failure): return .phasePlanIncomplete(failure)
+                case let .goalPhaseMismatch(id): return .goalPhaseMismatch(id)
+                case let .goalNotFound(id): return .goalNotFound(id)
+                case let .goalNotActionable(id): return .goalNotActionable(id)
+                case let .invalidGoalTransition(from, to): return .invalidGoalTransition(from: from, to: to)
+                case .ownerAcceptanceRequired: return .ownerAcceptanceRequired
+                case let .goalAcceptanceEvidenceUnavailable(ids): return .goalAcceptanceEvidenceUnavailable(ids)
+                case let .invalidPlanMutation(message): return .invalidPlanMutation(message)
+                }
+            }
         case .reviseTicketTaskPlan, .completeTicketTask:
             if let error = error as? TicketTaskPlanningPolicyError {
                 switch error {

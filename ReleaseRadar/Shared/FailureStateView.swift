@@ -192,6 +192,25 @@ struct FailureStatePresentation: Equatable, Sendable {
 
     init?(agentError: AgentCommandError) {
         switch agentError {
+        case let .planRevisionConflict(_, current):
+            self.init(title: "Phase plan changed",
+                      detail: "The current phase plan revision is \(current). Refresh the phase before retrying. No delivery state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-agent-validation")
+        case let .phasePlanIncomplete(failure):
+            self.init(title: "Phase plan incomplete",
+                      detail: "Assign tickets: \(failure.unassignedTicketIDs.map(\.rawValue).joined(separator: ", ")). Complete goals: \(failure.incompleteGoalIDs.map(\.rawValue).joined(separator: ", ")). Resolve conflicting tickets: \(failure.conflictingTicketIDs.map(\.rawValue).joined(separator: ", ")). Then finalize the phase plan.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-agent-validation")
+        case .ownerAcceptanceRequired:
+            self.init(title: "Owner acceptance required", detail: "Accept the Delivery Goal in Release Radar. External agents can request acceptance but cannot grant it.",
+                      systemImage: "lock.trianglebadge.exclamationmark", tone: .error, accessibilityID: "failure-agent-validation")
+        case let .goalAcceptanceEvidenceUnavailable(tickets):
+            self.init(title: "Acceptance evidence unavailable", detail: "Restore the evidence linked to tickets \(tickets.map(\.rawValue).joined(separator: ", ")) before retrying.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-agent-validation")
+        case .phasePlanNotFound, .phasePlanNotReady, .ticketGoalRequired, .goalPhaseMismatch,
+             .goalNotFound, .goalNotActionable, .invalidGoalTransition:
+            self.init(title: "Delivery Goal action rejected",
+                      detail: "Refresh the phase plan, check ticket assignments and goal state, and finalize the current plan before retrying. Activation and supersession must use their governing ticket or plan operations. No delivery state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-agent-validation")
         case let .ticketTaskPlanRevisionConflict(_, current):
             self.init(title: "Task plan changed",
                       detail: "The current task plan revision is \(current). Refresh the ticket before retrying. No delivery state changed.",
@@ -214,7 +233,8 @@ struct FailureStatePresentation: Equatable, Sendable {
                 tone: .warning,
                 accessibilityID: "failure-agent-outcome-unknown"
             )
-        case let .invalidEnvelope(message),
+        case let .invalidPlanMutation(message),
+             let .invalidEnvelope(message),
              let .invalidReference(message),
              let .crossProjectReference(message),
              let .dependencyCycle(message):
