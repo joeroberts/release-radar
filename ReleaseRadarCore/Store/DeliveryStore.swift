@@ -61,14 +61,21 @@ public struct AuditScope: Equatable, Sendable {
 
 public actor DeliveryStore {
     private let connection: SQLiteConnection?
+    private var readOnlyFiles: ExistingDocumentationStoreFiles?
     public let availability: DeliveryStoreAvailability
+    public let schemaVersionForDocumentation: Int
 
     public init(databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL()) {
+        self.init(databaseURL: databaseURL, createIfMissing: true)
+    }
+
+    private init(databaseURL: URL, createIfMissing: Bool) {
+        schemaVersionForDocumentation = Int(StoreMigrations.currentVersion)
         let databaseExisted = FileManager.default.fileExists(atPath: databaseURL.path)
         let snapshotURL = Self.preMigrationSnapshotURL(for: databaseURL)
         let openedConnection: SQLiteConnection
         do {
-            openedConnection = try SQLiteConnection(url: databaseURL)
+            openedConnection = try SQLiteConnection(url: databaseURL, createIfMissing: createIfMissing)
             guard try openedConnection.scalarText("PRAGMA integrity_check") == "ok" else {
                 throw StoreError.unavailable("Database integrity check failed")
             }
@@ -101,6 +108,49 @@ public actor DeliveryStore {
         }
     }
 
+    public static func documentationMaintenance(databaseURL: URL) throws -> DeliveryStore {
+        _ = try ExistingDocumentationStoreFiles(url: databaseURL)
+        return DeliveryStore(databaseURL: databaseURL, createIfMissing: false)
+    }
+
+    public static func existingApplicationSupportDatabaseURL(fileManager: FileManager = .default) -> URL {
+        fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("com.rekonlabs.ReleaseRadar/release-radar.sqlite")
+    }
+
+    /// Existing, quiesced v10...v13 storage only. Does not create, repair or migrate.
+    public init(existingReadOnlyDatabaseURL: URL) throws {
+        let files = try ExistingDocumentationStoreFiles(url: existingReadOnlyDatabaseURL)
+        let opened = try SQLiteConnection(url: existingReadOnlyDatabaseURL, immutableReadOnly: true)
+        let version = try opened.scalarInt("PRAGMA user_version") ?? 0
+        guard try StoreMigrations.recognizesDocumentationPreflightSchema(opened, version: version) else {
+            throw StoreError.unsupportedSchemaVersion(found: version, supported: 13)
+        }
+        guard try opened.scalarText("PRAGMA quick_check") == "ok" else {
+            throw StoreError.unavailable("Existing documentation store is invalid")
+        }
+        try files.verify()
+        connection = opened; readOnlyFiles = files; availability = .available
+        schemaVersionForDocumentation = Int(version)
+    }
+
+    /// One database snapshot for a complete fixed-purpose inventory. The read-only
+    /// preflight additionally rejects any source/sidecar change before or after it.
+    func documentationRead<T: Sendable>(_ body: @Sendable (SQLiteConnection) throws -> T) throws -> T {
+        try readOnlyFiles?.verify()
+        let connection = try availableConnection()
+        try connection.execute("BEGIN DEFERRED TRANSACTION")
+        do {
+            let result = try read(body)
+            try connection.execute("COMMIT")
+            try readOnlyFiles?.verify()
+            return result
+        } catch {
+            try? connection.execute("ROLLBACK")
+            throw error
+        }
+    }
+
     public func transact<T: Sendable>(
         actor: DeliveryActor,
         reason: String,
@@ -123,6 +173,7 @@ public actor DeliveryStore {
         auditScope: AuditScope? = nil,
         _ body: @Sendable (SQLiteConnection) throws -> T
     ) throws -> T {
+        guard readOnlyFiles == nil else { throw StoreError.unavailable("Documentation preflight is read-only") }
         let connection = try availableConnection()
         try connection.execute("BEGIN IMMEDIATE TRANSACTION")
         let scopedConnection = connection.makeScopedConnection(access: .transaction)

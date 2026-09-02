@@ -110,6 +110,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) else {
             return
         }
+        switch DocumentationMaintenanceLaunch.parse(arguments: ProcessInfo.processInfo.arguments, environment: ProcessInfo.processInfo.environment) {
+        case .invalid:
+            NSApp.setActivationPolicy(.prohibited)
+            logger.error("Documentation maintenance options are invalid; no application services started")
+            return
+        case let .maintenance(mode, databaseURL):
+            NSApp.setActivationPolicy(.prohibited)
+            Task { [weak self] in
+                do {
+                    self?.agentBridgeHost = try await AgentBridgeApplicationHost.startDocumentationMaintenance(databaseURL: databaseURL, mode: mode)
+                } catch {
+                    self?.logger.error("Documentation maintenance unavailable: \(error.localizedDescription, privacy: .private)")
+                }
+            }
+            return
+        case .application: break
+        }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
 #if DEBUG
@@ -199,6 +216,10 @@ struct ReleaseRadarApp: App {
             break
         }
 
+        guard DocumentationMaintenanceLaunch.parse(arguments: processInfo.arguments, environment: processInfo.environment) == .application else {
+            _model = State(initialValue: nil)
+            return
+        }
         let services = ReleaseRadarAppServices.shared
 #if DEBUG
         let isDebugBuild = true
@@ -248,7 +269,7 @@ struct ReleaseRadarApp: App {
                 SidebarView(model: model)
                     .frame(minWidth: 760, minHeight: 520)
             } else {
-                Text("Release Radar XCTest host is isolated")
+                Text(AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance: ordinary application services are disabled")
             }
         }
         .defaultSize(width: 1600, height: 820)
@@ -267,7 +288,7 @@ struct ReleaseRadarApp: App {
                 AddProjectWindowView(model: model)
                     .frame(minWidth: 680, minHeight: 500)
             } else {
-                Text("Release Radar XCTest host is isolated")
+                Text(AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance: ordinary application services are disabled")
             }
         }
         .defaultSize(width: 760, height: 560)
@@ -277,7 +298,7 @@ struct ReleaseRadarApp: App {
             if let model {
                 MenuBarContent(model: model)
             } else {
-                Text("Release Radar XCTest host is isolated")
+                Text(AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance: ordinary application services are disabled")
             }
         }
 
@@ -285,7 +306,7 @@ struct ReleaseRadarApp: App {
             if let model {
                 SettingsView(model: model)
             } else {
-                Text("Release Radar XCTest host is isolated")
+                Text(AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance: ordinary application services are disabled")
             }
         }
     }

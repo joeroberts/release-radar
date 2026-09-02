@@ -17,6 +17,7 @@ public struct ImportPreview: Equatable, Sendable {
     public let ticketDependencies: [ImportTicketDependency]
     public let evidence: [ImportEvidence]
     public let reviewItems: [ImportReviewItem]
+    public let documentationCatalogDigest: String?
 
     public init(
         sourceRoot: URL,
@@ -28,7 +29,8 @@ public struct ImportPreview: Equatable, Sendable {
         tickets: [ImportTicket],
         ticketDependencies: [ImportTicketDependency],
         evidence: [ImportEvidence],
-        reviewItems: [ImportReviewItem]
+        reviewItems: [ImportReviewItem],
+        documentationCatalogDigest: String? = nil
     ) {
         self.sourceRoot = sourceRoot
         self.artifactURL = artifactURL
@@ -40,6 +42,7 @@ public struct ImportPreview: Equatable, Sendable {
         self.ticketDependencies = ticketDependencies
         self.evidence = evidence
         self.reviewItems = reviewItems
+        self.documentationCatalogDigest = documentationCatalogDigest
     }
 }
 
@@ -92,12 +95,14 @@ public struct ImportEvidence: Equatable, Sendable {
     public let label: String
     public let path: String
     public let isAvailable: Bool
+    public let sourcePath: String?
 
-    public init(ticketID: TicketID?, label: String, path: String, isAvailable: Bool) {
+    public init(ticketID: TicketID?, label: String, path: String, isAvailable: Bool, sourcePath: String? = nil) {
         self.ticketID = ticketID
         self.label = label
         self.path = path
         self.isAvailable = isAvailable
+        self.sourcePath = sourcePath
     }
 }
 
@@ -137,6 +142,7 @@ public enum RekonImportError: Error, LocalizedError, Equatable, Sendable {
     case invalidPath(String)
     case targetProjectMismatch
     case projectNotFound
+    case documentation(DocumentationOperationError)
 
     public var errorDescription: String? {
         switch self {
@@ -148,6 +154,7 @@ public enum RekonImportError: Error, LocalizedError, Equatable, Sendable {
         case let .limitExceeded(message): message
         case let .invalidPath(path): "Evidence path is outside the authorized project: \(path)"
         case .targetProjectMismatch: "The import preview belongs to a different project"
+        case let .documentation(error): "Managed documentation import is unavailable (\(error.rawValue)); inspect and accept the exact bound catalog before importing"
         case .projectNotFound: "The target project or authorized root is not persisted"
         }
     }

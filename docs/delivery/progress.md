@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Outcome: M3A managed evidence identity independently accepted
-- Active task: None; M3B follows the accepted M3A commit/push
-- Last complete task: M3A — Managed Evidence Identity
+- Outcome: M3B inventory and audited reconciliation independently accepted
+- Active task: None; M3C is next after the M3B checkpoint
+- Last complete task: M3B — Evidence Inventory and Audited Reconciliation
 - Authorization: Owner authorized the remaining M2C–M8 program in dependency
   order, including development, required checks and independent reviews,
   in-scope corrections, ledger updates, and commit/normal push after each
@@ -13,21 +13,23 @@
   RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M3A](task-briefs/2026-09-01-managed-repository-documentation-contract/m3a-managed-evidence-identity-brief.md)
-- Current blockers and risks: No required M3A findings. One unchanged
+- Controlling brief: [M3B](task-briefs/2026-09-01-managed-repository-documentation-contract/m3b-evidence-inventory-reconciliation-brief.md)
+- Current blockers and risks: No required M3B findings. One unchanged
   onboarding test expects schema version 9 while the accepted migration version
   is now 13. Isolated-host runtime accessibility inspection was unavailable; no
   accessibility defect was established and full live-app acceptance is not
   claimed.
-- Verification: M3A native core tests passed 84/84; independent focused QA
-  passed 44/44. Code Review, QA, Architecture, and Security/Privacy are GO.
-- Next eligible action: Open M3B after accepted M3A commit/push.
-- State: M3A COMPLETE
-- Development baseline for M3A: Required worktree
+- Verification: M3B native compatibility tests passed 126/126 and affected
+  correction checks passed 27/27; independent QA passed 37/37. Code Review,
+  QA, Architecture, and Security/Privacy are GO.
+- Next eligible action: Commit and normally push M3B, verify the checkpoint,
+  then open M3C under the existing program authorization.
+- State: M3B COMPLETE
+- Development baseline for M3B: Required worktree
   `/Users/jroberts/.codex/worktrees/b0f1/release_radar`, branch
   `codex/managed-documentation-contract-planning`, clean HEAD/upstream/live
-  remote verified after the M3A0 normal push at
-  `ba1f895e5a1b7eafd693486ca24bcfe56d116908`.
+  remote verified after the M3A normal push at
+  `d20a3db1412cd67323564f8e33374c95350be4da`.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -124,6 +126,94 @@
   `.build/m3a/` outputs and three log-identified synthetic host databases were
   removed after process exit and exact-target verification under owner cleanup
   authorization. Excluded consumers and owner state are unchanged. M3B is next.
+
+## MDCP M3B — Evidence Inventory and Audited Reconciliation
+
+- Outcome: Complete with Code Review, QA, Architecture, and Security/Privacy
+  GO; no required findings remain. Implementer `/root/m3b_implementer`;
+  reviewers `/root/m3b_code_review`, `/root/m3b_qa`,
+  `/root/m3b_architecture`, and `/root/m3a_security` were independent of the
+  implementation. The shared-file contract below was published before RED.
+- Verification: Signed serial `xcodebuild test -project
+  ReleaseRadar.xcodeproj -scheme ReleaseRadar -destination 'platform=macOS'
+  -parallel-testing-enabled NO` passed 126/126 across the new suites and
+  existing bridge, importer, notification, resolver, and catalog tests.
+  Focused stale-preview/preflight checks passed 6/6; the final preservation
+  correction passed 27/27. Independent QA passed 37/37, including all four new
+  suites, five store checks, and four existing legacy importer/bridge checks.
+  Every mutation's replay, relaunch, request-body mismatch, and late receipt
+  rollback passed. Lost-reply recovery used an isolated callback. Packaged
+  helper discovery ran without a production connection. `git diff --check`
+  passed.
+- Required correction: Fixed preservation metadata now includes historical
+  notification rows with no project attribution. Its direct regression failed
+  before the bounded partition correction and passed afterward. Frozen v10
+  semantic preservation across migration and byte-preserving v10–v12 preflight
+  passed; immutable fixtures remain unchanged.
+- Durable artifacts: source, focused tests, and this ledger. Temporary
+  `.build/m3b/` results and 15 log-identified synthetic XCTest host directories
+  were removed after process exit and exact-target verification under owner
+  cleanup authorization. No owner state, installation, production broker
+  registration, live maintenance launch, or UI acceptance was performed.
+
+- Scope: The six named M3B tools use a separate read-only inventory dispatcher
+  and five typed audited commands. Inventory returns exact project/root-row
+  identity, stored binding context separately from current catalog observation,
+  every evidence locator/association, stored versus resolved availability, and
+  exact candidate/rejection metadata. An unavailable or oversized result is
+  explicit and cannot be used as a complete inventory. Pending catalogs do not
+  prevent readback of the persisted binding or authorize managed resolution.
+- Required supporting boundary: M6's pre-migration semantic comparison and M7's
+  quiesced inventory cannot use ordinary app launch, which migrates storage and
+  starts background writers. A fixed-purpose read-only application preflight
+  path will open existing supported v10–v13 storage without creation, migration,
+  background services, or mutation dispatch. Fixed preservation counts/digests
+  and audit/receipt identity fingerprints support the explicit M6–M8 equality
+  gates. No arbitrary query/table selector, baseline database, or new ledger is
+  introduced. Architecture confirmed this bounded query/transport need before
+  implementation; owner execution remains separately gated.
+- Exact Task 4B file overlap: `ReleaseRadarCore/AgentBridge/AgentCommand.swift`,
+  `ReleaseRadarCore/AgentBridge/AgentCommandDispatcher.swift`,
+  `ReleaseRadarAgentTools/main.swift`,
+  `ReleaseRadarTests/AgentBridgeAcceptanceTests.swift`,
+  `ReleaseRadarTests/AgentBridgeTransportAcceptanceTests.swift`, and
+  `ReleaseRadarTests/NotificationAcceptanceTests.swift`. Shared surfaces are
+  additive command/result JSON, root authorization, canonical receipts,
+  transaction/replay and audit routing, tool translation/schema, transport
+  failures, and notification non-effects. Task 4A's accepted-transition and
+  upsert rules remain intact. Task 4B's task-plan commands remain unopened.
+- Supporting files: focused Documentation query/operation types, store read-only
+  access, application/transport hosting, importer classification, and their
+  existing or focused native tests. Guidance-v2 source text/package activation
+  remains M5 work; no repository guidance, live state, or document paths change.
+- Selected interfaces: version-1 inventory query with authorized `projectRoot`
+  and optional expected project/root IDs for discovery followed by exact calls;
+  exact project/root/repository/version/digest targets on managed commands;
+  adoption of 1–128 unique records, including each expected prior path and
+  nullable ticket association, within the existing 65,536-byte command bound.
+  Inventory is complete or explicitly unavailable/too large at the existing
+  131,072-byte response bound. Legacy response fields remain compatible.
+- Host operation: `--documentation-maintenance=read-only|commands`, with an
+  optional existing-store override for an approved disposable restore. Read-only
+  accepts inventory only on recognized v10–v13 shapes without migration. Commands permits only
+  the five documentation mutations and the exact root-`AGENTS.md` handoff route,
+  with ordinary UI/background writers disabled; this enables M8 acceptance
+  under continuing quiescence. Neither mode installs/registers the broker.
+  Tests use direct isolated callbacks and safe packaged-tool requests; tests
+  that register/unregister the production broker are deferred to authorized
+  live acceptance while the owner app is running.
+- Compatibility correction: Historical delivery evidence records the last
+  verified owner installation at schema v10; v11/v12 development did not imply
+  installation. Preflight therefore includes existing frozen v10/v11/v12
+  fixtures, exact schema refusal, and preservation of source-version fields
+  across migration. M6 compares immediate post-migration state before handoff
+  or binding, then uses the v13 baseline for its permitted subsequent changes.
+  Live schema/root identities still require the separately authorized readback.
+- Preflight storage boundary: Native synthetic tests confirmed that immutable
+  SQLite reads can omit committed WAL rows. Preflight therefore rejects any
+  nonempty WAL and preserves the database and sidecars unchanged. The later
+  owner-approved runbook must require graceful writer shutdown and a
+  checkpointed existing store; inventory never checkpoints or repairs storage.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.

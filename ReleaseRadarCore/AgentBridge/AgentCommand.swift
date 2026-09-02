@@ -26,6 +26,11 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
 }
 
 public enum AgentCommand: Codable, Equatable, Sendable {
+    case bindDocumentationRepository(target: DocumentationTarget)
+    case acceptDocumentationCatalog(target: DocumentationTarget, priorCatalogVersion: Int, priorCatalogDigest: String)
+    case addManagedEvidence(target: DocumentationTarget, id: String, ticketID: String?, artifactID: String)
+    case adoptManagedEvidence(target: DocumentationTarget, adoptions: [DocumentationAdoption])
+    case relocateLegacyEvidence(projectID: String, rootID: String, evidenceID: String, expectedPath: String, newPath: String)
     case upsertPhase(phaseID: String, name: String)
     case upsertTicket(ticketID: String, phaseID: String, outcome: String, lane: TicketLane)
     case transitionTicket(ticketID: String, lane: TicketLane, ticketTaskPlanRevision: Int64? = nil)
@@ -56,6 +61,7 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case dependencyCycle(String)
     case requestIDReused
     case appUnavailable
+    case documentation(DocumentationOperationError)
     case outcomeUnknown
     case internalFailure(String)
 }
@@ -64,11 +70,13 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let entityIDs: [String]
     public let auditEventID: AuditEventID?
     public let error: AgentCommandError?
+    public let inventory: EvidenceInventory?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
+        self.inventory = inventory
     }
 }
 

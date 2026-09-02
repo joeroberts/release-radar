@@ -192,6 +192,10 @@ struct FailureStatePresentation: Equatable, Sendable {
 
     init?(agentError: AgentCommandError) {
         switch agentError {
+        case let .documentation(error):
+            self.init(title: "Documentation action rejected",
+                      detail: "Documentation operation failed (\(error.rawValue)). Inspect the project evidence inventory and retry the exact approved operation.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-documentation-validation")
         case .outcomeUnknown:
             self.init(
                 title: "Action outcome unknown",

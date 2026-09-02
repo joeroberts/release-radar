@@ -134,6 +134,11 @@ enum StoreMigrations {
         )
     }
 
+    static func recognizesDocumentationPreflightSchema(_ connection: SQLiteConnection, version: Int64) throws -> Bool {
+        guard (10...currentVersion).contains(version) else { return false }
+        return try hasRequiredSchema(connection, throughVersion: version)
+    }
+
     private static func hasExpectedCurrentSchema(_ connection: SQLiteConnection) throws -> Bool {
         try hasRequiredSchema(connection, throughVersion: currentVersion)
     }

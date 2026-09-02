@@ -13,10 +13,12 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
 
     private let store: DeliveryStore
     private let project: AuthorizedProject
+    private let bookmarkStore: any ProjectBookmarkStoring
 
-    public init(store: DeliveryStore, project: AuthorizedProject) {
+    public init(store: DeliveryStore, project: AuthorizedProject, bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore()) {
         self.store = store
         self.project = project
+        self.bookmarkStore = bookmarkStore
     }
 
     public func canImport(_ folder: URL) -> Bool {
@@ -28,6 +30,14 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         guard project.authorizedRoots.contains(root) else {
             throw RekonImportError.unauthorizedFolder
         }
+        let documentationDigest: String?
+        do {
+            let reader = try RepositoryDocumentReader(rootURL: root, limits: .init(), afterRead: nil)
+            let mode = try RepositoryDocumentationMode.read(reader)
+            guard mode != .unavailable else { throw DocumentationOperationError.guidanceUnavailable }
+            documentationDigest = mode == .managedV2 ? try RepositoryDocumentValidator().validateCurrent(reader: reader).digest : nil
+            try reader.verifyStable()
+        } catch { throw RekonImportError.documentation(DocumentationCatalogContext.map(error)) }
         let artifactURL = root.appendingPathComponent(RepositoryDocumentContract.rekonSeedPath).standardizedFileURL
         let data = try Self.readArtifactData(under: root, artifactURL: artifactURL)
         let artifact: RekonArtifact
@@ -225,12 +235,29 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
             phaseDependencies: phaseDependencies.sorted(by: phaseDependencyOrder),
             tickets: tickets.sorted { $0.id.rawValue < $1.id.rawValue },
             ticketDependencies: ticketDependencies.sorted(by: ticketDependencyOrder),
-            evidence: evidence.sorted { $0.path < $1.path },
-            reviewItems: reviews.sorted { ($0.kind.rawValue, $0.sourceID) < ($1.kind.rawValue, $1.sourceID) }
+            evidence: evidence.map { value in
+                .init(ticketID: value.ticketID, label: value.label, path: value.path, isAvailable: value.isAvailable,
+                      sourcePath: documentationDigest == nil ? nil : value.sourcePath)
+            }.sorted { $0.path < $1.path },
+            reviewItems: reviews.sorted { ($0.kind.rawValue, $0.sourceID) < ($1.kind.rawValue, $1.sourceID) },
+            documentationCatalogDigest: documentationDigest
         )
     }
 
     public func apply(_ preview: ImportPreview, to project: ProjectID) async throws {
+        guard project == self.project.projectID else { throw RekonImportError.targetProjectMismatch }
+        guard preview.documentationCatalogDigest != nil else { return try await applyValidated(preview, to: project, documentation: nil) }
+        do {
+            let context = try await store.documentationRead { try DocumentationRootContext.read($0, path: preview.sourceRoot.path, projectID: project.rawValue) }
+            try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
+                try context.verifyAuthorization(resolved)
+                try await applyValidated(preview, to: project, documentation: context)
+            }
+        } catch let error as RekonImportError { throw error }
+        catch { throw RekonImportError.documentation(DocumentationCatalogContext.map(error)) }
+    }
+
+    private func applyValidated(_ preview: ImportPreview, to project: ProjectID, documentation: DocumentationRootContext?) async throws {
         guard project == self.project.projectID else {
             throw RekonImportError.targetProjectMismatch
         }
@@ -259,6 +286,25 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                 bindings: [.text(rootPath)]
             ) == projectID else {
                 throw RekonImportError.projectNotFound
+            }
+
+            var managedArtifacts: [String: String] = [:]
+            if let documentation {
+                try documentation.verifyPersisted(connection)
+                let catalog = try DocumentationCatalogContext(root: documentation.root)
+                let snapshot = try catalog.managedSnapshot()
+                try documentation.requireAccepted(snapshot)
+                guard snapshot.digest == preview.documentationCatalogDigest, try self.preview(preview.sourceRoot) == preview else { throw DocumentationOperationError.catalogUnaccepted }
+                for evidence in preview.evidence {
+                    // Preserve the lexical origin so a legacy symlink cannot manufacture identity.
+                    guard let sourcePath = evidence.sourcePath,
+                          let artifact = try? catalog.exactArtifact(path: sourcePath, root: documentation.root) else { continue }
+                    guard try connection.scalarInt("SELECT COUNT(*) FROM evidence WHERE project_id = ? AND path = ?", bindings: [.text(projectID), .text(evidence.path)]) == 0 else {
+                        throw DocumentationOperationError.evidenceConflict
+                    }
+                    managedArtifacts[evidence.path] = artifact.artifactID
+                }
+                try catalog.reader.verifyStable()
             }
 
             var reviews = preview.reviewItems
@@ -456,6 +502,18 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                 }
                 let ticketID = evidence.ticketID.flatMap { availableTicketIDs.contains($0) ? $0.rawValue : nil }
                 let isAvailable = FileManager.default.fileExists(atPath: evidenceURL.path)
+                if let artifact = managedArtifacts[evidence.path] {
+                    if try connection.scalarText("SELECT id FROM evidence WHERE project_id = ? AND artifact_id = ?", bindings: [.text(projectID), .text(artifact)]) != nil {
+                        try connection.execute("UPDATE evidence SET ticket_id = ?, is_available = ? WHERE project_id = ? AND artifact_id = ?",
+                                               bindings: [ticketID.map(SQLiteValue.text) ?? .null, .integer(isAvailable ? 1 : 0), .text(projectID), .text(artifact)])
+                    } else {
+                        let id = Self.stableID("evidence", projectID, "artifact:" + artifact)
+                        try connection.execute("INSERT INTO evidence (id, project_id, ticket_id, path, artifact_id, is_available) VALUES (?, ?, ?, NULL, ?, ?)",
+                                               bindings: [.text(id), .text(projectID), ticketID.map(SQLiteValue.text) ?? .null, .text(artifact), .integer(isAvailable ? 1 : 0)])
+                    }
+                    continue
+                }
+
                 if try connection.scalarText(
                     "SELECT id FROM evidence WHERE project_id = ? AND path = ?",
                     bindings: [.text(projectID), .text(evidenceURL.path)]
@@ -560,14 +618,16 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                 ticketID: .init(rawValue: task.id),
                 label: boundedText(evidence.label) ?? resolved.lastPathComponent,
                 path: resolved.path,
-                isAvailable: resolvedEvidence.isAvailable
+                isAvailable: resolvedEvidence.isAvailable,
+                sourcePath: URL(fileURLWithPath: href, relativeTo: virtualDashboardDirectory).standardizedFileURL.path
             )
             if let existing = records[resolved.path], existing.ticketID != record.ticketID {
                 records[resolved.path] = .init(
                     ticketID: nil,
                     label: existing.label,
                     path: resolved.path,
-                    isAvailable: existing.isAvailable
+                    isAvailable: existing.isAvailable,
+                    sourcePath: existing.sourcePath == record.sourcePath ? existing.sourcePath : nil
                 )
             } else {
                 try retainEvidence(record, records: &records)
@@ -649,7 +709,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         let resolved = resolvedEvidence.url
         if records[resolved.path] == nil {
             try retainEvidence(
-                .init(ticketID: nil, label: label, path: resolved.path, isAvailable: true),
+                .init(ticketID: nil, label: label, path: resolved.path, isAvailable: true, sourcePath: url.standardizedFileURL.path),
                 records: &records
             )
         }
