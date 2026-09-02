@@ -22,6 +22,9 @@
   deployment commit and intentional documentation changes are preserved.
   Owner installation, live bootstrap and catalog deployment/acceptance are
   outside this task's authorization.
+- The verified implementation is pushed as `ddf551a` in
+  [PR #5](https://github.com/joeroberts/release-radar/pull/5), targeting
+  `codex/release-radar-mvp`. PR merge is the remaining delivery action.
 
 ## Controlling work and verification
 

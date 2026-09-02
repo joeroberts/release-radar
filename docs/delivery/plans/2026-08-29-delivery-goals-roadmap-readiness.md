@@ -1698,7 +1698,7 @@ unchanged.
   callback test's obsolete task-tool absence assertion. Verify app-unavailable
   and outcome-unknown behavior through the controlled transport path; never
   run shared-service tests merely because the database is disposable.
-- [ ] **Gate/checkpoint:** Obtain independent code/QA review plus Architecture
+- [x] **Gate/checkpoint:** Obtain independent code/QA review plus Architecture
   and Security/Privacy coverage for the public command/authorization/replay
   boundary. Deliver the 3 production and 4 test paths above plus necessary
   documentation with a verified fast-forward push after acceptance. Once
