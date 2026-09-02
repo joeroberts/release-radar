@@ -512,7 +512,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     }
 
     func testCallbackInvalidationAfterHandoffReturnsOutcomeUnknownAndReplayWritesOnce() async throws {
-        let fixture = try await makeTransportFixture()
+        let fixture = try await makeTransportFixture(lane: .needsReview)
         let requestID = UUID(uuidString: "99999999-9999-4999-8999-999999999993")!
         let invalidation = CallbackInvalidationGate()
         let appDelegate = AppDelegate()
@@ -577,7 +577,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     }
 
     func testAfterReplyWorkCannotDelayCommittedToolResult() async throws {
-        let fixture = try await makeTransportFixture()
+        let fixture = try await makeTransportFixture(lane: .inProgress)
         let afterReplyGate = CallbackInvalidationGate()
         let appDelegate = AppDelegate()
         let host = try await appDelegate.startAgentBridge(
@@ -607,7 +607,6 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             ])
         }
 
-        await afterReplyGate.entered.wait()
         let responseData = try await withThrowingTaskGroup(of: Data.self) { group in
             group.addTask { try await responseTask.value }
             group.addTask {
@@ -618,8 +617,11 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             return try await group.next()!
         }
         let toolResponse = try Self.decodeToolResponseData(responseData)
-        XCTAssertNil(try decodeCommandResult(toolResponse).error)
+        let result = try decodeCommandResult(toolResponse)
+        XCTAssertNil(result.error)
+        _ = try XCTUnwrap(result.auditEventID, "The required transition must commit before waiting for after-reply work")
         XCTAssertEqual(mcpIsError(toolResponse), false)
+        await afterReplyGate.entered.wait()
     }
 
     func testMalformedNumbersAndPresentNonStringOptionalsRejectBeforeTransportOrWrite() async throws {
@@ -967,7 +969,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let store: DeliveryStore
     }
 
-    private func makeTransportFixture() async throws -> TransportFixture {
+    private func makeTransportFixture(lane: TicketLane = .backlog) async throws -> TransportFixture {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-TransportTests-\(UUID().uuidString)", isDirectory: true)
         let projectRoot = directory.appendingPathComponent("project", isDirectory: true)
@@ -983,8 +985,17 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-2', 'project-1', 'Launch')")
             try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-1', 'phase-1')")
-            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-03', 'project-1', 'phase-1', 'Signed bridge', 'backlog')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-03', 'project-1', 'phase-1', 'Signed bridge', ?)", bindings: [.text(lane.rawValue)])
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-PLAN', 'project-1', 'phase-1', 'Guarded signed bridge', 'needs_review')")
+            try connection.execute("""
+                INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at, activated_at)
+                VALUES ('project-1', 'phase-1', 'fixture-goal', 'Fixture goal', 'Complete fixture', 'active', 0, '2026-09-02T12:00:00Z', '2026-09-02T12:00:00Z', '2026-09-02T12:00:00Z')
+                """)
+            try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('project-1', 'phase-1', 'fixture-goal', 0, 'Delivered')")
+            for ticketID in ["RR-03", "RR-PLAN"] {
+                try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES ('project-1', 'phase-1', 'fixture-goal', ?)", bindings: [.text(ticketID)])
+            }
+            try connection.execute("UPDATE phase_plans SET state = 'ready', ready_revision = revision, finalized_at = '2026-09-02T12:00:00Z' WHERE project_id = 'project-1' AND phase_id = 'phase-1'")
             _ = try TicketTaskPlanningPolicy.revisePlan(
                 projectID: .init(rawValue: "project-1"),
                 ticketID: .init(rawValue: "RR-PLAN"),

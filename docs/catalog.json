@@ -3701,6 +3701,36 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "bc74c88a-cc63-4deb-8b2b-63ed254a476f",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "7856796b-eb43-47cd-b897-20234cd94131",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }

@@ -2,133 +2,97 @@
 
 ## Current outcome and authorization
 
-- MDCP is complete and ordinary live use was owner-approved on 2026-09-02.
-  M6B adopted five evidence locators; M7 deployed the six stable-ID document
-  moves; M8 accepted the catalog and verified exact replay/relaunch. Delivery
-  checkpoints are `b9b1932`, `004e2d2`, `d1b974a` and final closeout `a66bf9a`.
-- RR-R10 Tasks 1A/1B/2A/2B/3/4A/4B/5 are delivered. The coordinator verified
-  [Task 5 PR #6](https://github.com/joeroberts/release-radar/pull/6) merged into
-  `codex/release-radar-mvp` at 2026-09-02T11:35:34Z, merge `cdc3e6e`.
-- Task 6 PR #7 merged into `codex/release-radar-mvp` at
-  2026-09-02T11:57:19Z, merge `16c81a318672ad1e66c14a75e943992441768234`.
-- Task 7 is open in isolated branch `codex/rr-r10-task-7` from that merge.
-  Coordinator `01a06184-6387-7c42-878e-695db0481a18` accepted the canonical
-  brief and initial sequencing on 2026-09-02 under owner delegation.
-  Implementation, focused validation and independent review are complete.
-  Commit/push/PR/merge are authorized; integration is the remaining delivery
-  step. Task 7A remains unopened.
-- A focused synthetic test reproduced the v11 assignment-history foreign-key
-  conflict with the required Backlog phase move, even after explicit
-  unassignment. The [Task 7 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md)
-  contains the narrow forward-v14 correction accepted by the coordinator under
-  owner delegation on 2026-09-02. Repository-only implementation and synthetic
-  validation are released; no owner/shared-state action is authorized.
-- The original bound checkout, older deployed app and intentional dirty
-  documentation remain preserved. No owner installation, live bootstrap,
-  catalog deployment/acceptance or shared service operation is authorized here.
+MDCP and RR-R10 through Task 7 are delivered. Task 7A is active on
+`codex/rr-r10-task-7a`, based on Task 7 merge `02769d9`. Its scope is controlled
+by the [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md),
+[Task 7A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md)
+and [bounded runbook](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md).
 
-## Controlling work and verification
+The coordinator initially accepted preparation under owner delegation. The
+human subsequently approved the exact reviewed live package on 2026-09-02.
+The coordinator released the temporary coordination pause after the bounded
+existing-record corrections and explicitly authorized the exact recreated-file
+quarantine. That move is complete and bound-root documentation validation
+passes. Disposable migration/restore proof and installed owner migration have
+passed. The intermediate and through-Task-7A catalogs are accepted. Task
+bootstrap and relaunch preservation passed. The owner confirmed lower-task
+scroll reachability and explicitly deferred the presentation improvements to
+Issue #9. Delivery is proceeding; the caller hold remains active, Task 7A is
+Pending until its completion gate, and Task 8 is unopened.
 
-- [Task 7 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md)
-  controls the complete writer integration and accepted v14 amendment.
-  Native Debug builds and focused synthetic tests pass: 32 policy, 32 bridge,
-  44 importer/onboarding/sample/capture integration, and 59 store/preflight
-  cases across the initial and directly affected correction runs. These cover
-  the full ticket lane matrix, task-revision acceptance, start/dependency/
-  blocker gates, migration continuation, structural invalidation, assignment
-  history across phase moves, managed-import authorization/identity, and
-  v14 preservation/rollback/recovery. Independent Code/QA, Architecture,
-  Security/Privacy and documentation review found no Required defects. Native
-  documentation and diff checks pass. No review of reviews was performed.
-- Task 6's completed [policy brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md)
-  retains its accepted scope and evidence. Its exact UTF-8 identities,
-  revision/coverage rules, explicit continuation adoption and existing-evidence
-  interpretation remain intact; absent linked evidence adds no obligation.
-- [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) controls
-  remaining scope. The completed [Task 5 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md)
-  retains its delivered scope. The coordinator accepted the brief and bounded Core/AppModel support on
-  2026-09-02 under owner delegation. Implementation is complete, with 23
-  focused tests and the native rendering/interactive recovery test passing.
-  Independent projection/read-boundary and QA/UX reviews found no remaining
-  required product defect. The [Task 5 verification record](evidence/2026-09-02-rr-r10-task-5-ui.md)
-  holds canonical wide/compact, accessibility, contrast, scrolling and recovery
-  evidence and explicit delegated acceptance. Physical keyboard activation
-  and spoken VoiceOver remain unverified and were accepted as residual risks;
-  neither is reported as passing or personally inspected by the human owner.
-- Task 4B passed 103 focused tests, Debug/build-for-testing, native documentation
-  checks and applicable independent reviews. Its one separately authorized
-  broker test passed; the installed app was restored, read-only inventory was
-  complete, and the caller hold was released. Those completed checks are not
-  repeated by Task 5.
+## Verification and actual live state
 
-## Live baseline and remaining risks
+- Synthetic E2E 9/9, AppRoute/Notification 89/89 and documentation rechecks
+  10/10 pass. Four native rendering tests pass across 18 states/widths;
+  independent external QA observed five windows before its UI tool disconnected.
+  Safe selection coverage is 490 tests across the run and affected rechecks.
+  All five authorized shared-service selectors also pass. This is controlled
+  split-run coverage, not one whole-scheme invocation.
+- Release build and strict app/helper/framework signing pass. The unchanged
+  through-Task-7 candidate exposes 21 tool schemas. Independent preparation
+  QA, Security/Privacy and Architecture review found no Required defects;
+  independent live acceptance found no Required findings. Lower-row
+  scrolling is confirmed by the owner, not by the reviewer's physical UI test.
+- The original blocking `docs/.DS_Store` was quarantined under explicit
+  approval. Pre-service and pre-install backups are retained. Controlled tests
+  preserved the closed owner-store bytes/presence; normal old-app startup
+  restored its signed broker. The disposable copy migrated to v14, passed
+  relaunch equality, and restored the original v13 baseline. The exact candidate
+  is installed; the old app is retained. Owner migration and read-only relaunch
+  preserved every recorded data group, evidence, audit and receipt.
+- All tracked preservation groups, prior audit fingerprints and 103 receipts
+  matched. Four additional global audit fingerprints appeared during normal
+  startup/navigation; their exact contents and causes are unverified. The last
+  complete pre-migration baseline contained 382 audits and 103 receipts. The
+  installed app is now 0.1.6/schema v14. Both ordered catalog acceptances were
+  exactly replayed; the accepted preparation catalog is v1/213 artifacts.
+- Temporary remediation-phase selection was committed and exactly replayed.
+  RR-R10 remains In progress. One 16-row plan is at revision 11: ten tasks
+  through Task 7 are checked; Task 7A and five successors remain Pending.
+  All 11 bootstrap requests replayed their original revisions/audits. Only the
+  task-plan group and expected 11 audits/receipts changed from the pre-bootstrap
+  inventory. Installed-app relaunch reproduced the complete inventory exactly
+  at 398 audits/117 receipts. The actual UI showed every title/order and the
+  16-task count in accessibility state. This does not establish ordinary visual
+  reachability; the owner subsequently confirmed ordinary scrolling. Task 7A completion and
+  original phase restoration remain gated.
+- The first catalog call returned `appUnavailable` after the maintenance host
+  exited. UI inspection inadvertently opened normal mode. The app was closed
+  and explicit commands maintenance restored; fresh inventory showed no data,
+  audit or receipt change. The retained original request then succeeded.
 
-- Accepted application baseline: `MDCP-COMPAT-2` (`b365aff`), signed app/plugin
-  0.1.6, schema v13, guidance v2. The last accepted bound-root catalog is v1
-  with 194 artifacts; all eight evidence IDs/locators/associations and unrelated
-  delivery state were preserved at M8. Ordinary live use may subsequently
-  change owner state, so future installs require fresh authorized readback.
-- The inherited development catalog adds the Task 4B brief and a historical
-  progress record and corrects completed MDCP brief lifecycle metadata. Task 4B
-  closeout changes only its brief to completed/non-authoritative, preserving
-  its stable artifact ID and path. The branch preserves the missing activation
-  revision before the completion revision;
-  later catalog deployment must accept those revisions in order. The M6A
-  runbook remains a supporting preservation/recovery reference. This catalog
-  is repository-prepared only, pending separately
-  authorized deployment to the exact bound root and typed acceptance. The
-  live bound checkout has not been changed; no managed-current claim is made
-  for the development catalog. Task 5 evidence and the completed Task 6 brief
-  and the Task 7 brief are also repository-prepared additions pending that
-  separate acceptance.
-- The Task 7 development candidate uses schema v14. Its forward migration
-  preserves assignment history while allowing governed Backlog phase moves.
-  The installed v13 store has not been migrated. Task 7A must explicitly cover
-  v13-to-v14 installation, consistent pre-migration snapshots and exact
-  recovery. Older binaries refuse newer schemas; old-binary runtime opening
-  was not exercised here, and no downgrade or live recovery was performed.
-- Whole transport/lifecycle test classes can change the shared macOS bridge.
-  Future tasks must retain the brief's safe-selector discipline; Task 4B's
-  completed controlled run does not authorize later shared-service operations.
-- Native macOS does not support Dynamic Type text enlargement. Physical
-  keyboard activation and spoken VoiceOver remain unverified because the UI
-  tool did not reliably deliver those inputs to the isolated host. These
-  limitations were explicitly accepted in the Task 5 UI package. All
-  temporarily changed accessibility/keyboard preferences were restored to
-  their immediately observed prior values; no permission setting changed.
-- The M8 runtime limits remain documented in the historical record, including
-  the unchanged legacy directory-locator discrepancy. No accepted MDCP work
-  is reopened by Task 4B. Issue #1 remains unopened and the
-  held Issue #2 artifacts remain unchanged.
+## Blocker, risks and next eligible work
 
-## Retention and next work
+Finder recreated `docs/.DS_Store` after the original quarantine. Its exact
+second quarantine is now complete under delegated authorization; no repeated
+quarantine loop is authorized. The older dirty saved checkout and its
+unrelated files remain preserved. Only the approved documentation paths were
+deployed; the final closeout catalog remains pending.
 
-The [Historical closeout and review record](archive/2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md)
-preserves prior delivery details and the seven alignment findings. Earlier
-history remains in [Historical progress through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md).
-Exact owner approvals, requests, inventories and recovery copies remain in the
-owner-designated protected companion, retained through at least 2026-10-02.
-Existing M6A/M7/M8 temporary builds, test outputs and isolated host directories
-retain their recorded custody terms; none were deleted. Task 4B build logs,
-test results and prepared bundles remain temporarily in `.build/rr-r10-task4b`;
-the repository-native tests also create synthetic temporary fixture directories.
-These are verification output, not controlling deliverables. No additional
-cleanup is authorized.
-Task 5 temporary builds, copied inert hosts, test results and raw captures
-remain under `.build/rr-r10-task5`; its synthetic XCTest fixture directories
-are also retained. Durable Task 5 evidence is in the repository and catalog.
+The owner confirmed that the remaining rows are reachable by scrolling in the
+1456×1098 stacked view. Its fixed-height pane and unclear scroll affordance
+are explicitly deferred to [Issue #9](https://github.com/joeroberts/release-radar/issues/9).
+The UI-control sessions could not physically verify scrolling; this is owner
+observation, not reviewer runtime evidence. No repair or new task-plan row is
+included in Task 7A.
 
-Task 6 temporary native build logs, DerivedData, result bundles and PR body
-remain under `.build/rr-r10-task6`; synthetic `RR-R10-Task6-*` fixture directories
-and inert XCTest host output are retained. Production code, tests and the
-accepted brief are durable repository files; no deliverable exists only in
-scratch storage. No cleanup was performed or authorized.
+Next is the first commit/push, then Task 7A completion, phase restoration,
+final catalog reconciliation and the single PR merge. A further Finder-file
+recurrence requires identifying its producer or trigger and a bounded remedy.
 
-Task 6 is merged. Task 7 implementation, direct verification and independent
-review are complete; PR integration remains. Task 7A remains eligible only after
-Task 7 delivery and coordinator integration verification. Task 7 temporary
-native build logs, DerivedData and inert-host results are retained in
-`.build/rr-r10-task7`; synthetic test and XCTest-host directories are retained.
-No cleanup is authorized. The brief, reproduction test and delivery records
-are durable repository files. Development catalog changes remain pending
-separate deployment and acceptance; no live synchronization is claimed.
+## Retention and prior delivery references
+
+Exact requests, inventories, both backups, original quarantine and the
+unmigrated disposable copy remain in their owner-designated protected
+locations, retained through at least 2026-10-02. Task 7A durable tests and
+documents remain in this repository. Temporary build/test/runtime/capture
+output remains under `.build/rr-r10-task7a` and XCTest temporary locations;
+earlier recovery material retains its existing custody terms. No cleanup is
+authorized or performed.
+
+Closed delivery detail remains in the existing [Historical MDCP closeout record](archive/2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md),
+[Historical progress through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md),
+[task-brief index](task-briefs/README.md),
+[Task 5 UI verification and limitations](evidence/2026-09-02-rr-r10-task-5-ui.md),
+[Task 6 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md)
+and [Task 7 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md).
