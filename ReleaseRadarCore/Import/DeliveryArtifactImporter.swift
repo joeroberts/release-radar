@@ -112,6 +112,7 @@ public enum ImportReviewKind: String, Equatable, Hashable, Sendable {
     case unresolvedDependency = "unresolved_dependency"
     case conflict
     case unmappedStatus = "unmapped_status"
+    case sourceLane = "source_lane"
 }
 
 public struct ImportReviewItem: Equatable, Sendable {

@@ -97,7 +97,7 @@ public actor AgentCommandDispatcher {
                         throw DispatchControl.replay(priorResult)
                     }
 
-                    let taskRevision = try Self.apply(envelope.command, project: project, connection: connection)
+                    let taskRevision = try Self.apply(envelope.command, project: project, auditEventID: auditEventID, connection: connection)
                     let result = Self.resultForCommand(envelope.command, auditEventID: auditEventID, ticketTaskPlanRevision: taskRevision)
                     let resultData = try JSONEncoder().encode(result)
                     try connection.execute(
@@ -312,6 +312,7 @@ public actor AgentCommandDispatcher {
     private static func apply(
         _ command: AgentCommand,
         project: AuthorizedProject,
+        auditEventID: AuditEventID,
         connection: SQLiteConnection
     ) throws -> Int64? {
         let projectID = project.projectID
@@ -331,10 +332,9 @@ public actor AgentCommandDispatcher {
             throw DocumentationOperationError.invalidRequest
         case let .upsertPhase(phaseID, name):
             try requireWritableID(phaseID, table: "phases", projectID: projectID, connection: connection)
-            try connection.execute(
-                "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name",
-                bindings: [.text(phaseID), .text(projectID.rawValue), .text(name)]
-            )
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: projectID, phaseID: .init(rawValue: phaseID), name: name,
+                mode: .governed, connection: connection)
             try connection.execute(
                 """
                 INSERT INTO project_active_phases (project_id, phase_id)
@@ -351,10 +351,9 @@ public actor AgentCommandDispatcher {
                 "SELECT lane FROM tickets WHERE id = ? AND project_id = ?",
                 bindings: [.text(ticketID), .text(projectID.rawValue)]
             )
-            try connection.execute(
-                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET phase_id = excluded.phase_id, outcome = excluded.outcome, lane = excluded.lane",
-                bindings: [.text(ticketID), .text(projectID.rawValue), .text(phaseID), .text(outcome), .text(lane.rawValue)]
-            )
+            try DeliveryPlanningPolicy.upsertTicket(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), phaseID: .init(rawValue: phaseID),
+                outcome: outcome, lane: lane, auditEventID: auditEventID, connection: connection)
             try updateNeedsReviewOccurrence(
                 ticketID: ticketID,
                 lane: lane,
@@ -364,22 +363,13 @@ public actor AgentCommandDispatcher {
             )
         case let .transitionTicket(ticketID, lane, ticketTaskPlanRevision):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
-            if lane == .accepted {
-                try TicketTaskPlanningPolicy.assertCanAcceptTicket(
-                    projectID: projectID,
-                    ticketID: TicketID(rawValue: ticketID),
-                    expectedRevision: ticketTaskPlanRevision,
-                    connection: connection
-                )
-            }
             let previousLane = try connection.scalarText(
                 "SELECT lane FROM tickets WHERE id = ? AND project_id = ?",
                 bindings: [.text(ticketID), .text(projectID.rawValue)]
             )
-            try connection.execute(
-                "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
-                bindings: [.text(lane.rawValue), .text(projectID.rawValue), .text(ticketID)]
-            )
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), to: lane,
+                ticketTaskPlanRevision: ticketTaskPlanRevision, connection: connection)
             try updateNeedsReviewOccurrence(
                 ticketID: ticketID,
                 lane: lane,
@@ -482,6 +472,8 @@ public actor AgentCommandDispatcher {
         case let .requestReview(id, ticketID, kind, summary):
             if let ticketID {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+                try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
+                    projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             }
             try requireWritableID(id, table: "review_items", projectID: projectID, connection: connection)
             try requireAgentWritableReview(id: id, kind: kind, projectID: projectID, connection: connection)
@@ -505,6 +497,8 @@ public actor AgentCommandDispatcher {
             }
         case let .recordCompletion(id, ticketID, summary):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             try requireWritableID(id, table: "completion_records", projectID: projectID, connection: connection)
             let isNewCompletion = try connection.scalarText(
                 "SELECT id FROM completion_records WHERE id = ? AND project_id = ?",

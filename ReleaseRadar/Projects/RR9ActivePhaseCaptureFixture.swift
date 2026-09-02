@@ -24,6 +24,7 @@ enum RR9ActivePhaseCaptureError: Error, LocalizedError {
 }
 
 enum RR9ActivePhaseCaptureFixture {
+    private static let auditEventID = AuditEventID(rawValue: "rr9-capture-seed-audit")
     static let primaryProjectID = ProjectID(rawValue: "rr9-capture-primary")
     static let happyProjectID = ProjectID(rawValue: "rr9-capture-happy")
     static let emptyProjectID = ProjectID(rawValue: "rr9-capture-empty")
@@ -106,7 +107,7 @@ enum RR9ActivePhaseCaptureFixture {
         try await store.transact(
             actor: DeliveryActor(id: "release-radar.rr9-capture-seed"),
             reason: "Seed RR-R9 active phase capture fixture",
-            auditEventID: AuditEventID(rawValue: "rr9-capture-seed-audit"),
+            auditEventID: auditEventID,
             auditScope: AuditScope(projectID: primaryProjectID, entityType: .phase, entityID: currentPhaseID.rawValue)
         ) { connection in
             try insertProject(primaryProjectID, name: "RR-R9 Active Phase", connection: connection)
@@ -274,9 +275,8 @@ enum RR9ActivePhaseCaptureFixture {
         name: String,
         connection: SQLiteConnection
     ) throws {
-        try connection.execute(
-            "INSERT INTO phases (id, project_id, name) VALUES (?, ?, ?)",
-            bindings: [.text(phaseID.rawValue), .text(projectID.rawValue), .text(name)]
+        try DeliveryPlanningPolicy.upsertPhase(
+            projectID: projectID, phaseID: phaseID, name: name, mode: .governed, connection: connection
         )
     }
 
@@ -299,28 +299,49 @@ enum RR9ActivePhaseCaptureFixture {
         lane: TicketLane,
         connection: SQLiteConnection
     ) throws {
-        let stagedLane = lane == .accepted ? TicketLane.backlog : lane
-        try connection.execute(
-            "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, ?)",
-            bindings: [
-                .text(ticketID.rawValue), .text(projectID.rawValue), .text(phaseID.rawValue),
-                .text(outcome), .text(stagedLane.rawValue),
-            ]
+        try DeliveryPlanningPolicy.upsertTicket(
+            projectID: projectID, ticketID: ticketID, phaseID: phaseID, outcome: outcome,
+            lane: .backlog, auditEventID: auditEventID, connection: connection
+        )
+        guard let plan = try DeliveryPlanningPolicy.loadPlan(
+            projectID: projectID, phaseID: phaseID, connection: connection
+        ) else { throw DeliveryPlanningPolicyError.phasePlanNotFound }
+        let goalID = DeliveryGoalID(rawValue: "\(phaseID.rawValue)-capture-goal")
+        let hasGoal = try DeliveryPlanningPolicy.loadGoals(
+            projectID: projectID, phaseID: phaseID, connection: connection
+        ).contains { $0.id == goalID }
+        let revised = try DeliveryPlanningPolicy.applyRevision(
+            projectID: projectID,
+            phaseID: phaseID,
+            expectedRevision: plan.revision,
+            goalUpserts: hasGoal ? [] : [.init(
+                id: goalID,
+                title: "Capture phase delivery",
+                outcome: "Deliver the outcomes represented by this active-phase capture fixture.",
+                doneCriteria: ["Every assigned capture ticket is accepted."],
+                sortOrder: 0
+            )],
+            assignments: [.init(goalID: goalID, ticketID: ticketID)],
+            unassignedTicketIDs: [],
+            supersededGoalIDs: [],
+            auditEventID: auditEventID,
+            connection: connection
+        )
+        try DeliveryPlanningPolicy.finalizePlan(
+            projectID: projectID, phaseID: phaseID, expectedRevision: revised.revision, connection: connection
+        )
+        guard lane != .backlog else { return }
+        try DeliveryPlanningPolicy.transitionTicket(
+            projectID: projectID, ticketID: ticketID, to: .inProgress, connection: connection
         )
         if lane == .accepted {
-            try TicketTaskPlanningPolicy.assertCanAcceptTicket(
-                projectID: projectID,
-                ticketID: ticketID,
-                expectedRevision: nil,
-                connection: connection
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: ticketID, to: .needsReview, connection: connection
             )
-            try connection.execute(
-                "UPDATE tickets SET lane = ? WHERE project_id = ? AND id = ?",
-                bindings: [
-                    .text(TicketLane.accepted.rawValue),
-                    .text(projectID.rawValue),
-                    .text(ticketID.rawValue),
-                ]
+        }
+        if lane != .inProgress {
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: ticketID, to: lane, connection: connection
             )
         }
     }

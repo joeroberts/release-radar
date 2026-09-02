@@ -268,18 +268,117 @@ final class StoreAcceptanceTests: XCTestCase {
                        "completed:superseded:2026-08-30T11:00:00Z:2026-08-30T12:00:00Z")
     }
 
+    func testVersionFourteenPreservesVersionThirteenStateAndMovableAssignmentHistory() async throws {
+        let url = try makePopulatedVersionThirteenDatabaseURL()
+        let db = try SQLiteConnection(url: url)
+        let before = try semanticVersionThirteenSnapshot(db)
+        let oldEventSQL = try XCTUnwrap(db.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'delivery_goal_assignment_events'"))
+        let beforePreflight = try Data(contentsOf: url)
+        let oldReadOnly = try DeliveryStore(existingReadOnlyDatabaseURL: url)
+        let oldVersion = await oldReadOnly.schemaVersionForDocumentation
+        XCTAssertEqual(oldVersion, 13)
+        XCTAssertEqual(try Data(contentsOf: url), beforePreflight)
+        try db.execute("PRAGMA user_version = 14")
+        XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: url))
+        try db.execute("PRAGMA user_version = 13")
+
+        let store = DeliveryStore(databaseURL: url)
+        guard case .available = await store.availability else { return XCTFail("Expected v14 migration") }
+        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 14)
+        XCTAssertEqual(try semanticVersionThirteenSnapshot(db), before)
+        let expectedEventSQL = oldEventSQL.replacingOccurrences(
+            of: "FOREIGN KEY(project_id, phase_id, ticket_id)\n        REFERENCES tickets(project_id, phase_id, id)",
+            with: "FOREIGN KEY(project_id, ticket_id)\n        REFERENCES tickets(project_id, id)"
+        )
+        XCTAssertNotEqual(expectedEventSQL, oldEventSQL)
+        XCTAssertEqual(try db.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'delivery_goal_assignment_events'"), expectedEventSQL)
+        let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: url))
+        XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try semanticVersionThirteenSnapshot(snapshot), before)
+        XCTAssertEqual(try snapshot.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'delivery_goal_assignment_events'"), oldEventSQL)
+        guard case .available = await DeliveryStore(databaseURL: url).availability else { return XCTFail("Expected v14 relaunch") }
+        XCTAssertEqual(try semanticVersionThirteenSnapshot(db), before)
+        let readOnly = try DeliveryStore(existingReadOnlyDatabaseURL: url)
+        let version = await readOnly.schemaVersionForDocumentation
+        XCTAssertEqual(version, 14)
+
+        // The current assignment remains phase-local. Only history survives a move.
+        XCTAssertThrowsError(try db.execute("UPDATE tickets SET phase_id = 'phase-2' WHERE id = 'ticket-backlog'"))
+        try db.execute("DELETE FROM delivery_goal_ticket_assignments WHERE ticket_id = 'ticket-backlog'")
+        try db.execute("UPDATE tickets SET phase_id = 'phase-2' WHERE id = 'ticket-backlog'")
+        XCTAssertEqual(try db.scalarText("SELECT phase_id FROM tickets WHERE id = 'ticket-backlog'"), "phase-2")
+        XCTAssertEqual(try db.scalarText("SELECT phase_id FROM delivery_goal_assignment_events WHERE ticket_id = 'ticket-backlog'"), "phase-1")
+        XCTAssertEqual(try semanticVersionThirteenSnapshot(db)["delivery_goal_assignment_events"], before["delivery_goal_assignment_events"])
+        XCTAssertThrowsError(try db.execute("UPDATE delivery_goal_assignment_events SET ticket_id = 'ticket-other' WHERE ticket_id = 'ticket-backlog'"))
+        XCTAssertThrowsError(try db.execute("UPDATE delivery_goal_assignment_events SET phase_id = 'phase-2' WHERE ticket_id = 'ticket-backlog'"))
+        XCTAssertThrowsError(try db.execute("UPDATE delivery_goal_assignment_events SET current_goal_id = 'goal-3' WHERE ticket_id = 'ticket-backlog'"))
+        XCTAssertThrowsError(try db.execute("DELETE FROM tickets WHERE id = 'ticket-backlog'"))
+        XCTAssertNil(try db.row("PRAGMA foreign_key_check"))
+    }
+
+    func testVersionFourteenLateFailurePreservesVersionThirteenAndSnapshotThenRecovers() async throws {
+        let url = try makePopulatedVersionThirteenDatabaseURL()
+        let db = try SQLiteConnection(url: url)
+        // Keep the name occupied after the old event table has been copied and dropped.
+        try db.execute("DROP INDEX delivery_goal_assignment_events_ticket_revision_unique")
+        try db.execute("CREATE INDEX delivery_goal_assignment_events_ticket_revision_unique ON projects(name)")
+        let before = try semanticVersionThirteenSnapshot(db)
+        let manifest = try versionTwelveSchemaManifest(db)
+        let failed = DeliveryStore(databaseURL: url)
+        guard case let .unavailable(recovery) = await failed.availability else { return XCTFail("Expected late v14 index collision") }
+        XCTAssertEqual(recovery.kind, .migration)
+        for location in [url, try XCTUnwrap(recovery.preMigrationSnapshotURL)] {
+            let original = try SQLiteConnection(url: location)
+            XCTAssertEqual(try original.scalarInt("PRAGMA user_version"), 13)
+            XCTAssertEqual(try versionTwelveSchemaManifest(original), manifest)
+            XCTAssertEqual(try semanticVersionThirteenSnapshot(original), before)
+            XCTAssertNil(try original.row("PRAGMA foreign_key_check"))
+        }
+        let restoredURL = try makeDatabaseURL()
+        try FileManager.default.copyItem(at: XCTUnwrap(recovery.preMigrationSnapshotURL), to: restoredURL)
+        let restored = try SQLiteConnection(url: restoredURL)
+        try restored.execute("DROP INDEX delivery_goal_assignment_events_ticket_revision_unique")
+        guard case .available = await DeliveryStore(databaseURL: restoredURL).availability else { return XCTFail("Expected disposable snapshot recovery") }
+        XCTAssertEqual(try restored.scalarInt("PRAGMA user_version"), 14)
+        XCTAssertEqual(try semanticVersionThirteenSnapshot(restored), before)
+        XCTAssertNil(try restored.row("PRAGMA foreign_key_check"))
+        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try versionTwelveSchemaManifest(db), manifest)
+    }
+
+    func testVersionFourteenRejectsBrokenHistoricalPhaseBeforeRebuild() async throws {
+        let url = try makePopulatedVersionThirteenDatabaseURL()
+        let db = try SQLiteConnection(url: url)
+        try db.execute("DELETE FROM delivery_goal_ticket_assignments WHERE ticket_id = 'ticket-backlog'")
+        // Deliberately corrupt only this disposable synthetic store's old relationship.
+        try db.execute("PRAGMA foreign_keys = OFF")
+        try db.execute("UPDATE tickets SET phase_id = 'phase-2' WHERE id = 'ticket-backlog'")
+        try db.execute("PRAGMA foreign_keys = ON")
+        XCTAssertNotNil(try db.row("PRAGMA foreign_key_check"))
+        let before = try semanticVersionThirteenSnapshot(db)
+        let manifest = try versionTwelveSchemaManifest(db)
+        let store = DeliveryStore(databaseURL: url)
+        guard case let .unavailable(recovery) = await store.availability else { return XCTFail("Invalid historical phase must not be repaired by the v14 ticket reference") }
+        for location in [url, try XCTUnwrap(recovery.preMigrationSnapshotURL)] {
+            let original = try SQLiteConnection(url: location)
+            XCTAssertEqual(try original.scalarInt("PRAGMA user_version"), 13)
+            XCTAssertEqual(try versionTwelveSchemaManifest(original), manifest)
+            XCTAssertEqual(try semanticVersionThirteenSnapshot(original), before)
+        }
+    }
+
     func testVersionThirteenMigrationPreservesExactFrozenVersionTwelveStateAndRelaunches() async throws {
         let url = try copyVerifiedVersionTwelveFixture()
         let before = try SQLiteConnection(url: url)
         let legacy = try semanticVersionElevenSnapshot(before)
         let tasks = try taskTableSnapshot(before)
         let store = DeliveryStore(databaseURL: url)
-        guard case .available = await store.availability else { return XCTFail("Expected v13 migration") }
+        guard case .available = await store.availability else { return XCTFail("Expected current migration") }
         let migrated = try SQLiteConnection(url: url)
-        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "aded1d280e95a63b57617ff61d4bb01073c75df40dc2d65ffae22964bf503d0c")
+                       "0075da347c3ed1a813ba843686278bedb6a05deded1889ab7cb1ce93a668d78f")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
@@ -348,20 +447,20 @@ final class StoreAcceptanceTests: XCTestCase {
         let restoredDB = try SQLiteConnection(url: restoredURL)
         try restoredDB.execute("DROP INDEX project_documentation_bindings_repository_unique")
         guard case .available = await DeliveryStore(databaseURL: restoredURL).availability else { return XCTFail("Expected snapshot recovery") }
-        XCTAssertEqual(try restoredDB.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try restoredDB.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try semanticVersionElevenSnapshot(restoredDB), legacy)
         XCTAssertEqual(try taskTableSnapshot(restoredDB), tasks)
         XCTAssertEqual(try restoredDB.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
         try db.execute("DROP INDEX project_documentation_bindings_repository_unique")
         guard case .available = await DeliveryStore(databaseURL: url).availability else { return XCTFail("Expected bounded recovery") }
-        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try semanticVersionElevenSnapshot(db), legacy)
         XCTAssertEqual(try taskTableSnapshot(db), tasks)
         guard case .available = await DeliveryStore(databaseURL: url).availability else { return XCTFail("Expected recovered relaunch") }
-        try db.execute("PRAGMA user_version = 14")
+        try db.execute("PRAGMA user_version = \(StoreMigrations.currentVersion + 1)")
         let future = DeliveryStore(databaseURL: url)
         guard case .unavailable = await future.availability else { return XCTFail("Expected unsupported future schema refusal") }
-        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 14)
+        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion + 1)
         XCTAssertEqual(try semanticVersionElevenSnapshot(db), legacy)
         XCTAssertEqual(try taskTableSnapshot(db), tasks)
     }
@@ -1142,9 +1241,9 @@ final class StoreAcceptanceTests: XCTestCase {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
         try await store.transact(actor: .init(id: "fixture"), reason: "Seed planning history") { connection in
-            try connection.execute("INSERT INTO projects (id, name) VALUES ('p1', 'Project One')")
-            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'p1', 'One'), ('phase-2', 'p1', 'Two')")
-            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ticket-1', 'p1', 'phase-1', 'One', 'backlog'), ('ticket-2', 'p1', 'phase-2', 'Two', 'backlog')")
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('p1', 'Project One'), ('p2', 'Project Two')")
+            try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'p1', 'One'), ('phase-2', 'p1', 'Two'), ('phase-3', 'p2', 'Three')")
+            try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('ticket-1', 'p1', 'phase-1', 'One', 'backlog'), ('ticket-2', 'p1', 'phase-2', 'Two', 'backlog'), ('ticket-3', 'p2', 'phase-3', 'Three', 'backlog')")
             try connection.execute("INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES ('p1', 'phase-1', 'goal-1', 'Goal one', 'Outcome one', 'draft', 0, 't', 't'), ('p1', 'phase-2', 'goal-2', 'Goal two', 'Outcome two', 'draft', 0, 't', 't')")
         }
         let auditID = AuditEventID(rawValue: "assignment-audit")
@@ -1209,7 +1308,7 @@ final class StoreAcceptanceTests: XCTestCase {
             ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-2', 'p1', 'phase-1', 'ticket-1', NULL, 'goal-1', -1, 'assigned')", "CHECK constraint failed"),
             ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-3', 'p1', 'phase-1', 'ticket-1', 'goal-1', 'goal-1', 2, 'reassigned')", "CHECK constraint failed"),
             ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-4', 'p1', 'phase-1', 'ticket-1', 'goal-1', NULL, 2, 'unknown')", "CHECK constraint failed"),
-            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-5', 'p1', 'phase-1', 'ticket-2', NULL, 'goal-1', 2, 'assigned')", "FOREIGN KEY constraint failed"),
+            ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-5', 'p1', 'phase-1', 'ticket-3', NULL, 'goal-1', 2, 'assigned')", "FOREIGN KEY constraint failed"),
             ("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('bad-6', 'p1', 'phase-1', 'ticket-1', NULL, 'goal-2', 2, 'assigned')", "FOREIGN KEY constraint failed"),
         ] {
             XCTAssertThrowsError(try raw.execute(sql)) { error in
@@ -2576,6 +2675,60 @@ final class StoreAcceptanceTests: XCTestCase {
         SELECT json_group_array(json_array(type,name,tbl_name,sql))
         FROM (SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name)
         """))
+    }
+
+    private func makePopulatedVersionThirteenDatabaseURL() throws -> URL {
+        let url = try copyVerifiedVersionTwelveFixture()
+        let db = try SQLiteConnection(url: url)
+        let historicalEventSQL = try XCTUnwrap(db.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'delivery_goal_assignment_events'"))
+        try StoreMigrations.migrate(db)
+        // Synthetic v13 derives the historical event definition from the immutable
+        // v12 fixture. The pinned v13 manifest verifies the complete source schema.
+        try db.executeScript("""
+        BEGIN EXCLUSIVE TRANSACTION;
+        ALTER TABLE delivery_goal_assignment_events RENAME TO synthetic_current_assignment_events;
+        \(historicalEventSQL);
+        INSERT INTO delivery_goal_assignment_events
+            (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action)
+            SELECT audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action
+            FROM synthetic_current_assignment_events;
+        DROP TABLE synthetic_current_assignment_events;
+        CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
+            ON delivery_goal_assignment_events(project_id, phase_id, ticket_id, revision);
+        PRAGMA user_version = 13;
+        COMMIT;
+        """)
+        let manifest = try versionTwelveSchemaManifest(db)
+        XCTAssertEqual(SHA256.hash(data: Data(manifest.utf8)).map { String(format: "%02x", $0) }.joined(),
+                       "aded1d280e95a63b57617ff61d4bb01073c75df40dc2d65ffae22964bf503d0c")
+        try db.execute("""
+        INSERT INTO project_documentation_bindings
+            (project_id,root_id,repository_id,accepted_catalog_version,accepted_catalog_digest,accepted_catalog)
+        VALUES ('project-main','root-main','11111111-1111-1111-1111-111111111111',1,?,X'000102feff')
+        """, bindings: [.text(String(repeating: "a", count: 64))])
+        try db.execute("INSERT INTO evidence (id,project_id,ticket_id,artifact_id,is_available) VALUES ('managed-v13','project-main','ticket-backlog','exact-artifact-é',0)")
+        try db.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('project-main','phase-1','goal-1','ticket-backlog')")
+        try db.execute("""
+        INSERT INTO delivery_goal_assignment_events
+            (audit_event_id,project_id,phase_id,ticket_id,previous_goal_id,current_goal_id,revision,action)
+        VALUES ('audit-seeded','project-main','phase-1','ticket-backlog',NULL,'goal-1',2,'assigned')
+        """)
+        XCTAssertNil(try db.row("PRAGMA foreign_key_check"))
+        return url
+    }
+
+    private func semanticVersionThirteenSnapshot(_ connection: SQLiteConnection) throws -> [String: String] {
+        var snapshot = try semanticVersionElevenSnapshot(connection)
+        for (name, rows) in try taskTableSnapshot(connection) { snapshot[name] = rows }
+        snapshot["evidence"] = try XCTUnwrap(connection.scalarText("""
+        SELECT json_group_array(json_array(id,project_id,ticket_id,path,is_available,artifact_id))
+        FROM (SELECT * FROM evidence ORDER BY id)
+        """))
+        snapshot["project_documentation_bindings"] = try XCTUnwrap(connection.scalarText("""
+        SELECT json_group_array(json_array(project_id,root_id,repository_id,accepted_catalog_version,accepted_catalog_digest,hex(accepted_catalog)))
+        FROM (SELECT * FROM project_documentation_bindings ORDER BY project_id)
+        """))
+        return snapshot
     }
 
     private func copyVerifiedVersionElevenFixture() throws -> URL {

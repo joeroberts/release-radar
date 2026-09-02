@@ -149,6 +149,20 @@ final class DashboardProjectionTests: XCTestCase {
                 $0.outcome.split(whereSeparator: \.isWhitespace).count >= 5 && $0.outcome.hasSuffix(".")
             }
         )
+        let planning = try await store.read { connection in
+            (
+                try connection.scalarText("SELECT state FROM phase_plans WHERE phase_id = 'rekon-pursuit-post-mvp'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_plans WHERE ready_revision = revision"),
+                try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_ticket_assignments"),
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE plan_legacy_continuation <> 0"),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_task_plans")
+            )
+        }
+        XCTAssertEqual(planning.0, "ready")
+        XCTAssertEqual(planning.1, 1)
+        XCTAssertEqual(planning.2, 31)
+        XCTAssertEqual(planning.3, 0)
+        XCTAssertEqual(planning.4, 0)
     }
 
     func testSelectedTicketProjectsReadOnlyContextAndRelationshipDirection() async throws {

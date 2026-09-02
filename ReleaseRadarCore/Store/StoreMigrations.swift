@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 13
+    static let currentVersion: Int64 = 14
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -57,6 +57,18 @@ enum StoreMigrations {
             }
             if version < 13 {
                 try connection.executeScript(schemaVersion13)
+            }
+            if version < 14 {
+                guard let historicalEventsSQL = try connection.scalarText(
+                    "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'delivery_goal_assignment_events'"
+                ), normalizedSQL(historicalEventsSQL) == normalizedSQL(deliveryGoalAssignmentEventsTableSQL),
+                try connection.row("PRAGMA foreign_key_check") == nil
+                else {
+                    throw StoreError.unavailable(
+                        "Database schema version \(version) has an unrecognized assignment history table or invalid foreign keys"
+                    )
+                }
+                try connection.executeScript(schemaVersion14)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -225,10 +237,12 @@ enum StoreMigrations {
         if version >= 11 {
             guard try hasExpectedLegacyContinuationColumn(connection) else { return false }
             for table in planningTableSQL {
+                let expectedSQL = version >= 14 && table.name == "delivery_goal_assignment_events"
+                    ? deliveryGoalAssignmentEventsVersionFourteenTableSQL : table.sql
                 guard let actualSQL = try connection.scalarText(
                     "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
                     bindings: [.text(table.name)]
-                ), normalizedSQL(actualSQL) == normalizedSQL(table.sql)
+                ), normalizedSQL(actualSQL) == normalizedSQL(expectedSQL)
                 else { return false }
             }
         }
@@ -309,7 +323,16 @@ enum StoreMigrations {
         missingTables: Set<String>,
         missingColumns: Set<String>
     ) throws -> Bool {
-        for foreignKey in requiredForeignKeys where foreignKey.version <= version {
+        var expectedForeignKeys = requiredForeignKeys
+        if version >= 14 {
+            expectedForeignKeys.removeAll {
+                $0.table == "delivery_goal_assignment_events" && $0.targetTable == "tickets"
+            }
+            expectedForeignKeys.append(
+                (14, "delivery_goal_assignment_events", "project_id,ticket_id", "tickets", "project_id,id", "NO ACTION")
+            )
+        }
+        for foreignKey in expectedForeignKeys where foreignKey.version <= version {
             guard !missingTables.contains(foreignKey.table),
                   foreignKey.source.split(separator: ",").allSatisfy({
                     !missingColumns.contains("\(foreignKey.table).\($0)")
@@ -885,6 +908,20 @@ enum StoreMigrations {
     CREATE UNIQUE INDEX project_documentation_bindings_repository_unique ON project_documentation_bindings(repository_id);
     """
 
+    // History retains its original phase and goals when the ticket moves phases.
+    // Only the ticket reference changes; current assignments remain phase-local.
+    private static let schemaVersion14 = """
+    ALTER TABLE delivery_goal_assignment_events RENAME TO delivery_goal_assignment_events_v13;
+    \(deliveryGoalAssignmentEventsVersionFourteenTableSQL);
+    INSERT INTO delivery_goal_assignment_events
+        (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action)
+        SELECT audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action
+        FROM delivery_goal_assignment_events_v13;
+    DROP TABLE delivery_goal_assignment_events_v13;
+    CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
+        ON delivery_goal_assignment_events(project_id, phase_id, ticket_id, revision);
+    """
+
     private static let schemaVersion1 = """
     CREATE TABLE projects (
         id TEXT PRIMARY KEY NOT NULL,
@@ -1268,6 +1305,38 @@ enum StoreMigrations {
         FOREIGN KEY(project_id, phase_id) REFERENCES phase_plans(project_id, phase_id),
         FOREIGN KEY(project_id, phase_id, ticket_id)
             REFERENCES tickets(project_id, phase_id, id),
+        FOREIGN KEY(project_id, phase_id, previous_goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id),
+        FOREIGN KEY(project_id, phase_id, current_goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id),
+        CHECK (
+            (action = 'assigned' AND previous_goal_id IS NULL AND current_goal_id IS NOT NULL)
+            OR (action = 'unassigned' AND previous_goal_id IS NOT NULL AND current_goal_id IS NULL)
+            OR (
+                action = 'reassigned'
+                AND previous_goal_id IS NOT NULL
+                AND current_goal_id IS NOT NULL
+                AND previous_goal_id <> current_goal_id
+            )
+        )
+    )
+    """
+
+    private static let deliveryGoalAssignmentEventsVersionFourteenTableSQL = """
+    CREATE TABLE delivery_goal_assignment_events (
+        audit_event_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        previous_goal_id TEXT,
+        current_goal_id TEXT,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        action TEXT NOT NULL CHECK (action IN ('assigned', 'unassigned', 'reassigned')),
+        PRIMARY KEY(audit_event_id, ticket_id),
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) DEFERRABLE INITIALLY DEFERRED,
+        FOREIGN KEY(project_id, phase_id) REFERENCES phase_plans(project_id, phase_id),
+        FOREIGN KEY(project_id, ticket_id)
+            REFERENCES tickets(project_id, id),
         FOREIGN KEY(project_id, phase_id, previous_goal_id)
             REFERENCES delivery_goals(project_id, phase_id, id),
         FOREIGN KEY(project_id, phase_id, current_goal_id)
