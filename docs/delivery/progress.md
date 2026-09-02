@@ -2,17 +2,23 @@
 
 ## Current state
 
-- Outcome: M1A propagation correction
-- Active task: None — the local correction awaits owner review
-- Last complete task: M1A governance approval and closeout
-- Authorization: M1A propagation documentation and its local commit only; M2
-  and RR-R10 Task 4B remain unauthorized
+- Outcome: M2A catalog contract and validator complete; ready for session handoff
+- Active task: None — owner-requested handoff after M2A
+- Last complete task: M2A — Catalog Contract and Validator
+- Authorization: Owner authorized M2A–M8 implementation, required independent
+  reviews, local commits, and fast-forward pushes as one program. Owner-state
+  actions begin only at M6A. RR-R10 Task 4B and GitHub Issue #1 remain excluded.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Current blockers and risks: Owner review is required before this correction
-  closes; separate authorization is required before M2A or later work
-- Next eligible action: Owner review of the M1A propagation correction
-- State: AWAITING OWNER REVIEW
+- Controlling brief: [M2A](task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md)
+- Current blockers and risks: No unresolved M2A findings. The complete MDCP
+  program remains unfinished; M2B–M8 have not started.
+- Next eligible action: Resume [M2B — Deterministic Index Tool](task-briefs/2026-09-01-managed-repository-documentation-contract/m2b-deterministic-index-tool-brief.md)
+  in the next session under the existing program authorization.
+- State: HANDOFF READY — M2A COMPLETE
+- Session boundary: Stop after committing and pushing M2A; do not start M2B in
+  this session. Continue in the same authorized worktree and branch from this
+  accepted checkpoint; verify HEAD/upstream and cleanliness before resuming.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
@@ -51,8 +57,42 @@ or Git operations.
 - The managed-documentation program retains priority over RR-R10 Task 4B.
 - ADR-007 governs proportional validation for unopened work. This correction
   aligns the design, milestone briefs, checksum registry, and ledger with it.
-- M2 and RR-R10 Task 4B remain unauthorized.
-- Next action: owner review of this correction.
+- The owner approved M1 and M1A, including the propagation correction at
+  `57f2633`, and authorized M2A–M8 as one dependency-ordered program.
+- RR-R10 Task 4B becomes eligible only at `MDCP-COMPAT-1` and remains a
+  separately authorized program. GitHub Issue #1 remains unopened.
+- M2A subsequently completed; the current state above controls the handoff.
+
+## MDCP M2A — Catalog Contract and Validator
+
+- Status: Complete with all required reviews GO and no unresolved findings.
+- Implemented: Core catalog v1 models, canonical snapshots/digests, bounded
+  no-follow tree reads, collection/authority/checksum/link validation, explicit
+  prior/current lifecycle and identity transitions, and the narrow transitional
+  subtree rule. One synthetic fixture and focused XCTest coverage accompany
+  the implementation; Xcode changes only exclude source-read fixture resources.
+- Test-first evidence: runtime RED preceded implementation and each required
+  correction. The final normal-signing `RepositoryDocumentCatalogTests` run
+  passed 23/23 tests with no failures or skips; `git diff --check` passed.
+- Native verification command: `xcodebuild test -project ReleaseRadar.xcodeproj
+  -scheme ReleaseRadar -destination 'platform=macOS'
+  -only-testing:ReleaseRadarTests/RepositoryDocumentCatalogTests`.
+- Independent QA ran the signed 16-test and 22-test candidates, then inspected
+  the final malformed-angle regression and its signed 23-test result.
+- Implementer: `/root/m2a_implementer`. Code: `/root/m2a_code_review` — GO;
+  QA: `/root/m2a_qa` — GO; Architecture: `/root/m2a_architecture_review` — GO;
+  Security/Privacy: `/root/m2a_security_review` — GO. Required findings were
+  corrected and only affected verification/re-review repeated.
+- Historical-citation rule: an ordinary inline link beginning with the exact
+  visible label `Historical ` may cite archived, non-authoritative evidence.
+  Each occurrence still validates its target; other execution links and
+  catalog first-read/authority rules remain strict. This preserves the existing
+  progress history links for M4 without changing catalog schema.
+- Durable changes: Core documentation sources, tests/fixture, Xcode membership,
+  and this ledger. Temporary native build/log/result outputs remain under
+  `.build/m2a/`; none were deleted.
+- No owner application state, guidance, evidence, live repository catalog, or
+  document paths changed. M2B is the next slice and remains unopened.
 
 ## Task 4A planning gate
 
