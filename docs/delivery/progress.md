@@ -2,53 +2,72 @@
 
 ## Current outcome and authorization
 
-- M2–M6B are accepted. M6B converted five exact evidence locators, preserved
-  three legacy records, and passed replay/relaunch, QA and Architecture/Security
-  acceptance. Delivery checkpoint: `b9b1932`.
-- M7 repository cutover is accepted: six stable-ID moves, catalog and four
-  indexes, current references, and archived closed progress are deployed.
-  Active task: M8 catalog acceptance and controlled runtime readback.
-- The owner resumed the complete cutover/runtime outcome and selected the
-  existing `codex/managed-documentation-contract-planning` worktree. Exact live
-  cutover/deployment and catalog-acceptance authorization is recorded in the
-  protected companion before execution.
+- M2–M7 are accepted. M6B adopted five exact evidence locators; M7 deployed six
+  stable-ID document moves, complete indexes, current references and archived
+  closed progress. Delivery checkpoints: M6B `b9b1932`, M7 `004e2d2`.
+- M8 runtime acceptance is complete, including independent QA with no
+  required or optional findings. The final owner decision releasing ordinary
+  live use and terminal delivery remain pending.
+- The owner approved the exact adoption, cutover, bound-checkout deployment,
+  catalog-acceptance request, replay, backup and controlled readback packages.
+  Repository delivery uses `codex/managed-documentation-contract-planning` in
+  its associated development worktree. The original bound checkout retains its
+  deployment branch and commit with only the authorized documentation delta.
 - Controlling scope: [M7 brief](task-briefs/2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md),
   [M8 brief](task-briefs/2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md),
   [managed documentation design](../design/managed-repository-documentation-contract.md),
   [ADR-006](../architecture/ADR-006-managed-repository-documentation-contract.md)
   and [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md).
 
-## State, verification and risks
+## Verification and remaining limits
 
-- Frozen compatibility candidate: `MDCP-COMPAT-2`, commit `b365aff`, signed app
-  and plugin 0.1.6. No application, schema, permission or frozen-contract change.
-- The application still accepts the M6B catalog snapshot until M8's typed
-  acceptance. The cutover candidate is pending; no managed inventory or normal
-  writer may consume it before acceptance.
-- Both development and bound-checkout native catalog/index/link/checksum
-  checks pass. The deployed files equal the independently reviewed candidate;
-  Documentation review has no required or optional findings. The approved
-  transition retains 193 artifact IDs and adds one historical progress record.
-- Before cutover the owner opened the app normally. Fresh complete inventory
-  preserved M6B evidence/binding/root/delivery state; only the plugin lifecycle
-  record and one audit changed. That owner state is preserved as the new
-  baseline. Independent Security review found no remaining blocker. Ordinary
-  writers and the installed query client were then quiesced before any move.
-- One pre-existing legacy directory locator remains unresolved. The installed
-  plugin lifecycle state changed during the owner’s normal launch; its current
-  fingerprint is preserved, and no lifecycle repair is part of this cutover.
-  Ordinary live use remains unreleased.
-- Exact requests, backups, readbacks, UI evidence and recovery terms remain in
-  the owner-designated protected companion. Retain them through M8 and at least
-  2026-10-02; deletion requires separate authorization.
+- Frozen `MDCP-COMPAT-2` is `b365aff`: signed app/plugin 0.1.6. No production
+  source, schema, permission or frozen-contract change was needed.
+- Native current-tree, accepted-prior transition, index, link and checksum
+  checks pass. Deterministic rendering changes zero indexes. The catalog has
+  194 artifacts, preserving all 193 existing IDs. No active dependency on the
+  removed transitional subtree remains; historical references are retained.
+- The typed M8 operation accepted the deployed catalog. Exact replay returned
+  the original result and one audit/receipt pair. Complete readback persisted
+  across read-only relaunch. Only the accepted snapshot and the moved managed
+  plan's resolved path changed; all eight evidence IDs, locators, associations,
+  availability, roots, and 17 other preservation domains remain exact.
+- Before cutover, the owner confirmed opening the app normally. Fresh inventory
+  isolated its effect to plugin lifecycle state and one audit. That state was
+  preserved as the new baseline after independent Security acceptance.
+  Ordinary writers stayed quiesced throughout actual cutover and acceptance.
+- Native tests: 38 focused cases plus one post-cutover repository-conformance
+  case passed, with zero failures/skips. Isolated fixtures cover migration,
+  transition refusal/rollback, replay, compatibility, missing/historical
+  evidence, and root-relocation identity/recovery. Real macOS bookmark creation
+  and broker-level lost acceptance replies were not injected in this run.
+- Installed-app accessibility and screenshots show the accepted repository,
+  current/completed/superseded managed evidence and the moved canonical path.
+  Maintenance preserves the approved design's readable hierarchy and explicit
+  status labels; the normal phase-board shell was not relaunched. One existing
+  legacy directory locator remains typed unresolved while its legacy UI shows
+  stored availability. Its identity and behavior remain unchanged.
+- Read-only maintenance exited; database, sidecars and recovery snapshot stayed
+  byte-identical during relaunch/UI inspection. Ordinary live use is unreleased.
+- Independent M6B QA/Architecture/Security and M7 Documentation reviews accepted
+  their actual slices with no required findings. Independent M8 runtime QA
+  accepted the actual transition, replay, relaunch, state preservation and UI.
 
-## Next eligible work
+## Durable records and next work
 
-Complete M7 delivery, then M8's exact catalog acceptance, read-only runtime/
-relaunch checks and final delivery. Task 4B and Issue #1 remain
-separate and unopened.
+Exact approvals, requests/results, complete inventories, UI evidence and
+verified recovery copies remain in the owner-designated protected companion.
+Retain them through M8 and at least 2026-10-02; deletion needs separate approval.
+The temporary M7 candidate and M8 test outputs remain under the development
+worktree's `.build/mdcp-m7-candidate/` and `.build/mdcp-m8-tests/`; two isolated
+XCTest host directories also remain. Earlier
+M6A build/disposable inputs retain their existing custody and disposal terms.
+
+Record the owner's live-use decision and finish terminal delivery.
+Task 4B is the next separately authorized feature task; Issue #1 remains
+unopened. Neither is authorized by this closeout. The held Issue #2 artifacts
+remain unchanged.
 
 [Historical delivery through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md)
-contains closed task detail and the preserved Issue #2 unknown-authorship record.
-The catalog and root/local indexes provide navigation; this file owns current
-status and sequencing.
+contains closed detail and the preserved Issue #2 attribution record. The
+catalog and indexes own navigation; this ledger owns delivery status.
