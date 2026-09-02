@@ -1,6 +1,9 @@
 # RR-R10 Task 11A: Integration and staged Release candidate
 
-Active controlling scope. Current state is in [progress.md](../../progress.md).
+Completed scope record; non-authoritative. Current state is in
+[progress.md](../../progress.md). Direct integration/staging acceptance and exact
+live completion are recorded in the
+[handoff](../../evidence/2026-09-02-rr-r10-task-11a-integration-staging.md).
 
 ## Objective and outcome
 

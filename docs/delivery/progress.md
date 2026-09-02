@@ -6,8 +6,11 @@ MDCP and RR-R10 through Task 10 are delivered.
 Task 10 [PR #13](https://github.com/joeroberts/release-radar/pull/13) merged at
 `609881fe79ec37180057fc6ed36b6ba49afaa8ab`; the coordinator verified its merge,
 exact live completion and canonical reconciliation.
-Task 11A is authorized and active on `codex/rr-r10-task-11a`, controlled by its
-[integration/staging brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md).
+Task 11A integration/staging and live completion are accepted on
+`codex/rr-r10-task-11a`; its
+[integration/staging brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md)
+is completed and non-authoritative. Same-branch reconciliation and a single PR
+to `codex/release-radar-mvp` form its integration checkpoint.
 The [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) remains
 controlling; the [Task 10 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md)
 is completed and non-authoritative.
@@ -24,15 +27,16 @@ passed; Debug and Release builds passed. The exact signed candidate is retained
 in protected custody with no installation or owner-app launch. The
 [integration/staging handoff](evidence/2026-09-02-rr-r10-task-11a-integration-staging.md)
 records direct evidence and limits. Independent QA accepted the integration/
-staging checkpoint with Required 0; the live row remains Pending until reviewed
-implementation push and the exact revision-15 baseline check. Temporary
+staging checkpoint with Required 0. Reviewed implementation/evidence commit
+`7dea462ce42bc2d0d11e4926136991bad285445c` was pushed and remote-verified before
+the exact revision-15 baseline check and Task 11A completion below. Temporary
 outputs remain under `.build/rr-r10-task11a` and native synthetic directories.
 
 Task 10 direct checks and independent QA/UX plus Security/Privacy review are
 accepted with Required 0; its focused tests and runtime evidence remain in the
 [Task 10 verification](evidence/2026-09-02-rr-r10-task-10-ui.md).
-Its exact live completion/preservation baseline is below. Prior temporary
-outputs remain retained with no cleanup authorization. Task 7A custody remains
+Its retained live completion supplied the Task 11A pre-operation baseline.
+Prior temporary outputs remain retained with no cleanup authorization. Task 7A custody remains
 in the [Historical Task 7A closeout](archive/2026-09-02-rr-r10-task-7a-closeout.md).
 
 Development documentation changes remain pending later authorized bound-root
@@ -44,24 +48,23 @@ closed.
 
 - Installed app 0.1.6, schema v14, exposes 21 tools. The development
   candidate exposes 24 tools; no replacement was installed here.
-- RR-R10 has 16 active task rows. Fresh complete inventory matched the retained
-  Task 9 task-domain fingerprint, establishing revision 14. The typed
-  `completeTicketTask` request `9868A36C-25D5-4F59-8A14-8B9A0B073F75` for
-  `RR-R10` / `rr-r10-task-10` committed revision **15** and audit
-  `7066ED8A-1F61-43E3-8AB7-364271BF710E`; exact replay returned the same result.
+- RR-R10 has 16 active task rows. Fresh complete inventory exactly matched the
+  retained Task 10 post-inventory, establishing revision 15. The typed
+  `completeTicketTask` request `4DA3C7D9-9826-4133-B1D4-E2D0C10FF5FF` for
+  `RR-R10` / `rr-r10-task-11a` committed revision **16** and audit
+  `61EB3489-4CF7-4751-BC47-39A523EA9812`; exact replay returned the same result.
   This establishes completion through the typed result and preservation
   association; inventory does not return task rows and no physical checked-row
   observation is claimed.
 - Complete post-inventory contains the same one plan plus 16 task rows
   (task-domain count 17), with digest
-  `5fa422f5c1f202d41622956e29f05540cc89fc23d8283095b6c65557a882ce9e`.
-  Only the task-domain fingerprint changed. All 408 pre-operation audit and 122
-  receipt fingerprints remain, with one new audit and receipt (409/123 total).
-  Two unrelated audit entries already existed before this operation; all
-  Task 9-era audit fingerprints remained intact.
+  `99daef17e4f396c3822aaaa73b5c29e655fe367b7e2ec1bc19d60f58fd01d778`.
+  Only the task-domain fingerprint changed. All 409 pre-operation audit and 123
+  receipt fingerprints remain, with one new audit and receipt (410/124 total).
+  Their identity hashes match the returned audit and original request.
   All lane/goal, binding, root, evidence and other preservation groups match.
   The exact request/results and before/after inventories are retained in the
-  protected 2026-09-02 Task 10 companion records alongside Task 7A/8/9 records;
+  protected 2026-09-02 Task 11A companion records alongside Task 7A/8/9/10 records;
   the canonical request, result, replay and post-inventory copies were read back.
 - RR-R10 remains In progress in the remediation phase. The original active
   phase `RR-ROADMAP` was restored, audit
@@ -70,7 +73,7 @@ closed.
 - Accepted catalog v1 contains 213 artifacts at digest
   `07f804508a5053f1c5644de5f5f8142fb3f5c0531d850ebe3195d3cf9bdf476e`.
   Acceptance audit `E89F7619-BF0A-45BE-94B0-DA2CA6F71D28` replayed exactly.
-  Task 7A, Task 8, Task 9 and Task 10 briefs are completed/non-authoritative in the development
+  Task 7A, Task 8, Task 9, Task 10 and Task 11A briefs are completed/non-authoritative in the development
   catalog. The Task 7A recovery runbook remains supporting material. The
   development catalog has 226 artifacts and remains pending deployment and
   acceptance. Owner state may change during ordinary use.

@@ -1,6 +1,6 @@
 # RR-R10 Task 11A integration and staged-candidate handoff
 
-Non-authoritative verification evidence for the
+Completed, non-authoritative verification evidence for the
 [Task 11A brief](../task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md).
 Current authorization and live delivery state remain in [progress.md](../progress.md).
 
@@ -119,7 +119,7 @@ signed-framework stripping and App Intents metadata warnings remain; they are
 not new Task 11A changes. A rebuild produces a different signed candidate:
 Task 11B must consume these retained bytes and recheck their identity.
 
-## Independent acceptance and checkpoint
+## Independent acceptance and live completion
 
 Independent QA (`task11a_qa`, task
 `01a062f7-f134-7de2-b746-a5ae79f7ce0d`) accepted this integration/staging
@@ -129,15 +129,44 @@ candidate file hashes, archive/transcript hashes and custody permissions.
 No optional changes were requested. Full-scheme testing and owner installation
 remain Task 11B gates; this verdict does not approve those actions.
 
-No live Task 11A completion has been sent. Reviewed commit/push and an unchanged
-exact revision-15 task-domain baseline must precede that operation. The live
-accepted catalog remains v1/213 at
+Reviewed implementation/evidence commit
+`7dea462ce42bc2d0d11e4926136991bad285445c` was pushed and its remote head verified
+before the live operation. A fresh complete inventory exactly equaled the
+retained Task 10 post-inventory, including the revision-15 task-domain digest
+`5fa422f5c1f202d41622956e29f05540cc89fc23d8283095b6c65557a882ce9e`.
+
+The installed supported `completeTicketTask` operation completed only
+`RR-R10` / `rr-r10-task-11a`, expected revision **15** to committed revision
+**16**. Original request `4DA3C7D9-9826-4133-B1D4-E2D0C10FF5FF` was retained
+before dispatch; audit `61EB3489-4CF7-4751-BC47-39A523EA9812` and the exact
+committed result were returned again for the identical request. JSON member
+order differs; the complete result values are equal.
+
+Complete post-inventory retains one plan plus 16 tasks (domain count 17), now
+digest `99daef17e4f396c3822aaaa73b5c29e655fe367b7e2ec1bc19d60f58fd01d778`.
+Only `project.tasksV12` changed. All 409 pre-operation audit and 123 receipt
+fingerprints remain, with exactly one new audit and receipt (410/124 total),
+whose identity hashes match the returned audit and original request. All other
+preservation groups and inventory fields match, including eight evidence rows,
+binding, roots, catalog, ticket/goal/phase state and plugin lifecycle. RR-R10
+remains In progress; the active phase remains RR-ROADMAP. Inventory exposes
+fingerprints, not task rows: completion is established by the typed result and
+its preservation association, not a claimed physical checked-row observation.
+
+Full `before-inventory.json`, `complete-ticket-task-request.json`,
+`complete-ticket-task-result.json`, `complete-ticket-task-replay.json` and
+`after-inventory.json` are retained and read back in the same protected Task 11A
+custody directory as the candidate, all mode 0600. The live accepted catalog
+remains v1/213 at
 `07f804508a5053f1c5644de5f5f8142fb3f5c0531d850ebe3195d3cf9bdf476e`;
-development documentation is pending later authorized deployment/acceptance.
+development documentation (226 artifacts) is pending later authorized
+deployment/acceptance. No catalog acceptance, installation, owner bootstrap,
+phase/goal mutation or Task 11B action occurred.
 
 Durable deliverables are the three integration files, brief, this handoff,
 candidate identity/checksum and catalog/index/ledger records, plus the exact
-bundle/archive/transcript in protected owner-designated custody. Temporary
+bundle/archive/transcript and live-operation records in protected
+owner-designated custody. Temporary
 Debug/Release build products, logs, xcresults and remaining synthetic fixture/
 XCTest-host directories are retained under task-local build/native temporary
 locations. No cleanup is authorized. Physical keyboard/spoken VoiceOver remain
