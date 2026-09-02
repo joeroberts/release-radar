@@ -1,0 +1,78 @@
+# Delivery documentation
+
+<!-- release-radar-docs:v1:start -->
+
+## Collection: delivery
+
+- Path: [docs/delivery](.)
+- Purpose: Current delivery status and durable task/evidence history
+- Allowed contents: Current progress ledger; Historical archive; Task briefs; Verification evidence
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [450e84de-703b-4dcd-ad1a-7fddfee0d1d9](progress.md)
+- Archive destination: none
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 36ea9572-06fb-4faf-b999-f8ad4fd701c2 | [docs/delivery/README.md](README.md) | collectionIndex | supporting | active | none | none |
+| 450e84de-703b-4dcd-ad1a-7fddfee0d1d9 | [docs/delivery/progress.md](progress.md) | document | controlling &#40;delivery.current-state&#41; | active | none | none |
+
+### Children
+
+- [delivery.archive](archive/README.md) — indexed; Historical delivery records; never current task eligibility
+- [delivery.evidence](evidence) — leaf; Durable verification evidence from delivered work
+- [delivery.task-briefs](task-briefs/README.md) — indexed; Reviewed task scopes; current progress determines the open task
+
+## Leaf collection: delivery.evidence
+
+- Path: [docs/delivery/evidence](evidence)
+- Purpose: Durable verification evidence from delivered work
+- Allowed contents: Immutable test evidence; Runtime screenshots
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 96b10404-6291-4cc8-beb9-c0e2e1dff704 | [docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json](evidence/2026-08-30-rr-r10-task-2a-red-evidence.json) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 0199bdf8-78d1-460e-abe2-519f0fd34e0b | [docs/delivery/evidence/mdcp-m2c-onboarding-repair-compact.png](evidence/mdcp-m2c-onboarding-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 2497cc96-d6c8-42ea-87b3-1f6b7cabda8b | [docs/delivery/evidence/mdcp-m2c-onboarding-staged-wide.png](evidence/mdcp-m2c-onboarding-staged-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| ab3b7be3-fc39-48cf-8101-0fc4d24845ac | [docs/delivery/evidence/mdcp-m2c-overview-repair-compact.png](evidence/mdcp-m2c-overview-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| c7e61a92-4787-4f7d-93de-79b271e163e2 | [docs/delivery/evidence/mdcp-m2c-overview-staged-wide.png](evidence/mdcp-m2c-overview-staged-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| c57db624-74d1-439c-83f6-03033273c2fb | [docs/delivery/evidence/mdcp-m3c-confirmation-1100.png](evidence/mdcp-m3c-confirmation-1100.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| ed21cbac-018c-40d2-b681-96015909e9db | [docs/delivery/evidence/mdcp-m3c-confirmation-620.png](evidence/mdcp-m3c-confirmation-620.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 2f2246aa-e957-454f-9c9b-faf80cb410c6 | [docs/delivery/evidence/mdcp-m3c-evidence-1100.png](evidence/mdcp-m3c-evidence-1100.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 849e2bb8-5267-4bf0-8261-d5046970abaa | [docs/delivery/evidence/mdcp-m3c-evidence-620.png](evidence/mdcp-m3c-evidence-620.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 52cf86e7-e8fc-44eb-9558-aab94983f70b | [docs/delivery/evidence/mdcp-m3c-maintenance-read-only.png](evidence/mdcp-m3c-maintenance-read-only.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| ca37c279-0dbb-4061-b379-bc557159e907 | [docs/delivery/evidence/mdcp-m3c-phase-less-overview.png](evidence/mdcp-m3c-phase-less-overview.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| a14ff940-cfc1-4735-974b-895ab63f1364 | [docs/delivery/evidence/rr-r9-active-phase-board-compact.png](evidence/rr-r9-active-phase-board-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| b445b788-23e7-4630-a4d1-648845c1ebcc | [docs/delivery/evidence/rr-r9-active-phase-board-wide.png](evidence/rr-r9-active-phase-board-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 0ad29467-a31f-4574-9a98-05b2188a540f | [docs/delivery/evidence/rr-r9-active-phase-overview.png](evidence/rr-r9-active-phase-overview.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 7e761c7f-890f-46f8-80ac-17139b378c52 | [docs/delivery/evidence/rr-r9-active-phase-recovery.png](evidence/rr-r9-active-phase-recovery.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| f3745dd3-d7c2-48d2-b4b4-66e977c22067 | [docs/delivery/evidence/rr06-fix1-overview.png](evidence/rr06-fix1-overview.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 60bfe86b-4516-4c2b-bb2d-af7270316152 | [docs/delivery/evidence/rr06-fix1-projects.png](evidence/rr06-fix1-projects.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 596cc16a-071c-483e-9ca8-67e7b3d20c6b | [docs/delivery/evidence/rr06-owner-narrow.png](evidence/rr06-owner-narrow.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 0df8831b-ca74-470f-97b5-03bc346ecb21 | [docs/delivery/evidence/rr06-owner-wide.png](evidence/rr06-owner-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| bb97491f-4fd6-42a1-b19f-e16d635af1ad | [docs/delivery/evidence/rr07-activity.png](evidence/rr07-activity.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 1afeecc9-08fc-4299-8d5d-3eb562a4c40d | [docs/delivery/evidence/rr07-dependencies.png](evidence/rr07-dependencies.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| d3584218-3f79-4f1e-bcb8-1078dcc88854 | [docs/delivery/evidence/rr07-needs-review.png](evidence/rr07-needs-review.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 11bbbbe0-5784-4d8b-b552-705d5b033979 | [docs/delivery/evidence/rr07-settings.png](evidence/rr07-settings.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 887bdd6c-12b6-49e6-878e-51666796e566 | [docs/delivery/evidence/rr10-activity.png](evidence/rr10-activity.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 56d21a68-625e-4cef-ae0c-2804acff28fb | [docs/delivery/evidence/rr10-board-compact.png](evidence/rr10-board-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| c1dd4c3a-5460-48b8-b3d7-99645bee278c | [docs/delivery/evidence/rr10-dependencies.png](evidence/rr10-dependencies.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 7b8828f1-697e-4140-9c9b-f5b3da58408d | [docs/delivery/evidence/rr10-needs-review.png](evidence/rr10-needs-review.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| e0a1bf9e-5a4c-4a0d-ae90-bda8d9a93083 | [docs/delivery/evidence/rr10-notifications.png](evidence/rr10-notifications.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 3dae8a2b-fa2a-4472-a09b-ad00971e947e | [docs/delivery/evidence/rr10-onboarding-failure.png](evidence/rr10-onboarding-failure.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 199a56ed-2513-436b-ad69-36e4d45eef7c | [docs/delivery/evidence/rr10-projects-overview-board-detail.png](evidence/rr10-projects-overview-board-detail.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| dfa76052-348a-42ae-ae62-4044c29a40b7 | [docs/delivery/evidence/rr10-settings.png](evidence/rr10-settings.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+<!-- release-radar-docs:end -->

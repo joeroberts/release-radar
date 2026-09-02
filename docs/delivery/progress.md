@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Outcome: M3C accepted; bounded M2A binary-evidence correction independently accepted
-- Active task: Binary-evidence correction closeout; M4 resumes next
-- Last complete task: M3C — Evidence Readback and Repository-Root Relocation
+- Outcome: M4 accepted; documentation catalog and indexes staged at existing paths
+- Active task: None; M4 checkpoint closeout
+- Last complete task: M4 — Stage Repository Catalog In Place
 - Authorization: Owner authorized the remaining M2C–M8 program in dependency
   order, including development, required checks and independent reviews,
   in-scope corrections, ledger updates, and commit/normal push after each
@@ -13,23 +13,17 @@
   RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M2A](task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md) for the bounded correction; [M4](task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md) resumes afterward.
-- Current blockers and risks: No required correction findings remain. M4's full
-  catalog/index validation resumes after the correction is pushed. One unchanged
-  onboarding test expects schema version 9 while the accepted migration version
-  is now 13. M3C isolated-window accessibility and visual checks passed;
-  owner installation and live acceptance remain separately gated.
-- Verification: Binary-evidence correction passed independent native catalog
-  and index QA 43/43. Code, Architecture, and Security review GO; no Required
-  findings. M3C's prior acceptance remains intact.
-- Next eligible action: Commit/push the accepted correction separately, then
-  restore and finish M4's exact draft.
-- State: M2A CORRECTION COMPLETE; M4 HELD
-- Development baseline for the correction: Required worktree
-  `/Users/jroberts/.codex/worktrees/b0f1/release_radar`, branch
-  `codex/managed-documentation-contract-planning`, clean HEAD/upstream/live
-  remote verified after the M3C normal push at
-  `75f9dc1af4e63e57c1d9606f217c60d023da3931`.
+- Controlling brief: [M4](task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md)
+- Current blockers and risks: No required M4 findings remain. The actual root
+  guidance declaration is missing/legacy; staged-v1 preview was verified in a
+  disposable real-document copy. Owner installation and activation remain gated.
+  M5 compatibility must address the existing onboarding schema-9 expectation
+  against the accepted schema version 13.
+- Verification: Native catalog/index check passed; a second render changed zero
+  files and preserved all nine index bytes. Independent Documentation review GO.
+  Both held artifacts and all 87 existing checksum entries remain exact.
+- Next eligible action: Commit/push M4, then automatically open M5 compatibility.
+- State: M4 ACCEPTED
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -292,18 +286,28 @@
 
 ## MDCP M4 — Stage Repository Catalog In Place
 
-- Status: Held for the bounded M2A correction. The exact unapproved catalog/index
-  draft is preserved; no M4 acceptance or document cutover has occurred.
-- Scope: Inventory every eligible documentation artifact and collection at its
-  existing path; stage catalog v1 and deterministic root/local indexes. Derive
-  authority from accepted artifacts and preserve immutable held content and
-  existing checksum entries. The root index directly enumerates the transitional
-  subtree without writing inside it.
-- Verification: Accepted tool check on a small catalog fixture and expected
-  failure on the uncatalogued tree precede writes. Validate full coverage,
-  links, authority, checksums, leaf/index navigation, and second-render identity;
-  obtain one independent Documentation review. Owner-state inventory, document
-  moves, guidance activation, and source changes are outside this slice.
+- Outcome: Catalog v1 covers 188 artifacts and 28 collections at unchanged
+  paths, with nine generated indexes and 19 leaf collections. Seventeen active
+  controllers are distinct. Completed M4 is non-authoritative; later slices
+  remain proposed. The root index enumerates the transitional subtree without
+  writing inside it. No unresolved authority decision remains.
+- Verification: Proposed-fixture check passed and the uncatalogued real tree
+  failed as expected before writes. The corrected native
+  `ReleaseRadarDocumentationTool` passed full-tree check/write/check; the second
+  write changed zero files and all nine indexes remained byte-identical.
+  Existing human prose in three READMEs is preserved. The two held artifacts
+  match their accepted whole-file hashes; archive and task-brief manifests
+  remain unchanged and pass 87/87 entries. Actual guidance is missing/legacy;
+  a disposable real-docs copy with synthetic v1 guidance passes staged preview
+  without audited handoff or activation. `git diff --check` passes.
+- Independent review: `/root/m3c_implementer` authored the catalog/index slice;
+  `/root/m3c_code_review` supplied Documentation GO with zero Required findings.
+- Durable artifacts: catalog, nine indexes, and this ledger. M4-only inventory,
+  fixture, tool build, logs, held drafts, and disposable preview copy under
+  `.build/m4/` were removed after process exit and exact-target verification
+  under the owner's cleanup authorization. Pre-existing outputs are preserved.
+  No source, tests, document moves, guidance activation, or owner-state operation
+  occurred. M5 is next.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
