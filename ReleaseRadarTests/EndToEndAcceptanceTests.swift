@@ -13,7 +13,16 @@ final class EndToEndAcceptanceTests: XCTestCase {
         try await task11AIntegration(alreadyManaged: true)
     }
 
-    private func task11AIntegration(alreadyManaged: Bool) async throws {
+    func testTask11BCurrentV14InstallAdoptsGoalsAndCompletesOnlyFinalTask() async throws {
+        try await task11AIntegration(alreadyManaged: true, finalInstallation: true)
+    }
+
+    func testTask11BFinalCountIncludesCompletedReviewedRepairRow() async throws {
+        try await task11AIntegration(alreadyManaged: true, finalInstallation: true, includesReviewedRepair: true)
+    }
+
+    private func task11AIntegration(alreadyManaged: Bool, finalInstallation: Bool = false,
+                                   includesReviewedRepair: Bool = false) async throws {
         let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
             .appendingPathComponent("RR-R10-Task11A-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -117,7 +126,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         XCTAssertEqual(migrated.0, 0); XCTAssertEqual(migrated.1, 0)
         XCTAssertEqual(migrated.2, 1); XCTAssertEqual(migrated.3, 0)
         let registry = InMemoryAuthorizedProjectRegistry(projects: [.init(projectID: .init(rawValue: "p"), canonicalRoot: root, authorizedRoots: [root])])
-        let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry, bookmarkStore: bookmarks)
+        var dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry, bookmarkStore: bookmarks)
         var requests: [(AgentCommandEnvelope, AgentCommandResult)] = []
         func request(_ command: AgentCommand) -> AgentCommandEnvelope {
             .init(version: 1, requestID: UUID(), projectRoot: root.path, assertedThreadID: "task-11a-synthetic",
@@ -159,15 +168,89 @@ final class EndToEndAcceptanceTests: XCTestCase {
             XCTAssertEqual(inventory.receipts, managedBefore.receipts)
         }
         let baseline = try await store.read { try Self.bootstrapRows($0) }
-        let additions: [TicketTaskDraft] = [
+        var additions: [TicketTaskDraft] = [
             .init(id: .init(rawValue: "integrate"), label: "Integration", title: "Integrate delivery contracts", sortOrder: 0),
             .init(id: .init(rawValue: "verify"), label: "Verification", title: "Verify exact acceptance", sortOrder: 1),
             .init(id: .init(rawValue: "stage"), label: "Staging", title: "Stage release candidate", sortOrder: 2),
         ]
+        if finalInstallation {
+            let rows = [
+                ("1A", "Generate and verify the genuine schema-v10 fixture"),
+                ("1B", "Add schema-v11 persistence and public models"),
+                ("2A", "Generate and verify the genuine schema-v11 fixture"),
+                ("2B", "Add schema-v12 ticket-task persistence and models"),
+                ("3", "Enforce ticket-task revisions and acceptance"),
+                ("4A", "Guard every Accepted path"),
+                ("4B", "Expose audited ticket-task commands"),
+                ("5", "Present ticket tasks on cards and Ticket Details"),
+                ("6", "Enforce Delivery Goal plan and lifecycle rules"),
+                ("7", "Route every ticket writer and compose planning policy"),
+                ("7A", "Install and bootstrap live RR-R10 task tracking"),
+                ("8", "Expose audited Delivery Goal commands"),
+                ("9", "Project Delivery Goals, Activity, and owner review"),
+                ("10", "Present non-mutating phase browsing and Delivery Goals"),
+                ("11A", "Integrate and stage the release candidate"),
+                ("11B", "Install and verify the final RR-R10 outcome"),
+            ]
+            additions = rows.enumerated().map { index, row in
+                .init(id: .init(rawValue: "rr-r10-task-" + row.0.lowercased()), label: "Task " + row.0,
+                      title: row.1, sortOrder: index)
+            }
+        }
         let created = try await succeed(.reviseTicketTaskPlan(ticketID: "RR-R10", additions: additions))
         XCTAssertEqual(created.ticketTaskPlanRevision, 1)
         let born = try await store.read { try $0.rows("SELECT lifecycle,completion FROM ticket_tasks ORDER BY sort_order") }
-        XCTAssertEqual(born, Array(repeating: ["lifecycle": .text("active"), "completion": .text("pending")], count: 3))
+        XCTAssertEqual(born, Array(repeating: ["lifecycle": .text("active"), "completion": .text("pending")], count: finalInstallation ? 16 : 3))
+
+        var installationRevision: Int64 = 1
+        if finalInstallation {
+            for (index, task) in additions.prefix(15).enumerated() {
+                let result = try await succeed(.completeTicketTask(ticketID: "RR-R10", taskID: task.id.rawValue,
+                                                                  expectedRevision: installationRevision))
+                installationRevision = try XCTUnwrap(result.ticketTaskPlanRevision)
+                XCTAssertEqual(installationRevision, Int64(index + 2))
+            }
+            XCTAssertEqual(installationRevision, 16)
+            if includesReviewedRepair {
+                // Synthetic already-reviewed later work, not a contingent owner row.
+                let repair = TicketTaskDraft(id: .init(rawValue: "reviewed-repair"), label: "Reviewed repair",
+                                             title: "Preserve the installed task list after repair", sortOrder: 16)
+                let revised = try await succeed(.reviseTicketTaskPlan(ticketID: "RR-R10", expectedRevision: 16,
+                                                                     additions: [repair]))
+                XCTAssertEqual(revised.ticketTaskPlanRevision, 17)
+                let repaired = try await succeed(.completeTicketTask(ticketID: "RR-R10", taskID: "reviewed-repair", expectedRevision: 17))
+                installationRevision = try XCTUnwrap(repaired.ticketTaskPlanRevision)
+                XCTAssertEqual(installationRevision, 18)
+                additions.append(repair)
+            }
+            let beforeInstall = try await store.read { try Self.bootstrapRows($0) }
+            let readOnly = try DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
+            let preflight = await AgentQueryDispatcher(store: readOnly, bookmarkStore: bookmarks).dispatch(query)
+            XCTAssertEqual(preflight.inventory?.schemaVersion, 14)
+            XCTAssertTrue(preflight.inventory?.isComplete == true)
+            // This is the final same-schema reopen, not a fresh v13 migration.
+            let installed = DeliveryStore(databaseURL: databaseURL)
+            let afterInstall = try await installed.read { try Self.bootstrapRows($0) }
+            XCTAssertEqual(afterInstall, beforeInstall)
+            dispatcher = AgentCommandDispatcher(store: installed, projectRegistry: registry, bookmarkStore: bookmarks)
+            let state = try await installed.read { c in
+                (try c.scalarText("SELECT lane FROM tickets WHERE id='RR-R10'"),
+                 try c.scalarInt("SELECT plan_legacy_continuation FROM tickets WHERE id='RR-R10'"))
+            }
+            XCTAssertEqual(state.0, "in_progress"); XCTAssertEqual(state.1, 1)
+            let projection = try await DashboardProjection.load(from: installed)
+            let board = try XCTUnwrap(projection.board(for: .init(rawValue: "p"), phaseID: .init(rawValue: "release-radar-post-mvp-remediation")))
+            XCTAssertEqual(board.lane(.inProgress)?.cards.first { $0.id.rawValue == "RR-R10" }?.activeTaskCount,
+                           includesReviewedRepair ? 17 : 16)
+            guard case let .loaded(plan)? = board.detail(for: .init(rawValue: "RR-R10"))?.taskPlan else {
+                return XCTFail("Expected the current v14 task plan before final adoption")
+            }
+            XCTAssertEqual(plan.revision, installationRevision)
+            XCTAssertEqual(plan.tasks.map(\.id), additions.map(\.id))
+            XCTAssertEqual(plan.tasks.map(\.label), additions.map(\.label))
+            XCTAssertEqual(plan.tasks.map(\.title), additions.map(\.title))
+            XCTAssertEqual(plan.tasks.filter { $0.completion == .pending }.map(\.id.rawValue), ["rr-r10-task-11b"])
+        }
 
         let roadmap: [(String, String, [String])] = [
             ("RR-DG1", "Coherent owner planning and navigation", ["RR-RM1", "RR-RM2", "RR-RM10"]),
@@ -227,6 +310,57 @@ final class EndToEndAcceptanceTests: XCTestCase {
         for old in oldTickets {
             let current = try XCTUnwrap(planned["tickets"]?.first { $0["id"] == old["id"] })
             XCTAssertEqual(current.filter { $0.key != "plan_legacy_continuation" }, old.filter { $0.key != "plan_legacy_continuation" })
+        }
+
+        if finalInstallation {
+            let beforeCompletion = try await store.read { try Self.bootstrapRows($0) }
+            let completed = try await succeed(.completeTicketTask(ticketID: "RR-R10", taskID: "rr-r10-task-11b",
+                                                                 expectedRevision: installationRevision))
+            XCTAssertEqual(completed.ticketTaskPlanRevision, includesReviewedRepair ? 19 : 17)
+            let finalRows = try await store.read { try Self.bootstrapRows($0) }
+            let taskChanges: Set<String> = ["ticket_task_plans", "ticket_tasks", "audit_events", "agent_command_requests"]
+            XCTAssertEqual(finalRows.filter { !taskChanges.contains($0.key) }, beforeCompletion.filter { !taskChanges.contains($0.key) })
+            XCTAssertEqual(finalRows["ticket_tasks"]?.filter { $0["id"] != .text("rr-r10-task-11b") },
+                           beforeCompletion["ticket_tasks"]?.filter { $0["id"] != .text("rr-r10-task-11b") },
+                           "Completing 11B must preserve every field of all previously completed tasks")
+            for table in ["audit_events", "agent_command_requests"] {
+                XCTAssertEqual(finalRows[table]!.count, beforeCompletion[table]!.count + 1)
+                for row in beforeCompletion[table]! { XCTAssertTrue(finalRows[table]!.contains(row)) }
+            }
+            let reopened = DeliveryStore(databaseURL: databaseURL)
+            let replayDispatcher = AgentCommandDispatcher(store: reopened, projectRegistry: registry, bookmarkStore: bookmarks)
+            for (envelope, result) in requests {
+                let replay = await replayDispatcher.dispatch(envelope)
+                XCTAssertEqual(replay, result)
+            }
+            let replayRows = try await reopened.read { try Self.bootstrapRows($0) }
+            XCTAssertEqual(replayRows, finalRows, "Exact replay must not duplicate audit, receipt, assignment or notification history")
+            let finalResult = await AgentQueryDispatcher(store: reopened, bookmarkStore: bookmarks).dispatch(query)
+            let finalInventory = try XCTUnwrap(finalResult.inventory)
+            XCTAssertTrue(finalInventory.isComplete)
+            XCTAssertEqual(finalInventory.evidence, inventory.evidence)
+            XCTAssertEqual(finalInventory.binding, inventory.binding)
+            XCTAssertEqual(finalInventory.roots, inventory.roots)
+            for table in preservedTables { XCTAssertEqual(finalRows[table], baseline[table], table) }
+            let projection = try await DashboardProjection.load(from: reopened)
+            let board = try XCTUnwrap(projection.board(for: .init(rawValue: "p"), phaseID: .init(rawValue: "release-radar-post-mvp-remediation")))
+            let card = try XCTUnwrap(board.lane(.inProgress)?.cards.first { $0.id.rawValue == "RR-R10" })
+            let count = includesReviewedRepair ? 17 : 16
+            XCTAssertEqual(card.activeTaskCount, count)
+            guard case let .loaded(plan)? = board.detail(for: .init(rawValue: "RR-R10"))?.taskPlan else {
+                return XCTFail("Expected all final installed task rows")
+            }
+            XCTAssertEqual(plan.revision, includesReviewedRepair ? 19 : 17)
+            XCTAssertEqual(plan.tasks.count, count)
+            XCTAssertEqual(plan.tasks.map(\.id), additions.map(\.id))
+            XCTAssertTrue(plan.tasks.allSatisfy { $0.completion == .completed })
+            for (index, task) in plan.tasks.enumerated() {
+                XCTAssertEqual(task.accessibilityLabel(position: index + 1, total: count),
+                               "\(additions[index].label): \(additions[index].title), checked, item \(index + 1) of \(count)")
+            }
+            XCTAssertEqual(try Data(contentsOf: document), documentBytes)
+            XCTAssertEqual(try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root).digest, catalog.digest)
+            return // Task 11B does not perform the later review/Accepted lifecycle.
         }
 
         _ = try await succeed(.requestReview(id: "review", ticketID: "RR-R10", kind: "review", summary: "Review integrated delivery"))
