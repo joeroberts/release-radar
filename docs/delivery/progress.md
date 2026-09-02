@@ -2,12 +2,14 @@
 
 ## Current outcome and authorization
 
-- M2–M7 are accepted. M6B adopted five exact evidence locators; M7 deployed six
+- M2–M8 are accepted. M6B adopted five exact evidence locators; M7 deployed six
   stable-ID document moves, complete indexes, current references and archived
-  closed progress. Delivery checkpoints: M6B `b9b1932`, M7 `004e2d2`.
+  closed progress. Delivery checkpoints: M6B `b9b1932`, M7 `004e2d2`, and
+  M8 runtime acceptance `d1b974a`.
 - M8 runtime acceptance is complete, including independent QA with no
-  required or optional findings. The final owner decision releasing ordinary
-  live use and terminal delivery remain pending.
+  required or optional findings. On 2026-09-02, after successful readback and
+  review, the owner explicitly approved release for ordinary live use.
+  MDCP is complete.
 - The owner approved the exact adoption, cutover, bound-checkout deployment,
   catalog-acceptance request, replay, backup and controlled readback packages.
   Repository delivery uses `codex/managed-documentation-contract-planning` in
@@ -48,7 +50,8 @@
   legacy directory locator remains typed unresolved while its legacy UI shows
   stored availability. Its identity and behavior remain unchanged.
 - Read-only maintenance exited; database, sidecars and recovery snapshot stayed
-  byte-identical during relaunch/UI inspection. Ordinary live use is unreleased.
+  byte-identical during relaunch/UI inspection. Ordinary live use is released
+  under the owner's final approval.
 - Independent M6B QA/Architecture/Security and M7 Documentation reviews accepted
   their actual slices with no required findings. Independent M8 runtime QA
   accepted the actual transition, replay, relaunch, state preservation and UI.
@@ -60,12 +63,11 @@ verified recovery copies remain in the owner-designated protected companion.
 Retain them through M8 and at least 2026-10-02; deletion needs separate approval.
 The temporary M7 candidate and M8 test outputs remain under the development
 worktree's `.build/mdcp-m7-candidate/` and `.build/mdcp-m8-tests/`; two isolated
-XCTest host directories also remain. Earlier
-M6A build/disposable inputs retain their existing custody and disposal terms.
+XCTest host directories also remain. Earlier M6A build/disposable inputs retain
+their existing custody and disposal terms.
 
-Record the owner's live-use decision and finish terminal delivery.
-Task 4B is the next separately authorized feature task; Issue #1 remains
-unopened. Neither is authorized by this closeout. The held Issue #2 artifacts
+No MDCP work remains. Task 4B is the next separately authorized feature task;
+Issue #1 remains unopened. Neither is authorized by this closeout. The held Issue #2 artifacts
 remain unchanged.
 
 [Historical delivery through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md)
