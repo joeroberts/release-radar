@@ -420,6 +420,40 @@
   ],
   "artifacts": [
     {
+      "artifactID": "6ddee986-d90e-4732-9ff4-62d1a0eb4e34",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
+      "checksum": { "policy": "notApplicable" }
+    },
+    {
+      "artifactID": "bddf4926-4ab5-42e8-8af1-bc0b2854b1f2",
+      "path": "docs/delivery/evidence/2026-09-02-rr-r10-task-11b-installation.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
+      "checksum": { "policy": "notApplicable" }
+    },
+    {
+      "artifactID": "cbb4ca49-f1a0-43d1-96cf-2949de99e5fc",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-final-outcome-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.rr-r10-task-11b",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
+      "checksum": { "policy": "notApplicable" }
+    },
+    {
       "artifactID": "67abec4d-33b5-42be-89c3-e25cf84a20e8",
       "path": "docs/delivery/evidence/2026-09-02-rr-r10-task-11a-candidate.json",
       "kind": "verificationEvidence",
