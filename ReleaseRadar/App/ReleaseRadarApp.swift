@@ -105,6 +105,7 @@ enum AppLaunchConfiguration {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "AgentBridge")
     private var agentBridgeHost: AgentBridgeApplicationHost?
+    var maintenanceSession: DocumentationMaintenanceSession?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard !AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) else {
@@ -115,15 +116,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.setActivationPolicy(.prohibited)
             logger.error("Documentation maintenance options are invalid; no application services started")
             return
-        case let .maintenance(mode, databaseURL):
-            NSApp.setActivationPolicy(.prohibited)
-            Task { [weak self] in
-                do {
-                    self?.agentBridgeHost = try await AgentBridgeApplicationHost.startDocumentationMaintenance(databaseURL: databaseURL, mode: mode)
-                } catch {
-                    self?.logger.error("Documentation maintenance unavailable: \(error.localizedDescription, privacy: .private)")
-                }
-            }
+        case .maintenance:
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
             return
         case .application: break
         }
@@ -157,6 +152,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        maintenanceSession?.disconnect()
         agentBridgeHost?.disconnectCallback()
         agentBridgeHost = nil
     }
@@ -185,6 +181,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct ReleaseRadarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model: AppModel?
+    @State private var maintenanceSession: DocumentationMaintenanceSession?
+    @State private var maintenanceError: String?
     private let xctestHostStore: DeliveryStore?
 
     init() {
@@ -216,9 +214,17 @@ struct ReleaseRadarApp: App {
             break
         }
 
-        guard DocumentationMaintenanceLaunch.parse(arguments: processInfo.arguments, environment: processInfo.environment) == .application else {
+        switch DocumentationMaintenanceLaunch.parse(arguments: processInfo.arguments, environment: processInfo.environment) {
+        case let .maintenance(mode, databaseURL):
             _model = State(initialValue: nil)
+            do { _maintenanceSession = State(initialValue: try DocumentationMaintenanceSession(databaseURL: databaseURL, mode: mode)) }
+            catch { _maintenanceError = State(initialValue: "Documentation maintenance could not open the selected existing store.") }
             return
+        case .invalid:
+            _model = State(initialValue: nil)
+            _maintenanceError = State(initialValue: "Invalid documentation maintenance options.")
+            return
+        case .application: break
         }
         let services = ReleaseRadarAppServices.shared
 #if DEBUG
@@ -268,8 +274,15 @@ struct ReleaseRadarApp: App {
             if let model {
                 SidebarView(model: model)
                     .frame(minWidth: 760, minHeight: 520)
+            } else if let maintenanceSession {
+                DocumentationMaintenanceView(session: maintenanceSession)
+                    .frame(minWidth: 620, minHeight: 520)
+                    .task {
+                        appDelegate.maintenanceSession = maintenanceSession
+                        await maintenanceSession.connectExistingBridge()
+                    }
             } else {
-                Text(AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance: ordinary application services are disabled")
+                Text(maintenanceError ?? (AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance is unavailable"))
             }
         }
         .defaultSize(width: 1600, height: 820)

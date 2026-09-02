@@ -412,7 +412,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
         ) { connection in
             guard try connection.scalarText(
-                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY rowid LIMIT 1",
+                "SELECT path FROM project_roots WHERE project_id = ? AND (NOT EXISTS (SELECT 1 FROM project_documentation_bindings WHERE project_id = project_roots.project_id) OR id = (SELECT root_id FROM project_documentation_bindings WHERE project_id = project_roots.project_id)) ORDER BY rowid LIMIT 1",
                 bindings: [.text(projectID.rawValue)]
             ) == rootPath else {
                 throw ProjectAuthorizationError.projectRootMismatch
@@ -652,7 +652,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 bindings: [.text(projectID.rawValue)]
             ) == 1
             let rootPath = try connection.scalarText(
-                "SELECT path FROM project_roots WHERE project_id = ? ORDER BY rowid LIMIT 1",
+                "SELECT path FROM project_roots WHERE project_id = ? AND (NOT EXISTS (SELECT 1 FROM project_documentation_bindings WHERE project_id = project_roots.project_id) OR id = (SELECT root_id FROM project_documentation_bindings WHERE project_id = project_roots.project_id)) ORDER BY rowid LIMIT 1",
                 bindings: [.text(projectID.rawValue)]
             )
             let bookmarkCount = try connection.scalarInt(

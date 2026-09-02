@@ -23,8 +23,16 @@ struct DashboardProjection: Equatable, Sendable {
         boards[projectID]
     }
 
-    static func load(from store: DeliveryStore) async throws -> DashboardProjection {
-        try await store.read { connection in
+    static func load(from store: DeliveryStore, bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore()) async throws -> DashboardProjection {
+        let projectIDs = try await store.read { c in
+            try c.dashboardRows("SELECT id FROM projects ORDER BY id").map { ProjectID(rawValue: try $0.text("id")) }
+        }
+        var readbacks: [ProjectID: [EvidenceReadback]] = [:]
+        for projectID in projectIDs {
+            readbacks[projectID] = try await store.evidenceReadback(projectID: projectID, bookmarkStore: bookmarkStore)
+        }
+        let evidenceByProject = readbacks
+        return try await store.read { connection in
             let projectRows = try connection.dashboardRows(
                 """
                 SELECT projects.id, projects.name, project_active_phases.phase_id AS active_phase_id
@@ -70,7 +78,8 @@ struct DashboardProjection: Equatable, Sendable {
                         phases: phases,
                         goalContext: goalContext,
                         currentWorkCount: 0,
-                        attentionCount: 0
+                        attentionCount: 0,
+                        evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == nil }.map(EvidenceProjection.init)
                     ))
                     continue
                 }
@@ -107,7 +116,8 @@ struct DashboardProjection: Equatable, Sendable {
                     details[ticketID] = try connection.ticketDetail(
                         projectID: projectID,
                         ticketID: ticketID,
-                        outcome: outcome
+                        outcome: outcome,
+                        evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == ticketID }.map(EvidenceProjection.init)
                     )
                 }
 
@@ -128,7 +138,8 @@ struct DashboardProjection: Equatable, Sendable {
                     phases: phases,
                     goalContext: goalContext,
                     currentWorkCount: currentWorkCount,
-                    attentionCount: attentionCount
+                    attentionCount: attentionCount,
+                    evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == nil }.map(EvidenceProjection.init)
                 )
                 projects.append(project)
                 boards[projectID] = PhaseBoardProjection(
@@ -158,6 +169,7 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
     let goalContext: GoalContextProjection
     let currentWorkCount: Int
     let attentionCount: Int
+    let evidence: [EvidenceProjection]
 
     init(
         id: ProjectID,
@@ -167,7 +179,8 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
         phases: [ProjectPhaseProjection] = [],
         goalContext: GoalContextProjection,
         currentWorkCount: Int,
-        attentionCount: Int
+        attentionCount: Int,
+        evidence: [EvidenceProjection] = []
     ) {
         self.id = id
         self.name = name
@@ -177,6 +190,7 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
         self.goalContext = goalContext
         self.currentWorkCount = currentWorkCount
         self.attentionCount = attentionCount
+        self.evidence = evidence
     }
 }
 
@@ -244,6 +258,26 @@ struct EvidenceProjection: Equatable, Sendable, Identifiable {
     let label: String
     let path: String
     let isAvailable: Bool
+    let locator: EvidenceLocator
+    let managedDocument: ResolvedManagedDocument?
+
+    init(id: EvidenceID, label: String, path: String, isAvailable: Bool) {
+        self.id = id; self.label = label; self.path = path; self.isAvailable = isAvailable
+        locator = .filePath(path); managedDocument = nil
+    }
+    init(_ readback: EvidenceReadback) {
+        id = readback.evidence.id; locator = readback.evidence.locator
+        managedDocument = readback.managedDocument
+        switch locator {
+        case let .filePath(value):
+            path = value; label = URL(fileURLWithPath: value).lastPathComponent
+            isAvailable = readback.evidence.isAvailable
+        case let .managedDocument(id):
+            path = readback.managedDocument?.resolvedPath ?? ""
+            label = readback.managedDocument?.label ?? id
+            isAvailable = readback.managedDocument?.isAvailable == true
+        }
+    }
 }
 
 enum DashboardProjectionError: Error, Equatable {
@@ -278,7 +312,8 @@ private extension SQLiteConnection {
     func ticketDetail(
         projectID: ProjectID,
         ticketID: TicketID,
-        outcome: String
+        outcome: String,
+        evidence: [EvidenceProjection]
     ) throws -> TicketDetailProjection {
         let requires = try dashboardRows(
             """
@@ -314,18 +349,6 @@ private extension SQLiteConnection {
             "SELECT summary FROM blockers WHERE project_id = ? AND ticket_id = ? AND resolved_at IS NULL ORDER BY rowid",
             bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
         ).map { try $0.text("summary") }
-        let evidence = try dashboardRows(
-            "SELECT id, path, is_available FROM evidence WHERE project_id = ? AND ticket_id = ? ORDER BY rowid",
-            bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
-        ).map {
-            let path = try $0.text("path")
-            return EvidenceProjection(
-                id: EvidenceID(rawValue: try $0.text("id")),
-                label: URL(fileURLWithPath: path).lastPathComponent,
-                path: path,
-                isAvailable: try $0.integer("is_available") == 1
-            )
-        }
         let auditHistory = try dashboardRows(
             "SELECT reason FROM audit_events WHERE reason LIKE ? ORDER BY created_at DESC",
             bindings: [.text("%\(ticketID.rawValue)%")]

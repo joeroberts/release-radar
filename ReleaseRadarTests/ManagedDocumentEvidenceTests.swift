@@ -165,6 +165,44 @@ final class ManagedDocumentEvidenceTests: XCTestCase {
         assertFailure(await resolve(root, binding: binding), .unsafeResolution)
     }
 
+    func testResolutionRequiresCurrentManagedGuidanceDeclaration() async throws {
+        for contents: String? in [nil, "Legacy guidance", "<!-- release-radar:managed-guidance:start v99 -->"] {
+            let root = try fixture()
+            let binding = try makeBinding(root)
+            let guidance = root.appendingPathComponent("AGENTS.md")
+            if let contents { try Data(contents.utf8).write(to: guidance) }
+            else { try FileManager.default.removeItem(at: guidance) }
+            let resolved = await resolve(root, binding: binding)
+            XCTAssertFalse(resolved.isAvailable, "Managed evidence cannot be available without current v2 guidance")
+            XCTAssertNotNil(resolved.failure)
+        }
+    }
+
+    func testPublicReadbackResolvesStoredIdentityWithoutMutatingAvailability() async throws {
+        let root = try fixture()
+        let database = root.appendingPathComponent("test.sqlite")
+        let store = DeliveryStore(databaseURL: database)
+        let binding = try makeBinding(root)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Readback fixture") { c in
+            try c.execute("INSERT INTO projects (id, name) VALUES ('p', 'Project')")
+            try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('root', 'p', ?)", bindings: [.text(root.path)])
+            try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data) VALUES ('p', ?, ?)", bindings: [.text(root.path), .blob(Data(root.path.utf8))])
+            try c.execute("INSERT INTO project_documentation_bindings VALUES ('p', 'root', ?, 1, ?, ?)", bindings: [.text(binding.repositoryID), .text(binding.acceptedCatalogDigest), .blob(binding.acceptedCatalog)])
+            try c.execute("INSERT INTO evidence (id, project_id, artifact_id, is_available) VALUES ('proposed', 'p', 'draft', 0)")
+            try c.execute("INSERT INTO evidence (id, project_id, artifact_id, is_available) VALUES ('historical', 'p', 'history', 0)")
+            try c.execute("INSERT INTO evidence (id, project_id, path, is_available) VALUES ('legacy', 'p', '/arbitrary/legacy.md', 1)")
+        }
+        let rows = try await store.evidenceReadback(projectID: binding.projectID, bookmarkStore: RelocationBookmarks())
+        let proposed = try XCTUnwrap(rows.first { $0.evidence.id.rawValue == "proposed" })
+        XCTAssertFalse(proposed.evidence.isAvailable)
+        XCTAssertTrue(proposed.managedDocument!.isAvailable)
+        XCTAssertEqual(proposed.managedDocument?.lifecycle, .proposed)
+        XCTAssertFalse(proposed.managedDocument!.isControlling)
+        XCTAssertNil(rows.first { $0.evidence.id.rawValue == "legacy" }?.managedDocument)
+        let auditCount = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
+        XCTAssertEqual(auditCount, 1)
+    }
+
     private func assertFailure(_ result: ResolvedManagedDocument, _ failure: ManagedDocumentResolutionFailure,
                                file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(result.failure, failure, file: file, line: line)
@@ -174,6 +212,7 @@ final class ManagedDocumentEvidenceTests: XCTestCase {
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("ReleaseRadar-Managed-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: source, to: root)
+        try Data("\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged documentation\n\(RepositoryDocumentContract.guidanceEndMarker)\n".utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         return root
     }

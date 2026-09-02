@@ -64,6 +64,7 @@ final class AppModel {
     var alertRules: AlertRuleSnapshot?
     var alertRuleUpdateInFlight: AlertRuleKind?
 
+    private var repositoryRecoveries: [ProjectID: RepositoryRecoveryModel] = [:]
     private let store: DeliveryStore
     private let seedSampleData: Bool
     private let externalServicesSuppressed: Bool
@@ -180,6 +181,13 @@ final class AppModel {
 
     var currentProject: ProjectDashboardProjection? {
         dashboard?.projects.first { $0.id == currentProjectID }
+    }
+
+    func repositoryRecovery(for projectID: ProjectID) -> RepositoryRecoveryModel {
+        if let model = repositoryRecoveries[projectID] { return model }
+        let model = RepositoryRecoveryModel(store: store, projectID: projectID, allowsRelocation: true)
+        repositoryRecoveries[projectID] = model
+        return model
     }
 
     var onboardingStore: DeliveryStore { store }
@@ -517,6 +525,12 @@ final class AppModel {
 
     func reloadDashboardAfterCommittedAgentCommand() async {
         _ = await reloadProjectProjections(context: .agentCommandCommitted)
+    }
+
+    func reloadAfterRepositoryRelocation() async {
+        // Root relocation must re-observe authorization and guidance instead of
+        // reusing the pre-relocation cache. This does not rerun app startup.
+        _ = await reloadProjectProjections()
     }
 
     func scopedReviewActionFailure(for projectID: ProjectID) -> FailureStatePresentation? {

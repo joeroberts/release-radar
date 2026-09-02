@@ -11,6 +11,8 @@ struct ProjectOverviewView: View {
     let selectActivePhase: (PhaseID) async -> Void
     let reloadActivePhase: () async -> Void
     let reauthorizeActivePhase: (URL) async -> Void
+    var repositoryRecovery: RepositoryRecoveryModel? = nil
+    var onRepositoryRelocated: () async -> Void = {}
     @State private var promptCopyResult: CodexPromptCopyResult?
 
     var body: some View {
@@ -34,7 +36,20 @@ struct ProjectOverviewView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
 
+                if project.phases.isEmpty {
+                    FailureStateView(presentation: .firstPhaseRequired, style: .inline)
+                }
                 guidanceCard
+                if let repositoryRecovery {
+                    RepositoryRecoveryView(model: repositoryRecovery, onCommitted: onRepositoryRelocated)
+                }
+                if !project.evidence.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Project evidence").font(.headline)
+                        ForEach(project.evidence) { EvidenceDetailView(evidence: $0) }
+                    }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+                }
 
                 VStack(alignment: .leading, spacing: 14) {
                     ViewThatFits(in: .horizontal) {

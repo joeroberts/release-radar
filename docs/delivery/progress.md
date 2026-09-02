@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Outcome: M3B inventory and audited reconciliation independently accepted
-- Active task: None; M3C is next after the M3B checkpoint
-- Last complete task: M3B — Evidence Inventory and Audited Reconciliation
+- Outcome: M3C evidence readback and owner root relocation independently accepted
+- Active task: M3C closeout; M4 is next
+- Last complete task: M3C — Evidence Readback and Repository-Root Relocation
 - Authorization: Owner authorized the remaining M2C–M8 program in dependency
   order, including development, required checks and independent reviews,
   in-scope corrections, ledger updates, and commit/normal push after each
@@ -13,23 +13,22 @@
   RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M3B](task-briefs/2026-09-01-managed-repository-documentation-contract/m3b-evidence-inventory-reconciliation-brief.md)
-- Current blockers and risks: No required M3B findings. One unchanged
+- Controlling brief: [M3C](task-briefs/2026-09-01-managed-repository-documentation-contract/m3c-readback-root-relocation-brief.md)
+- Current blockers and risks: No required M3C findings. One unchanged
   onboarding test expects schema version 9 while the accepted migration version
-  is now 13. Isolated-host runtime accessibility inspection was unavailable; no
-  accessibility defect was established and full live-app acceptance is not
-  claimed.
-- Verification: M3B native compatibility tests passed 126/126 and affected
-  correction checks passed 27/27; independent QA passed 37/37. Code Review,
-  QA, Architecture, and Security/Privacy are GO.
-- Next eligible action: Commit and normally push M3B, verify the checkpoint,
-  then open M3C under the existing program authorization.
-- State: M3B COMPLETE
-- Development baseline for M3B: Required worktree
+  is now 13. M3C isolated-window accessibility and visual checks passed;
+  owner installation and live acceptance remain separately gated.
+- Verification: M3C native compatibility passed 159/160, with only that
+  unchanged assertion failure. Independent QA passed 43/43 and the affected
+  refresh recheck 1/1. Code Review, QA, Architecture, and Security/Privacy GO.
+- Next eligible action: Stage M4's catalog and indexes at current repository
+  paths after the accepted M3C commit/push.
+- State: M3C COMPLETE
+- Development baseline for M3C: Required worktree
   `/Users/jroberts/.codex/worktrees/b0f1/release_radar`, branch
   `codex/managed-documentation-contract-planning`, clean HEAD/upstream/live
-  remote verified after the M3A normal push at
-  `d20a3db1412cd67323564f8e33374c95350be4da`.
+  remote verified after the M3B normal push at
+  `2019cfa9ea2e817d631e60a1741ba66d10a3fbfe`.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -214,6 +213,48 @@
   nonempty WAL and preserves the database and sidecars unchanged. The later
   owner-approved runbook must require graceful writer shutdown and a
   checkpointed existing store; inventory never checkpoints or repairs storage.
+
+## MDCP M3C — Readback and Root Relocation
+
+- Outcome: Batched public readback and existing detail/overview views preserve
+  locator identity and distinguish lifecycle, authority, availability, and
+  recovery. Owner prepare/confirm validates the exact accepted repository,
+  fresh bookmark, ownership, and handoff association before atomically replacing
+  the bound root/bookmark and at most one exact legacy handoff path. Managed and
+  other legacy evidence stay unchanged. A bookmark/path-free recovery token
+  reads the exact persisted receipt after restart without retrying a mutation.
+- Owner boundary: Rebind remains outside agent commands/MCP. Maintenance reuses
+  the evidence/recovery UI and one existing store without ordinary app services;
+  read-only mode disables relocation. Existing v10–v12 readback stays unmigrated.
+  Phase-less projects retain recovery access. Post-relocation overview refresh
+  now updates root/guidance without changing navigation or adding an audit.
+- Verification: Runtime RED preceded changes and required corrections. Signed,
+  serial `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar
+  -destination 'platform=macOS' -parallel-testing-enabled NO` passed 159/160
+  compatibility tests; the sole failure is the unchanged schema-9 expectation.
+  Final rendering passed 2/2. Independent QA passed 43/43 and repeated the
+  affected owner-refresh regression 1/1. Replay/restart, ambiguity, collision,
+  denial, rollback, root revocation, unavailable guidance, checksum states, and
+  changed read-only source rejection passed. `git diff --check` passed.
+- Independent roles: implementer `/root/m3c_implementer`; Code Review
+  `/root/m3c_code_review`, QA `/root/m3c_qa`, Architecture
+  `/root/m3c_architecture`, and Security/Privacy `/root/m3c_security` all GO.
+  Required findings are closed; only affected checks/reviews were repeated.
+- Actual isolated windows passed AX checks for evidence states, artifact IDs,
+  confirmation controls, phase-less recovery, and settled read-only maintenance.
+  QA and coordinator inspected wide/compact captures against the existing
+  mockups: [evidence wide](evidence/mdcp-m3c-evidence-1100.png),
+  [evidence compact](evidence/mdcp-m3c-evidence-620.png),
+  [confirmation wide](evidence/mdcp-m3c-confirmation-1100.png),
+  [confirmation compact](evidence/mdcp-m3c-confirmation-620.png),
+  [phase-less overview](evidence/mdcp-m3c-phase-less-overview.png), and
+  [read-only maintenance](evidence/mdcp-m3c-maintenance-read-only.png).
+  Synthetic bookmark limitations account for the maintenance unavailable state;
+  no owner application, database, installation, or live broker operation ran.
+- Durable artifacts: source, focused tests, six screenshots, and this ledger.
+  Program-created `.build/m3c/`, associated logs, and 16 synthetic host directories
+  were removed after process exit and exact-target verification under owner
+  cleanup authorization. Pre-existing outputs were preserved. M4 is next.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.

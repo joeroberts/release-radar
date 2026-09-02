@@ -79,9 +79,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         }
     }
 
-    static func startDocumentationMaintenance(databaseURL: URL, mode: DocumentationMaintenanceMode) async throws -> AgentBridgeApplicationHost {
-        let store = try mode == .readOnly ? DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
-            : DeliveryStore.documentationMaintenance(databaseURL: databaseURL)
+    static func startDocumentationMaintenance(store: DeliveryStore, mode: DocumentationMaintenanceMode) async throws -> AgentBridgeApplicationHost {
         let dispatcher = mode == .readOnly ? nil : AgentCommandDispatcher(store: store, projectRegistry: PersistedAuthorizedProjectRegistry(store: store))
         let host = AgentBridgeApplicationHost(dispatcher: dispatcher, queries: AgentQueryDispatcher(store: store), maintenanceMode: mode,
                                                beforeDispatch: { _ in }, afterDispatchBeforeReply: { _, _ in }, afterReply: { _, _ in })

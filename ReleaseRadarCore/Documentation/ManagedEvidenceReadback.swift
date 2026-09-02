@@ -46,3 +46,62 @@ extension DeliveryStore {
         }
     }
 }
+
+/// Stored identity and fresh catalog resolution are distinct public readback fields.
+public struct EvidenceReadback: Equatable, Codable, Sendable {
+    public let evidence: LocatedEvidenceRecord
+    public let managedDocument: ResolvedManagedDocument?
+}
+
+extension DeliveryStore {
+    public func evidenceReadback(projectID: ProjectID,
+                                 bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore()) async throws -> [EvidenceReadback] {
+        let version = schemaVersionForDocumentation
+        let state = try documentationRead { c in
+            var records: [LocatedEvidenceRecord] = []
+            var offset = 0
+            let artifactColumn = version >= 13 ? "artifact_id" : "NULL AS artifact_id"
+            while let row = try c.row("SELECT id, ticket_id, path, \(artifactColumn), is_available FROM evidence WHERE project_id = ? ORDER BY rowid LIMIT 1 OFFSET ?",
+                                      bindings: [.text(projectID.rawValue), .integer(Int64(offset))]) {
+                guard case let .text(id) = row["id"], case let .integer(available) = row["is_available"] else {
+                    throw StoreError.unavailable("Invalid evidence record")
+                }
+                let locator: EvidenceLocator
+                switch (row["path"], row["artifact_id"]) {
+                case let (.text(path), .null): locator = .filePath(path)
+                case let (.null, .text(artifact)): locator = .managedDocument(artifactID: artifact)
+                default: throw StoreError.unavailable("Evidence does not have exactly one supported locator")
+                }
+                let ticket: TicketID?
+                if case let .text(value) = row["ticket_id"] { ticket = .init(rawValue: value) } else { ticket = nil }
+                records.append(.init(id: .init(rawValue: id), projectID: projectID, ticketID: ticket, locator: locator, isAvailable: available == 1))
+                offset += 1
+            }
+            var binding: ProjectDocumentationBinding?
+            var invalidBinding = false
+            do { binding = try DocumentationRootContext.binding(c, projectID: projectID.rawValue, version: version) }
+            catch { invalidBinding = true }
+            var root: ProjectRootRecord?
+            var bookmark: Data?
+            var stale = false
+            if let binding, let row = try c.row("SELECT r.path, b.bookmark_data, b.is_stale FROM project_roots r LEFT JOIN project_bookmarks b ON b.project_id = r.project_id AND b.path = r.path WHERE r.id = ? AND r.project_id = ?",
+                                               bindings: [.text(binding.rootID.rawValue), .text(projectID.rawValue)]), case let .text(path) = row["path"] {
+                root = .init(id: binding.rootID, projectID: projectID, path: path)
+                if case let .blob(data) = row["bookmark_data"] { bookmark = data }
+                stale = row["is_stale"] == .integer(1)
+            }
+            return (records, binding, root, bookmark, stale, invalidBinding)
+        }
+        let artifactIDs = state.0.compactMap { record -> String? in
+            if case let .managedDocument(id) = record.locator { return id }; return nil
+        }
+        let resolved = await ManagedDocumentResolver().resolve(artifactIDs: artifactIDs, projectID: projectID,
+            binding: state.1, root: state.2, bookmark: state.4 ? nil : state.3, bookmarkStore: bookmarkStore)
+        return state.0.map { record in
+            guard case let .managedDocument(id) = record.locator else { return .init(evidence: record, managedDocument: nil) }
+            let failure: ManagedDocumentResolutionFailure? = state.5 ? .bindingMismatch : state.4 ? .staleRoot : nil
+            let document = failure.map { ResolvedManagedDocument(artifactID: id, resolvedPath: nil, label: nil, lifecycle: nil, authority: nil, authorityRole: nil, failure: $0) } ?? resolved[id]
+            return .init(evidence: record, managedDocument: document)
+        }
+    }
+}

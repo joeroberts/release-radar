@@ -216,8 +216,7 @@ struct SidebarView: View {
                     DetailUnavailableView(title: "Notifications", image: "bell")
                 }
             case let .projectOverview(projectID):
-                if let project = dashboard.projects.first(where: { $0.id == projectID }),
-                   !project.phases.isEmpty {
+                if let project = dashboard.projects.first(where: { $0.id == projectID }) {
                     ProjectOverviewView(
                         project: project,
                         board: dashboard.board(for: projectID),
@@ -235,7 +234,9 @@ struct SidebarView: View {
                         },
                         reauthorizeActivePhase: { folder in
                             await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
-                        }
+                        },
+                        repositoryRecovery: model.repositoryRecovery(for: projectID),
+                        onRepositoryRelocated: { await model.reloadAfterRepositoryRelocation() }
                     )
                 } else {
                     FailureStateView(presentation: .firstPhaseRequired, style: .full)
