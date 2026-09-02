@@ -192,6 +192,16 @@ struct FailureStatePresentation: Equatable, Sendable {
 
     init?(agentError: AgentCommandError) {
         switch agentError {
+        case let .ticketTaskPlanRevisionConflict(_, current):
+            self.init(title: "Task plan changed",
+                      detail: "The current task plan revision is \(current). Refresh the ticket before retrying. No delivery state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-agent-validation")
+        case .ticketTaskPlanNotFound, .ticketTaskPlanAlreadyExists, .ticketTaskNotFound,
+             .ticketTaskImmutable, .ticketTaskIncomplete, .ticketTaskReplacementRequired,
+             .invalidTicketTaskMutation:
+            self.init(title: "Task action rejected",
+                      detail: "Refresh the ticket task plan and check the requested tasks before retrying. Definitions of completed tasks cannot change, and a plan must retain an active task. No delivery state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-agent-validation")
         case let .documentation(error):
             self.init(title: "Documentation action rejected",
                       detail: "Documentation operation failed (\(error.rawValue)). Inspect the project evidence inventory and retry the exact approved operation.",

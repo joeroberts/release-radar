@@ -10,7 +10,7 @@
 
 **Specs:** `docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md` and `docs/design/release-radar-ticket-tasks-design.md`
 
-**Package status:** owner-authorized post-MDCP planning refresh, 2026-09-02. Tasks 1A/1B/2A/2B/3/4A and MDCP are delivered. Current authorization and the next eligible task are recorded in `docs/delivery/progress.md`; this revision does not authorize feature execution or owner-state changes.
+**Package status:** owner-authorized post-MDCP plan, updated 2026-09-02. Tasks 1A/1B/2A/2B/3/4A and MDCP are delivered; Task 4B implementation and acceptance are complete with PR delivery in progress. Current authorization and the next eligible task are recorded in `docs/delivery/progress.md`; this plan alone does not authorize feature execution or owner-state changes.
 
 ## Global Constraints
 
@@ -1452,8 +1452,8 @@ the recovery/visibility contract that authorizes that upgrade.
 ## Revised implementation sequence
 
 Tasks 2A–4A below are completed historical instructions. Their original gates
-are retained as delivery context and do not reopen accepted work. Current
-implementation begins only at separately authorized Task 4B.
+are retained as delivery context and do not reopen accepted work. Task 4B implementation and acceptance are also complete; its PR checkpoint
+precedes the next separately coordinated Task 5.
 
 ### Task 2A: Generate and verify the genuine schema-v11 fixture
 
@@ -1645,7 +1645,7 @@ use only the existing transition command.
 
 ### Task 4B: Expose audited ticket-task commands
 
-**Controlling brief:** [Task 4B](../task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md).
+**Completed implementation and acceptance (2026-09-02); retained scope:** [Task 4B](../task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md).
 
 **Files:**
 - Modify: `ReleaseRadarCore/AgentBridge/AgentCommand.swift`
@@ -1667,7 +1667,7 @@ scope, authorized-root/attribution checks, and packaged helper transport. Task
 4A's existing revision-bearing Accepted path and upsert rejection remain
 unchanged.
 
-- [ ] **RED/commands:** Add exact command JSON round trips, translators, and
+- [x] **RED/commands:** Add exact command JSON round trips, translators, and
   strict MCP schemas. Test nil creation returning revision 1 versus present
   expected revision,
   63/64/65 aggregate operations, 65,535/65,536/65,537 sorted-key bytes, stable
@@ -1679,26 +1679,26 @@ unchanged.
   chained completion, transaction rollback, committed audit/revision/result,
   helper/app unavailable, and `outcomeUnknown` recovery by replaying the exact
   complete original request.
-- [ ] **RED/concurrency:** Build on delivered Task 4A and use the existing
+- [x] **RED/concurrency:** Build on delivered Task 4A and use the existing
   store/dispatcher concurrency infrastructure for all four schedules: no-plan
   Accept versus first plan creation; Accept@R versus add/supersede@R; Accept@R
   versus completion@R; and two revisions or completions at R. Assert one
   coherent winner and exact loser rollback with no orphan task/plan, extra
   audit/receipt, lane, owner-attention, or notification effect.
-- [ ] **GREEN:** Validate schema/bounds before mutation, canonicalize request
+- [x] **GREEN:** Validate schema/bounds before mutation, canonicalize request
   bodies once, transact through Task 3, return only committed revisions and
   audits, and retain complete requests for replay/outcome-unknown recovery. Add
   exactly the two new helper tools; do not add a second accept tool, alter any
   Accepted-path rule, or infer state from Git, Markdown, tests, goals, or
   execution.
-- [ ] **Verify:** Run the brief's focused policy/bridge/notification and safe
+- [x] **Verify:** Run the brief's focused policy/bridge/notification and safe
   stdio/schema selections plus a Debug build. Preserve all 19 current tools
   and add exactly two (21 total), with strict translators and unchanged MDCP
   schemas/read-only routing. Update the existing transport count and MDCP
   callback test's obsolete task-tool absence assertion. Verify app-unavailable
   and outcome-unknown behavior through the controlled transport path; never
   run shared-service tests merely because the database is disposable.
-- [ ] **Gate/checkpoint:** Obtain independent code/QA review plus Architecture
+- [x] **Gate/checkpoint:** Obtain independent code/QA review plus Architecture
   and Security/Privacy coverage for the public command/authorization/replay
   boundary. Deliver the 3 production and 4 test paths above plus necessary
   documentation with a verified fast-forward push after acceptance. Once

@@ -62,8 +62,6 @@ public actor AgentCommandDispatcher {
         do {
             let requestBody = try canonicalRequestBody(envelope)
             let auditEventID = AuditEventID(rawValue: UUID().uuidString)
-            let result = resultForCommand(envelope.command, auditEventID: auditEventID)
-            let resultData = try JSONEncoder().encode(result)
             let auditScope = Self.auditScope(for: envelope.command, projectID: project.projectID)
             let actor: DeliveryActor = switch origin {
             case .externalAgent:
@@ -99,7 +97,9 @@ public actor AgentCommandDispatcher {
                         throw DispatchControl.replay(priorResult)
                     }
 
-                    try Self.apply(envelope.command, project: project, connection: connection)
+                    let taskRevision = try Self.apply(envelope.command, project: project, connection: connection)
+                    let result = Self.resultForCommand(envelope.command, auditEventID: auditEventID, ticketTaskPlanRevision: taskRevision)
+                    let resultData = try JSONEncoder().encode(result)
                     try connection.execute(
                         "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES (?, ?, ?, ?)",
                         bindings: [
@@ -126,7 +126,7 @@ public actor AgentCommandDispatcher {
             }
             return .init(entityIDs: [], auditEventID: nil, error: .internalFailure(error.localizedDescription))
         } catch {
-            return .init(entityIDs: [], auditEventID: nil, error: Self.map(error))
+            return .init(entityIDs: [], auditEventID: nil, error: Self.map(error, command: envelope.command))
         }
     }
 
@@ -145,7 +145,9 @@ public actor AgentCommandDispatcher {
            threadID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || threadID.utf8.count > 1_024 {
             return .invalidEnvelope("assertedThreadID must contain 1...1024 UTF-8 bytes when present")
         }
-        guard let data = try? JSONEncoder().encode(envelope.command), data.count <= 65_536 else {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        guard let data = try? encoder.encode(envelope.command), data.count <= 65_536 else {
             return .invalidEnvelope("command payload must not exceed 65536 bytes")
         }
         func valid(_ value: String, maximum: Int = 4_096) -> Bool {
@@ -173,6 +175,27 @@ public actor AgentCommandDispatcher {
                 }
             }
             commandFieldsAreValid = valid(ticketID, maximum: 256)
+        case let .reviseTicketTaskPlan(ticketID, expectedRevision, additions, definitionRevisions, supersededTaskIDs):
+            let additions = additions ?? []
+            let definitions = definitionRevisions ?? []
+            let supersessions = supersededTaskIDs ?? []
+            commandFieldsAreValid = valid(ticketID, maximum: 256) && !ticketID.contains("\0")
+                && expectedRevision.map { $0 > 0 } != false
+                && additions.count + definitions.count + supersessions.count <= TicketTaskPlanningPolicy.maximumOperationsPerRevision
+                && additions.allSatisfy {
+                    valid($0.id.rawValue, maximum: 256) && !$0.id.rawValue.contains("\0")
+                        && valid($0.label, maximum: 256) && !$0.label.contains("\0")
+                        && valid($0.title) && !$0.title.contains("\0") && $0.sortOrder >= 0
+                }
+                && definitions.allSatisfy {
+                    valid($0.id.rawValue, maximum: 256) && !$0.id.rawValue.contains("\0")
+                        && $0.title.map { valid($0) && !$0.contains("\0") } != false
+                        && $0.sortOrder.map { $0 >= 0 } != false
+                }
+                && supersessions.allSatisfy { valid($0.rawValue, maximum: 256) && !$0.rawValue.contains("\0") }
+        case let .completeTicketTask(ticketID, taskID, expectedRevision):
+            commandFieldsAreValid = valid(ticketID, maximum: 256) && !ticketID.contains("\0")
+                && valid(taskID, maximum: 256) && !taskID.contains("\0") && expectedRevision > 0
         case let .setActivePhase(phaseID):
             commandFieldsAreValid = valid(phaseID, maximum: 256)
         case let .setDependency(id, _, subjectID, dependsOnID):
@@ -234,8 +257,12 @@ public actor AgentCommandDispatcher {
         return try encoder.encode(body)
     }
 
-    private func resultForCommand(_ command: AgentCommand, auditEventID: AuditEventID) -> AgentCommandResult {
+    private static func resultForCommand(_ command: AgentCommand, auditEventID: AuditEventID, ticketTaskPlanRevision: Int64?) -> AgentCommandResult {
         switch command {
+        case let .reviseTicketTaskPlan(ticketID, _, _, _, _):
+            return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: ticketTaskPlanRevision)
+        case let .completeTicketTask(ticketID, taskID, _):
+            return .init(entityIDs: [ticketID, taskID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: ticketTaskPlanRevision)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             return .init(entityIDs: command.documentationIDs, auditEventID: auditEventID, error: nil)
         case let .upsertPhase(phaseID, _):
@@ -267,6 +294,7 @@ public actor AgentCommandDispatcher {
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
         case let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
+        case let .reviseTicketTaskPlan(ticketID, _, _, _, _), let .completeTicketTask(ticketID, _, _): (.ticketTaskPlan, ticketID)
         case let .setDependency(id, kind, _, _):
             (kind == .ticket ? .ticketDependency : .phaseDependency, id)
         case let .recordBlocker(id, _, _), let .resolveBlocker(id): (.blocker, id)
@@ -285,9 +313,20 @@ public actor AgentCommandDispatcher {
         _ command: AgentCommand,
         project: AuthorizedProject,
         connection: SQLiteConnection
-    ) throws {
+    ) throws -> Int64? {
         let projectID = project.projectID
         switch command {
+        case let .reviseTicketTaskPlan(ticketID, expectedRevision, additions, definitionRevisions, supersededTaskIDs):
+            return try TicketTaskPlanningPolicy.revisePlan(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), expectedRevision: expectedRevision,
+                additions: additions ?? [], definitionRevisions: definitionRevisions ?? [],
+                supersededTaskIDs: supersededTaskIDs ?? [], connection: connection
+            ).revision
+        case let .completeTicketTask(ticketID, taskID, expectedRevision):
+            return try TicketTaskPlanningPolicy.completeTask(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), taskID: .init(rawValue: taskID),
+                expectedRevision: expectedRevision, connection: connection
+            ).revision
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             throw DocumentationOperationError.invalidRequest
         case let .upsertPhase(phaseID, name):
@@ -494,6 +533,7 @@ public actor AgentCommandDispatcher {
             try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .reviewRequested, subjectID: reviewItemID, connection: connection)
             try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
         }
+        return nil
     }
 
     private static func updateNeedsReviewOccurrence(
@@ -633,7 +673,25 @@ public actor AgentCommandDispatcher {
         }
     }
 
-    private static func map(_ error: Error) -> AgentCommandError {
+    private static func map(_ error: Error, command: AgentCommand) -> AgentCommandError {
+        // Preserve the existing Accepted-transition error contract. Only the
+        // additive task commands expose these task-policy rejection categories.
+        switch command {
+        case .reviseTicketTaskPlan, .completeTicketTask:
+            if let error = error as? TicketTaskPlanningPolicyError {
+                switch error {
+                case .ticketTaskPlanNotFound: return .ticketTaskPlanNotFound
+                case .ticketTaskPlanAlreadyExists: return .ticketTaskPlanAlreadyExists
+                case let .ticketTaskPlanRevisionConflict(expected, current): return .ticketTaskPlanRevisionConflict(expected: expected, current: current)
+                case let .ticketTaskNotFound(id): return .ticketTaskNotFound(id)
+                case let .ticketTaskImmutable(id): return .ticketTaskImmutable(id)
+                case let .ticketTaskIncomplete(ids): return .ticketTaskIncomplete(pendingTaskIDs: ids)
+                case .ticketTaskReplacementRequired: return .ticketTaskReplacementRequired
+                case let .invalidTicketTaskMutation(reason): return .invalidTicketTaskMutation(String(describing: reason))
+                }
+            }
+        default: break
+        }
         if let error = error as? DocumentationOperationError { return .documentation(error) }
         if let validation = error as? CommandValidation {
             switch validation {

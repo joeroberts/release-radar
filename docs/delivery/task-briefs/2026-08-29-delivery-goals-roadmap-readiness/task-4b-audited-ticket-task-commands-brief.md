@@ -1,5 +1,9 @@
 # RR-R10 Task 4B: Audited ticket-task commands
 
+Status: Completed implementation and acceptance, 2026-09-02. Retained as
+non-authoritative delivery history; current status and sequencing are in
+[progress.md](../../progress.md).
+
 ## Objective and outcome
 
 Expose the delivered Ticket Task policy through two bounded, audited,
@@ -22,6 +26,9 @@ Production paths:
   the policy inside the existing transaction, scope the audit and persist the
   committed result for exact replay.
 - `ReleaseRadarAgentTools/main.swift`: two strict schemas and translators.
+- `ReleaseRadar/Shared/FailureStateView.swift`: compile-required exhaustive
+  mapping for the additive errors. The coordinator confirmed this minimal
+  supporting compatibility edit on 2026-09-02; it adds no UI workflow.
 
 Test paths:
 
@@ -148,6 +155,39 @@ and `testAfterReplyWorkCannotDelayCommittedToolResult` are not ordinary-session
 selections. Use their existing mechanisms for controlled acceptance, without
 changing service identity, signing or shared registration as an implicit setup
 step. No unfiltered full-scheme run is required for this slice.
+
+The implemented stdio-only additions are
+`testTicketTaskToolSchemasPreserveExistingToolsAndRequireBoundedRecords`,
+`testMalformedTicketTaskInputsRejectBeforeTransport` and
+`testTicketTaskInputBoundariesRejectBeforeTransport`.
+
+The bounded controlled alternative is
+`AgentBridgeTransportAcceptanceTests/testTicketTaskToolsUseRegisteredBrokerAndRecoverExactRequests`.
+Independent Security/Privacy source review accepted this operation with no
+required findings. Run only this selector from the prepared test build with
+`test-without-building`, parallel testing disabled, and the native 90-second
+maximum test execution allowance. It requires an already-enabled service and
+no other app host before connecting, uses synthetic fixture storage, and
+disconnects without unregistering. It covers both valid task tools, committed
+receipts/revisions, exact replay, callback loss and unavailable-app refusal.
+
+Execution requires separate approval for gracefully quitting and relaunching
+the unchanged `/Applications/ReleaseRadar.app`, including ordinary startup
+notification recovery/sending and eligible plugin lifecycle work. All Release
+Radar callers, UI actions and service changes must be held, and originating
+callers must resolve any pending or uncertain request before the pause. Keep
+the installed broker registration, broker process, lifecycle helper and
+existing MCP clients. Re-resolve their identities before execution.
+
+After success, failure or interruption, wait for this run's test host and
+helper processes to exit, confirm the broker still resolves to the unchanged
+installed app, relaunch that exact app, and prove callback restoration using
+the existing read-only evidence inventory at the saved bound repository root.
+Only then release callers. A registration mismatch or failed restoration
+requires escalation, not manual service repair. There is no owner installation,
+live task/catalog mutation, direct database access, or owner-store byte-identity
+claim in this operation. Test artifacts are retained under the existing
+custody rules.
 
 Exercise the accepted boundaries directly: 63/64/65 aggregate operations;
 65,535/65,536/65,537 bytes in the sorted-key encoded `AgentCommand`; and

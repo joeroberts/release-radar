@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import ServiceManagement
 import XCTest
@@ -659,6 +660,307 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         XCTAssertEqual(counts, [0, 0, 0, 0])
     }
 
+    func testTicketTaskToolSchemasPreserveExistingToolsAndRequireBoundedRecords() throws {
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let response = try Self.runToolSession(packagedTool, tool: "release_radar_revise_ticket_task_plan", arguments: [
+            "version": true,
+        ])
+        XCTAssertTrue(Self.hasTypedToolSchema(response.list), "The packaged helper must preserve 19 tools and add the two strict task schemas")
+        XCTAssertEqual(jsonRPCErrorCode(response.call), -32602)
+    }
+
+    func testMalformedTicketTaskInputsRejectBeforeTransport() throws {
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let revisionTool = "release_radar_revise_ticket_task_plan"
+        let completionTool = "release_radar_complete_ticket_task"
+        // An invalid reason is a final local guard: even a missing task-input validator
+        // cannot forward any of these requests to the shared broker.
+        let base: [String: Any] = [
+            "version": 1,
+            "requestID": "99999999-9999-4999-8999-999999999996",
+            "projectRoot": "/task-input-validation-only",
+            "reason": NSNull(),
+            "ticketID": "RR-03",
+        ]
+        let draft: [String: Any] = ["id": "task-a", "label": "Task A", "title": "Verify the command", "sortOrder": 0]
+        var cases: [(String, String, [String: Any], String)] = []
+        func add(_ name: String, _ tool: String = "release_radar_revise_ticket_task_plan", _ fields: [String: Any], _ expected: String) {
+            cases.append((name, tool, base.merging(fields) { _, value in value }, expected))
+        }
+        for field in ["lane", "completion", "lifecycle", "unexpected"] {
+            add("unknown top-level \(field)", revisionTool, [field: "active"], "Unsupported")
+            add("unknown completion \(field)", completionTool, ["taskID": "task-a", "expectedRevision": 1, field: "active"], "Unsupported")
+        }
+        for field in ["completion", "lifecycle", "unexpected"] {
+            add("unknown draft \(field)", revisionTool, ["additions": [draft.merging([field: "pending"]) { _, value in value }]], "Unsupported")
+        }
+        add("immutable revised label", revisionTool, ["definitionRevisions": [["id": "task-a", "label": "new"]]], "Unsupported")
+        for field in ["additions", "definitionRevisions", "supersededTaskIDs"] {
+            for value: Any in [NSNull(), "invalid", [true], [["unexpected": true]]] {
+                add("malformed \(field)", revisionTool, [field: value], field == "supersededTaskIDs" ? "supersededTaskIDs" : "\(field)")
+            }
+        }
+        for value: Any in [true, 1.5, 0, -1, NSNumber(value: UInt64.max), NSNull(), "1"] {
+            add("invalid plan revision", revisionTool, ["expectedRevision": value], "expectedRevision")
+            add("invalid completion revision", completionTool, ["taskID": "task-a", "expectedRevision": value], "expectedRevision")
+        }
+        add("missing completion revision", completionTool, ["taskID": "task-a"], "expectedRevision")
+        for value: Any in [true, 1.5, -1, NSNumber(value: UInt64.max), NSNull(), "1"] {
+            add("invalid draft order", revisionTool, ["additions": [draft.merging(["sortOrder": value]) { _, value in value }]], "sortOrder")
+            add("invalid revised order", revisionTool, ["definitionRevisions": [["id": "task-a", "sortOrder": value]]], "sortOrder")
+        }
+        for field in ["id", "label", "title", "sortOrder"] {
+            var missing = draft
+            missing.removeValue(forKey: field)
+            add("missing draft \(field)", revisionTool, ["additions": [missing]], field)
+        }
+        for field in ["ticketID", "taskID"] {
+            add("non-string \(field)", completionTool, ["taskID": "task-a", "expectedRevision": 1].merging([field: true]) { _, value in value }, field)
+        }
+        for field in ["id", "label", "title"] {
+            for value: Any in [true, NSNull(), "", "   "] {
+                add("invalid draft \(field)", revisionTool, ["additions": [draft.merging([field: value]) { _, value in value }]], field)
+            }
+        }
+        add("nested typed ID is not flat MCP input", revisionTool, ["additions": [draft.merging(["id": ["rawValue": "task-a"]]) { _, value in value }]], "id")
+        add("null revised title", revisionTool, ["definitionRevisions": [["id": "task-a", "title": NSNull()]]], "title")
+        for (name, tool, arguments, expected) in cases {
+            let response = try Self.runToolSession(packagedTool, tool: tool, arguments: arguments).call
+            XCTAssertEqual(jsonRPCErrorCode(response), -32602, name)
+            let message = (response["error"] as? [String: Any])?["message"] as? String ?? ""
+            XCTAssertTrue(message.contains(expected), "\(name): \(message)")
+        }
+    }
+
+    func testTicketTaskInputBoundariesRejectBeforeTransport() throws {
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let base: [String: Any] = [
+            "version": 1,
+            "requestID": "99999999-9999-4999-8999-999999999996",
+            "projectRoot": "/task-input-validation-only",
+            "reason": NSNull(),
+            "ticketID": "RR-03",
+        ]
+        let draft: [String: Any] = ["id": "task-a", "label": "Task A", "title": "Verify the command", "sortOrder": 0]
+        func check(_ fields: [String: Any], expected: String, tool: String = "release_radar_revise_ticket_task_plan") throws {
+            let response = try Self.runToolSession(packagedTool, tool: tool, arguments: base.merging(fields) { _, value in value }).call
+            XCTAssertEqual(jsonRPCErrorCode(response), -32602)
+            let message = (response["error"] as? [String: Any])?["message"] as? String ?? ""
+            XCTAssertTrue(message.contains(expected), message)
+        }
+        for field in ["id", "label", "title"] {
+            let maximum = field == "title" ? 4_096 : 256
+            for count in [maximum - 1, maximum, maximum + 1] {
+                for multibyte in [false, true] {
+                    let value = multibyte
+                        ? String(repeating: "é", count: count / 2) + String(repeating: "a", count: count % 2)
+                        : String(repeating: "a", count: count)
+                    XCTAssertEqual(value.utf8.count, count)
+                    try check(["additions": [draft.merging([field: value]) { _, value in value }]], expected: count > maximum ? field : "reason")
+                    if field == "id" {
+                        try check(["supersededTaskIDs": [value]], expected: count > maximum ? "supersededTaskIDs" : "reason")
+                        try check(["taskID": value, "expectedRevision": 1], expected: count > maximum ? "taskID" : "reason", tool: "release_radar_complete_ticket_task")
+                    }
+                    if field != "label" {
+                        try check(["definitionRevisions": [["id": field == "id" ? value : "task-a", "title": field == "title" ? value : "Revise the task"]]], expected: count > maximum ? field : "reason")
+                    }
+                }
+            }
+        }
+        for count in [63, 64, 65] {
+            try check([
+                "additions": [draft],
+                "definitionRevisions": [["id": "existing", "sortOrder": 1]],
+                "supersededTaskIDs": (0..<(count - 2)).map { "old-\($0)" },
+            ], expected: count > 64 ? "64" : "reason")
+        }
+        try check([:], expected: "reason")
+        try check(["additions": [], "definitionRevisions": [], "supersededTaskIDs": [], "expectedRevision": Int64.max], expected: "reason")
+        try check(["additions": [draft.merging(["sortOrder": Int.max]) { _, value in value }]], expected: "reason")
+        try check(["taskID": "task-a", "expectedRevision": Int64.max], expected: "reason", tool: "release_radar_complete_ticket_task")
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        for byteCount in [65_535, 65_536, 65_537] {
+            var drafts = (0..<16).map {
+                TicketTaskDraft(id: .init(rawValue: "task-\($0)"), label: "Task \($0)", title: String(repeating: "a", count: 4_096), sortOrder: $0)
+            }
+            let initial = try encoder.encode(AgentCommand.reviseTicketTaskPlan(ticketID: "RR-03", additions: drafts))
+            let adjustedTitle = String(repeating: "a", count: 4_096 + byteCount - initial.count)
+            XCTAssertLessThanOrEqual(adjustedTitle.utf8.count, 4_096)
+            drafts[0] = .init(id: drafts[0].id, label: drafts[0].label, title: adjustedTitle, sortOrder: 0)
+            XCTAssertEqual(try encoder.encode(AgentCommand.reviseTicketTaskPlan(ticketID: "RR-03", additions: drafts)).count, byteCount)
+            let records: [[String: Any]] = drafts.map { ["id": $0.id.rawValue, "label": $0.label, "title": $0.title, "sortOrder": $0.sortOrder] }
+            try check(["additions": records], expected: byteCount > 65_536 ? "65,536" : "reason")
+        }
+    }
+
+    func testTicketTaskToolsUseRegisteredBrokerAndRecoverExactRequests() async throws {
+        let bridgeService = SMAppService.agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
+        func requireControlledEnvironment() throws {
+            guard bridgeService.status == .enabled else {
+                throw TransportTestError.invalidResponse("Controlled task transport requires the already enabled bridge; this test does not register it")
+            }
+            let otherApps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.rekonlabs.ReleaseRadar")
+                .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+            guard otherApps.isEmpty else {
+                throw TransportTestError.invalidResponse("Quiesce other Release Radar app hosts before controlled task transport")
+            }
+        }
+        try requireControlledEnvironment()
+        let fixture = try await makeTransportFixture()
+        let packagedTool = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let projectRoot = fixture.projectRoot.path
+        let reason = "Prove audited ticket task transport"
+        let threadID = "asserted-task-4b-transport"
+        let creationID = UUID(uuidString: "99999999-9999-4999-8999-999999999981")!
+        let revisionID = UUID(uuidString: "99999999-9999-4999-8999-999999999982")!
+        let completionID = UUID(uuidString: "99999999-9999-4999-8999-999999999983")!
+        let lostReplyID = UUID(uuidString: "99999999-9999-4999-8999-999999999984")!
+        let unavailableID = UUID(uuidString: "99999999-9999-4999-8999-999999999985")!
+        let lostReply = CallbackInvalidationGate()
+        let afterReply = CallbackInvalidationGate()
+        let committedResult = ResultCapture()
+        let appDelegate = AppDelegate()
+        try requireControlledEnvironment()
+        let host = try await appDelegate.startAgentBridge(
+            databaseURL: fixture.databaseURL,
+            afterDispatchBeforeReply: { envelope, result in
+                guard envelope.requestID == lostReplyID else { return }
+                committedResult.set(result)
+                lostReply.entered.signal()
+                await lostReply.release.wait()
+            },
+            afterReply: { envelope, _ in
+                guard envelope.requestID == completionID else { return }
+                afterReply.entered.signal()
+                await afterReply.release.wait()
+            }
+        )
+        defer {
+            lostReply.release.signal()
+            afterReply.release.signal()
+            host.disconnectCallback()
+            XCTAssertEqual(bridgeService.status, .enabled, "Controlled task transport must preserve bridge registration")
+        }
+        func arguments(_ requestID: UUID, _ fields: [String: Any]) -> [String: Any] {
+            [
+                "version": 1, "requestID": requestID.uuidString, "projectRoot": projectRoot,
+                "reason": reason, "assertedThreadID": threadID, "ticketID": "RR-03",
+            ].merging(fields) { _, value in value }
+        }
+        func assertReceipt(_ result: AgentCommandResult, requestID: UUID, command: AgentCommand, revision: Int64) async throws {
+            XCTAssertNil(result.error)
+            XCTAssertEqual(result.ticketTaskPlanRevision, revision)
+            let expected = AgentCommandEnvelope(version: 1, requestID: requestID, projectRoot: projectRoot, assertedThreadID: threadID, reason: reason, command: command)
+            let stored = try await fixture.store.read { connection in
+                try connection.row("SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?", bindings: [.text(requestID.uuidString)])
+            }
+            guard case let .blob(requestData)? = stored?["request_body"], case let .blob(resultData)? = stored?["result_data"] else {
+                XCTFail("A successful task tool must persist its complete receipt")
+                return
+            }
+            var requestBody = try XCTUnwrap(JSONSerialization.jsonObject(with: requestData) as? [String: Any])
+            XCTAssertNil(requestBody["requestID"], "Ordinary canonical receipts store the request identity in their key")
+            requestBody["requestID"] = requestID.uuidString
+            XCTAssertEqual(try JSONDecoder().decode(AgentCommandEnvelope.self, from: JSONSerialization.data(withJSONObject: requestBody)), expected)
+            XCTAssertEqual(try JSONDecoder().decode(AgentCommandResult.self, from: resultData), result)
+            let auditID = try XCTUnwrap(result.auditEventID)
+            let count = try await fixture.store.read { connection in
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id = ? AND entity_type = 'ticket_task_plan' AND entity_id = 'RR-03' AND project_id = 'project-1' AND actor_id = 'release-radar-agent' AND thread_id = ? AND thread_attribution = 'asserted'", bindings: [.text(auditID.rawValue), .text(threadID)])
+            }
+            XCTAssertEqual(count, 1)
+        }
+        let initialTasks: [TicketTaskDraft] = [
+            .init(id: .init(rawValue: "task-a"), label: "Task A", title: "Create the plan", sortOrder: 0),
+            .init(id: .init(rawValue: "task-b"), label: "Task B", title: "Supersede this task", sortOrder: 1),
+            .init(id: .init(rawValue: "task-c"), label: "Task C", title: "Recover the exact request", sortOrder: 2),
+        ]
+        let creation = arguments(creationID, ["additions": initialTasks.map { ["id": $0.id.rawValue, "label": $0.label, "title": $0.title, "sortOrder": $0.sortOrder] as [String: Any] }])
+        let first = try decodeCommandResult(Self.runTool(packagedTool, tool: "release_radar_revise_ticket_task_plan", arguments: creation))
+        try await assertReceipt(first, requestID: creationID, command: .reviseTicketTaskPlan(ticketID: "RR-03", additions: initialTasks), revision: 1)
+        XCTAssertEqual(try decodeCommandResult(Self.runTool(packagedTool, tool: "release_radar_revise_ticket_task_plan", arguments: creation)), first)
+
+        let replacement = TicketTaskDraft(id: .init(rawValue: "task-d"), label: "Task D", title: "Keep the plan pending", sortOrder: 3)
+        let definition = TicketTaskDefinitionRevision(id: .init(rawValue: "task-a"), title: "Verify the committed task revision", sortOrder: 0)
+        let revision = arguments(revisionID, [
+            "expectedRevision": 1,
+            "additions": [["id": "task-d", "label": "Task D", "title": "Keep the plan pending", "sortOrder": 3]],
+            "definitionRevisions": [["id": "task-a", "title": "Verify the committed task revision", "sortOrder": 0]],
+            "supersededTaskIDs": ["task-b"],
+        ])
+        let revised = try decodeCommandResult(Self.runTool(packagedTool, tool: "release_radar_revise_ticket_task_plan", arguments: revision))
+        try await assertReceipt(revised, requestID: revisionID, command: .reviseTicketTaskPlan(ticketID: "RR-03", expectedRevision: 1, additions: [replacement], definitionRevisions: [definition], supersededTaskIDs: [.init(rawValue: "task-b")]), revision: 2)
+        XCTAssertEqual(try decodeCommandResult(Self.runTool(packagedTool, tool: "release_radar_revise_ticket_task_plan", arguments: revision)), revised)
+
+        let completionResponse = Task.detached { @Sendable in
+            try Self.runToolData(packagedTool, tool: "release_radar_complete_ticket_task", arguments: [
+                "version": 1, "requestID": completionID.uuidString, "projectRoot": projectRoot,
+                "reason": reason, "assertedThreadID": threadID, "ticketID": "RR-03", "taskID": "task-a", "expectedRevision": 2,
+            ])
+        }
+        await afterReply.entered.wait()
+        let completionData = try await withThrowingTaskGroup(of: Data.self) { group in
+            group.addTask { try await completionResponse.value }
+            group.addTask {
+                try await Task.sleep(for: .seconds(2))
+                throw TransportTestError.timedOut
+            }
+            defer { group.cancelAll() }
+            return try await group.next()!
+        }
+        afterReply.release.signal()
+        let completed = try decodeCommandResult(Self.decodeToolResponseData(completionData))
+        try await assertReceipt(completed, requestID: completionID, command: .completeTicketTask(ticketID: "RR-03", taskID: "task-a", expectedRevision: 2), revision: 3)
+        XCTAssertEqual(try decodeCommandResult(Self.runTool(packagedTool, tool: "release_radar_complete_ticket_task", arguments: arguments(completionID, ["taskID": "task-a", "expectedRevision": 2]))), completed)
+        afterReply.release.signal()
+
+        let pending = DataCapture()
+        let pendingFinished = AsyncSignal()
+        DispatchQueue.global().async {
+            pending.set(Result {
+                try Self.runToolData(packagedTool, tool: "release_radar_complete_ticket_task", arguments: [
+                    "version": 1, "requestID": lostReplyID.uuidString, "projectRoot": projectRoot,
+                    "reason": reason, "assertedThreadID": threadID, "ticketID": "RR-03", "taskID": "task-c", "expectedRevision": 3,
+                ])
+            })
+            pendingFinished.signal()
+        }
+        await lostReply.entered.wait()
+        host.disconnectCallback()
+        lostReply.release.signal()
+        await pendingFinished.wait()
+        let uncertain = try Self.decodeToolResponseData(pending.get())
+        XCTAssertEqual(try decodeCommandResult(uncertain).error, .outcomeUnknown)
+        XCTAssertEqual(mcpIsError(uncertain), true)
+        let original = try XCTUnwrap(committedResult.get())
+        try await assertReceipt(original, requestID: lostReplyID, command: .completeTicketTask(ticketID: "RR-03", taskID: "task-c", expectedRevision: 3), revision: 4)
+
+        let reconnectDelegate = AppDelegate()
+        try requireControlledEnvironment()
+        let reconnect = try await reconnectDelegate.startAgentBridge(databaseURL: fixture.databaseURL)
+        defer { reconnect.disconnectCallback() }
+        let replay = try decodeCommandResult(Self.runTool(packagedTool, tool: "release_radar_complete_ticket_task", arguments: arguments(lostReplyID, ["taskID": "task-c", "expectedRevision": 3])))
+        XCTAssertEqual(replay, original)
+        reconnect.disconnectCallback()
+        let unavailable = try Self.runTool(packagedTool, tool: "release_radar_complete_ticket_task", arguments: arguments(unavailableID, ["taskID": "task-d", "expectedRevision": 4]))
+        XCTAssertEqual(try decodeCommandResult(unavailable).error, .appUnavailable)
+        XCTAssertEqual(mcpIsError(unavailable), true)
+        let finalState = try await fixture.store.read { connection in
+            [
+                .integer(try connection.scalarInt("SELECT revision FROM ticket_task_plans WHERE ticket_id = 'RR-03'") ?? -1),
+                .integer(try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1),
+                .integer(try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE reason = ?", bindings: [.text(reason)]) ?? -1),
+                .text(try connection.scalarText("SELECT lane FROM tickets WHERE id = 'RR-03'") ?? "missing"),
+                .text(try connection.scalarText("SELECT group_concat(state, ';') FROM (SELECT id || ':' || completion || ':' || lifecycle AS state FROM ticket_tasks WHERE ticket_id = 'RR-03' ORDER BY id)") ?? "missing"),
+            ] as [SQLiteValue]
+        }
+        XCTAssertEqual(finalState, [.integer(4), .integer(4), .integer(4), .text("backlog"), .text("task-a:completed:active;task-b:pending:superseded;task-c:completed:active;task-d:pending:active")])
+    }
+
     private struct TransportFixture {
         let databaseURL: URL
         let projectRoot: URL
@@ -709,6 +1011,19 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         arguments: [String: Any],
         environment: [String: String] = [:]
     ) throws -> [String: Any] {
+        let responses = try runToolSession(executableURL, tool: tool, arguments: arguments, environment: environment)
+        guard hasTypedToolSchema(responses.list) else {
+            throw TransportTestError.invalidResponse("The packaged helper returned an unexpected tool schema")
+        }
+        return responses.call
+    }
+
+    nonisolated private static func runToolSession(
+        _ executableURL: URL,
+        tool: String,
+        arguments: [String: Any],
+        environment: [String: String] = [:]
+    ) throws -> (list: [String: Any], call: [String: Any]) {
         let process = Process()
         process.executableURL = executableURL
         process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, override in override }
@@ -763,12 +1078,11 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             return object
         }
         guard let listResponse = responses.first(where: { ($0["id"] as? NSNumber)?.intValue == 1 }),
-              Self.hasTypedToolSchema(listResponse),
               let callResponse = responses.first(where: { ($0["id"] as? NSNumber)?.intValue == 2 })
         else {
             throw TransportTestError.invalidResponse(String(decoding: responseData, as: UTF8.self))
         }
-        return callResponse
+        return (listResponse, callResponse)
     }
 
     nonisolated private static func readLine(from handle: FileHandle) throws -> Data {
@@ -809,7 +1123,8 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 19,
+              tools.count == 21,
+              hasTicketTaskToolSchemas(tools),
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
               let transitionSchema = transition["inputSchema"] as? [String: Any],
               let transitionProperties = transitionSchema["properties"] as? [String: Any],
@@ -841,6 +1156,45 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             && upsertProperties["ticketTaskPlanRevision"] == nil
             && upsertSchema["additionalProperties"] as? Bool == false
             && NSDictionary(dictionary: activePhaseSchema).isEqual(to: expectedActivePhaseSchema)
+    }
+
+    nonisolated private static func hasTicketTaskToolSchemas(_ tools: [[String: Any]]) -> Bool {
+        guard let revise = tools.first(where: { $0["name"] as? String == "release_radar_revise_ticket_task_plan" })?["inputSchema"] as? [String: Any],
+              let complete = tools.first(where: { $0["name"] as? String == "release_radar_complete_ticket_task" })?["inputSchema"] as? [String: Any],
+              let reviseProperties = revise["properties"] as? [String: Any],
+              let completeProperties = complete["properties"] as? [String: Any],
+              let additions = reviseProperties["additions"] as? [String: Any],
+              let draft = additions["items"] as? [String: Any],
+              let draftProperties = draft["properties"] as? [String: Any],
+              let revisions = reviseProperties["definitionRevisions"] as? [String: Any],
+              let revision = revisions["items"] as? [String: Any],
+              let revisionProperties = revision["properties"] as? [String: Any],
+              let superseded = reviseProperties["supersededTaskIDs"] as? [String: Any]
+        else { return false }
+        let common: Set<String> = ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "ticketID"]
+        let required: Set<String> = ["version", "requestID", "projectRoot", "reason", "ticketID"]
+        let positiveRevision: [String: Any] = ["type": "integer", "minimum": 1, "maximum": Int64.max]
+        return Set(reviseProperties.keys) == common.union(["expectedRevision", "additions", "definitionRevisions", "supersededTaskIDs"])
+            && Set(completeProperties.keys) == common.union(["taskID", "expectedRevision"])
+            && Set(revise["required"] as? [String] ?? []) == required
+            && Set(complete["required"] as? [String] ?? []) == required.union(["taskID", "expectedRevision"])
+            && revise["additionalProperties"] as? Bool == false
+            && complete["additionalProperties"] as? Bool == false
+            && NSDictionary(dictionary: reviseProperties["expectedRevision"] as? [String: Any] ?? [:]).isEqual(to: positiveRevision)
+            && NSDictionary(dictionary: completeProperties["expectedRevision"] as? [String: Any] ?? [:]).isEqual(to: positiveRevision)
+            && Set(draftProperties.keys) == ["id", "label", "title", "sortOrder"]
+            && Set(draft["required"] as? [String] ?? []) == ["id", "label", "title", "sortOrder"]
+            && draft["additionalProperties"] as? Bool == false
+            && Set(revisionProperties.keys) == ["id", "title", "sortOrder"]
+            && Set(revision["required"] as? [String] ?? []) == ["id"]
+            && revision["additionalProperties"] as? Bool == false
+            && [additions, revisions, superseded].allSatisfy { $0["type"] as? String == "array" && ($0["maxItems"] as? NSNumber)?.intValue == 64 }
+            && (superseded["items"] as? [String: Any])?["type"] as? String == "string"
+            && (draftProperties["id"] as? [String: Any])?["maxLength"] as? Int == 256
+            && (draftProperties["label"] as? [String: Any])?["maxLength"] as? Int == 256
+            && (draftProperties["title"] as? [String: Any])?["maxLength"] as? Int == 4_096
+            && (draftProperties["sortOrder"] as? [String: Any])?["minimum"] as? Int == 0
+            && (draftProperties["sortOrder"] as? [String: Any])?["maximum"] as? Int == Int.max
     }
 
     private func decodeCommandResult(_ response: [String: Any]) throws -> AgentCommandResult {

@@ -6,19 +6,25 @@
   M6B adopted five evidence locators; M7 deployed the six stable-ID document
   moves; M8 accepted the catalog and verified exact replay/relaunch. Delivery
   checkpoints are `b9b1932`, `004e2d2`, `d1b974a` and final closeout `a66bf9a`.
-- RR-R10 Tasks 1A/1B/2A/2B/3/4A are delivered. Ten checkpoints remain:
-  4B, 5, 6, 7, 7A, 8, 9, 10, 11A and 11B, then explicit ticket/Delivery Goal
+- RR-R10 Tasks 1A/1B/2A/2B/3/4A are delivered. Task 4B implementation and
+  acceptance are complete, with PR delivery in progress. Nine later checkpoints
+  remain: 5, 6, 7, 7A, 8, 9, 10, 11A and 11B, then explicit ticket/Delivery Goal
   acceptance and terminal reconciliation. Stable task identities and the full
   product outcome are unchanged.
-- On 2026-09-02 the owner approved the alignment review findings and authorized
-  a focused remaining-plan revision and Task 4B brief. This repository planning
-  slice is complete with native documentation validation and independent
-  review accepted, Required 0 and Optional 0.
-  Task 4B implementation, owner installation, catalog deployment/acceptance and
-  other live mutations are not authorized by that planning approval.
-- Repository work uses `codex/managed-documentation-contract-planning` in its
-  associated development worktree. The original bound checkout retains its
-  deployment branch/commit and authorized MDCP documentation delta.
+- The alignment review and controlling Task 4B brief were independently
+  accepted and merged in PR #4. On 2026-09-02 the owner separately authorized
+  Task 4B implementation, validation, commit, push, pull request and merge,
+  through coordinator task `01a06184-6387-7c42-878e-695db0481a18`. Routine
+  decisions are delegated to that coordinator; high-risk/destructive owner
+  or shared-state actions still require the human owner.
+- Task 4B is active on `codex/rr-r10-task-4b` in its isolated development
+  worktree, based on merged commit `02d16db`. The original bound checkout,
+  deployment commit and intentional documentation changes are preserved.
+  Owner installation, live bootstrap and catalog deployment/acceptance are
+  outside this task's authorization.
+- The verified implementation is pushed as `ddf551a` in
+  [PR #5](https://github.com/joeroberts/release-radar/pull/5), targeting
+  `codex/release-radar-mvp`. PR merge is the remaining delivery action.
 
 ## Controlling work and verification
 
@@ -29,17 +35,28 @@
   The linked Ticket Tasks design now distinguishes completed handoff history
   from current entry conditions.
 - Task 4B's bounded test scope includes updating the existing MDCP callback
-  assertion that the new task tool is absent. It preserves all six MDCP tools;
-  the intended inventory is 19 existing plus two new tools.
-- Native catalog/index/link/checksum validation and `git diff --check` pass.
-  All 194 existing artifact IDs/paths and the 16 task labels/titles/order are
-  preserved; the catalog adds only the brief and historical progress record.
-  Completed MDCP brief lifecycle metadata and status headers are reconciled.
-  The correction passed native current-tree/transition checks and independent
-  documentation review; no runtime tests were rerun.
-  Independent review accepted the plan, brief and authorization/preservation
-  boundaries. No product code, runtime tests or owner-state operations are
-  part of this planning slice.
+  assertion for the two newly exposed tools. The verified inventory preserves
+  all 19 prior tools, including the six MDCP tools, and adds exactly two.
+  The only supporting production path beyond the original brief is the
+  compiler-required exhaustive error mapping in `FailureStateView.swift`,
+  confirmed by the coordinator under the existing authorization.
+- Test-first implementation passed 103 focused native tests: policy, bridge,
+  notifications, safe packaged schemas/input validation and selected MDCP
+  regressions. Debug build and prepared test build pass. Native documentation
+  validation and `git diff --check` pass. Independent code/QA, public-contract/
+  transaction, Security/Privacy, error-presentation and documentation review
+  found Required 0 and Optional 0. No schema or policy implementation changed.
+- The coordinator separately approved the bounded app pause/relaunch and
+  controlled broker test, including ordinary startup effects. The single
+  guarded transport selector passed (1 test, 0 failures), proving both tools,
+  committed revisions/receipts, exact replay, lost-reply recovery and
+  unavailable-app refusal. The installed broker, lifecycle helper and existing
+  MCP clients remained running. The exact installed app was restored, and
+  read-only inventory at the saved bound root returned `isComplete = true`,
+  schema v13, eight evidence rows and matching catalog/accepted-binding digest.
+  The caller hold was released after restoration; no further service test is
+  required. No owner installation, live task bootstrap, catalog acceptance or
+  direct owner-store access occurred.
 
 ## Live baseline and remaining risks
 
@@ -48,9 +65,11 @@
   with 194 artifacts; all eight evidence IDs/locators/associations and unrelated
   delivery state were preserved at M8. Ordinary live use may subsequently
   change owner state, so future installs require fresh authorized readback.
-- This development candidate adds the Task 4B brief and a historical progress
-  record, and corrects completed MDCP brief lifecycle metadata. The branch
-  preserves the missing activation revision before the completion revision;
+- The inherited development catalog adds the Task 4B brief and a historical
+  progress record and corrects completed MDCP brief lifecycle metadata. Task 4B
+  closeout changes only its brief to completed/non-authoritative, preserving
+  its stable artifact ID and path. The branch preserves the missing activation
+  revision before the completion revision;
   later catalog deployment must accept those revisions in order. The M6A
   runbook remains a supporting preservation/recovery reference. This catalog
   is repository-prepared only, pending separately
@@ -58,12 +77,11 @@
   live bound checkout has not been changed; no managed-current claim is made
   for the development catalog.
 - Whole transport/lifecycle test classes can change the shared macOS bridge.
-  Task 4B's brief supplies safe development selections; required packaged
-  transport acceptance still needs an isolated service/session or separately
-  authorized quiescence and restoration.
+  Future tasks must retain the brief's safe-selector discipline; Task 4B's
+  completed controlled run does not authorize later shared-service operations.
 - The M8 runtime limits remain documented in the historical record, including
   the unchanged legacy directory-locator discrepancy. No accepted MDCP work
-  is reopened by this planning refresh. Issue #1 remains unopened and the
+  is reopened by Task 4B. Issue #1 remains unopened and the
   held Issue #2 artifacts remain unchanged.
 
 ## Retention and next work
@@ -74,9 +92,13 @@ history remains in [Historical progress through M6B](archive/2026-09-02-progress
 Exact owner approvals, requests, inventories and recovery copies remain in the
 owner-designated protected companion, retained through at least 2026-10-02.
 Existing M6A/M7/M8 temporary builds, test outputs and isolated host directories
-retain their recorded custody terms; none were deleted. This planning slice
-creates no new temporary files.
+retain their recorded custody terms; none were deleted. Task 4B build logs,
+test results and prepared bundles remain temporarily in `.build/rr-r10-task4b`;
+the repository-native tests also create synthetic temporary fixture directories.
+These are verification output, not controlling deliverables. No additional
+cleanup is authorized.
 
-After this planning slice is delivered, Task 4B is the next eligible feature
-under its separate implementation authorization. Complete the required
-controlled transport checks before claiming that future slice complete.
+Task 4B is verified for its authorized PR/merge checkpoint. Task 5 may open
+only in the next separately coordinated task after that merge. The new tools
+remain development-only until Tasks 5, 6 and 7 are accepted; Task 7A owns the
+later owner installation and live bootstrap.

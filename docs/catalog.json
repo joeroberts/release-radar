@@ -3466,9 +3466,8 @@
       "artifactID": "edf26376-b869-41d0-99de-5d848a51dd9a",
       "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.rr-r10-task-4b",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
       "supersedes": [],
       "applicationSensitivity": [
