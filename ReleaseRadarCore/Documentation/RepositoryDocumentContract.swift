@@ -3,12 +3,44 @@ import Foundation
 /// The caller must keep authorization to its resolved project root alive for the whole validation.
 public enum RepositoryDocumentContract {
     public static let catalogVersion = 1
+    public static let legacyGuidanceVersion = 1
+    public static let guidanceVersion = legacyGuidanceVersion
+    public static let rekonSeedVersion = 1
     public static let catalogPath = "docs/catalog.json"
     public static let rootIndexPath = "docs/README.md"
     public static let guidancePath = "AGENTS.md"
     public static let progressPath = "docs/delivery/progress.md"
+    public static let rekonSeedPath = "docs/delivery/dashboard-status.json"
+    public static let deliveryCollectionPath = "docs/delivery"
+    public static let taskBriefCollectionPath = "docs/delivery/task-briefs"
+    public static let handoffCollectionPath = "docs/delivery/handoffs"
+    public static let reviewCollectionPath = "docs/delivery/reviews"
+    public static let evidenceCollectionPath = "docs/delivery/evidence"
+    public static let planCollectionPath = "docs/plans"
+    public static let archiveCollectionPath = "docs/delivery/archive"
+    public static let rekonRoadmapPath = "docs/delivery/roadmap.md"
+    public static let rekonEvidenceBasePath = "docs/delivery/dashboard"
     public static let managedIndexStart = "<!-- release-radar-docs:v1:start -->"
     public static let managedIndexEnd = "<!-- release-radar-docs:end -->"
+    public static let guidanceMarkerName = "release-radar-guidance"
+    public static let guidanceStartPrefix = "<!-- \(guidanceMarkerName):v"
+    public static let guidanceStartSuffix = ":start -->"
+    public static let guidanceStartMarker = "\(guidanceStartPrefix)\(guidanceVersion)\(guidanceStartSuffix)"
+    public static let guidanceEndMarker = "<!-- \(guidanceMarkerName):end -->"
+    public static let handoffEvidenceIDPrefix = "release-radar-handoff:v\(guidanceVersion):"
+    public static let managedGuidanceBlock = """
+    \(guidanceStartMarker)
+    ## Release Radar tracking
+
+    This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, or changing tracked delivery state, invoke the installed `release-radar` skill and follow it.
+
+    - `\(progressPath)` is the repository's durable delivery source of truth.
+    - Codex may update repository tracking documents under owner authorization.
+    - Release Radar is the only writer of its SQLite database. Use its existing typed MCP mutations; never edit that database directly.
+    - Do not claim synchronization without both a successful audited MCP result and direct readback of the corresponding repository files.
+    - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state.
+    \(guidanceEndMarker)
+    """
 
     public struct Limits: Sendable {
         public let maximumCatalogBytes: Int

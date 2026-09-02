@@ -31,7 +31,7 @@ private struct PreparedProjectProjections: Sendable {
     let reviewInboxes: [ProjectID: ReviewInboxProjection]
     let dependencyGraphs: [ProjectID: DependencyGraphProjection]
     let projectActivities: [ProjectID: ProjectActivityProjection]
-    let projectGuidanceStates: [ProjectID: ProjectGuidanceState]
+    let projectDocumentationStates: [ProjectID: ProjectDocumentationState]
     let projectRoots: [ProjectID: URL]
     let selectedTicketID: TicketID
     let selectedReviewItemID: ReviewItemID?
@@ -80,7 +80,7 @@ final class AppModel {
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
     private var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
-    private var projectGuidanceStates: [ProjectID: ProjectGuidanceState] = [:]
+    private var projectDocumentationStates: [ProjectID: ProjectDocumentationState] = [:]
     private var projectRoots: [ProjectID: URL] = [:]
     private var reviewActionStates: [ProjectID: ReviewActionState] = [:]
     private var activePhaseSelectionStatuses: [ProjectID: ActivePhaseSelectionStatus] = [:]
@@ -352,7 +352,11 @@ final class AppModel {
     }
 
     func projectGuidanceState(for projectID: ProjectID) -> ProjectGuidanceState {
-        projectGuidanceStates[projectID] ?? .unavailable
+        projectDocumentationState(for: projectID).guidanceState
+    }
+
+    func projectDocumentationState(for projectID: ProjectID) -> ProjectDocumentationState {
+        projectDocumentationStates[projectID] ?? .legacy(.unavailable)
     }
 
     func projectRoot(for projectID: ProjectID) -> URL? {
@@ -679,7 +683,7 @@ final class AppModel {
         var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
         var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
         var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
-        var projectGuidanceStates: [ProjectID: ProjectGuidanceState] = [:]
+        var projectDocumentationStates: [ProjectID: ProjectDocumentationState] = [:]
         var projectRoots: [ProjectID: URL] = [:]
         var selectedTicketID = self.selectedTicketID
         let visibleProjectID = selection.projectID
@@ -693,10 +697,10 @@ final class AppModel {
             switch context {
             case .ordinary:
                 let guidance = await projectOnboarding.observeProjectGuidanceContext(projectID: project.id)
-                projectGuidanceStates[project.id] = guidance.state
+                projectDocumentationStates[project.id] = guidance.documentationState
                 projectRoots[project.id] = guidance.projectRoot
             case .ownerActivePhaseCommitted, .agentCommandCommitted:
-                projectGuidanceStates[project.id] = self.projectGuidanceStates[project.id] ?? .unavailable
+                projectDocumentationStates[project.id] = self.projectDocumentationStates[project.id] ?? .legacy(.unavailable)
                 projectRoots[project.id] = self.projectRoots[project.id]
             }
             guard let board = dashboard.board(for: project.id) else { continue }
@@ -719,7 +723,7 @@ final class AppModel {
             reviewInboxes: reviewInboxes,
             dependencyGraphs: dependencyGraphs,
             projectActivities: projectActivities,
-            projectGuidanceStates: projectGuidanceStates,
+            projectDocumentationStates: projectDocumentationStates,
             projectRoots: projectRoots,
             selectedTicketID: selectedTicketID,
             selectedReviewItemID: reviewInboxes[visibleProjectID]?.openItems.first?.id
@@ -731,7 +735,7 @@ final class AppModel {
         reviewInboxes = prepared.reviewInboxes
         dependencyGraphs = prepared.dependencyGraphs
         projectActivities = prepared.projectActivities
-        projectGuidanceStates = prepared.projectGuidanceStates
+        projectDocumentationStates = prepared.projectDocumentationStates
         projectRoots = prepared.projectRoots
         selectedTicketID = prepared.selectedTicketID
         selectedReviewItemID = prepared.selectedReviewItemID

@@ -4,7 +4,7 @@ import ReleaseRadarCore
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
-    let guidanceState: ProjectGuidanceState
+    let documentationState: ProjectDocumentationState
     let projectRoot: URL?
     let phaseSelectionStatus: ActivePhaseSelectionStatus
     let openBoard: () -> Void
@@ -106,7 +106,7 @@ struct ProjectOverviewView: View {
     }
 
     private var guidanceCard: some View {
-        let presentation = ProjectGuidancePresentation(state: guidanceState)
+        let presentation = ProjectGuidancePresentation(documentationState: documentationState)
         return VStack(alignment: .leading, spacing: 8) {
             Label(presentation.status, systemImage: presentation.systemImage)
                 .font(.headline)
@@ -120,7 +120,7 @@ struct ProjectOverviewView: View {
                     .accessibilityIdentifier("project-guidance-authorized-root")
                 Button(actionTitle) {
                     promptCopyResult = CodexPromptHandoff.copy(
-                        prompt: CodexPromptHandoff.prompt(for: guidanceState, projectRoot: projectRoot),
+                        prompt: CodexPromptHandoff.prompt(for: documentationState.guidanceState, projectRoot: projectRoot),
                         using: CodexPromptHandoff.writeToGeneralPasteboard
                     )
                 }
@@ -163,6 +163,30 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
     let detail: String
     let systemImage: String
     let actionTitle: String?
+
+    init(documentationState: ProjectDocumentationState) {
+        guard case let .stagedCatalog(audited, preview) = documentationState else {
+            let legacy = Self(state: documentationState.guidanceState)
+            status = legacy.status
+            detail = legacy.detail
+            systemImage = legacy.systemImage
+            actionTitle = legacy.actionTitle
+            return
+        }
+        let version = RepositoryDocumentContract.legacyGuidanceVersion
+        let guidance = audited ? "Guidance v\(version) remains current." : "Guidance v\(version) still needs its audited handoff. Use the repair prompt to complete it."
+        switch preview {
+        case let .valid(version, _):
+            status = "Release Radar catalog staged · v\(version)"
+            detail = "\(guidance) The catalog passed read-only validation. Import, evidence, and delivery state are unchanged."
+            systemImage = "doc.text.magnifyingglass"
+        case let .invalid(error):
+            status = "Release Radar staged catalog needs repair"
+            detail = "\(guidance) \(error.localizedDescription) Import, evidence, and delivery state are unchanged."
+            systemImage = "exclamationmark.triangle"
+        }
+        actionTitle = audited ? nil : "Copy repair prompt"
+    }
 
     init(state: ProjectGuidanceState) {
         switch state {

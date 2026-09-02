@@ -2,25 +2,66 @@
 
 ## Current state
 
-- Outcome: M2B deterministic index tool complete and independently accepted
-- Active task: None — stop after M2B delivery
-- Last complete task: M2B — Deterministic Index Tool
-- Authorization: Owner explicitly authorized M2B implementation, focused tests,
-  independent Code Review and QA, required in-scope corrections, ledger updates,
-  commit, and normal push. Stop after M2B; M2C–M8, RR-R10 Task 4B, and GitHub
-  Issue #1 remain outside this task.
+- Outcome: M2C central path contract and v1 catalog preview independently accepted
+- Active task: M2C accepted-slice commit/push
+- Last complete task: M2C — Central Path Contract and v1 Catalog Preview
+- Authorization: Owner authorized the remaining M2C–M8 program in dependency
+  order, including development, required checks and independent reviews,
+  in-scope corrections, ledger updates, and commit/normal push after each
+  accepted slice. Continue automatically between eligible slices. M6A, M6B,
+  M7, and M8 retain their exact live-operation approval gates. Stop after M8;
+  RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M2B](task-briefs/2026-09-01-managed-repository-documentation-contract/m2b-deterministic-index-tool-brief.md)
-- Current blockers and risks: No unresolved M2B findings. Recovery covers
-  synchronous failures; incomplete rollback reports retained backup locations
-  separately from disposable candidates for manual recovery.
-- Verification: Independent QA passed 37/37 focused tests and synthetic CLI
-  checks, then 5/5 affected recovery checks. Code Review and QA are GO.
-- Next eligible action: [M2C — Central Path Contract and V1 Preview](task-briefs/2026-09-01-managed-repository-documentation-contract/m2c-central-path-contract-v1-preview-brief.md)
-  is eligible but unopened; this task does not authorize it.
-- State: M2B COMPLETE
-- Session boundary: Commit and push only accepted M2B changes, then stop.
+- Controlling brief: [M2C](task-briefs/2026-09-01-managed-repository-documentation-contract/m2c-central-path-contract-v1-preview-brief.md)
+- Current blockers and risks: No required M2C product findings. One unchanged
+  onboarding test expects schema version 9 while the accepted migration version
+  is 12. Isolated-host runtime accessibility inspection was unavailable; no
+  accessibility defect was established and full live-app acceptance is not
+  claimed.
+- Verification: M2C focused checks passed 9/9; compatibility run passed 134
+  tests with the one pre-existing schema-version assertion failure. Independent
+  QA verified the nine focused checks and two native rendering checks. Code,
+  QA, Architecture, and Security/Privacy reviews are GO.
+- Next eligible action: Open M3A0 after the accepted M2C commit/push checkpoint.
+- State: M2C COMPLETE
+- Development checkpoint: Required worktree
+  `/Users/jroberts/.codex/worktrees/b0f1/release_radar`, branch
+  `codex/managed-documentation-contract-planning`, clean HEAD/upstream/live
+  remote at accepted starting commit `a37a707d4416eb35cb76fdfd1bfb9d3c90379eb9`.
+
+## MDCP M2C — Central Path Contract and v1 Catalog Preview
+
+- Implemented: One Core path/version/marker definition, compatible v1 guidance
+  and prompts, and one read-only documentation state for legacy or valid/invalid
+  staged catalogs. Authorized onboarding observation and app presentation use
+  that state; importer/evidence identity and delivery behavior remain legacy.
+- Verification: Runtime RED preceded behavior changes. Native `xcodebuild test
+  -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -destination
+  'platform=macOS'` with focused `ProjectDocumentationPreviewTests` and
+  `OnboardingAcceptanceTests/testCentralizedHandoffPromptIsByteCompatibleWithLegacyV1`
+  passed 9/9. The six-suite compatibility run passed 134 tests with only the
+  unchanged schema-9 assertion failure. `git diff --check` passed.
+- Independent roles: implementer `/root/m2c_implementer`; Code Review
+  `/root/m2c_code_review`, QA `/root/m2c_qa`, Architecture
+  `/root/m2c_architecture`, and Security/Privacy `/root/m2c_security` all GO.
+  Code Review also accepted the default-preserving initializer used for native
+  rendering. No required findings remain.
+- QA rendered actual overview/onboarding views at 1100×850 and 620×850;
+  `ProjectDocumentationRenderingTests` passed 2/2. Current design prose governs
+  the superseded onboarding mockup. Representative evidence:
+  [overview staged](evidence/mdcp-m2c-overview-staged-wide.png),
+  [overview repair](evidence/mdcp-m2c-overview-repair-compact.png),
+  [onboarding staged](evidence/mdcp-m2c-onboarding-staged-wide.png), and
+  [onboarding repair](evidence/mdcp-m2c-onboarding-repair-compact.png).
+  Status/detail wrapping and actions were visually verified. Native AX traversal
+  exposed no SwiftUI nodes in the isolated host; runtime accessibility remains
+  unverified. Source identifiers and presentation behavior were inspected.
+- Durable artifacts: source, focused tests, four screenshots, and this ledger.
+  Native build/log/result outputs under `.build/m2c/` and synthetic rendering
+  temporary directories are disposable under the owner's program authorization.
+  Owner data, bundled skill bytes, existing fixtures, and `docs/superpowers/`
+  were unchanged. M3A0 is next.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.

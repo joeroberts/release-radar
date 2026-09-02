@@ -20,7 +20,8 @@ public struct OnboardingPreview: Equatable, Sendable {
     public let authorizedWorktreeURLs: [URL]
     public let worktreesRequiringAuthorization: [URL]
     public let recognizedArtifactPreview: ImportPreview?
-    public let projectGuidanceState: ProjectGuidanceState
+    public let documentationState: ProjectDocumentationState
+    public var projectGuidanceState: ProjectGuidanceState { documentationState.guidanceState }
     public let pendingProjectID: ProjectID?
     public let completedProjectID: ProjectID?
 
@@ -33,6 +34,7 @@ public struct OnboardingPreview: Equatable, Sendable {
         worktreesRequiringAuthorization: [URL],
         recognizedArtifactPreview: ImportPreview? = nil,
         projectGuidanceState: ProjectGuidanceState = .missing,
+        documentationState: ProjectDocumentationState? = nil,
         pendingProjectID: ProjectID? = nil,
         completedProjectID: ProjectID? = nil
     ) {
@@ -43,7 +45,7 @@ public struct OnboardingPreview: Equatable, Sendable {
         self.authorizedWorktreeURLs = authorizedWorktreeURLs
         self.worktreesRequiringAuthorization = worktreesRequiringAuthorization
         self.recognizedArtifactPreview = recognizedArtifactPreview
-        self.projectGuidanceState = projectGuidanceState
+        self.documentationState = documentationState ?? .legacy(projectGuidanceState)
         self.pendingProjectID = pendingProjectID
         self.completedProjectID = completedProjectID
     }
@@ -250,7 +252,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 projectID: projectID,
                 rootURL: authorizedSelected
             )
-            let projectGuidanceState = ProjectGuidanceInspection.inspect(
+            let documentationState = ProjectGuidanceInspection.inspectDocumentation(
                 rootURL: authorizedSelected,
                 hasAuditedHandoff: hasAuditedHandoff
             )
@@ -263,7 +265,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 authorizedWorktreeURLs: authorized,
                 worktreesRequiringAuthorization: outsideWorktrees,
                 recognizedArtifactPreview: recognizedArtifactPreview,
-                projectGuidanceState: projectGuidanceState,
+                documentationState: documentationState,
                 pendingProjectID: projectIdentity.pending,
                 completedProjectID: projectIdentity.completed
             )
@@ -357,7 +359,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 )
                 return ProjectGuidanceObservation(
                     projectRoot: project.canonicalRoot,
-                    state: ProjectGuidanceInspection.inspect(
+                    documentationState: ProjectGuidanceInspection.inspectDocumentation(
                         rootURL: project.canonicalRoot,
                         hasAuditedHandoff: hasAuditedHandoff
                     )
@@ -373,7 +375,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         rootURL: URL
     ) async throws -> Bool {
         let agentsPath = Self.canonical(rootURL)
-            .appendingPathComponent("AGENTS.md", isDirectory: false)
+            .appendingPathComponent(RepositoryDocumentContract.guidancePath, isDirectory: false)
             .path
         return try await store.read { connection in
             try connection.scalarInt(

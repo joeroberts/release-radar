@@ -42,8 +42,8 @@ enum CodexPromptCopyResult: Equatable, Sendable {
 }
 
 struct CodexPromptHandoff: Sendable {
-    private static let setupPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. You are authorizing this task to create or update only the Release Radar managed guidance block in the authorized repository's root AGENTS.md, and to create docs/delivery/progress.md only if it is absent, while preserving every other instruction and all existing delivery content. Follow the skill's repository handoff: write and read back the permitted repository guidance first, record that exact AGENTS.md with the existing ticketless Release Radar evidence mutation, preserve the complete request across uncertain outcomes, and report any pending audit or discrepancy instead of guessing."
-    private static let auditRepairPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. Release Radar reports this repository's guidance handoff incomplete: the v1 managed block already matches, but its required ticketless evidence record is absent. You are authorizing this task to read back the exact root AGENTS.md and complete the handoff through the skill's audited repair path without changing unrelated repository instructions, delivery documentation, or delivery state. Preserve the complete request across uncertain outcomes and report any pending audit or discrepancy instead of guessing."
+    private static let setupPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. You are authorizing this task to create or update only the Release Radar managed guidance block in the authorized repository's root \(RepositoryDocumentContract.guidancePath), and to create \(RepositoryDocumentContract.progressPath) only if it is absent, while preserving every other instruction and all existing delivery content. Follow the skill's repository handoff: write and read back the permitted repository guidance first, record that exact \(RepositoryDocumentContract.guidancePath) with the existing ticketless Release Radar evidence mutation, preserve the complete request across uncertain outcomes, and report any pending audit or discrepancy instead of guessing."
+    private static let auditRepairPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. Release Radar reports this repository's guidance handoff incomplete: the v\(RepositoryDocumentContract.legacyGuidanceVersion) managed block already matches, but its required ticketless evidence record is absent. You are authorizing this task to read back the exact root \(RepositoryDocumentContract.guidancePath) and complete the handoff through the skill's audited repair path without changing unrelated repository instructions, delivery documentation, or delivery state. Preserve the complete request across uncertain outcomes and report any pending audit or discrepancy instead of guessing."
     static let copyButtonAccessibilityLabel = "Copy Codex prompt"
     static let copyButtonAccessibilityIdentifier = "onboarding-copy-codex-prompt"
     static let clipboardDisclosure = "Only the prompt is copied. It remains on the clipboard until replaced."
@@ -174,9 +174,15 @@ struct OnboardingView: View {
         onAttachFolder: (@MainActor (URL, ProjectID) async throws -> AttachFolderOutcome)? = nil,
         onReloadAfterFolderAttachment: (@MainActor (ProjectID) async -> Bool)? = nil,
         pasteboardWriter: @escaping @MainActor (String) -> Bool = CodexPromptHandoff.writeToGeneralPasteboard,
+        initialPreview: OnboardingPreview? = nil,
         onFinished: @escaping @MainActor (ProjectID) async -> Void
     ) {
         _onboarding = State(initialValue: FolderProjectOnboarding(store: store))
+        if let initialPreview {
+            _preview = State(initialValue: initialPreview)
+            _workflow = State(initialValue: .initialize)
+            _projectName = State(initialValue: initialPreview.selectedFolder.lastPathComponent)
+        }
         self.navigationTitle = navigationTitle
         self.onCancel = onCancel
         self.onOpenExisting = onOpenExisting
@@ -324,9 +330,15 @@ struct OnboardingView: View {
                 recognizedArtifactPreview(importPreview)
             }
 
-            let guidance = ProjectGuidancePresentation(state: preview.projectGuidanceState)
+            let guidance = ProjectGuidancePresentation(documentationState: preview.documentationState)
             LabeledContent("Release Radar guidance", value: guidance.status)
                 .accessibilityIdentifier("onboarding-project-guidance-status")
+            if case .stagedCatalog = preview.documentationState {
+                Text(guidance.detail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("onboarding-documentation-detail")
+            }
 
             let confirmation = InitializeProjectConfirmation(
                 projectName: projectName,

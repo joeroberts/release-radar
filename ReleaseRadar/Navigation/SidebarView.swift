@@ -221,7 +221,7 @@ struct SidebarView: View {
                     ProjectOverviewView(
                         project: project,
                         board: dashboard.board(for: projectID),
-                        guidanceState: model.projectGuidanceState(for: projectID),
+                        documentationState: model.projectDocumentationState(for: projectID),
                         projectRoot: model.projectRoot(for: projectID),
                         phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
                         openBoard: {

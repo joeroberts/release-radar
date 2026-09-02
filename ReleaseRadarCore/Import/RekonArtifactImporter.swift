@@ -2,7 +2,6 @@ import Foundation
 import Darwin
 
 public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
-    private static let artifactPath = "docs/delivery/dashboard-status.json"
     private static let maximumArtifactBytes = 1_048_576
     private static let maximumPhases = 256
     private static let maximumTasks = 5_000
@@ -29,7 +28,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         guard project.authorizedRoots.contains(root) else {
             throw RekonImportError.unauthorizedFolder
         }
-        let artifactURL = root.appendingPathComponent(Self.artifactPath).standardizedFileURL
+        let artifactURL = root.appendingPathComponent(RepositoryDocumentContract.rekonSeedPath).standardizedFileURL
         let data = try Self.readArtifactData(under: root, artifactURL: artifactURL)
         let artifact: RekonArtifact
         do {
@@ -37,7 +36,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         } catch {
             throw RekonImportError.malformedArtifact
         }
-        guard artifact.schemaVersion == 1 else {
+        guard artifact.schemaVersion == RepositoryDocumentContract.rekonSeedVersion else {
             throw RekonImportError.unsupportedSchemaVersion(artifact.schemaVersion)
         }
         try validateLimits(artifact)
@@ -239,7 +238,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         guard preview == currentPreview,
               preview.sourceRoot == self.project.canonicalRoot || self.project.authorizedRoots.contains(preview.sourceRoot),
               preview.artifactURL == preview.sourceRoot
-                .appendingPathComponent(Self.artifactPath)
+                .appendingPathComponent(RepositoryDocumentContract.rekonSeedPath)
                 .standardizedFileURL else {
             throw RekonImportError.malformedArtifact
         }
@@ -548,7 +547,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
     ) throws -> [ImportEvidence] {
         var records: [String: ImportEvidence] = [:]
         var scannedEntryCount = 0
-        let virtualDashboardDirectory = root.appendingPathComponent("docs/delivery/dashboard", isDirectory: true)
+        let virtualDashboardDirectory = root.appendingPathComponent(RepositoryDocumentContract.rekonEvidenceBasePath, isDirectory: true)
         for task in artifact.tasks where taskCounts[task.id] == 1 && confidentTicketIDs.contains(.init(rawValue: task.id)) {
             guard let evidence = task.evidence, let href = boundedText(evidence.href) else { continue }
             let resolvedEvidence = try validateEvidence(
@@ -575,17 +574,17 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
             }
         }
 
-        let delivery = root.appendingPathComponent("docs/delivery", isDirectory: true)
-        try addEvidenceIfPresent(delivery.appendingPathComponent("roadmap.md"), label: "Roadmap", within: root, records: &records)
+        let delivery = root.appendingPathComponent(RepositoryDocumentContract.deliveryCollectionPath, isDirectory: true)
+        try addEvidenceIfPresent(root.appendingPathComponent(RepositoryDocumentContract.rekonRoadmapPath), label: "Roadmap", within: root, records: &records)
         try addRecognizedMarkdown(
-            in: delivery.appendingPathComponent("task-briefs", isDirectory: true),
+            in: root.appendingPathComponent(RepositoryDocumentContract.taskBriefCollectionPath, isDirectory: true),
             label: "Task brief",
             within: root,
             scannedEntryCount: &scannedEntryCount,
             records: &records
         )
         try addRecognizedMarkdown(
-            in: delivery.appendingPathComponent("handoffs", isDirectory: true),
+            in: root.appendingPathComponent(RepositoryDocumentContract.handoffCollectionPath, isDirectory: true),
             label: "Handoff",
             within: root,
             scannedEntryCount: &scannedEntryCount,
@@ -593,7 +592,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
         )
         try addLedgers(in: delivery, within: root, scannedEntryCount: &scannedEntryCount, records: &records)
         try addLedgers(
-            in: delivery.appendingPathComponent("reviews", isDirectory: true),
+            in: root.appendingPathComponent(RepositoryDocumentContract.reviewCollectionPath, isDirectory: true),
             within: root,
             scannedEntryCount: &scannedEntryCount,
             records: &records
