@@ -275,7 +275,9 @@ public struct RepositoryDocumentValidator {
         let byPath = Dictionary(uniqueKeysWithValues: catalog.artifacts.map { ($0.path, $0) })
         var text: [String: String] = [:]
         for artifact in catalog.artifacts where artifact.kind != .designAsset {
-            guard let contents = String(data: try contents(artifact.path), encoding: .utf8) else {
+            let bytes = try contents(artifact.path)
+            if artifact.kind == .verificationEvidence && !artifact.path.lowercased().hasSuffix(".md") { continue }
+            guard let contents = String(data: bytes, encoding: .utf8) else {
                 throw RepositoryDocumentError(.invalidUTF8, path: artifact.path)
             }
             text[artifact.path] = contents

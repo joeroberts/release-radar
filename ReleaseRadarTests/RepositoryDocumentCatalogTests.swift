@@ -87,6 +87,60 @@ final class RepositoryDocumentCatalogTests: XCTestCase {
         }
     }
 
+    func testBinaryVerificationEvidenceValidatesAndIndexesWithoutLosingFileChecks() throws {
+        let root = try fixture()
+        let png = try XCTUnwrap(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN9sAAAAASUVORK5CYII="))
+        XCTAssertNil(String(data: png, encoding: .utf8))
+        let path = "docs/plans/evidence.png"
+        let file = root.appendingPathComponent(path)
+        try FileManager.default.removeItem(at: root.appendingPathComponent("docs/plans/evidence.md"))
+        try png.write(to: file)
+        try artifact(root, "evidence") { $0["path"] = path }
+        let digest = SHA256.hash(data: png).map { String(format: "%02x", $0) }.joined()
+        try Data("\(digest)  \(path)\n".utf8).write(to: root.appendingPathComponent("docs/plans/SHA256SUMS"))
+        let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
+        XCTAssertEqual(snapshot.catalog.artifacts.first { $0.artifactID == "evidence" }?.kind, .verificationEvidence)
+
+        for index in ["docs/README.md", "docs/plans/README.md"] {
+            let url = root.appendingPathComponent(index)
+            try (Data(contentsOf: url) + Data("\n\(RepositoryDocumentContract.managedIndexStart)\n\(RepositoryDocumentContract.managedIndexEnd)\n".utf8)).write(to: url)
+        }
+        XCTAssertEqual(try RepositoryDocumentIndexTool().write(authorizedRoot: root), ["docs/README.md", "docs/plans/README.md"])
+        XCTAssertNoThrow(try RepositoryDocumentIndexTool().check(authorizedRoot: root))
+        let index = try String(contentsOf: root.appendingPathComponent("docs/plans/README.md"), encoding: .utf8)
+        XCTAssertTrue(index.contains("[docs/plans/evidence.png](evidence.png)"))
+        XCTAssertTrue(index.contains("verificationEvidence"))
+        XCTAssertEqual(try Data(contentsOf: file), png)
+
+        try (png + Data([0xff])).write(to: file)
+        reject("checksumMismatch") { try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root) }
+        try png.write(to: file)
+        let changing = RepositoryDocumentValidator(afterRead: { readPath in
+            if readPath == path { try! (png + Data([0xff])).write(to: file) }
+        })
+        reject("changedDuringRead") { try changing.validateCurrent(authorizedRoot: root) }
+        try FileManager.default.removeItem(at: file)
+        let original = root.appendingPathComponent("original.png")
+        try png.write(to: original)
+        try FileManager.default.createSymbolicLink(at: file, withDestinationURL: original)
+        reject("unsafeFileType") { try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root) }
+    }
+
+    func testBinaryEvidenceAllowancePreservesMarkdownAndTextValidation() throws {
+        for path in ["docs/plans/evidence.md", "docs/plans/current.md", "docs/README.md", "docs/plans/SHA256SUMS"] {
+            let root = try fixture()
+            try Data([0xff]).write(to: root.appendingPathComponent(path))
+            reject("invalidUTF8") { try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root) }
+        }
+        let root = try fixture()
+        try artifact(root, "evidence") { $0["lifecycle"] = "active" }
+        let contents = Data("[Missing evidence](missing.md)\n".utf8)
+        try contents.write(to: root.appendingPathComponent("docs/plans/evidence.md"))
+        let digest = SHA256.hash(data: contents).map { String(format: "%02x", $0) }.joined()
+        try Data("\(digest)  docs/plans/evidence.md\n".utf8).write(to: root.appendingPathComponent("docs/plans/SHA256SUMS"))
+        reject("brokenLink") { try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root) }
+    }
+
     func testSymlinkRootsIntermediateFinalAndNonRegularFilesReject() throws {
         for path in ["docs/catalog.json", "docs/plans/draft.md", "docs/plans"] {
             let root = try fixture()

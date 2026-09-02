@@ -2,8 +2,8 @@
 
 ## Current state
 
-- Outcome: M3C evidence readback and owner root relocation independently accepted
-- Active task: M3C closeout; M4 is next
+- Outcome: M3C accepted; bounded M2A binary-evidence correction independently accepted
+- Active task: Binary-evidence correction closeout; M4 resumes next
 - Last complete task: M3C — Evidence Readback and Repository-Root Relocation
 - Authorization: Owner authorized the remaining M2C–M8 program in dependency
   order, including development, required checks and independent reviews,
@@ -13,22 +13,23 @@
   RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M3C](task-briefs/2026-09-01-managed-repository-documentation-contract/m3c-readback-root-relocation-brief.md)
-- Current blockers and risks: No required M3C findings. One unchanged
+- Controlling brief: [M2A](task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md) for the bounded correction; [M4](task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md) resumes afterward.
+- Current blockers and risks: No required correction findings remain. M4's full
+  catalog/index validation resumes after the correction is pushed. One unchanged
   onboarding test expects schema version 9 while the accepted migration version
   is now 13. M3C isolated-window accessibility and visual checks passed;
   owner installation and live acceptance remain separately gated.
-- Verification: M3C native compatibility passed 159/160, with only that
-  unchanged assertion failure. Independent QA passed 43/43 and the affected
-  refresh recheck 1/1. Code Review, QA, Architecture, and Security/Privacy GO.
-- Next eligible action: Stage M4's catalog and indexes at current repository
-  paths after the accepted M3C commit/push.
-- State: M3C COMPLETE
-- Development baseline for M3C: Required worktree
+- Verification: Binary-evidence correction passed independent native catalog
+  and index QA 43/43. Code, Architecture, and Security review GO; no Required
+  findings. M3C's prior acceptance remains intact.
+- Next eligible action: Commit/push the accepted correction separately, then
+  restore and finish M4's exact draft.
+- State: M2A CORRECTION COMPLETE; M4 HELD
+- Development baseline for the correction: Required worktree
   `/Users/jroberts/.codex/worktrees/b0f1/release_radar`, branch
   `codex/managed-documentation-contract-planning`, clean HEAD/upstream/live
-  remote verified after the M3B normal push at
-  `2019cfa9ea2e817d631e60a1741ba66d10a3fbfe`.
+  remote verified after the M3C normal push at
+  `75f9dc1af4e63e57c1d9606f217c60d023da3931`.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -255,6 +256,54 @@
   Program-created `.build/m3c/`, associated logs, and 16 synthetic host directories
   were removed after process exit and exact-target verification under owner
   cleanup authorization. Pre-existing outputs were preserved. M4 is next.
+
+## M2A correction — Binary Verification Evidence
+
+- Outcome: Complete. Non-Markdown verification evidence is validated as bytes;
+  textual documents, indexes, manifests, and Markdown evidence retain UTF-8
+  validation and applicable links. Existing containment, limits, checksums,
+  and snapshot-stability validation remain effective.
+- Trigger: M4's truthful `verificationEvidence` classification for existing PNG
+  screenshots fails `invalidUTF8` in the accepted validator. Artifact kind is
+  independent of encoding; relabelling evidence as a design asset is not a fix.
+- Scope: Restore binary evidence handling through the existing bounded reader
+  and checksum validation while retaining UTF-8 and link checks for textual
+  evidence/documents/indexes/manifests. Use the existing focused catalog/index
+  tests and independent Code, QA, Architecture, and Security review capabilities.
+  No schema, guidance, owner-state, or new validation framework change.
+- Delivery: Preserve M4's unapproved draft and commit this source correction
+  separately so M4's final diff remains documentation-only. The existing program
+  authorization covers this required accepted-contract correction; no live gate
+  is consumed or waived.
+- Verification: Direct PNG `invalidUTF8` RED preceded the bounded decoder
+  correction. Independent coordinator QA ran signed serial `xcodebuild test
+  -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -destination
+  'platform=macOS' -parallel-testing-enabled NO` with
+  `RepositoryDocumentCatalogTests` and `RepositoryDocumentIndexTests`: 43/43
+  passed. Binary indexing, corrupt checksum, changed file, symlink, malformed
+  text, and broken Markdown-link regressions passed. `git diff --check` passed.
+- Independent review: `/root/m3c_qa` implemented this separate correction;
+  `/root/m3c_code_review` supplied Code, Architecture, and Security GO. The
+  coordinator independently executed QA. No Required findings remain.
+- Durable artifacts: validator, focused native regressions, and this ledger.
+  Correction-only build outputs and four synthetic host directories were removed
+  after process exit and exact-target verification. M4's unapproved draft and
+  temporary preparation outputs remain preserved for immediate continuation.
+
+## MDCP M4 — Stage Repository Catalog In Place
+
+- Status: Held for the bounded M2A correction. The exact unapproved catalog/index
+  draft is preserved; no M4 acceptance or document cutover has occurred.
+- Scope: Inventory every eligible documentation artifact and collection at its
+  existing path; stage catalog v1 and deterministic root/local indexes. Derive
+  authority from accepted artifacts and preserve immutable held content and
+  existing checksum entries. The root index directly enumerates the transitional
+  subtree without writing inside it.
+- Verification: Accepted tool check on a small catalog fixture and expected
+  failure on the uncatalogued tree precede writes. Validate full coverage,
+  links, authority, checksums, leaf/index navigation, and second-render identity;
+  obtain one independent Documentation review. Owner-state inventory, document
+  moves, guidance activation, and source changes are outside this slice.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
