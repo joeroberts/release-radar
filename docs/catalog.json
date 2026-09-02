@@ -357,7 +357,8 @@
       "parentCollection": "delivery.task-briefs",
       "purpose": "Task scopes for 2026-09-01-managed-repository-documentation-contract; current progress determines eligibility",
       "allowedContents": [
-        "Reviewed task briefs"
+        "Reviewed task briefs",
+        "Activation runbooks"
       ],
       "prohibitedContents": [
         "Temporary build output",
@@ -2826,6 +2827,21 @@
     {
       "artifactID": "e47faa43-b783-46de-931f-cc98456224fd",
       "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "bdb0f78b-3c1d-4ce2-8272-27cc5bf88ddd",
+      "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md",
       "kind": "document",
       "lifecycle": "proposed",
       "authorityLevel": "supporting",

@@ -2,29 +2,39 @@
 
 ## Current state
 
-- Outcome: M5 accepted; guidance-v2 compatibility candidate verified
-- Active task: None; M5 checkpoint closeout
+- Outcome: M2–M5 accepted and pushed; M6A initial owner preflight performed
+- Active task: M2A authorized-root reader investigation; live M6A paused
 - Last complete task: M5 — Guidance-v2 Compatibility
-- Authorization: Owner authorized the remaining M2C–M8 program in dependency
-  order, including development, required checks and independent reviews,
-  in-scope corrections, ledger updates, and commit/normal push after each
-  accepted slice. Continue automatically between eligible slices. M6A, M6B,
-  M7, and M8 retain their exact live-operation approval gates. Stop after M8;
-  RR-R10 Task 4B and GitHub Issue #1 remain unopened.
+- Authorization: The owner authorized development, checks, independent review,
+  in-scope corrections, delivery records, and normal commit/push for the MDCP
+  program. M6A initial preflight and the separately proposed installed-app
+  broker recovery are approved. Installation, disposable/owner migration,
+  repository activation, handoff, and binding retain their exact live gates.
+  Latest owner direction: finish and deliver M6A, then stop for a new session.
+  Do not open M6B, M7, M8, Task 4B, or Issue #1 in this session.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M5](task-briefs/2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md)
-- Current blockers and risks: No Required M5 findings remain. M6A must resolve
-  exact owner targets, backup custody, and the lifecycle runbook limitation
-  below before any live operation. Root guidance remains missing/legacy;
-  staging does not activate managed documentation.
-- Verification: Independent QA covers 169 selected checks after one stale
-  tool-inventory assertion correction. Code, Architecture, targeted Security,
-  and UX GO; Release build/signatures and repository documentation check pass.
-- Next eligible action: Commit/push M5, establish the exact `MDCP-COMPAT-1`
-  checkpoint, then prepare the concrete M6A approval runbook.
-- State: M5 ACCEPTED
-- Prior checkpoint: M4 `fa9036496566fe5f82aca87feb5180bbdf45396c`.
+- Controlling briefs: [M2A](task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md)
+  for any confirmed frozen reader correction; [M6A](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md)
+  for owner activation.
+- Current risk: Read-only inventory established the saved identity, schema 10,
+  seven legacy path records, and no binding, but returned unavailable guidance
+  before catalog validation. Missing live catalog alone does not explain that
+  result. The reader may request directory-read access above the authorized
+  root; a focused synthetic regression will determine whether M2A must reopen.
+- Verified owner state: Protected pre-recovery and post-recovery backups are
+  complete. Supported startup restored the exact installed broker; the app and
+  lifecycle writer then exited. Read-only maintenance exited, and all captured
+  owner-file bytes and sidecar absence remained unchanged. No migration,
+  installation, handoff, binding, adoption, or document move occurred.
+- Next action: Resolve the bounded reader defect under the frozen-contract
+  correction rule, then resume approved read-only inventory and complete the
+  exact [M6A runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
+  before its remaining live approval.
+- State: M5 ACCEPTED; M6A IN PROGRESS, LIVE OPERATIONS PAUSED
+- Accepted checkpoint / `MDCP-COMPAT-1`:
+  `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`; a confirmed defect requires a
+  separately accepted replacement before further M6A live execution.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -368,8 +378,9 @@
   Task 4B is not exposed.
 - Freeze boundary: M2–M5 command/query/result, schema-v13 evidence/root-bound
   accepted snapshots, inventory/adoption/transition/rebind, importer, guidance,
-  plugin, exact tool schemas, and overlapping tests are accepted. Declare
-  `MDCP-COMPAT-1` only after the M5 commit is clean and exact locally/upstream/live.
+  plugin, exact tool schemas, and overlapping tests are accepted.
+  `MDCP-COMPAT-1` is `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`,
+  verified clean and equal at HEAD, upstream, and live remote after push.
   M6–M8 consume that candidate; a frozen defect reopens only its owning slice.
 - Durable artifacts: nine production/package/project files, thirteen tests,
   four screenshots, catalog/index metadata, and this ledger. Catalog coverage
@@ -383,6 +394,57 @@
   normal app startup, which also starts unrelated writers. Resolve the exact
   approved live workflow before claiming managed lifecycle success. This
   observation authorizes no new feature or owner operation.
+
+## MDCP M6A — Preparation and Initial Preflight
+
+- Authorization: "m6a is approved" approved initial steps 1–3 and recommended
+  target, protected-location, custody, and retention defaults. The subsequent
+  "approved" authorized the concrete backup-first recovery: normal startup of
+  the installed app, including its normal storage/notification/lifecycle
+  effects, broker verification, graceful close, then resumed preflight.
+- Recovery: Exact installed app/helper identities verified at version 0.1.5.
+  Approved clients and lifecycle helper were quiesced after exact executable
+  checks. The complete database/recovery set and app/plugin/configuration/
+  guidance recovery material were protected. Normal installed-app startup
+  restored its broker; the app quit and remaining lifecycle writer exited.
+  Separate pre-recovery and post-recovery copies have identical file bytes.
+- Read-only result: The frozen 0.1.6 candidate ran with explicit read-only mode
+  and exact existing-store override. Its packaged AgentTools returned schema
+  10, one saved root, seven `filePath` evidence rows, no binding, and ten fixed
+  preservation domains. Full owner identities and results remain protected.
+  The host quit and all captured owner files/sidecar absence matched baseline.
+- Required investigation: Inventory is incomplete with `catalogInvalid` and
+  unavailable guidance, without a catalog-validation error. Independent source
+  diagnosis places that failure before validation, in reader creation or
+  guidance reading. The live root has marker-free guidance and no catalog; the
+  native unsandboxed checker reports the expected missing catalog, which alone
+  would permit complete legacy inventory. Ancestor directory-read requirements
+  are the bounded hypothesis; no actual sandbox-denial log was established.
+  Live operations paused for a focused M2A regression and, if confirmed, the
+  authorized frozen-contract correction procedure.
+- Durable artifacts: The [activation runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
+  is supporting procedure, not an execution approval or competing ledger.
+  Exact targets, requests/results, backup manifests, immutable software copies,
+  and owner screenshots are in the owner-approved protected companion. Retain
+  them through M8 and at least the approved deadline; disposal is separately
+  gated. Temporary tool-created screenshot originals remain retained under
+  those owner-data terms. The frozen app/checker remain temporary build outputs.
+- Remaining activation inputs: Exact corrected candidate, complete inventory,
+  selected-root catalog deployment, disposable restoration/migration, install,
+  guidance-only handoff, binding/replay, and precise recovery requests must be
+  concrete before remaining live approval. The selected owner checkout has no
+  catalog; staging in the development worktree does not activate that root.
+- Plugin constraint: Supported external CLI installation can satisfy exact
+  plugin identity while preserving/reporting its stale managed lifecycle
+  receipt. Independent Architecture/Security review accepted that explicit
+  limitation; clean lifecycle status and normal startup are not implied.
+- Review: Earlier independent procedure review accepted backup of the prior
+  migration snapshot, candidate-client inventory, explicit store overrides,
+  verified host exits, and complete equality comparisons. M6A's final QA,
+  Architecture, and Security/Privacy acceptance remains pending actual execution.
+- Session boundary: Deliver M6A and its proposed reconciliation inventory, then
+  stop. M6B and later slices require continuation in a new session; no adoption
+  or document relocation is authorized by M6A.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.

@@ -180,7 +180,7 @@ Leaf: no child collections.
 
 - Path: [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract](2026-09-01-managed-repository-documentation-contract)
 - Purpose: Task scopes for 2026-09-01-managed-repository-documentation-contract; current progress determines eligibility
-- Allowed contents: Reviewed task briefs
+- Allowed contents: Activation runbooks; Reviewed task briefs
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: [011f16aa-fb30-458e-947b-56a8097415fb](2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md)
 - Archive destination: [delivery.archive](../archive)
@@ -200,6 +200,7 @@ Leaf: no child collections.
 | 011f16aa-fb30-458e-947b-56a8097415fb | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md](2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md) | document | nonAuthoritative | completed | none | none |
 | c44ceed1-073d-455b-bb79-fe345f455a1f | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md](2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md) | document | nonAuthoritative | completed | none | none |
 | e47faa43-b783-46de-931f-cc98456224fd | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md](2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md) | document | supporting | proposed | none | none |
+| bdb0f78b-3c1d-4ce2-8272-27cc5bf88ddd | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md](2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md) | document | supporting | proposed | none | none |
 | 34b9a03b-8249-4468-ac45-bc916038fc47 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md](2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md) | document | supporting | proposed | none | none |
 | c1b4b005-b1e4-452f-bfa2-9099999eb7e1 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md](2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md) | document | supporting | proposed | none | none |
 | 49eedb35-c8d8-420e-9212-2121b30950d2 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md](2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md) | document | supporting | proposed | none | none |
