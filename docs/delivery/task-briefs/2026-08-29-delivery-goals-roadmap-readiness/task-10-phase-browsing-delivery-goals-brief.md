@@ -1,5 +1,8 @@
 # RR-R10 Task 10: Phase browsing and Delivery Goals
 
+Completed scope record; non-authoritative. Current sequencing is in
+[progress.md](../../progress.md).
+
 ## Objective and outcome
 
 Implement [Task 10](../../plans/2026-08-29-delivery-goals-roadmap-readiness.md#task-10-present-non-mutating-phase-browsing-and-delivery-goals)
@@ -104,3 +107,31 @@ Coordinator scope/sequencing inspection and one independent qualified QA/UX plus
 Security/Privacy reviewer for actual changed UI and owner-acceptance boundaries.
 The reviewer inspects implementation and runtime evidence, not prior reviews.
 Required defects receive bounded correction and only directly affected checks.
+
+## Delivery closeout
+
+Implementation `07c37bd3c3204bb595907ad60c839e47856def28` was pushed after nine
+focused tests, native wide/compact AX and keyboard verification, documentation
+checks and independent QA/UX plus Security/Privacy acceptance (Required 0).
+The [runtime record](../../evidence/2026-09-02-rr-r10-task-10-ui.md) retains
+the two corrected selection regressions, screenshots and explicit limits.
+Both temporary Keyboard navigation changes were restored to the prior OFF
+state. Issue #9, installation, shared services and Task 11 remain excluded.
+
+Fresh complete inventory matched the retained revision-14 task fingerprint.
+Request `9868A36C-25D5-4F59-8A14-8B9A0B073F75` completed `rr-r10-task-10` at
+revision **15**, audit `7066ED8A-1F61-43E3-8AB7-364271BF710E`; exact replay
+returned the same result. Post-inventory remains complete, with one plan plus
+16 task rows and task digest
+`5fa422f5c1f202d41622956e29f05540cc89fc23d8283095b6c65557a882ce9e`.
+Only the task-domain preservation group changed. All 408 pre-operation audit
+and 122 receipt fingerprints remain, with one new audit and receipt (409/123).
+Two unrelated audit entries were already present before this operation; all
+406 Task 9-era audit fingerprints also remained intact. No raw SQLite or
+physical checked-row observation is claimed.
+
+Exact request, result, replay and before/after inventories are retained and
+read back in the owner-designated protected 2026-09-02/task-10 companion records.
+The final same-branch documentation reconciliation accompanies
+[PR #13](https://github.com/joeroberts/release-radar/pull/13). Catalog deployment/acceptance is separately pending; this
+closeout does not change the installed accepted catalog or open Task 11A.
