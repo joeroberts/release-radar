@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Outcome: M3A0 immutable schema-v12 migration fixture independently accepted
-- Active task: M3A0 accepted-slice commit/push
-- Last complete task: M3A0 — Schema-v12 Migration Fixture
+- Outcome: M3A managed evidence identity independently accepted
+- Active task: None; M3B follows the accepted M3A commit/push
+- Last complete task: M3A — Managed Evidence Identity
 - Authorization: Owner authorized the remaining M2C–M8 program in dependency
   order, including development, required checks and independent reviews,
   in-scope corrections, ledger updates, and commit/normal push after each
@@ -13,22 +13,21 @@
   RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M3A0](task-briefs/2026-09-01-managed-repository-documentation-contract/m3a0-schema-v12-fixture-brief.md)
-- Current blockers and risks: No required M2C product findings. One unchanged
+- Controlling brief: [M3A](task-briefs/2026-09-01-managed-repository-documentation-contract/m3a-managed-evidence-identity-brief.md)
+- Current blockers and risks: No required M3A findings. One unchanged
   onboarding test expects schema version 9 while the accepted migration version
-  is 12. Isolated-host runtime accessibility inspection was unavailable; no
+  is now 13. Isolated-host runtime accessibility inspection was unavailable; no
   accessibility defect was established and full live-app acceptance is not
   claimed.
-- Verification: M3A0 focused tests passed 2/2 for implementer and independent
-  QA; fixture-local checksum and full frozen schema manifest pass. Code Review,
-  QA, and Architecture are GO with no required findings.
-- Next eligible action: Open M3A after the accepted M3A0 commit/push checkpoint.
-- State: M3A0 COMPLETE
-- Development checkpoint: Required worktree
+- Verification: M3A native core tests passed 84/84; independent focused QA
+  passed 44/44. Code Review, QA, Architecture, and Security/Privacy are GO.
+- Next eligible action: Open M3B after accepted M3A commit/push.
+- State: M3A COMPLETE
+- Development baseline for M3A: Required worktree
   `/Users/jroberts/.codex/worktrees/b0f1/release_radar`, branch
   `codex/managed-documentation-contract-planning`, clean HEAD/upstream/live
-  remote verified after the M2C normal push at
-  `5c44f99354b7f97003a6f538fc390533011e19d1`.
+  remote verified after the M3A0 normal push at
+  `ba1f895e5a1b7eafd693486ca24bcfe56d116908`.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -84,9 +83,47 @@
   `/root/m2c_qa` all GO. The QA agent did not implement this slice. No required
   findings remain.
 - Durable artifacts: fixture/checksum, focused store tests, one Xcode resource
-  exclusion, and this ledger. Native results/exports under `.build/m3a0/` are
-  temporary. Production behavior, prior fixtures, owner data, and Issue #2
+  exclusion, and this ledger. Temporary native results/exports under
+  `.build/m3a0/` were removed after process exit and exact-target verification
+  under the owner's cleanup authorization. Production behavior, prior fixtures,
+  owner data, and Issue #2
   artifacts are unchanged. M3A is next.
+
+## MDCP M3A — Managed Evidence Identity
+
+- Implemented: Schema v13 preserves all frozen-v12 legacy evidence and unrelated
+  state, creates no inferred bindings or artifact IDs, and enforces exactly one
+  locator plus project/repository/root binding uniqueness. Additive Codable
+  models preserve the legacy API; readback validates the persisted canonical
+  snapshot. Managed resolution requires the exact authorized bound root and
+  accepted repository/version/digest, with separate identity, authority, and
+  typed availability outcomes.
+- Verification: Schema and root-classification runtime RED preceded changes;
+  missing model/readback APIs also failed before implementation. Signed serial
+  `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar
+  -destination 'platform=macOS' -parallel-testing-enabled NO` passed 84/84 across
+  `StoreAcceptanceTests`, `ManagedDocumentEvidenceTests`, and
+  `RepositoryDocumentCatalogTests`. Independent QA passed 44/44, including six
+  frozen-v12/v13 tests, model/resolver/catalog coverage, and four existing bridge
+  and importer legacy-boundary checks. Migration rollback, actual snapshot
+  restoration, exact schema refusal, relaunch, accepted moves, missing/restored
+  files, historical authority, checksum and unsafe-path failures are covered.
+  The v12 fixture checksum and `git diff --check` pass.
+- Independent roles: implementer `/root/m3a_implementer`; Code Review
+  `/root/m3a_code_review`, QA `/root/m3a_qa`, Architecture
+  `/root/m3a0_architecture`, and Security/Privacy `/root/m3a_security` all GO.
+  No required findings remain. Optional extreme caller-supplied `Limits`
+  robustness is deferred; defaults are safe and repository content cannot set
+  those values.
+- Limits: Verification used synthetic stores/files and bookmark authorization.
+  No owner migration, installation, UI acceptance, or live mutation occurred.
+  One catalog stability test failed transiently, then passed unchanged in
+  isolation and both final runs. Four older synthetic downgrade setups were
+  updated to remove v13 objects; immutable fixtures remain unchanged.
+- Durable artifacts: source, focused tests, and this ledger. Temporary
+  `.build/m3a/` outputs and three log-identified synthetic host databases were
+  removed after process exit and exact-target verification under owner cleanup
+  authorization. Excluded consumers and owner state are unchanged. M3B is next.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.

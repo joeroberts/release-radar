@@ -40,17 +40,8 @@ public struct RepositoryDocumentValidator {
                limits.maximumDepth].allSatisfy({ $0 > 0 && $0 <= 1_073_741_824 }) else {
             throw RepositoryDocumentError(.limitExceeded)
         }
-        let bytes = try reader.read(RepositoryDocumentContract.catalogPath, catalog: true)
-        guard String(data: bytes, encoding: .utf8) != nil else { throw RepositoryDocumentError(.invalidUTF8) }
-        let catalog: RepositoryDocumentCatalog
-        do {
-            struct Version: Decodable { let version: Int }
-            let version = try JSONDecoder().decode(Version.self, from: bytes).version
-            guard version == RepositoryDocumentContract.catalogVersion else { throw RepositoryDocumentError(.unsupportedVersion) }
-            catalog = try JSONDecoder().decode(RepositoryDocumentCatalog.self, from: bytes)
-        } catch let failure as RepositoryDocumentError { throw failure }
-        catch { throw RepositoryDocumentError(.malformedCatalog) }
-        try validateMetadata(catalog)
+        let snapshot = try decodeCatalogSnapshot(reader.read(RepositoryDocumentContract.catalogPath, catalog: true))
+        let catalog = snapshot.catalog
         let inventory = try reader.inventory()
         try reader.verifyStable()
         let expectedFiles = Set(catalog.artifacts.map(\.path)).union([RepositoryDocumentContract.catalogPath])
@@ -69,6 +60,23 @@ public struct RepositoryDocumentValidator {
         try reader.validateReplacementBounds(indexes)
         try validateContents(catalog, reader: reader, indexes: indexes)
         try reader.verifyStable()
+        return snapshot
+    }
+
+    /// Metadata-only reconstruction for a persisted trust anchor. This does not
+    /// establish current file availability or accept a repository transition.
+    func decodeCatalogSnapshot(_ bytes: Data) throws -> RepositoryDocumentSnapshot {
+        guard bytes.count <= limits.maximumCatalogBytes else { throw RepositoryDocumentError(.limitExceeded) }
+        guard String(data: bytes, encoding: .utf8) != nil else { throw RepositoryDocumentError(.invalidUTF8) }
+        let catalog: RepositoryDocumentCatalog
+        do {
+            struct Version: Decodable { let version: Int }
+            let version = try JSONDecoder().decode(Version.self, from: bytes).version
+            guard version == RepositoryDocumentContract.catalogVersion else { throw RepositoryDocumentError(.unsupportedVersion) }
+            catalog = try JSONDecoder().decode(RepositoryDocumentCatalog.self, from: bytes)
+        } catch let failure as RepositoryDocumentError { throw failure }
+        catch { throw RepositoryDocumentError(.malformedCatalog) }
+        try validateMetadata(catalog)
         let canonical = try canonicalData(catalog)
         return .init(catalog: catalog, canonicalCatalog: canonical, digest: Self.digest(canonical))
     }

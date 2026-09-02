@@ -132,7 +132,7 @@ public struct RepositoryDocumentSnapshot: Equatable, Sendable {
 }
 
 public struct RepositoryDocumentError: Error, Equatable, Sendable, LocalizedError {
-    public enum Code: String, Sendable {
+    public enum Code: String, Codable, Sendable {
         case malformedCatalog, unsupportedVersion, invalidUTF8, missingFile
         case invalidIdentity, duplicateIdentity, duplicatePath, invalidAuthority, conflictingController
         case supersessionCycle, missingReplacement, invalidCollection, retiredIdentity

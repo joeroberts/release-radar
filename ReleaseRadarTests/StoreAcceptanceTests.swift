@@ -268,6 +268,164 @@ final class StoreAcceptanceTests: XCTestCase {
                        "completed:superseded:2026-08-30T11:00:00Z:2026-08-30T12:00:00Z")
     }
 
+    func testVersionThirteenMigrationPreservesExactFrozenVersionTwelveStateAndRelaunches() async throws {
+        let url = try copyVerifiedVersionTwelveFixture()
+        let before = try SQLiteConnection(url: url)
+        let legacy = try semanticVersionElevenSnapshot(before)
+        let tasks = try taskTableSnapshot(before)
+        let store = DeliveryStore(databaseURL: url)
+        guard case .available = await store.availability else { return XCTFail("Expected v13 migration") }
+        let migrated = try SQLiteConnection(url: url)
+        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), 13)
+        let fullManifest = try versionTwelveSchemaManifest(migrated)
+        XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
+                       "aded1d280e95a63b57617ff61d4bb01073c75df40dc2d65ffae22964bf503d0c")
+        XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
+        XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
+        XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
+        XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM evidence WHERE artifact_id IS NOT NULL"), 0)
+        XCTAssertEqual(try migrated.scalarText("SELECT group_concat(name, ',') FROM pragma_table_info('evidence')"),
+                       "id,project_id,ticket_id,path,is_available,artifact_id")
+        let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: url))
+        XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try semanticVersionElevenSnapshot(snapshot), legacy)
+        XCTAssertEqual(try taskTableSnapshot(snapshot), tasks)
+        guard case .available = await DeliveryStore(databaseURL: url).availability else { return XCTFail("Expected relaunch") }
+        XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
+        XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
+        XCTAssertNil(try migrated.row("PRAGMA foreign_key_check"))
+    }
+
+    func testVersionThirteenRejectsMissingMixedDuplicateAndCrossProjectLocatorsAndBindings() async throws {
+        let url = try copyVerifiedVersionTwelveFixture()
+        let store = DeliveryStore(databaseURL: url)
+        guard case .available = await store.availability else { return XCTFail("Expected migration") }
+        let db = try SQLiteConnection(url: url)
+        for (path, artifact) in [("NULL", "NULL"), ("'/test/both'", "'current'"), ("NULL", "''")] {
+            XCTAssertThrowsError(try db.execute("INSERT INTO evidence (id,project_id,path,artifact_id) VALUES ('invalid','project-main', \(path), \(artifact))"))
+        }
+        try db.execute("INSERT INTO evidence (id,project_id,ticket_id,artifact_id) VALUES ('managed-new','project-main','ticket-active','current')")
+        XCTAssertNil(try db.scalarText("SELECT path FROM evidence WHERE id = 'managed-new'"))
+        XCTAssertThrowsError(try db.execute("INSERT INTO evidence (id,project_id,artifact_id) VALUES ('duplicate','project-main','current')"))
+        XCTAssertThrowsError(try db.execute("UPDATE evidence SET path = '/test/mixed' WHERE id = 'managed-new'"))
+        XCTAssertThrowsError(try db.execute("UPDATE evidence SET artifact_id = 'mixed' WHERE id = 'evidence-managed'"))
+        XCTAssertThrowsError(try db.execute("INSERT INTO evidence (id,project_id,ticket_id,artifact_id) VALUES ('cross','project-other','ticket-active','current')"))
+        try db.execute("INSERT INTO evidence (id,project_id,artifact_id) VALUES ('other-managed','project-other','current')")
+        let sql = "INSERT INTO project_documentation_bindings (project_id,root_id,repository_id,accepted_catalog_version,accepted_catalog_digest,accepted_catalog) VALUES (?, ?, ?, 1, ?, ?)"
+        let digest = String(repeating: "a", count: 64)
+        func binding(_ project: String, _ root: String, _ repo: String) throws {
+            try db.execute(sql, bindings: [.text(project), .text(root), .text(repo), .text(digest), .blob(Data("{}".utf8))])
+        }
+        try binding("project-main", "root-main", "11111111-1111-1111-1111-111111111111")
+        XCTAssertThrowsError(try binding("project-main", "root-main", "22222222-2222-2222-2222-222222222222"))
+        XCTAssertThrowsError(try binding("project-other", "root-other", "11111111-1111-1111-1111-111111111111"))
+        XCTAssertThrowsError(try binding("project-other", "root-main", "22222222-2222-2222-2222-222222222222"))
+        XCTAssertThrowsError(try db.execute("UPDATE project_documentation_bindings SET root_id = 'root-other'"))
+        try binding("project-other", "root-other", "22222222-2222-2222-2222-222222222222")
+        XCTAssertNil(try db.row("PRAGMA foreign_key_check"))
+    }
+
+    func testVersionThirteenLateFailurePreservesOriginalAndSnapshotThenRecovers() async throws {
+        let url = try copyVerifiedVersionTwelveFixture()
+        let db = try SQLiteConnection(url: url)
+        let legacy = try semanticVersionElevenSnapshot(db)
+        let tasks = try taskTableSnapshot(db)
+        try db.execute("CREATE INDEX project_documentation_bindings_repository_unique ON projects(name)")
+        let originalManifest = try versionTwelveSchemaManifest(db)
+        let failed = DeliveryStore(databaseURL: url)
+        guard case let .unavailable(recovery) = await failed.availability else { return XCTFail("Expected late schema object collision") }
+        for location in [url, try XCTUnwrap(recovery.preMigrationSnapshotURL)] {
+            let restored = try SQLiteConnection(url: location)
+            XCTAssertEqual(try restored.scalarInt("PRAGMA user_version"), 12)
+            XCTAssertEqual(try versionTwelveSchemaManifest(restored), originalManifest)
+            XCTAssertEqual(try semanticVersionElevenSnapshot(restored), legacy)
+            XCTAssertEqual(try taskTableSnapshot(restored), tasks)
+        }
+        // Restore the actual pre-migration snapshot to a fresh synthetic database
+        // and exercise recovery independently of the rolled-back original.
+        let restoredURL = try makeDatabaseURL()
+        try FileManager.default.copyItem(at: XCTUnwrap(recovery.preMigrationSnapshotURL), to: restoredURL)
+        let restoredDB = try SQLiteConnection(url: restoredURL)
+        try restoredDB.execute("DROP INDEX project_documentation_bindings_repository_unique")
+        guard case .available = await DeliveryStore(databaseURL: restoredURL).availability else { return XCTFail("Expected snapshot recovery") }
+        XCTAssertEqual(try restoredDB.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try semanticVersionElevenSnapshot(restoredDB), legacy)
+        XCTAssertEqual(try taskTableSnapshot(restoredDB), tasks)
+        XCTAssertEqual(try restoredDB.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
+        try db.execute("DROP INDEX project_documentation_bindings_repository_unique")
+        guard case .available = await DeliveryStore(databaseURL: url).availability else { return XCTFail("Expected bounded recovery") }
+        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try semanticVersionElevenSnapshot(db), legacy)
+        XCTAssertEqual(try taskTableSnapshot(db), tasks)
+        guard case .available = await DeliveryStore(databaseURL: url).availability else { return XCTFail("Expected recovered relaunch") }
+        try db.execute("PRAGMA user_version = 14")
+        let future = DeliveryStore(databaseURL: url)
+        guard case .unavailable = await future.availability else { return XCTFail("Expected unsupported future schema refusal") }
+        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 14)
+        XCTAssertEqual(try semanticVersionElevenSnapshot(db), legacy)
+        XCTAssertEqual(try taskTableSnapshot(db), tasks)
+    }
+
+    func testVersionThirteenBindingAndBothLocatorReadbacksSurviveRelaunch() async throws {
+        let url = try copyVerifiedVersionTwelveFixture()
+        let store = DeliveryStore(databaseURL: url)
+        let catalogRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
+        let binding = try ProjectDocumentationBinding(projectID: .init(rawValue: "project-main"), rootID: .init(rawValue: "root-main"),
+            acceptedSnapshot: RepositoryDocumentValidator().validateCurrent(authorizedRoot: catalogRoot))
+        let initiallyUnbound = try await store.documentationBinding(projectID: binding.projectID)
+        XCTAssertNil(initiallyUnbound)
+        try await store.transact(actor: .init(id: "synthetic-test"), reason: "Seed explicit managed binding") { db in
+            try db.execute("INSERT INTO project_documentation_bindings (project_id,root_id,repository_id,accepted_catalog_version,accepted_catalog_digest,accepted_catalog) VALUES (?, ?, ?, ?, ?, ?)",
+                bindings: [.text(binding.projectID.rawValue), .text(binding.rootID.rawValue), .text(binding.repositoryID),
+                           .integer(Int64(binding.acceptedCatalogVersion)), .text(binding.acceptedCatalogDigest), .blob(binding.acceptedCatalog)])
+            try db.execute("INSERT INTO evidence (id,project_id,artifact_id,is_available) VALUES ('managed-readback','project-main','draft',0)")
+            try db.execute("INSERT INTO project_roots (id,project_id,path) VALUES ('second-root','project-main','/test/second-root')")
+        }
+        let before = try versionTwelveSchemaManifest(SQLiteConnection(url: url))
+        let state = try semanticVersionElevenSnapshot(SQLiteConnection(url: url))
+        for current in [store, DeliveryStore(databaseURL: url)] {
+            let readback = try await current.documentationBinding(projectID: binding.projectID)
+            XCTAssertEqual(readback, binding)
+            let managed = try await current.locatedEvidence(projectID: binding.projectID, evidenceID: .init(rawValue: "managed-readback"))
+            XCTAssertEqual(managed?.locator, .managedDocument(artifactID: "draft"))
+            XCTAssertEqual(managed?.isAvailable, false)
+            XCTAssertNil(managed?.legacyRecord)
+            let legacy = try await current.locatedEvidence(projectID: binding.projectID, evidenceID: .init(rawValue: "evidence-managed"))
+            XCTAssertEqual(legacy?.locator, .filePath("/test/main/docs/plans/current.md"))
+            let crossProject = try await current.locatedEvidence(projectID: .init(rawValue: "project-other"), evidenceID: .init(rawValue: "managed-readback"))
+            XCTAssertNil(crossProject)
+            let otherBinding = try await current.documentationBinding(projectID: .init(rawValue: "project-other"))
+            XCTAssertNil(otherBinding)
+        }
+        XCTAssertEqual(try versionTwelveSchemaManifest(SQLiteConnection(url: url)), before)
+        XCTAssertEqual(try semanticVersionElevenSnapshot(SQLiteConnection(url: url)), state)
+    }
+
+    func testVersionThirteenManifestRejectsMissingOrCounterfeitBindingAndLocatorConstraints() async throws {
+        for table in ["evidence", "project_documentation_bindings"] {
+            let url = try makeDatabaseURL()
+            let store = DeliveryStore(databaseURL: url)
+            guard case .available = await store.availability else { return XCTFail("Expected current schema") }
+            let db = try SQLiteConnection(url: url)
+            let sql = try XCTUnwrap(db.scalarText("SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?", bindings: [.text(table)]))
+            let counterfeit: String
+            let objects: [String]
+            if table == "evidence" {
+                counterfeit = sql.replacingOccurrences(of: "UNIQUE(project_id, artifact_id)", with: "UNIQUE(project_id, artifact_id, id)")
+                objects = []
+            } else {
+                counterfeit = sql.replacingOccurrences(of: "REFERENCES project_roots(project_id, id)", with: "REFERENCES projects(id, id)")
+                objects = ["project_documentation_bindings_root_unique", "project_documentation_bindings_repository_unique"]
+            }
+            XCTAssertNotEqual(counterfeit, sql)
+            try reconstructEmptyVersionTwelveTable(db, table: table, dependentObjects: objects, sql: counterfeit)
+            let damagedManifest = try versionTwelveSchemaManifest(db)
+            let failed = DeliveryStore(databaseURL: url)
+            guard case .unavailable = await failed.availability else { return XCTFail("Expected exact schema refusal for \(table)") }
+            XCTAssertEqual(try versionTwelveSchemaManifest(db), damagedManifest)
+        }
+    }
+
     func testDeliveryGoalPublicModelsRoundTripAndKeepObservedGoalIdentityDistinct() throws {
         let createdAt = Date(timeIntervalSince1970: 1_777_777_777)
         let goalID = DeliveryGoalID(rawValue: "DG-1")
@@ -862,14 +1020,14 @@ final class StoreAcceptanceTests: XCTestCase {
         try insertTask(future, projectID: "project-main", ticketID: "ticket-active", id: "future-task", label: "Future", title: "Future version preservation", sortOrder: 0)
         let futureV11Snapshot = try semanticVersionElevenSnapshot(future)
         let futureTaskSnapshot = try taskTableSnapshot(future)
-        try future.execute("PRAGMA user_version = 13")
+        try future.execute("PRAGMA user_version = \(StoreMigrations.currentVersion + 1)")
         let unsupported = DeliveryStore(databaseURL: futureURL)
         guard case let .unavailable(futureRecovery) = await unsupported.availability else {
-            return XCTFail("Expected schema-v13 rejection")
+            return XCTFail("Expected future schema rejection")
         }
         XCTAssertEqual(futureRecovery.kind, .migration)
         let afterUnsupported = try SQLiteConnection(url: futureURL)
-        XCTAssertEqual(try afterUnsupported.scalarInt("PRAGMA user_version"), 13)
+        XCTAssertEqual(try afterUnsupported.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion + 1)
         XCTAssertEqual(try semanticVersionElevenSnapshot(afterUnsupported), futureV11Snapshot)
         XCTAssertEqual(try taskTableSnapshot(afterUnsupported), futureTaskSnapshot)
         XCTAssertNil(try afterUnsupported.row("PRAGMA foreign_key_check"))
@@ -898,7 +1056,7 @@ final class StoreAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE lane IN ('backlog', 'blocked', 'accepted') AND plan_legacy_continuation <> 0")
             )
         }
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(firstRead.0, 2)
         XCTAssertEqual(firstRead.1, 1)
         XCTAssertEqual(firstRead.2, 2)
@@ -1352,7 +1510,7 @@ final class StoreAcceptanceTests: XCTestCase {
         guard case .available = await recovered!.availability else {
             return XCTFail("Expected normal migration after removing only the injected trigger")
         }
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try semanticVersionTenSnapshot(SQLiteConnection(url: databaseURL)), beforeMigration)
         recovered = nil
         let relaunched = DeliveryStore(databaseURL: databaseURL)
@@ -1944,7 +2102,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(state.0, "single-phase")
         XCTAssertNil(state.1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
     }
 
     func testVersionSevenMigrationBackfillsOnlyUnambiguousTicketGoalIdentity() async throws {
@@ -2028,7 +2186,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL))
         XCTAssertEqual(relaunchedLinkCount, 1)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 7)
         XCTAssertNil(try snapshot.scalarText("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'ticket_goal_links'"))
         XCTAssertEqual(try snapshot.scalarText("SELECT outcome FROM tickets WHERE id = 'ONE'"), "Owner-authored unambiguous outcome")
@@ -2115,7 +2273,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertTrue(initial[.agentCompletionAndReview])
         XCTAssertTrue(initial[.needsReviewEntry])
         XCTAssertFalse(initial[.pausedGoals])
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
 
         let schema = try SQLiteConnection(url: databaseURL)
         XCTAssertThrowsError(try schema.execute("INSERT INTO alert_rules (kind, is_enabled) VALUES ('unknown', 1)"))
@@ -2176,7 +2334,7 @@ final class StoreAcceptanceTests: XCTestCase {
             )
         }
 
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(state.0, 1)
         XCTAssertEqual(state.1, "neverInstalled")
     }
@@ -2196,7 +2354,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(recovery.kind, .migration)
         let original = try SQLiteConnection(url: databaseURL)
         let snapshot = try SQLiteConnection(url: try XCTUnwrap(recovery.preMigrationSnapshotURL))
-        XCTAssertEqual(try original.scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try original.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try original.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle"), 0)
         XCTAssertEqual(try snapshot.scalarInt("SELECT COUNT(*) FROM codex_plugin_lifecycle"), 0)
     }
@@ -2332,7 +2490,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(persisted.0, "Store")
         XCTAssertEqual(persisted.1, 1)
         XCTAssertEqual(persisted.2, 0)
-        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try relaunchedDatabase.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try snapshot.scalarText("SELECT value FROM legacy_marker"), "before-migration")
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 0)
     }
@@ -2604,7 +2762,7 @@ final class StoreAcceptanceTests: XCTestCase {
         expectedTaskCount: Int64
     ) throws {
         let connection = try SQLiteConnection(url: databaseURL)
-        XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 12)
+        XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try semanticVersionElevenSnapshot(connection), expectedVersionElevenSnapshot)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_task_plans"), expectedTaskPlanCount)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_tasks"), expectedTaskCount)
@@ -2716,7 +2874,7 @@ final class StoreAcceptanceTests: XCTestCase {
         var store: DeliveryStore? = DeliveryStore(databaseURL: databaseURL)
         _ = store
         store = nil
-        guard try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version") == 12 else {
+        guard try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version") == StoreMigrations.currentVersion else {
             throw StoreError.unavailable("Expected schema-v12 test database")
         }
         return databaseURL
@@ -2893,6 +3051,19 @@ final class StoreAcceptanceTests: XCTestCase {
     }
 
     private func removeVersionElevenSchema(_ connection: SQLiteConnection) throws {
+        // These older migration tests derive synthetic legacy stores from current
+        // code. Strip v13 as well; the genuine frozen fixtures remain untouched.
+        let frozen = try SQLiteConnection(url: copyVerifiedVersionTwelveFixture())
+        let legacyEvidenceSQL = try XCTUnwrap(frozen.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'evidence'"))
+        try connection.executeScript("""
+        DROP TABLE project_documentation_bindings;
+        DROP INDEX project_roots_project_identity_unique;
+        ALTER TABLE evidence RENAME TO evidence_current;
+        \(legacyEvidenceSQL);
+        INSERT INTO evidence (id,project_id,ticket_id,path,is_available)
+            SELECT id,project_id,ticket_id,path,is_available FROM evidence_current;
+        DROP TABLE evidence_current;
+        """)
         try connection.executeScript("""
         DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
         DROP TRIGGER IF EXISTS ticket_task_plans_reject_ticket_delete;
