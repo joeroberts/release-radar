@@ -2,38 +2,74 @@
 
 ## Current state
 
-- Outcome: M2–M6A accepted; M6A owner activation and inventory complete
-- Active task: None after M6A delivery; owner-requested session stop
-- Last complete task: M6A — Owner Activation, Migration, and Inventory
+- Outcome: M2–M6B accepted; exact managed adoption and relaunch verified
+- Active task: M6B delivery, followed by M7 exact cutover preparation
+- Last complete task: M6B — Exact Managed Evidence Adoption
 - Authorization: The owner authorized development, checks, independent review,
   in-scope corrections, delivery records, and normal commit/push for the MDCP
   program. M6A initial preflight and the separately proposed installed-app
   broker recovery were approved, followed by explicit approval of the exact
   remaining activation runbook and exact seven-file Finder metadata quarantine.
   The approved activation operations are complete.
-  Latest owner direction: finish and deliver M6A, then stop for a new session.
-  Do not open M6B, M7, M8, Task 4B, or Issue #1 in this session.
+  On 2026-09-02 the owner resumed M6B and the stated cutover/runtime outcome,
+  selected `codex/managed-documentation-contract-planning` in its existing
+  worktree, and explicitly approved the protected five-row M6B execution
+  package, including backup, exact replay, and read-only acceptance.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M6A](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md)
-  and its approved activation/recovery runbook.
+- Controlling scope: [M6B](task-briefs/2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md)
+  and the exact owner-approved protected execution package. The M6A runbook
+  remains the preservation/recovery reference.
 - Verified owner state: Exact signed app/plugin 0.1.6 installed; schema 13,
   current v2 guidance, exact accepted repository binding, and complete inventory
-  persist across relaunch. Seven original legacy rows are unchanged; one
-  ticketless guidance row and two exact audit/receipt pairs were added.
-  Read-only inspection left the closed database set byte-identical.
+  persist across relaunch. Five exact evidence rows now use managed artifact
+  identities; three legacy rows remain unchanged. M6B added one audit/receipt
+  pair and preserved all unrelated state. Read-only relaunch left the closed
+  database set byte-identical.
 - Remaining limits: One pre-existing legacy directory locator remains
   unresolved. The exact installed plugin retains its old app-managed receipt
   and may show Modified/Needs repair. Ordinary live use remains unreleased.
-- Next eligible slice: M6B in a new session only, after explicit owner resume
-  and the exact reconciliation approval. The protected inventory proposes five
-  exact adoption candidates and three retained legacy records. No later slice
-  is opened by M6A completion.
-- State: M6A ACCEPTED; STOP AFTER DELIVERY
+- Next eligible work: Prepare M7's exact catalog-driven cutover and live
+  preflight after the M6B delivery push under the
+  owner's stated outcome. M8 accepts the pending catalog and verifies runtime.
+  Task 4B and Issue #1 remain separate and unopened.
+- State: M6B ACCEPTED
 - Prior checkpoint `MDCP-COMPAT-1`:
   `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`. Replacement `MDCP-COMPAT-2` is
   `b365aff416dde5afd058e03cf0e471580add002f`, verified clean with equal HEAD,
   upstream, and live remote after normal push.
+
+## MDCP M6B — Exact Managed Evidence Adoption
+
+- Authorization: The owner explicitly approved the complete five-row request,
+  fresh backup, replay, and read-only acceptance in this session. Repository
+  delivery uses the existing `codex/managed-documentation-contract-planning`
+  worktree; the original checkout remains the bound application target.
+- Result: One typed adoption transaction converted the five exact M6A matches.
+  All eight evidence IDs, project/ticket/phase associations, stored and resolved
+  availability, and document paths remain unchanged. The three retained legacy
+  rows include the existing unresolved directory locator.
+- Verification: Fresh preflight equalled the accepted M6A inventory. Exact
+  replay returned the original result. Full before/after comparison permits
+  only five locator changes, their evidence fingerprint, and one exact
+  audit/receipt pair. Catalog, binding, root/bookmark metadata and the other
+  17 preservation domains are unchanged. Full inventory persisted across
+  read-only relaunch; closed-store bytes and sidecar/recovery presence remained
+  equal afterward. Native accessibility readback distinguishes current,
+  completed and superseded managed evidence from legacy rows.
+- Independent review: `/root/m6b_security_review` accepted the actual operation's
+  command contract, Architecture and Security/Privacy boundaries;
+  `/root/m6b_qa` accepted the semantic comparison, replay, relaunch, saved native
+  UI evidence and concise delivery record. No required or optional findings
+  remain. Repository documentation and diff checks pass.
+- Durable evidence: Exact approval/request/results, before/after/relaunch
+  inventories, UI evidence and the fresh schema-13 recovery copy are in the
+  existing owner-designated protected companion, retained through M8 and at
+  least 2026-10-02. No new temporary build or test files were created. Existing
+  M6A temporary inputs and protected retention obligations remain unchanged.
+- Limits: No source, schema, catalog, physical document path, root, plugin
+  receipt, or ordinary application-startup change occurred. App maintenance
+  exited; ordinary live use remains unreleased.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
