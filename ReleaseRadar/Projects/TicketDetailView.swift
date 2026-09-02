@@ -2,6 +2,9 @@ import SwiftUI
 
 struct TicketDetailView: View {
     let detail: TicketDetailProjection
+    var reload: () async -> Void = {}
+    @State private var isReloadingTasks = false
+    @ScaledMetric(relativeTo: .subheadline) private var taskFontSize = 12
 
     var body: some View {
         ScrollView {
@@ -18,6 +21,8 @@ struct TicketDetailView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("inspector-outcome")
                 }
+
+                tasksSection
 
                 detailSection("Goal context", systemImage: "scope") {
                     Label(detail.goalContext.linkQuality.rawValue, systemImage: "checkmark.seal")
@@ -65,6 +70,48 @@ struct TicketDetailView: View {
             .textSelection(.enabled)
         }
         .accessibilityIdentifier("ticket-inspector")
+    }
+
+    private var tasksSection: some View {
+        detailSection("Tasks", systemImage: "checklist") {
+            switch detail.taskPlan {
+            case .noPlan:
+                Text("No task plan")
+                    .foregroundStyle(.secondary)
+            case let .loaded(plan):
+                ForEach(Array(plan.tasks.enumerated()), id: \.element.id) { index, task in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: task.completion == .completed ? "checkmark.square" : "square")
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                        Text("\(task.label): \(task.title)")
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.system(size: taskFontSize))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(task.accessibilityLabel(position: index + 1, total: plan.tasks.count))
+                    .accessibilityIdentifier("task-row-\(task.id.rawValue)")
+                }
+            case let .unavailable(recovery):
+                FailureStateView(
+                    presentation: .init(title: "Tasks unavailable", detail: recovery.message,
+                        systemImage: "arrow.clockwise", tone: .warning,
+                        accessibilityID: "task-plan-unavailable"),
+                    style: .compact,
+                    actionTitle: isReloadingTasks ? "Reloading…" : "Reload",
+                    action: {
+                        guard !isReloadingTasks else { return }
+                        isReloadingTasks = true
+                        Task {
+                            await reload()
+                            isReloadingTasks = false
+                        }
+                    }
+                )
+                .disabled(isReloadingTasks)
+            }
+        }
     }
 
     private func relationshipSection(

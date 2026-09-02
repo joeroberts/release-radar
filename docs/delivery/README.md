@@ -41,6 +41,7 @@
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | 96b10404-6291-4cc8-beb9-c0e2e1dff704 | [docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json](evidence/2026-08-30-rr-r10-task-2a-red-evidence.json) | verificationEvidence | nonAuthoritative | completed | none | none |
+| a5d9d0f5-d689-405d-b175-f88534219a1f | [docs/delivery/evidence/2026-09-02-rr-r10-task-5-ui.md](evidence/2026-09-02-rr-r10-task-5-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 0199bdf8-78d1-460e-abe2-519f0fd34e0b | [docs/delivery/evidence/mdcp-m2c-onboarding-repair-compact.png](evidence/mdcp-m2c-onboarding-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 2497cc96-d6c8-42ea-87b3-1f6b7cabda8b | [docs/delivery/evidence/mdcp-m2c-onboarding-staged-wide.png](evidence/mdcp-m2c-onboarding-staged-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | ab3b7be3-fc39-48cf-8101-0fc4d24845ac | [docs/delivery/evidence/mdcp-m2c-overview-repair-compact.png](evidence/mdcp-m2c-overview-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
@@ -55,6 +56,17 @@
 | 9f047ff0-f55e-47bb-a46d-5b40d9f51146 | [docs/delivery/evidence/mdcp-m5-onboarding-unavailable-wide.png](evidence/mdcp-m5-onboarding-unavailable-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | fb8da0f4-d5e9-4631-b571-5f5ff6c2f017 | [docs/delivery/evidence/mdcp-m5-overview-current-wide.png](evidence/mdcp-m5-overview-current-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | ef0a5b3e-c4de-4007-92ac-36d4cb2ecc5c | [docs/delivery/evidence/mdcp-m5-overview-update-compact.png](evidence/mdcp-m5-overview-update-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| b6fff764-f6dd-4d5f-9015-ad24aa679694 | [docs/delivery/evidence/rr-r10-task5-accessibility-compact.txt](evidence/rr-r10-task5-accessibility-compact.txt) | verificationEvidence | nonAuthoritative | completed | none | none |
+| db824e94-8967-4901-9fb5-70f882b64cf1 | [docs/delivery/evidence/rr-r10-task5-accessibility-wide.txt](evidence/rr-r10-task5-accessibility-wide.txt) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 766a793e-6b1e-4003-8f71-658f269ab46f | [docs/delivery/evidence/rr-r10-task5-compact-last-tasks.png](evidence/rr-r10-task5-compact-last-tasks.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| f4ffe8b5-2802-40ef-8747-8eddd233c0f5 | [docs/delivery/evidence/rr-r10-task5-increased-contrast-compact.png](evidence/rr-r10-task5-increased-contrast-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| f48dfad6-7632-49a5-8709-76a4e0da8cbc | [docs/delivery/evidence/rr-r10-task5-increased-contrast-wide.png](evidence/rr-r10-task5-increased-contrast-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 08a40605-af59-4fd7-996e-84f6052c6477 | [docs/delivery/evidence/rr-r10-task5-loaded-compact.png](evidence/rr-r10-task5-loaded-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 751e813c-3d89-4546-876f-faef75588785 | [docs/delivery/evidence/rr-r10-task5-loaded-wide.png](evidence/rr-r10-task5-loaded-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 57b45ac5-b53b-4d5f-86a2-fa2046e525ad | [docs/delivery/evidence/rr-r10-task5-no-plan-compact.png](evidence/rr-r10-task5-no-plan-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 9101f56b-2e34-41a6-879b-00e5a24b1591 | [docs/delivery/evidence/rr-r10-task5-no-plan-wide.png](evidence/rr-r10-task5-no-plan-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 304d9a72-624f-4ddb-b9dd-05c7e75d6d2c | [docs/delivery/evidence/rr-r10-task5-unavailable-compact.png](evidence/rr-r10-task5-unavailable-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| ddff4197-4f3b-4fe8-9a20-c3ab4809bb79 | [docs/delivery/evidence/rr-r10-task5-unavailable-wide.png](evidence/rr-r10-task5-unavailable-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | a14ff940-cfc1-4735-974b-895ab63f1364 | [docs/delivery/evidence/rr-r9-active-phase-board-compact.png](evidence/rr-r9-active-phase-board-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | b445b788-23e7-4630-a4d1-648845c1ebcc | [docs/delivery/evidence/rr-r9-active-phase-board-wide.png](evidence/rr-r9-active-phase-board-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 0ad29467-a31f-4574-9a98-05b2188a540f | [docs/delivery/evidence/rr-r9-active-phase-overview.png](evidence/rr-r9-active-phase-overview.png) | verificationEvidence | nonAuthoritative | completed | none | none |

@@ -264,7 +264,7 @@ struct PhaseBoardView: View {
     private var detail: some View {
         if let selected = board.detail(for: selectedTicketID)
             ?? board.details.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first {
-            TicketDetailView(detail: selected)
+            TicketDetailView(detail: selected, reload: reloadActivePhase)
         } else {
             ContentUnavailableView("Select a ticket", systemImage: "rectangle.on.rectangle")
         }
