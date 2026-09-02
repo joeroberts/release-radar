@@ -3,7 +3,7 @@
 ## Current state
 
 - Outcome: M2–M5 accepted and pushed; M6A initial owner preflight performed
-- Active task: M6A activation-runbook completion after accepted M2A correction
+- Active task: M6A remaining exact activation approval
 - Last complete task: M5 — Guidance-v2 Compatibility
 - Authorization: The owner authorized development, checks, independent review,
   in-scope corrections, delivery records, and normal commit/push for the MDCP
@@ -19,9 +19,9 @@
   for owner activation.
 - Current risk: The synthetic regression confirmed unnecessary ancestor
   directory-read requirements. The accepted correction uses directory search
-  access with the same no-follow/identity protections. Actual signed-app
-  inventory at the owner root remains the next live verification; missing
-  catalog deployment and remaining activation actions are still gated.
+  access with the same no-follow/identity protections. The corrected signed app
+  now returns complete live legacy inventory with unchanged stored state. Selected-root catalog deployment and the remaining
+  installation/migration/handoff/binding actions are still gated.
 - Verified owner state: Protected pre-recovery and post-recovery backups are
   complete. Supported startup restored the exact installed broker; the app and
   lifecycle writer then exited. Read-only maintenance exited, and all captured
@@ -29,11 +29,13 @@
   installation, handoff, binding, adoption, or document move occurred.
 - Next action: Obtain approval for the completed exact remaining
   [M6A runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md),
-  then verify the corrected reader through the approved live sequence.
+  then execute its disposable proof, deployment, installation, migration,
+  handoff, binding, and relaunch checks.
 - State: M2A CORRECTION ACCEPTED; M6A IN PROGRESS
 - Prior checkpoint `MDCP-COMPAT-1`:
-  `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`. The accepted correction below
-  establishes replacement `MDCP-COMPAT-2` after its normal commit/push.
+  `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`. Replacement `MDCP-COMPAT-2` is
+  `b365aff416dde5afd058e03cf0e471580add002f`, verified clean with equal HEAD,
+  upstream, and live remote after normal push.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -444,15 +446,30 @@
   10, one saved root, seven `filePath` evidence rows, no binding, and ten fixed
   preservation domains. Full owner identities and results remain protected.
   The host quit and all captured owner files/sidecar absence matched baseline.
-- Required investigation: Inventory is incomplete with `catalogInvalid` and
+- Initial failed observation: The prior inventory was incomplete with `catalogInvalid` and
   unavailable guidance, without a catalog-validation error. Independent source
   diagnosis places that failure before validation, in reader creation or
   guidance reading. The live root has marker-free guidance and no catalog; the
   native unsandboxed checker reports the expected missing catalog, which alone
   would permit complete legacy inventory. Ancestor directory-read requirements
   are the bounded hypothesis; no actual sandbox-denial log was established.
-  Live operations paused for a focused M2A regression and, if confirmed, the
-  authorized frozen-contract correction procedure.
+  Live operations paused for the M2A correction recorded above. Its accepted
+  replacement then resumed the already-approved read-only preflight.
+- Corrected live verification: Exact-ID inventory through the signed replacement
+  returns `isComplete=true`, schema 10, legacy guidance with the expected
+  missing-catalog observation, seven `filePath` records, and no binding. Saved
+  identities, evidence, roots, all ten fixed domains, audits, and receipts equal
+  the prior discovery. After normal Quit and verified process exit, all nine
+  recorded source-presence/byte states still match the protected baseline.
+- Remaining approval package: The protected exact companion names candidate,
+  store/project/root, backup/disposable locations, CLI, source/deployment
+  revisions, catalog snapshot, guidance diffs, two complete mutation requests,
+  recovery and retention terms. It proposes disposable restoration/migration,
+  accepted repository deployment at unchanged paths, exact installation,
+  schema-13 migration, v2 handoff, binding/replay/relaunch, and M6A closeout.
+  The deployment explicitly includes previously accepted instruction-policy
+  changes; the handoff itself only appends its managed block. No remaining
+  activation action has run or received its final exact approval.
 - Durable artifacts: The [activation runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
   is supporting procedure, not an execution approval or competing ledger.
   Exact targets, requests/results, backup manifests, immutable software copies,
@@ -473,6 +490,14 @@
   migration snapshot, candidate-client inventory, explicit store overrides,
   verified host exits, and complete equality comparisons. M6A's final QA,
   Architecture, and Security/Privacy acceptance remains pending actual execution.
+- Preparation review: Independent QA confirmed exact baseline equality and
+  sufficient copy/migration/restoration comparisons. Architecture/Security
+  review required active operator-document lifecycle before initial binding
+  and explicit installation-failure recovery. Both were incorporated without
+  new application behavior or another catalog-acceptance operation. Native
+  documentation validation passes after the one affected index regeneration.
+  Affected Architecture/Security review returned GO with zero Required findings;
+  the remaining package is ready for exact owner approval.
 - Session boundary: Deliver M6A and its proposed reconciliation inventory, then
   stop. M6B and later slices require continuation in a new session; no adoption
   or document relocation is authorized by M6A.

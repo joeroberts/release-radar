@@ -1,15 +1,14 @@
-# M6A owner activation runbook — preparation draft
+# M6A owner activation runbook
 
-**Status: Initial preflight and broker recovery approved and executed;
-live operations paused on an incomplete read-only inventory.**
-The owner approved recommended defaults and initial steps 1–3, then explicitly
-approved backup-first normal startup of the installed app to restore its broker,
-graceful close, and resumed preflight. Protected copies are complete; captured
-owner bytes remain unchanged. Inventory established schema 10 and saved
-identities but failed before catalog validation. The focused M2A correction is independently accepted; the replacement
-candidate must pass the actual signed-app check before later live mutations. Steps 4–7, including
-selected-root deployment, still require exact live approval. The owner now
-requires delivery of M6A followed by a session stop before M6B.
+**Status: Initial preflight and broker recovery complete; remaining exact
+activation package prepared for approval.**
+The owner approved initial steps 1–3 and separately approved backup-first
+installed-app startup to restore the broker. After the accepted M2A correction,
+the signed replacement returns complete live legacy inventory: schema 10,
+seven path records, exact saved identities, and no binding. All stored fields
+and captured source bytes remain unchanged after host exit. The remaining
+installation, disposable/owner migration, selected-root deployment, handoff,
+and binding actions have not run. Deliver M6A, then stop before M6B as requested.
 
 This supporting procedure accompanies the [M6A brief](m6a-owner-activation-inventory-brief.md).
 Exact owner locations, inventory, requests, custody, and approvals belong in
@@ -18,9 +17,9 @@ the owner-approved protected companion. Current delivery state remains in
 
 ## Frozen candidate
 
-`MDCP-COMPAT-2` is the accepted M2A authorized-root search-access correction
-on `codex/managed-documentation-contract-planning`; record its exact pushed
-commit in the protected companion before resuming live execution. It replaces
+`MDCP-COMPAT-2` is `b365aff416dde5afd058e03cf0e471580add002f`, the
+accepted and pushed M2A authorized-root search-access correction on
+`codex/managed-documentation-contract-planning`. It replaces
 `MDCP-COMPAT-1` (`dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`).
 The correction changes only root-directory acquisition and its regression;
 accepted storage, command, catalog, guidance, and signing contracts remain fixed.
@@ -47,9 +46,9 @@ Paths below are relative to `ReleaseRadar.app`.
 
 Verified app and documentation-checker copies are retained as temporary build
 outputs under `.build/mdcp-compat-2/`. The checker requires its adjacent
-`ReleaseRadarCore.framework`. The replacement has not been installed or launched against owner state.
-The prior candidate was launched once in explicit read-only maintenance against
-the approved existing owner store, then closed.
+`ReleaseRadarCore.framework`. The replacement has not been installed. Its
+approved exact-store read-only launch returned complete inventory and unchanged stored state, then exited.
+The prior candidate is retained separately as an older temporary build input.
 Revalidate the selected bundle before approving its installation;
 a rebuilt or changed bundle needs a newly recorded exact identity.
 
@@ -93,8 +92,7 @@ with those results before requesting approval for steps 4–7 and recovery.
 The owner has approved the recommended target/protected-location/retention
 defaults for that initial preflight. The protected companion and separate pre-/post-recovery backups are complete.
 Read-only typed discovery established the exact saved project/root identities,
-schema 10, seven legacy path records, and no binding. Inventory remains
-incomplete pending the reader investigation; no migration has occurred.
+schema 10, seven legacy path records, and no binding. The corrected signed-app query is complete; no migration has occurred.
 
 ## Broker recovery — authorized and completed
 
@@ -123,6 +121,42 @@ The exact installed broker was restored and verified. The app and lifecycle
 writer exited. Pre- and post-recovery copies contain identical file bytes. No
 candidate installation, direct database repair, or notification suppression
 workaround occurred.
+
+## Remaining exact activation package
+
+The protected companion now contains the complete remaining operation package,
+original/deployed/activated guidance copies and exact diffs, the full canonical
+catalog, and complete handoff/binding requests for replay. Its final repository
+activation revision is recorded after this documentation preparation is pushed;
+the application source remains the exact compatibility checkpoint above.
+
+Catalog target: repository `e7475429-ef51-4368-ad9e-61d9073d5a4f`, version **1**,
+digest `3872999314072d41cb7d0ce213e953d11c5c0e8d817d7ac60ad98736dad27a9a`,
+**193** artifacts. The M6A brief and runbook are active operator documents
+through later preservation/recovery; this does not authorize M6B or later
+execution. The selected root's clean checkout predates this catalog.
+The requested deployment is a normal fast-forward of its existing branch to
+the exact accepted preparation revision, with no document moves. It includes
+the previously accepted proportional instruction policy, exposed separately
+in the protected deployment diff. The later guidance handoff preserves every
+deployed instruction byte outside the exact appended v2 block.
+
+The package requests disposable schema-10 backup/readback, copy-only migration
+to schema 13, original-schema restoration proof, exact app/plugin installation,
+owner migration, handoff, binding/replay, and read-only relaunch acceptance.
+It names each process transition, protected failed-state destination, expected
+state change, and recovery action. Recovery preserves the accepted repository
+deployment forward while restoring the exact old store/software and deployed
+pre-handoff guidance. No Git history rollback is proposed.
+
+The exact handoff is ticketless and uses the one preselected fresh identity
+because complete inventory proves no existing root-guidance handoff row. Final
+closeout syncs the approved guidance and concise ledger into development, and
+the completion ledger into the selected root after handoff. Any resulting
+approved owner-checkout guidance/ledger changes are retained and disclosed for
+the next session. Ordinary writers stay closed. No adoption or M6B execution
+is included. The owner's original program gate requires explicit approval of
+this concrete remaining package before it runs.
 
 ## Plugin installation limitation
 

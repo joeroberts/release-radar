@@ -1,8 +1,10 @@
 # MDCP M6A Brief: Owner Activation, Migration, and Read-Only Inventory
 
-**Status:** Proposed and unopened. `MDCP-COMPAT-1`, M1 owner approval, and
-separate explicit authorization for install, owner data, storage migration,
-guidance handoff, app launch, tests, and recovery actions are required.
+**Status:** Active operator contract. Initial preflight and broker recovery are
+complete. Remaining exact installation, migration, deployment, handoff, binding,
+and recovery actions require the owner's concrete runbook approval. This
+contract remains applicable to preservation/recovery through M8; that lifecycle
+status authorizes no later slice. Deliver M6A, then stop for a new session.
 
 ## Objective and user-visible outcome
 
