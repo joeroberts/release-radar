@@ -90,3 +90,13 @@ boundaries. Coordinator scope/sequencing inspection is under owner delegation.
 No review of reviews or additional generic approval gates. Preserve Task 5's
 physical keyboard, spoken VoiceOver and native macOS Dynamic Type limits.
 Issue #9 remains owner-deferred. The coordinator owns dispatch after Task 8.
+
+This brief is completed and non-authoritative. The scoped native checks and
+independent review completed with no Required findings. The exact live Task 8
+completion returned revision 13 and audit
+`25B157F9-1877-487C-A0B3-CE198AD70528`, with identical replay and complete
+preservation readback. The [progress ledger](../../progress.md) records the
+current outcome and pending deployment boundary. Source, tests and delivery
+documents are durable repository artifacts; private live requests/readbacks
+are retained in the protected owner-designated companion location. Build/test
+outputs remain temporary and retained; no cleanup is authorized.

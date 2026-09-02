@@ -3736,9 +3736,8 @@
       "artifactID": "dda2b5e7-4a6a-4557-ba4c-8685bb3f76da",
       "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-8-audited-delivery-goal-commands-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.rr-r10-task-8",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
       "supersedes": [],
       "applicationSensitivity": [
