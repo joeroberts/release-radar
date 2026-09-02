@@ -2,23 +2,25 @@
 
 ## Current state
 
-- Outcome: M2A catalog contract and validator complete; ready for session handoff
-- Active task: None — owner-requested handoff after M2A
-- Last complete task: M2A — Catalog Contract and Validator
-- Authorization: Owner authorized M2A–M8 implementation, required independent
-  reviews, local commits, and fast-forward pushes as one program. Owner-state
-  actions begin only at M6A. RR-R10 Task 4B and GitHub Issue #1 remain excluded.
+- Outcome: M2B deterministic index tool complete and independently accepted
+- Active task: None — stop after M2B delivery
+- Last complete task: M2B — Deterministic Index Tool
+- Authorization: Owner explicitly authorized M2B implementation, focused tests,
+  independent Code Review and QA, required in-scope corrections, ledger updates,
+  commit, and normal push. Stop after M2B; M2C–M8, RR-R10 Task 4B, and GitHub
+  Issue #1 remain outside this task.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M2A](task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md)
-- Current blockers and risks: No unresolved M2A findings. The complete MDCP
-  program remains unfinished; M2B–M8 have not started.
-- Next eligible action: Resume [M2B — Deterministic Index Tool](task-briefs/2026-09-01-managed-repository-documentation-contract/m2b-deterministic-index-tool-brief.md)
-  in the next session under the existing program authorization.
-- State: HANDOFF READY — M2A COMPLETE
-- Session boundary: Stop after committing and pushing M2A; do not start M2B in
-  this session. Continue in the same authorized worktree and branch from this
-  accepted checkpoint; verify HEAD/upstream and cleanliness before resuming.
+- Controlling brief: [M2B](task-briefs/2026-09-01-managed-repository-documentation-contract/m2b-deterministic-index-tool-brief.md)
+- Current blockers and risks: No unresolved M2B findings. Recovery covers
+  synchronous failures; incomplete rollback reports retained backup locations
+  separately from disposable candidates for manual recovery.
+- Verification: Independent QA passed 37/37 focused tests and synthetic CLI
+  checks, then 5/5 affected recovery checks. Code Review and QA are GO.
+- Next eligible action: [M2C — Central Path Contract and V1 Preview](task-briefs/2026-09-01-managed-repository-documentation-contract/m2c-central-path-contract-v1-preview-brief.md)
+  is eligible but unopened; this task does not authorize it.
+- State: M2B COMPLETE
+- Session boundary: Commit and push only accepted M2B changes, then stop.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
@@ -93,6 +95,37 @@ or Git operations.
   `.build/m2a/`; none were deleted.
 - No owner application state, guidance, evidence, live repository catalog, or
   document paths changed. M2B is the next slice and remains unopened.
+
+## MDCP M2B — Deterministic Index Tool
+
+- Status: Complete; independent Code Review and QA GO, no unresolved findings.
+- Implemented: Core `RepositoryDocumentIndexTool.check` and `write`, a separate
+  `ReleaseRadarDocumentationTool` executable and Xcode scheme, deterministic
+  collection/leaf/transitional navigation, lifecycle/authority/supersession
+  output, strict markers, and byte preservation outside managed sections.
+  M2A catalog/path logic validates the complete generated candidate before
+  descriptor-relative per-file atomic swaps with bounded rollback.
+- Verification: Test-first runtime RED/GREEN; native `ReleaseRadar` scheme with
+  `-only-testing:ReleaseRadarTests/RepositoryDocumentIndexTests` and
+  `-only-testing:ReleaseRadarTests/RepositoryDocumentCatalogTests` passed 37/37
+  (14 index, 23 catalog), independently repeated by QA. Standalone tool build
+  and synthetic CLI checks passed for stale/current read-only checks, golden
+  output, exact changed paths, idempotence, human bytes/CRLF, and invalid input.
+- Code Review identified one required cleanup-recovery provenance defect.
+  Four new regression tests preceded its correction; the five affected checks
+  (including existing atomic rollback) passed for implementer and independent
+  QA. Cleanup failures now distinguish committed replacements, preserved or
+  restored originals, and incomplete recovery. `git diff --check` passed.
+- Implementer: `/root/m2b_implementer`; Code Review:
+  `/root/m2b_code_review` — GO after affected re-review; QA:
+  `/root/m2b_qa` — GO including affected verification.
+- Durable artifacts: Core sources, executable and Xcode integration, 18 index
+  tests, two golden fixtures under `Fixtures/RepositoryDocuments/indexes/`,
+  and this ledger. Task-created build/log/CLI outputs and 14 finished isolated
+  XCTest host directories were removed after exact-target verification under
+  owner cleanup authorization. Pre-existing outputs were preserved.
+- No live catalog/index, document path, owner application state, installed
+  guidance, or agent bridge change. M2C is next eligible and remains unopened.
 
 ## Task 4A planning gate
 

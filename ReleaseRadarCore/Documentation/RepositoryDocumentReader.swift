@@ -4,7 +4,7 @@ import Foundation
 /// Descriptor-relative I/O keeps every read below the caller-authorized root.
 /// A second metadata pass detects replacement, content changes, and tree changes.
 final class RepositoryDocumentReader {
-    private struct Stamp: Equatable {
+    struct Stamp: Equatable {
         let device: dev_t
         let inode: ino_t
         let mode: mode_t
@@ -13,6 +13,11 @@ final class RepositoryDocumentReader {
         let modifiedNanos: Int
         let changedSeconds: Int
         let changedNanos: Int
+        // rename changes ctime without changing the retained file contents.
+        func matchesAfterRename(_ other: Stamp) -> Bool {
+            device == other.device && inode == other.inode && mode == other.mode && size == other.size
+                && modifiedSeconds == other.modifiedSeconds && modifiedNanos == other.modifiedNanos
+        }
         init(_ value: stat) {
             device = value.st_dev; inode = value.st_ino; mode = value.st_mode; size = value.st_size
             modifiedSeconds = value.st_mtimespec.tv_sec; modifiedNanos = value.st_mtimespec.tv_nsec
@@ -96,7 +101,7 @@ final class RepositoryDocumentReader {
         }
     }
 
-    private func openRelative(_ path: String, directory: Bool = false) throws -> Int32 {
+    func openRelative(_ path: String, directory: Bool = false) throws -> Int32 {
         try Self.validatePath(path, limits: limits, docsOnly: false)
         var descriptor = dup(root)
         guard descriptor >= 0 else { throw RepositoryDocumentError(.readFailed, path: path) }
@@ -179,6 +184,27 @@ final class RepositoryDocumentReader {
         guard fstat(descriptor, &info) == 0 else { throw RepositoryDocumentError(.readFailed, path: path) }
         stamps[path] = Stamp(info)
         directories.insert(path)
+        let names = try directoryNames(descriptor, path: path)
+        for name in names.sorted() {
+            let child = path + "/" + name
+            try Self.validatePath(child, limits: limits)
+            guard !Self.isProhibited(child) else { throw RepositoryDocumentError(.prohibitedContent, path: child) }
+            guard fstatat(descriptor, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else {
+                throw RepositoryDocumentError(.changedDuringRead, path: child)
+            }
+            switch info.st_mode & S_IFMT {
+            case S_IFDIR: try walk(child, files: &files, directories: &directories)
+            case S_IFREG:
+                fileCount += 1
+                guard fileCount <= limits.maximumArtifactCount + 1 else { throw RepositoryDocumentError(.limitExceeded, path: child) }
+                files.insert(child)
+                _ = try read(child, catalog: child == RepositoryDocumentContract.catalogPath)
+            default: throw RepositoryDocumentError(.unsafeFileType, path: child)
+            }
+        }
+    }
+
+    private func directoryNames(_ descriptor: Int32, path: String) throws -> [String] {
         let duplicate = dup(descriptor)
         guard duplicate >= 0 else { throw RepositoryDocumentError(.readFailed, path: path) }
         guard let stream = fdopendir(duplicate) else {
@@ -203,26 +229,23 @@ final class RepositoryDocumentReader {
                 throw RepositoryDocumentError(.limitExceeded, path: path)
             }
         }
-        for name in names.sorted() {
-            let child = path + "/" + name
-            try Self.validatePath(child, limits: limits)
-            guard !Self.isProhibited(child) else { throw RepositoryDocumentError(.prohibitedContent, path: child) }
-            guard fstatat(descriptor, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else {
-                throw RepositoryDocumentError(.changedDuringRead, path: child)
-            }
-            switch info.st_mode & S_IFMT {
-            case S_IFDIR: try walk(child, files: &files, directories: &directories)
-            case S_IFREG:
-                fileCount += 1
-                guard fileCount <= limits.maximumArtifactCount + 1 else { throw RepositoryDocumentError(.limitExceeded, path: child) }
-                files.insert(child)
-                _ = try read(child, catalog: child == RepositoryDocumentContract.catalogPath)
-            default: throw RepositoryDocumentError(.unsafeFileType, path: child)
-            }
-        }
+        return names
     }
 
-    func verifyStable() throws {
+    func validateReplacementBounds(_ replacements: [String: Data]) throws {
+        var candidateTotal = totalBytes
+        for (path, bytes) in replacements {
+            guard let original = data[path], bytes.count <= limits.maximumFileBytes else {
+                throw RepositoryDocumentError(.limitExceeded, path: path)
+            }
+            candidateTotal += bytes.count - original.count
+        }
+        guard candidateTotal <= limits.maximumTotalBytes else { throw RepositoryDocumentError(.limitExceeded) }
+    }
+
+    // Only the writer's own temporary entries and replaced indexes are excluded.
+    // Every other observed file and each directory identity remain checked.
+    func verifyStable(temporaryPaths: Set<String> = [], replacedPaths: Set<String> = []) throws {
         do {
             let currentRoot = try Self.openRoot(rootURL)
             defer { close(currentRoot) }
@@ -230,11 +253,27 @@ final class RepositoryDocumentReader {
             guard fstat(currentRoot, &info) == 0, Stamp(info) == rootStamp else {
                 throw RepositoryDocumentError(.changedDuringRead)
             }
-            for (path, expected) in stamps.sorted(by: { $0.key < $1.key }) {
+            for (path, expected) in stamps.sorted(by: { $0.key < $1.key }) where !replacedPaths.contains(path) {
                 let descriptor = try openRelative(path, directory: expected.mode & S_IFMT == S_IFDIR)
                 defer { close(descriptor) }
-                guard fstat(descriptor, &info) == 0, Stamp(info) == expected else {
+                guard fstat(descriptor, &info) == 0 else { throw RepositoryDocumentError(.changedDuringRead, path: path) }
+                let actual = Stamp(info)
+                let directoryUnchanged = !temporaryPaths.isEmpty && expected.mode & S_IFMT == S_IFDIR
+                    && actual.device == expected.device && actual.inode == expected.inode && actual.mode == expected.mode
+                guard directoryUnchanged || actual == expected else {
                     throw RepositoryDocumentError(.changedDuringRead, path: path)
+                }
+                if directoryUnchanged {
+                    let prefix = path + "/"
+                    let expectedNames = Set(stamps.keys.filter {
+                        $0.hasPrefix(prefix) && !$0.dropFirst(prefix.count).contains("/")
+                    }.map { String($0.dropFirst(prefix.count)) })
+                    let temporaryNames = Set(temporaryPaths.filter {
+                        $0.hasPrefix(prefix) && !$0.dropFirst(prefix.count).contains("/")
+                    }.map { String($0.dropFirst(prefix.count)) })
+                    guard Set(try directoryNames(descriptor, path: path)) == expectedNames.union(temporaryNames) else {
+                        throw RepositoryDocumentError(.changedDuringRead, path: path)
+                    }
                 }
             }
         } catch {

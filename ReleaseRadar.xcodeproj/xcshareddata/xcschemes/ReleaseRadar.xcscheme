@@ -49,6 +49,9 @@
                ReferencedContainer = "container:ReleaseRadar.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "A20000000000000000000009" BuildableName = "ReleaseRadarDocumentationTool" BlueprintName = "ReleaseRadarDocumentationTool" ReferencedContainer = "container:ReleaseRadar.xcodeproj"/>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

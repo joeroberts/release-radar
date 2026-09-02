@@ -26,12 +26,20 @@ public struct RepositoryDocumentValidator {
 
     /// Validates this tree only. Acceptance of a change additionally requires validateTransition.
     public func validateCurrent(authorizedRoot: URL) throws -> RepositoryDocumentSnapshot {
+        let reader = try RepositoryDocumentReader(rootURL: authorizedRoot, limits: limits, afterRead: afterRead, beforeRootOpen: beforeRootOpen)
+        return try validateCurrent(reader: reader)
+    }
+
+    // The index tool transforms only validated collection-index paths. All contents,
+    // links, checksums, and transitional navigation are validated on the complete
+    // in-memory candidate before the caller may write it.
+    func validateCurrent(reader: RepositoryDocumentReader,
+                         prepareIndexes: ((RepositoryDocumentCatalog) throws -> [String: Data])? = nil) throws -> RepositoryDocumentSnapshot {
         guard [limits.maximumCatalogBytes, limits.maximumFileBytes, limits.maximumArtifactCount,
                limits.maximumCollectionCount, limits.maximumTotalBytes, limits.maximumPathBytes,
                limits.maximumDepth].allSatisfy({ $0 > 0 && $0 <= 1_073_741_824 }) else {
             throw RepositoryDocumentError(.limitExceeded)
         }
-        let reader = try RepositoryDocumentReader(rootURL: authorizedRoot, limits: limits, afterRead: afterRead, beforeRootOpen: beforeRootOpen)
         let bytes = try reader.read(RepositoryDocumentContract.catalogPath, catalog: true)
         guard String(data: bytes, encoding: .utf8) != nil else { throw RepositoryDocumentError(.invalidUTF8) }
         let catalog: RepositoryDocumentCatalog
@@ -55,7 +63,11 @@ public struct RepositoryDocumentValidator {
         guard Set(catalog.collections.map(\.path)) == inventory.directories else {
             throw RepositoryDocumentError(.invalidCollection)
         }
-        try validateContents(catalog, reader: reader)
+        let indexes = try prepareIndexes?(catalog) ?? [:]
+        let indexPaths = Set(catalog.artifacts.filter { $0.kind == .collectionIndex }.map(\.path))
+        guard Set(indexes.keys).isSubset(of: indexPaths) else { throw RepositoryDocumentError(.unsafePath) }
+        try reader.validateReplacementBounds(indexes)
+        try validateContents(catalog, reader: reader, indexes: indexes)
         try reader.verifyStable()
         let canonical = try canonicalData(catalog)
         return .init(catalog: catalog, canonicalCatalog: canonical, digest: Self.digest(canonical))
@@ -249,12 +261,13 @@ public struct RepositoryDocumentValidator {
         }
     }
 
-    private func validateContents(_ catalog: RepositoryDocumentCatalog, reader: RepositoryDocumentReader) throws {
+    private func validateContents(_ catalog: RepositoryDocumentCatalog, reader: RepositoryDocumentReader, indexes: [String: Data]) throws {
+        func contents(_ path: String) throws -> Data { try indexes[path] ?? reader.read(path) }
         let byID = Dictionary(uniqueKeysWithValues: catalog.artifacts.map { ($0.artifactID, $0) })
         let byPath = Dictionary(uniqueKeysWithValues: catalog.artifacts.map { ($0.path, $0) })
         var text: [String: String] = [:]
         for artifact in catalog.artifacts where artifact.kind != .designAsset {
-            guard let contents = String(data: try reader.read(artifact.path), encoding: .utf8) else {
+            guard let contents = String(data: try contents(artifact.path), encoding: .utf8) else {
                 throw RepositoryDocumentError(.invalidUTF8, path: artifact.path)
             }
             text[artifact.path] = contents
@@ -280,7 +293,7 @@ public struct RepositoryDocumentValidator {
         }
         for artifact in catalog.artifacts where artifact.checksum.policy == .required {
             guard let manifestID = artifact.checksum.manifestArtifactID,
-                  manifests[manifestID]?[artifact.path] == Self.digest(try reader.read(artifact.path)) else {
+                  manifests[manifestID]?[artifact.path] == Self.digest(try contents(artifact.path)) else {
                 throw RepositoryDocumentError(.checksumMismatch, path: artifact.path)
             }
         }

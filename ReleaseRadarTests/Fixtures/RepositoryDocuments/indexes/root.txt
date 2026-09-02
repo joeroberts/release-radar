@@ -1,0 +1,48 @@
+# Human heading
+
+<!-- release-radar-docs:v1:start -->
+
+## Collection: docs
+
+- Path: [docs](.)
+- Purpose: Repository documentation
+- Allowed contents: indexes; plans
+- Prohibited contents: temporary files
+- First read: [root-index](README.md)
+- Archive destination: none
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| root-index | [docs/README.md](README.md) | collectionIndex | supporting | active | none | none |
+
+### Children
+
+- [archive](archive) — leaf; Historical documents
+- [plans](plans/README.md) — indexed; Current decisions
+
+## Leaf collection: archive
+
+- Path: [docs/archive](archive)
+- Purpose: Historical documents
+- Allowed contents: historical documents
+- Prohibited contents: controllers
+- First read: none
+- Archive destination: none
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| history | [docs/archive/history.md](archive/history.md) | document | nonAuthoritative | archived | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+<!-- release-radar-docs:end -->
+
+Human footer.
