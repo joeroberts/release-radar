@@ -157,6 +157,7 @@ Leaf: no child collections.
 | bc74c88a-cc63-4deb-8b2b-63ed254a476f | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md) | document | nonAuthoritative | completed | none | none |
 | 7856796b-eb43-47cd-b897-20234cd94131 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md) | document | supporting | active | none | none |
 | dda2b5e7-4a6a-4557-ba4c-8685bb3f76da | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-8-audited-delivery-goal-commands-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-8-audited-delivery-goal-commands-brief.md) | document | nonAuthoritative | completed | none | none |
+| f8d9dbb3-0bfe-4e3c-a7a1-b481b3982ce9 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-9-delivery-projections-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-9-delivery-projections-brief.md) | document | controlling &#40;delivery.rr-r10-task-9&#41; | active | none | none |
 
 ### Children
 

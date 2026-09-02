@@ -690,7 +690,8 @@ final class AppModel {
         reviewInboxes[item.projectID] = ReviewInboxProjection(
             projectID: inbox.projectID,
             openItems: inbox.openItems.filter { $0.id != item.id },
-            completedItems: inbox.completedItems.filter { $0.id != item.id } + [committed]
+            completedItems: inbox.completedItems.filter { $0.id != item.id } + [committed],
+            deliveryGoalAcceptances: inbox.deliveryGoalAcceptances
         )
     }
 

@@ -1,8 +1,240 @@
 import XCTest
-import ReleaseRadarCore
+@testable import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class DashboardProjectionTests: XCTestCase {
+    func testByteDistinctGoalIDsRemainSeparateInBoardsAndFilters() async throws {
+        let composed = DeliveryGoalID(rawValue: "\u{e9}"), decomposed = DeliveryGoalID(rawValue: "e\u{301}")
+        let first = DeliveryGoalFilter.goal(composed), second = DeliveryGoalFilter.goal(decomposed)
+        XCTAssertNotEqual(first, second, "SQLite BINARY goal identities must not normalize")
+        guard first != second else { return } // Do not deliberately crash the host on the known duplicate-key bug.
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Byte-distinct goal snapshot") { c in
+            try c.execute("INSERT INTO projects (id,name) VALUES ('p','Project')")
+            try c.execute("INSERT INTO phases (id,project_id,name) VALUES ('phase','p','Phase')")
+            for id in [composed.rawValue, decomposed.rawValue] {
+                try c.execute("INSERT INTO phases (id,project_id,name) VALUES (?,'p','Same name')", bindings: [.text(id)])
+            }
+            try c.execute("INSERT INTO project_active_phases (project_id,phase_id) VALUES ('p',?)", bindings: [.text(composed.rawValue)])
+            for (id, ticket) in [(composed, "one"), (decomposed, "two")] {
+                try c.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('p','phase',?,?,?,'draft',0,'2026-09-02T12:00:00Z','2026-09-02T12:00:00Z')",
+                              bindings: [.text(id.rawValue), .text(ticket), .text(ticket)])
+                try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,'p','phase',?,'backlog')", bindings: [.text(ticket), .text(ticket)])
+                try c.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('p','phase',?,?)", bindings: [.text(id.rawValue), .text(ticket)])
+            }
+        }
+        let dashboard = try await DashboardProjection.load(from: store)
+        XCTAssertEqual(dashboard.boards.count, 3)
+        let active = try XCTUnwrap(dashboard.board(for: .init(rawValue: "p")))
+        XCTAssertEqual(Data(active.phaseID.rawValue.utf8), Data(composed.rawValue.utf8))
+        let other = try XCTUnwrap(dashboard.board(for: .init(rawValue: "p"), phaseID: .init(rawValue: decomposed.rawValue)))
+        XCTAssertEqual(Data(other.phaseID.rawValue.utf8), Data(decomposed.rawValue.utf8))
+        XCTAssertFalse(other.isActivePhase)
+        let board = try XCTUnwrap(dashboard.board(for: .init(rawValue: "p"), phaseID: .init(rawValue: "phase")))
+        XCTAssertEqual(board.deliveryGoals.map { $0.ticketIDs.map(\.rawValue) }, [["two"], ["one"]])
+        XCTAssertEqual(Set(board.deliveryGoals.map(\.id)).count, 2)
+        XCTAssertEqual(board.filtered(by: first).lanes.flatMap(\.cards).map(\.id.rawValue), ["one"])
+        XCTAssertEqual(board.filtered(by: second).lanes.flatMap(\.cards).map(\.id.rawValue), ["two"])
+    }
+
+    func testMigratedLegacyContinuationIsProjectedWithoutInventingCoverage() async throws {
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/SchemaV10/release-radar-v10.sqlite")
+        try FileManager.default.copyItem(at: fixture, to: databaseURL)
+        do {
+            let old = try SQLiteConnection(url: databaseURL)
+            try old.execute("INSERT INTO projects (id,name) VALUES ('legacy-project','Legacy project')")
+            try old.execute("INSERT INTO phases (id,project_id,name) VALUES ('legacy-phase','legacy-project','Legacy phase')")
+            try old.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('active','legacy-project','legacy-phase','Existing work','in_progress'), ('blocked','legacy-project','legacy-phase','Blocked work','blocked'), ('done','legacy-project','legacy-phase','Historical work','accepted')")
+        }
+        let projection = try await DashboardProjection.load(from: DeliveryStore(databaseURL: databaseURL))
+        let board = try XCTUnwrap(projection.board(for: .init(rawValue: "legacy-project"), phaseID: .init(rawValue: "legacy-phase")))
+        XCTAssertEqual(board.phasePlan.state, .legacyUnassessed)
+        XCTAssertEqual(board.phasePlan.upcomingCount, 2)
+        XCTAssertEqual(board.phasePlan.coveredUpcomingCount, 0)
+        XCTAssertEqual(board.phasePlan.unassignedUpcomingCount, 2)
+        XCTAssertTrue(board.detail(for: .init(rawValue: "active"))?.isLegacyContinuation == true)
+        XCTAssertFalse(board.detail(for: .init(rawValue: "blocked"))?.isLegacyContinuation == true)
+        XCTAssertNil(board.detail(for: .init(rawValue: "done"))?.deliveryGoal)
+    }
+
+    func testInactiveBoardPreservesAuthorizedEvidenceMetadataAndRecovery() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("task9-evidence-\(UUID().uuidString)").resolvingSymlinksInPath()
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
+        try FileManager.default.copyItem(at: fixture, to: root)
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Managed board evidence") { c in
+            try c.execute("INSERT INTO projects (id,name) VALUES ('evidence-project','Evidence project')")
+            try c.execute("INSERT INTO phases (id,project_id,name) VALUES ('active-phase','evidence-project','Active'), ('other-phase','evidence-project','Other')")
+            try c.execute("INSERT INTO project_active_phases (project_id,phase_id) VALUES ('evidence-project','active-phase')")
+            try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('evidence-ticket','evidence-project','other-phase','Preserve evidence','backlog')")
+            try c.execute("INSERT INTO project_roots (id,project_id,path) VALUES ('root','evidence-project',?)", bindings: [.text(root.path)])
+            try c.execute("INSERT INTO project_bookmarks (project_id,path,bookmark_data) VALUES ('evidence-project',?,?)", bindings: [.text(root.path), .blob(Data(root.path.utf8))])
+            try c.execute("INSERT INTO project_documentation_bindings VALUES ('evidence-project','root',?,1,?,?)",
+                          bindings: [.text(snapshot.catalog.repositoryID), .text(snapshot.digest), .blob(snapshot.canonicalCatalog)])
+            for artifact in ["current", "draft", "history"] {
+                try c.execute("INSERT INTO evidence (id,project_id,ticket_id,artifact_id,path) VALUES (?,'evidence-project','evidence-ticket',?,NULL)", bindings: [.text(artifact), .text(artifact)])
+            }
+        }
+        func bookmarks(allowAccess: Bool) -> ProjectBookmarkStore {
+            ProjectBookmarkStore(resolver: { .init(url: URL(fileURLWithPath: String(decoding: $0, as: UTF8.self)), isStale: false) },
+                                 startAccessing: { _ in allowAccess }, stopAccessing: { _ in })
+        }
+        let project = ProjectID(rawValue: "evidence-project"), phase = PhaseID(rawValue: "other-phase")
+        let loaded = try await DashboardProjection.load(from: store, bookmarkStore: bookmarks(allowAccess: true))
+        let board = try XCTUnwrap(loaded.board(for: project, phaseID: phase))
+        let evidence = try XCTUnwrap(board.detail(for: .init(rawValue: "evidence-ticket"))).evidence
+        XCTAssertEqual(evidence.count, 3)
+        for (id, lifecycle, authority): (String, RepositoryDocumentArtifact.Lifecycle, RepositoryDocumentArtifact.Authority) in
+            [("current", .active, .controlling), ("draft", .proposed, .supporting), ("history", .archived, .nonAuthoritative)] {
+            let item = try XCTUnwrap(evidence.first { $0.id.rawValue == id })
+            XCTAssertEqual(item.locator, .managedDocument(artifactID: id))
+            XCTAssertEqual(item.managedDocument?.lifecycle, lifecycle)
+            XCTAssertEqual(item.managedDocument?.authority, authority)
+            XCTAssertTrue(item.isAvailable)
+        }
+        XCTAssertEqual(board.filtered(by: .unassigned).detail(for: .init(rawValue: "evidence-ticket"))?.evidence, evidence)
+        let denied = try await DashboardProjection.load(from: store, bookmarkStore: bookmarks(allowAccess: false))
+        let unavailable = try XCTUnwrap(denied.board(for: project, phaseID: phase)?.detail(for: .init(rawValue: "evidence-ticket"))).evidence
+        XCTAssertEqual(unavailable.map(\.id), evidence.map(\.id))
+        XCTAssertTrue(unavailable.allSatisfy { !$0.isAvailable && EvidenceStatusPresentation($0).recovery != nil })
+        let recovered = try await DashboardProjection.load(from: store, bookmarkStore: bookmarks(allowAccess: true))
+        XCTAssertEqual(recovered.board(for: project, phaseID: phase)?.detail(for: .init(rawValue: "evidence-ticket"))?.evidence, evidence)
+    }
+
+    func testAllPhaseBoardsKeepActiveSummaryAndExactCoverageWithStableFilters() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let project = DashboardSampleData.projectID
+        try await store.transact(actor: .init(id: "fixture"), reason: "Additional projection phases") { c in
+            let statements = """
+                INSERT INTO phases (id,project_id,name) VALUES ('roadmap','rekon-pursuit','Roadmap');
+                INSERT INTO phases (id,project_id,name) VALUES ('empty','rekon-pursuit','Empty');
+                INSERT INTO projects (id,name) VALUES ('no-active','No active phase');
+                INSERT INTO phases (id,project_id,name) VALUES ('legacy','no-active','Legacy');
+                INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES
+                  ('r1','rekon-pursuit','roadmap','First outcome','backlog'),
+                  ('r2','rekon-pursuit','roadmap','Second outcome','blocked'),
+                  ('r3','rekon-pursuit','roadmap','Unassigned outcome','backlog'),
+                  ('r4','rekon-pursuit','roadmap','Accepted history','accepted'),
+                  ('legacy-work','no-active','legacy','Continue existing work','in_progress'),
+                  ('legacy-done','no-active','legacy','Accepted legacy history','accepted');
+                INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES
+                  ('rekon-pursuit','roadmap','z','Same title','Second goal','draft',1,'2026-09-02T12:00:00Z','2026-09-02T12:00:00Z'),
+                  ('rekon-pursuit','roadmap','a','Same title','First goal','draft',1,'2026-09-02T12:00:00Z','2026-09-02T12:00:00Z'),
+                  ('rekon-pursuit','roadmap','old','Old goal','Historical goal','superseded',2,'2026-09-02T12:00:00Z','2026-09-02T12:00:00Z');
+                INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES
+                  ('rekon-pursuit','roadmap','a','r1'), ('rekon-pursuit','roadmap','z','r2');
+                INSERT INTO delivery_goal_done_criteria (project_id,phase_id,goal_id,sort_order,criterion)
+                  VALUES ('rekon-pursuit','roadmap','a',0,'First outcome is verified');
+                UPDATE phase_plans SET state='draft',revision=7 WHERE phase_id='roadmap';
+                INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES
+                  ('legacy-evidence','rekon-pursuit','r1','/synthetic/missing.md',0);
+                INSERT INTO evidence (id,project_id,ticket_id,artifact_id,path) VALUES
+                  ('managed-evidence','rekon-pursuit','r1','stable-artifact',NULL);
+                """
+            for statement in statements.split(separator: ";") where !statement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                try c.execute(String(statement))
+            }
+            _ = try TicketTaskPlanningPolicy.revisePlan(projectID: project, ticketID: .init(rawValue: "r1"),
+                expectedRevision: nil, additions: [.init(id: .init(rawValue: "task"), label: "Task 1", title: "Verify first outcome", sortOrder: 0)],
+                definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let before = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
+        let projection = try await DashboardProjection.load(from: store)
+        let active = try XCTUnwrap(projection.board(for: project))
+        XCTAssertEqual(active.phaseID.rawValue, "rekon-pursuit-post-mvp")
+        XCTAssertEqual(active.project.currentWorkCount, 13)
+        XCTAssertEqual(active.project.attentionCount, 3)
+        XCTAssertEqual(projection.boards.count, 4)
+        XCTAssertNil(projection.board(for: .init(rawValue: "no-active")))
+        XCTAssertNil(projection.board(for: .init(rawValue: "no-active"), phaseID: .init(rawValue: "roadmap")))
+        let board = try XCTUnwrap(projection.board(for: project, phaseID: .init(rawValue: "roadmap")))
+        XCTAssertEqual(board.phaseName, "Roadmap")
+        XCTAssertFalse(board.isActivePhase)
+        XCTAssertEqual(board.phasePlan.state, .draft)
+        XCTAssertEqual(board.phasePlan.revision, 7)
+        XCTAssertEqual(board.phasePlan.upcomingCount, 3)
+        XCTAssertEqual(board.phasePlan.coveredUpcomingCount, 2)
+        XCTAssertEqual(board.phasePlan.unassignedUpcomingCount, 1)
+        XCTAssertFalse(board.phasePlan.isDeliveryComplete)
+        XCTAssertEqual(board.deliveryGoals.map(\.goalID.rawValue), ["a", "z", "old"])
+        XCTAssertEqual(board.filterableDeliveryGoals.map(\.goalID.rawValue), ["a", "z"])
+        XCTAssertEqual(board.deliveryGoals[0].doneCriteria, ["First outcome is verified"])
+        XCTAssertEqual(board.deliveryGoals[0].ticketIDs.map(\.rawValue), ["r1"])
+        let detail = try XCTUnwrap(board.detail(for: .init(rawValue: "r1")))
+        XCTAssertEqual(detail.deliveryGoal?.goalID.rawValue, "a")
+        XCTAssertEqual(detail.deliveryGoal?.lifecycle, .draft)
+        XCTAssertEqual(detail.codexExecutionGoal.linkQuality, .unavailable)
+        XCTAssertEqual(detail.codexExecutionGoal, detail.goalContext)
+        let filtered = board.filtered(by: .goal(.init(rawValue: "a")))
+        XCTAssertEqual(filtered.lanes.map(\.lane), TicketLane.allCases)
+        XCTAssertEqual(filtered.lanes.map(\.count), [1, 0, 0, 0, 0])
+        XCTAssertEqual(filtered.lane(.backlog)?.cards.first?.activeTaskCount, 1)
+        XCTAssertEqual(filtered.detail(for: .init(rawValue: "r1")), detail)
+        XCTAssertNil(filtered.detail(for: .init(rawValue: "r2")))
+        XCTAssertEqual(filtered.phasePlan, board.phasePlan, "Filtering must not change plan coverage")
+        XCTAssertEqual(board.filtered(by: .unassigned).lanes.map(\.count), [1, 0, 0, 0, 0])
+        XCTAssertEqual(board.filtered(by: .goal(.init(rawValue: "absent"))).lanes.map(\.count), [0, 0, 0, 0, 0])
+        XCTAssertEqual(board.filtered(by: .all), board)
+        let evidence = try XCTUnwrap(detail.evidence.first { $0.id.rawValue == "managed-evidence" })
+        XCTAssertEqual(evidence.locator, .managedDocument(artifactID: "stable-artifact"))
+        XCTAssertEqual(evidence.managedDocument?.failure, .bindingMissing)
+        XCTAssertFalse(evidence.isAvailable)
+        XCTAssertNotNil(EvidenceStatusPresentation(evidence).recovery)
+        XCTAssertEqual(detail.evidence.first { $0.id.rawValue == "legacy-evidence" }?.path, "/synthetic/missing.md")
+        let legacy = try XCTUnwrap(projection.board(for: .init(rawValue: "no-active"), phaseID: .init(rawValue: "legacy")))
+        XCTAssertEqual(legacy.phasePlan.state, .legacyUnassessed)
+        XCTAssertEqual(legacy.phasePlan.unassignedUpcomingCount, 1)
+        XCTAssertEqual(legacy.phasePlan.coveredUpcomingCount, 0)
+        XCTAssertFalse(legacy.detail(for: .init(rawValue: "legacy-work"))?.isLegacyContinuation == true,
+                       "Legacy phase membership alone cannot grant continuation")
+        XCTAssertNil(legacy.detail(for: .init(rawValue: "legacy-done"))?.deliveryGoal)
+        let empty = try XCTUnwrap(projection.board(for: project, phaseID: .init(rawValue: "empty")))
+        XCTAssertEqual(empty.phasePlan.upcomingCount, 0)
+        XCTAssertFalse(empty.phasePlan.isDeliveryComplete)
+        let after = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
+        XCTAssertEqual(after, before, "Loading and filtering are read-only")
+        let failedTasks = try await DashboardProjection.load(from: store, taskRows: { connection, project, phase, ticket in
+            if phase.rawValue == "roadmap" && (ticket == nil || ticket?.rawValue == "r1") {
+                return try connection.rows("SELECT * FROM missing_task_projection_table")
+            }
+            return try TicketTaskPlanProjection.queryRows(connection, projectID: project, phaseID: phase, ticketID: ticket)
+        })
+        let failedBoard = try XCTUnwrap(failedTasks.board(for: project, phaseID: .init(rawValue: "roadmap")))
+        guard case .unavailable? = failedBoard.detail(for: .init(rawValue: "r1"))?.taskPlan else { return XCTFail("Expected task recovery") }
+        XCTAssertNil(failedBoard.lane(.backlog)?.cards.first?.activeTaskCount)
+        XCTAssertEqual(failedBoard.detail(for: .init(rawValue: "r1"))?.evidence, detail.evidence)
+        XCTAssertEqual(failedBoard.detail(for: .init(rawValue: "r2"))?.taskPlan, .noPlan)
+        XCTAssertEqual(failedTasks.board(for: project), active)
+    }
+
+    func testReadyCompletedDeliveryRetainsRevisionAndSeparateExecutionContext() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let project = DashboardSampleData.projectID
+        let beforeProjection = try await DashboardProjection.load(from: store)
+        let before = try XCTUnwrap(beforeProjection.board(for: project))
+        let ticket = TicketID(rawValue: "VD2-07c")
+        XCTAssertNotNil(before.detail(for: ticket)?.deliveryGoal)
+        XCTAssertEqual(before.detail(for: ticket)?.codexExecutionGoal.status, "Blocked")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Completed projection snapshot") { c in
+            try c.execute("UPDATE tickets SET lane='accepted' WHERE project_id='rekon-pursuit'")
+        }
+        let completedProjection = try await DashboardProjection.load(from: store)
+        let completed = try XCTUnwrap(completedProjection.board(for: project))
+        XCTAssertEqual(completed.phasePlan.state, .ready)
+        XCTAssertEqual(completed.phasePlan.revision, before.phasePlan.revision)
+        XCTAssertTrue(completed.phasePlan.isDeliveryComplete)
+        XCTAssertEqual(completed.phasePlan.upcomingCount, 0)
+        XCTAssertEqual(completed.phasePlan.coveredUpcomingCount, 0)
+        XCTAssertEqual(completed.phasePlan.unassignedUpcomingCount, 0)
+        XCTAssertEqual(completed.lane(.accepted)?.count, 31)
+        XCTAssertEqual(completed.detail(for: ticket)?.codexExecutionGoal, before.detail(for: ticket)?.codexExecutionGoal)
+    }
+
     func testTaskPlansProjectCanonicalActiveRowsAndCountsAcrossMutations() async throws {
         let store = DeliveryStore(databaseURL: databaseURL)
         try await DashboardSampleData.seedIfNeeded(in: store)

@@ -1,11 +1,258 @@
 import XCTest
-import ReleaseRadarCore
+@testable import ReleaseRadarCore
 @testable import ReleaseRadar
 
 @MainActor
 final class ReviewAndGraphAcceptanceTests: XCTestCase {
     private var databaseURL: URL!
     private var projectRoot: URL!
+
+    func testTicketDetailsRetainStructuredBlockerReviewAndCompletionAudits() async throws {
+        let (store, dispatcher) = try await deliveryGoalFixture()
+        let evidenceURL = projectRoot.appendingPathComponent("evidence.md")
+        try Data("Synthetic acceptance evidence".utf8).write(to: evidenceURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Synthetic observed task") { c in
+            try c.execute("INSERT INTO observed_threads (id,project_id,status,last_observed_at) VALUES ('external-task','goal-project','active','2026-09-02T12:00:00Z')")
+        }
+        try await prepareDeliveryGoal(dispatcher)
+        let started = await dispatcher.dispatch(envelope(reason: "Start outcome", command: .transitionTicket(ticketID: "t1", lane: .inProgress)))
+        XCTAssertNil(started.error)
+        let requests: [(String, AgentCommand)] = [
+            ("Owner decision needed", .recordBlocker(id: "block", ticketID: "t1", summary: "Await owner decision")),
+            ("Owner decision recorded", .resolveBlocker(blockerID: "block")),
+            ("Ask for validation", .requestReview(id: "review", ticketID: "t1", kind: "review", summary: "Validate outcome")),
+            ("Outcome evidence recorded", .recordCompletion(id: "completion", ticketID: "t1", summary: "Complete outcome")),
+            ("Preserve file evidence", .addEvidence(id: "evidence", ticketID: "t1", path: evidenceURL.resolvingSymlinksInPath().path)),
+            ("Link execution task", .linkThread(id: "thread-link", ticketID: "t1", threadID: "external-task")),
+            ("Record dependency", .setDependency(id: "dependency", kind: .ticket, subjectID: "t1", dependsOnID: "t2"))
+        ]
+        for (reason, command) in requests {
+            let result = await dispatcher.dispatch(envelope(reason: reason, command: command))
+            XCTAssertNil(result.error)
+        }
+        let dashboard = try await DashboardProjection.load(from: store)
+        let board = try XCTUnwrap(dashboard.board(for: .init(rawValue: "goal-project"), phaseID: .init(rawValue: "goal-phase")))
+        let detail = try XCTUnwrap(board.detail(for: .init(rawValue: "t1")))
+        for (reason, _) in requests { XCTAssertTrue(detail.auditHistory.contains(reason), "Missing exact ticket-owned audit: \(reason)") }
+        XCTAssertFalse(board.detail(for: .init(rawValue: "t2"))!.auditHistory.contains("Owner decision needed"))
+    }
+
+    func testByteDistinctGoalIDsRemainSeparateInReviewAndActivity() async throws {
+        let (store, _) = try await deliveryGoalFixture()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Byte-distinct awaiting goals") { c in
+            for (goal, ticket) in [("\u{e9}", "t1"), ("e\u{301}", "t2")] {
+                try c.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('goal-project','goal-phase',?,?,?,'awaiting_acceptance',0,'2026-09-02T12:00:00Z','2026-09-02T12:00:00Z')",
+                              bindings: [.text(goal), .text(ticket), .text(ticket)])
+                try c.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('goal-project','goal-phase',?,?)", bindings: [.text(goal), .text(ticket)])
+            }
+        }
+        let inbox = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertEqual(Set(inbox.deliveryGoalAcceptances.map(\.id)).count, 2)
+        XCTAssertEqual(inbox.deliveryGoalAcceptances.map { $0.ticketIDs.map(\.rawValue) }, [["t2"], ["t1"]])
+        guard Set(inbox.deliveryGoalAcceptances.map(\.id)).count == 2 else { return }
+        let activity = try await ProjectActivityProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertTrue(activity.items.isEmpty, "Unscoped fixture audit must not become a project Activity item")
+    }
+
+    func testSavedReviewDecisionRetainsGoalAttentionWhenRefreshFails() async throws {
+        let store = try await seededStore()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Pending owner goal snapshot") { c in
+            try c.execute("UPDATE delivery_goals SET lifecycle='awaiting_acceptance' WHERE project_id='rekon-pursuit'")
+        }
+        let model = AppModel(store: store,
+            projectOnboarding: FolderProjectOnboarding(store: store, bookmarkStore: ReviewBookmarkStore()),
+            reviewInboxLoader: { store, project in
+                let status = try await store.read { try $0.scalarText("SELECT status FROM review_items WHERE id='duplicate-review'") }
+                if status == "resolved" { throw NSError(domain: "Synthetic refresh failure", code: 1) }
+                return try await ReviewInboxProjection.load(from: store, projectID: project)
+            }, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let before = try XCTUnwrap(model.reviewInbox(for: DashboardSampleData.projectID))
+        XCTAssertFalse(before.deliveryGoalAcceptances.isEmpty)
+        let item = try XCTUnwrap(before.openItems.first { $0.id.rawValue == "duplicate-review" })
+        await model.performReviewDecision(.resolve, item: item)
+        let after = try XCTUnwrap(model.reviewInbox(for: DashboardSampleData.projectID))
+        XCTAssertEqual(after.completedItems.first { $0.id == item.id }?.status, .resolved)
+        XCTAssertEqual(after.deliveryGoalAcceptances, before.deliveryGoalAcceptances)
+        XCTAssertNotNil(model.reviewActionError)
+    }
+
+    func testDeliveryAssignmentActivityUsesOneAuditAndExactTicketHistory() async throws {
+        let (store, dispatcher) = try await deliveryGoalFixture()
+        let request = envelope(reason: "Organize complete outcomes", command: .applyPhasePlanRevision(
+            projectID: "goal-project", phaseID: "goal-phase", expectedRevision: 0,
+            goalUpserts: [goalDraft("g1"), goalDraft("g2")],
+            assignments: [.init(goalID: .init(rawValue: "g1"), ticketID: .init(rawValue: "t1")),
+                          .init(goalID: .init(rawValue: "g1"), ticketID: .init(rawValue: "t2"))],
+            unassignedTicketIDs: [], supersededGoalIDs: []))
+        let result = await dispatcher.dispatch(request)
+        XCTAssertNil(result.error)
+        let replay = await dispatcher.dispatch(request)
+        XCTAssertEqual(replay, result)
+        let activity = try await ProjectActivityProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        let auditID = try XCTUnwrap(result.auditEventID)
+        let rows = activity.items.filter { $0.id == "audit-\(auditID.rawValue)" }
+        XCTAssertEqual(rows.count, 1)
+        let item = try XCTUnwrap(rows.first)
+        XCTAssertEqual(item.title, "Delivery Goal plan updated")
+        XCTAssertEqual(item.phaseID?.rawValue, "goal-phase")
+        XCTAssertEqual(item.originatingThreadID, "rr07-review-thread")
+        XCTAssertEqual(item.assignmentEvents.map(\.ticketID.rawValue), ["t1", "t2"])
+        XCTAssertEqual(item.assignmentEvents.map(\.revision), [1, 1])
+        XCTAssertNil(item.runtimeState)
+        XCTAssertTrue(activity.items(for: .init(rawValue: "t1")).contains(item))
+        XCTAssertTrue(activity.items(for: .init(rawValue: "t2")).contains(item))
+        let unassign = await dispatcher.dispatch(envelope(reason: "Remove old membership", command: .applyPhasePlanRevision(
+            projectID: "goal-project", phaseID: "goal-phase", expectedRevision: 1, goalUpserts: [], assignments: [],
+            unassignedTicketIDs: [.init(rawValue: "t2")], supersededGoalIDs: [])))
+        XCTAssertNil(unassign.error)
+        let assign = await dispatcher.dispatch(envelope(reason: "Use replacement outcome", command: .applyPhasePlanRevision(
+            projectID: "goal-project", phaseID: "goal-phase", expectedRevision: 2, goalUpserts: [],
+            assignments: [.init(goalID: .init(rawValue: "g2"), ticketID: .init(rawValue: "t2"))],
+            unassignedTicketIDs: [], supersededGoalIDs: [])))
+        XCTAssertNil(assign.error)
+        let updated = try await ProjectActivityProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        let history = updated.items(for: .init(rawValue: "t2")).flatMap(\.assignmentEvents).filter { $0.ticketID.rawValue == "t2" }
+            .sorted { $0.revision < $1.revision }
+        XCTAssertEqual(history.map(\.revision), [1, 2, 3])
+        XCTAssertEqual(history.map(\.previousGoalID?.rawValue), [nil, "g1", nil])
+        XCTAssertEqual(history.map(\.currentGoalID?.rawValue), ["g1", nil, "g2"])
+        let dashboard = try await DashboardProjection.load(from: store)
+        let detail = try XCTUnwrap(dashboard.board(for: .init(rawValue: "goal-project"), phaseID: .init(rawValue: "goal-phase"))?.detail(for: .init(rawValue: "t2")))
+        XCTAssertTrue(detail.auditHistory.contains("Organize complete outcomes"))
+        XCTAssertTrue(detail.auditHistory.contains("Remove old membership"))
+        XCTAssertTrue(detail.auditHistory.contains("Use replacement outcome"))
+    }
+
+    func testDeliveryGoalReviewIsDerivedExactlyOnceAndCleansUpAfterAcceptance() async throws {
+        let (store, dispatcher) = try await deliveryGoalFixture()
+        try await prepareDeliveryGoal(dispatcher)
+        let request = envelope(reason: "Request owner acceptance", command: .transitionDeliveryGoal(
+            projectID: "goal-project", phaseID: "goal-phase", goalID: "g1", expectedPlanRevision: 1, lifecycle: .awaitingAcceptance))
+        let beforeFailure = try await deliveryHistoryCounts(store)
+        let failed = await dispatcher.dispatch(request)
+        XCTAssertNotNil(failed.error)
+        let failedInbox = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertTrue(failedInbox.deliveryGoalAcceptances.isEmpty)
+        let afterFailure = try await deliveryHistoryCounts(store)
+        XCTAssertEqual(afterFailure, beforeFailure)
+        try await finishDeliveryTickets(dispatcher)
+        let awaiting = await dispatcher.dispatch(request)
+        XCTAssertNil(awaiting.error)
+        let replay = await dispatcher.dispatch(request)
+        XCTAssertEqual(replay, awaiting)
+        let inbox = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertEqual(inbox.deliveryGoalAcceptances.count, 1)
+        let review = try XCTUnwrap(inbox.deliveryGoalAcceptances.first)
+        XCTAssertEqual(review.projectID.rawValue, "goal-project")
+        XCTAssertEqual(review.phaseID.rawValue, "goal-phase")
+        XCTAssertEqual(review.goalID.rawValue, "g1")
+        XCTAssertEqual(review.expectedPlanRevision, 1)
+        XCTAssertEqual(review.doneCriteria, ["Verify g1"])
+        XCTAssertEqual(review.ticketIDs.map(\.rawValue), ["t1", "t2"])
+        let relaunched = try await ReviewInboxProjection.load(from: DeliveryStore(databaseURL: databaseURL), projectID: .init(rawValue: "goal-project"))
+        XCTAssertEqual(relaunched.deliveryGoalAcceptances, inbox.deliveryGoalAcceptances)
+        let accept = envelope(reason: "Owner accepts outcome", command: .transitionDeliveryGoal(
+            projectID: "goal-project", phaseID: "goal-phase", goalID: "g1", expectedPlanRevision: 1, lifecycle: .accepted))
+        let forbidden = await dispatcher.dispatch(accept)
+        XCTAssertEqual(forbidden.error, .ownerAcceptanceRequired)
+        let stillAwaiting = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertEqual(stillAwaiting.deliveryGoalAcceptances, inbox.deliveryGoalAcceptances)
+        let accepted = await dispatcher.dispatch(accept, origin: .ownerApp)
+        XCTAssertNil(accepted.error)
+        let acceptedReplay = await dispatcher.dispatch(accept, origin: .ownerApp)
+        XCTAssertEqual(acceptedReplay, accepted)
+        let oldRequestReplay = await dispatcher.dispatch(request)
+        XCTAssertEqual(oldRequestReplay, awaiting)
+        let final = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertTrue(final.deliveryGoalAcceptances.isEmpty)
+        let counts = try await store.read { c in
+            [try c.scalarInt("SELECT COUNT(*) FROM review_items") ?? -1,
+             try c.scalarInt("SELECT COUNT(*) FROM notification_events") ?? -1,
+             try c.scalarInt("SELECT COUNT(*) FROM observed_goals") ?? -1]
+        }
+        XCTAssertEqual(counts, [0, 0, 0])
+    }
+
+    func testDeliveryGoalReviewKeepsIdentityAndCurrentRevisionUntilReworkStarts() async throws {
+        let (store, dispatcher) = try await deliveryGoalFixture()
+        try await prepareDeliveryGoal(dispatcher)
+        try await finishDeliveryTickets(dispatcher)
+        let request = envelope(reason: "Request owner acceptance", command: .transitionDeliveryGoal(
+            projectID: "goal-project", phaseID: "goal-phase", goalID: "g1", expectedPlanRevision: 1, lifecycle: .awaitingAcceptance))
+        let result = await dispatcher.dispatch(request)
+        XCTAssertNil(result.error)
+        let original = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        let created = await dispatcher.dispatch(envelope(reason: "Add owner-directed rework", command: .upsertTicket(
+            ticketID: "rework", phaseID: "goal-phase", outcome: "Resolve the owner feedback", lane: .backlog)))
+        XCTAssertNil(created.error)
+        let assigned = await dispatcher.dispatch(envelope(reason: "Assign rework", command: .applyPhasePlanRevision(
+            projectID: "goal-project", phaseID: "goal-phase", expectedRevision: 2, goalUpserts: [],
+            assignments: [.init(goalID: .init(rawValue: "g1"), ticketID: .init(rawValue: "rework"))],
+            unassignedTicketIDs: [], supersededGoalIDs: [])))
+        XCTAssertNil(assigned.error)
+        let updated = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertEqual(updated.deliveryGoalAcceptances.first?.id, original.deliveryGoalAcceptances.first?.id)
+        XCTAssertEqual(updated.deliveryGoalAcceptances.first?.expectedPlanRevision, 3)
+        let finalized = await dispatcher.dispatch(envelope(reason: "Finalize rework", command: .finalizePhasePlan(
+            projectID: "goal-project", phaseID: "goal-phase", expectedRevision: 3)))
+        XCTAssertNil(finalized.error)
+        let started = await dispatcher.dispatch(envelope(reason: "Start rework", command: .transitionTicket(ticketID: "rework", lane: .inProgress)))
+        XCTAssertNil(started.error)
+        let final = try await ReviewInboxProjection.load(from: store, projectID: .init(rawValue: "goal-project"))
+        XCTAssertTrue(final.deliveryGoalAcceptances.isEmpty)
+    }
+
+    private func deliveryGoalFixture() async throws -> (DeliveryStore, AgentCommandDispatcher) {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Synthetic goal projections") { c in
+            let statements = """
+                INSERT INTO projects (id,name) VALUES ('goal-project','Goal project');
+                INSERT INTO phases (id,project_id,name) VALUES ('goal-phase','goal-project','Goal phase');
+                INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES
+                  ('t1','goal-project','goal-phase','First complete outcome','backlog'),
+                  ('t2','goal-project','goal-phase','Second complete outcome','backlog');
+                """
+            for statement in statements.split(separator: ";") where !statement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                try c.execute(String(statement))
+            }
+        }
+        return (store, AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: .init(rawValue: "goal-project"), canonicalRoot: projectRoot, authorizedRoots: [projectRoot])
+        ])))
+    }
+
+    private func goalDraft(_ id: String) -> DeliveryGoalDraft {
+        .init(id: .init(rawValue: id), title: "Delivery \(id)", outcome: "Complete \(id)", doneCriteria: ["Verify \(id)"], sortOrder: 0)
+    }
+
+    private func prepareDeliveryGoal(_ dispatcher: AgentCommandDispatcher) async throws {
+        let revised = await dispatcher.dispatch(envelope(reason: "Organize outcomes", command: .applyPhasePlanRevision(
+            projectID: "goal-project", phaseID: "goal-phase", expectedRevision: 0, goalUpserts: [goalDraft("g1")],
+            assignments: ["t1", "t2"].map { .init(goalID: .init(rawValue: "g1"), ticketID: .init(rawValue: $0)) },
+            unassignedTicketIDs: [], supersededGoalIDs: [])))
+        XCTAssertNil(revised.error)
+        let finalized = await dispatcher.dispatch(envelope(reason: "Finalize outcomes", command: .finalizePhasePlan(
+            projectID: "goal-project", phaseID: "goal-phase", expectedRevision: 1)))
+        XCTAssertNil(finalized.error)
+    }
+
+    private func finishDeliveryTickets(_ dispatcher: AgentCommandDispatcher) async throws {
+        for ticket in ["t1", "t2"] {
+            for lane in [TicketLane.inProgress, .needsReview, .accepted] {
+                let result = await dispatcher.dispatch(envelope(reason: "Deliver \(ticket)", command: .transitionTicket(ticketID: ticket, lane: lane)))
+                XCTAssertNil(result.error)
+            }
+        }
+    }
+
+    private func deliveryHistoryCounts(_ store: DeliveryStore) async throws -> [Int64] {
+        try await store.read { c in
+            try ["audit_events", "agent_command_requests", "delivery_goal_assignment_events", "review_items", "notification_events"].map {
+                try c.scalarInt("SELECT COUNT(*) FROM \($0)") ?? -1
+            }
+        }
+    }
 
     func testSampleAcceptedSeedRollsBackWhenAPlanAppearsAfterStagedInsertion() async throws {
         let store = DeliveryStore(databaseURL: databaseURL)
