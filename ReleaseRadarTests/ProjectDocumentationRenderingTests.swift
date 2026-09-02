@@ -117,9 +117,30 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         var value: CFTypeRef?
         XCTAssertEqual(AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value), .success)
-        let ownWindow = (value as? [AXUIElement] ?? []).first { element in
+        func matchesTestWindow(_ element: AXUIElement) -> Bool {
+            var pid: pid_t = 0
             var title: CFTypeRef?
-            return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success && (title as? String) == name
+            var role: CFTypeRef?
+            return AXUIElementGetPid(element, &pid) == .success
+                && pid == ProcessInfo.processInfo.processIdentifier
+                && AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role) == .success
+                && (role as? String) == kAXWindowRole
+                && AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success
+                && (title as? String) == name
+        }
+        var ownWindow = (value as? [AXUIElement] ?? []).first(where: matchesTestWindow)
+        // XCTest can expose its window through focused/main attributes while AXWindows is empty.
+        if ownWindow == nil {
+            for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+                var candidate: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(application, attribute as CFString, &candidate) == .success,
+                      let candidate, CFGetTypeID(candidate) == AXUIElementGetTypeID() else { continue }
+                let element = candidate as! AXUIElement
+                if matchesTestWindow(element) {
+                    ownWindow = element
+                    break
+                }
+            }
         }
         let actual = accessibilityText(try XCTUnwrap(ownWindow))
         XCTAssertTrue(actual.contains(expected.status), "Missing actual guidance status: \(expected.status)")

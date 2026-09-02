@@ -144,9 +144,30 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         let status = AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value)
         let childCount = hosting.accessibilityChildren()?.count ?? 0
         let windows = value as? [AXUIElement] ?? []
-        let ownWindow = windows.first { element in
+        func matchesTestWindow(_ element: AXUIElement) -> Bool {
+            var pid: pid_t = 0
             var title: CFTypeRef?
-            return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success && (title as? String) == name
+            var role: CFTypeRef?
+            return AXUIElementGetPid(element, &pid) == .success
+                && pid == ProcessInfo.processInfo.processIdentifier
+                && AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role) == .success
+                && (role as? String) == kAXWindowRole
+                && AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success
+                && (title as? String) == name
+        }
+        var ownWindow = windows.first(where: matchesTestWindow)
+        // XCTest can expose its window through focused/main attributes while AXWindows is empty.
+        if ownWindow == nil {
+            for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+                var candidate: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(application, attribute as CFString, &candidate) == .success,
+                      let candidate, CFGetTypeID(candidate) == AXUIElementGetTypeID() else { continue }
+                let element = candidate as! AXUIElement
+                if matchesTestWindow(element) {
+                    ownWindow = element
+                    break
+                }
+            }
         }
         let axText = ownWindow.map { accessibilityText($0) } ?? ""
         XCTAssertEqual(status, .success, "Isolated host accessibility API unavailable")

@@ -143,6 +143,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
+| 01415623-2b67-48f0-860e-18e9be333e6b | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/rendering-test-repair-brief.md](2026-08-29-delivery-goals-roadmap-readiness/rendering-test-repair-brief.md) | document | nonAuthoritative | completed | none | none |
 | a1e930aa-1ab0-47f3-a77f-c1986686b7e0 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md) | document | nonAuthoritative | completed | none | none |
 | d97170ea-7811-4aba-b068-bd69d6ee0ea1 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md) | document | nonAuthoritative | completed | none | none |
 | 362c407f-7d7b-488b-9204-91c8b0103265 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1a-schema-v10-fixture-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-1a-schema-v10-fixture-brief.md) | document | nonAuthoritative | completed | none | none |

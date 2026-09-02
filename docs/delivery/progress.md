@@ -2,25 +2,65 @@
 
 ## Current outcome and authorization
 
-MDCP and RR-R10 through Task 10 are delivered.
+MDCP and RR-R10 through Task 11A are delivered.
 Task 10 [PR #13](https://github.com/joeroberts/release-radar/pull/13) merged at
 `609881fe79ec37180057fc6ed36b6ba49afaa8ab`; the coordinator verified its merge,
 exact live completion and canonical reconciliation.
-Task 11A integration/staging and live completion are accepted on
-`codex/rr-r10-task-11a`; its
+Task 11A integration/staging and live completion are accepted; its
+[PR #14](https://github.com/joeroberts/release-radar/pull/14) merged at
+`3ae19c6e0d7ca2e1baf6458f6fd73670748c9af0`. Its
 [integration/staging brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md)
-is completed and non-authoritative. Same-branch reconciliation and a single PR
-to `codex/release-radar-mvp` form its integration checkpoint.
+is completed and non-authoritative.
 The [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) remains
 controlling; the [Task 10 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md)
 is completed and non-authoritative.
 The coordinator owns scope and sequencing under owner delegation.
-Authorization covers planning, implementation, focused validation, independent
-review, commit/push/PR/merge and exact live task completion with same-branch
-reconciliation. Installation, shared-service mutation, UI repair and cleanup
-are outside this checkpoint.
+Current authorization covers the dedicated
+[rendering-test repair](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/rendering-test-repair-brief.md):
+diagnosis, bounded test-only implementation, focused isolated validation,
+independent review and one commit/push/PR/merge checkpoint. Task 11B remains
+paused. Installed-app, live-data/tracking, shared-service, document deployment,
+catalog acceptance, product-source expansion and cleanup are outside this task.
 
 ## Active verification and delivery
+
+The Task 11B preparation run reported 524 passed / 4 failed / 0 skipped,
+excluding five fixed-service selectors. A separately approved serial
+maintenance rerun of those same four rendering selectors also failed all four
+at own-titled-window AX discovery. That maintenance window is closed; the app
+and services were restored and the caller hold released. The off-MainActor
+AX lookup hypothesis also failed and was removed. No product defect is
+established.
+
+The dedicated rendering repair's implementation and independent code/QA review
+are accepted with Required 0. This XCTest host exposes
+its exact titled window through `AXFocusedWindow`/`AXMainWindow` while
+`AXWindows` is empty, so the fixtures' enumeration assumption was insufficient.
+Both existing helpers now try the original window list first, then those
+attributes on the same application AX element. A candidate must match the
+current process ID, exact fixture title and `AXWindow` role. All original AX
+success, missing-window, real-subtree content, state, width, persistence,
+recovery and PNG assertions remain intact. No product source changed.
+
+A coordinator-approved passive probe established the attribute difference
+against the exact isolated PID/executable/title. The correction then passed
+the complete original overview selector in a fresh host with no observer or
+inspection pause. The final serial run of all four original selectors reports
+**4 passed / 0 failed / 0 skipped, exit 0**, with all **18 PNG attachments**
+retained. The independent reviewer confirmed the unchanged assertion coverage,
+exact window scope and attachment count.
+Native documentation validation and `git diff --check` pass. No product or OS
+defect, permission change, or broader UI acceptance is claimed.
+
+The canonical brief is completed and non-authoritative; its catalog identity
+and generated index are retained.
+Temporary build logs/results/DerivedData, prior-result diagnostics, the
+one-off AX probe source/binary/output, and extracted final PNG attachments
+remain under `.build/rendering-test-repair`. Synthetic per-PID XCTest host
+directories named in those logs are also retained, including the observation
+and successful runs (82377, 82610 and 82638). These temporary files are excluded
+from the repair implementation; no cleanup occurred. The installed app,
+Task 11A signed candidate, owner data and live tracking state remain untouched.
 
 Task 11A's five new integration cases and nine focused existing cases have
 passed; Debug and Release builds passed. The exact signed candidate is retained
@@ -46,36 +86,29 @@ closed.
 
 ## Last verified live checkpoint
 
-- Installed app 0.1.6, schema v14, exposes 21 tools. The development
-  candidate exposes 24 tools; no replacement was installed here.
-- RR-R10 has 16 active task rows. Fresh complete inventory exactly matched the
-  retained Task 10 post-inventory, establishing revision 15. The typed
-  `completeTicketTask` request `4DA3C7D9-9826-4133-B1D4-E2D0C10FF5FF` for
-  `RR-R10` / `rr-r10-task-11a` committed revision **16** and audit
-  `61EB3489-4CF7-4751-BC47-39A523EA9812`; exact replay returned the same result.
-  This establishes completion through the typed result and preservation
-  association; inventory does not return task rows and no physical checked-row
-  observation is claimed.
-- Complete post-inventory contains the same one plan plus 16 task rows
-  (task-domain count 17), with digest
-  `99daef17e4f396c3822aaaa73b5c29e655fe367b7e2ec1bc19d60f58fd01d778`.
-  Only the task-domain fingerprint changed. All 409 pre-operation audit and 123
-  receipt fingerprints remain, with one new audit and receipt (410/124 total).
-  Their identity hashes match the returned audit and original request.
-  All lane/goal, binding, root, evidence and other preservation groups match.
-  The exact request/results and before/after inventories are retained in the
-  protected 2026-09-02 Task 11A companion records alongside Task 7A/8/9/10 records;
-  the canonical request, result, replay and post-inventory copies were read back.
-- RR-R10 remains In progress in the remediation phase. The original active
-  phase `RR-ROADMAP` was restored, audit
-  `1DF40288-7DEE-4BC4-BF34-D859137FAADC`, with exact replay and preserved
-  lane/goal state.
-- Accepted catalog v1 contains 213 artifacts at digest
+The coordinator's closed Task 11B maintenance handoff is the latest verified
+checkpoint; this repair makes no owner calls or independent live readback.
+
+- Installed app remains 0.1.6, schema v14, with 21 tools. Task 11A's retained
+  development candidate has 24 tools and has not been installed.
+- RR-R10 remains In progress, Task 11B Pending, with 15 of 16 task rows
+  complete at revision 16. The original phase `RR-ROADMAP` was restored by
+  Task 11B audit `9C547BEF-0C25-4F56-9EF4-AAC0CC5492F7`.
+- There are 413 audits / 126 receipts. All prior inventory was preserved;
+  additions were two approved phase audits/receipts and one explicitly
+  unattributed startup/readback audit. This task does not investigate or
+  remove that audit.
+- The configured Codex connector is closed following approved client
+  terminations. A signed installed-helper restoration readback succeeded;
+  connector restoration or a reconnect workaround is outside this repair.
+- Task 11A's historical completion request
+  `4DA3C7D9-9826-4133-B1D4-E2D0C10FF5FF` established revision 16 with audit
+  `61EB3489-4CF7-4751-BC47-39A523EA9812`; its retained association is recorded
+  in the [Task 11A handoff](evidence/2026-09-02-rr-r10-task-11a-integration-staging.md).
+- Accepted catalog v1 remains the 213-artifact snapshot at digest
   `07f804508a5053f1c5644de5f5f8142fb3f5c0531d850ebe3195d3cf9bdf476e`.
-  Acceptance audit `E89F7619-BF0A-45BE-94B0-DA2CA6F71D28` replayed exactly.
-  Task 7A, Task 8, Task 9, Task 10 and Task 11A briefs are completed/non-authoritative in the development
-  catalog. The Task 7A recovery runbook remains supporting material. The
-  development catalog has 226 artifacts and remains pending deployment and
+  Completed brief identities are preserved. The development catalog has 227
+  artifacts and remains pending separately authorized deployment and
   acceptance. Owner state may change during ordinary use.
 
 ## Remaining limits and next work
@@ -92,7 +125,7 @@ Protected requests, backups, old app and quarantines retain their recorded
 custody through at least 2026-10-02. Temporary outputs remain retained; no
 cleanup is authorized. The older dirty bound checkout remains preserved.
 
-Task 11B remains unopened. The coordinator may release it only after verifying
-Task 11A's direct integration/staging validation, independent acceptance, exact
-live completion, same-branch reconciliation and single PR merge. Its high-risk
-installation/owner-data actions require their own concrete human approval.
+Task 11B remains paused pending repair integration and reconciliation. The coordinator may resume
+it only after the dedicated repair's verified merge and reconciliation, plus
+any new concrete maintenance approval. Installation and owner-data actions
+require their own concrete human approval.

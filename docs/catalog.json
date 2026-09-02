@@ -3902,6 +3902,21 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "01415623-2b67-48f0-860e-18e9be333e6b",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/rendering-test-repair-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
