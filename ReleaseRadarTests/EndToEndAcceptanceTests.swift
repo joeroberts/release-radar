@@ -5,6 +5,340 @@ import XCTest
 @testable import ReleaseRadar
 
 final class EndToEndAcceptanceTests: XCTestCase {
+    func testTask11AV10MigrationIntegratesExactRoadmapTasksAndAcceptance() async throws {
+        try await task11AIntegration(alreadyManaged: false)
+    }
+
+    func testTask11AManagedV13BaselineIntegratesWithoutLosingDocumentation() async throws {
+        try await task11AIntegration(alreadyManaged: true)
+    }
+
+    private func task11AIntegration(alreadyManaged: Bool) async throws {
+        let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent("RR-R10-Task11A-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let fixtures = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures")
+        let root = directory.appendingPathComponent("repository", isDirectory: true)
+        try FileManager.default.copyItem(at: fixtures.appendingPathComponent("RepositoryDocuments/valid"), to: root)
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        let catalog = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
+        let document = root.appendingPathComponent("docs/plans/draft.md")
+        let documentBytes = try Data(contentsOf: document)
+        let databaseURL = directory.appendingPathComponent("store.sqlite")
+        let frozen = try Data(contentsOf: fixtures.appendingPathComponent("SchemaV10/release-radar-v10.sqlite"))
+        XCTAssertEqual(SHA256.hash(data: frozen).map { String(format: "%02x", $0) }.joined(),
+                       "9fae45086de5581ae0c34c904362fb03d10ecfb9f5f8b6c5a428e762f1ce6559")
+        try frozen.write(to: databaseURL)
+        do {
+            let c = try SQLiteConnection(url: databaseURL)
+            XCTAssertEqual(try c.scalarInt("PRAGMA user_version"), 10)
+            try c.executeScript("""
+            INSERT INTO projects (id,name,first_dashboard_opened) VALUES ('p','Release Radar',1),('other','Other',1);
+            INSERT INTO phases (id,project_id,name) VALUES
+                ('release-radar-post-mvp-remediation','p','Remediation'),('RR-ROADMAP','p','Established product'),
+                ('other-phase','other','Other');
+            INSERT INTO project_active_phases VALUES ('p','RR-ROADMAP');
+            INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES
+                ('RR-R10','p','release-radar-post-mvp-remediation','Deliver tasks and Delivery Goals','in_progress'),
+                ('OTHER','other','other-phase','Preserve other project','needs_review');
+            INSERT INTO audit_events (id,actor_id,reason,created_at) VALUES ('prior-audit','fixture','Preserve prior audit','2026-08-29T12:00:00Z');
+            INSERT INTO agent_command_requests VALUES ('prior-request',X'00',X'01','2026-08-29T12:00:00Z');
+            INSERT INTO notification_events (id,fingerprint,state,project_id,ticket_id)
+                VALUES ('prior-notification','prior','delivered','other','OTHER');
+            INSERT INTO observed_threads (id,project_id,status,last_observed_at) VALUES ('thread','p','active','2026-08-29T12:00:00Z');
+            INSERT INTO observed_goals (id,project_id,thread_id,status,text,last_observed_at) VALUES ('codex-goal','p','thread','active','Execution context','2026-08-29T12:00:00Z');
+            INSERT INTO thread_links (id,project_id,ticket_id,thread_id) VALUES ('thread-link','p','RR-R10','thread');
+            INSERT INTO ticket_goal_links (id,project_id,ticket_id,thread_id,goal_id) VALUES ('goal-link','p','RR-R10','thread','codex-goal');
+            """)
+            for number in 1...9 {
+                try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,'p','release-radar-post-mvp-remediation',?,'accepted')",
+                              bindings: [.text("RR-R\(number)"), .text("Accepted historical outcome \(number)")])
+            }
+            for number in 1...11 {
+                try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,'p','RR-ROADMAP',?,?)",
+                              bindings: [.text("RR-RM\(number)"), .text("Roadmap outcome \(number)"),
+                                         .text([6, 8, 11].contains(number) ? "blocked" : "backlog")])
+            }
+            try c.execute("INSERT INTO ticket_dependencies VALUES ('dependency','p','RR-RM6','RR-RM5')")
+            try c.execute("INSERT INTO blockers (id,project_id,ticket_id,summary) VALUES ('blocker','p','RR-RM8','Owner decision')")
+            try c.execute("INSERT INTO project_roots (id,project_id,path) VALUES ('root','p',?)", bindings: [.text(root.path)])
+            try c.execute("INSERT INTO project_bookmarks (project_id,path,bookmark_data) VALUES ('p',?,X'01')", bindings: [.text(root.path)])
+            try c.execute("INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('legacy-evidence','p','RR-R10',?,1)",
+                          bindings: [.text(root.appendingPathComponent("AGENTS.md").path)])
+            if alreadyManaged {
+                // Same recognized-v13 fixture convention as Task 7/7A. The real
+                // v11 migration alone grants continuation; never seed that flag.
+                try StoreMigrations.migrate(c)
+                let historical = try SQLiteConnection(url: fixtures.appendingPathComponent("SchemaV11/release-radar-v11.sqlite"), immutableReadOnly: true)
+                let eventSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='delivery_goal_assignment_events'"))
+                try c.executeScript("""
+                DROP TABLE delivery_goal_assignment_events;
+                \(eventSQL);
+                CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
+                    ON delivery_goal_assignment_events(project_id,phase_id,ticket_id,revision);
+                PRAGMA user_version=13;
+                INSERT INTO evidence (id,project_id,ticket_id,artifact_id,is_available)
+                    VALUES ('managed-evidence','p','RR-R10','draft',1);
+                """)
+                try c.execute("""
+                INSERT INTO project_documentation_bindings
+                    (project_id,root_id,repository_id,accepted_catalog_version,accepted_catalog_digest,accepted_catalog)
+                    VALUES ('p','root',?,?,?,?)
+                """, bindings: [.text(catalog.catalog.repositoryID), .integer(Int64(catalog.version)),
+                                 .text(catalog.digest), .blob(catalog.canonicalCatalog)])
+                XCTAssertTrue(try StoreMigrations.recognizesDocumentationPreflightSchema(c, version: 13))
+            }
+            XCTAssertNil(try c.row("PRAGMA foreign_key_check"))
+        }
+        let sourceRows = try Self.bootstrapRows(try SQLiteConnection(url: databaseURL, immutableReadOnly: true))
+        let bookmarks = ProjectBookmarkStore(resolver: { _ in .init(url: root, isStale: false) },
+                                            startAccessing: { _ in true }, stopAccessing: { _ in })
+        let query = AgentQueryEnvelope(version: 1, projectRoot: root.path, query: .inventoryEvidence(projectID: "p", rootID: "root"))
+        var managedBefore: EvidenceInventory?
+        if alreadyManaged {
+            let readOnly = try DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
+            let result = await AgentQueryDispatcher(store: readOnly, bookmarkStore: bookmarks).dispatch(query)
+            managedBefore = try XCTUnwrap(result.inventory)
+            XCTAssertTrue(managedBefore?.isComplete == true)
+        }
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let availability = await store.availability
+        XCTAssertEqual(availability, .available)
+        let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL), immutableReadOnly: true)
+        XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), alreadyManaged ? 13 : 10)
+        XCTAssertEqual(try Self.bootstrapRows(snapshot), sourceRows)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL, immutableReadOnly: true).scalarInt("PRAGMA user_version"), 14)
+        let migrated = try await store.read { c in
+            (try c.scalarInt("SELECT COUNT(*) FROM ticket_task_plans"),
+             try c.scalarInt("SELECT COUNT(*) FROM delivery_goals"),
+             try c.scalarInt("SELECT plan_legacy_continuation FROM tickets WHERE id='RR-R10'"),
+             try c.scalarInt("SELECT COUNT(*) FROM tickets WHERE project_id='p' AND id<>'RR-R10' AND plan_legacy_continuation<>0"))
+        }
+        XCTAssertEqual(migrated.0, 0); XCTAssertEqual(migrated.1, 0)
+        XCTAssertEqual(migrated.2, 1); XCTAssertEqual(migrated.3, 0)
+        let registry = InMemoryAuthorizedProjectRegistry(projects: [.init(projectID: .init(rawValue: "p"), canonicalRoot: root, authorizedRoots: [root])])
+        let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry, bookmarkStore: bookmarks)
+        var requests: [(AgentCommandEnvelope, AgentCommandResult)] = []
+        func request(_ command: AgentCommand) -> AgentCommandEnvelope {
+            .init(version: 1, requestID: UUID(), projectRoot: root.path, assertedThreadID: "task-11a-synthetic",
+                  reason: "Verify Task 11A integration", command: command)
+        }
+        func succeed(_ command: AgentCommand) async throws -> AgentCommandResult {
+            let envelope = request(command)
+            let result = await dispatcher.dispatch(envelope)
+            XCTAssertNil(result.error, "\(command)")
+            _ = try XCTUnwrap(result.auditEventID)
+            requests.append((envelope, result))
+            return result
+        }
+        func reject(_ command: AgentCommand) async throws -> AgentCommandError {
+            let before = try await store.read { try Self.bootstrapRows($0) }
+            let result = await dispatcher.dispatch(request(command))
+            let error = try XCTUnwrap(result.error, "Must reject \(command)")
+            XCTAssertNil(result.auditEventID)
+            let after = try await store.read { try Self.bootstrapRows($0) }
+            XCTAssertEqual(after, before, "Rejected command must have no durable effects")
+            return error
+        }
+        if !alreadyManaged {
+            let target = DocumentationTarget(projectID: "p", rootID: "root", repositoryID: catalog.catalog.repositoryID,
+                                             catalogVersion: catalog.version, catalogDigest: catalog.digest)
+            _ = try await succeed(.bindDocumentationRepository(target: target))
+            _ = try await succeed(.addManagedEvidence(target: target, id: "managed-evidence", ticketID: "RR-R10", artifactID: "draft"))
+        }
+        let inventoryResult = await AgentQueryDispatcher(store: store, bookmarkStore: bookmarks).dispatch(query)
+        let inventory = try XCTUnwrap(inventoryResult.inventory)
+        XCTAssertTrue(inventory.isComplete)
+        XCTAssertEqual(inventory.evidence.count, 2)
+        XCTAssertTrue(inventory.evidence.allSatisfy(\.resolvedAvailable))
+        if let managedBefore {
+            XCTAssertEqual(inventory.preservation, managedBefore.preservation)
+            XCTAssertEqual(inventory.evidence, managedBefore.evidence)
+            XCTAssertEqual(inventory.binding, managedBefore.binding)
+            XCTAssertEqual(inventory.audits, managedBefore.audits)
+            XCTAssertEqual(inventory.receipts, managedBefore.receipts)
+        }
+        let baseline = try await store.read { try Self.bootstrapRows($0) }
+        let additions: [TicketTaskDraft] = [
+            .init(id: .init(rawValue: "integrate"), label: "Integration", title: "Integrate delivery contracts", sortOrder: 0),
+            .init(id: .init(rawValue: "verify"), label: "Verification", title: "Verify exact acceptance", sortOrder: 1),
+            .init(id: .init(rawValue: "stage"), label: "Staging", title: "Stage release candidate", sortOrder: 2),
+        ]
+        let created = try await succeed(.reviseTicketTaskPlan(ticketID: "RR-R10", additions: additions))
+        XCTAssertEqual(created.ticketTaskPlanRevision, 1)
+        let born = try await store.read { try $0.rows("SELECT lifecycle,completion FROM ticket_tasks ORDER BY sort_order") }
+        XCTAssertEqual(born, Array(repeating: ["lifecycle": .text("active"), "completion": .text("pending")], count: 3))
+
+        let roadmap: [(String, String, [String])] = [
+            ("RR-DG1", "Coherent owner planning and navigation", ["RR-RM1", "RR-RM2", "RR-RM10"]),
+            ("RR-DG2", "Portable project continuity", ["RR-RM5", "RR-RM6"]),
+            ("RR-DG3", "Truthful supported Codex visibility", ["RR-RM7"]),
+            ("RR-DG4", "Production-quality macOS release", ["RR-RM3", "RR-RM4", "RR-RM9"]),
+            ("RR-DG5", "iPhone-companion scope decision", ["RR-RM8"]),
+            ("RR-DG6", "Role-agent workflow decision", ["RR-RM11"]),
+        ]
+        for phase in ["release-radar-post-mvp-remediation", "RR-ROADMAP"] {
+            let goals: [DeliveryGoalDraft]
+            let assignments: [DeliveryGoalAssignment]
+            if phase == "RR-ROADMAP" {
+                goals = roadmap.enumerated().map { index, row in
+                    .init(id: .init(rawValue: row.0), title: row.1, outcome: "Deliver \(row.1.lowercased()).",
+                          doneCriteria: ["Every assigned roadmap ticket has its owner-approved outcome accepted."], sortOrder: index)
+                }
+                assignments = roadmap.flatMap { row in row.2.map { .init(goalID: .init(rawValue: row.0), ticketID: .init(rawValue: $0)) } }
+            } else {
+                goals = [.init(id: .init(rawValue: "RR-DG-R10"), title: "Delivery Goals and ticket tasks",
+                               outcome: "Deliver first-class per-ticket tasks, phase-scoped Delivery Goals and exact roadmap readiness.",
+                               doneCriteria: ["Exact task acceptance is enforced.", "All seven goals and exact roadmap assignments persist."], sortOrder: 0)]
+                assignments = [.init(goalID: .init(rawValue: "RR-DG-R10"), ticketID: .init(rawValue: "RR-R10"))]
+            }
+            let revised = try await succeed(.applyPhasePlanRevision(projectID: "p", phaseID: phase, expectedRevision: 0,
+                                                                  goalUpserts: goals, assignments: assignments))
+            XCTAssertEqual(revised.phasePlanRevision, 1)
+            let finalized = try await succeed(.finalizePhasePlan(projectID: "p", phaseID: phase, expectedRevision: 1))
+            XCTAssertEqual(finalized.phasePlanRevision, 1)
+        }
+        let planned = try await store.read { try Self.bootstrapRows($0) }
+        let expectedAssignments: Set<String> = [
+            "RR-DG-R10|RR-R10", "RR-DG1|RR-RM1", "RR-DG1|RR-RM2", "RR-DG1|RR-RM10",
+            "RR-DG2|RR-RM5", "RR-DG2|RR-RM6", "RR-DG3|RR-RM7", "RR-DG4|RR-RM3",
+            "RR-DG4|RR-RM4", "RR-DG4|RR-RM9", "RR-DG5|RR-RM8", "RR-DG6|RR-RM11",
+        ]
+        let actualAssignments = try await store.read { c in
+            try c.rows("SELECT goal_id || '|' || ticket_id AS pair FROM delivery_goal_ticket_assignments").compactMap { row -> String? in
+                guard case let .text(value) = row["pair"] else { return nil }; return value
+            }
+        }
+        XCTAssertEqual(Set(actualAssignments), expectedAssignments)
+        XCTAssertEqual(actualAssignments.count, 12, "Disjoint exact assignments, no accepted-history backfill")
+        XCTAssertEqual(planned["delivery_goals"]?.count, 7)
+        let adoption = try await store.read { c in
+            (try c.scalarInt("SELECT COUNT(*) FROM delivery_goals WHERE id='RR-DG-R10' AND lifecycle='active' AND activated_at IS NOT NULL"),
+             try c.scalarInt("SELECT COUNT(*) FROM delivery_goals WHERE phase_id='RR-ROADMAP' AND lifecycle='planned' AND activated_at IS NULL"),
+             try c.scalarInt("SELECT plan_legacy_continuation FROM tickets WHERE id='RR-R10'"),
+             try c.scalarInt("SELECT COUNT(*) FROM phase_plans WHERE project_id='p' AND state='ready' AND revision=1 AND ready_revision=1"))
+        }
+        XCTAssertEqual(adoption.0, 1); XCTAssertEqual(adoption.1, 6); XCTAssertEqual(adoption.2, 0); XCTAssertEqual(adoption.3, 2)
+        let preservedTables = ["projects", "project_active_phases", "ticket_dependencies", "blockers", "observed_threads",
+                               "observed_goals", "thread_links", "ticket_goal_links", "notification_events", "notification_occurrences",
+                               "project_documentation_bindings", "project_roots", "project_bookmarks", "evidence", "codex_plugin_lifecycle"]
+        for table in preservedTables { XCTAssertEqual(planned[table], baseline[table], table) }
+        let oldTickets = try XCTUnwrap(baseline["tickets"])
+        for old in oldTickets {
+            let current = try XCTUnwrap(planned["tickets"]?.first { $0["id"] == old["id"] })
+            XCTAssertEqual(current.filter { $0.key != "plan_legacy_continuation" }, old.filter { $0.key != "plan_legacy_continuation" })
+        }
+
+        _ = try await succeed(.requestReview(id: "review", ticketID: "RR-R10", kind: "review", summary: "Review integrated delivery"))
+        _ = try await succeed(.transitionTicket(ticketID: "RR-R10", lane: .needsReview))
+        let incomplete = try await reject(.transitionTicket(ticketID: "RR-R10", lane: .accepted, ticketTaskPlanRevision: 1))
+        // Accepted transitions retain their pre-Task-4B error envelope; the new
+        // structured task errors belong only to the two task mutation commands.
+        XCTAssertEqual(incomplete, .internalFailure("Complete every active ticket task before accepting the ticket."))
+        for ticket in ["RR-R10", "RR-R1", "new-accepted"] {
+            _ = try await reject(.upsertTicket(ticketID: ticket, phaseID: "release-radar-post-mvp-remediation", outcome: "Reject bypass", lane: .accepted))
+        }
+        var revision: Int64 = 1
+        for (index, task) in additions.enumerated() {
+            let completed = try await succeed(.completeTicketTask(ticketID: "RR-R10", taskID: task.id.rawValue, expectedRevision: revision))
+            revision = try XCTUnwrap(completed.ticketTaskPlanRevision)
+            XCTAssertEqual(revision, Int64(index + 2))
+        }
+        let tasksCompleted = try await store.read { try Self.bootstrapRows($0) }
+        XCTAssertEqual(tasksCompleted["phase_plans"], planned["phase_plans"])
+        XCTAssertEqual(tasksCompleted["delivery_goals"], planned["delivery_goals"])
+        let noAutomaticAcceptance = try await store.read { try $0.scalarText("SELECT lane FROM tickets WHERE id='RR-R10'") }
+        XCTAssertEqual(noAutomaticAcceptance, "needs_review")
+        _ = try await reject(.transitionTicket(ticketID: "RR-R10", lane: .accepted))
+        let stale = try await reject(.transitionTicket(ticketID: "RR-R10", lane: .accepted, ticketTaskPlanRevision: 3))
+        XCTAssertEqual(stale, .internalFailure("The ticket task plan changed. Refresh it before retrying."))
+        _ = try await succeed(.recordCompletion(id: "completion", ticketID: "RR-R10", summary: "Integration verified"))
+        _ = try await succeed(.transitionTicket(ticketID: "RR-R10", lane: .accepted, ticketTaskPlanRevision: revision))
+        for lane in TicketLane.allCases where lane != .accepted {
+            _ = try await reject(.transitionTicket(ticketID: "RR-R10", lane: lane, ticketTaskPlanRevision: revision))
+            _ = try await reject(.transitionTicket(ticketID: "RR-R1", lane: lane))
+            for ticket in ["RR-R10", "RR-R1"] {
+                _ = try await reject(.upsertTicket(ticketID: ticket, phaseID: "release-radar-post-mvp-remediation", outcome: "Reject reopening", lane: lane))
+            }
+        }
+        _ = try await reject(.reviseTicketTaskPlan(ticketID: "RR-R10", expectedRevision: revision, additions: [.init(id: .init(rawValue: "reopen"), label: "Reopen", title: "Reject accepted plan changes", sortOrder: 3)]))
+
+        // The other command writer must invalidate both sides of a Backlog
+        // phase move. New work cannot inherit migration continuation/readiness.
+        _ = try await succeed(.upsertTicket(ticketID: "new-work", phaseID: "RR-ROADMAP", outcome: "New work", lane: .backlog))
+        _ = try await reject(.transitionTicket(ticketID: "new-work", lane: .inProgress))
+        _ = try await reject(.requestReview(id: "new-review", ticketID: "new-work", kind: "review", summary: "Cannot skip start"))
+        _ = try await reject(.recordCompletion(id: "new-completion", ticketID: "new-work", summary: "Cannot skip start"))
+        _ = try await succeed(.upsertTicket(ticketID: "new-work", phaseID: "release-radar-post-mvp-remediation", outcome: "Moved work", lane: .backlog))
+        let moved = try await store.read { c in
+            (try c.scalarInt("SELECT COUNT(*) FROM phase_plans WHERE project_id='p' AND state='draft'"),
+             try c.scalarText("SELECT phase_id || '|' || lane || '|' || plan_legacy_continuation FROM tickets WHERE id='new-work'"))
+        }
+        XCTAssertEqual(moved.0, 2)
+        XCTAssertEqual(moved.1, "release-radar-post-mvp-remediation|backlog|0")
+        let committed = try await store.read { try Self.bootstrapRows($0) }
+        let relaunched = DeliveryStore(databaseURL: databaseURL)
+        let replayDispatcher = AgentCommandDispatcher(store: relaunched, projectRegistry: registry, bookmarkStore: bookmarks)
+        for (envelope, result) in requests {
+            let replay = await replayDispatcher.dispatch(envelope)
+            XCTAssertEqual(replay, result)
+        }
+        let replayRows = try await relaunched.read { try Self.bootstrapRows($0) }
+        XCTAssertEqual(replayRows, committed)
+        let finalResult = await AgentQueryDispatcher(store: relaunched, bookmarkStore: bookmarks).dispatch(query)
+        let finalInventory = try XCTUnwrap(finalResult.inventory)
+        XCTAssertTrue(finalInventory.isComplete)
+        XCTAssertEqual(finalInventory.evidence, inventory.evidence)
+        XCTAssertEqual(finalInventory.binding, inventory.binding)
+        XCTAssertEqual(finalInventory.roots, inventory.roots)
+        for fingerprint in inventory.audits { XCTAssertTrue(finalInventory.audits.contains(fingerprint)) }
+        for fingerprint in inventory.receipts { XCTAssertTrue(finalInventory.receipts.contains(fingerprint)) }
+        for table in preservedTables where !["notification_events", "notification_occurrences"].contains(table) {
+            XCTAssertEqual(committed[table], baseline[table], table)
+        }
+        for row in baseline["notification_events"] ?? [] {
+            XCTAssertTrue(committed["notification_events"]?.contains(row) == true)
+        }
+        XCTAssertEqual(try Data(contentsOf: document), documentBytes)
+        XCTAssertEqual(try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root).digest, catalog.digest)
+        let projection = try await DashboardProjection.load(from: relaunched)
+        let board = try XCTUnwrap(projection.board(for: .init(rawValue: "p"), phaseID: .init(rawValue: "release-radar-post-mvp-remediation")))
+        let card = try XCTUnwrap(board.lane(.accepted)?.cards.first { $0.id.rawValue == "RR-R10" })
+        XCTAssertEqual(card.activeTaskCount, 3)
+        guard case let .loaded(plan)? = board.detail(for: .init(rawValue: "RR-R10"))?.taskPlan else {
+            return XCTFail("Expected persisted completed task projection")
+        }
+        XCTAssertEqual(plan.revision, 4)
+        XCTAssertEqual(plan.tasks.map(\.id.rawValue), ["integrate", "verify", "stage"])
+        XCTAssertTrue(plan.tasks.allSatisfy { $0.completion == .completed })
+    }
+
+    func testTask11ASampleAndDebugWritersCreateGovernedPlansWithoutLegacyContinuation() async throws {
+        let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent("RR-R10-Task11A-Writers-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        for sample in [true, false] {
+            let store = DeliveryStore(databaseURL: directory.appendingPathComponent(sample ? "sample.sqlite" : "debug.sqlite"))
+            if sample { try await DashboardSampleData.seedIfNeeded(in: store) }
+            else { try await RR9ActivePhaseCaptureFixture.seedIfNeeded(in: store, rootDirectory: directory.appendingPathComponent("roots"), scenario: .happy) }
+            let first = try await store.read { try Self.bootstrapRows($0) }
+            let state = try await store.read { c in
+                (try c.scalarInt("SELECT COUNT(*) FROM tickets"),
+                 try c.scalarInt("SELECT COUNT(*) FROM tickets WHERE lane='accepted'"),
+                 try c.scalarInt("SELECT COUNT(*) FROM tickets WHERE plan_legacy_continuation<>0"),
+                 try c.scalarInt("SELECT COUNT(*) FROM ticket_task_plans"),
+                 try c.scalarInt("SELECT COUNT(*) FROM tickets t LEFT JOIN delivery_goal_ticket_assignments a ON a.project_id=t.project_id AND a.phase_id=t.phase_id AND a.ticket_id=t.id WHERE a.ticket_id IS NULL"),
+                 try c.scalarInt("SELECT COUNT(*) FROM phase_plans p WHERE EXISTS (SELECT 1 FROM tickets t WHERE t.project_id=p.project_id AND t.phase_id=p.phase_id) AND (p.state<>'ready' OR p.ready_revision<>p.revision)"))
+            }
+            XCTAssertGreaterThan(state.0 ?? 0, 0); XCTAssertGreaterThan(state.1 ?? 0, 0)
+            XCTAssertEqual(state.2, 0); XCTAssertEqual(state.3, 0); XCTAssertEqual(state.4, 0); XCTAssertEqual(state.5, 0)
+            if sample { try await DashboardSampleData.seedIfNeeded(in: store) }
+            else { try await RR9ActivePhaseCaptureFixture.seedIfNeeded(in: store, rootDirectory: directory.appendingPathComponent("roots"), scenario: .happy) }
+            let second = try await store.read { try Self.bootstrapRows($0) }
+            XCTAssertEqual(second, first, "Writer re-entry must not rewrite delivery history")
+        }
+    }
+
     func testTask7ABootstrapPreservesManagedV13MigrationLineageAndReplaysThroughTask7() async throws {
         let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
             .appendingPathComponent("RR-R10-Task7A-\(UUID().uuidString)", isDirectory: true)

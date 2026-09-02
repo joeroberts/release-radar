@@ -42,6 +42,9 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | 96b10404-6291-4cc8-beb9-c0e2e1dff704 | [docs/delivery/evidence/2026-08-30-rr-r10-task-2a-red-evidence.json](evidence/2026-08-30-rr-r10-task-2a-red-evidence.json) | verificationEvidence | nonAuthoritative | completed | none | none |
 | fc2ef1e4-36f7-4f32-8e1a-e03a5e59ce7d | [docs/delivery/evidence/2026-09-02-rr-r10-task-10-ui.md](evidence/2026-09-02-rr-r10-task-10-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 7b3c9e04-c628-492e-910a-6818c132bc10 | [docs/delivery/evidence/2026-09-02-rr-r10-task-11a-SHA256SUMS](evidence/2026-09-02-rr-r10-task-11a-SHA256SUMS) | checksumManifest | nonAuthoritative | completed | none | none |
+| 67abec4d-33b5-42be-89c3-e25cf84a20e8 | [docs/delivery/evidence/2026-09-02-rr-r10-task-11a-candidate.json](evidence/2026-09-02-rr-r10-task-11a-candidate.json) | verificationEvidence | nonAuthoritative | completed | none | none |
+| 7c39bcd0-76cc-4b5f-a461-f5257c245188 | [docs/delivery/evidence/2026-09-02-rr-r10-task-11a-integration-staging.md](evidence/2026-09-02-rr-r10-task-11a-integration-staging.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | a5d9d0f5-d689-405d-b175-f88534219a1f | [docs/delivery/evidence/2026-09-02-rr-r10-task-5-ui.md](evidence/2026-09-02-rr-r10-task-5-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 0199bdf8-78d1-460e-abe2-519f0fd34e0b | [docs/delivery/evidence/mdcp-m2c-onboarding-repair-compact.png](evidence/mdcp-m2c-onboarding-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 2497cc96-d6c8-42ea-87b3-1f6b7cabda8b | [docs/delivery/evidence/mdcp-m2c-onboarding-staged-wide.png](evidence/mdcp-m2c-onboarding-staged-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |

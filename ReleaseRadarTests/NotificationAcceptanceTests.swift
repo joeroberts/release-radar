@@ -5,6 +5,84 @@ import XCTest
 @testable import ReleaseRadar
 
 final class NotificationAcceptanceTests: XCTestCase {
+    func testTask11ADeliveryGoalAndTaskCommandsPreserveRealCodexBlockedNotificationsAcrossReplay() async throws {
+        let f = try await makeFixture(firstDashboardOpened: true)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed linked execution context") { c in
+            try c.execute("INSERT INTO observed_threads (id,project_id,status,last_observed_at) VALUES ('thread','project-1','active','2026-09-02T12:00:00Z')")
+            try c.execute("INSERT INTO thread_links (id,project_id,ticket_id,thread_id) VALUES ('thread-link','project-1','RR-09','thread')")
+        }
+        let recorder = MeaningfulDeliveryEventRecorder(store: f.store)
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread", goalID: "codex-goal", status: .active, observedAt: Date(timeIntervalSince1970: 1))
+        let linked = await f.dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path,
+                                                     reason: "Approve exact execution goal", command: .linkGoal(id: "goal-link", ticketID: "RR-09", goalID: "codex-goal")))
+        XCTAssertNil(linked.error)
+        try await recorder.recordGoalObservation(projectID: .init(rawValue: "project-1"), threadID: "thread", goalID: "codex-goal", status: .blocked, observedAt: Date(timeIntervalSince1970: 2))
+        func context(_ store: DeliveryStore) async throws -> [String: [[String: SQLiteValue]]] {
+            try await store.read { c in
+                var rows: [String: [[String: SQLiteValue]]] = [:]
+                for table in ["notification_events", "notification_occurrences", "alert_rules", "observed_goals", "ticket_goal_links"] {
+                    rows[table] = try c.rows("SELECT * FROM \(table) ORDER BY rowid")
+                }
+                return rows
+            }
+        }
+        let before = try await context(f.store)
+        XCTAssertEqual(before["notification_events"]?.count, 1, "The real linked Codex blocked event must still be emitted")
+        XCTAssertEqual(before["notification_events"]?.first?["event_kind"], .text("goal_blocked"))
+        let commands: [AgentCommand] = [
+            .applyPhasePlanRevision(projectID: "project-1", phaseID: "phase-1", expectedRevision: 0,
+                                    goalUpserts: [.init(id: .init(rawValue: "fixture-goal"), title: "Updated delivery goal",
+                                                       outcome: "Deliver the scoped outcome", doneCriteria: ["Scoped ticket accepted"], sortOrder: 0)]),
+            .finalizePhasePlan(projectID: "project-1", phaseID: "phase-1", expectedRevision: 1),
+            .reviseTicketTaskPlan(ticketID: "RR-09", additions: [.init(id: .init(rawValue: "one"), label: "One", title: "Verify delivery", sortOrder: 0)]),
+            .completeTicketTask(ticketID: "RR-09", taskID: "one", expectedRevision: 1),
+        ]
+        var requests: [(AgentCommandEnvelope, AgentCommandResult)] = []
+        for command in commands {
+            let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path,
+                                               reason: "Delivery planning is not a Codex event", command: command)
+            let result = await f.dispatcher.dispatch(request)
+            XCTAssertNil(result.error)
+            XCTAssertNotNil(result.auditEventID)
+            requests.append((request, result))
+            let after = try await context(f.store)
+            XCTAssertEqual(after, before)
+        }
+        // Progress/acceptance is a separate formal action. Its legitimate review
+        // occurrence changes are not attributed to task or Delivery Goal edits.
+        try await transition(.needsReview, requestID: UUID().uuidString, fixture: f)
+        try await transition(.accepted, requestID: UUID().uuidString, ticketTaskPlanRevision: 2, fixture: f)
+        let evidence = f.projectRoot.appendingPathComponent("proof.txt")
+        try Data("Synthetic acceptance evidence".utf8).write(to: evidence)
+        let added = await f.dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path,
+                                                     reason: "Attach acceptance evidence", command: .addEvidence(id: "proof", ticketID: "RR-09", path: evidence.path)))
+        XCTAssertNil(added.error)
+        let beforeGoal = try await context(f.store)
+        let awaiting = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path,
+                                             reason: "Request Delivery Goal acceptance", command: .transitionDeliveryGoal(projectID: "project-1", phaseID: "phase-1", goalID: "fixture-goal", expectedPlanRevision: 1, lifecycle: .awaitingAcceptance))
+        let result = await f.dispatcher.dispatch(awaiting)
+        XCTAssertNil(result.error)
+        XCTAssertNotNil(result.auditEventID)
+        requests.append((awaiting, result))
+        let afterGoal = try await context(f.store)
+        XCTAssertEqual(afterGoal, beforeGoal, "Delivery Goal attention must not impersonate a Codex notification")
+        let relaunched = DeliveryStore(databaseURL: f.databaseURL)
+        let dispatcher = AgentCommandDispatcher(store: relaunched, projectRegistry: f.registry)
+        let countsBeforeReplay = try await relaunched.read { c in
+            try ["audit_events", "agent_command_requests"].map { try c.scalarInt("SELECT COUNT(*) FROM \($0)") }
+        }
+        for (request, original) in requests {
+            let replay = await dispatcher.dispatch(request)
+            XCTAssertEqual(replay, original)
+        }
+        let replayed = try await context(relaunched)
+        XCTAssertEqual(replayed, beforeGoal)
+        let countsAfterReplay = try await relaunched.read { c in
+            try ["audit_events", "agent_command_requests"].map { try c.scalarInt("SELECT COUNT(*) FROM \($0)") }
+        }
+        XCTAssertEqual(countsAfterReplay, countsBeforeReplay)
+    }
+
     func testTaskOnlyCommandsLeaveAttentionNotificationsAndDeliveryContextUnchanged() async throws {
         let f = try await makeFixture(firstDashboardOpened: true)
         try await transition(.needsReview, requestID: UUID().uuidString, fixture: f)

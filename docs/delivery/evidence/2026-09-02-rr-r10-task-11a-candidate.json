@@ -1,0 +1,147 @@
+{
+  "recordVersion": 1,
+  "checkpoint": "RR-R10 Task 11A",
+  "recordedAt": "2026-09-02",
+  "productSourceCommit": "609881fe79ec37180057fc6ed36b6ba49afaa8ab",
+  "sourceRepository": "https://github.com/joeroberts/release-radar",
+  "productSourceUnchangedFromCommit": true,
+  "worktree": "/Users/jroberts/.codex/worktrees/365e/release_radar",
+  "branch": "codex/rr-r10-task-11a",
+  "buildCommand": "xcodebuild -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -configuration Release CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO -derivedDataPath .build/rr-r10-task11a/ReleaseDerivedData build",
+  "toolchain": {
+    "xcode": "26.6",
+    "xcodeBuild": "17F113",
+    "sdk": "macosx26.5",
+    "sdkBuild": "25F70",
+    "hostOSBuild": "25F84",
+    "architecture": "arm64"
+  },
+  "bundle": {
+    "path": "/Users/jroberts/Library/Application Support/RekonLabs/ReleaseRadar-MDCP/2026-09-02/task-11a/ReleaseRadar.app",
+    "bundleIdentifier": "com.rekonlabs.ReleaseRadar",
+    "version": "0.1.6",
+    "build": "1",
+    "minimumOS": "14.0",
+    "storeSchema": 14
+  },
+  "archive": {
+    "path": "/Users/jroberts/Library/Application Support/RekonLabs/ReleaseRadar-MDCP/2026-09-02/task-11a/ReleaseRadar-task-11a.zip",
+    "sha256": "dbeb2df8b9a97fb3a6f7e57d47765da39ee802a869d1fe6e55e29e6796c1a44a"
+  },
+  "custody": {
+    "parentMode": "0700",
+    "archiveMode": "0600",
+    "retainThrough": "2026-10-02",
+    "noCleanupAuthorized": true
+  },
+  "signing": {
+    "authority": "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)",
+    "teamIdentifier": "2UA854NLX4",
+    "strictVerificationPassed": true,
+    "hardenedRuntimeAllComponents": true,
+    "signatures": [
+      {
+        "path": ".",
+        "source": "ReleaseRadar/ReleaseRadar.entitlements",
+        "cdHash": "cd5e6016f9b82577fc53ab9a51cad5755551b13b",
+        "entitlements": {
+          "com.apple.security.app-sandbox": true,
+          "com.apple.security.network.client": true,
+          "com.apple.security.application-groups": [
+            "2UA854NLX4.com.rekonlabs.ReleaseRadar"
+          ],
+          "com.apple.security.files.user-selected.read-only": true
+        },
+        "matchesSourceEntitlements": true
+      },
+      {
+        "path": "Contents/Resources/ReleaseRadarBridgeAgent",
+        "source": "ReleaseRadarBridgeAgent/ReleaseRadarBridgeAgent.entitlements",
+        "cdHash": "f62a2e096a1b8574e6c3c5c76a1a542fb3c74e7a",
+        "entitlements": {
+          "com.apple.security.application-groups": [
+            "2UA854NLX4.com.rekonlabs.ReleaseRadar"
+          ],
+          "com.apple.security.app-sandbox": true
+        },
+        "matchesSourceEntitlements": true
+      },
+      {
+        "path": "Contents/Resources/ReleaseRadarPluginLifecycleHelper",
+        "source": "ReleaseRadarPluginLifecycleHelper/ReleaseRadarPluginLifecycleHelper.entitlements",
+        "cdHash": "919c0519afa5e78ae0059e0709cd848d92280c96",
+        "entitlements": {
+          "com.apple.security.temporary-exception.files.absolute-path.read-only": [
+            "/private/var/empty/"
+          ],
+          "com.apple.security.temporary-exception.files.home-relative-path.read-write": [
+            "/.codex/"
+          ],
+          "com.apple.security.temporary-exception.mach-lookup.global-name": [
+            "com.apple.security.syspolicy"
+          ],
+          "com.apple.security.app-sandbox": true,
+          "com.apple.security.temporary-exception.files.home-relative-path.read-only": [
+            "/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime/",
+            "/Documents/dev/joeroberts/ai-tools/integrations/codex/"
+          ]
+        },
+        "matchesSourceEntitlements": true
+      },
+      {
+        "path": "Contents/Helpers/ReleaseRadarAgentTools",
+        "cdHash": "553f01e80f8ef87994d335468cc64c66295dd401",
+        "entitlements": {
+          "com.apple.application-identifier": "2UA854NLX4.com.rekonlabs.ReleaseRadarAgentTools"
+        }
+      },
+      {
+        "path": "Contents/Frameworks/ReleaseRadarCore.framework",
+        "cdHash": "23901e3468295c462e2e727ab7204046d97677c9",
+        "entitlements": {}
+      }
+    ]
+  },
+  "packagedTools": {
+    "count": 24,
+    "protocolVersion": "2025-06-18",
+    "probe": "initialize and tools/list over stdio only; no tools/call or broker connection",
+    "transcript": "/Users/jroberts/Library/Application Support/RekonLabs/ReleaseRadar-MDCP/2026-09-02/task-11a/candidate-tools.jsonl",
+    "sha256": "5722921512851049d9f60cd1370471c61096ec32d9d393ad1a11710079bd642e",
+    "marketplaceMatchesProductSource": true
+  },
+  "copyVerification": {
+    "all18RegularFilesMatchBuild": true,
+    "frameworkSymlinks": {
+      "Contents/Frameworks/ReleaseRadarCore.framework/ReleaseRadarCore": "Versions/Current/ReleaseRadarCore",
+      "Contents/Frameworks/ReleaseRadarCore.framework/Resources": "Versions/Current/Resources",
+      "Contents/Frameworks/ReleaseRadarCore.framework/Versions/Current": "A"
+    }
+  },
+  "regularFileSHA256": {
+    "Contents/Frameworks/ReleaseRadarCore.framework/Versions/A/ReleaseRadarCore": "9fe47bd6999717ef9e7e467bbdb8d734b82ebaa66132d2770b7917fac4c1a220",
+    "Contents/Frameworks/ReleaseRadarCore.framework/Versions/A/Resources/Info.plist": "e1b15cb7d84fd2579d056befb522748cce296b783217186fb32d1b975ccf4d49",
+    "Contents/Frameworks/ReleaseRadarCore.framework/Versions/A/_CodeSignature/CodeResources": "bfa426653848670446e031c6e074d57c9c6545c52104d09db2370eb65c2d3561",
+    "Contents/Helpers/ReleaseRadarAgentTools": "99fd4c13a2508f445cfb71798ba60149588c33c0cdb31e044b2c2b98b02f6984",
+    "Contents/Info.plist": "24afb19e4a7c905a74b94d0b9129e43d27364707edc9a078528bd26ee18e1274",
+    "Contents/Library/LaunchAgents/com.rekonlabs.ReleaseRadar.BridgeAgent.plist": "d54cbc9dbd9ef5ab7c9bc3df1f9582f6a33c034fe3ab08b5199ec83ae532a110",
+    "Contents/Library/LaunchAgents/com.rekonlabs.ReleaseRadar.PluginLifecycleHelper.plist": "1ef5a3f824305fff91d32b1b84f2aea32ed4ccd0b7efd1eb5e4af9c91d3c3f8f",
+    "Contents/MacOS/ReleaseRadar": "e3e616e3dbe00154dec69947440090942b90cc38a53dd5e63a37db62073720ad",
+    "Contents/PkgInfo": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+    "Contents/Resources/AppIcon.icns": "bb1f4040463e491b3671ec0433f7b2fe96020779e61943fe3844a00e8b182330",
+    "Contents/Resources/Assets.car": "540329ed646f6c31fb6c6f4b7df6004deb6e64ebc37fb107b58df7f3ee2444d6",
+    "Contents/Resources/CodexPluginMarketplace/.agents/plugins/marketplace.json": "452ee718a4126d9a6ddda85f4c6bd2f839e0c704343472977dad906ef3347e42",
+    "Contents/Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json": "aec771ddf093cd8705bb6b8df52bc8eaba59175afb83ca83df5d82c2bbf5d7a6",
+    "Contents/Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json": "4e2f32f74da1c618990f0b434ac1b23044dcd2292ddf885202b76c1998726c71",
+    "Contents/Resources/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md": "68b17a708e537a60f918ba6564f0344ddb24d3fefc38b6e981fbd158058850a8",
+    "Contents/Resources/ReleaseRadarBridgeAgent": "4f3601588b21b09865ba812d2e2946b30ba7c18ddc90af7439c6db3cce883985",
+    "Contents/Resources/ReleaseRadarPluginLifecycleHelper": "f395657c81081425cce99e920b27d5d988b4a33fe06f4ed8d532822930ba9ff1",
+    "Contents/_CodeSignature/CodeResources": "763b70b59218c25a1b4e0b023c4f2483fe5944ffff45d015643811011fb9a1d4"
+  },
+  "limits": [
+    "Not installed or launched against owner data.",
+    "Apple Development local-owner candidate; not Developer ID/notarization evidence.",
+    "Complete scheme and packaged broker/lifecycle acceptance require Task 11B isolated service/session gate.",
+    "A rebuild is a different candidate; consume this retained bundle/archive, not a new build."
+  ]
+}
