@@ -1,8 +1,47 @@
+import Darwin
 import Foundation
 import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    func testLegacyInventoryReadsAuthorizedRootBelowSearchOnlyAncestorWithoutMutation() async throws {
+        let f = try await makeFixture(rootPath: "search-only/repository")
+        let ancestor = f.root.deletingLastPathComponent()
+        let guidance = f.root.appendingPathComponent("AGENTS.md")
+        let evidence = f.root.appendingPathComponent("docs/plans/draft.md")
+        let guidanceBytes = Data("# Synthetic repository instructions\n".utf8)
+        try guidanceBytes.write(to: guidance)
+        try FileManager.default.removeItem(at: f.root.appendingPathComponent("docs/catalog.json"))
+        let evidenceBytes = try Data(contentsOf: evidence)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed readable legacy evidence") { c in
+            try c.execute("INSERT INTO evidence (id, project_id, path, is_available) VALUES ('legacy', 'p', ?, 0)", bindings: [.text(evidence.path)])
+        }
+        let initial = await inventory(f.store, f.root)
+        let before = try XCTUnwrap(initial)
+        XCTAssertTrue(before.isComplete)
+        XCTAssertEqual(before.catalog.guidance, .legacy)
+        XCTAssertEqual(before.catalog.validationError, .missingFile)
+
+        XCTAssertEqual(chmod(ancestor.path, 0o100), 0)
+        defer { XCTAssertEqual(chmod(ancestor.path, 0o700), 0) }
+        let directory = open(ancestor.path, O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+        let openError = errno
+        if directory >= 0 { close(directory) }
+        XCTAssertEqual(directory, -1, "The fixture ancestor must forbid directory reads")
+        XCTAssertEqual(openError, EACCES)
+        XCTAssertEqual(try Data(contentsOf: guidance), guidanceBytes, "Authorized leaf reads still succeed")
+        XCTAssertEqual(try Data(contentsOf: evidence), evidenceBytes)
+
+        let observed = await inventory(f.store, f.root)
+        let after = try XCTUnwrap(observed)
+        XCTAssertTrue(after.isComplete)
+        XCTAssertEqual(after.catalog.guidance, .legacy)
+        XCTAssertEqual(after.catalog.validationError, .missingFile)
+        XCTAssertEqual(after.evidence.first?.resolvedAvailable, true)
+        XCTAssertEqual(after.evidence.first?.evidence.isAvailable, false)
+        XCTAssertEqual(after, before, "Repository observation and every stored preservation domain remain unchanged")
+    }
+
     func testGuidanceUpgradeReusesExactLegacyHandoffAndReplaysFreshAudit() async throws {
         let f = try await makeFixture()
         let path = f.root.appendingPathComponent("AGENTS.md").path
@@ -471,11 +510,12 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [.init(projectID: .init(rawValue: "p"), canonicalRoot: root, authorizedRoots: [root])]), bookmarkStore: bookmarks(root))
     }
 
-    private func makeFixture() async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
+    private func makeFixture(rootPath: String = "repository") async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
         let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("ReleaseRadar-M3B-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        let root = directory.appendingPathComponent("repository")
+        let root = directory.appendingPathComponent(rootPath)
+        try FileManager.default.createDirectory(at: root.deletingLastPathComponent(), withIntermediateDirectories: true)
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         try FileManager.default.copyItem(at: source, to: root)
         let block = RepositoryDocumentContract.managedGuidanceBlock

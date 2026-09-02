@@ -53,7 +53,8 @@ final class RepositoryDocumentReader {
     private static func openRoot(_ url: URL, beforeOpen: ((String) -> Void)? = nil) throws -> Int32 {
         let path = url.path
         guard path.hasPrefix("/"), !path.utf8.contains(0) else { throw RepositoryDocumentError(.unsafePath) }
-        var descriptor = open("/", O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+        // Traversal needs search access, not permission to list the root's ancestors.
+        var descriptor = open("/", O_SEARCH | O_CLOEXEC)
         guard descriptor >= 0 else { throw RepositoryDocumentError(.readFailed) }
         do {
             for component in path.split(separator: "/") {
@@ -64,7 +65,7 @@ final class RepositoryDocumentReader {
                 }
                 guard info.st_mode & S_IFMT == S_IFDIR else { throw RepositoryDocumentError(.unsafeFileType) }
                 beforeOpen?(String(component))
-                let next = openat(descriptor, String(component), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+                let next = openat(descriptor, String(component), O_SEARCH | O_NOFOLLOW | O_CLOEXEC)
                 guard next >= 0 else { throw RepositoryDocumentError(.changedDuringRead) }
                 var opened = stat()
                 guard fstat(next, &opened) == 0, Stamp(opened) == Stamp(info) else {

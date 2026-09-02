@@ -6,8 +6,8 @@ The owner approved recommended defaults and initial steps 1–3, then explicitly
 approved backup-first normal startup of the installed app to restore its broker,
 graceful close, and resumed preflight. Protected copies are complete; captured
 owner bytes remain unchanged. Inventory established schema 10 and saved
-identities but failed before catalog validation. A focused M2A investigation
-must resolve that frozen-reader risk before resuming. Steps 4–7, including
+identities but failed before catalog validation. The focused M2A correction is independently accepted; the replacement
+candidate must pass the actual signed-app check before later live mutations. Steps 4–7, including
 selected-root deployment, still require exact live approval. The owner now
 requires delivery of M6A followed by a session stop before M6B.
 
@@ -18,11 +18,12 @@ the owner-approved protected companion. Current delivery state remains in
 
 ## Frozen candidate
 
-`MDCP-COMPAT-1` is commit
-`dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf` on
-`codex/managed-documentation-contract-planning`. M5 finished with a clean
-worktree and equal HEAD, upstream, and live remote. Subsequent runbook/catalog
-metadata does not change the frozen application source or tests.
+`MDCP-COMPAT-2` is the accepted M2A authorized-root search-access correction
+on `codex/managed-documentation-contract-planning`; record its exact pushed
+commit in the protected companion before resuming live execution. It replaces
+`MDCP-COMPAT-1` (`dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`).
+The correction changes only root-directory acquisition and its regression;
+accepted storage, command, catalog, guidance, and signing contracts remain fixed.
 
 The verified Release candidate is version **0.1.6**, build **1**, signed by
 team **2UA854NLX4** with the existing entitlements and hardened runtime.
@@ -30,24 +31,25 @@ Paths below are relative to `ReleaseRadar.app`.
 
 | Executable | Signing identifier | CDHash |
 | --- | --- | --- |
-| `Contents/MacOS/ReleaseRadar` | `com.rekonlabs.ReleaseRadar` | `f4410d38b4742d84f94fab6f35ffab731a4e242b` |
-| `Contents/Helpers/ReleaseRadarAgentTools` | `com.rekonlabs.ReleaseRadarAgentTools` | `4440794b027c07a1f55981dc3014dd51a98f1aaa` |
-| `Contents/Resources/ReleaseRadarBridgeAgent` | `com.rekonlabs.ReleaseRadarBridgeAgent` | `04e2a2811dc6929e3dcd697435bc7bd119e3f6f3` |
-| `Contents/Resources/ReleaseRadarPluginLifecycleHelper` | `com.rekonlabs.ReleaseRadarPluginLifecycleHelper` | `d232b806e0930a9f751d8a1283a39c3384605df1` |
+| `Contents/MacOS/ReleaseRadar` | `com.rekonlabs.ReleaseRadar` | `9cd6d59d42efe263e2fa757b1fcb965a0adb3782` |
+| `Contents/Helpers/ReleaseRadarAgentTools` | `com.rekonlabs.ReleaseRadarAgentTools` | `7cf24e3f613a3ec9fe2f4e48c2df80deeb6f4c5a` |
+| `Contents/Resources/ReleaseRadarBridgeAgent` | `com.rekonlabs.ReleaseRadarBridgeAgent` | `cb9d4531f918781637b887c9756925062d1d7005` |
+| `Contents/Resources/ReleaseRadarPluginLifecycleHelper` | `com.rekonlabs.ReleaseRadarPluginLifecycleHelper` | `d7c796987ac69d8fab6f3c0f21c016d2c803fad1` |
 
 - App executable SHA-256:
-  `5e4ce39d601d734f6741b6228484101e83ec4c59508e76bad552f1d173b1b507`.
+  `34795c4b8fbc6ee048a06070cab8683a1816848ca7b46f6e2621ca66c320cf78`.
 - App `Contents/_CodeSignature/CodeResources` SHA-256:
-  `74b9a2d5cd8ad54a2b34b4aa23dc35732b8382caa893d795f3e3024d159da920`.
+  `8bf66fd75186f4548c297e883a716255eba7cfcb3227740309ddc0ce5675d8ec`.
 - Bundled plugin **0.1.6** normalized digest:
   `dad143d88e77af7e2ed4523c17c31a24fdd8810e87d02a2ccfe2c39ba5558f8c`.
 - Packaged agent tool exposes the accepted **19** tool schemas. Safe
   initialize/tools-list and strict signature verification already passed.
 
 Verified app and documentation-checker copies are retained as temporary build
-outputs under `.build/mdcp-compat-1/`. The checker requires its adjacent
-`ReleaseRadarCore.framework`. They have not been installed. The candidate was launched once in explicit
-read-only maintenance against the approved existing owner store, then closed.
+outputs under `.build/mdcp-compat-2/`. The checker requires its adjacent
+`ReleaseRadarCore.framework`. The replacement has not been installed or launched against owner state.
+The prior candidate was launched once in explicit read-only maintenance against
+the approved existing owner store, then closed.
 Revalidate the selected bundle before approving its installation;
 a rebuilt or changed bundle needs a newly recorded exact identity.
 

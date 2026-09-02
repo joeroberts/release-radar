@@ -3,7 +3,7 @@
 ## Current state
 
 - Outcome: M2–M5 accepted and pushed; M6A initial owner preflight performed
-- Active task: M2A authorized-root reader investigation; live M6A paused
+- Active task: M6A activation-runbook completion after accepted M2A correction
 - Last complete task: M5 — Guidance-v2 Compatibility
 - Authorization: The owner authorized development, checks, independent review,
   in-scope corrections, delivery records, and normal commit/push for the MDCP
@@ -17,24 +17,23 @@
 - Controlling briefs: [M2A](task-briefs/2026-09-01-managed-repository-documentation-contract/m2a-catalog-contract-validator-brief.md)
   for any confirmed frozen reader correction; [M6A](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md)
   for owner activation.
-- Current risk: Read-only inventory established the saved identity, schema 10,
-  seven legacy path records, and no binding, but returned unavailable guidance
-  before catalog validation. Missing live catalog alone does not explain that
-  result. The reader may request directory-read access above the authorized
-  root; a focused synthetic regression will determine whether M2A must reopen.
+- Current risk: The synthetic regression confirmed unnecessary ancestor
+  directory-read requirements. The accepted correction uses directory search
+  access with the same no-follow/identity protections. Actual signed-app
+  inventory at the owner root remains the next live verification; missing
+  catalog deployment and remaining activation actions are still gated.
 - Verified owner state: Protected pre-recovery and post-recovery backups are
   complete. Supported startup restored the exact installed broker; the app and
   lifecycle writer then exited. Read-only maintenance exited, and all captured
   owner-file bytes and sidecar absence remained unchanged. No migration,
   installation, handoff, binding, adoption, or document move occurred.
-- Next action: Resolve the bounded reader defect under the frozen-contract
-  correction rule, then resume approved read-only inventory and complete the
-  exact [M6A runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
-  before its remaining live approval.
-- State: M5 ACCEPTED; M6A IN PROGRESS, LIVE OPERATIONS PAUSED
-- Accepted checkpoint / `MDCP-COMPAT-1`:
-  `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`; a confirmed defect requires a
-  separately accepted replacement before further M6A live execution.
+- Next action: Obtain approval for the completed exact remaining
+  [M6A runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md),
+  then verify the corrected reader through the approved live sequence.
+- State: M2A CORRECTION ACCEPTED; M6A IN PROGRESS
+- Prior checkpoint `MDCP-COMPAT-1`:
+  `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`. The accepted correction below
+  establishes replacement `MDCP-COMPAT-2` after its normal commit/push.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -394,6 +393,38 @@
   normal app startup, which also starts unrelated writers. Resolve the exact
   approved live workflow before claiming managed lifecycle success. This
   observation authorizes no new feature or owner operation.
+
+## MDCP M2A — Authorized-Root Search Access Correction
+
+- Trigger: M6A read-only owner inventory failed before catalog validation.
+  A synthetic readable repository beneath a search-only ancestor reproduced
+  unavailable/incomplete inventory even though direct leaf reads succeeded.
+- Correction: `RepositoryDocumentReader` opens root-path directories with
+  Darwin `O_SEARCH`. Directory-only semantics, no-follow traversal, identity
+  stamps, relative file reads, stability checks, and sandbox grants remain
+  intact. No storage, command, catalog, or signing contract changed.
+- Direct verification: Native regression RED preceded GREEN 1/1. Signed serial
+  `xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar
+  -destination 'platform=macOS' -parallel-testing-enabled NO` passed 64/64 across
+  `RepositoryDocumentCatalogTests`, `RepositoryDocumentIndexTests`, and
+  `ManagedDocumentationOperationsTests`. Independent QA repeated 64/64, covering
+  search-only access, unchanged inventory/preservation, symlinks, replacement,
+  read bounds, query authorization, and index refusal. `git diff --check` passes.
+- Independent roles: Implementer `/root/m3c_implementer`; Code, Architecture,
+  Security reviewer `/root/m3c_code_review`; QA `/root/m3c_qa`. All GO with no
+  Required or Optional findings. Live sandbox verification remains M6A work.
+- Replacement candidate: Release build and strict signatures pass with exact
+  tracked entitlements, plugin 0.1.6 unchanged, and 19 packaged tool schemas.
+  The replacement checker validates all 193 current artifacts. No owner app,
+  store, broker registration, installation, or repository activation ran while
+  correcting the source.
+- Artifacts: Reader source, one focused regression in the existing test suite,
+  and concise delivery/runbook updates are durable. Replacement app/checker
+  copies under `.build/mdcp-compat-2/` remain temporary activation inputs. The
+  prior `.build/mdcp-compat-1/` remains preserved. Correction-only native outputs
+  and four identified synthetic host directories were removed under the owner's
+  existing cleanup authorization after verified process exit. Protected owner
+  material and both retained compatibility candidates remain untouched.
 
 ## MDCP M6A — Preparation and Initial Preflight
 
