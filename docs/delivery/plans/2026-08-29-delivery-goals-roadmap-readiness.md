@@ -1849,7 +1849,7 @@ create/update requests. No portable exporter/exportability helper is added.
 **Interfaces:** Consumes the exact remote-equal through-Task-7 candidate and
 the shared owner-install security/recovery contract in the Ticket Tasks design.
 It adds no product behavior. It installs task UI/policy/tools over the existing
-managed schema-v13 store, creates the live 16-row RR-R10 plan at revision 1, completes accepted rows
+managed schema-v13 store using Task 7's forward-v14 migration, creates the live 16-row RR-R10 plan at revision 1, completes accepted rows
 through Task 7, and produces installed replay/readback evidence that every
 later task command consumes.
 
@@ -1866,15 +1866,17 @@ later task command consumes.
   changes. Do not add a generalized backup framework or product feature.
 - [ ] **RED/isolated install proof:** In the declared end-to-end test, start
   from the existing managed v13 owner-state shape with RR-R10 In progress and
-  assert its migration-only continuation survives the no-migration install
-  path. Retain historical v10/v11/v12 fixture migration coverage through v13;
+  assert its migration-only continuation survives the v13-to-v14 install
+  path. Retain historical v10/v11/v12 fixture migration coverage through v14;
   do not recreate or infer the owner's continuation. Exercise one 16-addition
   Active/Pending creation request,
   the exact chained completion manifest through Task 7, replay, relaunch, and
   Task 7A still Pending. Prove `☷ 16`, all labels/titles/order, checked states
   through Task 7, no lane/goal movement, no duplicate audit/receipt/
-  notification, and unchanged unrelated state. The test must fail before its
-  Task-7 product dependencies are present.
+  notification, and unchanged unrelated state. Establish the predependency
+  condition using genuine earlier product/fixture inputs; do not manufacture
+  RED by weakening the merged product. Old binaries refuse v14; restoration
+  requires the consistent pre-migration snapshot and exact old software.
 - [ ] **GREEN/isolated install proof:** Make only the declared integration test
   pass against the exact through-Task-7 product. Do not add product behavior in
   this checkpoint. Run the focused test, complete scheme on isolated data, and

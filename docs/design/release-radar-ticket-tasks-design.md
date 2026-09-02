@@ -4,7 +4,7 @@
 - Date: 2026-08-30
 - Governing delivery phase: `release-radar-post-mvp-remediation`
 - Governing ticket: `RR-R10`
-- Delivered task-storage foundation: additive schema v12; current store schema v13
+- Delivered task-storage foundation: additive schema v12; installed store schema v13; through-Task-7 candidate schema v14
 - Architecture decision: `docs/architecture/ADR-005-ticket-task-work-plans.md`
 
 ## Product outcome
@@ -475,8 +475,14 @@ or repeated initial binding/adoption is authorized.
   repository/root binding and accepted catalog; evidence IDs, managed/legacy
   locators, associations and resolution; and guidance/plugin state. Ordinary
   live use requires fresh authorized readback, not reuse of an old inventory.
-- Historical fixtures migrate through v11/v12/v13; installation over an existing
-  valid v13 store preserves its current schema and migration continuation.
+- Historical fixtures retain their genuine v10/v11/v12 definitions and migrate
+  through v13 to v14. Task 7A installs over the existing valid v13 store and
+  performs Task 7's narrow forward-v14 assignment-history migration, preserving
+  migration-granted continuation and all existing state. The flag must come from
+  real migration lineage, never inference or recreation. Old binaries refuse
+  v14; downgrade recovery restores the consistent pre-migration snapshot and
+  old software together, with no down migration or manual SQLite edits. See
+  the [Task 7A runbook](../delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md).
 - Prepare new briefs/catalog/index changes in the development worktree. At the
   authorized live checkpoint, deploy changes to the exact bound checkout and
   accept the prior-to-candidate catalog transition before managed operations.
@@ -518,7 +524,7 @@ RR-R10 task rows first appear in the app during Task 7A, after Tasks 5, 6, and
 repository sequence records approved scope and delivered checkpoints, not
 live or inferred app-owned tracking. The handoff already moved RR-R10 to
 In progress before Task 2A. Task 7A installs the exact through-Task-7 candidate
-over the existing v13 store and proves the migration-granted continuation
+over the existing v13 store, migrates to v14, and proves the migration-granted continuation
 and task/documentation foundations preserve this pre-policy In-progress
 ticket safely. Eligibility for that continuation was already proven before the
 early In-progress mutation and Task 2A release; Task 7A re-verifies the actual

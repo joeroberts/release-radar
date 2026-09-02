@@ -100,13 +100,20 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: .darkAqua)
         window.title = name
+        let priorActivationPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
         window.isReleasedWhenClosed = false
         window.contentView = hosting
-        window.orderFront(nil)
-        defer { window.close() }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer { window.close(); NSApp.setActivationPolicy(priorActivationPolicy) }
         hosting.layoutSubtreeIfNeeded()
         try await Task.sleep(for: .milliseconds(200))
         hosting.layoutSubtreeIfNeeded()
+        if let seconds = ProcessInfo.processInfo.environment["RR_TASK7A_INSPECT_SECONDS"].flatMap(Double.init), seconds > 0 {
+            print("Task 7A external inspection: \(name), \(Int(width))×850, PID \(ProcessInfo.processInfo.processIdentifier)")
+            try await Task.sleep(for: .seconds(min(seconds, 60)))
+        }
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         var value: CFTypeRef?
         XCTAssertEqual(AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value), .success)

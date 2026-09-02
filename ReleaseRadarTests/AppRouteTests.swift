@@ -1180,6 +1180,7 @@ final class AppRouteTests: XCTestCase {
             try connection.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('root-direct', 'project-direct', ?)", bindings: [.text(projectRoot.path)])
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-direct', 'project-direct', 'MVP')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('DIRECT-1', 'project-direct', 'phase-direct', 'Direct navigation', 'in_progress')")
+            try Self.seedActionableGoal(projectID: "project-direct", phaseID: "phase-direct", ticketID: "DIRECT-1", connection: connection)
         }
         let notificationDispatcher = PushoverNotificationDispatcher(
             store: store,
@@ -1551,11 +1552,12 @@ final class AppRouteTests: XCTestCase {
             let succeeds: Bool
         }
         let scenarios = [
-            Scenario(name: "no plan omitted", lane: .backlog, plan: .none, revision: nil, succeeds: true),
-            Scenario(name: "no plan present", lane: .backlog, plan: .none, revision: 1, succeeds: false),
-            Scenario(name: "loaded plan omitted", lane: .backlog, plan: .pending, revision: nil, succeeds: false),
-            Scenario(name: "loaded plan stale", lane: .backlog, plan: .pending, revision: 2, succeeds: false),
-            Scenario(name: "pending exact", lane: .backlog, plan: .pending, revision: 1, succeeds: false),
+            Scenario(name: "backlog direct acceptance", lane: .backlog, plan: .none, revision: nil, succeeds: false),
+            Scenario(name: "no plan omitted", lane: .needsReview, plan: .none, revision: nil, succeeds: true),
+            Scenario(name: "no plan present", lane: .needsReview, plan: .none, revision: 1, succeeds: false),
+            Scenario(name: "loaded plan omitted", lane: .needsReview, plan: .pending, revision: nil, succeeds: false),
+            Scenario(name: "loaded plan stale", lane: .needsReview, plan: .pending, revision: 2, succeeds: false),
+            Scenario(name: "pending exact", lane: .needsReview, plan: .pending, revision: 1, succeeds: false),
             Scenario(name: "completed exact", lane: .needsReview, plan: .completed, revision: 2, succeeds: true),
             Scenario(name: "terminal", lane: .accepted, plan: .none, revision: nil, succeeds: false),
         ]
@@ -2736,6 +2738,7 @@ final class AppRouteTests: XCTestCase {
         plan: Task4AOwnerPlanState
     ) async throws {
         try await store.transact(actor: .init(id: "fixture"), reason: "Prepare owner acceptance matrix") { connection in
+            try seedActionableGoal(projectID: "rr9-owner-project", phaseID: "phase-roadmap", ticketID: "ROAD-1", connection: connection)
             try connection.execute(
                 "UPDATE tickets SET lane = ? WHERE project_id = 'rr9-owner-project' AND id = 'ROAD-1'",
                 bindings: [.text(lane.rawValue)]
@@ -2760,6 +2763,20 @@ final class AppRouteTests: XCTestCase {
                 )
             }
         }
+    }
+
+    private static func seedActionableGoal(projectID: String, phaseID: String, ticketID: String, connection: SQLiteConnection) throws {
+        let goalID = "fixture-goal-" + phaseID
+        try connection.execute("""
+            INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at, activated_at)
+            VALUES (?, ?, ?, 'Fixture goal', 'Complete fixture', 'active', 0, '2026-09-02T12:00:00Z', '2026-09-02T12:00:00Z', '2026-09-02T12:00:00Z')
+            """, bindings: [.text(projectID), .text(phaseID), .text(goalID)])
+        try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES (?, ?, ?, 0, 'Delivered')",
+                               bindings: [.text(projectID), .text(phaseID), .text(goalID)])
+        try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES (?, ?, ?, ?)",
+                               bindings: [.text(projectID), .text(phaseID), .text(goalID), .text(ticketID)])
+        try connection.execute("UPDATE phase_plans SET state = 'ready', ready_revision = revision, finalized_at = '2026-09-02T12:00:00Z' WHERE project_id = ? AND phase_id = ?",
+                               bindings: [.text(projectID), .text(phaseID)])
     }
 
     private static func task4AOwnerTransitionState(_ store: DeliveryStore) async throws -> Task4AOwnerTransitionState {

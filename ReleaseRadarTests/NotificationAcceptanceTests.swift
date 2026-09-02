@@ -11,7 +11,7 @@ final class NotificationAcceptanceTests: XCTestCase {
         try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed unrelated delivery context") { c in
             try c.execute("INSERT INTO evidence (id, project_id, ticket_id, path, is_available) VALUES ('proof', 'project-1', 'RR-09', '/fixture/proof', 1)")
             try c.execute("INSERT INTO review_items (id, project_id, ticket_id, kind, summary) VALUES ('review', 'project-1', 'RR-09', 'agent_request', 'Review delivery')")
-            try c.execute("UPDATE phase_plans SET state = 'draft', revision = 1 WHERE project_id = 'project-1' AND phase_id = 'phase-1'")
+            try c.execute("UPDATE phase_plans SET state = 'draft', revision = 1, ready_revision = NULL, finalized_at = NULL WHERE project_id = 'project-1' AND phase_id = 'phase-1'")
             try c.execute("INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES ('project-1', 'phase-1', 'goal', 'Goal', 'Deliver', 'planned', 0, '2026-09-02T00:00:00Z', '2026-09-02T00:00:00Z')")
         }
         let before = try await task4ANotificationSnapshot(f.store)
@@ -1120,7 +1120,11 @@ final class NotificationAcceptanceTests: XCTestCase {
                 ticketTaskPlanRevision: ticketTaskPlanRevision
             )
         ))
-        XCTAssertNil(result.error)
+        if let error = result.error {
+            throw NSError(domain: "NotificationAcceptanceTests", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Required notification transition failed: \(error)",
+            ])
+        }
     }
 
     private func task4ANotificationSnapshot(_ store: DeliveryStore) async throws -> Task4ANotificationSnapshot {
@@ -1184,6 +1188,13 @@ final class NotificationAcceptanceTests: XCTestCase {
             try connection.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('root-1', 'project-1', ?)", bindings: [.text(projectRoot.path)])
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-09', 'project-1', 'phase-1', 'Durable alerts', 'in_progress')")
+            try connection.execute("""
+                INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at, activated_at)
+                VALUES ('project-1', 'phase-1', 'fixture-goal', 'Fixture goal', 'Complete fixture', 'active', 0, '2026-09-02T12:00:00Z', '2026-09-02T12:00:00Z', '2026-09-02T12:00:00Z')
+                """)
+            try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('project-1', 'phase-1', 'fixture-goal', 0, 'Delivered')")
+            try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES ('project-1', 'phase-1', 'fixture-goal', 'RR-09')")
+            try connection.execute("UPDATE phase_plans SET state = 'ready', ready_revision = revision, finalized_at = '2026-09-02T12:00:00Z' WHERE project_id = 'project-1' AND phase_id = 'phase-1'")
         }
         let registry = InMemoryAuthorizedProjectRegistry(projects: [
             .init(projectID: .init(rawValue: "project-1"), canonicalRoot: projectRoot, authorizedRoots: [projectRoot]),

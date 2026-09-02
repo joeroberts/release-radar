@@ -125,12 +125,20 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: .darkAqua)
         window.title = name
-        window.isReleasedWhenClosed = false; window.contentView = hosting; window.orderFront(nil)
-        defer { window.close() }
+        let priorActivationPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        window.isReleasedWhenClosed = false; window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer { window.close(); NSApp.setActivationPolicy(priorActivationPolicy) }
         hosting.layoutSubtreeIfNeeded()
         // Yield the main actor so the view's existing async load tasks settle.
         try await Task.sleep(for: .milliseconds(200))
         hosting.layoutSubtreeIfNeeded()
+        if let seconds = ProcessInfo.processInfo.environment["RR_TASK7A_INSPECT_SECONDS"].flatMap(Double.init), seconds > 0 {
+            print("Task 7A external inspection: \(name), \(Int(width))×\(Int(height)), PID \(ProcessInfo.processInfo.processIdentifier)")
+            try await Task.sleep(for: .seconds(min(seconds, 60)))
+        }
         let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
         var value: CFTypeRef?
         let status = AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value)
