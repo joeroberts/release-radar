@@ -4,6 +4,46 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    func testValidUncataloguedLegacyEvidenceResolvesWithoutConflictOrMutation() async throws {
+        let f = try await makeFixture()
+        let bound = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: try target(f.root))))
+        XCTAssertNil(bound.error)
+        let path = f.root.appendingPathComponent("AGENTS.md").path
+        let added = await f.dispatcher.dispatch(envelope(f.root, .addEvidence(id: "handoff", ticketID: nil, path: path)))
+        XCTAssertNil(added.error)
+        let before = try await f.store.read { c in
+            try ["evidence", "audit_events", "agent_command_requests"].map { try c.scalarInt("SELECT COUNT(*) FROM \($0)") }
+        }
+        let result = await inventory(f.store, f.root)
+        let row = try XCTUnwrap(result?.evidence.first)
+        XCTAssertTrue(result?.isComplete == true)
+        XCTAssertEqual(row.evidence.locator, .filePath(path))
+        XCTAssertEqual(row.resolvedPath, "AGENTS.md")
+        XCTAssertTrue(row.resolvedAvailable)
+        XCTAssertNil(row.rejection)
+        XCTAssertNil(row.candidateArtifactID)
+        XCTAssertNil(row.lifecycle)
+        XCTAssertNil(row.authority)
+        let after = try await f.store.read { c in
+            try ["evidence", "audit_events", "agent_command_requests"].map { try c.scalarInt("SELECT COUNT(*) FROM \($0)") }
+        }
+        XCTAssertEqual(after, before)
+    }
+
+    func testMissingManagedArtifactStillRejectsInventory() async throws {
+        let f = try await makeFixture()
+        let bound = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: try target(f.root))))
+        XCTAssertNil(bound.error)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed missing managed identity") { c in
+            try c.execute("INSERT INTO evidence (id, project_id, artifact_id, is_available) VALUES ('missing-managed', 'p', 'absent', 1)")
+        }
+        let result = await inventory(f.store, f.root)
+        let row = try XCTUnwrap(result?.evidence.first)
+        XCTAssertFalse(row.resolvedAvailable)
+        XCTAssertEqual(row.rejection, .evidenceConflict)
+        XCTAssertNil(row.resolvedPath)
+    }
+
     func testLegacyInventoryReadsAuthorizedRootBelowSearchOnlyAncestorWithoutMutation() async throws {
         let f = try await makeFixture(rootPath: "search-only/repository")
         let ancestor = f.root.deletingLastPathComponent()

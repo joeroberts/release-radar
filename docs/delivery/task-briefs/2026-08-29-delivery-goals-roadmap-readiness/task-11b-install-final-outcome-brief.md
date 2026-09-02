@@ -1,5 +1,11 @@
 # RR-R10 Task 11B: Install and verify the final outcome
 
+Current follow-up: the owner explicitly authorized the
+[installed-workflow repair](task-11b-installed-workflow-repair-brief.md) on
+2026-09-02 after PR #16. The closeout restrictions below describe the prior
+execution, not the new repair authorization. RR-R10 was subsequently Accepted
+under owner override; no task or acceptance operation is repeated by the repair.
+
 Completed and non-authoritative. The owner explicitly resumed immediate
 Task11B closeout using existing installation, goal results, tests and reviews,
 with no additional UI pass, tests or reviews. Completion request

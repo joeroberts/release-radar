@@ -18,6 +18,8 @@
 		B10000000000000000000009 /* PluginLifecycleHelper plist in Copy LaunchAgents */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PluginLifecycleHelper plist */; };
 		B1000000000000000000000A /* CodexPluginMarketplace in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* CodexPluginMarketplace */; };
 		B1000000000000000000000B /* ReleaseRadarCore.framework in Documentation Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* ReleaseRadarCore.framework */; };
+		B1000000000000000000000C /* Documentation tool in Copy Helpers */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		B1000000000000000000000D /* Catalog reference in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,7 +72,7 @@
 		};
 		C10000000000000000000005 /* Copy Bridge Agent */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = Contents/Resources; dstSubfolderSpec = 1; files = (B10000000000000000000004 /* ReleaseRadarBridgeAgent in Copy Bridge Agent */, ); name = "Copy Bridge Agent"; runOnlyForDeploymentPostprocessing = 0; };
 		C10000000000000000000006 /* Copy LaunchAgents */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = Contents/Library/LaunchAgents; dstSubfolderSpec = 1; files = (B10000000000000000000006 /* com.rekonlabs.ReleaseRadar.BridgeAgent.plist in Copy LaunchAgents */, B10000000000000000000009 /* PluginLifecycleHelper plist in Copy LaunchAgents */, ); name = "Copy LaunchAgents"; runOnlyForDeploymentPostprocessing = 0; };
-		C10000000000000000000007 /* Copy Helpers */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = Contents/Helpers; dstSubfolderSpec = 1; files = (B10000000000000000000005 /* ReleaseRadarAgentTools in Copy Helpers */, ); name = "Copy Helpers"; runOnlyForDeploymentPostprocessing = 0; };
+		C10000000000000000000007 /* Copy Helpers */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = Contents/Helpers; dstSubfolderSpec = 1; files = (B10000000000000000000005 /* ReleaseRadarAgentTools in Copy Helpers */, B1000000000000000000000C /* Documentation tool in Copy Helpers */, ); name = "Copy Helpers"; runOnlyForDeploymentPostprocessing = 0; };
 		C10000000000000000000008 /* Copy Lifecycle Helper */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = Contents/Resources; dstSubfolderSpec = 1; files = (B10000000000000000000008 /* ReleaseRadarPluginLifecycleHelper in Copy Lifecycle Helper */, ); name = "Copy Lifecycle Helper"; runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXCopyFilesBuildPhase section */
 
@@ -88,6 +90,7 @@
 		A1000000000000000000001A /* PluginLifecycleHelper plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ReleaseRadarPluginLifecycleHelper/com.rekonlabs.ReleaseRadar.PluginLifecycleHelper.plist; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000001B /* CodexPluginMarketplace */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ReleaseRadar/CodexPluginMarketplace; sourceTree = SOURCE_ROOT; };
 		A1000000000000000000001C /* ReleaseRadarDocumentationTool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ReleaseRadarDocumentationTool; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000001D /* Catalog reference */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ReleaseRadarDocumentationTool/catalog-v1.md; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -183,7 +186,7 @@
 			buildConfigurationList = A50000000000000000000055 /* Build configuration list for PBXNativeTarget "ReleaseRadar" */;
 			buildPhases = (C10000000000000000000001 /* Sources */, C10000000000000000000002 /* Frameworks */, C10000000000000000000003 /* Resources */, C10000000000000000000004 /* Embed Frameworks */, C10000000000000000000005 /* Copy Bridge Agent */, C10000000000000000000006 /* Copy LaunchAgents */, C10000000000000000000007 /* Copy Helpers */, C10000000000000000000008 /* Copy Lifecycle Helper */, );
 			buildRules = ();
-			dependencies = (A80000000000000000000001 /* PBXTargetDependency */, A80000000000000000000005 /* PBXTargetDependency */, A80000000000000000000006 /* PBXTargetDependency */, A80000000000000000000008 /* PBXTargetDependency */, );
+			dependencies = (A80000000000000000000001 /* PBXTargetDependency */, A80000000000000000000005 /* PBXTargetDependency */, A80000000000000000000006 /* PBXTargetDependency */, A80000000000000000000008 /* PBXTargetDependency */, A8000000000000000000000A /* Documentation tool dependency */, );
 			fileSystemSynchronizedGroups = (A10000000000000000000003 /* ReleaseRadar */, A10000000000000000000008 /* ReleaseRadarIntegration */, A10000000000000000000009 /* ReleaseRadarTransport */, );
 			name = ReleaseRadar;
 			packageProductDependencies = ();
@@ -294,7 +297,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		C10000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000007 /* Assets.xcassets in Resources */, B1000000000000000000000A /* CodexPluginMarketplace in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		C10000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000007 /* Assets.xcassets in Resources */, B1000000000000000000000A /* CodexPluginMarketplace in Resources */, B1000000000000000000000D /* Catalog reference in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
 		C11000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		C12000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		C13000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
@@ -326,6 +329,7 @@
 		A80000000000000000000007 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A20000000000000000000007 /* ReleaseRadarWrongAgentTools */; targetProxy = A70000000000000000000007 /* PBXContainerItemProxy */; };
 		A80000000000000000000008 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A20000000000000000000008 /* ReleaseRadarPluginLifecycleHelper */; targetProxy = A70000000000000000000008 /* PBXContainerItemProxy */; };
 		A80000000000000000000009 /* Documentation Core dependency */ = {isa = PBXTargetDependency; target = A20000000000000000000002; targetProxy = A70000000000000000000009; };
+		A8000000000000000000000A /* Documentation tool dependency */ = {isa = PBXTargetDependency; target = A20000000000000000000009; };
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -347,8 +351,8 @@
 		A50000000000000000000066 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO; CREATE_INFOPLIST_SECTION_IN_BINARY = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.rekonlabs.ReleaseRadarWrongAgentTools; PRODUCT_NAME = ReleaseRadarWrongAgentTools; SKIP_INSTALL = YES; }; name = Release; };
 		A50000000000000000000068 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = ReleaseRadarPluginLifecycleHelper/ReleaseRadarPluginLifecycleHelper.entitlements; CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO; CREATE_INFOPLIST_SECTION_IN_BINARY = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.rekonlabs.ReleaseRadarPluginLifecycleHelper; PRODUCT_NAME = ReleaseRadarPluginLifecycleHelper; SKIP_INSTALL = YES; }; name = Debug; };
 		A50000000000000000000069 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = ReleaseRadarPluginLifecycleHelper/ReleaseRadarPluginLifecycleHelper.entitlements; CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO; CREATE_INFOPLIST_SECTION_IN_BINARY = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.rekonlabs.ReleaseRadarPluginLifecycleHelper; PRODUCT_NAME = ReleaseRadarPluginLifecycleHelper; SKIP_INSTALL = YES; }; name = Release; };
-		A5000000000000000000006B /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ENABLE_HARDENED_RUNTIME = YES; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path", ); PRODUCT_BUNDLE_IDENTIFIER = com.rekonlabs.ReleaseRadarDocumentationTool; PRODUCT_NAME = ReleaseRadarDocumentationTool; SKIP_INSTALL = YES; }; name = Debug; };
-		A5000000000000000000006C /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ENABLE_HARDENED_RUNTIME = YES; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path", ); PRODUCT_BUNDLE_IDENTIFIER = com.rekonlabs.ReleaseRadarDocumentationTool; PRODUCT_NAME = ReleaseRadarDocumentationTool; SKIP_INSTALL = YES; }; name = Release; };
+		A5000000000000000000006B /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ENABLE_HARDENED_RUNTIME = YES; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path", "@executable_path/../Frameworks", ); PRODUCT_BUNDLE_IDENTIFIER = com.rekonlabs.ReleaseRadarDocumentationTool; PRODUCT_NAME = ReleaseRadarDocumentationTool; SKIP_INSTALL = YES; }; name = Debug; };
+		A5000000000000000000006C /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ENABLE_HARDENED_RUNTIME = YES; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path", "@executable_path/../Frameworks", ); PRODUCT_BUNDLE_IDENTIFIER = com.rekonlabs.ReleaseRadarDocumentationTool; PRODUCT_NAME = ReleaseRadarDocumentationTool; SKIP_INSTALL = YES; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */

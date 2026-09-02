@@ -1,5 +1,10 @@
 # RR-R10 Task 11B preparation and installation evidence
 
+Historical installation record. The owner subsequently authorized the
+[installed-workflow repair](2026-09-02-rr-r10-task-11b-installed-workflow-repair.md)
+after PR #16; that record identifies the corrected app now installed. The
+original candidate, operations and overrides below remain historical evidence.
+
 Completed, non-authoritative evidence. The exact retained candidate is installed
 and the approved Delivery Goal/catalog operations committed. The owner explicitly
 directed immediate Task11B completion and closeout using existing evidence,

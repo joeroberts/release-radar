@@ -420,6 +420,28 @@
   ],
   "artifacts": [
     {
+      "artifactID": "rr-r10-task11b-installed-workflow-repair-evidence",
+      "path": "docs/delivery/evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-r10-task11b-installed-workflow-repair",
+      "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
       "artifactID": "6ddee986-d90e-4732-9ff4-62d1a0eb4e34",
       "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md",
       "kind": "document",
