@@ -151,6 +151,7 @@ Leaf: no child collections.
 | 4a630e58-ff66-43cb-9c54-89dd9d6c13c8 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-3-ticket-task-planning-policy-brief.md) | document | nonAuthoritative | completed | none | none |
 | 0d74594e-6d13-48dc-b634-f1f17cf84383 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-4a-guard-every-accepted-path-brief.md) | document | nonAuthoritative | completed | none | none |
 | edf26376-b869-41d0-99de-5d848a51dd9a | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-4b-audited-ticket-task-commands-brief.md) | document | nonAuthoritative | completed | none | none |
+| 709a940d-b43d-484c-859d-8c88c0592f27 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

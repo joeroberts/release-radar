@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import ReleaseRadarCore
 
 enum DashboardCardPresentation: Equatable, Sendable {
@@ -23,7 +24,11 @@ struct DashboardProjection: Equatable, Sendable {
         boards[projectID]
     }
 
-    static func load(from store: DeliveryStore, bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore()) async throws -> DashboardProjection {
+    static func load(
+        from store: DeliveryStore,
+        bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(),
+        taskRows: TicketTaskPlanProjection.RowQuery = TicketTaskPlanProjection.queryRows
+    ) async throws -> DashboardProjection {
         let projectIDs = try await store.read { c in
             try c.dashboardRows("SELECT id FROM projects ORDER BY id").map { ProjectID(rawValue: try $0.text("id")) }
         }
@@ -89,6 +94,11 @@ struct DashboardProjection: Equatable, Sendable {
                     "SELECT id, outcome, lane FROM tickets WHERE project_id = ? AND phase_id = ? ORDER BY rowid",
                     bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
                 )
+                let taskPlans = TicketTaskPlanProjection.load(
+                    connection, projectID: projectID, phaseID: phaseID,
+                    ticketIDs: try ticketRows.map { TicketID(rawValue: try $0.text("id")) },
+                    query: taskRows
+                )
                 var cardsByLane = Dictionary(uniqueKeysWithValues: TicketLane.allCases.map { ($0, [TicketCardProjection]()) })
                 var details: [TicketID: TicketDetailProjection] = [:]
 
@@ -110,13 +120,15 @@ struct DashboardProjection: Equatable, Sendable {
                         id: ticketID,
                         outcome: outcome,
                         dependencyCount: dependencyCount,
-                        blockerCount: blockerCount
+                        blockerCount: blockerCount,
+                        taskPlan: taskPlans[ticketID] ?? .unavailable(recovery: .init())
                     )
                     cardsByLane[lane, default: []].append(card)
                     details[ticketID] = try connection.ticketDetail(
                         projectID: projectID,
                         ticketID: ticketID,
                         outcome: outcome,
+                        taskPlan: card.taskPlan,
                         evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == ticketID }.map(EvidenceProjection.init)
                     )
                 }
@@ -222,6 +234,16 @@ struct TicketCardProjection: Equatable, Sendable, Identifiable {
     let outcome: String
     let dependencyCount: Int
     let blockerCount: Int
+    var taskPlan: TicketTaskPlanProjection = .noPlan
+
+    var activeTaskCount: Int? {
+        guard case let .loaded(plan) = taskPlan else { return nil }
+        return plan.tasks.count
+    }
+
+    var taskCountAnnouncement: String? {
+        activeTaskCount.map { "\($0) \($0 == 1 ? "task" : "tasks")" }
+    }
 }
 
 struct TicketDetailProjection: Equatable, Sendable {
@@ -234,6 +256,7 @@ struct TicketDetailProjection: Equatable, Sendable {
     let evidence: [EvidenceProjection]
     let auditHistory: [String]
     let notificationHistory: [String]
+    var taskPlan: TicketTaskPlanProjection = .noPlan
 }
 
 enum GoalLinkQuality: String, Equatable, Sendable {
@@ -313,6 +336,7 @@ private extension SQLiteConnection {
         projectID: ProjectID,
         ticketID: TicketID,
         outcome: String,
+        taskPlan: TicketTaskPlanProjection,
         evidence: [EvidenceProjection]
     ) throws -> TicketDetailProjection {
         let requires = try dashboardRows(
@@ -396,7 +420,8 @@ private extension SQLiteConnection {
             ownerAttention: ownerAttention,
             evidence: evidence,
             auditHistory: auditHistory,
-            notificationHistory: notificationHistory
+            notificationHistory: notificationHistory,
+            taskPlan: taskPlan
         )
     }
 
@@ -445,5 +470,113 @@ private extension Dictionary where Key == String, Value == SQLiteValue {
         guard let value = self[column] else { throw DashboardProjectionError.missingColumn(column) }
         guard case let .integer(integer) = value else { throw DashboardProjectionError.invalidColumn(column) }
         return integer
+    }
+}
+
+struct TicketTaskProjection: Equatable, Sendable, Identifiable {
+    let id: TicketTaskID
+    let label: String
+    let title: String
+    let completion: TicketTaskCompletion
+
+    func accessibilityLabel(position: Int, total: Int) -> String {
+        "\(label): \(title), \(completion == .completed ? "checked" : "unchecked"), item \(position) of \(total)"
+    }
+}
+
+struct LoadedTicketTaskPlanProjection: Equatable, Sendable {
+    let revision: Int64
+    let tasks: [TicketTaskProjection]
+}
+
+struct TaskPlanRecoveryProjection: Equatable, Sendable {
+    let message = "Task information could not be loaded. Reload to try again."
+}
+
+enum TicketTaskPlanProjection: Equatable, Sendable {
+    case noPlan
+    case loaded(plan: LoadedTicketTaskPlanProjection)
+    case unavailable(recovery: TaskPlanRecoveryProjection)
+
+    typealias RowQuery = @Sendable (SQLiteConnection, ProjectID, PhaseID, TicketID?) throws -> [[String: SQLiteValue]]
+
+    static func queryRows(
+        _ connection: SQLiteConnection,
+        projectID: ProjectID,
+        phaseID: PhaseID,
+        ticketID: TicketID?
+    ) throws -> [[String: SQLiteValue]] {
+        try connection.rows(
+            """
+            SELECT tickets.id AS ticket_id, plans.revision,
+                   tasks.id, tasks.label, tasks.title, tasks.completion
+            FROM tickets
+            LEFT JOIN ticket_task_plans AS plans
+              ON plans.project_id = tickets.project_id AND plans.ticket_id = tickets.id
+            LEFT JOIN ticket_tasks AS tasks
+              ON tasks.project_id = plans.project_id AND tasks.ticket_id = plans.ticket_id
+             AND tasks.lifecycle = 'active'
+            WHERE tickets.project_id = ? AND tickets.phase_id = ?
+            \(ticketID == nil ? "" : "AND tickets.id = ?")
+            ORDER BY tickets.id, tasks.sort_order, tasks.label COLLATE BINARY, tasks.id COLLATE BINARY
+            """,
+            bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+                + (ticketID.map { [.text($0.rawValue)] } ?? [])
+        )
+    }
+
+    static func load(
+        _ connection: SQLiteConnection,
+        projectID: ProjectID,
+        phaseID: PhaseID,
+        ticketIDs: [TicketID],
+        query: RowQuery
+    ) -> [TicketID: TicketTaskPlanProjection] {
+        let batches: [String: [[String: SQLiteValue]]]
+        do {
+            batches = try Dictionary(grouping: query(connection, projectID, phaseID, nil)) {
+                try $0.text("ticket_id")
+            }
+        } catch {
+            // A failed phase batch is narrowed so an unrelated ticket remains usable.
+            return Dictionary(uniqueKeysWithValues: ticketIDs.map { ticketID in
+                let projection: TicketTaskPlanProjection
+                do {
+                    projection = try decode(query(connection, projectID, phaseID, ticketID))
+                } catch {
+                    projection = unavailableProjection()
+                }
+                return (ticketID, projection)
+            })
+        }
+        return Dictionary(uniqueKeysWithValues: ticketIDs.map { ticketID in
+            do {
+                return (ticketID, try decode(batches[ticketID.rawValue] ?? []))
+            } catch {
+                return (ticketID, unavailableProjection())
+            }
+        })
+    }
+
+    private static func decode(_ rows: [[String: SQLiteValue]]) throws -> TicketTaskPlanProjection {
+        guard let first = rows.first else { throw DashboardProjectionError.missingColumn("task plan") }
+        if first["revision"] == .null { return .noPlan }
+        let revision = try first.integer("revision")
+        let tasks = try rows.map { row in
+            guard let completion = TicketTaskCompletion(rawValue: try row.text("completion")) else {
+                throw DashboardProjectionError.missingColumn("task completion")
+            }
+            return TicketTaskProjection(
+                id: .init(rawValue: try row.text("id")),
+                label: try row.text("label"), title: try row.text("title"), completion: completion
+            )
+        }
+        return .loaded(plan: .init(revision: revision, tasks: tasks))
+    }
+
+    private static func unavailableProjection() -> TicketTaskPlanProjection {
+        Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "Dashboard")
+            .error("Ticket task projection unavailable; reload required")
+        return .unavailable(recovery: .init())
     }
 }

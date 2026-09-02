@@ -496,12 +496,16 @@ final class AppModel {
     }
 
     func reloadAfterActivePhaseSelection(projectID: ProjectID) async {
-        guard case let .savedNeedsReload(phaseID, phaseName) = activePhaseSelectionStatuses[projectID] else {
-            return
+        switch activePhaseSelectionStatus(for: projectID) {
+        case let .savedNeedsReload(phaseID, phaseName):
+            _ = await reloadProjectProjections(
+                context: .ownerActivePhaseCommitted(projectID, phaseID, phaseName)
+            )
+        case .idle, .mutationFailed:
+            _ = await reloadProjectProjections()
+        case .saving:
+            break
         }
-        _ = await reloadProjectProjections(
-            context: .ownerActivePhaseCommitted(projectID, phaseID, phaseName)
-        )
     }
 
     func reauthorizeActivePhaseProject(at folder: URL, projectID: ProjectID) async {

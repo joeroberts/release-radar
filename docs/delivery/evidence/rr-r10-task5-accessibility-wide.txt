@@ -1,0 +1,108 @@
+Window: "RR-R10 Task 5 — isolated native acceptance", App: Release Radar Task 5 Test Host.
+0 standard window RR-R10 Task 5 — isolated native acceptance, Secondary Actions: Raise
+	1 container
+		2 text Value: Rekon Pursuit, ID: phase-board
+		3 pop up button (disabled) Active phase, Help: No other phases are available for this project., Value: Post-MVP refinement, ID: phase-board
+		4 pop up button Card density, Help: Choose whether cards show full outcomes or use compact density., Value: Full outcomes, ID: phase-board
+		5 text Value: Post-MVP refinement Lane position communicates delivery state; cards show work and constraints., ID: phase-board
+		6 container Description: Backlog, 9 tickets, ID: phase-board
+			7 text Backlog 9
+			8 scroll area Secondary Actions: Scroll Up, Scroll Down
+				9 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+					10 button Description: DESIGN-V2, Defines one cohesive visual language across the dashboard., 1 dependencies, 0 blockers, ID: ticket-DESIGN-V2
+					11 button Description: VD2-09, Packages verified release evidence for owner sign-off., 0 dependencies, 0 blockers, ID: ticket-VD2-09
+					12 button Description: UX-D12, Makes local search intent and results predictable., 2 dependencies, 1 blockers, ID: ticket-UX-D12
+					13 button Description: P2A-1, Hands phase-two delivery to agents with explicit context., 1 dependencies, 0 blockers, ID: ticket-P2A-1
+					14 button Description: QA-11, Confirms critical workflows remain stable before release., 0 dependencies, 0 blockers, ID: ticket-QA-11
+					15 button Description: SEC-10, Confirms local delivery data stays private and bounded., 0 dependencies, 0 blockers, ID: ticket-SEC-10
+					16 button Description: DOC-09, Explains daily owner operations and recovery paths., 0 dependencies, 0 blockers, ID: ticket-DOC-09
+					17 button ID: ticket-PERF-08, Description: PERF-08, Keeps phase-board rendering within the approved performance budget., 0 dependencies, 0 blockers
+					18 button Description: REL-07, Produces a signed release candidate ready for validation., 0 dependencies, 0 blockers, ID: ticket-REL-07
+				19 scroll bar (settable, float) 0
+					20 value indicator (settable, float) 0
+					21 increment arrow button
+					22 decrement arrow button
+					23 increment page button
+					24 decrement page button
+		25 container Description: In progress, 1 tickets, ID: phase-board
+			26 text In progress 1
+			27 scroll area
+				28 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+					29 button ID: ticket-VD2-08, Description: VD2-08, Verifies the dashboard’s visual fidelity and accessibility before release., 1 task, 4 dependencies, 0 blockers
+		30 container Description: Needs review, 2 tickets, ID: phase-board
+			31 text Needs review 2
+			32 scroll area
+				33 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+					34 button Description: UX-D10, Confirms exported delivery records before they leave the app., 2 dependencies, 0 blockers, ID: ticket-UX-D10
+					35 button Description: VD2-07d, Finds local delivery records with precise matching., 1 dependencies, 0 blockers, ID: ticket-VD2-07d
+		36 container Description: Blocked, 1 tickets, ID: phase-board
+			37 text Blocked 1
+			38 scroll area
+				39 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+					40 button ID: ticket-VD2-07c, Description: VD2-07c, Makes delivery activity and AI context understandable to the owner., 16 tasks, 3 dependencies, 1 blockers, selected
+		41 container Description: Accepted, 18 tickets, ID: phase-board
+			42 text Accepted 18
+			43 scroll area Secondary Actions: Scroll Up, Scroll Down
+				44 list Secondary Actions: AXScrollToTop, AXScrollToBottom
+					45 button ID: ticket-VD2-07, Description: VD2-07, Separates settings concerns into a maintainable app architecture., 2 dependencies, 0 blockers
+					46 button Description: VD2-06, Makes project contacts clear and actionable., 2 dependencies, 0 blockers, ID: ticket-VD2-06
+					47 button Description: VD2-05, Moves delivery records safely through the approved pipeline., 0 dependencies, 0 blockers, ID: ticket-VD2-05
+					48 button Description: VD2-04, Onboards folder-backed projects with recoverable authorization., 0 dependencies, 0 blockers, ID: ticket-VD2-04
+					49 button Description: VD2-03, Exposes bounded agent actions through the typed bridge., 0 dependencies, 0 blockers, ID: ticket-VD2-03
+					50 button Description: RR-04, Authorizes project folders and preserves recoverable access., 0 dependencies, 0 blockers, ID: ticket-RR-04
+					51 button Description: RR-03, Lets agents update delivery through validated typed actions., 0 dependencies, 0 blockers, ID: ticket-RR-03
+					52 button Description: RR-02, Persists delivery state transactionally in the local store., 0 dependencies, 0 blockers, ID: ticket-RR-02
+					53 button Description: RR-01, Establishes the signed and sandboxed application foundation., 0 dependencies, 0 blockers, ID: ticket-RR-01
+					54 button Description: UX-D09, Keeps project navigation clear at every depth., 0 dependencies, 0 blockers, ID: ticket-UX-D09
+					55 button Description: UX-D08, Translates runtime and delivery states into readable language., 0 dependencies, 0 blockers, ID: ticket-UX-D08
+					56 button Description: UX-D07, Makes owner attention requests visible and actionable., 0 dependencies, 0 blockers, ID: ticket-UX-D07
+					57 button Description: CORE-06, Attributes every consequential delivery update to its actor., 0 dependencies, 0 blockers, ID: ticket-CORE-06
+					58 button Description: CORE-05, Keeps delivery evidence available and visibly recoverable., 0 dependencies, 0 blockers, ID: ticket-CORE-05
+					59 button Description: CORE-04, Records blockers without hiding their resolution history., 0 dependencies, 0 blockers, ID: ticket-CORE-04
+					60 button Description: CORE-03, Preserves acyclic ticket dependencies and their direction., 0 dependencies, 0 blockers, ID: ticket-CORE-03
+					61 button Description: CORE-02, Uses exactly five persisted delivery lanes everywhere., 0 dependencies, 0 blockers, ID: ticket-CORE-02
+				62 scroll bar (settable, float) 0
+					63 value indicator (settable, float) 0
+					64 increment arrow button
+					65 decrement arrow button
+					66 increment page button
+					67 decrement page button
+		68 scroll area ID: phase-board, Secondary Actions: Scroll Up, Scroll Down
+			69 text SELECTED TICKET VD2-07c Makes delivery activity and AI context understandable to the owner. TASKS
+			70 unknown ID: task-row-task-1, Description: Task 1: Verify the complete long task title wraps below its own text while preserving its label and checked state at compact widths, checked, item 1 of 16
+			71 unknown Description: Task 2: Verify delivery checkpoint 2, unchecked, item 2 of 16, ID: task-row-task-2
+			72 unknown Description: Task 3: Verify delivery checkpoint 3, unchecked, item 3 of 16, ID: task-row-task-3
+			73 unknown Description: Task 4: Verify delivery checkpoint 4, unchecked, item 4 of 16, ID: task-row-task-4
+			74 unknown Description: Task 5: Verify delivery checkpoint 5, unchecked, item 5 of 16, ID: task-row-task-5
+			75 unknown Description: Task 6: Verify delivery checkpoint 6, unchecked, item 6 of 16, ID: task-row-task-6
+			76 unknown Description: Task 7: Verify delivery checkpoint 7, unchecked, item 7 of 16, ID: task-row-task-7
+			77 unknown Description: Task 8: Verify delivery checkpoint 8, unchecked, item 8 of 16, ID: task-row-task-8
+			78 unknown Description: Task 9: Verify delivery checkpoint 9, unchecked, item 9 of 16, ID: task-row-task-9
+			79 unknown Description: Task 10: Verify delivery checkpoint 10, unchecked, item 10 of 16, ID: task-row-task-10
+			80 unknown Description: Task 11: Verify delivery checkpoint 11, unchecked, item 11 of 16, ID: task-row-task-11
+			81 unknown Description: Task 12: Verify delivery checkpoint 12, unchecked, item 12 of 16, ID: task-row-task-12
+			82 unknown Description: Task 13: Verify delivery checkpoint 13, unchecked, item 13 of 16, ID: task-row-task-13
+			83 unknown Description: Task 14: Verify delivery checkpoint 14, unchecked, item 14 of 16, ID: task-row-task-14
+			84 unknown Description: Task 15: Verify delivery checkpoint 15, unchecked, item 15 of 16, ID: task-row-task-15
+			85 unknown Description: Task 16: Verify delivery checkpoint 16, unchecked, item 16 of 16, ID: task-row-task-16
+			86 text GOAL CONTEXT Verified link Blocked Resolve the policy boundary for Activity and AI areas. Last observed Aug 23, 2026 at 6:14 PM REQUIRES This ticket depends on VD2-03 Exposes bounded agent actions through the typed bridge. VD2-04 Onboards folder-backed projects with recoverable authorization. VD2-05 Moves delivery records safely through the approved pipeline. UNLOCKS These tickets depend on this ticket UX-D12 Makes local search intent and results predictable. OWNER ATTENTION Policy decision required before work can continue. EVIDENCE
+			87 unknown Description: Activity areas decision record. Legacy file path. evidence/Activity areas decision record. Available, ID: evidence-rr06-evidence-policy
+			88 text AUDIT Seed RR-06 dashboard examples including VD2-07c NOTIFICATIONS Blocked alert · Delivered
+			89 scroll bar (settable, float) 0
+				90 value indicator (settable, float) 0
+				91 increment arrow button
+				92 decrement arrow button
+				93 increment page button
+				94 decrement page button
+	95 close button
+	96 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	97 text RR-R10 Task 5 — isolated native acceptance
+98 menu bar
+	99 ReleaseRadarTask5
+	100 File
+	101 Edit
+	102 View
+	103 Window
+	104 Help
+
+The focused UI element is 0 standard window RR-R10 Task 5 — isolated native acceptance, Secondary Actions: Raise

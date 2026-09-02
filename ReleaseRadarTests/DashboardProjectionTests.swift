@@ -3,6 +3,90 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class DashboardProjectionTests: XCTestCase {
+    func testTaskPlansProjectCanonicalActiveRowsAndCountsAcrossMutations() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let ticketID = TicketID(rawValue: "VD2-07c")
+        let initial = try await DashboardProjection.load(from: store)
+        XCTAssertEqual(initial.board(for: projectID)?.detail(for: ticketID)?.taskPlan, .noPlan)
+        XCTAssertNil(initial.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount)
+        let revision = try await store.transact(actor: .init(id: "fixture"), reason: "Create task projection fixture") { c in
+            try TicketTaskPlanningPolicy.revisePlan(projectID: projectID, ticketID: ticketID, expectedRevision: nil,
+                additions: [
+                    .init(id: .init(rawValue: "z"), label: "Task B", title: "Verify recovery", sortOrder: 1),
+                    .init(id: .init(rawValue: "a"), label: "Task A", title: "Load canonical tasks", sortOrder: 1),
+                    .init(id: .init(rawValue: "old"), label: "Task old", title: "Replace prior definition", sortOrder: 0)
+                ], definitionRevisions: [], supersededTaskIDs: [], connection: c).revision
+        }
+        let revised = try await store.transact(actor: .init(id: "fixture"), reason: "Supersede old task") { c in
+            try TicketTaskPlanningPolicy.revisePlan(projectID: projectID, ticketID: ticketID, expectedRevision: revision,
+                additions: [], definitionRevisions: [], supersededTaskIDs: [.init(rawValue: "old")], connection: c).revision
+        }
+        let loaded = try await DashboardProjection.load(from: store)
+        guard case let .loaded(plan)? = loaded.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
+            return XCTFail("Expected loaded canonical plan")
+        }
+        XCTAssertEqual(plan.tasks.map(\.id.rawValue), ["a", "z"])
+        XCTAssertEqual(plan.tasks.map(\.completion), [.pending, .pending])
+        XCTAssertEqual(loaded.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 2)
+        let completedRevision = try await store.transact(actor: .init(id: "fixture"), reason: "Complete task") { c in
+            try TicketTaskPlanningPolicy.completeTask(projectID: projectID, ticketID: ticketID,
+                taskID: .init(rawValue: "a"), expectedRevision: revised, connection: c).revision
+        }
+        let completed = try await DashboardProjection.load(from: store)
+        guard case let .loaded(completedPlan)? = completed.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
+            return XCTFail("Expected completed row")
+        }
+        XCTAssertEqual(completedPlan.tasks.map(\.completion), [.completed, .pending])
+        XCTAssertEqual(completed.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 2)
+        _ = try await store.transact(actor: .init(id: "fixture"), reason: "Add next task") { c in
+            try TicketTaskPlanningPolicy.revisePlan(projectID: projectID, ticketID: ticketID, expectedRevision: completedRevision,
+                additions: [.init(id: .init(rawValue: "next"), label: "Task C", title: "Inspect running UI", sortOrder: 2)],
+                definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let added = try await DashboardProjection.load(from: store)
+        guard case let .loaded(addedPlan)? = added.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
+            return XCTFail("Expected added row")
+        }
+        XCTAssertEqual(addedPlan.tasks.map(\.id.rawValue), ["a", "z", "next"])
+        let card = try XCTUnwrap(added.board(for: projectID)?.lane(.blocked)?.cards.first)
+        XCTAssertEqual(card.activeTaskCount, 3)
+        XCTAssertEqual(card.taskPlan, .loaded(plan: addedPlan))
+    }
+
+    func testTaskQueryFailureDropsOnlyFailedTicketTasksAndRecovers() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let ticketID = TicketID(rawValue: "VD2-07c")
+        _ = try await store.transact(actor: .init(id: "fixture"), reason: "Seed failed task query") { c in
+            try TicketTaskPlanningPolicy.revisePlan(projectID: projectID, ticketID: ticketID, expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "one"), label: "Task 1", title: "Recover task load", sortOrder: 0)],
+                definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let before = try await DashboardProjection.load(from: store)
+        XCTAssertEqual(before.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 1)
+        let failed = try await DashboardProjection.load(from: store, taskRows: { connection, project, phase, ticket in
+            if ticket == nil || ticket == ticketID {
+                // Exercise a genuine failing read; other ticket queries still succeed.
+                return try connection.rows("SELECT * FROM missing_task_projection_table")
+            }
+            return try TicketTaskPlanProjection.queryRows(connection, projectID: project, phaseID: phase, ticketID: ticket)
+        })
+        let board = try XCTUnwrap(failed.board(for: projectID))
+        guard case let .unavailable(recovery)? = board.detail(for: ticketID)?.taskPlan else {
+            return XCTFail("Task query failure must be distinct from no plan")
+        }
+        XCTAssertFalse(recovery.message.isEmpty)
+        XCTAssertNil(board.lane(.blocked)?.cards.first?.activeTaskCount)
+        XCTAssertEqual(board.detail(for: .init(rawValue: "VD2-08"))?.taskPlan, .noPlan)
+        XCTAssertEqual(board.lanes.map(\.count), [9, 1, 2, 1, 18])
+        XCTAssertEqual(board.detail(for: ticketID)?.evidence, before.board(for: projectID)?.detail(for: ticketID)?.evidence)
+        let recovered = try await DashboardProjection.load(from: store)
+        XCTAssertEqual(recovered.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 1)
+    }
+
     private var databaseURL: URL!
 
     override func setUp() {

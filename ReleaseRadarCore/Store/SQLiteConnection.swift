@@ -102,7 +102,7 @@ public final class SQLiteConnection: @unchecked Sendable {
     }
 
     // Fixed app projections use bounded cursor reads rather than repeated OFFSET queries.
-    func rows(_ sql: String, bindings: [SQLiteValue] = [], maximum: Int = 10_000) throws -> [[String: SQLiteValue]] {
+    public func rows(_ sql: String, bindings: [SQLiteValue] = [], maximum: Int = 10_000) throws -> [[String: SQLiteValue]] {
         try validateLease()
         let statement = try prepare(sql)
         defer { sqlite3_finalize(statement) }

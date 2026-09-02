@@ -5,6 +5,7 @@ struct TicketCardView: View {
     let presentation: DashboardCardPresentation
     let isSelected: Bool
     let select: () -> Void
+    @ScaledMetric(relativeTo: .caption2) private var metadataFontSize = 11
 
     var body: some View {
         Button(action: select) {
@@ -22,26 +23,14 @@ struct TicketCardView: View {
                         .accessibilityIdentifier("ticket-outcome-\(card.id.rawValue)")
                 }
 
-                if card.dependencyCount > 0 || card.blockerCount > 0 {
-                    HStack(spacing: 11) {
-                        if card.dependencyCount > 0 {
-                            signal(
-                                systemImage: "point.3.connected.trianglepath.dotted",
-                                count: card.dependencyCount,
-                                color: .secondary,
-                                label: "\(card.dependencyCount) dependencies"
-                            )
-                        }
-                        if card.blockerCount > 0 {
-                            signal(
-                                systemImage: "exclamationmark.octagon",
-                                count: card.blockerCount,
-                                color: .red,
-                                label: "\(card.blockerCount) blockers"
-                            )
-                        }
+                if card.activeTaskCount != nil || card.dependencyCount > 0 || card.blockerCount > 0 {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { metadata(separated: true) }
+                            .fixedSize()
+                        VStack(alignment: .leading, spacing: 8) { metadata(separated: false) }
                     }
                     .frame(minHeight: 17)
+                    .accessibilityHidden(true)
                 }
             }
             .padding(9)
@@ -54,22 +43,42 @@ struct TicketCardView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(card.id.rawValue), \(card.outcome), \(card.dependencyCount) dependencies, "
-                + "\(card.blockerCount) blockers\(isSelected ? ", selected" : "")"
+            "\(card.id.rawValue), \(card.outcome), "
+                + (card.taskCountAnnouncement.map { $0 + ", " } ?? "")
+                + "\(card.dependencyCount) dependencies, \(card.blockerCount) blockers\(isSelected ? ", selected" : "")"
         )
         .accessibilityIdentifier("ticket-\(card.id.rawValue)")
     }
 
-    private func signal(systemImage: String, count: Int, color: Color, label: String) -> some View {
+    @ViewBuilder
+    private func metadata(separated: Bool) -> some View {
+        if let count = card.activeTaskCount {
+            signal(systemImage: "checklist", count: count, color: .secondary)
+        }
+        if card.dependencyCount > 0 {
+            if separated && card.activeTaskCount != nil { metadataSeparator }
+            signal(systemImage: "point.3.connected.trianglepath.dotted", count: card.dependencyCount, color: .secondary)
+        }
+        if card.blockerCount > 0 {
+            if separated && (card.activeTaskCount != nil || card.dependencyCount > 0) { metadataSeparator }
+            signal(systemImage: "exclamationmark.octagon", count: card.blockerCount, color: .red)
+        }
+    }
+
+    private var metadataSeparator: some View {
+        Divider().frame(height: metadataFontSize * 1.25)
+    }
+
+    private func signal(systemImage: String, count: Int, color: Color) -> some View {
         Label {
             Text("\(count)")
-                .font(.caption2.monospacedDigit())
+                .font(.system(size: metadataFontSize).monospacedDigit())
         } icon: {
             Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .light))
+                .font(.system(size: metadataFontSize + 1, weight: .light))
         }
         .labelStyle(.titleAndIcon)
         .foregroundStyle(color)
-        .accessibilityLabel(label)
+        .fixedSize()
     }
 }

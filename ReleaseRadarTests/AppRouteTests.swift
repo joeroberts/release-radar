@@ -1,9 +1,160 @@
 import AppKit
+import SwiftUI
 import XCTest
 import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class AppRouteTests: XCTestCase {
+    @MainActor
+    func testTaskPlanNativeBoardRendering() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-TaskUI-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let ticketID = TicketID(rawValue: "VD2-07c")
+        let fault = TaskPlanQueryFault()
+        _ = try await store.transact(actor: .init(id: "fixture"), reason: "Create native task UI fixture") { c in
+            let plan = try TicketTaskPlanningPolicy.revisePlan(projectID: projectID, ticketID: ticketID, expectedRevision: nil,
+                additions: (1...16).map { index in
+                    .init(id: .init(rawValue: "task-\(index)"), label: "Task \(index)",
+                          title: index == 1 ? "Verify the complete long task title wraps below its own text while preserving its label and checked state at compact widths" : "Verify delivery checkpoint \(index)",
+                          sortOrder: index)
+                }, definitionRevisions: [], supersededTaskIDs: [], connection: c)
+            _ = try TicketTaskPlanningPolicy.completeTask(projectID: projectID, ticketID: ticketID, taskID: .init(rawValue: "task-1"), expectedRevision: plan.revision, connection: c)
+            return try TicketTaskPlanningPolicy.revisePlan(projectID: projectID, ticketID: .init(rawValue: "VD2-08"), expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "single"), label: "Task 1", title: "Inspect one active task", sortOrder: 0)],
+                definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let model = AppModel(store: store, dashboardLoader: { store in
+                try await DashboardProjection.load(from: store, taskRows: { c, project, phase, ticket in
+                    if fault.isFailing && (ticket == nil || ticket == ticketID) {
+                        return try c.rows("SELECT * FROM missing_task_ui_table")
+                    }
+                    return try TicketTaskPlanProjection.queryRows(c, projectID: project, phaseID: phase, ticketID: ticket)
+                })
+            }, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        model.selectedTicketID = ticketID
+        let window = NSWindow(contentRect: NSRect(x: 30, y: 30, width: 1600, height: 900),
+                              styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        let priorActivationPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(priorActivationPolicy) }
+        window.isReleasedWhenClosed = false
+        window.title = "RR-R10 Task 5 — isolated native acceptance"
+        window.appearance = NSAppearance(named: .darkAqua)
+        defer { window.close() }
+        for width in [1600.0, 760.0] {
+            for enhanced in [false, true] {
+                model.selectedTicketID = ticketID
+                let content = TaskPlanBoardTestView(model: model, projectID: projectID)
+                    .environment(\.colorScheme, .dark)
+                    .environment(\.dynamicTypeSize, enhanced ? .accessibility3 : .large)
+                let hosting = NSHostingView(rootView: content)
+                window.appearance = NSAppearance(named: enhanced ? .accessibilityHighContrastDarkAqua : .darkAqua)
+                hosting.appearance = window.appearance
+                hosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
+                window.contentView = hosting
+                window.setContentSize(NSSize(width: width, height: 900))
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                try await Task.sleep(for: .milliseconds(250))
+                hosting.layoutSubtreeIfNeeded()
+                if let duration = ProcessInfo.processInfo.environment["RR_TASK5_INSPECT_SECONDS"].flatMap(Double.init), duration > 0 {
+                    print("TASK5 INSPECTION PID \(ProcessInfo.processInfo.processIdentifier) width \(width) enhanced \(enhanced)")
+                    try await Task.sleep(for: .seconds(min(duration, 300)))
+                }
+                let board = try XCTUnwrap(model.dashboard?.board(for: projectID))
+                XCTAssertEqual(board.lane(.blocked)?.cards.first?.activeTaskCount, 16)
+                try taskCapture(hosting, name: "task5-loaded-\(Int(width))-\(enhanced ? "accessible" : "standard")")
+            }
+        }
+        for width in [1600.0, 760.0] {
+            let hosting = NSHostingView(rootView: TaskPlanBoardTestView(model: model, projectID: projectID)
+                .environment(\.colorScheme, .dark))
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
+            window.contentView = hosting
+            window.setContentSize(NSSize(width: width, height: 900))
+            model.selectedTicketID = .init(rawValue: "DESIGN-V2")
+            try await Task.sleep(for: .milliseconds(250))
+            hosting.layoutSubtreeIfNeeded()
+            XCTAssertEqual(model.dashboard?.board(for: projectID)?.detail(for: model.selectedTicketID)?.taskPlan, .noPlan)
+            try taskCapture(hosting, name: "task5-no-plan-\(Int(width))")
+            model.selectedTicketID = ticketID
+            fault.isFailing = true
+            await model.reloadAfterActivePhaseSelection(projectID: projectID)
+            try await Task.sleep(for: .milliseconds(250))
+            hosting.layoutSubtreeIfNeeded()
+            guard case .unavailable = model.dashboard?.board(for: projectID)?.detail(for: ticketID)?.taskPlan else {
+                return XCTFail("Expected unavailable task projection")
+            }
+            try taskCapture(hosting, name: "task5-unavailable-\(Int(width))")
+            fault.isFailing = false
+            if let duration = ProcessInfo.processInfo.environment["RR_TASK5_INSPECT_SECONDS"].flatMap(Double.init), duration > 0 {
+                print("TASK5 RECOVERY INSPECTION PID \(ProcessInfo.processInfo.processIdentifier) width \(width); press Reload")
+                try await Task.sleep(for: .seconds(min(duration, 300)))
+            } else {
+                await model.reloadAfterActivePhaseSelection(projectID: projectID)
+            }
+            XCTAssertEqual(model.dashboard?.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 16)
+        }
+    }
+
+    @MainActor
+    private func taskCapture<V: View>(_ hosting: NSHostingView<V>, name: String) throws {
+        let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
+        hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
+        let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+
+    }
+
+    @MainActor
+    func testTaskPlanReloadPreservesPhaseSelectionFailure() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-TaskReloadFailure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let projectID = DashboardSampleData.projectID
+        await model.setActivePhase(projectID: projectID, phaseID: .init(rawValue: "unavailable-phase"))
+        let failure = model.activePhaseSelectionStatus(for: projectID)
+        guard case .mutationFailed = failure else { return XCTFail("Expected phase selection failure") }
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change canonical outcome before recovery") { c in
+            try c.execute("UPDATE tickets SET outcome = 'Recovered canonical ticket.' WHERE id = 'VD2-07c'")
+        }
+        await model.reloadAfterActivePhaseSelection(projectID: projectID)
+        XCTAssertEqual(model.dashboard?.board(for: projectID)?.detail(for: .init(rawValue: "VD2-07c"))?.outcome,
+                       "Recovered canonical ticket.")
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: projectID), failure)
+    }
+
+    @MainActor
+    func testTaskPlanReloadWorksWhenPhaseSelectionIsIdle() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-TaskReload-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let ticketID = TicketID(rawValue: "VD2-07c")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change canonical outcome before reload") { c in
+            try c.execute("UPDATE tickets SET outcome = 'Reloaded canonical ticket.' WHERE id = ?", bindings: [.text(ticketID.rawValue)])
+        }
+        await model.reloadAfterActivePhaseSelection(projectID: DashboardSampleData.projectID)
+        XCTAssertEqual(model.dashboard?.board(for: DashboardSampleData.projectID)?.detail(for: ticketID)?.outcome,
+                       "Reloaded canonical ticket.")
+        XCTAssertEqual(model.activePhaseSelectionStatus(for: DashboardSampleData.projectID), .idle)
+    }
+
 #if DEBUG
     func testRR9AcceptedHistoryRollsBackWhenAPlanAppearsAfterStagedInsertion() async throws {
         let directory = FileManager.default.temporaryDirectory
@@ -3168,5 +3319,35 @@ private enum RouteProjectionError: Error {
 private actor RouteCountingTransport: PushoverTransport {
     func send(_ message: PushoverMessage, credentials: PushoverCredentials) async throws -> PushoverProviderReceipt {
         .init(requestID: "unused")
+    }
+}
+
+
+private final class TaskPlanQueryFault: @unchecked Sendable {
+    private let lock = NSLock()
+    private var failing = false
+    var isFailing: Bool {
+        get { lock.withLock { failing } }
+        set { lock.withLock { failing = newValue } }
+    }
+}
+
+@MainActor
+private struct TaskPlanBoardTestView: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.colorSchemeContrast) private var contrast
+    @ScaledMetric(relativeTo: .subheadline) private var metric = 12.0
+    @Bindable var model: AppModel
+    let projectID: ProjectID
+    var body: some View {
+        if let board = model.dashboard?.board(for: projectID) {
+            PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID,
+                phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
+                selectActivePhase: { _ in XCTFail("Task UI must not select an active phase") },
+                reloadActivePhase: { await model.reloadAfterActivePhaseSelection(projectID: projectID) },
+                reauthorizeActivePhase: { _ in XCTFail("Task UI must not authorize folders") })
+                .background(Color(nsColor: .windowBackgroundColor))
+                .onAppear { print("TASK5 ENV dynamicType=\(typeSize) metric=\(metric) contrast=\(contrast)") }
+        }
     }
 }
