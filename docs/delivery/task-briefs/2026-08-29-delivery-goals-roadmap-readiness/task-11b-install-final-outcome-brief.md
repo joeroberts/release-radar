@@ -1,17 +1,21 @@
 # RR-R10 Task 11B: Install and verify the final outcome
 
-Task 11B remains Pending. On 2026-09-02 the coordinator relayed NEW explicit
-owner approval for the reviewed second maintenance-window package and
-established the exclusive caller hold. Execute the exact attempt-2 runbook,
-conditional on retained valid tests and actual installed outcome reviews.
-The owner explicitly overrode further backup/restore rehearsals and related
-pre-install review/release gates; direct installation resumed and the retained
-candidate is now installed. Existing custody files remain untouched. The coordinator removed the obsolete repeat/full-suite gate after the
-owner challenged redundant reruns; no new service-test cycle is authorized.
-The first window is closed; its records and all history remain preserved.
-Current baseline disposition, scope and authority are in
-[progress.md](../../progress.md). No additional approval is needed for already
-covered operations; changed preconditions must be resolved before mutation.
+Completed and non-authoritative. The owner explicitly resumed immediate
+Task11B closeout using existing installation, goal results, tests and reviews,
+with no additional UI pass, tests or reviews. Completion request
+`CE03A579-0CF1-4FC3-91D6-CB6F7A82A3E1` committed task-plan revision17
+(from16), audit `B16E76CE-65E5-45E2-9D72-9E2D56D5F156`, after reviewed
+implementation/evidence commit `bcc53fe` was pushed. The final catalog acceptance committed audit
+`206FC620-2114-4C68-A7D7-4C5EC78C3808`. Source integration and merge are
+recorded in [PR #16](https://github.com/joeroberts/release-radar/pull/16). The final installed UI pass and new
+post-install independent review were not performed by explicit owner direction;
+no such validation is claimed. Parent RR-R10 and Delivery Goal acceptance are
+separate, not authorized by this completion. See [progress.md](../../progress.md)
+and the [evidence](../../evidence/2026-09-02-rr-r10-task-11b-installation.md).
+
+The scope and criteria below are the retained task contract, interpreted with
+the explicit owner overrides recorded in the evidence; they authorize no
+further execution after closeout.
 
 ## Objective and outcome
 

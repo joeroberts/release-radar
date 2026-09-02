@@ -1,5 +1,12 @@
 # RR-R10 Task 11B installation, recovery and owner-operation package
 
+Task11B completion committed at revision17, audit
+`B16E76CE-65E5-45E2-9D72-9E2D56D5F156`. This supporting record retains the
+executed package and owner overrides; it is not authority to repeat operations.
+The owner removed further backup/rehearsal, test, UI-pass and review gates and
+directed immediate closeout using existing results. Existing custody files stay
+intact; no cleanup is authorized. Current closure is in [progress.md](../../progress.md).
+
 On 2026-09-02 the coordinator relayed the owner's NEW explicit approval of this
 reviewed SECOND maintenance-window package and established an exclusive caller
 hold. Task 11B is the sole mutation/test caller; reviewers must not introduce

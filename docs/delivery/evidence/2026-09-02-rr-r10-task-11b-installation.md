@@ -1,11 +1,13 @@
 # RR-R10 Task 11B preparation and installation evidence
 
-Active, non-authoritative evidence. Task 11B remains Pending. The first approved
-maintenance window is closed, with its original requests/results/backups
-preserved. NEW explicit owner approval of the reviewed second maintenance window has now
-been relayed by the coordinator, with the exclusive caller hold. Current authority is in
-[progress.md](../progress.md); the proposed next window is bounded by the
-[runbook](../task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md).
+Completed, non-authoritative evidence. The exact retained candidate is installed
+and the approved Delivery Goal/catalog operations committed. The owner explicitly
+directed immediate Task11B completion and closeout using existing evidence,
+without further tests, UI passes, reviews or backup work. Task11B completion
+committed at task-plan revision17, audit
+`B16E76CE-65E5-45E2-9D72-9E2D56D5F156`. Current administrative closeout is
+recorded in [progress.md](../progress.md). Earlier observations and interrupted
+attempts below are retained historical evidence, not current authorization.
 
 ## Integrated repair and next-window readiness
 
@@ -395,3 +397,31 @@ not individually re-observed before the owner ended further verification.
 Task completion and final catalog reconciliation below use the retained exact
 requests. RR-R10 is not RR-RM10: only Task11B is being completed; parent ticket
 and goal acceptance remain separate and unauthorized.
+
+## Task11B completion
+
+Implementation/evidence commit `bcc53fe` was pushed before the original order100
+request `CE03A579-0CF1-4FC3-91D6-CB6F7A82A3E1`. The supported installed helper
+returned success for `RR-R10` / `rr-r10-task-11b`, task-plan revision17 and audit
+`B16E76CE-65E5-45E2-9D72-9E2D56D5F156`. The exact result is retained as
+`attempt-2/task-11b-completion-result.json`. Prior15 completed rows plus the
+exact remaining-task completion establish16 completed active tasks; no final
+manual UI pass is claimed. No parent lane or goal acceptance command was sent.
+RR-R10 is distinct from RR-RM10. RR-R10 remains at its In-progress endpoint;
+RR-DG-R10 Active and the six roadmap goals Planned are the approved finalized
+goal-command outcome, not later owner acceptance.
+
+Additional validation was explicitly stopped by the owner. Completed candidate,
+code/E2E and risk reviews remain accepted; no fresh final installed QA/Security
+review, repeated suite, cancelled service selector, extra backup/rehearsal or
+final all-row/all-goal UI pass is represented as performed.
+
+Final order110 request `6F9B6E0B-1105-476F-B840-F570E3DFB5D6` committed
+catalog-acceptance audit `206FC620-2114-4C68-A7D7-4C5EC78C3808` for the
+230-artifact closeout digest
+`fc15cd1fd686811914dd0c9498141284c3fc64bdd66dfe50544db54d5aab58ba`.
+The exact result is preserved as `attempt-2/closeout-catalog-result.json`.
+Canonical and bound documents carry the same completed Task11B identities and
+generated indexes. [PR #16](https://github.com/joeroberts/release-radar/pull/16)
+is the source integration and merge record. No final UI pass or additional
+test/review was performed; these limits are not relabelled as completed checks.
