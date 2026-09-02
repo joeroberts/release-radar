@@ -70,7 +70,15 @@ in the original Task 11B evidence; no prior completion/acceptance was repeated.
 Independent source and installed-outcome review accepted: Required 0, Optional 0.
 The reviewer independently inspected installed process identity, signing,
 entitlements, framework linkage, reference bytes and current task/goal UI.
-Terminal managed-document reconciliation follows before handoff.
+Canonical and worktree documentation checks pass. Catalog acceptance request
+`45ED5DAF-5761-4AC4-8699-F814DCF132DE` committed audit
+`E04A0021-5909-43E8-8E09-E37BA5C3657C`, accepting catalog v1 digest
+`78d0ca8953f896dea11c507c042125b085bcf31bd315fdd497a935a23b217715`.
+Complete application readback matches that accepted binding. Only the eight
+task-related documentation paths were patched in the dirty canonical checkout;
+unrelated changes and AGENTS.md remain intact. Product commit `882a338` and
+[PR #17](https://github.com/joeroberts/release-radar/pull/17) record source
+integration. No application task, ticket acceptance or goal operation was repeated.
 No full-suite or layout matrix was repeated; issue #9 remains
 deferred. No new owner task/goal/acceptance operation or direct SQLite access.
 

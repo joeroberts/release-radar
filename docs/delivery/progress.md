@@ -32,7 +32,12 @@ and no longer falsely rejects valid uncatalogued file-path evidence.
 Fresh RED reproduced both defects; GREEN passed five focused tests. Signed
 Release build, strict bundle signatures, installed example write/check and
 actual UI/inventory readback passed. Independent source and installed review:
-Required 0, Optional 0. Final documentation/Git reconciliation is pending.
+Required 0, Optional 0. Canonical documentation and generated indexes validate.
+Catalog acceptance request `45ED5DAF-5761-4AC4-8699-F814DCF132DE` committed audit
+`E04A0021-5909-43E8-8E09-E37BA5C3657C`; complete app readback confirms catalog v1
+digest `78d0ca8953f896dea11c507c042125b085bcf31bd315fdd497a935a23b217715`.
+The source integration and merge record is
+[PR #17](https://github.com/joeroberts/release-radar/pull/17).
 See the [repair evidence](evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md).
 
 RekonUILib's existing AGENTS.md evidence now resolves without conflict, with
@@ -49,8 +54,8 @@ goal/completion/acceptance operation occurred during the product repair.
 
 ## Next eligible work
 
-Finish authorized catalog reconciliation, commit/push and PR merge; no additional
-product work or review cycle is required.
+No successor product work is opened. This task's remaining authorization is only
+its PR #17 source closeout; all implementation and installed checks are complete.
 Do not mutate RekonUILib or Pursuit to work around Release Radar defects.
 [Issue #9](https://github.com/joeroberts/release-radar/issues/9) remains deferred.
 Existing protected records, backups, build output and diagnostics remain intact.
