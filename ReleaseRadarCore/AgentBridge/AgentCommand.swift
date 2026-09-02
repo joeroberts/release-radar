@@ -26,6 +26,9 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
 }
 
 public enum AgentCommand: Codable, Equatable, Sendable {
+    case applyPhasePlanRevision(projectID: String, phaseID: String, expectedRevision: Int64, goalUpserts: [DeliveryGoalDraft]? = nil, assignments: [DeliveryGoalAssignment]? = nil, unassignedTicketIDs: [TicketID]? = nil, supersededGoalIDs: [DeliveryGoalID]? = nil)
+    case finalizePhasePlan(projectID: String, phaseID: String, expectedRevision: Int64)
+    case transitionDeliveryGoal(projectID: String, phaseID: String, goalID: String, expectedPlanRevision: Int64, lifecycle: DeliveryGoalLifecycle)
     case bindDocumentationRepository(target: DocumentationTarget)
     case acceptDocumentationCatalog(target: DocumentationTarget, priorCatalogVersion: Int, priorCatalogDigest: String)
     case addManagedEvidence(target: DocumentationTarget, id: String, ticketID: String?, artifactID: String)
@@ -72,6 +75,18 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case ticketTaskIncomplete(pendingTaskIDs: [TicketTaskID])
     case ticketTaskReplacementRequired
     case invalidTicketTaskMutation(String)
+    case phasePlanNotFound
+    case planRevisionConflict(expected: Int64, current: Int64)
+    case phasePlanNotReady
+    case ticketGoalRequired(TicketID)
+    case phasePlanIncomplete(PhasePlanReadinessFailure)
+    case goalPhaseMismatch(DeliveryGoalID)
+    case goalNotFound(DeliveryGoalID)
+    case goalNotActionable(DeliveryGoalID)
+    case invalidGoalTransition(from: DeliveryGoalLifecycle, to: DeliveryGoalLifecycle)
+    case ownerAcceptanceRequired
+    case goalAcceptanceEvidenceUnavailable([TicketID])
+    case invalidPlanMutation(String)
     case outcomeUnknown
     case internalFailure(String)
 }
@@ -82,13 +97,15 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let error: AgentCommandError?
     public let inventory: EvidenceInventory?
     public let ticketTaskPlanRevision: Int64?
+    public let phasePlanRevision: Int64?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
         self.inventory = inventory
         self.ticketTaskPlanRevision = ticketTaskPlanRevision
+        self.phasePlanRevision = phasePlanRevision
     }
 }
 

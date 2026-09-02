@@ -62,7 +62,7 @@ final class DocumentationCallbackTests: XCTestCase {
         XCTAssertTrue(names.contains("release_radar_add_evidence"))
         XCTAssertTrue(names.contains("release_radar_revise_ticket_task_plan"))
         XCTAssertTrue(names.contains("release_radar_complete_ticket_task"))
-        XCTAssertEqual(names.count, 21)
+        XCTAssertEqual(names.count, 24)
         let inventory = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_inventory_evidence" })
         XCTAssertEqual((inventory["inputSchema"] as? [String: Any])?["required"] as? [String], ["version", "projectRoot"])
     }

@@ -662,6 +662,129 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         XCTAssertEqual(counts, [0, 0, 0, 0])
     }
 
+    func testDeliveryGoalCallbackPreservesTypedResultsAndTrustedExternalOrigin() async throws {
+        let f = try await makeTransportFixture(lane: .needsReview)
+        let dispatcher = AgentCommandDispatcher(store: f.store, projectRegistry: PersistedAuthorizedProjectRegistry(store: f.store))
+        // Exercise the real callback with synthetic state without registering a service.
+        let callback = AgentBridgeAppCallback(dispatcher: dispatcher, queries: AgentQueryDispatcher(store: f.store),
+            beforeDispatch: { _ in }, afterDispatchBeforeReply: { _, _ in }, afterReply: { _, _ in })
+        func send(_ envelope: AgentCommandEnvelope) async throws -> AgentCommandResult {
+            let data = try JSONEncoder().encode(envelope)
+            let response: Data = await withCheckedContinuation { continuation in
+                callback.dispatch(ReleaseRadarBridgeTransport.wireVersion, envelope: data,
+                    admissionDeadline: Date().addingTimeInterval(10).timeIntervalSince1970) { continuation.resume(returning: $0) }
+            }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: response)
+        }
+        func envelope(_ command: AgentCommand) -> AgentCommandEnvelope {
+            .init(version: 1, requestID: UUID(), projectRoot: f.projectRoot.path, assertedThreadID: "release-radar-owner",
+                  reason: "Task 8 callback verification", command: command)
+        }
+        let revision = envelope(.applyPhasePlanRevision(projectID: "project-1", phaseID: "phase-1", expectedRevision: 0,
+            goalUpserts: [.init(id: .init(rawValue: "fixture-goal"), title: "Revised goal", outcome: "Complete fixture", doneCriteria: ["Delivered"], sortOrder: 0)]))
+        let revised = try await send(revision)
+        XCTAssertNil(revised.error); XCTAssertEqual(revised.phasePlanRevision, 1)
+        let finalized = try await send(envelope(.finalizePhasePlan(projectID: "project-1", phaseID: "phase-1", expectedRevision: 1)))
+        XCTAssertNil(finalized.error); XCTAssertEqual(finalized.phasePlanRevision, 1)
+        for (ticket, taskRevision) in [("RR-03", nil as Int64?), ("RR-PLAN", Int64(2))] {
+            let result = try await send(envelope(.transitionTicket(ticketID: ticket, lane: .accepted, ticketTaskPlanRevision: taskRevision)))
+            XCTAssertNil(result.error)
+        }
+        let request = envelope(.transitionDeliveryGoal(projectID: "project-1", phaseID: "phase-1", goalID: "fixture-goal", expectedPlanRevision: 1, lifecycle: .awaitingAcceptance))
+        let awaiting = try await send(request)
+        XCTAssertNil(awaiting.error); XCTAssertEqual(awaiting.phasePlanRevision, 1)
+        let replay = try await send(request); XCTAssertEqual(replay, awaiting)
+        let ownerRequest = envelope(.transitionDeliveryGoal(projectID: "project-1", phaseID: "phase-1", goalID: "fixture-goal", expectedPlanRevision: 1, lifecycle: .accepted))
+        let denied = try await send(ownerRequest); XCTAssertEqual(denied.error, .ownerAcceptanceRequired)
+        let ownerResult = await dispatcher.dispatch(ownerRequest, origin: .ownerApp)
+        XCTAssertNil(ownerResult.error)
+        let countsBefore = try await requestCounts(f.store, requestID: ownerRequest.requestID, reason: ownerRequest.reason)
+        let reused = try await send(ownerRequest)
+        XCTAssertEqual(reused.error, .ownerAcceptanceRequired); XCTAssertNil(reused.auditEventID); XCTAssertTrue(reused.entityIDs.isEmpty)
+        let countsAfter = try await requestCounts(f.store, requestID: ownerRequest.requestID, reason: ownerRequest.reason)
+        XCTAssertEqual(countsAfter, countsBefore)
+        let ownerReplay = await dispatcher.dispatch(ownerRequest, origin: .ownerApp); XCTAssertEqual(ownerReplay, ownerResult)
+    }
+
+    func testDeliveryGoalToolMalformedInputsAndBoundsRejectBeforeTransport() throws {
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        // The invalid reason is the last guard even if a field validator regresses:
+        // none of these stdio-only checks can contact the shared broker.
+        let base: [String: Any] = ["version": 1, "requestID": UUID().uuidString, "projectRoot": "/task8-validation-only",
+            "reason": NSNull(), "projectID": "project-1", "phaseID": "phase-1", "expectedRevision": 0]
+        let draft: [String: Any] = ["id": "g", "title": "Goal", "outcome": "Outcome", "doneCriteria": ["Done"], "sortOrder": 0]
+        func check(_ fields: [String: Any], expected: String, tool: String = "apply_phase_plan_revision") throws {
+            var arguments = base.merging(fields) { _, new in new }
+            if tool == "transition_delivery_goal" { arguments.removeValue(forKey: "expectedRevision") }
+            let result = try Self.runToolSession(helper, tool: "release_radar_" + tool, arguments: arguments).call
+            XCTAssertEqual(jsonRPCErrorCode(result), -32602)
+            let message = (result["error"] as? [String: Any])?["message"] as? String ?? ""
+            XCTAssertTrue(message.contains(expected), message)
+        }
+        for key in ["goalUpserts", "assignments", "unassignedTicketIDs", "supersededGoalIDs"] {
+            for value: Any in [NSNull(), "bad", [true]] { try check([key: value], expected: key) }
+        }
+        for value: Any in [true, 1.5, -1, NSNumber(value: UInt64.max), NSNull(), "1"] {
+            try check(["expectedRevision": value], expected: "expectedRevision")
+            try check(["expectedRevision": value], expected: "expectedRevision", tool: "finalize_phase_plan")
+            try check(["goalID": "g", "expectedPlanRevision": value, "lifecycle": "awaiting_acceptance"], expected: "expectedPlanRevision", tool: "transition_delivery_goal")
+        }
+        try check(["origin": "ownerApp"], expected: "Unsupported")
+        try check(["goalUpserts": [draft.merging(["lifecycle": "accepted"]) { _, new in new }]], expected: "exact")
+        try check(["assignments": [["goalID": "g", "ticketID": "t", "extra": true]]], expected: "exact")
+        for lifecycle in ["accepted", "active", "planned", "draft", "superseded"] {
+            try check(["goalID": "g", "expectedPlanRevision": 1, "lifecycle": lifecycle], expected: "awaiting_acceptance", tool: "transition_delivery_goal")
+        }
+        try check(["goalID": "g", "expectedPlanRevision": 1, "lifecycle": "awaiting_acceptance", "origin": "ownerApp"], expected: "Unsupported", tool: "transition_delivery_goal")
+        for count in [63, 64, 65] {
+            try check(["goalUpserts": [draft], "supersededGoalIDs": (1..<count).map { "g\($0)" }], expected: count <= 64 ? "reason" : "64")
+        }
+        for count in [511, 512, 513] {
+            try check(["assignments": [["goalID": "g", "ticketID": "t"]], "unassignedTicketIDs": (1..<count).map { "t\($0)" }], expected: count <= 512 ? "reason" : "512")
+        }
+        try check([:], expected: "reason")
+        try check(["goalUpserts": [], "assignments": [], "supersededGoalIDs": [], "unassignedTicketIDs": [], "expectedRevision": Int64.max], expected: "reason")
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        for bytes in [65_535, 65_536, 65_537] {
+            let empty = AgentCommand.applyPhasePlanRevision(projectID: "project-1", phaseID: "phase-1", expectedRevision: 0,
+                goalUpserts: [.init(id: .init(rawValue: "g"), title: "", outcome: "Outcome", doneCriteria: ["Done"], sortOrder: 0)])
+            let padding = bytes - (try encoder.encode(empty).count)
+            let title = String(repeating: "é", count: padding / 2) + String(repeating: "a", count: padding % 2)
+            let record = draft.merging(["title": title]) { _, new in new }
+            try check(["goalUpserts": [record]], expected: bytes <= 65_536 ? "reason" : "65,536")
+        }
+    }
+
+    func testDeliveryGoalToolsExposeOnlyExternalLifecycleAndBoundedSchemas() throws {
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let session = try Self.runToolSession(helper, tool: "release_radar_finalize_phase_plan", arguments: ["version": true])
+        let result = try XCTUnwrap(session.list["result"] as? [String: Any])
+        let tools = try XCTUnwrap(result["tools"] as? [[String: Any]])
+        XCTAssertEqual(tools.count, 24)
+        for name in ["apply_phase_plan_revision", "finalize_phase_plan", "transition_delivery_goal"] {
+            let tool = tools.first { $0["name"] as? String == "release_radar_" + name }
+            XCTAssertNotNil(tool, name)
+            guard let schema = tool?["inputSchema"] as? [String: Any], let fields = schema["properties"] as? [String: Any] else { continue }
+            XCTAssertEqual(schema["additionalProperties"] as? Bool, false)
+            XCTAssertNil(fields["origin"])
+            let required = Set(schema["required"] as? [String] ?? [])
+            XCTAssertTrue(required.isSuperset(of: ["version", "requestID", "projectRoot", "reason", "projectID", "phaseID"]))
+            if name == "transition_delivery_goal" {
+                XCTAssertEqual((fields["lifecycle"] as? [String: Any])?["enum"] as? [String], ["awaiting_acceptance"])
+                XCTAssertTrue(required.isSuperset(of: ["goalID", "expectedPlanRevision", "lifecycle"]))
+            } else {
+                XCTAssertTrue(required.contains("expectedRevision"))
+            }
+            if name == "apply_phase_plan_revision" {
+                for (key, maximum) in [("goalUpserts", 64), ("supersededGoalIDs", 64), ("assignments", 512), ("unassignedTicketIDs", 512)] {
+                    XCTAssertEqual((fields[key] as? [String: Any])?["maxItems"] as? Int, maximum)
+                    XCTAssertFalse(required.contains(key))
+                }
+            }
+        }
+        XCTAssertEqual(jsonRPCErrorCode(session.call), -32602)
+    }
+
     func testTicketTaskToolSchemasPreserveExistingToolsAndRequireBoundedRecords() throws {
         let packagedTool = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
@@ -1134,7 +1257,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 21,
+              tools.count == 24,
               hasTicketTaskToolSchemas(tools),
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
               let transitionSchema = transition["inputSchema"] as? [String: Any],

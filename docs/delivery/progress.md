@@ -2,111 +2,92 @@
 
 ## Current outcome and authorization
 
-MDCP and RR-R10 through Task 7 are delivered. Task 7A is active on
-`codex/rr-r10-task-7a`, based on Task 7 merge `02769d9`. Its scope is controlled
-by the [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md),
-[Task 7A brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md)
-and [bounded runbook](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md).
+MDCP and RR-R10 through Task 7A are delivered. Task 7A
+[PR #10](https://github.com/joeroberts/release-radar/pull/10) merged at
+`979926be37609b9f52c5588d238bc8f34753361b`; the coordinator verified the merge,
+completion records and brief closeout, and released the caller hold.
+Its completed verification and custody details are preserved in the
+[Historical Task 7A closeout](archive/2026-09-02-rr-r10-task-7a-closeout.md).
 
-The coordinator initially accepted preparation under owner delegation. The
-human subsequently approved the exact reviewed live package on 2026-09-02.
-The coordinator released the temporary coordination pause after the bounded
-existing-record corrections and explicitly authorized the exact recreated-file
-quarantine. That move is complete and bound-root documentation validation
-passes. Disposable migration/restore proof and installed owner migration have
-passed. The intermediate and through-Task-7A catalogs are accepted. Task
-bootstrap and relaunch preservation passed. The owner confirmed lower-task
-scroll reachability and explicitly deferred the presentation improvements to
-Issue #9. First commit `ac6197c255fed91721c78e6680ed472fa0e49ba2` is pushed and
-remote-verified. Task 7A's live row is completed at revision 12 and the original
-phase is restored. The final catalog is accepted and exactly replayed. The
-caller hold remains until coordinator verification of the merged delivery;
-Task 8 is unopened.
+Task 8 implementation and live completion are delivered on
+`codex/rr-r10-task-8`, under the
+[RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) and
+[Task 8 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-8-audited-delivery-goal-commands-brief.md).
+The coordinator accepted its scope and sequencing under owner delegation.
+Authorization covers planning, implementation, focused validation, independent
+review, commit/push/PR/merge and exact live task completion with same-branch
+reconciliation. Installation, shared-service mutation, UI repair and cleanup
+are outside this checkpoint.
 
-## Verification and actual live state
+## Active verification and delivery
 
-- Synthetic E2E 9/9, AppRoute/Notification 89/89 and documentation rechecks
-  10/10 pass. Four native rendering tests pass across 18 states/widths;
-  independent external QA observed five windows before its UI tool disconnected.
-  Safe selection coverage is 490 tests across the run and affected rechecks.
-  All five authorized shared-service selectors also pass. This is controlled
-  split-run coverage, not one whole-scheme invocation.
-- Release build and strict app/helper/framework signing pass. The unchanged
-  through-Task-7 candidate exposes 21 tool schemas. Independent preparation
-  QA, Security/Privacy and Architecture review found no Required defects;
-  independent live acceptance found no Required findings. Lower-row
-  scrolling is confirmed by the owner, not by the reviewer's physical UI test.
-- The original blocking `docs/.DS_Store` was quarantined under explicit
-  approval. Pre-service and pre-install backups are retained. Controlled tests
-  preserved the closed owner-store bytes/presence; normal old-app startup
-  restored its signed broker. The disposable copy migrated to v14, passed
-  relaunch equality, and restored the original v13 baseline. The exact candidate
-  is installed; the old app is retained. Owner migration and read-only relaunch
-  preserved every recorded data group, evidence, audit and receipt.
-- All tracked preservation groups, prior audit fingerprints and 103 receipts
-  matched. Four additional global audit fingerprints appeared during normal
-  startup/navigation; their exact contents and causes are unverified. The last
-  complete pre-migration baseline contained 382 audits and 103 receipts. The
-  installed app is now 0.1.6/schema v14. Both ordered catalog acceptances were
-  exactly replayed; the accepted preparation catalog is v1/213 artifacts.
-- Temporary remediation-phase selection was committed and exactly replayed.
-  RR-R10 remains In progress. Bootstrap produced one 16-row plan at revision 11,
-  with ten tasks through Task 7 checked and six Pending before Task 7A completion.
-  All 11 bootstrap requests replayed their original revisions/audits. Only the
-  task-plan group and expected 11 audits/receipts changed from the pre-bootstrap
-  inventory. Installed-app relaunch reproduced the complete inventory exactly
-  at 398 audits/117 receipts. The actual UI showed every title/order and the
-  16-task count in accessibility state. This does not establish ordinary visual
-  reachability; the owner subsequently confirmed ordinary scrolling.
-- Task 7A completion returned revision 12 and audit
-  `E61829C9-30A5-4F66-BD2B-81EB0D33EB2B`; exact replay returned the same result.
-  Restoring `RR-ROADMAP` returned audit `1DF40288-7DEE-4BC4-BF34-D859137FAADC`
-  and replayed exactly. The UI shows Established product roadmap with original
-  lane counts 8/0/0/3/0. Full typed readback retains both audit IDs and restores
-  the original delivery-state preservation digest; only task and accepted
-  documentation-binding groups differ from the pre-operation baseline.
-- Final catalog v1/213 artifacts is accepted at digest
+Task 8 implementation is verified. Native Debug builds and 49 unique focused
+XCTest cases pass across bridge, safe stdio/callback transport, documentation
+replay and error presentation selections. Initial missing-command/schema RED
+was observed; two synthetic fault-fixture setup errors were corrected and
+the affected tests passed. All 24 tools are present and the prior 21 complete
+tool definitions compare exactly unchanged. Canonical old result/receipt
+encoding and MDCP replay ordering are preserved. No shared service tests ran.
+
+Independent Code/QA, Architecture, Security/Privacy and supporting error-text/
+documentation review found no Required defects. One optional suggestion about
+empty readiness-message categories does not block delivery. The implementation
+was committed and pushed as `807ef6c60af5150598aaaa1ef71b069539dc9e15`,
+with remote equality verified before the live completion. This branch includes
+the final completion/brief reconciliation for the single Task 8 PR. Temporary logs, DerivedData, result bundles and compatibility snapshots
+are retained under `.build/rr-r10-task8` and native test temporary directories.
+
+Development documentation changes remain pending later authorized bound-root
+deployment and catalog acceptance. They do not change the installed accepted
+snapshot or authorize a new live operation. Task 7A's completed checks remain
+closed.
+
+## Last verified live checkpoint
+
+- Installed app 0.1.6, schema v14, exposes 21 tools. The Task 8 development
+  candidate exposes 24 tools; no replacement was installed here.
+- RR-R10 has 16 active task rows. Fresh complete inventory matched the retained
+  Task 7A task-domain fingerprint, establishing revision 12. The typed
+  `completeTicketTask` request `C0FFDCA0-7592-4317-A3CD-0203E21D416E` for
+  `RR-R10` / `rr-r10-task-8` committed revision **13** and audit
+  `25B157F9-1877-487C-A0B3-CE198AD70528`; exact replay returned the same result.
+  This establishes completion through the typed result and preservation
+  association; inventory does not return task rows and no physical checked-row
+  observation is claimed.
+- Complete post-inventory contains the same one plan plus 16 task rows
+  (task-domain count 17), with digest
+  `b02d047088233d7d1977ded9caf9d2acbcbeeb4cc80368b13659ed0c1c749d44`.
+  Only the task-domain fingerprint changed. All 404 prior audit and 120 receipt
+  fingerprints remain, with exactly one new audit and receipt (405/121 total).
+  All lane/goal, binding, root, evidence and other preservation groups match.
+  The exact request/results and before/after inventories are retained in the
+  protected 2026-09-02 Task 8 companion records alongside Task 7A records.
+- RR-R10 remains In progress in the remediation phase. The original active
+  phase `RR-ROADMAP` was restored, audit
+  `1DF40288-7DEE-4BC4-BF34-D859137FAADC`, with exact replay and preserved
+  lane/goal state.
+- Accepted catalog v1 contains 213 artifacts at digest
   `07f804508a5053f1c5644de5f5f8142fb3f5c0531d850ebe3195d3cf9bdf476e`.
-  Audit `E89F7619-BF0A-45BE-94B0-DA2CA6F71D28` replayed exactly; complete
-  readback contains 404 audits/120 receipts. The brief is completed and
-  non-authoritative; the recovery runbook remains active supporting material.
-- The first catalog call returned `appUnavailable` after the maintenance host
-  exited. UI inspection inadvertently opened normal mode. The app was closed
-  and explicit commands maintenance restored; fresh inventory showed no data,
-  audit or receipt change. The retained original request then succeeded.
+  Acceptance audit `E89F7619-BF0A-45BE-94B0-DA2CA6F71D28` replayed exactly.
+  Task 7A and Task 8 briefs are completed/non-authoritative in the development
+  catalog. The Task 7A recovery runbook remains supporting material. The
+  development catalog has 215 artifacts and remains pending deployment and
+  acceptance. Owner state may change during ordinary use.
 
-## Blocker, risks and next eligible work
+## Remaining limits and next work
 
-Finder recreated `docs/.DS_Store` after the original quarantine. Its exact
-second quarantine is now complete under delegated authorization; no repeated
-quarantine loop is authorized. The older dirty saved checkout and its
-unrelated files remain preserved. Only the approved documentation paths were
-deployed; the final closeout catalog, generated indexes and evidence agree.
+The pane-height and scroll-affordance issue is explicitly deferred by the
+owner to [Issue #9](https://github.com/joeroberts/release-radar/issues/9).
+Ordinary scrolling reaches all rows. The accepted physical-keyboard,
+spoken-VoiceOver and native macOS text-sizing limits remain in the
+[Task 5 verification record](evidence/2026-09-02-rr-r10-task-5-ui.md).
+A further bound-root Finder metadata recurrence needs a bounded remedy; no
+repeated quarantine loop is authorized.
 
-The owner confirmed that the remaining rows are reachable by scrolling in the
-1456×1098 stacked view. Its fixed-height pane and unclear scroll affordance
-are explicitly deferred to [Issue #9](https://github.com/joeroberts/release-radar/issues/9).
-The UI-control sessions could not physically verify scrolling; this is owner
-observation, not reviewer runtime evidence. No repair or new task-plan row is
-included in Task 7A.
+Protected requests, backups, old app and quarantines retain their recorded
+custody through at least 2026-10-02. Temporary outputs remain retained; no
+cleanup is authorized. The older dirty bound checkout remains preserved.
 
-Task 8 is next eligible only after coordinator verification of the single
-merged Task 7A PR and release of the caller hold. A further Finder-file
-recurrence requires identifying its producer or trigger and a bounded remedy.
-
-## Retention and prior delivery references
-
-Exact requests, inventories, both backups, original quarantine and the
-unmigrated disposable copy remain in their owner-designated protected
-locations, retained through at least 2026-10-02. Task 7A durable tests and
-documents remain in this repository. Temporary build/test/runtime/capture
-output remains under `.build/rr-r10-task7a` and XCTest temporary locations;
-earlier recovery material retains its existing custody terms. No cleanup is
-authorized or performed.
-
-Closed delivery detail remains in the existing [Historical MDCP closeout record](archive/2026-09-02-progress-through-mdcp-closeout-and-rr-r10-review.md),
-[Historical progress through M6B](archive/2026-09-02-progress-through-mdcp-m6b.md),
-[task-brief index](task-briefs/README.md),
-[Task 5 UI verification and limitations](evidence/2026-09-02-rr-r10-task-5-ui.md),
-[Task 6 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md)
-and [Task 7 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md).
+Task 9 is unopened. It becomes eligible after Task 8's implementation,
+verification, independent review, exact live completion, documentation/brief
+reconciliation and PR merge are complete and verified by the coordinator.
