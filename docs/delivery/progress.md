@@ -3,13 +3,14 @@
 ## Current state
 
 - Outcome: M2–M5 accepted and pushed; M6A initial owner preflight performed
-- Active task: M6A remaining exact activation approval
+- Active task: M6A approved activation; catalog preflight stopped on Finder metadata
 - Last complete task: M5 — Guidance-v2 Compatibility
 - Authorization: The owner authorized development, checks, independent review,
   in-scope corrections, delivery records, and normal commit/push for the MDCP
   program. M6A initial preflight and the separately proposed installed-app
-  broker recovery are approved. Installation, disposable/owner migration,
-  repository activation, handoff, and binding retain their exact live gates.
+  broker recovery were approved, followed by explicit approval of the exact
+  remaining activation runbook. Its known actions remain authorized; unexpected
+  owner-root content must be resolved before the next live mutation.
   Latest owner direction: finish and deliver M6A, then stop for a new session.
   Do not open M6B, M7, M8, Task 4B, or Issue #1 in this session.
 - Controlling decision: root `AGENTS.md` and
@@ -20,17 +21,17 @@
 - Current risk: The synthetic regression confirmed unnecessary ancestor
   directory-read requirements. The accepted correction uses directory search
   access with the same no-follow/identity protections. The corrected signed app
-  now returns complete live legacy inventory with unchanged stored state. Selected-root catalog deployment and the remaining
-  installation/migration/handoff/binding actions are still gated.
-- Verified owner state: Protected pre-recovery and post-recovery backups are
-  complete. Supported startup restored the exact installed broker; the app and
-  lifecycle writer then exited. Read-only maintenance exited, and all captured
-  owner-file bytes and sidecar absence remained unchanged. No migration,
-  installation, handoff, binding, adoption, or document move occurred.
-- Next action: Obtain approval for the completed exact remaining
-  [M6A runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md),
-  then execute its disposable proof, deployment, installation, migration,
-  handoff, binding, and relaunch checks.
+  now returns complete live legacy inventory with unchanged stored state.
+  Deployment exposed seven pre-existing Finder metadata files forbidden by the
+  catalog. Their exact protected-quarantine proposal awaits owner approval.
+- Verified owner state: Protected backups are complete. The disposable
+  schema-10 → schema-13 → restored-schema-10 proof passed. Every maintenance host
+  exited. Owner database/recovery bytes and sidecar absence remain unchanged;
+  the accepted repository deployment is present. No installation, owner
+  migration, handoff, binding, adoption, or document move occurred.
+- Next action: Resolve the exact seven-file Finder metadata quarantine request,
+  then resume the already-approved installation, owner migration, handoff,
+  binding, and relaunch sequence. No source workaround is proposed.
 - State: M2A CORRECTION ACCEPTED; M6A IN PROGRESS
 - Prior checkpoint `MDCP-COMPAT-1`:
   `dd32d8d0d7f333afc7367e5f2cc505d9e889c8cf`. Replacement `MDCP-COMPAT-2` is
@@ -428,79 +429,62 @@
   existing cleanup authorization after verified process exit. Protected owner
   material and both retained compatibility candidates remain untouched.
 
-## MDCP M6A — Preparation and Initial Preflight
+## MDCP M6A — Approved Activation in Progress
 
-- Authorization: "m6a is approved" approved initial steps 1–3 and recommended
-  target, protected-location, custody, and retention defaults. The subsequent
-  "approved" authorized the concrete backup-first recovery: normal startup of
-  the installed app, including its normal storage/notification/lifecycle
-  effects, broker verification, graceful close, then resumed preflight.
-- Recovery: Exact installed app/helper identities verified at version 0.1.5.
-  Approved clients and lifecycle helper were quiesced after exact executable
-  checks. The complete database/recovery set and app/plugin/configuration/
-  guidance recovery material were protected. Normal installed-app startup
-  restored its broker; the app quit and remaining lifecycle writer exited.
-  Separate pre-recovery and post-recovery copies have identical file bytes.
-- Read-only result: The frozen 0.1.6 candidate ran with explicit read-only mode
-  and exact existing-store override. Its packaged AgentTools returned schema
-  10, one saved root, seven `filePath` evidence rows, no binding, and ten fixed
-  preservation domains. Full owner identities and results remain protected.
-  The host quit and all captured owner files/sidecar absence matched baseline.
-- Initial failed observation: The prior inventory was incomplete with `catalogInvalid` and
-  unavailable guidance, without a catalog-validation error. Independent source
-  diagnosis places that failure before validation, in reader creation or
-  guidance reading. The live root has marker-free guidance and no catalog; the
-  native unsandboxed checker reports the expected missing catalog, which alone
-  would permit complete legacy inventory. Ancestor directory-read requirements
-  are the bounded hypothesis; no actual sandbox-denial log was established.
-  Live operations paused for the M2A correction recorded above. Its accepted
-  replacement then resumed the already-approved read-only preflight.
-- Corrected live verification: Exact-ID inventory through the signed replacement
-  returns `isComplete=true`, schema 10, legacy guidance with the expected
-  missing-catalog observation, seven `filePath` records, and no binding. Saved
-  identities, evidence, roots, all ten fixed domains, audits, and receipts equal
-  the prior discovery. After normal Quit and verified process exit, all nine
-  recorded source-presence/byte states still match the protected baseline.
-- Remaining approval package: The protected exact companion names candidate,
-  store/project/root, backup/disposable locations, CLI, source/deployment
-  revisions, catalog snapshot, guidance diffs, two complete mutation requests,
-  recovery and retention terms. It proposes disposable restoration/migration,
-  accepted repository deployment at unchanged paths, exact installation,
-  schema-13 migration, v2 handoff, binding/replay/relaunch, and M6A closeout.
-  The deployment explicitly includes previously accepted instruction-policy
-  changes; the handoff itself only appends its managed block. No remaining
-  activation action has run or received its final exact approval.
-- Durable artifacts: The [activation runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
-  is supporting procedure, not an execution approval or competing ledger.
-  Exact targets, requests/results, backup manifests, immutable software copies,
-  and owner screenshots are in the owner-approved protected companion. Retain
-  them through M8 and at least the approved deadline; disposal is separately
-  gated. Temporary tool-created screenshot originals remain retained under
-  those owner-data terms. The frozen app/checker remain temporary build outputs.
-- Remaining activation inputs: Exact corrected candidate, complete inventory,
-  selected-root catalog deployment, disposable restoration/migration, install,
-  guidance-only handoff, binding/replay, and precise recovery requests must be
-  concrete before remaining live approval. The selected owner checkout has no
-  catalog; staging in the development worktree does not activate that root.
-- Plugin constraint: Supported external CLI installation can satisfy exact
-  plugin identity while preserving/reporting its stale managed lifecycle
-  receipt. Independent Architecture/Security review accepted that explicit
-  limitation; clean lifecycle status and normal startup are not implied.
-- Review: Earlier independent procedure review accepted backup of the prior
-  migration snapshot, candidate-client inventory, explicit store overrides,
-  verified host exits, and complete equality comparisons. M6A's final QA,
-  Architecture, and Security/Privacy acceptance remains pending actual execution.
-- Preparation review: Independent QA confirmed exact baseline equality and
-  sufficient copy/migration/restoration comparisons. Architecture/Security
-  review required active operator-document lifecycle before initial binding
-  and explicit installation-failure recovery. Both were incorporated without
-  new application behavior or another catalog-acceptance operation. Native
-  documentation validation passes after the one affected index regeneration.
-  Affected Architecture/Security review returned GO with zero Required findings;
-  the remaining package is ready for exact owner approval.
-- Session boundary: Deliver M6A and its proposed reconciliation inventory, then
-  stop. M6B and later slices require continuation in a new session; no adoption
-  or document relocation is authorized by M6A.
+- Authorization: The owner approved initial preflight/defaults, separately
+  approved backup-first installed-app broker recovery, and then approved the
+  exact remaining activation runbook. These approvals remain valid. Latest
+  direction is to deliver M6A and stop before M6B for a new session.
+- Initial owner preflight: Protected pre-/post-recovery copies are complete.
+  Supported installed-app startup restored the exact broker, then ordinary
+  writers exited. The accepted reader correction returned complete schema-10
+  legacy inventory: seven `filePath` records, one exact root, no binding, ten
+  preservation domains, 358 audits, and 99 receipts. Original stored state and
+  captured bytes were preserved. Six records resolve; one existing unsafe-path
+  record remains unavailable. Full identities/results stay protected.
+- Approved operation package: The [activation runbook](task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
+  and protected companion define exact candidate/store/project/root, backup
+  custody, source/deployment revisions, catalog snapshot, guidance diffs, two
+  immutable replay requests, installation, migration, recovery, and retention.
+  Preparation QA and Architecture/Security returned GO with zero Required
+  findings. Active operator-document lifecycle preserves applicability through
+  later recovery without authorizing another slice.
+- Disposable proof: The original copy exactly matched complete schema-10
+  inventory. Copy-only migration produced schema 13 without binding and
+  preserved every original evidence record, root, fixed domain, audit, and
+  receipt. The complete migrated inventory matched after read-only relaunch.
+  The migrated set was retained, then the original backup was restored; typed
+  readback exactly reproduced the initial schema-10 inventory. Every host
+  exited. Owner database bytes remained unchanged throughout. Independent QA
+  `/root/m3c_qa` returned terminal GO for this copy property with no Required
+  findings; added v11 metadata/unassessed phase plans and empty v12/v13 domains
+  match the accepted migration behavior. Final owner migration/binding review
+  remains pending.
+- Repository deployment: The selected owner checkout fast-forwarded cleanly to
+  approved revision `534b47c43f4d38e18d2cf951cedaa1925cb8329c` on its existing
+  branch. Guidance matches the separately approved instruction-policy diff;
+  pre-handoff guidance and ledger copies are protected. Document paths remain
+  unchanged.
+- Current stop: The deployed catalog check refused seven pre-existing
+  `.DS_Store` files. Their exact protected-quarantine proposal awaits owner
+  approval. The files remain unchanged and the quarantine destination does not
+  exist. Installation, owner migration, v2 handoff, binding, and adoption have
+  not started. No source workaround or document relocation is proposed.
+- Remaining execution: After the exact metadata disposition, continue the
+  already-approved app/plugin installation, owner migration and preservation,
+  v2 handoff, binding/replay, read-only relaunch, and independent final QA,
+  Architecture, and Security/Privacy checks. External plugin installation
+  preserves the old managed receipt and may report Modified/Needs repair;
+  ordinary startup is not authorized merely to repair that receipt.
+- Retention: All owner backups, disposable/restored/migrated sets, requests,
+  results, and retained screenshots remain under approved custody through M8
+  and at least the agreed deadline. Deletion is separately gated. One initial
+  disposable UI screenshot expired before copying; typed readback is the
+  direct evidence for that transition. Both compatibility app/checker copies
+  remain temporary build inputs; protected owner material is not generic
+  disposable build output.
+- Session boundary: Deliver M6A with its proposed reconciliation inventory and
+  handoff, then stop. Do not open M6B, M7, M8, Task 4B, or Issue #1 here.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.

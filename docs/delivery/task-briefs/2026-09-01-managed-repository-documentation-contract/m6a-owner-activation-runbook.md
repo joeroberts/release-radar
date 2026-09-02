@@ -1,14 +1,14 @@
 # M6A owner activation runbook
 
-**Status: Initial preflight and broker recovery complete; remaining exact
-activation package prepared for approval.**
-The owner approved initial steps 1–3 and separately approved backup-first
-installed-app startup to restore the broker. After the accepted M2A correction,
-the signed replacement returns complete live legacy inventory: schema 10,
-seven path records, exact saved identities, and no binding. All stored fields
-and captured source bytes remain unchanged after host exit. The remaining
-installation, disposable/owner migration, selected-root deployment, handoff,
-and binding actions have not run. Deliver M6A, then stop before M6B as requested.
+**Status: Exact remaining activation package owner-approved; execution paused
+at deployed-catalog validation.**
+Initial preflight, broker recovery, and disposable backup/migration/restoration
+proof are complete. The approved repository revision is deployed at unchanged
+document paths. Seven pre-existing Finder metadata files fail the catalog's
+prohibited-content rule; their exact quarantine proposal awaits approval.
+No app/plugin installation, owner migration, v2 handoff, binding, or adoption
+has run. Existing approval remains valid for the remaining known actions.
+Deliver M6A, then stop before M6B as requested.
 
 This supporting procedure accompanies the [M6A brief](m6a-owner-activation-inventory-brief.md).
 Exact owner locations, inventory, requests, custody, and approvals belong in
@@ -129,6 +129,8 @@ original/deployed/activated guidance copies and exact diffs, the full canonical
 catalog, and complete handoff/binding requests for replay. Its final repository
 activation revision is recorded after this documentation preparation is pushed;
 the application source remains the exact compatibility checkpoint above.
+The owner approved the package with deployment revision
+`534b47c43f4d38e18d2cf951cedaa1925cb8329c`.
 
 Catalog target: repository `e7475429-ef51-4368-ad9e-61d9073d5a4f`, version **1**,
 digest `3872999314072d41cb7d0ce213e953d11c5c0e8d817d7ac60ad98736dad27a9a`,
@@ -155,8 +157,8 @@ closeout syncs the approved guidance and concise ledger into development, and
 the completion ledger into the selected root after handoff. Any resulting
 approved owner-checkout guidance/ledger changes are retained and disclosed for
 the next session. Ordinary writers stay closed. No adoption or M6B execution
-is included. The owner's original program gate requires explicit approval of
-this concrete remaining package before it runs.
+is included. The owner's original live-operation gate has been satisfied for this package;
+unexpected owner-root contents still require their exact disposition.
 
 ## Plugin installation limitation
 
