@@ -54,8 +54,8 @@ goal/completion/acceptance operation occurred during the product repair.
 
 ## Next eligible work
 
-No successor product work is opened. This task's remaining authorization is only
-its PR #17 source closeout; all implementation and installed checks are complete.
+No successor product work is opened. Authorization covers this repair and its
+PR #17 source closeout only; no additional implementation or review is required.
 Do not mutate RekonUILib or Pursuit to work around Release Radar defects.
 [Issue #9](https://github.com/joeroberts/release-radar/issues/9) remains deferred.
 Existing protected records, backups, build output and diagnostics remain intact.
