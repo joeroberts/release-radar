@@ -1,7 +1,8 @@
 # MDCP M3C Brief: Evidence Readback and Repository-Root Relocation
 
-**Status:** Proposed and unopened. M3B acceptance, M1 owner approval, and
-separate M3C authorization are required before work.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

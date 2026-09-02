@@ -1,8 +1,8 @@
 # MDCP M8 Brief: Runtime Acceptance and Closeout
 
-**Status:** Proposed and unopened. M7 acceptance and separate authorization for
-catalog-acceptance mutation, tests, app launch/readback, owner-state access,
-and closeout are required.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

@@ -1,7 +1,8 @@
 # MDCP M6B Brief: Adopt Exact Managed Evidence
 
-**Status:** Proposed and unopened. M6A acceptance and separate explicit owner
-authorization for the exact named evidence mutation are required.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

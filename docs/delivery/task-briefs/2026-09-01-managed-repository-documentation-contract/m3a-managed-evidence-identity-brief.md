@@ -1,7 +1,8 @@
 # MDCP M3A Brief: Add Managed Evidence Identity
 
-**Status:** Proposed and unopened. M3A0 acceptance, M1 owner approval, and
-separate M3A authorization are required before work.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

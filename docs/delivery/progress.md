@@ -32,8 +32,11 @@
   assertion that the new task tool is absent. It preserves all six MDCP tools;
   the intended inventory is 19 existing plus two new tools.
 - Native catalog/index/link/checksum validation and `git diff --check` pass.
-  All 194 existing catalog entries and the 16 task labels/titles/order are
+  All 194 existing artifact IDs/paths and the 16 task labels/titles/order are
   preserved; the catalog adds only the brief and historical progress record.
+  Completed MDCP brief lifecycle metadata and status headers are reconciled.
+  The correction passed native current-tree/transition checks and independent
+  documentation review; no runtime tests were rerun.
   Independent review accepted the plan, brief and authorization/preservation
   boundaries. No product code, runtime tests or owner-state operations are
   part of this planning slice.
@@ -46,7 +49,11 @@
   delivery state were preserved at M8. Ordinary live use may subsequently
   change owner state, so future installs require fresh authorized readback.
 - This development candidate adds the Task 4B brief and a historical progress
-  record. Its catalog is repository-prepared only, pending separately
+  record, and corrects completed MDCP brief lifecycle metadata. The branch
+  preserves the missing activation revision before the completion revision;
+  later catalog deployment must accept those revisions in order. The M6A
+  runbook remains a supporting preservation/recovery reference. This catalog
+  is repository-prepared only, pending separately
   authorized deployment to the exact bound root and typed acceptance. The
   live bound checkout has not been changed; no managed-current claim is made
   for the development catalog.

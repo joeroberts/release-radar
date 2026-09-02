@@ -1,7 +1,8 @@
 # MDCP M5 Brief: Freeze the Guidance-v2 Compatibility Candidate
 
-**Status:** Proposed and unopened. M4 acceptance, M1 owner approval, and
-separate M5 authorization are required before work.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

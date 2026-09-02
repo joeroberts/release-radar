@@ -1,10 +1,8 @@
 # MDCP M6A Brief: Owner Activation, Migration, and Read-Only Inventory
 
-**Status:** Active operator contract. The owner approved the exact runbook and
-metadata quarantine; installation, migration, deployment, handoff, binding,
-and relaunch readback are verified. Current closeout status is in the ledger. This
-contract remains applicable to preservation/recovery through M8; that lifecycle
-status authorizes no later slice. Deliver M6A, then stop for a new session.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

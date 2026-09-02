@@ -1,7 +1,8 @@
 # MDCP M4 Brief: Stage This Repository's Catalog In Place
 
-**Status:** Proposed and unopened. M2-M3 acceptance, M1 owner approval, and
-separate M4 authorization are required before repository changes.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

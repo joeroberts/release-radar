@@ -1,7 +1,8 @@
 # MDCP M2A Brief: Catalog Contract and Validator
 
-**Status:** Proposed and unopened. M1 owner approval and separate M2A
-authorization are required before RED, implementation, tests, or Git actions.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 

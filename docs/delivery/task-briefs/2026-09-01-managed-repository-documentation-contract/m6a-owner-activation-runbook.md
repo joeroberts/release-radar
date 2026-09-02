@@ -1,13 +1,17 @@
 # M6A owner activation runbook
 
-**Status: M6A accepted; stop after delivery before M6B.**
-The exact app/plugin is installed, owner storage is schema 13, and v2 guidance
-and the accepted binding persist. The seven original legacy rows are unchanged;
-only the approved ticketless handoff row and two audit/receipt pairs were added.
-Seven pre-existing Finder metadata files were quarantined under separate owner
-approval; their protected copies remain retained. No adoption or document move
-occurred. Deliver M6A, then stop before M6B as requested. This operator contract
-remains active for later preservation/recovery without authorizing later work.
+**Status: M6A completed; supporting preservation/recovery reference.**
+MDCP closed after M8 acceptance and owner approval of ordinary live use.
+The procedures below record the delivered activation work; they do not reopen
+M6A or authorize another operation. Preservation, recovery, and retention terms
+remain applicable to the retained protected copies.
+
+At M6A delivery, the exact app/plugin was installed, owner storage was schema
+13, and v2 guidance and the accepted binding persisted. The seven original
+legacy rows were unchanged; only the approved ticketless handoff row and two
+audit/receipt pairs were added. Seven pre-existing Finder metadata files were
+quarantined under separate owner approval; their protected copies remain
+retained. Evidence adoption and document movement occurred in later slices.
 
 This supporting procedure accompanies the [M6A brief](m6a-owner-activation-inventory-brief.md).
 Exact owner locations, inventory, requests, custody, and approvals belong in

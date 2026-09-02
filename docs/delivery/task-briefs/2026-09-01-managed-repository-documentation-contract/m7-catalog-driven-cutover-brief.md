@@ -1,9 +1,8 @@
 # MDCP M7 Brief: Catalog-Driven Repository Cutover
 
-**Status:** Owner-authorized cutover applied and independently accepted.
-The exact six moves and reviewed documentation delta are deployed in both
-roots. Native repository checks pass. M7 delivery and M8 acceptance/readback
-remain the next operations under the approved exact package.
+**Status:** Completed. Retained as a non-authoritative record of the delivered
+task scope; the original execution instructions below do not reopen work.
+Current delivery state and authorization are in [progress.md](../../progress.md).
 
 ## Objective and user-visible outcome
 
