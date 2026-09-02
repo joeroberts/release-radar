@@ -6,23 +6,37 @@
   M6B adopted five evidence locators; M7 deployed the six stable-ID document
   moves; M8 accepted the catalog and verified exact replay/relaunch. Delivery
   checkpoints are `b9b1932`, `004e2d2`, `d1b974a` and final closeout `a66bf9a`.
-- RR-R10 Tasks 1A/1B/2A/2B/3/4A/4B are delivered. The coordinator verified
-  [PR #5](https://github.com/joeroberts/release-radar/pull/5) merged into
-  `codex/release-radar-mvp` at 2026-09-02T10:29:21Z, merge `ed630dd`.
-- Task 5 is implemented, independently reviewed and explicitly accepted in its isolated worktree on
-  `codex/rr-r10-task-5`, based on that merge. Implementation, validation,
-  commit/push/PR/merge and routine decisions are authorized through coordinator
-  `01a06184-6387-7c42-878e-695db0481a18`. On 2026-09-02 the coordinator accepted
-  the concrete UI package under owner delegation, before any Task 5 commit,
-  with the documented platform/input-tool limitations. Commit/push/PR/merge
-  is released; the coordinator verifies integration before opening Task 6.
-  High-risk/destructive owner or shared-state actions require the human owner.
+- RR-R10 Tasks 1A/1B/2A/2B/3/4A/4B/5 are delivered. The coordinator verified
+  [Task 5 PR #6](https://github.com/joeroberts/release-radar/pull/6) merged into
+  `codex/release-radar-mvp` at 2026-09-02T11:35:34Z, merge `cdc3e6e`.
+- Task 6 is implemented, directly verified and independently reviewed in its
+  isolated worktree on
+  `codex/rr-r10-task-6`, based on that merge. Coordinator
+  `01a06184-6387-7c42-878e-695db0481a18` accepted the canonical brief, initial
+  sequencing and existing-evidence interpretation on 2026-09-02 under owner
+  delegation. Focused validation, independent review, commit/push/PR/merge
+  are authorized and released for delivery. High-risk/destructive owner or
+  shared-state actions require the human owner. Task 7 remains unopened.
 - The original bound checkout, older deployed app and intentional dirty
   documentation remain preserved. No owner installation, live bootstrap,
   catalog deployment/acceptance or shared service operation is authorized here.
 
 ## Controlling work and verification
 
+- Completed [Task 6 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md)
+  records the policy/test scope. Debug build-for-testing passed. The focused
+  run passed 17 new policy, 50 Store and 32 Task policy tests (99 total).
+  Independent Code/QA, Architecture, Security/Privacy and documentation review
+  identified one required byte-identity defect. Two regression tests reproduced
+  it; the bounded UTF-8 identity correction passed all 19 policy tests and
+  independent correction review. No Required finding remains. Native
+  documentation and diff checks pass. Only the affected policy suite was rerun;
+  the successful 82 existing checks remain terminal.
+- The policy preserves exact revisions, coverage and assignment/audit history,
+  enforces current Ready and owner-origin acceptance, and adopts only explicit
+  migration-continuation work into its Draft goal during finalization. Linked
+  child evidence marked unavailable blocks acceptance; absent evidence adds no
+  requirement. No ticket writer routing or bridge commands were added.
 - [RR-R10 plan](plans/2026-08-29-delivery-goals-roadmap-readiness.md) controls
   remaining scope. The completed [Task 5 brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-5-ticket-task-presentation-brief.md)
   retains its delivered scope. The coordinator accepted the brief and bounded Core/AppModel support on
@@ -57,7 +71,8 @@
   is repository-prepared only, pending separately
   authorized deployment to the exact bound root and typed acceptance. The
   live bound checkout has not been changed; no managed-current claim is made
-  for the development catalog.
+  for the development catalog. Task 5 evidence and the completed Task 6 brief
+  are also repository-prepared additions pending that separate acceptance.
 - Whole transport/lifecycle test classes can change the shared macOS bridge.
   Future tasks must retain the brief's safe-selector discipline; Task 4B's
   completed controlled run does not authorize later shared-service operations.
@@ -89,7 +104,14 @@ Task 5 temporary builds, copied inert hosts, test results and raw captures
 remain under `.build/rr-r10-task5`; its synthetic XCTest fixture directories
 are also retained. Durable Task 5 evidence is in the repository and catalog.
 
-Task 5 product work is accepted. Task 6 is next eligible after the coordinator
-verifies Task 5's PR merge and must be started by the coordinator. The new
+Task 6 temporary native build logs, DerivedData, result bundles and PR body
+remain under `.build/rr-r10-task6`; synthetic `RR-R10-Task6-*` fixture directories
+and inert XCTest host output are retained. Production code, tests and the
+accepted brief are durable repository files; no deliverable exists only in
+scratch storage. No cleanup was performed or authorized.
+
+Task 6 implementation is complete; PR integration is the remaining delivery
+step. Task 7 is next eligible only after the coordinator verifies Task 6's merge
+and opens that checkpoint. The new
 tools remain development-only until Tasks 5, 6 and 7 are accepted; Task 7A owns
 the later owner installation and live bootstrap.
