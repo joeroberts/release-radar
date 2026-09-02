@@ -22,11 +22,11 @@ separate actions.
 
 ## Controlling references
 
-- `docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md`
+- `docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md`
 - `docs/architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md`
 - `docs/design/release-radar-delivery-goals-phase-board-design.md`
 - `docs/design/mockups/phase_board.png`
-- `docs/superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md`
+- `docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md`
 
 The approved five-lane Phase Board, ticket-card hierarchy, density behavior,
 and selected-ticket inspector remain the visual baseline. Ticket Tasks add
@@ -475,7 +475,7 @@ feature. Task 11B reuses that exact approved runbook.
 
 The installed RR-R10 task plan is created only through the typed, audited,
 revision-checked requests above. Its catalog is the active titled sequence in
-`docs/superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md`, but the
+`docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md`, but the
 runtime does not read that Markdown. Task 7A's bootstrap request contains
 explicit machine IDs, visible labels, titles, and ordering. All 16 additions
 are born active and pending, and successful creation returns revision 1; the

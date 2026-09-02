@@ -16,6 +16,7 @@
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
+| eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7 | [docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md](2026-08-29-delivery-goals-roadmap-readiness-design.md) | document | controlling &#40;product.delivery-goals-readiness&#41; | active | none | none |
 | da877bf9-71c1-4b8b-8431-298121a2f41e | [docs/design/README.md](README.md) | collectionIndex | supporting | active | none | none |
 | 98f5320c-208e-4ca1-aacf-c8df5701a1d4 | [docs/design/agent-driven-delivery-dashboard-design.md](agent-driven-delivery-dashboard-design.md) | document | controlling &#40;product.dashboard&#41; | active | none | none |
 | 37a68186-3912-480d-a755-de5cfdfecb9f | [docs/design/cloudkit-iphone-companion-draft.md](cloudkit-iphone-companion-draft.md) | document | supporting | proposed | none | none |

@@ -60,7 +60,8 @@
         "Current progress ledger",
         "Task briefs",
         "Verification evidence",
-        "Historical archive"
+        "Historical archive",
+        "Implementation plans"
       ],
       "prohibitedContents": [
         "Temporary build output",
@@ -401,55 +402,19 @@
       "isLeaf": true
     },
     {
-      "collectionID": "superpowers",
-      "path": "docs/superpowers",
-      "parentCollection": "docs",
-      "purpose": "Existing plans/specification transition; root-index enumeration only until M7",
+      "collectionID": "delivery.plans",
+      "path": "docs/delivery/plans",
+      "parentCollection": "delivery",
+      "purpose": "Current implementation plans; progress determines task eligibility",
       "allowedContents": [
-        "Existing plans and specs collections"
+        "Implementation plans"
       ],
       "prohibitedContents": [
-        "Temporary build output",
         "Owner data and credentials",
-        "New content",
-        "In-subtree generated indexes"
-      ],
-      "isLeaf": true
-    },
-    {
-      "collectionID": "superpowers.plans",
-      "path": "docs/superpowers/plans",
-      "parentCollection": "superpowers",
-      "purpose": "Existing implementation plans retained in place until M7",
-      "allowedContents": [
-        "Existing five implementation plans"
-      ],
-      "prohibitedContents": [
-        "Temporary build output",
-        "Owner data and credentials",
-        "New content",
-        "In-subtree generated indexes"
+        "Temporary build output"
       ],
       "isLeaf": true,
       "firstRead": "cd044b85-6519-4330-ae3c-dc0d9c20a65e",
-      "archiveDestination": "delivery.archive"
-    },
-    {
-      "collectionID": "superpowers.specs",
-      "path": "docs/superpowers/specs",
-      "parentCollection": "superpowers",
-      "purpose": "Existing Delivery Goals specification retained in place until M7",
-      "allowedContents": [
-        "Existing Delivery Goals and readiness specification"
-      ],
-      "prohibitedContents": [
-        "Temporary build output",
-        "Owner data and credentials",
-        "New content",
-        "In-subtree generated indexes"
-      ],
-      "isLeaf": true,
-      "firstRead": "eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7",
       "archiveDestination": "delivery.archive"
     }
   ],
@@ -3377,11 +3342,11 @@
     },
     {
       "artifactID": "acb2bdfe-b052-40bc-aac7-80742791aa50",
-      "path": "docs/superpowers/plans/2026-08-23-release-radar-mvp.md",
+      "path": "docs/delivery/archive/2026-08-23-release-radar-mvp.md",
       "kind": "document",
       "lifecycle": "superseded",
       "authorityLevel": "nonAuthoritative",
-      "parentCollection": "superpowers.plans",
+      "parentCollection": "delivery.archive",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -3392,11 +3357,11 @@
     },
     {
       "artifactID": "b7ad406a-3131-4eaa-8f8b-fbee0fcd26dc",
-      "path": "docs/superpowers/plans/2026-08-25-release-radar-remediation.md",
+      "path": "docs/delivery/archive/2026-08-25-release-radar-remediation.md",
       "kind": "document",
       "lifecycle": "superseded",
       "authorityLevel": "nonAuthoritative",
-      "parentCollection": "superpowers.plans",
+      "parentCollection": "delivery.archive",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -3407,11 +3372,11 @@
     },
     {
       "artifactID": "0ff7a384-fbb1-4ff1-bb0b-fbbd27b466a3",
-      "path": "docs/superpowers/plans/2026-08-27-codex-plugin-lifecycle.md",
+      "path": "docs/delivery/archive/2026-08-27-codex-plugin-lifecycle.md",
       "kind": "document",
-      "lifecycle": "completed",
+      "lifecycle": "archived",
       "authorityLevel": "nonAuthoritative",
-      "parentCollection": "superpowers.plans",
+      "parentCollection": "delivery.archive",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -3422,12 +3387,12 @@
     },
     {
       "artifactID": "cd044b85-6519-4330-ae3c-dc0d9c20a65e",
-      "path": "docs/superpowers/plans/2026-08-29-delivery-goals-roadmap-readiness.md",
+      "path": "docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md",
       "kind": "document",
       "lifecycle": "active",
       "authorityLevel": "controlling",
       "authorityRole": "delivery.rr-r10-implementation",
-      "parentCollection": "superpowers.plans",
+      "parentCollection": "delivery.plans",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -3438,11 +3403,11 @@
     },
     {
       "artifactID": "7d88279f-a192-4b4e-83ab-36e144a734dd",
-      "path": "docs/superpowers/plans/2026-08-29-release-radar-active-phase-selection.md",
+      "path": "docs/delivery/archive/2026-08-29-release-radar-active-phase-selection.md",
       "kind": "document",
-      "lifecycle": "completed",
+      "lifecycle": "archived",
       "authorityLevel": "nonAuthoritative",
-      "parentCollection": "superpowers.plans",
+      "parentCollection": "delivery.archive",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -3453,12 +3418,27 @@
     },
     {
       "artifactID": "eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7",
-      "path": "docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md",
+      "path": "docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md",
       "kind": "document",
       "lifecycle": "active",
       "authorityLevel": "controlling",
       "authorityRole": "product.delivery-goals-readiness",
-      "parentCollection": "superpowers.specs",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "d8f875e8-c5ec-486b-9e76-068003c5fa01",
+      "path": "docs/delivery/archive/2026-09-02-progress-through-mdcp-m6b.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
@@ -3467,22 +3447,5 @@
         "policy": "notApplicable"
       }
     }
-  ],
-  "transitionalSubtree": {
-    "path": "docs/superpowers",
-    "indexedAncestor": "docs",
-    "collectionIDs": [
-      "superpowers",
-      "superpowers.plans",
-      "superpowers.specs"
-    ],
-    "artifactIDs": [
-      "acb2bdfe-b052-40bc-aac7-80742791aa50",
-      "b7ad406a-3131-4eaa-8f8b-fbee0fcd26dc",
-      "0ff7a384-fbb1-4ff1-bb0b-fbbd27b466a3",
-      "cd044b85-6519-4330-ae3c-dc0d9c20a65e",
-      "7d88279f-a192-4b4e-83ab-36e144a734dd",
-      "eeb25b5c-efbd-4669-8ead-43f0a6fbfbb7"
-    ]
-  }
+  ]
 }

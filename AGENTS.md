@@ -7,8 +7,8 @@ These instructions apply to the entire repository.
 Treat the user's explicit request and the approved project artifacts as the
 controlling sources for Release Radar. Current artifacts include:
 
-- `docs/superpowers/plans/2026-08-23-release-radar-mvp.md` for the approved MVP
-  plan and task boundaries
+- `docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md`
+  for the current RR-R10 implementation scope and task boundaries
 - `docs/design/agent-driven-delivery-dashboard-design.md` and
   `docs/design/mockups/` for product and visual design
 - `docs/architecture/ADR-001-release-radar-boundaries.md` for architecture,

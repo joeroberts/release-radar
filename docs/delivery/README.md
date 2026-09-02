@@ -6,7 +6,7 @@
 
 - Path: [docs/delivery](.)
 - Purpose: Current delivery status and durable task/evidence history
-- Allowed contents: Current progress ledger; Historical archive; Task briefs; Verification evidence
+- Allowed contents: Current progress ledger; Historical archive; Implementation plans; Task briefs; Verification evidence
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: [450e84de-703b-4dcd-ad1a-7fddfee0d1d9](progress.md)
 - Archive destination: none
@@ -23,6 +23,7 @@
 
 - [delivery.archive](archive/README.md) — indexed; Historical delivery records; never current task eligibility
 - [delivery.evidence](evidence) — leaf; Durable verification evidence from delivered work
+- [delivery.plans](plans) — leaf; Current implementation plans; progress determines task eligibility
 - [delivery.task-briefs](task-briefs/README.md) — indexed; Reviewed task scopes; current progress determines the open task
 
 ## Leaf collection: delivery.evidence
@@ -74,6 +75,26 @@
 | 3dae8a2b-fa2a-4472-a09b-ad00971e947e | [docs/delivery/evidence/rr10-onboarding-failure.png](evidence/rr10-onboarding-failure.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 199a56ed-2513-436b-ad69-36e4d45eef7c | [docs/delivery/evidence/rr10-projects-overview-board-detail.png](evidence/rr10-projects-overview-board-detail.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | dfa76052-348a-42ae-ae62-4044c29a40b7 | [docs/delivery/evidence/rr10-settings.png](evidence/rr10-settings.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.plans
+
+- Path: [docs/delivery/plans](plans)
+- Purpose: Current implementation plans; progress determines task eligibility
+- Allowed contents: Implementation plans
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [cd044b85-6519-4330-ae3c-dc0d9c20a65e](plans/2026-08-29-delivery-goals-roadmap-readiness.md)
+- Archive destination: [delivery.archive](archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| cd044b85-6519-4330-ae3c-dc0d9c20a65e | [docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md](plans/2026-08-29-delivery-goals-roadmap-readiness.md) | document | controlling &#40;delivery.rr-r10-implementation&#41; | active | none | none |
 
 ### Children
 

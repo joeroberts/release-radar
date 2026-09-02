@@ -8,7 +8,7 @@
 
 **Tech Stack:** Swift 6, SwiftUI, Observation, SQLite3, XCTest, macOS 14+, Xcode project file-system-synchronized groups, existing XPC/MCP bridge.
 
-**Specs:** `docs/superpowers/specs/2026-08-29-delivery-goals-roadmap-readiness-design.md` and `docs/design/release-radar-ticket-tasks-design.md`
+**Specs:** `docs/design/2026-08-29-delivery-goals-roadmap-readiness-design.md` and `docs/design/release-radar-ticket-tasks-design.md`
 
 **Package status:** owner-approved direction; exact planning package pending owner acceptance.
 
