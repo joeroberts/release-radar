@@ -723,7 +723,7 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(
             model.projectGuidanceState(for: attachmentRouteProjectID),
-            .outdated(installed: 0, current: 1)
+            .outdated(installed: 0, current: 2)
         )
         XCTAssertEqual(model.projectRoot(for: attachmentRouteProjectID), folder)
         XCTAssertEqual(try String(contentsOf: agentsURL, encoding: .utf8), outdated)
@@ -734,7 +734,7 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(
             model.projectGuidanceState(for: attachmentRouteProjectID),
-            .handoffIncomplete(version: 1)
+            .handoffIncomplete(version: 2)
         )
 
         let handoff = await AgentCommandDispatcher(
@@ -762,7 +762,7 @@ final class AppRouteTests: XCTestCase {
 
         await model.loadDashboard()
 
-        XCTAssertEqual(model.projectGuidanceState(for: attachmentRouteProjectID), .current(version: 1))
+        XCTAssertEqual(model.projectGuidanceState(for: attachmentRouteProjectID), .current(version: 2))
         XCTAssertEqual(try String(contentsOf: agentsURL, encoding: .utf8), current)
         XCTAssertEqual(bookmarks.accessStarts, bookmarks.accessStops)
     }

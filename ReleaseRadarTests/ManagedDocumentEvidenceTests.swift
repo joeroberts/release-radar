@@ -212,7 +212,7 @@ final class ManagedDocumentEvidenceTests: XCTestCase {
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("ReleaseRadar-Managed-\(UUID().uuidString)")
         try FileManager.default.copyItem(at: source, to: root)
-        try Data("\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged documentation\n\(RepositoryDocumentContract.guidanceEndMarker)\n".utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         return root
     }

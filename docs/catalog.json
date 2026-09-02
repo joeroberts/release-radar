@@ -1972,6 +1972,66 @@
       }
     },
     {
+      "artifactID": "2168caea-798e-4895-acad-27b249b57bf6",
+      "path": "docs/delivery/evidence/mdcp-m5-onboarding-unavailable-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "9f047ff0-f55e-47bb-a46d-5b40d9f51146",
+      "path": "docs/delivery/evidence/mdcp-m5-onboarding-unavailable-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "fb8da0f4-d5e9-4631-b571-5f5ff6c2f017",
+      "path": "docs/delivery/evidence/mdcp-m5-overview-current-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ef0a5b3e-c4de-4007-92ac-36d4cb2ecc5c",
+      "path": "docs/delivery/evidence/mdcp-m5-overview-update-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "a14ff940-cfc1-4735-974b-895ab63f1364",
       "path": "docs/delivery/evidence/rr-r9-active-phase-board-compact.png",
       "kind": "verificationEvidence",
@@ -2752,8 +2812,8 @@
       "artifactID": "c44ceed1-073d-455b-bb79-fe345f455a1f",
       "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md",
       "kind": "document",
-      "lifecycle": "proposed",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
       "supersedes": [],
       "applicationSensitivity": [

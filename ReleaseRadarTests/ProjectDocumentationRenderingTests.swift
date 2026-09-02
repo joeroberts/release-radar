@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import XCTest
 @testable import ReleaseRadar
@@ -6,9 +7,8 @@ import XCTest
 
 @MainActor
 final class ProjectDocumentationRenderingTests: XCTestCase {
-    // Native captures support manual layout review. They do not assert VoiceOver
-    // behavior; the isolated host does not expose the SwiftUI accessibility tree.
-    func testOverviewDocumentationStateAtWideAndCompactWidths() throws {
+    // Inspect only this isolated test process and its own titled native windows.
+    func testOverviewDocumentationStateAtWideAndCompactWidths() async throws {
         let project = ProjectDashboardProjection(
             id: .init(rawValue: "m2c-rendering"),
             name: "Documentation Preview",
@@ -30,15 +30,15 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     reloadActivePhase: {},
                     reauthorizeActivePhase: { _ in }
                 )
-                try render(view, name: "overview-\(name)-\(Int(width))", width: width)
+                try await render(view, name: "m5-overview-\(name)-\(Int(width))", width: width, expected: ProjectGuidancePresentation(documentationState: state))
             }
         }
     }
 
-    func testOnboardingDocumentationPreviewAtWideAndCompactWidths() throws {
-        let output = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-M2C-Rendering-\(UUID().uuidString)", isDirectory: true)
+    func testOnboardingDocumentationPreviewAtWideAndCompactWidths() async throws {
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-M5-Rendering-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
-        print("M2C isolated rendering store: \(output.path)")
+        print("M5 isolated rendering store: \(output.path)")
         let store = DeliveryStore(databaseURL: output.appendingPathComponent("rendering.sqlite"))
         for (name, state) in states {
             let preview = OnboardingPreview(
@@ -51,44 +51,78 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 documentationState: state
             )
             for width in [1100.0, 620.0] {
+                let captureName = "m5-onboarding-\(name)-\(Int(width))"
                 let view = OnboardingView(
                     store: store,
+                    navigationTitle: captureName,
                     onOpenExisting: { _ in },
                     pasteboardWriter: { _ in XCTFail("Rendering must not write to the clipboard"); return false },
                     initialPreview: preview,
                     onFinished: { _ in XCTFail("Rendering must not initialize a project") }
                 )
-                try render(view, name: "onboarding-\(name)-\(Int(width))", width: width)
+                try await render(view, name: captureName, width: width, expected: ProjectGuidancePresentation(documentationState: state))
             }
         }
     }
 
     private var states: [(String, ProjectDocumentationState)] {
         [
-            ("legacy", .legacy(.current(version: 1))),
-            ("staged", .stagedCatalog(hasAuditedHandoff: true, preview: .valid(version: 1, digest: "test-only"))),
-            ("repair", .stagedCatalog(hasAuditedHandoff: false, preview: .invalid(.init(.malformedCatalog))))
+            ("v1-update", .legacy(.outdated(installed: 1, current: 2))),
+            ("managed-current", .managed(hasAuditedHandoff: true, catalogVersion: 1, catalogDigest: "test-only")),
+            ("managed-unavailable", .managedUnavailable(hasAuditedHandoff: true, reason: .catalogUnaccepted, validationError: nil))
         ]
+    }
+
+    private func accessibilityText(_ root: AXUIElement) -> String {
+        var pending = [root], result: [String] = [], count = 0
+        while let element = pending.popLast(), count < 1000 {
+            count += 1
+            for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute, kAXHelpAttribute] {
+                var value: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let value = value as? String { result.append(value) }
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success, let children = children as? [AXUIElement] { pending.append(contentsOf: children) }
+        }
+        return result.joined(separator: "\n")
     }
 
     private func render<V: View>(
         _ view: V,
         name: String,
-        width: Double
-    ) throws {
+        width: Double,
+        expected: ProjectGuidancePresentation
+    ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
         hosting.appearance = NSAppearance(named: .darkAqua)
         hosting.frame = NSRect(origin: .zero, size: frame.size)
         let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: .darkAqua)
+        window.title = name
         window.isReleasedWhenClosed = false
         window.contentView = hosting
         window.orderFront(nil)
         defer { window.close() }
         hosting.layoutSubtreeIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.15))
+        try await Task.sleep(for: .milliseconds(200))
         hosting.layoutSubtreeIfNeeded()
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        var value: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value), .success)
+        let ownWindow = (value as? [AXUIElement] ?? []).first { element in
+            var title: CFTypeRef?
+            return AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title) == .success && (title as? String) == name
+        }
+        let actual = accessibilityText(try XCTUnwrap(ownWindow))
+        XCTAssertTrue(actual.contains(expected.status), "Missing actual guidance status: \(expected.status)")
+        if name.contains("managed-unavailable") {
+            XCTAssertTrue(actual.contains("catalog acceptance"), "Missing actual pending-catalog recovery")
+            XCTAssertFalse(actual.contains("Copy setup prompt"))
+            XCTAssertFalse(actual.contains("Copy repair prompt"))
+        }
+        if name.hasPrefix("m5-overview"), let action = expected.actionTitle { XCTAssertTrue(actual.contains(action)) }
+        print("M5 isolated render PID \(ProcessInfo.processInfo.processIdentifier): actual AX status and recovery verified; capture \(name)")
         let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
         hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))

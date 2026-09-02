@@ -3,6 +3,32 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    func testGuidanceUpgradeReusesExactLegacyHandoffAndReplaysFreshAudit() async throws {
+        let f = try await makeFixture()
+        let path = f.root.appendingPathComponent("AGENTS.md").path
+        let id = "release-radar-handoff:v1:existing"
+        try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
+        let initial = await f.dispatcher.dispatch(envelope(f.root, .addEvidence(id: id, ticketID: nil, path: path)))
+        XCTAssertNil(initial.error)
+        let before = try await f.store.read { c in try ["evidence", "audit_events", "agent_command_requests", "notification_events"].map { try c.scalarInt("SELECT COUNT(*) FROM \($0)") } }
+        let captured = await inventory(f.store, f.root)
+        let observed = try XCTUnwrap(captured)
+        XCTAssertTrue(observed.isComplete)
+        let exact = observed.evidence.filter { $0.evidence.ticketID == nil && $0.evidence.locator == .filePath(path) }
+        XCTAssertEqual(exact.map { $0.evidence.id.rawValue }, [id])
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
+        let request = envelope(f.root, .addEvidence(id: exact[0].evidence.id.rawValue, ticketID: nil, path: path))
+        let upgraded = await f.dispatcher.dispatchDocumentationMaintenance(request)
+        XCTAssertNil(upgraded.error); XCTAssertNotNil(upgraded.auditEventID)
+        XCTAssertNotEqual(upgraded.auditEventID, initial.auditEventID)
+        let replay = await f.dispatcher.dispatchDocumentationMaintenance(request)
+        XCTAssertEqual(replay, upgraded)
+        let after = try await f.store.read { c in try ["evidence", "audit_events", "agent_command_requests", "notification_events"].map { try c.scalarInt("SELECT COUNT(*) FROM \($0)") } }
+        XCTAssertEqual(after, [before[0], before[1]! + 1, before[2]! + 1, before[3]])
+        let row = try await f.store.locatedEvidence(projectID: .init(rawValue: "p"), evidenceID: .init(rawValue: id))
+        XCTAssertEqual(row?.locator, .filePath(path)); XCTAssertNil(row?.ticketID)
+    }
+
     func testFiveTypedDocumentationCommandsDecode() throws {
         let target: [String: Any] = ["projectID": "p", "rootID": "root", "repositoryID": "11111111-1111-1111-1111-111111111111", "catalogVersion": 1, "catalogDigest": String(repeating: "a", count: 64)]
         let commands: [[String: Any]] = [
@@ -258,7 +284,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
     func testStagedV1ImporterRetainsLegacyIdentityAndLegacyArbitraryCommandIsCompatible() async throws {
         let f = try await makeFixture()
         try prepareImportTree(f.root)
-        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
+        try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
         let importer = RekonArtifactImporter(store: f.store, project: .init(projectID: .init(rawValue: "p"), canonicalRoot: f.root, authorizedRoots: [f.root]))
         let preview = try importer.preview(f.root)
         XCTAssertNil(preview.documentationCatalogDigest)
@@ -269,7 +295,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         try Data("arbitrary".utf8).write(to: arbitrary)
         let result = await f.dispatcher.dispatch(envelope(f.root, .addEvidence(id: "other", ticketID: nil, path: arbitrary.path)))
         XCTAssertNil(result.error)
-        try Data("\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged\n\(RepositoryDocumentContract.guidanceEndMarker)\n".utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
         let underV2 = await f.dispatcher.dispatch(envelope(f.root, .addEvidence(id: "other", ticketID: nil, path: arbitrary.path)))
         XCTAssertNil(underV2.error)
     }
@@ -279,7 +305,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let suffix = RepositoryDocumentContract.guidanceStartSuffix
         let end = RepositoryDocumentContract.guidanceEndMarker
         XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: nil), .legacy)
-        XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: RepositoryDocumentContract.managedGuidanceBlock), .legacy)
+        XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: RepositoryDocumentContract.legacyManagedGuidanceBlock), .legacy)
         for contents in ["\(prefix)3\(suffix)\n\(end)", "\(prefix)2\(suffix)", "\(prefix)2\(suffix)\n\(end)\n\(end)", " \(prefix)2\(suffix)\n\(end)"] {
             XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: contents), .unavailable)
         }
@@ -349,11 +375,11 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         for state in ["unbound", "accepted", "pending"] {
             let f = try await makeFixture()
             try prepareImportTree(f.root)
-            try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
+            try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
             let importer = RekonArtifactImporter(store: f.store, project: .init(projectID: .init(rawValue: "p"), canonicalRoot: f.root, authorizedRoots: [f.root]), bookmarkStore: bookmarks(f.root))
             let v1 = try importer.preview(f.root)
             XCTAssertNil(v1.documentationCatalogDigest)
-            try Data("\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged\n\(RepositoryDocumentContract.guidanceEndMarker)\n".utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
+            try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
             if state != "unbound" { _ = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: try target(f.root)))) }
             if state == "pending" {
                 try editCatalog(f.root) { catalog in
@@ -452,7 +478,7 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let root = directory.appendingPathComponent("repository")
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         try FileManager.default.copyItem(at: source, to: root)
-        let block = "\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged documentation\n\(RepositoryDocumentContract.guidanceEndMarker)\n"
+        let block = RepositoryDocumentContract.managedGuidanceBlock
         try Data(block.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         try await store.transact(actor: .init(id: "fixture"), reason: "Seed authorized project") { c in

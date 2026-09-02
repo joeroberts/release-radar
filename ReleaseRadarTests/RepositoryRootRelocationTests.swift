@@ -25,6 +25,7 @@ final class RepositoryRootRelocationTests: XCTestCase {
             let legacy = try await f.store.locatedEvidence(projectID: f.project, evidenceID: .init(rawValue: "legacy"))
             XCTAssertEqual(legacy?.locator, .filePath(f.root.appendingPathComponent("arbitrary.md").path))
             if handoff {
+                XCTAssertEqual(ProjectGuidanceInspection.handoffEvidenceIDPrefix, "release-radar-handoff:v1:", "Guidance v2 must retain legacy handoff identity")
                 let row = try await f.store.locatedEvidence(projectID: f.project, evidenceID: .init(rawValue: ProjectGuidanceInspection.handoffEvidenceIDPrefix + "one"))
                 XCTAssertEqual(row?.locator, .filePath(f.next.appendingPathComponent("AGENTS.md").path))
                 XCTAssertFalse(row!.isAvailable)
@@ -206,7 +207,7 @@ final class RepositoryRootRelocationTests: XCTestCase {
         let root = directory.appendingPathComponent("old"), next = directory.appendingPathComponent("new")
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         try FileManager.default.copyItem(at: source, to: root)
-        try Data("\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged documentation\n\(RepositoryDocumentContract.guidanceEndMarker)\n".utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         if uppercaseRepositoryID {
             let url = root.appendingPathComponent("docs/catalog.json")
             var catalog = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]

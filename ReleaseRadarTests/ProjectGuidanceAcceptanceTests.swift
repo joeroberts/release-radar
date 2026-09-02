@@ -8,11 +8,11 @@ final class ProjectGuidanceAcceptanceTests: XCTestCase {
         XCTAssertEqual(ProjectGuidanceInspection.inspect(contents: "# Existing instructions\n"), .missing)
         XCTAssertEqual(
             ProjectGuidanceInspection.inspect(contents: ProjectGuidanceInspection.managedBlock),
-            .current(version: 1)
+            .current(version: 2)
         )
         XCTAssertEqual(
             ProjectGuidanceInspection.inspect(contents: Self.guidance(version: 0)),
-            .outdated(installed: 0, current: 1)
+            .outdated(installed: 0, current: 2)
         )
         XCTAssertEqual(
             ProjectGuidanceInspection.inspect(contents: "<!-- release-radar-guidance:v1:start -->\nmissing end"),
@@ -62,7 +62,7 @@ final class ProjectGuidanceAcceptanceTests: XCTestCase {
 
         let preview = try await onboarding.inspect(folder: directory)
 
-        XCTAssertEqual(preview.projectGuidanceState, .outdated(installed: 0, current: 1))
+        XCTAssertEqual(preview.projectGuidanceState, .outdated(installed: 0, current: 2))
         XCTAssertEqual(try Data(contentsOf: agentsURL), original)
         XCTAssertEqual(bookmarks.accessStarts, 1)
         XCTAssertEqual(bookmarks.accessStops, 1)
@@ -96,11 +96,11 @@ final class ProjectGuidanceAcceptanceTests: XCTestCase {
 
         XCTAssertEqual(
             ProjectGuidanceInspection.inspect(rootURL: directory, hasAuditedHandoff: false),
-            .handoffIncomplete(version: 1)
+            .handoffIncomplete(version: 2)
         )
         XCTAssertEqual(
             ProjectGuidanceInspection.inspect(rootURL: directory, hasAuditedHandoff: true),
-            .current(version: 1)
+            .current(version: 2)
         )
     }
 

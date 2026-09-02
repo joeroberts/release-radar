@@ -4,7 +4,7 @@ import Foundation
 public enum RepositoryDocumentContract {
     public static let catalogVersion = 1
     public static let legacyGuidanceVersion = 1
-    public static let guidanceVersion = legacyGuidanceVersion
+    public static let guidanceVersion = 2
     public static let rekonSeedVersion = 1
     public static let catalogPath = "docs/catalog.json"
     public static let rootIndexPath = "docs/README.md"
@@ -16,7 +16,7 @@ public enum RepositoryDocumentContract {
     public static let handoffCollectionPath = "docs/delivery/handoffs"
     public static let reviewCollectionPath = "docs/delivery/reviews"
     public static let evidenceCollectionPath = "docs/delivery/evidence"
-    public static let planCollectionPath = "docs/plans"
+    public static let planCollectionPath = "docs/delivery/plans"
     public static let archiveCollectionPath = "docs/delivery/archive"
     public static let rekonRoadmapPath = "docs/delivery/roadmap.md"
     public static let rekonEvidenceBasePath = "docs/delivery/dashboard"
@@ -27,9 +27,10 @@ public enum RepositoryDocumentContract {
     public static let guidanceStartSuffix = ":start -->"
     public static let guidanceStartMarker = "\(guidanceStartPrefix)\(guidanceVersion)\(guidanceStartSuffix)"
     public static let guidanceEndMarker = "<!-- \(guidanceMarkerName):end -->"
-    public static let handoffEvidenceIDPrefix = "release-radar-handoff:v\(guidanceVersion):"
-    public static let managedGuidanceBlock = """
-    \(guidanceStartMarker)
+    // Evidence identity survives guidance upgrades; this is an identity namespace, not the installed guidance version.
+    public static let handoffEvidenceIDPrefix = "release-radar-handoff:v1:"
+    public static let legacyManagedGuidanceBlock = """
+    <!-- release-radar-guidance:v1:start -->
     ## Release Radar tracking
 
     This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, or changing tracked delivery state, invoke the installed `release-radar` skill and follow it.
@@ -39,6 +40,24 @@ public enum RepositoryDocumentContract {
     - Release Radar is the only writer of its SQLite database. Use its existing typed MCP mutations; never edit that database directly.
     - Do not claim synchronization without both a successful audited MCP result and direct readback of the corresponding repository files.
     - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state.
+    \(guidanceEndMarker)
+    """
+
+    public static let managedGuidanceBlock = """
+    \(guidanceStartMarker)
+    ## Release Radar tracking
+
+    This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, or changing tracked delivery state, invoke the installed `release-radar` skill and follow it.
+
+    - Read `\(catalogPath)` and begin documentation discovery at `\(rootIndexPath)`. Follow generated local indexes before broad search and load only task-relevant controlling artifacts.
+    - The catalog owns documentation identity, lifecycle, authority, and navigation. `\(progressPath)` remains the durable delivery source of truth; the catalog and indexes never authorize or infer ticket or phase state.
+    - Under owner authorization, update the catalog, collection/index metadata, active references, and applicable checksums in the same change as any durable add, move, rename, supersession, closeout, restoration, or deletion. Preserve stable artifact IDs and never reuse retired IDs.
+    - Keep only active operational detail in `\(progressPath)`; move closed detail to `\(archiveCollectionPath)/` and label it historical and non-authoritative. Place implementation plans in `\(planCollectionPath)/` and controlling task briefs in `\(taskBriefCollectionPath)/`.
+    - Add no new content under `docs/superpowers/` during transition and never recreate it after cutover.
+    - Release Radar is the only SQLite writer. Never edit that database or repair a managed evidence path directly. Use supported read-only inventory and typed, audited evidence operations with exact artifact IDs and request identities.
+    - Managed operations require the exact authorized root and accepted repository ID, catalog version, and digest. Only explicit repository binding establishes a missing binding; only catalog acceptance advances an accepted snapshot. Treat a changed catalog as pending until Release Radar accepts its validated transition.
+    - Run the repository documentation check and read back the resulting repository and application state before completion. Do not claim completion while catalog, indexes, lifecycle, authority, references, applicable checksums, evidence resolution, or application readback disagree. Preserve exact requests across uncertain outcomes.
+    - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state. Repository-local rules outside this block may narrow this contract but must not weaken or duplicate it.
     \(guidanceEndMarker)
     """
 

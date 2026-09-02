@@ -180,27 +180,51 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
     let actionTitle: String?
 
     init(documentationState: ProjectDocumentationState) {
-        guard case let .stagedCatalog(audited, preview) = documentationState else {
+        switch documentationState {
+        case .legacy:
             let legacy = Self(state: documentationState.guidanceState)
             status = legacy.status
             detail = legacy.detail
             systemImage = legacy.systemImage
             actionTitle = legacy.actionTitle
-            return
-        }
-        let version = RepositoryDocumentContract.legacyGuidanceVersion
-        let guidance = audited ? "Guidance v\(version) remains current." : "Guidance v\(version) still needs its audited handoff. Use the repair prompt to complete it."
-        switch preview {
-        case let .valid(version, _):
-            status = "Release Radar catalog staged · v\(version)"
-            detail = "\(guidance) The catalog passed read-only validation. Import, evidence, and delivery state are unchanged."
-            systemImage = "doc.text.magnifyingglass"
-        case let .invalid(error):
-            status = "Release Radar staged catalog needs repair"
-            detail = "\(guidance) \(error.localizedDescription) Import, evidence, and delivery state are unchanged."
+        case let .stagedCatalog(_, preview):
+            switch preview {
+            case let .valid(version, _):
+                status = "Release Radar catalog staged · v\(version)"
+                detail = "Legacy guidance v1 remains supported and can be upgraded to v2. The catalog passed read-only validation. Import, evidence, and delivery state are unchanged."
+                systemImage = "doc.text.magnifyingglass"
+            case let .invalid(error):
+                status = "Release Radar staged catalog needs repair"
+                detail = "Legacy guidance v1 remains supported. \(error.localizedDescription) Repair the catalog before upgrading to v2. Import, evidence, and delivery state are unchanged."
+                systemImage = "exclamationmark.triangle"
+            }
+            actionTitle = "Copy update prompt"
+        case let .managed(audited, version, _):
+            status = audited ? "Release Radar managed documentation current · v2" : "Release Radar managed documentation handoff incomplete · v2"
+            detail = "Catalog v\(version) matches this project's accepted repository and authorized root." + (audited ? " The exact guidance and audited handoff are present." : " Complete the audited guidance handoff without changing delivery state.")
+            systemImage = audited ? "checkmark.circle" : "exclamationmark.arrow.triangle.2.circlepath"
+            actionTitle = audited ? nil : "Copy repair prompt"
+        case let .managedUnavailable(audited, reason, validationError):
+            status = "Release Radar managed documentation unavailable"
+            let recovery: String
+            switch reason {
+            case .bindingMissing:
+                recovery = "Use the owner-authorized repository binding operation to bind this exact root and validated catalog."
+            case .catalogUnaccepted:
+                recovery = "The catalog has changed. Use the owner-authorized catalog acceptance operation to validate and accept its transition."
+            case .bindingMismatch, .bindingConflict, .rootMismatch:
+                recovery = "The repository or root does not match the accepted binding. Restore the accepted repository or use owner-confirmed repository recovery."
+            case .rootUnavailable, .staleRoot:
+                recovery = "Restore folder access or use owner-confirmed repository recovery, then reload the project."
+            case .guidanceUnavailable:
+                recovery = "The managed guidance changed during inspection. Restore the exact guidance block and reload the project."
+            default:
+                recovery = "Repair the catalog, files, indexes, and applicable checksums, then run the repository documentation check and reload." + (validationError.map { " Validation: \($0.rawValue)." } ?? "")
+            }
+            detail = "Guidance v2 is readable, but managed operations are closed. " + recovery + (audited ? "" : " The guidance handoff also still needs its audited evidence.")
             systemImage = "exclamationmark.triangle"
+            actionTitle = nil
         }
-        actionTitle = audited ? nil : "Copy repair prompt"
     }
 
     init(state: ProjectGuidanceState) {
@@ -222,7 +246,7 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
             actionTitle = "Copy setup prompt"
         case let .outdated(installed, current):
             status = "Release Radar guidance update required · v\(installed) → v\(current)"
-            detail = "Use Codex to replace only the managed Release Radar block and preserve every other repository instruction."
+            detail = "Legacy guidance remains supported. Validate the repository catalog and indexes before using Codex to upgrade only the managed block to v2."
             systemImage = "arrow.triangle.2.circlepath"
             actionTitle = "Copy update prompt"
         case .needsRepair:

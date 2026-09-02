@@ -118,7 +118,7 @@ public struct EvidenceInventory: Codable, Equatable, Sendable {
     public let receipts: [PreservationFingerprint]
 }
 
-/// The declaration is distinct from guidance prose validation (owned by M5).
+/// Managed v2 requires the exact shipped block; legacy classification remains compatible.
 /// Unknown, duplicate and malformed managed declarations always fail closed.
 public enum RepositoryDocumentationMode: String, Codable, Sendable {
     case legacy, managedV2, unavailable
@@ -133,7 +133,9 @@ public enum RepositoryDocumentationMode: String, Codable, Sendable {
         let suffix = RepositoryDocumentContract.guidanceStartSuffix
         switch lines[markers[0]] {
         case "\(prefix)1\(suffix)": return .legacy
-        case "\(prefix)2\(suffix)": return .managedV2
+        case "\(prefix)2\(suffix)":
+            let block = lines[markers[0]...markers[1]].joined(separator: "\n")
+            return block == RepositoryDocumentContract.managedGuidanceBlock ? .managedV2 : .unavailable
         default: return .unavailable
         }
     }

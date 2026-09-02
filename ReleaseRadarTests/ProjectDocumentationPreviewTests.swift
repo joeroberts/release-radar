@@ -5,7 +5,7 @@ import XCTest
 
 final class ProjectDocumentationPreviewTests: XCTestCase {
     func testCentralContractNamesOnlyCanonicalApplicationPaths() {
-        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 1)
+        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 2)
         XCTAssertEqual(RepositoryDocumentContract.rekonSeedVersion, 1)
         XCTAssertEqual([
             RepositoryDocumentContract.guidancePath,
@@ -19,8 +19,8 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
             RepositoryDocumentContract.evidenceCollectionPath,
             RepositoryDocumentContract.planCollectionPath,
             RepositoryDocumentContract.archiveCollectionPath
-        ], ["AGENTS.md", "docs/catalog.json", "docs/README.md", "docs/delivery/progress.md", "docs/delivery/dashboard-status.json", "docs/delivery/task-briefs", "docs/delivery/handoffs", "docs/delivery/reviews", "docs/delivery/evidence", "docs/plans", "docs/delivery/archive"])
-        XCTAssertEqual(RepositoryDocumentContract.guidanceStartMarker, "<!-- release-radar-guidance:v1:start -->")
+        ], ["AGENTS.md", "docs/catalog.json", "docs/README.md", "docs/delivery/progress.md", "docs/delivery/dashboard-status.json", "docs/delivery/task-briefs", "docs/delivery/handoffs", "docs/delivery/reviews", "docs/delivery/evidence", "docs/delivery/plans", "docs/delivery/archive"])
+        XCTAssertEqual(RepositoryDocumentContract.guidanceStartMarker, "<!-- release-radar-guidance:v2:start -->")
         XCTAssertEqual(RepositoryDocumentContract.guidanceEndMarker, "<!-- release-radar-guidance:end -->")
         XCTAssertEqual(RepositoryDocumentContract.handoffEvidenceIDPrefix, "release-radar-handoff:v1:")
     }
@@ -29,7 +29,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         let root = try fixture()
         try FileManager.default.removeItem(at: root.appendingPathComponent("docs/catalog.json"))
         for audited in [false, true] {
-            let guidance: ProjectGuidanceState = audited ? .current(version: 1) : .handoffIncomplete(version: 1)
+            let guidance: ProjectGuidanceState = .outdated(installed: 1, current: 2)
             let state = ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: audited)
             XCTAssertEqual(state, .legacy(guidance))
             XCTAssertEqual(ProjectGuidancePresentation(documentationState: state), ProjectGuidancePresentation(state: guidance))
@@ -43,12 +43,12 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         for audited in [false, true] {
             let state = ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: audited)
             XCTAssertEqual(state, .stagedCatalog(hasAuditedHandoff: audited, preview: .valid(version: 1, digest: snapshot.digest)))
-            XCTAssertEqual(state.guidanceState, audited ? .current(version: 1) : .handoffIncomplete(version: 1))
+            XCTAssertEqual(state.guidanceState, .outdated(installed: 1, current: 2))
             let presentation = ProjectGuidancePresentation(documentationState: state)
             XCTAssertEqual(presentation.status, "Release Radar catalog staged · v1")
             XCTAssertTrue(presentation.detail.contains("read-only"))
             XCTAssertTrue(presentation.detail.contains("Import, evidence, and delivery state are unchanged."))
-            XCTAssertEqual(presentation.actionTitle, audited ? nil : "Copy repair prompt")
+            XCTAssertEqual(presentation.actionTitle, "Copy update prompt")
         }
         XCTAssertEqual(try repositoryBytes(root), before)
     }
@@ -79,8 +79,8 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
             }
             XCTAssertTrue(audited)
             XCTAssertEqual(error.code, expected)
-            XCTAssertEqual(state.guidanceState, .current(version: 1))
-            XCTAssertEqual(ProjectGuidanceInspection.inspect(rootURL: root, hasAuditedHandoff: true), .current(version: 1))
+            XCTAssertEqual(state.guidanceState, .outdated(installed: 1, current: 2))
+            XCTAssertEqual(ProjectGuidanceInspection.inspect(rootURL: root, hasAuditedHandoff: true), .outdated(installed: 1, current: 2))
             let presentation = ProjectGuidancePresentation(documentationState: state)
             XCTAssertEqual(presentation.status, "Release Radar staged catalog needs repair")
             XCTAssertTrue(presentation.detail.contains("retry"))
@@ -90,7 +90,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
 
     func testNonExactV1GuidanceDoesNotActivateStagedCatalog() throws {
         let root = try fixture()
-        for contents in ["# Owner guidance", ProjectGuidanceInspection.managedBlock + "\n<!-- release-radar-guidance:end -->", ProjectGuidanceInspection.managedBlock.replacingOccurrences(of: "v1:start", with: "v2:start")] {
+        for contents in ["# Owner guidance", RepositoryDocumentContract.legacyManagedGuidanceBlock + "\n<!-- release-radar-guidance:end -->", RepositoryDocumentContract.legacyManagedGuidanceBlock.replacingOccurrences(of: "v1:start", with: "v2:start")] {
             try Data(contents.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
             let guidance = ProjectGuidanceInspection.inspect(rootURL: root, hasAuditedHandoff: true)
             XCTAssertEqual(ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: true), .legacy(guidance))
@@ -117,9 +117,9 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
             let preview = try await onboarding.inspect(folder: root)
             XCTAssertEqual(preview.recognizedArtifactPreview, expectedImport)
             XCTAssertEqual(try importer.preview(root), expectedImport)
-            XCTAssertEqual(preview.projectGuidanceState, .handoffIncomplete(version: 1))
+            XCTAssertEqual(preview.projectGuidanceState, .outdated(installed: 1, current: 2))
             if catalog == nil {
-                XCTAssertEqual(preview.documentationState, .legacy(.handoffIncomplete(version: 1)))
+                XCTAssertEqual(preview.documentationState, .legacy(.outdated(installed: 1, current: 2)))
             } else if catalog == validCatalog {
                 XCTAssertEqual(preview.documentationState, .stagedCatalog(hasAuditedHandoff: false, preview: .valid(version: 1, digest: snapshot.digest)))
             } else {
@@ -145,7 +145,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         try FileManager.default.createDirectory(at: plans, withIntermediateDirectories: true)
         try Data("Arbitrary historical content".utf8).write(to: plans.appendingPathComponent("delivery-ledger.md"))
         XCTAssertEqual(try importer.preview(root), before)
-        XCTAssertEqual(ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: true), .legacy(.current(version: 1)))
+        XCTAssertEqual(ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: true), .legacy(.outdated(installed: 1, current: 2)))
     }
 
     func testAuthorizedSavedProjectObservationPreservesAuditedHandoffAndEvidence() async throws {
@@ -161,7 +161,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         let before = try await storeCounts(store)
         let observation = await onboarding.observeProjectGuidanceContext(projectID: projectID)
         XCTAssertEqual(observation.projectRoot, root)
-        XCTAssertEqual(observation.state, .current(version: 1))
+        XCTAssertEqual(observation.state, .outdated(installed: 1, current: 2))
         guard case .stagedCatalog(hasAuditedHandoff: true, preview: .valid) = observation.documentationState else {
             return XCTFail("Saved authorization must expose the staged catalog with its audited handoff")
         }
@@ -181,7 +181,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         let root = parent.appendingPathComponent("repository", isDirectory: true)
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         try FileManager.default.copyItem(at: source, to: root)
-        try Data(ProjectGuidanceInspection.managedBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         return root
     }
 

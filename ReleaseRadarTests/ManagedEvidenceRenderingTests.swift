@@ -36,7 +36,7 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         let root = directory.appendingPathComponent("original"), next = directory.appendingPathComponent("relocated")
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         try FileManager.default.copyItem(at: source, to: root)
-        try Data("\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged documentation\n\(RepositoryDocumentContract.guidanceEndMarker)\n".utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         try FileManager.default.copyItem(at: root, to: next)
         let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
         let database = directory.appendingPathComponent("store.sqlite")
@@ -77,7 +77,7 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         await appModel.reloadAfterRepositoryRelocation()
         XCTAssertEqual(appModel.projectRoot(for: .init(rawValue: "p"))?.path, next.path, "Post-relocation refresh retained the revoked root")
         XCTAssertNotEqual(appModel.projectDocumentationState(for: .init(rawValue: "p")), oldDocumentation, "Post-relocation refresh retained unavailable guidance")
-        XCTAssertEqual(appModel.projectDocumentationState(for: .init(rawValue: "p")), ProjectGuidanceInspection.inspectDocumentation(rootURL: next, hasAuditedHandoff: false))
+        guard case .managed(hasAuditedHandoff: false, catalogVersion: 1, catalogDigest: snapshot.digest) = appModel.projectDocumentationState(for: .init(rawValue: "p")) else { return XCTFail("Relocated project must use its exact accepted binding") }
         XCTAssertEqual(appModel.selection, .projectOverview(.init(rawValue: "p")))
         let refreshedAuditCount = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
         XCTAssertEqual(refreshedAuditCount, auditCount)

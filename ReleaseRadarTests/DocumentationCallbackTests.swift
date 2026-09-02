@@ -76,7 +76,7 @@ final class DocumentationCallbackTests: XCTestCase {
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let root = directory.appendingPathComponent("repository")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid"), to: root)
-        try Data("\(RepositoryDocumentContract.guidanceStartPrefix)2\(RepositoryDocumentContract.guidanceStartSuffix)\nManaged\n\(RepositoryDocumentContract.guidanceEndMarker)\n".utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         try await store.transact(actor: .init(id: "fixture"), reason: "Seed") { c in
             try c.execute("INSERT INTO projects (id, name) VALUES ('p', 'Project')")

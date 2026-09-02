@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Outcome: M4 accepted; documentation catalog and indexes staged at existing paths
-- Active task: None; M4 checkpoint closeout
-- Last complete task: M4 — Stage Repository Catalog In Place
+- Outcome: M5 accepted; guidance-v2 compatibility candidate verified
+- Active task: None; M5 checkpoint closeout
+- Last complete task: M5 — Guidance-v2 Compatibility
 - Authorization: Owner authorized the remaining M2C–M8 program in dependency
   order, including development, required checks and independent reviews,
   in-scope corrections, ledger updates, and commit/normal push after each
@@ -13,17 +13,18 @@
   RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M4](task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md)
-- Current blockers and risks: No required M4 findings remain. The actual root
-  guidance declaration is missing/legacy; staged-v1 preview was verified in a
-  disposable real-document copy. Owner installation and activation remain gated.
-  M5 compatibility must address the existing onboarding schema-9 expectation
-  against the accepted schema version 13.
-- Verification: Native catalog/index check passed; a second render changed zero
-  files and preserved all nine index bytes. Independent Documentation review GO.
-  Both held artifacts and all 87 existing checksum entries remain exact.
-- Next eligible action: Commit/push M4, then automatically open M5 compatibility.
-- State: M4 ACCEPTED
+- Controlling brief: [M5](task-briefs/2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md)
+- Current blockers and risks: No Required M5 findings remain. M6A must resolve
+  exact owner targets, backup custody, and the lifecycle runbook limitation
+  below before any live operation. Root guidance remains missing/legacy;
+  staging does not activate managed documentation.
+- Verification: Independent QA covers 169 selected checks after one stale
+  tool-inventory assertion correction. Code, Architecture, targeted Security,
+  and UX GO; Release build/signatures and repository documentation check pass.
+- Next eligible action: Commit/push M5, establish the exact `MDCP-COMPAT-1`
+  checkpoint, then prepare the concrete M6A approval runbook.
+- State: M5 ACCEPTED
+- Prior checkpoint: M4 `fa9036496566fe5f82aca87feb5180bbdf45396c`.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -308,6 +309,80 @@
   under the owner's cleanup authorization. Pre-existing outputs are preserved.
   No source, tests, document moves, guidance activation, or owner-state operation
   occurred. M5 is next.
+
+## MDCP M5 — Guidance-v2 Compatibility
+
+- Outcome: Exact guidance v2, supported v1 upgrades, current/pending/unavailable
+  accepted-binding observation, matching prompts and plugin 0.1.6. The stable
+  v1 handoff evidence namespace preserves existing identity; an upgrade reuses
+  the exact inventoried row with a fresh audited request. The v2 handoff
+  requires an existing catalogued ledger and preserves it byte-for-byte. The
+  canonical plan collection is `docs/delivery/plans`.
+- Shared source/test inventory was identified before RED. Final production
+  inventory is Core `RepositoryDocumentContract`, `DocumentationOperations`,
+  `ProjectGuidanceInspection`, and `ProjectOnboarding`; app `OnboardingView`
+  and `ProjectOverviewView`; bundled plugin skill/manifest; and the Xcode project
+  version. Final test inventory is `ManagedGuidanceCompatibilityTests`,
+  `ProjectDocumentationPreviewTests`, `ProjectGuidanceAcceptanceTests`,
+  `OnboardingAcceptanceTests`, `ManagedDocumentationOperationsTests`,
+  `ManagedDocumentEvidenceTests`, `RepositoryRootRelocationTests`,
+  `DocumentationCallbackTests`, `ManagedEvidenceRenderingTests`, `AppRouteTests`,
+  `CodexPluginLifecycleAcceptanceTests`, `ProjectDocumentationRenderingTests`,
+  and `AgentBridgeTransportAcceptanceTests`.
+- Verification: Initial six-test RED preceded 6/6 Core GREEN. Direct affected
+  checks closed the existing-ledger and persisted phase-less-root regressions.
+  Independent signed serial `xcodebuild test -project ReleaseRadar.xcodeproj
+  -scheme ReleaseRadar -destination 'platform=macOS'
+  -parallel-testing-enabled NO` passed 168/169; its sole stale 13-tool
+  expectation was corrected to 19 and the affected malformed-input check
+  passed 1/1. All 169 selected checks are covered. They include exact v2/v1/v3,
+  package/prompt agreement, actual-tree read-only conformance and damaged-copy
+  failures, schema 13, legacy import, binding/evidence/root continuity,
+  replay/rollback, and presentation. Production broker/lifecycle registration
+  tests remain excluded because they operate on owner services.
+- Required corrections: Existing-ledger prerequisites prevent a handoff from
+  invalidating its catalog. Folder inspection uses the persisted exact root
+  owner independently of phase/onboarding routing. Stale schema/version/tool
+  expectations and the native capture's overridden window title were corrected
+  without changing production behavior. The transient inventory comparison
+  passed unchanged in serial execution and final independent QA.
+- Independent roles: `/root/m3c_implementer` authored M5;
+  `/root/m3c_code_review` supplied Code, Architecture, targeted Security, and
+  UX wording GO; `/root/m3c_qa` supplied final QA GO. The coordinator independently
+  accepted runtime visuals. No Required findings remain.
+- Runtime UX: Both native UI tests passed, covering 12 actual AX/window captures
+  at 620 and 1100 widths. The coordinator inspected seven representative images
+  against the accepted existing design. Status, recovery text, and update action
+  remain readable. Durable examples: [current overview](evidence/mdcp-m5-overview-current-wide.png),
+  [compact upgrade](evidence/mdcp-m5-overview-update-compact.png),
+  [compact recovery](evidence/mdcp-m5-onboarding-unavailable-compact.png), and
+  [wide recovery](evidence/mdcp-m5-onboarding-unavailable-wide.png).
+- Package/candidate: App and plugin version 0.1.6; normalized plugin digest
+  `dad143d88e77af7e2ed4523c17c31a24fdd8810e87d02a2ccfe2c39ba5558f8c`.
+  Native Release build passed with normal signing and hardened runtime; app,
+  agent tool, bridge, and lifecycle helper signatures verify under team
+  `2UA854NLX4`. App/helper entitlements match their tracked definitions.
+  Release packaged initialize/tools-list exposes exactly 19 typed schemas,
+  defined in [AgentTools](../../ReleaseRadarAgentTools/main.swift) and verified
+  by the focused tool-schema tests. The six documentation tools are additive;
+  Task 4B is not exposed.
+- Freeze boundary: M2–M5 command/query/result, schema-v13 evidence/root-bound
+  accepted snapshots, inventory/adoption/transition/rebind, importer, guidance,
+  plugin, exact tool schemas, and overlapping tests are accepted. Declare
+  `MDCP-COMPAT-1` only after the M5 commit is clean and exact locally/upstream/live.
+  M6–M8 consume that candidate; a frozen defect reopens only its owning slice.
+- Durable artifacts: nine production/package/project files, thirteen tests,
+  four screenshots, catalog/index metadata, and this ledger. Catalog coverage
+  is 192 artifacts; the native check and `git diff --check` pass. M4 document
+  paths, held files, manifests, and repository guidance remain unchanged.
+  M5 native outputs and 26 exact synthetic directories were removed after
+  process exit/provenance verification. Verified temporary app/checker copies
+  remain under `.build/mdcp-compat-1/` for M6A; pre-existing outputs are preserved.
+- M6A runbook limitation: direct supported plugin CLI installation leaves the
+  app's managed lifecycle receipt stale. Its existing receipt update requires
+  normal app startup, which also starts unrelated writers. Resolve the exact
+  approved live workflow before claiming managed lifecycle success. This
+  observation authorizes no new feature or owner operation.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
