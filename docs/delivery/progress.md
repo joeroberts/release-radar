@@ -2,9 +2,9 @@
 
 ## Current state
 
-- Outcome: M2C central path contract and v1 catalog preview independently accepted
-- Active task: M2C accepted-slice commit/push
-- Last complete task: M2C — Central Path Contract and v1 Catalog Preview
+- Outcome: M3A0 immutable schema-v12 migration fixture independently accepted
+- Active task: M3A0 accepted-slice commit/push
+- Last complete task: M3A0 — Schema-v12 Migration Fixture
 - Authorization: Owner authorized the remaining M2C–M8 program in dependency
   order, including development, required checks and independent reviews,
   in-scope corrections, ledger updates, and commit/normal push after each
@@ -13,22 +13,22 @@
   RR-R10 Task 4B and GitHub Issue #1 remain unopened.
 - Controlling decision: root `AGENTS.md` and
   [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md)
-- Controlling brief: [M2C](task-briefs/2026-09-01-managed-repository-documentation-contract/m2c-central-path-contract-v1-preview-brief.md)
+- Controlling brief: [M3A0](task-briefs/2026-09-01-managed-repository-documentation-contract/m3a0-schema-v12-fixture-brief.md)
 - Current blockers and risks: No required M2C product findings. One unchanged
   onboarding test expects schema version 9 while the accepted migration version
   is 12. Isolated-host runtime accessibility inspection was unavailable; no
   accessibility defect was established and full live-app acceptance is not
   claimed.
-- Verification: M2C focused checks passed 9/9; compatibility run passed 134
-  tests with the one pre-existing schema-version assertion failure. Independent
-  QA verified the nine focused checks and two native rendering checks. Code,
-  QA, Architecture, and Security/Privacy reviews are GO.
-- Next eligible action: Open M3A0 after the accepted M2C commit/push checkpoint.
-- State: M2C COMPLETE
+- Verification: M3A0 focused tests passed 2/2 for implementer and independent
+  QA; fixture-local checksum and full frozen schema manifest pass. Code Review,
+  QA, and Architecture are GO with no required findings.
+- Next eligible action: Open M3A after the accepted M3A0 commit/push checkpoint.
+- State: M3A0 COMPLETE
 - Development checkpoint: Required worktree
   `/Users/jroberts/.codex/worktrees/b0f1/release_radar`, branch
   `codex/managed-documentation-contract-planning`, clean HEAD/upstream/live
-  remote at accepted starting commit `a37a707d4416eb35cb76fdfd1bfb9d3c90379eb9`.
+  remote verified after the M2C normal push at
+  `5c44f99354b7f97003a6f538fc390533011e19d1`.
 
 ## MDCP M2C — Central Path Contract and v1 Catalog Preview
 
@@ -58,10 +58,35 @@
   exposed no SwiftUI nodes in the isolated host; runtime accessibility remains
   unverified. Source identifiers and presentation behavior were inspected.
 - Durable artifacts: source, focused tests, four screenshots, and this ledger.
-  Native build/log/result outputs under `.build/m2c/` and synthetic rendering
-  temporary directories are disposable under the owner's program authorization.
+  Native outputs under `.build/m2c/` and the two synthetic rendering temporary
+  databases were removed after process exit and exact-target verification under
+  the owner's cleanup authorization.
   Owner data, bundled skill bytes, existing fixtures, and `docs/superpowers/`
   were unchanged. M3A0 is next.
+
+## MDCP M3A0 — Schema-v12 Migration Fixture
+
+- Implemented: Immutable synthetic
+  [schema-v12 fixture](../../ReleaseRadarTests/Fixtures/SchemaV12/release-radar-v12.sqlite)
+  generated through accepted production `DeliveryStore` initialization and
+  audited transactions. Six evidence variants and unrelated-state sentinels
+  populate all 30 tables; full schema, integrity, and foreign-key checks pass.
+- Verification: Missing-fixture RED, native generation 1/1, and final 2/2
+  without failures/skips. Independent QA repeated
+  `StoreAcceptanceTests/testExactVersionTwelveFixtureManifestAndSemantics` and
+  `StoreAcceptanceTests/testGenerateVersionTwelveFixtureAttachmentOnlyWhenAbsent`
+  through the `ReleaseRadar` Xcode scheme on macOS. Repeat generation emitted
+  no replacement attachment. Fixture-local `shasum -a 256 -c SHA256SUMS` and
+  `git diff --check` pass. SHA-256:
+  `66d777eb7acd9df11c253d8fa51b6932fd1c1b16af74bfbceef5b18c0aed8319`.
+- Independent roles: implementer `/root/m3a0_implementer`; Code Review
+  `/root/m3a0_code_review`, Architecture `/root/m3a0_architecture`, and QA
+  `/root/m2c_qa` all GO. The QA agent did not implement this slice. No required
+  findings remain.
+- Durable artifacts: fixture/checksum, focused store tests, one Xcode resource
+  exclusion, and this ledger. Native results/exports under `.build/m3a0/` are
+  temporary. Production behavior, prior fixtures, owner data, and Issue #2
+  artifacts are unchanged. M3A is next.
 
 This file is the current authoritative delivery state. Archived files are
 historical evidence only.
