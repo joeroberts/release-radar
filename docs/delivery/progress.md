@@ -35,8 +35,14 @@ The owner requested adding Codex goals to the kickoff prompt. It now explicitly
 requests one orchestrator goal for the reviewed local C8 source candidate and
 concrete installation handoff, with no invented token budget or automatic worker
 goals. Goal completion requires the stated evidence and task closeout; it neither
-completes installed C8 acceptance nor changes application Delivery Goals. This
-prompt-only update awaits its bounded independent review. No goal is created here.
+completes installed C8 acceptance nor changes application Delivery Goals. Candidate
+`43e3655` passed native documentation and scoped diff checks. The fresh Terra High
+task “Review C8 kickoff goal scope” (`01a0782b-2ea9-78b3-b224-63ef8152b77e`)
+completed its bounded review with no findings and was archived after its result
+was preserved and work had stopped. Runtime metadata confirms Terra High.
+The canonical checker and supported application readback retain the known
+`docs/.DS_Store`/`prohibitedContent` blocker and zero project bindings. No goal is
+created here, and the pilot remains unstarted.
 
 The owner also clarified that bounded tasks must be archived when their work and
 required corrections are complete. This is now recorded in AGENTS.md and ADR-007:
