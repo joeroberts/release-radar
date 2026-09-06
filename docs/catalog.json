@@ -4123,6 +4123,21 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-c8-and-baseline-closeout-2026-09-06",
+      "path": "docs/delivery/archive/2026-09-06-c8-and-baseline-closeout.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }

@@ -3,6 +3,14 @@
 Date: 2026-09-06. Status: **Supporting; architecture and sequence proposed. Six
 additional outcomes approved for roadmap inclusion on 2026-09-06.**
 
+Programme authorization now covers scoped implementation, local commits, branch
+pushes and PRs, with owner approval before every merge; see
+[current authorization](../progress.md#current-programme-authorization--2026-09-06).
+Earlier assessment-only restrictions below describe that completed assessment,
+not the new programme. Inclusion and execution authorization do not accept every
+proposed contract. The shared-contract reconciliation below is a review candidate,
+not an ADR amendment or implementation claim.
+
 The scoped owner decisions recorded below and in ADR-001 are accepted inputs to
 this plan. They do not approve all proposed contracts or implementation.
 
@@ -184,13 +192,13 @@ the wider direction confirmed by the owner.
 | Ref / feature / maturity | Current support and architectural fit | Complete outcome and decisive acceptance |
 | --- | --- | --- |
 | C1 Register, initialize and resume — repair | Persisted roots/bookmarks and setup exist; phase-gated visibility and incomplete handoff are incompatible with empty/unplaced planning. Retain authorization/store policy, replace setup orchestration. | A saved project is visible with an honest setup status even with zero phases. A blank folder has a supported documentation-bootstrap path; existing managed docs have explicit binding/acceptance steps. Creating the first real plan remains an authorized typed delivery action. Close/relaunch at every step preserves name, exclusions and progress; checking status creates nothing. |
-| C2 Edit project — repair | Name is collected at setup; no general editor. Metadata edits fit the existing owner-operation pattern. | Rename and edit permitted metadata by stable project ID. Editing never creates a new project, resets setup, changes delivery state or implicitly relocates a root. Cancel, invalid input and unavailable folder preserve data. |
+| C2 Edit project — repair | Name is collected at setup; no general editor. Metadata edits fit the existing owner-operation pattern. | Rename and edit applicable existing onboarding settings by stable project ID, preserving saved task exclusions even when observation is unavailable. Task exclusions are not documentation filters. Root/worktree authorization and one-time seed application remain explicit operations, not incidental metadata saves. Editing never creates a new project, resets setup, changes delivery state or implicitly relocates a root. Cancel, invalid input and unavailable folder preserve data. |
 | C3 Same-folder reconnect and first-root attachment — existing + #19 | Core owner actions exist; documentation errors lack a direct route to them. | Restore folder access from the actual error, renew only the exact saved folder, retain IDs/history/binding. Invalid or changed docs must not prevent renewing permission; show the remaining catalog problem afterward. Legacy rootless attachment remains a distinct confirmed action. Diagnose picker behavior in the installed app. |
 | C4 Repository relocation and worktree roots — existing, continuity gap | Typed relocation checks accepted catalog identity; multiple roots are supported but primary-root intent needs clarity. | Preserve project/artifact identities, authorize destination and keep the accepted-catalog boundary for relocation. Explicit primary root and separately authorized worktrees; no arbitrary evidence repointing. Wrong repository, lost permission and partial failure leave original associations intact. |
 | C5 Archive and restore — #20 | No project lifecycle field/workflow. Add to existing store, not a second project registry. | Archive retains the graph/history and repository association, hides from default active views and suspends applicable operational activity. Restore changes lifecycle only and exposes access problems. Neither action needs a valid current catalog merely to manage local records. |
 | C6 Remove from tracking, retaining history — #20, owner-selected policy | Goals/tasks/history foreign keys, audit protection and receipts make naive cascades unsafe. | Confirm the exact project and explicitly state retained read-only audit/activity history. Atomically remove the operational graph and local capabilities, stop monitoring and prevent pending app-owned actions from applying, while preserving the history/removal record, other projects and every repository file. Late callbacks/old requests cannot mutate a re-added registration. Full erasure is not selected. |
 | C7 Backup, reset and recovery — repair | Migration preservation exists; no coordinated recovery across app/bridge connections and dependent services. | Separate preference reset, tracking-data reset and full backup restore. Quiesce all app-owned connections and pending work, replace state through app-owned operations, reopen services, inspect external plugin state, and recover missing permissions. Older backups cannot cause replay of already-sent notifications. A repository-only reconstruction is explicitly incomplete. |
-| C8 Documentation validation, catalog acceptance and maintenance — existing + #18 + approved validator repair | Strong catalog/identity validator, generated indexes and typed operations. Refresh and status ownership are fragmented; blanket rejection of dot-prefixed paths makes ordinary Finder metadata invalidate documentation. | Apply the narrow OS-metadata discovery rule below. One root/registration-scoped observation drives Overview and evidence: checking, current, invalid, pending acceptance or inaccessible, with validation time. Authorized filesystem events plus activation/reopen invalidate stale success; coalesce reads and reject late results. Observation never accepts a catalog or repairs files. |
+| C8 Documentation validation, catalog acceptance and maintenance — existing + #18 + completed validator repair | Strong catalog/identity validator, generated indexes and typed operations. The exact regular-`.DS_Store` repair is delivered; refresh and status ownership remain fragmented. | Preserve the narrow OS-metadata discovery rule below. One root/registration-scoped observation drives Overview and evidence: checking, current, invalid, pending acceptance or inaccessible, with validation time. Authorized filesystem events plus activation/reopen invalidate stale success; coalesce reads and reject late results. Observation never accepts a catalog or repairs files. |
 | C9 Evidence preview, identity and lifecycle — existing | Managed artifact locators and bounded reads are reusable; legacy paths remain distinct. | Preserve repositoryID/artifactID through relocation, archive and import. Render only bounded authorized content; rejected/stale/missing evidence stays explicit. Maintenance, preview and export use the same identity and custody rules. Never replace identity with a cached path to make a check pass. |
 | C10 Portable export — approved RM5 and owner-selected contents | No complete exporter; seed import is not export. Existing v1 contract is too old. | Design the revised self-contained package of all supported project records, managed documents and evidence files with historical provenance, then produce the acceptance fixture. Preserve root/identity mappings; include all supported roots rather than silently omit content. Unavailable required content prevents a complete export. Exclude source-code checkouts, credentials and device permissions; distinguish the package from full app backup. |
 | C11 Portable import — approved RM6 | Validation/transaction foundations fit; implementation depends on C10. | Preview and revalidate exact package records and files, freshly authorize destination roots, reject identity/root and destination-file conflicts, restore the complete supported graph with exported domain IDs and new local capabilities. Design file placement/recovery and the store transaction together so failure leaves no partial project or overwritten owner content. Imported observations/history remain historical; do not replay source notifications or commands. Round-trip records, documents and evidence files. |
@@ -198,8 +206,14 @@ the wider direction confirmed by the owner.
 
 ### C8 bounded repair: tolerate ordinary OS metadata
 
-The owner approved this repair direction for inclusion in the plan. The current
-`RepositoryDocumentReader.isProhibited` and directory walk reject dot-prefixed
+**Closed:** the exact regular-`.DS_Store` repair and installed verification are
+complete in the merged baseline; [progress](../progress.md) records the result.
+The requirements below are retained for compatibility, not reopened work. Broader
+C8 freshness remains in slice 3; missing binding and connector availability are
+separate recovery limitations.
+
+At the assessment baseline,
+`RepositoryDocumentReader.isProhibited` and the directory walk rejected dot-prefixed
 paths, following the [managed-documentation contract](../../design/managed-repository-documentation-contract.md).
 This is a validator design defect: Finder metadata must not invalidate otherwise
 valid documentation. Repeated deletion and changes to `.gitignore` are not the fix.
@@ -228,10 +242,8 @@ Acceptance uses the existing reader/validator tests and bundled checker:
   tolerates the canonical metadata file without deleting it, while separately
   reporting any real catalog, authorization or binding errors.
 
-Deliver this bounded repair early, before relying on canonical documentation
-validation to unblock other work. It does not depend on the lifecycle migrations
-or the later automatic-refresh work in slice 3. Its implementation still requires
-the ordinary explicit selection of that work; this update adds the plan only.
+This repair was delivered independently of lifecycle migrations and the later
+automatic-refresh work in slice 3. Do not repeat it as a lifecycle prerequisite.
 
 ### Planning, work and owner navigation
 
@@ -294,6 +306,143 @@ feature. No schema-only foundation is a completed owner feature.
 | D11 Presentation — owner-set scope | Adopt RekonDesignSystem components, tokens and appearance directly, with a small explicit mapping of app statuses. Adding or changing light/dark support is out of scope. Existing light/dark wordmark assets do not require app theme support. | I3/I4 and all visible slices. Verify status mapping and the lifecycle pilot before broader adoption; no separate theme decision is pending. |
 | D12 Traceability and change authority | Preserve the source identity/version of requirements and decisions, typed relationships to delivery work, and the affected phase/task/document baselines of a proposal. Record rationale/disposition and reject stale application through existing revision checks. Explicit links reveal recorded impacts; neither prose inference nor proposal approval changes delivery state automatically. | P15/P16/P18, History, C10/C11 and I6. Set the shared contract in slice 0, then implement in slice 5; no generic change-control engine. |
 | D13 Delivery evidence identity | Associate evidence with repository and source revision, test scope/result source, documentation version and build/installation identity as applicable. Keep expected evidence, reported observations, source freshness and owner acceptance distinct. Bounded source-control read access requires its own authorization; it does not depend on live Codex observation. | P17, P9/P11/P12, C9–C11, I5/I6/I9. Decide with the early contracts; deliver in slice 6 without adding automatic GitHub mutations. |
+
+### Chief-architect reconciliation — 2026-09-06 review candidate
+
+This reconciliation covers all 40 rows (C1–C12, P1–P19, I1–I9), including the six
+approved additions. Its source baseline is `c1754e0`, containing merged
+`acfaeeddd7159c44e9cc2ecb62de6b12024b1f61`. It preserves accepted contracts and
+recommends the following shared meanings; recommendations remain proposed until
+the owner accepts the applicable choice. No new registry, API specification or
+schema is introduced here.
+
+| Contracts / consumers | Accepted boundary and reconciliation recommendation | Migration, compatibility and recovery consequence |
+| --- | --- | --- |
+| D1; C1–C7/C10/C11, all project-scoped P features, I1/I6–I8 | **Accepted:** a stored path alone grants no access and does not prove continuity; re-add cannot receive old requests. **Recommend:** preserve domain identity, separately identify a local registration and its current request generation, and retain root-row/bookmark capability identity. New projects receive opaque IDs; rename/resume/reconnect never derive or replace them. A worktree is another authorized root of the same registration, not another project. | Preserve every legacy domain ID and relationship. Resume resolves the saved registration before any create. New callbacks and receipts carry that registration/generation. Existing path-only callers may remain compatible only where the original registration is unambiguous; after removal/re-add or restore, reject requests that cannot prove the expected registration rather than retarget them. Scope receipt migration/version negotiation to changed entry points; do not invent missing ownership for old receipts. |
+| D2/D8; C1–C4/C8/C12, P1/P3/P5/P13, I2/I3 | **Accepted outcome:** visible saved phase-less projects, usable resume/edit/bootstrap/recovery. **Recommend:** registration saved, setup tasks, access, documentation health, lifecycle and plan readiness are independent facts. Finishing the setup UI acknowledges saved choices; it does not certify managed-current documentation or a Ready plan. Local metadata edits require the exact saved project and writable store; folder-dependent actions still require their own authorization. | Recognized setup markers migrate without consuming unrelated review items. Legacy phase presence does not prove setup or documentation completion. Preserve saved name/exclusions and explicit worktree grants; unavailable observation cannot erase excluded thread IDs. Seed application remains a one-time reviewed action, not a saved checkbox that reapplies on edit/relaunch. Health remains reachable if the store cannot open and never substitutes cached data for a successful current read. |
+| D3/D7; C5–C7/C10/C11, P11/P12/P18/P19, I6–I8 | **Accepted:** archive is reversible; removal retains read-only history and files. **Recommend:** retained events refer to historical project/registration identity independently of live foreign keys. Archive suspends monitoring; removal invalidates admission and late app-owned work before releasing capabilities. | Re-add creates a new registration, not resurrection. Read-only history links must not resolve into a replacement by matching a path/name. Backup restore preserves source history while invalidating pre-restore work. Neither archive nor ticket cancellation proves an external execution stopped; run ownership/cancellation belongs to I7/I8 if pursued. |
+| D4/D5; P1–P6/P8–P10/P14/P18, C10/C11, I6 | **Accepted:** five lanes; active phase is context; phase-plan readiness is structural; phase-owned Delivery Goals and owner goal acceptance differ from observed execution goals and task completion. **Recommend:** unplaced work has stable identity and no lane; placement enters Backlog under current policy. Keep phase lifecycle separate from active selection. Workspace Delivery Goals aggregate phase-owned records; Execution is a separate view with historical/unlinked observations. | No inferred lifecycle, delivery goals, task completions or execution links during migration. Moving non-Accepted work reconciles both affected phase revisions, goal assignment, dependencies and task/evidence references atomically. Accepted tickets/goals remain immutable; withdrawal/split creates explicit successor history and no duplicated credit. Retain current 1:1 execution links until a separately selected cardinality change; P14 browsing does not itself require P6's 1:N proposal. |
+| D6; C12, P1/P4/P7–P11/P13–P15/P19, I3/I6 | **Accepted:** browsing must not change active context or delivery state. **Recommend:** typed navigation identifies project, explicit phase scope, entity and filter domain (Delivery Goal versus execution goal), plus restoration context. Dependencies use a project-wide graph with selected phase/ticket focus. Search and impact results enter the same route history. Saved views initially store local workspace query preferences. | Legacy routes resolve honestly with absent detail; they do not guess a phase or broaden an unsupported filter. Removed/archived/missing targets have explicit recovery. Persisting saved views does not persist capabilities; recompute authorization on restoration. Saved views spanning projects are excluded from a single-project package, but included in full local configuration backup; revisit only if portable shared views become a selected outcome. |
+| D7; P6/P11/P12/P14/P16–P18, C6/C7/C10/C11, I1/I6–I9 | **Accepted:** imported observations are historical and import/refresh cannot replay notifications or formal commands. **Recommend:** event source identity, occurrence time, observation/recording time and event-time facts remain distinct. Local audit, imported source history, external observation and send result retain their own provenance. | Old events lacking prior lane or timestamp stay unknown; today's lane may be shown only as explicitly current context. Claimed agent/thread attribution is not verified reviewer independence. Imported event IDs retain source namespace/provenance; destination import gets a real local audit. Duplicate observations cannot manufacture acceptance or attention; unknown sends remain unknown until safely reconciled. |
+| D8/D9; C3/C4/C8–C11, P15–P17, I6 | **Accepted:** app-owned delivery, repository-owned documents, explicit bound root and accepted catalog snapshot, read-only phone publication. **Recommend:** distinguish artifact identity, catalog acceptance, content revision and current readability. A passing catalog check does not establish unchanged mutable document bytes or approval of their prose. | Reconnect renews exact-folder access without accepting changed documents. Managed relocation retains the accepted repository/root boundary. Portable import retains the source accepted snapshot as provenance but separately validates and explicitly establishes the destination binding; package presence is not implicit acceptance. Publication carries source/content revision and publication time; neither upload recency nor phone cache can repair Mac authority. |
+| D10/D11; I1–I9, visible C/P consumers | **Accepted:** observer, bridge and installer are separate; RDS appearance is unchanged. **Recommend:** one owner for any future run; package audience is decided before wider distribution work. Use RDS only in the app UI target with explicit domain-status mapping. | Observer no-go does not block delivery tracking, task exclusions, historical execution browsing or local revision evidence. Plugin receipts lost in reset cannot prove uninstall. No source scraper, executor, cloud schema, hook system or entitlement change is a prerequisite for lifecycle. Light/dark work remains excluded, including under I4 wordmark work. |
+| D12; P15/P16/P18, P1/P5/P11/P19, C10/C11, I6 | **Accepted inclusion:** traceability, proposal previews and ticket successor lifecycle. **Recommend:** document-backed requirement/decision references use managed artifact identity plus a stable source-local reference when supplied, and the exact source revision. A heading or excerpt alone is a locator, not a new authoritative requirement. Proposals identify every affected app revision and referenced document revision. | Existing work has no inferred links or approval history. Editing document text does not apply a plan, and approving an app proposal does not edit documents or grant execution authority. Stale baselines reject without partial app changes. A multi-authority change reports repository and app outcomes separately; it cannot claim a distributed atomic commit. Missing/superseded references remain visible in impact/history instead of silently relinking. |
+| D13; P17/P9/P11/P12, C9–C11, I4–I6/I9 | **Accepted inclusion:** evidence tied to actual code revision. **Recommend:** identify the repository separately from the commit, and record the tested revision, scope, result source/time and relevant document/build identity. Mutable dirty-worktree evidence must explicitly say what was tested; a commit label alone is insufficient. | Preserve manual/local evidence and unknown legacy provenance. A test result does not automatically transfer to a newer commit, merge result or installed binary; PR state, build identity, installed version and owner acceptance remain distinct. Record immutable observed revisions in evidence without adding checksums to mutable plans/catalog metadata. Remote outages leave evidence unavailable/stale; viewing it cannot run tests or mutate GitHub. |
+
+Concrete contradictions requiring reconciliation in the owning slice:
+
+- **Setup and copied handoff (D2/D8):** the dashboard design requires an active
+  phase, while `ProjectOnboarding.finish` currently requires any phase. Neither
+  is created by the guidance-only handoff. The old design also forbids a root in
+  the copied prompt, whereas the installed handoff requires the exact authorized
+  root and pre-existing catalog/indexes/ledger. A blank-folder bootstrap must
+  therefore precede that handoff as a separately described repository operation;
+  status checking or evidence registration cannot fill the gap. The lifecycle
+  slice must reconcile the prompt, shipped skill and product design together
+  within specifically authorized guidance changes, preserving unrelated rules.
+- **Planning membership and scope (D4–D6):** the Project Plan proposal excludes
+  goal records, predates delivered Delivery Goals and diagnoses missing phase
+  discovery that now exists. Include formal Delivery Goals and readiness as
+  recorded planning context, without counting goals as additional tickets;
+  exclude observed execution goals and unresolved intake from work totals. The
+  proposed Goals mockup is execution-oriented and cannot be relabelled as the
+  Delivery Goals screen. ADR-003's phase-scoped graph remains current behavior
+  until the explicit D6 graph-scope amendment; nonactive-phase navigation must
+  never silently use the active-phase graph.
+- **Archive lane conflict (D4/D7/D8):** ADR-001 v1 preserves lanes; ADR-004 and
+  RR-R10 require importer tickets in Backlog and prohibit imported migration
+  continuation. Recommend preserving formal state in the new complete package,
+  while requiring current destination prerequisites before subsequent execution.
+  The future format decision must explicitly amend the conflicting importer rule;
+  this recommendation does not change v1 behavior or grant an import bypass.
+- **History and authority (D7/D12/D13):** current Activity decorates historical
+  events with current ticket lane/phase. Proposed transition wording requires
+  actual event facts, not those decorations. An accepted catalog snapshot also
+  does not version mutable prose: traceability and code evidence need explicit
+  source-revision references, without checksum-controlling the plan itself.
+- **Document maturity:** ADR-006's pending header and older implementation
+  statements disagree with controlling catalog/delivered MDCP evidence. Follow
+  the accepted boundary and verified delivery record; do not infer a new approval
+  from either label. Governing-document reconciliation is separate authorized
+  work, not part of this plan-only candidate.
+
+### Material owner choices and when they are needed
+
+Only the first two choices affect the upcoming lifecycle. Their recommended
+directions are concrete but not yet accepted by this reconciliation. Settled
+retention, package contents, Mac/repository/phone authority, six added outcomes
+and unchanged RDS appearance are not questions again.
+
+| Choice | Recommendation and alternative | Timing / consequence |
+| --- | --- | --- |
+| D1 registration compatibility | Accept opaque IDs for new projects plus a separate local registration/request generation, preserving legacy IDs. Reject legacy requests when they cannot distinguish a replaced/restored registration. Alternative: retain path-derived domain IDs and rely on registration identity for all continuity, accepting a more complicated historical identity model. | Before lifecycle persistence/command work. The recommended choice avoids path identity reuse; either choice needs stale-request rejection and explicit compatibility behavior. Wire fields and schema layout belong to the slice. |
+| D2/D8 setup completion and bootstrap handoff | Allow entry to the saved project with zero phases and with separately visible outstanding documentation tasks. Finish means saved setup choices, not “managed current.” Recommend a previewed copied bootstrap request containing exact root/project identity and only required setup metadata, followed by explicit validation, binding/acceptance and audited handoff. Alternative: retain a visible project but keep setup marked unfinished until documentation is current; require the owner to supply the exact root manually if it cannot be copied. | Before the lifecycle brief is released. Recommend the first route to avoid a new documentation-availability deadlock. Showing the exact root before Copy makes its disclosure deliberate; no source content, task content or credentials are copied. Bootstrap must preserve existing files/instructions and cannot use guidance installation as permission to overwrite them. |
+| D4–D6 recorded planning and IA | Recommend Overview plus sibling Project Plan, one board with phase/all-phase scopes, project-wide dependency focus, unplaced work without lanes, explicit phase lifecycle/order, and separate Delivery/Execution goal views. Alternative: retain only the selected-phase board and narrower goal browser, which would require revising the corresponding proposed outcomes explicitly. | RM1, before slices 4/5 and final Goals UI, not slice 1. Preserve existing phase-owned Delivery Goals and 1:1 execution links by default; cross-phase outcomes and 1:N links need a separate demonstrated requirement and owner selection. |
+| D4/D7/D8 complete-package formal state | Recommend the new version preserve supported lanes, readiness/revisions and accepted history, with destination access/evidence checks before new execution. Alternative: convert imported work to Backlog, explicitly abandoning lossless formal-state restoration. | Before RM5's format/fixture, not lifecycle. Resolve the ADR-001/004 conflict explicitly and design file/store recovery together; no new continuation exception is inferred. |
+
+Remaining I1/I5–I9 pursue/no-go, audience, publication and run-ownership decisions
+keep their existing bounded assignments. They are not hidden prerequisites for
+these four choices. D3/D7/D12/D13 implementation details (retained-history schema,
+event payloads, proposal encoding, revision adapters) belong to their slices;
+routine choices consistent with accepted semantics require no extra owner gate.
+
+### Minimum prerequisites and complete lifecycle recommendation
+
+Release slice 1 after the two immediate owner choices and independent review of
+this candidate are recorded in the delivery baseline. The slice must reconcile
+its affected product design and shipped guidance under explicit authorization;
+that does not require a separate prerequisite design project. Its brief should
+cover C1/C2/C3/C12 and the first I3
+integration as one usable outcome, with these coherent checkpoints:
+
+1. **Save, resume and edit:** a real folder-backed project is visible immediately
+   after durable save, including with zero phases. Resume uses its saved name,
+   task exclusions, explicit worktree choices and setup state. Name/exclusion
+   edits are app-owned metadata actions; root grants and seed application retain
+   separate reviewed actions. The project remains visible through lost access;
+   it is not a new folderless-project workflow.
+2. **Complete the actual documentation journey:** inspect prerequisites, expose
+   explicit blank/existing-repository bootstrap or repair, copy the exact reviewed
+   request with accessible success/failure, validate repository results, then
+   explicitly bind or accept only the appropriate exact snapshot and record the
+   handoff. Each repository/app outcome survives close/relaunch independently;
+   uncertain mutations use the same request identity. Copy is never dispatch,
+   and Check never writes. No test-created phase or manual test-only catalog may
+   substitute for a missing step in the actual supported journey.
+3. **Recover and understand health:** reconnect the exact saved folder directly
+   from its access error even if the catalog is invalid; show the remaining
+   documentation issue afterward. Consolidate existing store/access/catalog/
+   plugin/observer diagnostics with exact targets and check times, preserving
+   simultaneous failures and read-only refresh. Initial refresh/relaunch and
+   stale-result rejection support this journey; broader C8 watching stays in
+   slice 3. Add contextual Help and RDS components to these complete flows.
+
+Use current app services and focused migrations only where those behaviors need
+them. Establish registration-scoped late-result protection in lifecycle; defer
+removal tombstones, full-backup machinery, cloud outboxes and complete navigation
+history until their owning slices. First-root attachment and exact same-folder
+reconnect retain ADR-001 semantics; C4's managed relocation contract is not relaxed
+to solve missing binding. Initial health may explain an unavailable operation
+without inventing it, but the promised bootstrap and same-folder recovery must
+work end to end.
+
+Read-only inspection confirmed RDS's public integration guidance and local
+revision `d0932aa6b6c21f420ea197a9cc7b14254c23695a`; choosing the reproducible consumer
+resolution belongs to slice 1. The lifecycle and board/settings reference images
+were inspected alongside proposed Goals/Work Board/History. The onboarding image
+is catalogued **superseded**: its first-phase action, generic relocation action
+and live-connection implication cannot override current contracts. Use its calm
+recovery composition only where compatible; the slice must compare the actual
+RDS-based UI at compact/wide sizes and verify keyboard/accessibility behavior.
+No runtime visual correctness is claimed for this documentation candidate.
+
+Direct source inspection confirmed the phase gate, path-derived creation,
+exclusion replacement and resumed UI defaults in `ProjectOnboarding.swift` and
+`OnboardingView.swift`, pending-project filtering in `DashboardProjection.swift`,
+project-only routes in `AppRoute.swift`, and current-state decoration in
+`ProjectActivityProjection.swift`. CodeGraph was attempted first but reported no
+usable index in this worktree; focused current-file inspection supplied the
+evidence. These are slice inputs, not fixes made by this architecture assignment.
 
 ### Migration and recovery implications
 
@@ -654,15 +803,23 @@ owner's request; future compatibility does not authorize speculative implementat
 
 ## Assessment limitations and current activation state
 
-The installed validator rejects the canonical repository's `docs/.DS_Store`.
-This is the planned C8 product repair, not a recurring owner-cleanup prerequisite.
-Supported inventory reports no accepted
+The original assessment found the installed validator rejecting the canonical
+repository's `docs/.DS_Store`. C8's exact repair and installed verification are now
+closed; do not turn metadata cleanup into a new prerequisite. The recorded
+supported inventory still reports no accepted
 repository binding for the current Release Radar registration. That is consistent
 with the reported post-reset mismatch and differs from the historical September 2
 acceptance. Existing files alone do not establish restored app authority.
 
+During this reconciliation the parent reported a successful supported connector
+inventory against the canonical root: managed v2, catalog v1 and expected
+repository identity, with `bindingMissing`, no project binding and
+`isComplete: false`. The earlier connector `appUnavailable` did not recur in that
+readback and is not asserted as the current state. The parent records the direct
+result in progress; this architecture task performed no app-state operation.
+
 This plan can be reviewed as proposed repository documentation. Its catalog change
-remains unaccepted by the app. Implementing C8 does not itself restore a missing
+remains unaccepted by the app. Completing C8 does not itself restore a missing
 binding or accept a catalog; those operations remain distinct from the validator
 repair and the plan's product decisions. Do not present this draft
 as an accepted application snapshot or reconstruct missing audits. No application
