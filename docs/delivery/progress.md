@@ -17,9 +17,10 @@ checkout's unrelated changes and native default staged bundle remain preserved.
 
 The explicit orchestrator execution goal covers this reviewed source checkpoint,
 durable results, local commits, task archival and installation handoff. It does
-not change Release Radar Delivery Goals or owner acceptance. No push, PR, merge
-to a remote branch, installation, app/owner-state mutation, repository binding,
-catalog acceptance, audit reconstruction, metadata deletion or hooks were performed.
+not change Release Radar Delivery Goals or owner acceptance. At that source checkpoint no push, PR, remote merge, installation, app/owner-state
+mutation, repository binding, catalog acceptance, audit reconstruction, metadata
+deletion or hooks were performed. The subsequently approved no-launch installation
+is recorded below.
 
 ## Changed behavior and direct verification
 
@@ -72,23 +73,29 @@ owner's explicit resume. Architect/delivery/reviewer settings were confirmed as
 assigned. No Ultra or new worker goal was used. Role choice and observed rework
 are recorded here; they are not a model-quality comparison or a new scorecard.
 
-## Remaining installed acceptance and next authorized decision
+## Installed follow-through and remaining acceptance
 
-**C8 installed acceptance remains outstanding.** The concrete next decision is
-owner authorization for the exact brief's preparation and native no-launch
-installation of the canonical C8 candidate into `/Applications/ReleaseRadar.app`,
-followed by separately authorized installed-reader/checker and supported app
-readback. The proposed sequence preserves the previous default staged bundle and
-uses the existing installer's verification, atomic promotion and rollback.
-None of that installation sequence has been executed.
+After source closeout, the owner explicitly approved the documented no-launch
+installation. On 2026-09-06 the exact candidate was prepared through the reviewed
+sequence and installed with `script/build_and_run.sh install-staged-release-no-launch`
+into `/Applications/ReleaseRadar.app`. The native installer returned success after
+its signature/identity checks and verified promotion. The installed main binary
+matches the approved candidate hash; version is 0.1.6, build 1.
 
-The installed bundle was not changed. Final supported application readback
-returned `appUnavailable`. The last successful readback during this pilot reported
-`isComplete: false`, `catalogInvalid` / `prohibitedContent`, and zero project
-repository bindings; it is not a fresh claim of current application state. Final
-canonical documentation validation with the candidate helper passes. Passing source
-validation does not repair installed state or establish application availability. Binding, pending catalog acceptance and post-reset recovery remain
-separate owner-authorized operations; no managed-current synchronization is claimed.
+The installed bundled documentation checker then passed against the canonical
+repository with `.DS_Store` retained. No GUI launch occurred, and an exact process
+check found the installed app executable was not running. The prior default staged
+bundle remains at `build/product-architecture-plan-worktree/dist/ReleaseRadar.pre-C8-source-35e2ef6.app`.
+This retained staging artifact is not an installed-app backup. Earlier temporary
+build/test paths remain listed in the brief; no discretionary cleanup was performed.
+
+**Full installed acceptance remains outstanding:** launch and exercise the installed
+app reader and obtain supported application readback under separate authorization.
+The source checkpoint's final readback was `appUnavailable`; its earlier old-validator
+`prohibitedContent` and zero-binding report is historical, not a current installed-
+state claim. No repository binding, catalog acceptance, audit reconstruction or
+post-reset recovery was performed. Passing the installed helper does not establish
+managed-current application tracking. The source execution goal remains complete.
 
 The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
 retains all 40 capability rows and their accepted/proposed distinctions. Broader

@@ -148,10 +148,11 @@ jaroberts4@gmail.com (PT7GS96H3L)`). Its main binary SHA-256 is
 `06931783b7717060baaaff682d8b5ebd32ddc3424e72c70e5f460984a864a28e`. The
 pre-existing `dist/ReleaseRadar.app` was not changed.
 
-After independent review and explicit owner authorization, prepare and install
-only through the source-candidate native installer. The integrated handoff
-worktree has the reviewed source and candidate. The following future-only,
-fail-fast sequence preserves the known pre-existing default staged bundle before
+The owner approved and executed the following reviewed preparation and no-launch
+installation sequence on 2026-09-06. This is the retained installation record,
+not an instruction to repeat the sequence. The integrated handoff
+worktree has the reviewed source and candidate. The approved
+fail-fast sequence preserved the pre-existing default staged bundle before
 placing the C8 candidate at the native installer's expected path:
 
 ```sh
@@ -168,10 +169,11 @@ ditto "$candidate" "$default_stage"
 "$handoff_root/script/build_and_run.sh" install-staged-release-no-launch
 ```
 
-This sequence is not executed by this source checkpoint. The native installer,
+This sequence was not executed at the source checkpoint; it was executed after
+the owner subsequently approved the exact no-launch installation. The native installer,
 rather than `ditto` directly into `/Applications`, owns process shutdown,
 signature and identity verification, atomic promotion, backup and rollback.
-Before the installer starts, the prior staged bundle would remain recoverably at
+The prior staged bundle remains recoverably at
 `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/build/product-architecture-plan-worktree/dist/ReleaseRadar.pre-C8-source-35e2ef6.app`;
 the sequence never removes it.
 Installed acceptance remains the separately authorized check of the installed
@@ -200,3 +202,18 @@ remaining temporary fixture roots are
 `/private/tmp/release-radar-c8-helper-green.ZiH8qN`, and
 `/private/tmp/release-radar-c8-staged-check.YIq4nP`. No cleanup is authorized
 or performed by this task.
+
+### Approved no-launch installation result — 2026-09-06
+
+The native installer completed successfully at `/Applications/ReleaseRadar.app`.
+Installed version 0.1.6 build 1 and main-binary SHA-256 match the approved candidate
+recorded above. Native signature, identity and promotion checks passed. The installed
+`Contents/Helpers/ReleaseRadarDocumentationTool check --root` against the canonical
+repository passed with actual `.DS_Store` retained. The GUI was not launched, and
+an exact process check found the installed app executable was not running.
+
+The prior staged bundle named above remains preserved. No discretionary cleanup
+of the listed temporary outputs occurred; the native installer's own temporary
+promotion/backup cleanup ran as part of the approved procedure. Launch-based app-
+reader acceptance and supported application readback remain separately authorized
+work. No binding, catalog acceptance, audit reconstruction or recovery was performed.
