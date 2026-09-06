@@ -81,9 +81,14 @@ and product plan. Assign one integration writer and one progress-ledger writer.
 Worktrees do not isolate SQLite, installed apps, credentials, ports or shared Git
 metadata; shared mutations remain serialized and separately authorized. Finish and
 preserve the result before ending a task; archived status is not proof that a run
-or external process stopped. Same-outcome corrections may reuse a task, unrelated
-work must not. No new task database, architecture registry or parallel ledger is
-introduced.
+or external process stopped. The orchestrator must promptly archive bounded delivery,
+integration and review tasks after their outcome and required corrections are
+complete, durable results are saved and processes have stopped. Parent-level owner
+approval does not keep a completed child open. Record the outcome and archive status
+in the existing progress ledger. Only required corrections to that same outcome may
+reuse or restore a task; a new candidate outside that correction scope or a
+separate handoff review uses a fresh task. This owner clarification was requested on 2026-09-06. No new task database,
+architecture registry or parallel ledger is introduced.
 
 ## Assignment and completion policy
 

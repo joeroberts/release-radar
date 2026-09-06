@@ -1,7 +1,7 @@
 # Operating baseline preparation
 
 Date: 2026-09-06. Status: preparation complete; independent review passed;
-owner baseline approval pending.
+owner approved baseline `44dc75b` on 2026-09-06.
 
 ## Objective and outcome
 
@@ -48,6 +48,6 @@ No product test suite is needed for this documentation-only outcome.
 
 Completion requires coherent operating documents, no unresolved required review
 findings, a local committed baseline with canonical copies, and explicit reporting
-of the separate application recovery limitations. Owner baseline approval remains
-the next step. Reviewer recommendations do not expand scope; only required defects
+of the separate application recovery limitations. The owner approved the baseline; the requested
+[new-task kickoff prompt](c8-pilot-kickoff.md) is the final handoff. Reviewer recommendations do not expand scope; only required defects
 block, and bounded corrections repeat only affected checks.

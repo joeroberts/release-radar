@@ -423,7 +423,8 @@
       "parentCollection": "delivery.task-briefs",
       "purpose": "Operating baseline preparation; progress determines current authorization",
       "allowedContents": [
-        "Reviewed task briefs"
+        "Reviewed task briefs",
+        "Reviewed handoff prompts"
       ],
       "prohibitedContents": [
         "Temporary build output",
@@ -4050,6 +4051,21 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-c8-pilot-kickoff-2026-09-06",
+      "path": "docs/delivery/task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-06-operating-baseline",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"

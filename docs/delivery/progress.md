@@ -11,8 +11,10 @@ The independently reviewed operating-document candidate is
 committed as `c9374836e18390caa16851330bc8951f90479a64` on
 `codex/full-product-architecture-plan`, building on `1816b99`. Independent review
 is complete with no required or optional findings. Subsequent commits record
-status and this bounded closeout; the final local branch head is the starting
-baseline presented to the owner. Owner baseline approval is pending.
+status and bounded closeout. On 2026-09-06 the owner approved starting baseline
+`44dc75b1cf63837e22e5cf18773178576d55c618`. The current follow-through records that
+approval and provides the requested new-task kickoff prompt; no pilot is launched
+from this task.
 
 The operating policy is in root AGENTS.md and
 [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md): the
@@ -22,12 +24,20 @@ outcomes; models and effort vary by complexity and risk. **Ultra is prohibited i
 all tasks, subagents, defaults and escalation paths.** Required review is terminal
 apart from concrete defects, and optional recommendations do not expand scope.
 
-After the committed baseline is reviewed and approved by the owner, provide a
-prompt to start a new task for the proposed C8 validator-repair pilot. Do not launch
-that pilot here. No product code, rules/hooks installation, global Codex settings,
+The [C8 kickoff prompt](task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md)
+is the handoff for a new Astra Medium orchestrator task. Its explicit authorization
+applies when the owner submits it in that new task. Do not launch the pilot here. No product code, rules/hooks installation, global Codex settings,
 application-state mutation, push, PR, merge or app installation is authorized by
 this baseline-preparation task. Operating-document changes do not establish
 technical enforcement of tool restrictions.
+
+The owner also clarified that bounded tasks must be archived when their work and
+required corrections are complete. This is now recorded in AGENTS.md and ADR-007:
+the orchestrator owns archiving after durable results and stopped processes, and a
+new candidate outside the original correction scope or a separate handoff review
+gets a fresh task. The kickoff prompt carries that rule. The kickoff's one required
+collection-metadata correction is awaiting scoped closure; the new archival-policy
+clarification is awaiting independent review in a fresh task.
 
 ## Product direction and approval boundaries
 
@@ -104,11 +114,10 @@ unknown discovery state rather than proof that an assigned task did not run.
 
 ## Next eligible work
 
-Present the reviewed committed baseline for owner review/approval. After that
-approval, provide the requested new-task pilot prompt; do not launch the pilot
-from this closeout. The proposed pilot is C8 with Terra Medium delivery and Sol
-High independent review; consult the separate
-chief architect at Astra High for the compatibility contract as needed. Its brief
+The owner has approved the operating baseline. Provide the committed kickoff
+prompt for a new Astra Medium orchestrator task. It specifies Terra Medium delivery,
+Sol High independent review and separate Astra High chief-architect input for the
+compatibility contract. The pilot begins only when the owner submits that prompt. Its brief
 must preserve the narrow scope, name the approved starting commit and specify the
 actual authorized delivery endpoint. Broader lifecycle repairs follow the plan's
 shared decisions; optional observer, companion, execution engine and I9 hooks do

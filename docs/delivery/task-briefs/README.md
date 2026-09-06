@@ -229,7 +229,7 @@ Leaf: no child collections.
 
 - Path: [docs/delivery/task-briefs/2026-09-06-operating-baseline](2026-09-06-operating-baseline)
 - Purpose: Operating baseline preparation; progress determines current authorization
-- Allowed contents: Reviewed task briefs
+- Allowed contents: Reviewed handoff prompts; Reviewed task briefs
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: none
 - Archive destination: [delivery.archive](../archive)
@@ -239,6 +239,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
+| rr-c8-pilot-kickoff-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md](2026-09-06-operating-baseline/c8-pilot-kickoff.md) | document | supporting | active | none | none |
 | rr-operating-baseline-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md](2026-09-06-operating-baseline/operating-baseline-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children

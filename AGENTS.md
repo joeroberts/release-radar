@@ -225,10 +225,18 @@ required owner decisions. A successful dispatch is not a completed assignment.
 
 Orchestrator and chief-architect responsibilities persist across slices, but their
 conversations may be replaced from the existing plan, ADRs and progress ledger.
-Delivery, integration and review tasks end with their assigned outcome; reuse them
-only for corrections to that same outcome. Do not recycle a task for an unrelated
-role. Archive only after work/processes are known to have stopped; archiving alone
-does not prove cancellation. Preserve useful results in the repository first.
+Delivery, integration and review tasks end with their assigned outcome, including
+required corrections. The orchestrator must archive each bounded task promptly
+once that work is complete, useful results are preserved in the repository and
+its work/processes are known to have stopped. Parent-level owner review or approval
+is not a reason to leave a completed child task open. Record its result and archive
+status concisely in the existing progress ledger; archiving is not cancellation.
+
+Reuse or restore a task only for required corrections to the same assigned outcome.
+A new candidate outside that correction scope, unrelated outcome or separate
+handoff review requires a fresh task. Do not reuse a completed reviewer for kickoff-prompt review merely
+because its context or tools remain available. Orchestrator and chief-architect
+standing responsibilities retain the conversation-replacement rules above.
 
 Delivery tasks may use subagents only for concrete bounded work with relevant
 requirements, explicit model/effort and separate ownership. Never use an implementer
