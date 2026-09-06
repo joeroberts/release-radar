@@ -1,8 +1,8 @@
 # C8 source-repair pilot
 
-Date: 2026-09-06. Status: local source delivery complete and independently reviewed;
-installed acceptance remains outstanding. Retained as active supporting installation
-handoff material; current authorization and status are in the progress ledger.
+Date: 2026-09-06. Status: bounded C8 repair complete; independently reviewed source
+and installed-reader/checker acceptance passed. Retained as a completed, non-
+authoritative task record; current authorization and status are in the progress ledger.
 
 ## Objective and outcome
 
@@ -217,3 +217,29 @@ of the listed temporary outputs occurred; the native installer's own temporary
 promotion/backup cleanup ran as part of the approved procedure. Launch-based app-
 reader acceptance and supported application readback remain separately authorized
 work. No binding, catalog acceptance, audit reconstruction or recovery was performed.
+
+### Installed acceptance and bounded closure — 2026-09-06
+
+The owner explicitly authorized launching the installed app and completing read-only
+verification. The exact `/Applications/ReleaseRadar.app` executable launched and its
+Projects window was inspected. Its bundled documentation checker passed on the
+canonical repository with the actual `.DS_Store` retained.
+
+The Codex connector returned `appUnavailable` after startup. The installed app's
+supported `Contents/Helpers/ReleaseRadarAgentTools` MCP stdio entrypoint successfully
+served the identical `release_radar_inventory_evidence` query for the canonical
+root. That readback returned catalog v1, repository ID
+`e7475429-ef51-4368-ad9e-61d9073d5a4f`, managed guidance v2 and a validated catalog
+digest. The app reader therefore validated the metadata-bearing catalog; its
+remaining status was `bindingMissing`, not `prohibitedContent`. Inventory was
+`isComplete: false` with zero project bindings.
+
+The installed reader/checker result completes the bounded C8 metadata repair's
+acceptance, together with the reviewed source and 46 focused passing regressions.
+The app remains launched. Missing binding and connector availability are separate
+recovery issues; no delivery-state mutation, binding, catalog acceptance, audit
+reconstruction, plugin/configuration repair or broader freshness work was performed.
+Earlier statements about pending installed acceptance describe the prior source/
+installation checkpoints and are superseded by this installed acceptance result.
+Temporary files and retained staging artifacts remain as already listed; no cleanup
+was added during this verification.

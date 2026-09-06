@@ -240,7 +240,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-c8-source-repair-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-c8-source-repair/c8-source-repair-brief.md](2026-09-06-c8-source-repair/c8-source-repair-brief.md) | document | supporting | active | none | none |
+| rr-c8-source-repair-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-c8-source-repair/c8-source-repair-brief.md](2026-09-06-c8-source-repair/c8-source-repair-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

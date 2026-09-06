@@ -4098,8 +4098,8 @@
       "artifactID": "rr-c8-source-repair-brief-2026-09-06",
       "path": "docs/delivery/task-briefs/2026-09-06-c8-source-repair/c8-source-repair-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-06-c8-source-repair",
       "supersedes": [],
       "applicationSensitivity": [

@@ -2,18 +2,20 @@
 
 ## Current outcome and authorization
 
-C8's bounded local source checkpoint is delivered and independently reviewed.
+C8's bounded `.DS_Store` repair is closed: source delivery is independently
+reviewed, and installed-reader/checker verification passed on 2026-09-06.
 The owner launched this pilot from handoff `69d62b0`, following approved operating
 baseline `44dc75b`, and explicitly resumed it with Astra Medium after a model-change
 pause. The [C8 brief and installation handoff](task-briefs/2026-09-06-c8-source-repair/c8-source-repair-brief.md)
-retains the complete scope, direct checks, exact candidate and future installation
-sequence. It remains active as supporting handoff material; this ledger owns status.
+retains the completed scope, direct checks, exact candidate and executed installation
+sequence as a non-authoritative completed task record; this ledger owns status.
 
 Source implementation: `35e2ef60347e366ab43f8131ab5d99a99af6a6d8`.
 Reviewed source/handoff candidate: `5fd353960617c0e70dcc39a7d2d813567b83bb24`,
 locally integrated on `codex/full-product-architecture-plan`. The source handoff
 worktree contains the reviewed code and native installer. The older canonical
-checkout's unrelated changes and native default staged bundle remain preserved.
+checkout's unrelated changes remain preserved; the previous native default staged
+bundle is retained at the backup path recorded below.
 
 The explicit orchestrator execution goal covers this reviewed source checkpoint,
 durable results, local commits, task archival and installation handoff. It does
@@ -73,7 +75,7 @@ owner's explicit resume. Architect/delivery/reviewer settings were confirmed as
 assigned. No Ultra or new worker goal was used. Role choice and observed rework
 are recorded here; they are not a model-quality comparison or a new scorecard.
 
-## Installed follow-through and remaining acceptance
+## Installed follow-through and C8 closure
 
 After source closeout, the owner explicitly approved the documented no-launch
 installation. On 2026-09-06 the exact candidate was prepared through the reviewed
@@ -92,13 +94,34 @@ local binary changes and the retained prior-stage directory there. They were not
 committed as source changes or reverted. Earlier temporary
 build/test paths remain listed in the brief; no discretionary cleanup was performed.
 
-**Full installed acceptance remains outstanding:** launch and exercise the installed
-app reader and obtain supported application readback under separate authorization.
-The source checkpoint's final readback was `appUnavailable`; its earlier old-validator
-`prohibitedContent` and zero-binding report is historical, not a current installed-
-state claim. No repository binding, catalog acceptance, audit reconstruction or
-post-reset recovery was performed. Passing the installed helper does not establish
-managed-current application tracking. The source execution goal remains complete.
+The owner subsequently authorized launch, installed-reader/checker verification,
+and supported read-only application readback. `/Applications/ReleaseRadar.app`
+launched successfully; the exact installed executable was running and its Projects
+window was inspected. The installed bundled documentation checker again passed
+against the canonical root with actual `.DS_Store` retained.
+
+The Codex connector's inventory call returned `appUnavailable` both immediately
+and after startup. Using the installed app's supported
+`Contents/Helpers/ReleaseRadarAgentTools` MCP stdio entrypoint for the same
+`release_radar_inventory_evidence` query succeeded without a mutation. The app
+reader returned catalog version 1, repository ID
+`e7475429-ef51-4368-ad9e-61d9073d5a4f`, managed guidance v2 and a validated catalog
+digest. It no longer rejected `.DS_Store`; the remaining catalog status was
+`bindingMissing`, with zero project bindings and `isComplete: false`.
+
+This establishes agreement between the installed app reader and installed checker
+on the actual metadata-bearing repository. Combined with the reviewed source and
+46 passing focused regressions, the bounded C8 metadata repair meets its acceptance
+criteria and is closed. The app remains launched. No delivery-state mutation,
+repository binding, catalog acceptance, audit reconstruction, reset or recovery
+was performed. The original source execution goal remains complete.
+
+Separate remaining problems are the missing project repository binding and the
+Codex connector's `appUnavailable` result despite successful installed-helper
+readback. Their cause/recovery is outside C8; no plugin/configuration repair was
+attempted. Catalog edits remain unaccepted in application tracking. Neither C8
+closure nor a valid catalog implies managed-current synchronization or acceptance
+of broader C8 freshness work.
 
 The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
 retains all 40 capability rows and their accepted/proposed distinctions. Broader
