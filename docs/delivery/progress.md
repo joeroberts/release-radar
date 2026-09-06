@@ -11,6 +11,14 @@ It is supporting proposed documentation, not an accepted architecture change or
 authorization to implement product features, change agent configuration, mutate
 application state, publish a PR or merge work.
 
+On 2026-09-06 the owner approved adding all six recommended outcomes to the
+roadmap: requirements/decision traceability; plan revisions/change previews;
+delivery evidence tied to code revision; ticket cancellation/replacement/splitting;
+workspace search/saved views; and project health/guided recovery. Their inclusion
+is approved and recorded in the plan as P15–P19 and C12. Detailed contracts,
+sequencing choices and implementation remain separate decisions. The existing
+six-goal/eleven-ticket catalog and accepted product boundaries are preserved.
+
 The recommendation is to retain the app-owned transactional core and trust
 boundaries, resolve the shared identity/planning/authority contracts, and deliver
 complete bounded slices. The proposed plan accounts for all six approved roadmap
@@ -36,8 +44,15 @@ No product code or owner application state was changed.
 The native documentation checker passes in the clean planning worktree. One
 independent substantive review identified two missing proposed UX outcomes; both
 were corrected and verified resolved. No required review findings remain. The
-plan now assesses 34 capabilities, with decisions, dependencies and acceptance
+original plan assessed 34 capabilities, with decisions, dependencies and acceptance
 journeys. This is plan validation, not product implementation acceptance.
+The current roadmap update assesses 40 capabilities and integrates the six new
+outcomes into shared contracts, migrations/portability, delivery slices and direct
+acceptance checks. Native documentation validation and scoped diff checks pass;
+one independent review of the addition found no required or optional findings.
+Catalog identity, metadata and generated indexes remain unchanged. No product tests
+were rerun for this documentation-only change; the earlier 95 product tests are
+not verification of these future capabilities.
 The canonical checker currently rejects pre-existing `docs/.DS_Store`. Supported
 application inventory reports no accepted repository binding for the current
 Release Radar registration. The proposed catalog remains unaccepted; a validated
@@ -61,7 +76,9 @@ task definition, ticket lane or Delivery Goal was reopened by this assessment.
 Review the proposed plan's shared decisions and sequencing. Product implementation
 requires explicit selection/approval of the next complete slice and its applicable
 contract changes. The recommended first outcome is usable project registration,
-resume/edit and direct access recovery, informed by the full product model.
+resume/edit, direct access recovery and project health, informed by the full product
+model. Inclusion of the six additions is settled; refine their detailed contracts
+in the identified slices without silently dropping them or reopening that decision.
 Optional observer, companion and execution-host decisions do not block core repair.
 
 Canonical metadata cleanup and application binding/catalog recovery remain separate
