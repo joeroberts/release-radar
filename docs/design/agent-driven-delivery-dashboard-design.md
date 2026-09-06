@@ -156,9 +156,9 @@ no folder path or project content.
 > infer canonical state from arbitrary Markdown, or guess; send uncertain items
 > to Needs Review.
 
-Portable Import remains hidden until its exporter/archive gate opens. The
-owner-approved future Help section is deferred and is not part of onboarding
-initialization.
+Portable Import remains hidden until its exporter/archive gate opens. Contextual
+Help covers the shipped local lifecycle, documentation boundaries, and recovery;
+it does not imply portable import or later planning capabilities.
 
 For new folder-backed project onboarding:
 
@@ -176,16 +176,15 @@ For new folder-backed project onboarding:
 4. Confidently mapped phases/tickets/dependencies are imported. Ambiguous
    items, possible duplicates, unmatched threads, and missing outcome text go
    to a Needs review inbox instead of blocking onboarding.
-5. If no usable delivery structure is found, initialization remains saved and
-   resumable until the owner uses the displayed prompt in the current task
-   already rooted at the selected folder to invoke the installed skill,
-   preserve or create the applicable repository guidance and
-   minimum delivery ledger, and establish the project's current tracking state
-   through audited ticketless evidence. Completion still requires a persisted
-   active phase, but the owner-facing workflow does not call it the "first
-   phase." The app never invents a default phase, claims an agent was
-   contacted, writes repository files, or treats missing desktop observation as
-   Codex unavailability.
+5. Initialization saves an opaque project ID, a separate registration ID and a
+   request generation. The owner may explicitly finish with zero phases; the
+   project becomes visible immediately while incomplete repository documentation
+   remains actionable. The copied bootstrap prompt pins the exact registration
+   and root, previews either a blank-repository or preservation-first existing-
+   documents change, and stops after repository check/readback. Binding, catalog
+   acceptance and audited guidance handoff are separate explicit app actions.
+   The app never invents a default phase, claims an agent was contacted, writes
+   repository files, or treats missing desktop observation as Codex unavailability.
 6. The app creates no Pushover alert during onboarding. It may notify about
    outstanding review items only after the owner has opened that project's
    dashboard once.
@@ -198,6 +197,13 @@ The home screen lists projects with their active phase, verified persisted or
 truthfully unavailable/stale goal context, current work count, and attention
 count. A project is always represented by a folder-backed record; there are no
 folderless planning projects.
+
+A project with no phase is a valid ready-for-planning state. Its overview exposes
+editable saved name/task exclusions, contextual Help, exact-root recovery,
+documentation activation, and read-only project health. Settings retains a
+combined store/access/documentation/plugin/observer health surface even when the
+delivery store cannot open. Every result displays its check time and exact target
+when a saved registration is available; superseded refreshes are discarded.
 
 ### Phase board
 
@@ -289,15 +295,13 @@ current classification and decision gates are recorded exclusively in
 ## Acceptance criteria
 
 1. Onboarding any local folder preserves a resumable **Initialize Project
-   Tracking** state, discovers matching Codex threads/worktrees only when a
-   supported observer exists, remembers exclusions, and requires persisted
-   current tracking state before completion without owner-facing “first phase”
-   or false automatic-agent language. Its copied prompt operates in the current
-   task rooted at the selected folder and explicitly invokes
-   `$release-radar:release-radar`; owner-requested initialization preserves or
-   creates applicable repository guidance and the minimum pending-audit ledger,
-   reads it back, then records the actual `AGENTS.md` with existing ticketless
-   evidence without an invented MCP API.
+   Tracking** state with opaque project/registration identity, discovers matching
+   Codex threads/worktrees only when a supported observer exists, remembers
+   exclusions, and permits explicit completion with zero phases. Its copied
+   prompt operates in the current task rooted at the selected folder and
+   explicitly invokes `$release-radar:release-radar`; repository preparation,
+   binding, catalog acceptance, and audited guidance are previewed and confirmed
+   as separate steps without an invented MCP API.
 2. Rekon's importer produces local phases/tickets/dependencies/evidence links
    from its existing delivery records, routing uncertain mappings to Needs
    review rather than silently guessing.

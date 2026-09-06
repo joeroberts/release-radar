@@ -70,7 +70,9 @@ public enum ProjectGuidanceInspection {
             let snapshot = try RepositoryDocumentValidator().validateCurrent(reader: reader)
             if managed {
                 guard let context else { throw DocumentationOperationError.bindingMissing }
-                guard context.root == rootURL else { throw DocumentationOperationError.rootMismatch }
+                let boundRoot = context.root.standardizedFileURL.resolvingSymlinksInPath().path
+                let inspectedRoot = rootURL.standardizedFileURL.resolvingSymlinksInPath().path
+                guard boundRoot == inspectedRoot else { throw DocumentationOperationError.rootMismatch }
                 try context.requireAccepted(snapshot)
                 return .managed(hasAuditedHandoff: hasAuditedHandoff, catalogVersion: snapshot.version, catalogDigest: snapshot.digest)
             }

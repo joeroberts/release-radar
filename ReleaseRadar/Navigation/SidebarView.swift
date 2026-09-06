@@ -182,6 +182,7 @@ struct SidebarView: View {
                 ProjectsView(
                     projection: dashboard,
                     onboardingStore: model.onboardingStore,
+                    codexTasks: model.codexTasksForOnboarding(),
                     openProject: { projectID in
                         Task { await model.openProject(projectID) }
                     },
@@ -239,7 +240,19 @@ struct SidebarView: View {
                             await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
                         },
                         repositoryRecovery: model.repositoryRecovery(for: projectID),
-                        onRepositoryRelocated: { await model.reloadAfterRepositoryRelocation() }
+                        onRepositoryRelocated: { await model.reloadAfterRepositoryRelocation() },
+                        loadProjectSettings: { try await model.projectSettings(for: projectID) },
+                        saveProjectSettings: { registration, name, exclusions in
+                            try await model.updateProjectSettings(
+                                registration: registration,
+                                projectName: name,
+                                excludedTaskIDs: exclusions
+                            )
+                        },
+                        availableCodexTasks: model.codexTasks(for: projectID),
+                        loadProjectHealth: { await model.projectHealth(for: projectID) },
+                        previewDocumentationSetup: { try await model.previewDocumentationSetup(registration: $0) },
+                        performDocumentationSetup: { try await model.performDocumentationSetup($0) }
                     )
                 } else {
                     FailureStateView(presentation: .firstPhaseRequired, style: .full)

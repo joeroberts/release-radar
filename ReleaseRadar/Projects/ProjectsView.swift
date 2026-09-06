@@ -1,10 +1,12 @@
 import SwiftUI
 import ReleaseRadarCore
+import RekonDesignSystem
 
 struct ProjectsView: View {
     @Environment(\.openWindow) private var openWindow
     let projection: DashboardProjection
     let onboardingStore: DeliveryStore
+    var codexTasks: [CodexTaskDescriptor] = []
     let openProject: (ProjectID) -> Void
     let onboardingFinished: @MainActor () async -> Void
 
@@ -12,6 +14,7 @@ struct ProjectsView: View {
         if projection.projects.isEmpty {
             OnboardingView(
                 store: onboardingStore,
+                codexTasks: codexTasks,
                 onOpenExisting: openProject
             ) { _ in
                 await onboardingFinished()
@@ -40,7 +43,8 @@ struct ProjectsView: View {
                             Button {
                                 openProject(project.id)
                             } label: {
-                                VStack(alignment: .leading, spacing: 18) {
+                                RekonCard {
+                                    VStack(alignment: .leading, spacing: 18) {
                                     HStack(alignment: .top) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(project.name)
@@ -49,10 +53,8 @@ struct ProjectsView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.tertiary)
                                             if project.activePhaseName == "No active phase" {
-                                                FailureStateView(
-                                                    presentation: .firstPhaseRequired,
-                                                    style: .compact
-                                                )
+                                                Text("Ready for planning")
+                                                    .foregroundStyle(RekonTheme.secondaryText)
                                             } else {
                                                 Text(project.activePhaseName)
                                                     .foregroundStyle(.secondary)
@@ -70,13 +72,8 @@ struct ProjectsView: View {
                                         projectMetric(value: project.currentWorkCount, label: "Current work")
                                         projectMetric(value: project.attentionCount, label: "Needs attention")
                                     }
-                                }
-                                .padding(20)
-                                .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
-                                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                                    }
+                                    .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
                                 }
                             }
                             .buttonStyle(.plain)

@@ -6,6 +6,24 @@ import ReleaseRadarCore
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testApplicationHealthRemainsReachableWhenStoreIsUnavailable() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-Health-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("store.sqlite")
+        try Data("not-a-sqlite-database".utf8).write(to: databaseURL)
+        let model = AppModel(store: DeliveryStore(databaseURL: databaseURL))
+
+        let health = await model.applicationHealth()
+
+        XCTAssertNil(health.projectTarget)
+        XCTAssertEqual(health.checks.map(\.id), ["storage", "folder", "documentation", "plugin", "observer"])
+        XCTAssertEqual(health.checks.first?.state, .unavailable)
+        XCTAssertTrue(health.checks.dropFirst().contains { $0.state != .ready })
+    }
+
+    @MainActor
     func testTask10ViewedPhaseDoesNotChangeActivePhaseOrAuditAndSurvivesReload() async throws {
         let fixture = try await makeRR9OwnerFixture()
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Independent project browsing fixture") { c in

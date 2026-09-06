@@ -8,6 +8,7 @@ enum ReviewItemKind: Equatable, Sendable {
     case unmatchedTask
     case excludedTask
     case agentReviewRequest
+    case documentationSetup
     case unsupported(String)
 
     init(storedValue: String) {
@@ -18,6 +19,7 @@ enum ReviewItemKind: Equatable, Sendable {
         case "unmatched_task": self = .unmatchedTask
         case "excluded_task": self = .excludedTask
         case "agent_review_request": self = .agentReviewRequest
+        case "documentation_setup": self = .documentationSetup
         default: self = .unsupported(storedValue)
         }
     }
@@ -30,6 +32,7 @@ enum ReviewItemKind: Equatable, Sendable {
         case .unmatchedTask: "Unmatched task"
         case .excludedTask: "Excluded task"
         case .agentReviewRequest: "Agent review request"
+        case .documentationSetup: "Documentation setup"
         case let .unsupported(value): value.replacingOccurrences(of: "_", with: " ").capitalized
         }
     }
@@ -42,6 +45,7 @@ enum ReviewItemKind: Equatable, Sendable {
         case .unmatchedTask: "questionmark.folder"
         case .excludedTask: "eye.slash"
         case .agentReviewRequest: "checkmark.bubble"
+        case .documentationSetup: "doc.badge.gearshape"
         case .unsupported: "questionmark.circle"
         }
     }

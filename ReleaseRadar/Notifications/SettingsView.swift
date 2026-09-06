@@ -5,6 +5,9 @@ import SwiftUI
 struct SettingsView: View {
     @Bindable var model: AppModel
     @State private var pendingPluginConfirmation: PluginConfirmation?
+    @State private var applicationHealth: ApplicationHealthSnapshot?
+    @State private var isCheckingApplicationHealth = false
+    @State private var applicationHealthGeneration: UInt64 = 0
     @FocusState private var focusedPluginAction: CodexPluginLifecycleAction?
 
     var body: some View {
@@ -272,6 +275,35 @@ struct SettingsView: View {
 
     private var projects: some View {
         Form {
+            Section("Application health") {
+                if let applicationHealth {
+                    if let target = applicationHealth.projectTarget {
+                        Text("\(target.projectID.rawValue) · registration \(target.registrationID) · generation \(target.requestGeneration)\(applicationHealth.rootPath.map { " · \($0)" } ?? "")")
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .accessibilityIdentifier("settings-health-target")
+                    } else {
+                        Text("No project target is available. Storage, plugin, and observer recovery remain accessible here.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(applicationHealth.checks) { check in
+                        LabeledContent(check.title, value: check.detail)
+                            .accessibilityIdentifier("settings-health-\(check.id)")
+                    }
+                    Text("Checked \(applicationHealth.checkedAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Check local storage, folder access, documentation, Codex observation, and the installed workflow.")
+                        .foregroundStyle(.secondary)
+                }
+                Button(isCheckingApplicationHealth ? "Checking…" : "Check Health") {
+                    refreshApplicationHealth()
+                }
+                .disabled(isCheckingApplicationHealth)
+                .accessibilityIdentifier("settings-health-refresh")
+            }
             Section("Local projects") {
                 if let projects = model.dashboard?.projects, !projects.isEmpty {
                     ForEach(projects) { project in
@@ -287,6 +319,19 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .task { refreshApplicationHealth() }
+    }
+
+    private func refreshApplicationHealth() {
+        applicationHealthGeneration &+= 1
+        let generation = applicationHealthGeneration
+        isCheckingApplicationHealth = true
+        Task {
+            let health = await model.applicationHealth()
+            guard generation == applicationHealthGeneration else { return }
+            applicationHealth = health
+            isCheckingApplicationHealth = false
+        }
     }
 }
 

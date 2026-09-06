@@ -376,6 +376,163 @@ final class AppModel {
         projectRoots[projectID]
     }
 
+    func projectSettings(for projectID: ProjectID) async throws -> ProjectSettingsSnapshot {
+        try await projectOnboarding.projectSettings(projectID: projectID)
+    }
+
+    func updateProjectSettings(
+        registration: ProjectRegistration,
+        projectName: String,
+        excludedTaskIDs: Set<String>
+    ) async throws -> ProjectSettingsSnapshot {
+        let updated = try await projectOnboarding.updateProjectSettings(
+            registration: registration,
+            projectName: projectName,
+            excludedTaskIDs: excludedTaskIDs
+        )
+        _ = await reloadProjectProjections()
+        return updated
+    }
+
+    func codexTasks(for projectID: ProjectID) -> [CodexTaskDescriptor] {
+        guard let root = projectRoots[projectID] else { return [] }
+        let canonicalRoot = root.standardizedFileURL.resolvingSymlinksInPath()
+        return codexSnapshot.threads.compactMap { thread in
+            let workingDirectory = thread.workingDirectory.standardizedFileURL.resolvingSymlinksInPath()
+            let rootComponents = canonicalRoot.pathComponents
+            let candidateComponents = workingDirectory.pathComponents
+            guard candidateComponents.count >= rootComponents.count,
+                  Array(candidateComponents.prefix(rootComponents.count)) == rootComponents
+            else { return nil }
+            return CodexTaskDescriptor(
+                id: thread.id,
+                workingDirectory: workingDirectory,
+                title: thread.goal?.objective ?? thread.id
+            )
+        }
+    }
+
+    func codexTasksForOnboarding() -> [CodexTaskDescriptor] {
+        codexSnapshot.threads.map {
+            .init(
+                id: $0.id,
+                workingDirectory: $0.workingDirectory,
+                title: $0.goal?.objective ?? $0.id
+            )
+        }
+    }
+
+    func projectHealth(for projectID: ProjectID) async -> ProjectHealthSnapshot {
+        let checkedAt = Date()
+        guard case .available = await store.availability else {
+            return .init(
+                projectID: projectID,
+                registration: nil,
+                rootPath: projectRoots[projectID]?.path,
+                checkedAt: checkedAt,
+                checks: [
+                    .init(id: "storage", title: "Local storage unavailable", detail: "Release Radar could not open its local store. Use the recovery information shown by the app before retrying.", state: .unavailable),
+                    .init(id: "folder", title: "Folder access not checked", detail: "Folder authorization cannot be verified while local storage is unavailable.", state: .unavailable),
+                    .init(id: "documentation", title: "Documentation not checked", detail: "Repository documentation cannot be verified while local storage is unavailable.", state: .unavailable),
+                ]
+            )
+        }
+
+        let settings = try? await projectOnboarding.projectSettings(projectID: projectID)
+        var checks: [ProjectHealthSnapshot.Check] = [
+            .init(id: "storage", title: "Local storage ready", detail: "The current Release Radar schema is available.", state: .ready),
+        ]
+        let documentation = await projectOnboarding.inspectProjectGuidanceContext(projectID: projectID)
+        if let root = documentation.projectRoot {
+            checks.append(.init(id: "folder", title: "Folder access ready", detail: root.path, state: .ready))
+        } else {
+            checks.append(.init(id: "folder", title: "Folder access needs attention", detail: "The saved authorization could not be resolved. Reauthorize the same project folder, then check again.", state: .attention))
+        }
+
+        let documentationPresentation = ProjectGuidancePresentation(documentationState: documentation.documentationState)
+        let documentationReady = documentation.documentationState.guidanceState == .current(version: ProjectGuidanceInspection.currentVersion)
+        checks.append(.init(
+            id: "documentation",
+            title: documentationPresentation.status,
+            detail: documentationPresentation.detail,
+            state: documentationReady ? .ready : .attention
+        ))
+
+        let plugin = CodexPluginSettingsPresentation(state: codexPluginState)
+        let pluginReady: Bool
+        if case .installed = codexPluginState { pluginReady = true } else { pluginReady = false }
+        checks.append(.init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: plugin.detail, state: pluginReady ? .ready : .attention))
+
+        let connection = CodexConnectionPresentation(freshness: codexSnapshot.freshness)
+        checks.append(.init(
+            id: "observer",
+            title: "Codex observation: \(connection.status)",
+            detail: connection.detail,
+            state: codexSnapshot.freshness.state == .live ? .ready : .attention
+        ))
+        return .init(
+            projectID: projectID,
+            registration: settings?.registration,
+            rootPath: documentation.projectRoot?.path ?? projectRoots[projectID]?.path,
+            checkedAt: checkedAt,
+            checks: checks
+        )
+    }
+
+    func applicationHealth() async -> ApplicationHealthSnapshot {
+        if case .available = await store.availability,
+           let projectID = dashboard?.projects.first?.id {
+            let project = await projectHealth(for: projectID)
+            return .init(
+                projectTarget: project.registration,
+                rootPath: project.rootPath,
+                checkedAt: project.checkedAt,
+                checks: project.checks
+            )
+        }
+
+        let storageAvailable: Bool
+        if case .available = await store.availability { storageAvailable = true }
+        else { storageAvailable = false }
+        let plugin = CodexPluginSettingsPresentation(state: codexPluginState)
+        let pluginReady: Bool
+        if case .installed = codexPluginState { pluginReady = true } else { pluginReady = false }
+        let observer = CodexConnectionPresentation(freshness: codexSnapshot.freshness)
+        return .init(
+            projectTarget: nil,
+            rootPath: nil,
+            checkedAt: Date(),
+            checks: [
+                .init(
+                    id: "storage",
+                    title: storageAvailable ? "Local storage ready" : "Local storage unavailable",
+                    detail: storageAvailable
+                        ? "The current Release Radar schema is available."
+                        : "Release Radar could not open its local store. Project records remain unavailable until storage recovery succeeds.",
+                    state: storageAvailable ? .ready : .unavailable
+                ),
+                .init(id: "folder", title: "Folder access not checked", detail: "Open a saved project to check its exact folder authorization.", state: .unavailable),
+                .init(id: "documentation", title: "Documentation not checked", detail: "Open a saved project to check its exact repository documentation target.", state: .unavailable),
+                .init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: plugin.detail, state: pluginReady ? .ready : .attention),
+                .init(id: "observer", title: "Codex observation: \(observer.status)", detail: observer.detail, state: codexSnapshot.freshness.state == .live ? .ready : .attention),
+            ]
+        )
+    }
+
+    func previewDocumentationSetup(
+        registration: ProjectRegistration
+    ) async throws -> ProjectDocumentationSetupPreview {
+        try await ProjectDocumentationSetupCoordinator(store: store).preview(registration: registration)
+    }
+
+    func performDocumentationSetup(
+        _ preview: ProjectDocumentationSetupPreview
+    ) async throws -> AuditEventID? {
+        let audit = try await ProjectDocumentationSetupCoordinator(store: store).perform(preview)
+        _ = await reloadProjectProjections()
+        return audit
+    }
+
     func activePhaseSelectionStatus(for projectID: ProjectID) -> ActivePhaseSelectionStatus {
         activePhaseSelectionStatuses[projectID] ?? .idle
     }

@@ -1,5 +1,6 @@
 import SwiftUI
 import ReleaseRadarCore
+import RekonDesignSystem
 
 struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
@@ -13,16 +14,30 @@ struct ProjectOverviewView: View {
     let reauthorizeActivePhase: (URL) async -> Void
     var repositoryRecovery: RepositoryRecoveryModel? = nil
     var onRepositoryRelocated: () async -> Void = {}
+    var loadProjectSettings: (() async throws -> ProjectSettingsSnapshot)? = nil
+    var saveProjectSettings: ((ProjectRegistration, String, Set<String>) async throws -> ProjectSettingsSnapshot)? = nil
+    var availableCodexTasks: [CodexTaskDescriptor] = []
+    var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
+    var previewDocumentationSetup: ((ProjectRegistration) async throws -> ProjectDocumentationSetupPreview)? = nil
+    var performDocumentationSetup: ((ProjectDocumentationSetupPreview) async throws -> AuditEventID?)? = nil
     @State private var promptCopyResult: CodexPromptCopyResult?
+    @State private var settings: ProjectSettingsSnapshot?
+    @State private var health: ProjectHealthSnapshot?
+    @State private var isLoadingSettings = false
+    @State private var isRefreshingHealth = false
+    @State private var healthGeneration: UInt64 = 0
+    @State private var showsSettings = false
+    @State private var showsHelp = false
+    @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
+    @State private var documentationSetupMessage: String?
+    @State private var isPerformingDocumentationSetup = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(project.name)
-                        .font(.largeTitle.weight(.semibold))
-                    Text("Project overview")
-                        .foregroundStyle(.secondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
+                    VStack(alignment: .leading, spacing: 12) { projectHeading; projectActions }
                 }
 
                 HStack(spacing: 14) {
@@ -37,9 +52,17 @@ struct ProjectOverviewView: View {
                     .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
 
                 if project.phases.isEmpty {
-                    FailureStateView(presentation: .firstPhaseRequired, style: .inline)
+                    RekonCallout(tone: .information, systemImage: "flag.badge.plus") {
+                        Text("Ready for a first phase").font(.headline)
+                        Text("This project is usable now. Add a phase when delivery planning begins.")
+                            .foregroundStyle(RekonTheme.secondaryText)
+                    }
                 }
                 guidanceCard
+                documentationSetupControls
+                if loadProjectHealth != nil {
+                    ProjectHealthView(snapshot: health, isRefreshing: isRefreshingHealth, refresh: refreshHealth)
+                }
                 if let repositoryRecovery {
                     RepositoryRecoveryView(model: repositoryRecovery, onCommitted: onRepositoryRelocated)
                 }
@@ -91,6 +114,39 @@ struct ProjectOverviewView: View {
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .task { if health == nil { refreshHealth() } }
+        .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
+        .sheet(isPresented: $showsSettings) {
+            if let settings, let saveProjectSettings {
+                ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks) { name, excluded in
+                    let updated = try await saveProjectSettings(settings.registration, name, excluded)
+                    self.settings = updated
+                    refreshHealth()
+                    return updated
+                }
+            }
+        }
+    }
+
+    private var projectHeading: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(project.name).font(.largeTitle.weight(.semibold))
+            Text("Project overview").foregroundStyle(RekonTheme.secondaryText)
+        }
+    }
+
+    private var projectActions: some View {
+        HStack {
+            if loadProjectSettings != nil {
+                Button(isLoadingSettings ? "Loading…" : "Manage Project", action: openSettings)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .disabled(isLoadingSettings)
+                    .accessibilityIdentifier("project-manage")
+            }
+            Button("Help") { showsHelp = true }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("project-help")
+        }
     }
 
     private var deliveryHeading: some View {
@@ -135,7 +191,11 @@ struct ProjectOverviewView: View {
                     .accessibilityIdentifier("project-guidance-authorized-root")
                 Button(actionTitle) {
                     promptCopyResult = CodexPromptHandoff.copy(
-                        prompt: CodexPromptHandoff.prompt(for: documentationState.guidanceState, projectRoot: projectRoot),
+                        prompt: CodexPromptHandoff.prompt(
+                            for: documentationState.guidanceState,
+                            projectRoot: projectRoot,
+                            registration: health?.registration ?? settings?.registration
+                        ),
                         using: CodexPromptHandoff.writeToGeneralPasteboard
                     )
                 }
@@ -151,25 +211,129 @@ struct ProjectOverviewView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+        .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
         .accessibilityIdentifier("project-guidance-status")
     }
 
-    private func summaryCard(_ title: String, value: String, systemImage: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(Color.accentColor)
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.headline)
-                .lineLimit(2)
+    @ViewBuilder
+    private var documentationSetupControls: some View {
+        if let registration = health?.registration ?? settings?.registration,
+           previewDocumentationSetup != nil {
+            RekonSectionPanel {
+                Text("Documentation activation").font(.title2.weight(.semibold))
+                Text("Preview the exact project, root, repository, catalog, and registration before a separate owner-confirmed binding or acceptance.")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                Button("Preview Documentation Action") { loadDocumentationPreview(registration) }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .disabled(isPerformingDocumentationSetup)
+                    .accessibilityIdentifier("project-documentation-preview")
+                if let preview = documentationSetupPreview {
+                    Text("\(preview.target.projectID) · root \(preview.target.rootID)")
+                        .font(.caption.monospaced()).textSelection(.enabled)
+                    Text("repository \(preview.target.repositoryID) · catalog v\(preview.target.catalogVersion) · \(preview.target.catalogDigest)")
+                        .font(.caption.monospaced()).textSelection(.enabled)
+                    switch preview.action {
+                    case .bind:
+                        Button("Bind This Repository", action: performPreviewedDocumentationAction)
+                            .buttonStyle(RekonPrimaryButtonStyle())
+                            .accessibilityIdentifier("project-documentation-bind")
+                    case .accept:
+                        Button("Accept This Catalog", action: performPreviewedDocumentationAction)
+                            .buttonStyle(RekonPrimaryButtonStyle())
+                            .accessibilityIdentifier("project-documentation-accept")
+                    case .current:
+                        Label("Binding and catalog acceptance are current", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(RekonTheme.success)
+                    }
+                }
+                if let documentationSetupMessage {
+                    Text(documentationSetupMessage).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                }
+            }
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func summaryCard(_ title: String, value: String, systemImage: String) -> some View {
+        RekonCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(RekonTheme.accent)
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                Text(value)
+                    .font(.headline)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
+        }
+    }
+
+    private func openSettings() {
+        guard let loadProjectSettings else { return }
+        isLoadingSettings = true
+        Task {
+            defer { isLoadingSettings = false }
+            do {
+                settings = try await loadProjectSettings()
+                showsSettings = true
+            } catch {
+                health = .init(
+                    projectID: project.id,
+                    registration: nil,
+                    rootPath: projectRoot?.path,
+                    checkedAt: Date(),
+                    checks: [.init(id: "settings", title: "Project settings unavailable", detail: error.localizedDescription, state: .unavailable)]
+                )
+            }
+        }
+    }
+
+    private func refreshHealth() {
+        guard let loadProjectHealth else { return }
+        healthGeneration &+= 1
+        let generation = healthGeneration
+        isRefreshingHealth = true
+        Task {
+            let result = await loadProjectHealth()
+            guard generation == healthGeneration else { return }
+            health = result
+            isRefreshingHealth = false
+        }
+    }
+
+    private func loadDocumentationPreview(_ registration: ProjectRegistration) {
+        guard let previewDocumentationSetup else { return }
+        isPerformingDocumentationSetup = true
+        documentationSetupMessage = nil
+        Task {
+            defer { isPerformingDocumentationSetup = false }
+            do {
+                documentationSetupPreview = try await previewDocumentationSetup(registration)
+            } catch {
+                documentationSetupPreview = nil
+                documentationSetupMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func performPreviewedDocumentationAction() {
+        guard let preview = documentationSetupPreview, let performDocumentationSetup else { return }
+        isPerformingDocumentationSetup = true
+        documentationSetupMessage = nil
+        Task {
+            defer { isPerformingDocumentationSetup = false }
+            do {
+                let audit = try await performDocumentationSetup(preview)
+                documentationSetupMessage = audit.map { "Owner action committed and audited as \($0.rawValue)." }
+                    ?? "The accepted documentation state is already current."
+                documentationSetupPreview = nil
+                refreshHealth()
+            } catch {
+                documentationSetupMessage = error.localizedDescription
+            }
+        }
     }
 }
 

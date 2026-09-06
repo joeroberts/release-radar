@@ -132,6 +132,31 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertTrue(repair.contains("$release-radar:release-radar"))
     }
 
+    func testBootstrapPromptPinsProjectRegistrationAndSeparatesRepositoryFromAppAcceptance() {
+        let root = URL(fileURLWithPath: "/Users/example/Blank Project", isDirectory: true)
+        let registration = ProjectRegistration(
+            projectID: .init(rawValue: "project-opaque"),
+            registrationID: "registration-opaque",
+            requestGeneration: 7
+        )
+
+        let prompt = CodexPromptHandoff.prompt(
+            for: .missing,
+            projectRoot: root,
+            registration: registration
+        )
+
+        XCTAssertTrue(prompt.contains("project-opaque"))
+        XCTAssertTrue(prompt.contains("registration-opaque"))
+        XCTAssertTrue(prompt.contains("generation `7`"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("blank repository"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("existing documentation"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("separate explicit owner actions"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("binding"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("catalog acceptance"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("audited handoff"))
+    }
+
     func testInitializeProjectTrackingAllowsLegacyForeignKeyAuditReadWithoutAllowingAuditMutation() async throws {
         let fixture = try FolderFixture()
         let sentinelURL = fixture.root.appendingPathComponent("owner-sentinel.txt")
@@ -623,7 +648,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertTrue(hasFirstPhase)
     }
 
-    func testPreparedProjectRemainsPendingUntilFirstPhaseAndFinish() async throws {
+    func testPreparedProjectRemainsPendingUntilExplicitFinishWithoutPhase() async throws {
         let fixture = try FolderFixture()
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
         let onboarding = FolderProjectOnboarding(
@@ -652,29 +677,13 @@ final class OnboardingAcceptanceTests: XCTestCase {
         let resumedPreview = try await relaunchedOnboarding.inspect(folder: fixture.root)
         XCTAssertEqual(resumedPreview.pendingProjectID, projectID)
         XCTAssertNil(resumedPreview.completedProjectID)
-        try await onboarding.requestFirstPhaseDefinition(projectID: projectID)
-
-        let dispatcher = AgentCommandDispatcher(
-            store: store,
-            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
-        )
-        let result = await dispatcher.dispatch(.init(
-            version: AgentCommandDispatcher.commandEnvelopeVersion,
-            requestID: UUID(),
-            projectRoot: fixture.root.path,
-            reason: "Define first phase",
-            command: .upsertPhase(phaseID: "phase-first", name: "First phase")
-        ))
-        XCTAssertNil(result.error)
-        let phaseReadyDashboard = try await DashboardProjection.load(from: store)
-        XCTAssertTrue(phaseReadyDashboard.projects.isEmpty)
-
         _ = try await onboarding.finish(decision)
 
         let completed = try await DashboardProjection.load(from: store)
         XCTAssertEqual(completed.projects.map(\.id), [projectID])
+        XCTAssertTrue(completed.projects[0].phases.isEmpty)
         let inbox = try await ReviewInboxProjection.load(from: store, projectID: projectID)
-        XCTAssertTrue(inbox.openItems.isEmpty)
+        XCTAssertEqual(inbox.openItems.map(\.kind), [.documentationSetup])
         let finalState = try await store.read { connection in
             (
                 try connection.scalarInt(
@@ -688,7 +697,149 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertEqual(finalState.1, 0)
     }
 
-    func testCheckTrackingStatusIsReadOnlyAndFinishRechecksPersistedPhase() async throws {
+    func testNewProjectUsesOpaqueIdentitySeparateFromItsRegistration() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let projectID = try await onboarding.prepare(.init(
+            preview: preview,
+            projectName: "Opaque Project"
+        ))
+
+        XCTAssertEqual(projectID, preview.registration.projectID)
+        XCTAssertTrue(projectID.rawValue.hasPrefix("project-"))
+        XCTAssertNotEqual(projectID.rawValue, preview.registration.registrationID)
+        XCTAssertEqual(preview.registration.requestGeneration, 1)
+        XCTAssertFalse(projectID.rawValue.contains("project/project"))
+        let persisted = try await store.read { connection in
+            try connection.row(
+                "SELECT registration_id, request_generation, setup_state FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        XCTAssertEqual(persisted?["registration_id"], .text(preview.registration.registrationID))
+        XCTAssertEqual(persisted?["request_generation"], .integer(1))
+        XCTAssertEqual(persisted?["setup_state"], .text("pending"))
+    }
+
+    func testFinishAllowsZeroPhasesAndKeepsOutstandingDocumentationVisible() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let decision = OnboardingDecision(preview: preview, projectName: "Usable Project")
+        let projectID = try await onboarding.prepare(decision)
+
+        let finishedProjectID = try await onboarding.finish(decision)
+        XCTAssertEqual(finishedProjectID, projectID)
+
+        let dashboard = try await DashboardProjection.load(from: store)
+        XCTAssertEqual(dashboard.projects.map(\.id), [projectID])
+        XCTAssertTrue(dashboard.projects[0].phases.isEmpty)
+        let persisted = try await store.read { connection in
+            (
+                try connection.scalarText(
+                    "SELECT setup_state FROM project_registrations WHERE project_id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'documentation_setup' AND status = 'open'",
+                    bindings: [.text(projectID.rawValue)]
+                )
+            )
+        }
+        XCTAssertEqual(persisted.0, "complete")
+        XCTAssertEqual(persisted.1, 1)
+    }
+
+    func testProjectSettingsPersistNameAndExclusionsAndRejectStaleGeneration() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let tasks = [
+            CodexTaskDescriptor(id: "keep", workingDirectory: fixture.root, title: "Keep"),
+            CodexTaskDescriptor(id: "exclude", workingDirectory: fixture.root, title: "Exclude"),
+        ]
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root]),
+            codexTasks: tasks
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let decision = OnboardingDecision(
+            preview: preview,
+            projectName: "Initial",
+            excludedTaskIDs: ["exclude"]
+        )
+        let projectID = try await onboarding.prepare(decision)
+        _ = try await onboarding.finish(decision)
+        let original = try await onboarding.projectSettings(projectID: projectID)
+
+        let updated = try await onboarding.updateProjectSettings(
+            registration: original.registration,
+            projectName: "Renamed",
+            excludedTaskIDs: ["keep"]
+        )
+
+        XCTAssertEqual(updated.projectName, "Renamed")
+        XCTAssertEqual(updated.excludedTaskIDs, ["keep"])
+        XCTAssertEqual(updated.registration.requestGeneration, original.registration.requestGeneration + 1)
+        do {
+            _ = try await onboarding.updateProjectSettings(
+                registration: original.registration,
+                projectName: "Stale overwrite",
+                excludedTaskIDs: []
+            )
+            XCTFail("Expected a stale settings request to be rejected")
+        } catch let error as OnboardingError {
+            XCTAssertEqual(error, .staleRegistration)
+        }
+        let reloaded = try await onboarding.projectSettings(projectID: projectID)
+        XCTAssertEqual(reloaded, updated)
+    }
+
+    func testCompletedRegistrationRejectsReplayedPreparationWithoutChangingSavedProject() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let decision = OnboardingDecision(preview: preview, projectName: "Original")
+        let projectID = try await onboarding.prepare(decision)
+        _ = try await onboarding.finish(decision)
+
+        do {
+            _ = try await onboarding.prepare(.init(preview: preview, projectName: "Replayed"))
+            XCTFail("Expected completed setup to reject a replayed preparation")
+        } catch let error as OnboardingError {
+            XCTAssertEqual(error, .staleRegistration)
+        }
+
+        let saved = try await onboarding.projectSettings(projectID: projectID)
+        XCTAssertEqual(saved.projectName, "Original")
+        let pendingMarkers = try await store.read { connection in
+            try connection.scalarInt(
+                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_pending'",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        XCTAssertEqual(pendingMarkers, 0)
+    }
+
+    func testPhaseCheckIsReadOnlyAndExplicitFinishDoesNotRequireAPhase() async throws {
         let fixture = try FolderFixture()
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
         let onboarding = FolderProjectOnboarding(
@@ -705,29 +856,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         let afterCheck = try await attachmentDatabaseSnapshot(store: store)
         XCTAssertFalse(hasPhaseBeforeAgentUpdate)
         XCTAssertEqual(afterCheck, beforeCheck)
-        do {
-            _ = try await onboarding.finish(decision)
-            XCTFail("Expected Finish Initialization to remain phase-gated")
-        } catch let error as OnboardingError {
-            XCTAssertEqual(error, .noFirstPhase)
-        }
-
-        let dispatcher = AgentCommandDispatcher(
-            store: store,
-            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
-        )
-        let result = await dispatcher.dispatch(.init(
-            version: AgentCommandDispatcher.commandEnvelopeVersion,
-            requestID: UUID(),
-            projectRoot: fixture.root.path,
-            reason: "Define tracking phase",
-            command: .upsertPhase(phaseID: "phase-current", name: "Current tracking")
-        ))
-        XCTAssertNil(result.error)
-
-        let hasPhaseAfterAgentUpdate = try await onboarding.hasFirstPhase(projectID: projectID)
         let finishedProjectID = try await onboarding.finish(decision)
-        XCTAssertTrue(hasPhaseAfterAgentUpdate)
         XCTAssertEqual(finishedProjectID, projectID)
         let completed = try await store.read { connection in
             (
@@ -738,7 +867,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(completed.0, 0)
         XCTAssertEqual(completed.1, 0)
-        XCTAssertEqual(completed.2, 1)
+        XCTAssertEqual(completed.2, 0)
     }
 
     func testFinishedProjectRootIsReportedAsCompletedWithoutCreatingDuplicateState() async throws {
@@ -782,7 +911,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertEqual(durableCounts.2, 1)
     }
 
-    func testMarkerlessRootWithoutPhaseIsNotReportedAsCompleted() async throws {
+    func testPendingRegistrationRemainsPendingWhenLegacyMarkerIsMissing() async throws {
         let fixture = try FolderFixture()
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
         let onboarding = FolderProjectOnboarding(
@@ -804,7 +933,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
 
         let incompletePreview = try await onboarding.inspect(folder: fixture.symlinkedRoot)
 
-        XCTAssertNil(incompletePreview.pendingProjectID)
+        XCTAssertEqual(incompletePreview.pendingProjectID, projectID)
         XCTAssertNil(incompletePreview.completedProjectID)
     }
 
@@ -931,6 +1060,29 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.commandRows, 0)
         XCTAssertEqual(state.staleBookmarks, 1)
         XCTAssertEqual(fixture.bookmarks.accessStarts, fixture.bookmarks.accessStops)
+    }
+
+    func testReadOnlyHealthInspectionDoesNotMarkAStaleBookmark() async throws {
+        let fixture = try FolderFixture()
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        let onboarding = FolderProjectOnboarding(
+            store: store,
+            bookmarkStore: fixture.bookmarks,
+            worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+        )
+        let preview = try await onboarding.inspect(folder: fixture.root)
+        let decision = OnboardingDecision(preview: preview, projectName: "Health fixture")
+        let projectID = try await onboarding.prepare(decision)
+        _ = try await onboarding.finish(decision)
+        fixture.bookmarks.markStale(preview.selectedFolder)
+        let before = try await attachmentDatabaseSnapshot(store: store)
+
+        let observation = await onboarding.inspectProjectGuidanceContext(projectID: projectID)
+
+        XCTAssertNil(observation.projectRoot)
+        XCTAssertEqual(observation.documentationState, .legacy(.unavailable))
+        let after = try await attachmentDatabaseSnapshot(store: store)
+        XCTAssertEqual(after, before)
     }
 
     func testReviewDecisionFailsClosedForBookmarkResolverFailureWithoutDecisionAudit() async throws {
@@ -1369,7 +1521,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         )
     }
 
-    func testFinishWaitsForTypedAgentPhaseAndReconcilesEditableExclusions() async throws {
+    func testOptionalAgentPhaseAndSettingsReconcileEditableExclusions() async throws {
         let fixture = try FolderFixture()
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
         let onboarding = FolderProjectOnboarding(
@@ -1391,31 +1543,16 @@ final class OnboardingAcceptanceTests: XCTestCase {
         let projectID = try await onboarding.prepare(decision)
         let hadFirstPhaseBeforeRequest = try await onboarding.hasFirstPhase(projectID: projectID)
         XCTAssertFalse(hadFirstPhaseBeforeRequest)
-        do {
-            _ = try await onboarding.finish(decision)
-            XCTFail("Expected no first phase")
-        } catch let error as OnboardingError {
-            XCTAssertEqual(error, .noFirstPhase)
-        }
+        _ = try await onboarding.finish(decision)
 
         let beforeAgentPhase = try await store.read { connection in
             (
                 try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
-                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind <> 'onboarding_pending'", bindings: [.text(projectID.rawValue)])
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'documentation_setup'", bindings: [.text(projectID.rawValue)])
             )
         }
         XCTAssertEqual(beforeAgentPhase.0, 0)
-        XCTAssertEqual(beforeAgentPhase.1, 0)
-
-        try await onboarding.requestFirstPhaseDefinition(projectID: projectID)
-        let request = try await store.read { connection in
-            (
-                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = 'onboarding_phase_request'", bindings: [.text(projectID.rawValue)]),
-                try connection.scalarText("SELECT actor_id FROM audit_events ORDER BY created_at DESC LIMIT 1")
-            )
-        }
-        XCTAssertEqual(request.0, 1)
-        XCTAssertEqual(request.1, "release-radar-onboarding")
+        XCTAssertEqual(beforeAgentPhase.1, 1)
 
         let dispatcher = AgentCommandDispatcher(
             store: store,
@@ -1433,8 +1570,6 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertNil(phaseResult.error)
         let hasFirstPhaseAfterAgentCommand = try await onboarding.hasFirstPhase(projectID: projectID)
         XCTAssertTrue(hasFirstPhaseAfterAgentCommand)
-        let finishedProjectID = try await onboarding.finish(decision)
-        XCTAssertEqual(finishedProjectID, projectID)
 
         let persisted = try await store.read { connection in
             (
@@ -1463,7 +1598,12 @@ final class OnboardingAcceptanceTests: XCTestCase {
         let rescanned = try await relaunchedOnboarding.inspect(folder: fixture.root)
         XCTAssertEqual(rescanned.includedTaskDescriptors.map(\.id), ["included"])
 
-        _ = try await relaunchedOnboarding.finish(.init(preview: rescanned, projectName: "Fixture Project"))
+        let settings = try await relaunchedOnboarding.projectSettings(projectID: projectID)
+        let includedSettings = try await relaunchedOnboarding.updateProjectSettings(
+            registration: settings.registration,
+            projectName: "Fixture Project",
+            excludedTaskIDs: []
+        )
         let reIncluded = try await FolderProjectOnboarding(
             store: store,
             bookmarkStore: fixture.bookmarks,
@@ -1475,7 +1615,11 @@ final class OnboardingAcceptanceTests: XCTestCase {
         ).inspect(folder: fixture.root)
         XCTAssertEqual(Set(reIncluded.includedTaskDescriptors.map(\.id)), ["included", "excluded"])
 
-        _ = try await relaunchedOnboarding.finish(decision)
+        _ = try await relaunchedOnboarding.updateProjectSettings(
+            registration: includedSettings.registration,
+            projectName: "Fixture Project",
+            excludedTaskIDs: ["excluded"]
+        )
         let reExcluded = try await FolderProjectOnboarding(
             store: store,
             bookmarkStore: fixture.bookmarks,
@@ -1642,7 +1786,8 @@ private final class FolderFixture {
     let bookmarks = TestBookmarkStore()
 
     init() throws {
-        directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".release-radar-onboarding-test-\(UUID().uuidString)", isDirectory: true)
         root = directory.appendingPathComponent("project", isDirectory: true)
         symlinkedRoot = directory.appendingPathComponent("project-link", isDirectory: true)
         descendant = root.appendingPathComponent("Sources/Feature", isDirectory: true)

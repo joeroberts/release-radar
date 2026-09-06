@@ -65,6 +65,80 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testUsableLifecycleOverviewAtWideAndCompactWidths() async throws {
+        let projectID = ProjectID(rawValue: "project-rendering-opaque")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "registration-rendering-opaque",
+            requestGeneration: 3
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Usable Lifecycle",
+            activePhaseName: "No active phase",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0,
+            attentionCount: 1
+        )
+        let health = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: registration,
+            rootPath: "/Synthetic/UsableLifecycle",
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: [
+                .init(id: "storage", title: "Local storage ready", detail: "The current Release Radar schema is available.", state: .ready),
+                .init(id: "folder", title: "Folder access ready", detail: "/Synthetic/UsableLifecycle", state: .ready),
+                .init(id: "documentation", title: "Release Radar guidance not installed", detail: "Repository preparation remains explicit.", state: .attention),
+                .init(id: "plugin", title: "Codex workflow ready", detail: "The installed workflow matches.", state: .ready),
+                .init(id: "observer", title: "Codex observation unavailable", detail: "Retry observation separately.", state: .attention),
+            ]
+        )
+        for width in [1100.0, 620.0] {
+            let view = ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .legacy(.missing),
+                projectRoot: URL(fileURLWithPath: "/Synthetic/UsableLifecycle"),
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadProjectSettings: {
+                    .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                },
+                saveProjectSettings: { _, _, _ in
+                    XCTFail("Rendering must not save settings")
+                    return .init(registration: registration, projectName: project.name, excludedTaskIDs: [])
+                },
+                loadProjectHealth: { health },
+                previewDocumentationSetup: { _ in
+                    XCTFail("Rendering must not preview documentation")
+                    throw ProjectDocumentationSetupError.catalogUnavailable
+                }
+            )
+            try await render(
+                view,
+                name: "lifecycle-overview-\(Int(width))",
+                width: width,
+                expected: ProjectGuidancePresentation(documentationState: .legacy(.missing)),
+                expectedText: [
+                    "Ready for a first phase",
+                    "Manage Project",
+                    "Help",
+                    "Documentation activation",
+                    "Project health",
+                    "registration-rendering-opaque",
+                    "generation 3",
+                    "Local storage ready",
+                    "Folder access ready",
+                    "Codex workflow ready",
+                    "Codex observation unavailable",
+                ]
+            )
+        }
+    }
+
     private var states: [(String, ProjectDocumentationState)] {
         [
             ("v1-update", .legacy(.outdated(installed: 1, current: 2))),
@@ -91,7 +165,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         _ view: V,
         name: String,
         width: Double,
-        expected: ProjectGuidancePresentation
+        expected: ProjectGuidancePresentation,
+        expectedText: [String] = []
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
@@ -144,6 +219,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
         let actual = accessibilityText(try XCTUnwrap(ownWindow))
         XCTAssertTrue(actual.contains(expected.status), "Missing actual guidance status: \(expected.status)")
+        for text in expectedText {
+            XCTAssertTrue(actual.contains(text), "Missing actual lifecycle content: \(text)")
+        }
         if name.contains("managed-unavailable") {
             XCTAssertTrue(actual.contains("catalog acceptance"), "Missing actual pending-catalog recovery")
             XCTAssertFalse(actual.contains("Copy setup prompt"))

@@ -21,6 +21,11 @@ final class DocumentationToolInstallationTests: XCTestCase {
         let referenceLine = try XCTUnwrap(text.split(separator: "\n").first { $0.hasPrefix("Catalog v1 reference: ") })
         let reference = String(referenceLine.dropFirst("Catalog v1 reference: ".count))
         XCTAssertTrue(FileManager.default.isReadableFile(atPath: reference))
-        XCTAssertTrue(reference.hasPrefix(Bundle.main.bundleURL.path + "/Contents/Resources/"))
+        let packagedResources = helper
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Resources", isDirectory: true)
+            .standardizedFileURL.path + "/"
+        XCTAssertTrue(URL(fileURLWithPath: reference).standardizedFileURL.path.hasPrefix(packagedResources))
     }
 }

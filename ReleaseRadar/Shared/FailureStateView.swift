@@ -122,6 +122,14 @@ struct FailureStatePresentation: Equatable, Sendable {
                 tone: .warning,
                 accessibilityID: "failure-onboarding-marker-conflict"
             )
+        case .staleRegistration:
+            self.init(
+                title: "Project changed",
+                detail: onboardingError.localizedDescription,
+                systemImage: "arrow.clockwise.circle",
+                tone: .warning,
+                accessibilityID: "failure-stale-project-registration"
+            )
         }
     }
 
@@ -161,6 +169,14 @@ struct FailureStatePresentation: Equatable, Sendable {
                 systemImage: "arrow.triangle.branch",
                 tone: .warning,
                 accessibilityID: "failure-import-dependency"
+            )
+        case .documentationSetup:
+            self.init(
+                title: "Documentation setup needed",
+                detail: reviewItem.summary,
+                systemImage: "doc.badge.gearshape",
+                tone: .warning,
+                accessibilityID: "failure-documentation-setup"
             )
         case .unmatchedTask, .excludedTask, .agentReviewRequest, .unsupported:
             return nil

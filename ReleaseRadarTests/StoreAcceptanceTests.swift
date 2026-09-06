@@ -284,7 +284,7 @@ final class StoreAcceptanceTests: XCTestCase {
 
         let store = DeliveryStore(databaseURL: url)
         guard case .available = await store.availability else { return XCTFail("Expected v14 migration") }
-        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 14)
+        XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try semanticVersionThirteenSnapshot(db), before)
         let expectedEventSQL = oldEventSQL.replacingOccurrences(
             of: "FOREIGN KEY(project_id, phase_id, ticket_id)\n        REFERENCES tickets(project_id, phase_id, id)",
@@ -300,7 +300,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try semanticVersionThirteenSnapshot(db), before)
         let readOnly = try DeliveryStore(existingReadOnlyDatabaseURL: url)
         let version = await readOnly.schemaVersionForDocumentation
-        XCTAssertEqual(version, 14)
+        XCTAssertEqual(version, Int(StoreMigrations.currentVersion))
 
         // The current assignment remains phase-local. Only history survives a move.
         XCTAssertThrowsError(try db.execute("UPDATE tickets SET phase_id = 'phase-2' WHERE id = 'ticket-backlog'"))
@@ -339,7 +339,7 @@ final class StoreAcceptanceTests: XCTestCase {
         let restored = try SQLiteConnection(url: restoredURL)
         try restored.execute("DROP INDEX delivery_goal_assignment_events_ticket_revision_unique")
         guard case .available = await DeliveryStore(databaseURL: restoredURL).availability else { return XCTFail("Expected disposable snapshot recovery") }
-        XCTAssertEqual(try restored.scalarInt("PRAGMA user_version"), 14)
+        XCTAssertEqual(try restored.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try semanticVersionThirteenSnapshot(restored), before)
         XCTAssertNil(try restored.row("PRAGMA foreign_key_check"))
         XCTAssertEqual(try db.scalarInt("PRAGMA user_version"), 13)
@@ -378,10 +378,14 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "0075da347c3ed1a813ba843686278bedb6a05deded1889ab7cb1ce93a668d78f")
+                       "1004a04554ae24f2cff30c3d403ae8f15514ec4c43bdbe347f9a44ca34b5805b")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
+        XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_registrations"), 2)
+        XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(DISTINCT registration_id) FROM project_registrations"), 2)
+        XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_registrations WHERE registration_id = project_id"), 0)
+        XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_registrations WHERE request_generation = 1 AND setup_state = 'complete'"), 2)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM evidence WHERE artifact_id IS NOT NULL"), 0)
         XCTAssertEqual(try migrated.scalarText("SELECT group_concat(name, ',') FROM pragma_table_info('evidence')"),
                        "id,project_id,ticket_id,path,is_available,artifact_id")
@@ -2686,6 +2690,7 @@ final class StoreAcceptanceTests: XCTestCase {
         // v12 fixture. The pinned v13 manifest verifies the complete source schema.
         try db.executeScript("""
         BEGIN EXCLUSIVE TRANSACTION;
+        DROP TABLE project_registrations;
         ALTER TABLE delivery_goal_assignment_events RENAME TO synthetic_current_assignment_events;
         \(historicalEventSQL);
         INSERT INTO delivery_goal_assignment_events
@@ -3209,6 +3214,7 @@ final class StoreAcceptanceTests: XCTestCase {
         let frozen = try SQLiteConnection(url: copyVerifiedVersionTwelveFixture())
         let legacyEvidenceSQL = try XCTUnwrap(frozen.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'evidence'"))
         try connection.executeScript("""
+        DROP TABLE project_registrations;
         DROP TABLE project_documentation_bindings;
         DROP INDEX project_roots_project_identity_unique;
         ALTER TABLE evidence RENAME TO evidence_current;
@@ -3287,8 +3293,8 @@ final class StoreAcceptanceTests: XCTestCase {
     }
 
     private func makeDatabaseURL() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ReleaseRadarStoreTests-\(UUID().uuidString)", isDirectory: true)
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".release-radar-store-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock {
             try? FileManager.default.removeItem(at: directory)

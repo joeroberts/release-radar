@@ -4,6 +4,54 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    func testProjectLifecycleDocumentationSetupPreviewsThenPerformsOneAuditedBinding() async throws {
+        let fixture = try await makeFixture()
+        let registration = ProjectRegistration(
+            projectID: .init(rawValue: "p"),
+            registrationID: UUID().uuidString.lowercased(),
+            requestGeneration: 1
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed lifecycle registration") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('p', ?, 1, 'complete')",
+                bindings: [.text(registration.registrationID)]
+            )
+        }
+        let coordinator = ProjectDocumentationSetupCoordinator(
+            store: fixture.store,
+            bookmarkStore: bookmarks(fixture.root)
+        )
+
+        let preview = try await coordinator.preview(registration: registration)
+        XCTAssertEqual(preview.registration, registration)
+        XCTAssertEqual(preview.rootPath, fixture.root.path)
+        XCTAssertEqual(preview.action, .bind)
+        let before = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests")
+            )
+        }
+
+        let auditID = try await coordinator.perform(preview)
+
+        XCTAssertNotNil(auditID)
+        let current = try await coordinator.preview(registration: registration)
+        XCTAssertEqual(current.action, .current)
+        let after = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"),
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+                try connection.scalarText("SELECT actor_id FROM audit_events WHERE id = ?", bindings: [.text(auditID!.rawValue)])
+            )
+        }
+        XCTAssertEqual(before.0, 0)
+        XCTAssertEqual(before.1, 0)
+        XCTAssertEqual(after.0, 1)
+        XCTAssertEqual(after.1, 1)
+        XCTAssertEqual(after.2, "release-radar-owner")
+    }
+
     func testValidUncataloguedLegacyEvidenceResolvesWithoutConflictOrMutation() async throws {
         let f = try await makeFixture()
         let bound = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: try target(f.root))))
@@ -551,7 +599,8 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
     }
 
     private func makeFixture(rootPath: String = "repository") async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
-        let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("ReleaseRadar-M3B-\(UUID().uuidString)")
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".release-radar-managed-docs-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let root = directory.appendingPathComponent(rootPath)
