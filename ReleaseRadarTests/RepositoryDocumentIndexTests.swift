@@ -26,6 +26,29 @@ final class RepositoryDocumentIndexTests: XCTestCase {
         XCTAssertEqual(try inventory(root), written)
     }
 
+    func testIndexGenerationIgnoresOnlyRegularFinderMetadataAtItsStabilityBoundary() throws {
+        let root = try fixture()
+        let rootMetadata = root.appendingPathComponent("docs/.DS_Store")
+        let nestedMetadata = root.appendingPathComponent("docs/plans/.DS_Store")
+        try Data("root metadata".utf8).write(to: rootMetadata)
+        try Data("nested metadata".utf8).write(to: nestedMetadata)
+
+        XCTAssertEqual(try RepositoryDocumentIndexTool().write(authorizedRoot: root), ["docs/README.md", "docs/plans/README.md"])
+        XCTAssertNoThrow(try RepositoryDocumentIndexTool().check(authorizedRoot: root))
+
+        for isDirectory in [true, false] {
+            let unsafe = try fixture()
+            let metadata = unsafe.appendingPathComponent("docs/.DS_Store")
+            if isDirectory {
+                try FileManager.default.createDirectory(at: metadata, withIntermediateDirectories: false)
+            } else {
+                try FileManager.default.createSymbolicLink(at: metadata, withDestinationURL: unsafe.appendingPathComponent("outside"))
+            }
+            XCTAssertThrowsError(try RepositoryDocumentIndexTool().write(authorizedRoot: unsafe))
+            try FileManager.default.removeItem(at: metadata)
+        }
+    }
+
     func testStableOrderingAndEnumeration() throws {
         let one = try fixture(), two = try fixture()
         try edit(two) { object in

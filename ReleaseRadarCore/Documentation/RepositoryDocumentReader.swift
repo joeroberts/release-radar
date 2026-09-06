@@ -102,6 +102,12 @@ final class RepositoryDocumentReader {
         }
     }
 
+    /// The sole discovery exception is Finder metadata proven regular by the
+    /// descriptor-relative, no-follow stat already performed by the caller.
+    static func isExcludedDiscoveryEntry(name: String, metadata: stat) -> Bool {
+        name == ".DS_Store" && metadata.st_mode & S_IFMT == S_IFREG
+    }
+
     func openRelative(_ path: String, directory: Bool = false) throws -> Int32 {
         try Self.validatePath(path, limits: limits, docsOnly: false)
         var descriptor = dup(root)
@@ -189,10 +195,11 @@ final class RepositoryDocumentReader {
         for name in names.sorted() {
             let child = path + "/" + name
             try Self.validatePath(child, limits: limits)
-            guard !Self.isProhibited(child) else { throw RepositoryDocumentError(.prohibitedContent, path: child) }
             guard fstatat(descriptor, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else {
                 throw RepositoryDocumentError(.changedDuringRead, path: child)
             }
+            if Self.isExcludedDiscoveryEntry(name: name, metadata: info) { continue }
+            guard !Self.isProhibited(child) else { throw RepositoryDocumentError(.prohibitedContent, path: child) }
             switch info.st_mode & S_IFMT {
             case S_IFDIR: try walk(child, files: &files, directories: &directories)
             case S_IFREG:
@@ -231,6 +238,20 @@ final class RepositoryDocumentReader {
             }
         }
         return names
+    }
+
+    private func stableDirectoryNames(_ descriptor: Int32, path: String) throws -> Set<String> {
+        var stableNames = Set<String>()
+        for name in try directoryNames(descriptor, path: path) {
+            var info = stat()
+            guard fstatat(descriptor, name, &info, AT_SYMLINK_NOFOLLOW) == 0 else {
+                throw RepositoryDocumentError(.changedDuringRead, path: path + "/" + name)
+            }
+            if !Self.isExcludedDiscoveryEntry(name: name, metadata: info) {
+                stableNames.insert(name)
+            }
+        }
+        return stableNames
     }
 
     func validateReplacementBounds(_ replacements: [String: Data]) throws {
@@ -272,7 +293,7 @@ final class RepositoryDocumentReader {
                     let temporaryNames = Set(temporaryPaths.filter {
                         $0.hasPrefix(prefix) && !$0.dropFirst(prefix.count).contains("/")
                     }.map { String($0.dropFirst(prefix.count)) })
-                    guard Set(try directoryNames(descriptor, path: path)) == expectedNames.union(temporaryNames) else {
+                    guard try stableDirectoryNames(descriptor, path: path) == expectedNames.union(temporaryNames) else {
                         throw RepositoryDocumentError(.changedDuringRead, path: path)
                     }
                 }

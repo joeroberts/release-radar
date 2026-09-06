@@ -4,6 +4,16 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedGuidanceCompatibilityTests: XCTestCase {
+    func testDiscoveryExclusionVersionAndShippedReferenceAgree() throws {
+        XCTAssertEqual(RepositoryDocumentContract.discoveryExclusionVersion, 1)
+        let reference = try String(contentsOf: Self.repository.appendingPathComponent("ReleaseRadarDocumentationTool/catalog-v1.md"), encoding: .utf8)
+        XCTAssertTrue(reference.contains("Discovery exclusion v1"))
+        XCTAssertTrue(reference.contains("case-sensitive `.DS_Store` basename"))
+        XCTAssertTrue(reference.contains("ordinary regular file"))
+        XCTAssertTrue(reference.contains("A symlink"))
+        XCTAssertTrue(reference.contains("or directory with that name"))
+    }
+
     func testCurrentGuidanceBlockPathsAndStableHandoffIdentity() {
         XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 2)
         XCTAssertEqual(RepositoryDocumentContract.managedGuidanceBlock, Self.v2)
