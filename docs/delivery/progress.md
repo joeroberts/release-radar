@@ -86,7 +86,10 @@ The installed bundled documentation checker then passed against the canonical
 repository with `.DS_Store` retained. No GUI launch occurred, and an exact process
 check found the installed app executable was not running. The prior default staged
 bundle remains at `build/product-architecture-plan-worktree/dist/ReleaseRadar.pre-C8-source-35e2ef6.app`.
-This retained staging artifact is not an installed-app backup. Earlier temporary
+This retained staging artifact is not an installed-app backup. The handoff worktree
+tracks its default `dist/ReleaseRadar.app`, so the approved staging operation leaves
+local binary changes and the retained prior-stage directory there. They were not
+committed as source changes or reverted. Earlier temporary
 build/test paths remain listed in the brief; no discretionary cleanup was performed.
 
 **Full installed acceptance remains outstanding:** launch and exercise the installed

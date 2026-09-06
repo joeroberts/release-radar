@@ -148,8 +148,8 @@ jaroberts4@gmail.com (PT7GS96H3L)`). Its main binary SHA-256 is
 `06931783b7717060baaaff682d8b5ebd32ddc3424e72c70e5f460984a864a28e`. The
 pre-existing `dist/ReleaseRadar.app` was not changed.
 
-The owner approved and executed the following reviewed preparation and no-launch
-installation sequence on 2026-09-06. This is the retained installation record,
+The owner approved the following reviewed preparation and no-launch installation
+sequence, which Codex executed on 2026-09-06. This is the retained installation record,
 not an instruction to repeat the sequence. The integrated handoff
 worktree has the reviewed source and candidate. The approved
 fail-fast sequence preserved the pre-existing default staged bundle before
