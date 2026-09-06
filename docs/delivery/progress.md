@@ -38,10 +38,13 @@ components, tokens and appearance; no light/dark change or separate-library edit
 
 No installation, owner/application-state mutation, destructive recovery, cloud
 resource, release publication or governing-configuration change is authorized.
-SQLite remains app-owned. C8's exact regular-`.DS_Store` repair is closed; missing
-repository binding and connector `appUnavailable` remain separate recovery
-limitations, not source-delivery blockers or permission to fabricate acceptance.
-The initial native documentation check passed. Application synchronization is not
+SQLite remains app-owned. C8's exact regular-`.DS_Store` repair is closed. The
+current supported connector inventory succeeds for the canonical root, but reports
+`bindingMissing`, no project binding and `isComplete: false`; the earlier connector
+`appUnavailable` result did not recur on this read. Missing binding remains a
+separate recovery limitation, not a source-delivery blocker or permission to infer
+acceptance. No application mutation occurred. Native documentation checks passed.
+Application synchronization is not
 claimed. The next owner decision is the chief architect's bounded contract
 recommendation, before the affected implementation.
 
