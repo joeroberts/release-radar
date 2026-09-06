@@ -98,6 +98,17 @@ recommendations create no new owner gate; escalate only unresolved material
 tradeoffs and expressly reserved actions. No delivery pause or new review layer
 is implied by this clarification.
 
+The owner also requires writing tasks to own the remote Git endpoint: start from
+the named synchronized remote baseline, use a named branch with its remote
+upstream, commit coherent changes, push the branch/commits and create the PR.
+The orchestrator monitors review/corrections through owner-approved merge; a local
+commit alone is not a completed delivery. Architecture's first local candidate
+was integrated and merged through PR #22 by the parent; do not create a duplicate
+PR for that closed result. Active lifecycle delivery has been instructed to publish
+and track its own `codex/usable-project-lifecycle` branch and create its PR.
+Parent `codex/lifecycle-delivery` is published for the accepted decisions and ledger;
+its necessary updates will be integrated into the delivery PR through Git.
+
 ## Retained baseline evidence
 
 [Historical C8 and baseline closeout](archive/2026-09-06-c8-and-baseline-closeout.md)
