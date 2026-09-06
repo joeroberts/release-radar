@@ -6,9 +6,10 @@ The owner authorized updating and independently reviewing the agreed operating
 documents and establishing a local committed starting baseline. The controlling
 [baseline brief](task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md)
 limits this task to repository documentation, one fresh independent review task and
-local commits. The current task owns integration and this ledger. The candidate is
-being prepared on `codex/full-product-architecture-plan`, building on `1816b99`.
-Independent review, final commit and owner baseline approval are pending.
+local commits. The current task owns integration and this ledger. The operating-document candidate is
+committed as `c9374836e18390caa16851330bc8951f90479a64` on
+`codex/full-product-architecture-plan`, building on `1816b99`. Independent review
+and owner baseline approval remain pending.
 
 The operating policy is in root AGENTS.md and
 [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md): the
@@ -60,16 +61,16 @@ received independent review; no required findings remained. Those checks establi
 planning evidence, not implementation of future features or this operating update.
 
 For this operating update, native documentation validation and scoped diff checks
-pass. Canonical copy verification and a fresh independent operating-policy review
-are pending. No product
+pass. All seven scoped files were verified and persisted in the canonical
+repository; the Release Radar managed guidance block is unchanged. The fresh
+independent operating-policy review is pending. No product
 tests are required for this documentation-only change. The final record will name
-the reviewed candidate, result and committed baseline without a separate report
-checksum, review-of-review or new ledger.
+the review result and starting baseline without a separate report checksum,
+review-of-review or new ledger.
 
 Fresh supported application inventory reports `isComplete: false`, catalog
 `prohibitedContent` and zero project repository bindings. The canonical checker
-previously rejected `docs/.DS_Store`; repeat its direct check after copying the
-final candidate. A passing clean-worktree check and local commit do
+again rejected `docs/.DS_Store` after the candidate was copied back. A passing clean-worktree check and local commit do
 not establish accepted application tracking. Binding/catalog acceptance, missing
 audit reconstruction and installed application recovery remain separate work.
 
@@ -85,9 +86,20 @@ catalog acceptance. The prior owner acceptance override remains in the
 These records do not establish post-reset health. No accepted ticket, phase or
 Delivery Goal was reopened. RM10 Roadmap Help remains distinct from delivered RR-R10.
 
+## Review task setup
+
+A separate Sol High task, “Review Release Radar operating baseline,” was requested
+for candidate `c937483`. Codex created a worktree at that revision but has only
+returned pending client ID `client-new-thread:e9ab78f1-4be2-4f7c-845f-4d9e9c1ca314`.
+The task is not yet listed with a runnable task ID, so independent review has not
+been observed and must not be claimed. Setup status needs resolution before this
+baseline can be presented as reviewed. No duplicate reviewer or subagent fallback
+was created. This is a Codex task-setup limitation, not a reason to alter product
+code or expand the operating process.
+
 ## Next eligible work
 
-Finish independent review and local baseline preparation, then wait for owner
+Resolve review-task setup, finish independent review and local baseline preparation, then wait for owner
 review/approval before producing the new-task pilot prompt. The proposed pilot is
 C8 with Terra Medium delivery and Sol High independent review; consult the separate
 chief architect at Astra High for the compatibility contract as needed. Its brief
