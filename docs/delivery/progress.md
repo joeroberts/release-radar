@@ -86,6 +86,15 @@ independent architecture/security/QA review. The parent retains ledger ownership
 No owner/application-state action or installation is authorized by source delivery.
 Durable changes remain tracked; no new temporary files were created.
 
+The owner clarified programme follow-through: the orchestrator launches/monitors
+workers and answers settled questions from durable decisions and, where necessary,
+targeted history in “Review lifecycle and design system”
+(`01a075d9-72c4-7a63-9b04-e7a329a24c15`). Engineering choices within accepted
+outcomes are resolved with the delivery owner/chief architect. Worker plans and
+recommendations create no new owner gate; escalate only unresolved material
+tradeoffs and expressly reserved actions. No delivery pause or new review layer
+is implied by this clarification.
+
 ## Retained baseline evidence
 
 [Historical C8 and baseline closeout](archive/2026-09-06-c8-and-baseline-closeout.md)
