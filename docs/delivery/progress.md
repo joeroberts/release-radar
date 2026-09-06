@@ -1,6 +1,6 @@
 # Release Radar delivery state
 
-## Approved continuity decisions and current documentation work
+## Approved continuity decisions
 
 The owner selected removal from tracking with retained read-only history;
 self-contained portable project records, managed documents and evidence; and
@@ -11,10 +11,15 @@ new implementation. Remaining schemas, migration/file recovery and publication
 details remain to be designed. Project-editing additions were not selected by these
 answers, and RekonDesignSystem's existing appearance scope is unchanged.
 
-The current task owns this documentation correction and the ledger. Local checks
-and one independent review cover the selected policies and their boundaries;
-review is pending. No implementation, external publication or app-state mutation
-is authorized by these product decisions.
+The documentation candidate `8f82b46` and bounded correction `62d41eb` pass native
+documentation and scoped diff checks; all six canonical copies are verified.
+“Review approved continuity policies” (`01a0788a-d5cb-7bb2-99d9-e18ddf585d18`),
+confirmed Sol High, found one ambiguity between removal and restore. The correction
+separates remove/re-add, archive/restore and full-backup recovery; the same reviewer
+confirmed it resolved, with no remaining findings. The review task was archived
+after work stopped and its result was preserved here. Connector readback still reports
+`appUnavailable`; no managed-current tracking is claimed. These decisions authorize
+no implementation, external publication or app-state mutation.
 
 ## RekonDesignSystem scope clarification
 
