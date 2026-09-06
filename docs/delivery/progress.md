@@ -2,100 +2,96 @@
 
 ## Current outcome and authorization
 
-The owner authorized a full application/documentation/GitHub assessment and a
-feature-by-feature architecture and sequencing plan covering the complete intended
-product, including unfinished documented proposals, lifecycle repairs,
-RekonDesignSystem and actual Codex rules/hooks. The current deliverable is the
-[proposed full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md).
-It is supporting proposed documentation, not an accepted architecture change or
-authorization to implement product features, change agent configuration, mutate
-application state, publish a PR or merge work.
+The owner authorized updating and independently reviewing the agreed operating
+documents and establishing a local committed starting baseline. The controlling
+[baseline brief](task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md)
+limits this task to repository documentation, one fresh independent review task and
+local commits. The current task owns integration and this ledger. The candidate is
+being prepared on `codex/full-product-architecture-plan`, building on `1816b99`.
+Independent review, final commit and owner baseline approval are pending.
 
-On 2026-09-06 the owner approved adding all six recommended outcomes to the
-roadmap: requirements/decision traceability; plan revisions/change previews;
-delivery evidence tied to code revision; ticket cancellation/replacement/splitting;
-workspace search/saved views; and project health/guided recovery. Their inclusion
-is approved and recorded in the plan as P15–P19 and C12. Detailed contracts,
-sequencing choices and implementation remain separate decisions. The existing
-six-goal/eleven-ticket catalog and accepted product boundaries are preserved.
+The operating policy is in root AGENTS.md and
+[ADR-007](../architecture/ADR-007-proportional-delivery-validation.md): the
+orchestrator coordinates separate tasks and has no subagents; the chief architect
+maintains whole-product direction; delivery/review/integration are bounded by their
+outcomes; models and effort vary by complexity and risk. **Ultra is prohibited in
+all tasks, subagents, defaults and escalation paths.** Required review is terminal
+apart from concrete defects, and optional recommendations do not expand scope.
 
-The owner also approved adding the OS-metadata validator repair to C8: tolerate
-ordinary `.DS_Store` files during discovery through a narrow documented/tested
-exclusion, preserve filesystem safety and real document validation, and update the
-contract and shipped reference with the code. Schedule it early and independently
-of lifecycle migrations or automatic refresh. This is a product repair, not a
-request to change `.gitignore` or repeatedly delete Finder metadata. Implementation
-is not part of this documentation update.
+After the committed baseline is reviewed and approved by the owner, provide a
+prompt to start a new task for the proposed C8 validator-repair pilot. Do not launch
+that pilot here. No product code, rules/hooks installation, global Codex settings,
+application-state mutation, push, PR, merge or app installation is authorized by
+this baseline-preparation task. Operating-document changes do not establish
+technical enforcement of tool restrictions.
 
-The recommendation is to retain the app-owned transactional core and trust
-boundaries, resolve the shared identity/planning/authority contracts, and deliver
-complete bounded slices. The proposed plan accounts for all six approved roadmap
-goals and eleven tickets, all seven GitHub issues (six open), and the additional
-directions in the Project Plan, UX and companion proposals. Roadmap Help RM10
-remains distinct from completed RR-R10.
+## Product direction and approval boundaries
 
-## Assessment verification and limitations
+The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+assesses 40 capabilities, all six approved roadmap goals and eleven tickets, the
+seven reviewed GitHub issues, lifecycle repairs, RekonDesignSystem and execution
+reliability. Retain the app-owned transactional core and trust boundaries; settle
+shared identities/planning/authority contracts and deliver complete bounded slices.
+The plan's architecture and sequence remain proposed. Baseline approval does not
+implicitly accept every proposed contract or authorize all implementation.
 
-Source review used `ec511d8`, content-identical to GitHub default tree
-`fcb432bf2c6f5e5bab63418adb9b6ec647e1baef`. The older canonical checkout and its
-extensive pre-existing changes are preserved. The plan is authored on the isolated
-local branch `codex/full-product-architecture-plan`; its scoped documentation
-changes are also preserved in the canonical repository.
+The owner approved inclusion of P15–P19 and C12: requirements/decision traceability,
+plan revisions/change previews, evidence tied to code revision, ticket cancellation/
+replacement/splitting, workspace search/saved views, and health/guided recovery.
+Their detailed contracts remain to be settled in the applicable slices. The owner
+also approved planning C8's narrow regular-file .DS_Store discovery exclusion,
+with filesystem safety, real-document validation, regression tests and a versioned
+contract/shipped-reference update. This is a product repair, not a .gitignore change
+or recurring metadata deletion. C8 implementation has not begun.
 
-During the assessment, 95 focused onboarding, guidance, documentation-preview and
-store tests passed. These tests do not prove the complete owner journey: the real
-handoff does not create the phase required to finish onboarding. Installed empty
-Projects/Settings and relevant mockups were inspected; proposed-screen runtime,
-full-suite acceptance and the reported folder-picker timeout were not established.
-No product code or owner application state was changed.
+## Verification and remaining risks
 
-The native documentation checker passes in the clean planning worktree. One
-independent substantive review identified two missing proposed UX outcomes; both
-were corrected and verified resolved. No required review findings remain. The
-original plan assessed 34 capabilities, with decisions, dependencies and acceptance
-journeys. This is plan validation, not product implementation acceptance.
-The current roadmap update assesses 40 capabilities and integrates the six new
-outcomes into shared contracts, migrations/portability, delivery slices and direct
-acceptance checks. Native documentation validation and scoped diff checks pass;
-one independent review of the addition found no required or optional findings.
-Catalog identity, metadata and generated indexes remain unchanged. No product tests
-were rerun for this documentation-only change; the earlier 95 product tests are
-not verification of these future capabilities.
-The C8 planning update passes native documentation and scoped diff checks; one
-independent review found no required or optional findings. No product tests were
-rerun for this planning-only update.
-The canonical checker still rejects `docs/.DS_Store` under the existing defective
-rule; the planned code repair has not been implemented. Supported
-application inventory reports no accepted repository binding for the current
-Release Radar registration. The proposed catalog remains unaccepted; a validated
-source checkout is not proof of application acceptance or restored tracking data.
-No cleanup, binding, catalog acceptance or reconstruction of missing audits occurred.
+The existing product assessment used `ec511d8`, content-identical to reviewed
+GitHub default tree `fcb432bf2c6f5e5bab63418adb9b6ec647e1baef`. The baseline branch
+contains that source plus the reviewed planning commits. The older canonical branch
+and its unrelated changes remain intact; only scoped documentation is copied back.
+
+Earlier assessment verification comprised 95 focused onboarding/guidance/preview/
+store tests and inspection of empty installed Projects/Settings and design mockups.
+That did not prove the full owner journey: copied onboarding guidance cannot create
+the phase required by Finish. The folder-picker timeout and complete future-screen
+runtime remain unverified. The original plan, six additions and C8 planning update
+received independent review; no required findings remained. Those checks establish
+planning evidence, not implementation of future features or this operating update.
+
+For this operating update, native documentation validation and scoped diff checks
+pass. Canonical copy verification and a fresh independent operating-policy review
+are pending. No product
+tests are required for this documentation-only change. The final record will name
+the reviewed candidate, result and committed baseline without a separate report
+checksum, review-of-review or new ledger.
+
+Fresh supported application inventory reports `isComplete: false`, catalog
+`prohibitedContent` and zero project repository bindings. The canonical checker
+previously rejected `docs/.DS_Store`; repeat its direct check after copying the
+final candidate. A passing clean-worktree check and local commit do
+not establish accepted application tracking. Binding/catalog acceptance, missing
+audit reconstruction and installed application recovery remain separate work.
 
 ## Previous delivered baseline
 
-The September 2 RR-R10 Task 11B installed-workflow repair was integrated through
+September 2 RR-R10 Task 11B was integrated through
 [PR #17](https://github.com/joeroberts/release-radar/pull/17). Its
 [repair brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md)
 and [verification evidence](evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md)
-retain the completed scope, signed installation, tests, independent review and
-historical catalog acceptance/readback. The owner's prior RR-R10 acceptance
-override is retained in the [installation evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md).
-Those historical records do not establish post-reset health. No accepted work,
-task definition, ticket lane or Delivery Goal was reopened by this assessment.
+retain completed scope, installation, tests, independent review and historical
+catalog acceptance. The prior owner acceptance override remains in the
+[installation evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md).
+These records do not establish post-reset health. No accepted ticket, phase or
+Delivery Goal was reopened. RM10 Roadmap Help remains distinct from delivered RR-R10.
 
 ## Next eligible work
 
-Review the proposed plan's shared decisions and sequencing. Product implementation
-requires explicit selection/approval of the next complete slice and its applicable
-contract changes. The recommended first outcome is usable project registration,
-resume/edit, direct access recovery and project health, informed by the full product
-model. Inclusion of the six additions is settled; refine their detailed contracts
-in the identified slices without silently dropping them or reopening that decision.
-Optional observer, companion and execution-host decisions do not block core repair.
-
-Select the bounded C8 validator repair early, before canonical documentation
-validation is needed to unblock other repairs. Application binding/catalog recovery
-remains a separate owner-state action requiring its exact authorized scope; changing
-the validator cannot reconstruct missing state. Keep unrelated project
-state, repository changes, backups and diagnostics intact. No external publication,
-application repair or agent-configuration installation is part of this planning pass.
+Finish independent review and local baseline preparation, then wait for owner
+review/approval before producing the new-task pilot prompt. The proposed pilot is
+C8 with Terra Medium delivery and Sol High independent review; consult the separate
+chief architect at Astra High for the compatibility contract as needed. Its brief
+must preserve the narrow scope, name the approved starting commit and specify the
+actual authorized delivery endpoint. Broader lifecycle repairs follow the plan's
+shared decisions; optional observer, companion, execution engine and I9 hooks do
+not block this pilot. Eligibility does not authorize execution or owner-state repair.

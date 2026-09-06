@@ -8,7 +8,12 @@ Treat the user's explicit request and the approved project artifacts as the
 controlling sources for Release Radar. Current artifacts include:
 
 - `docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md`
-  for the current RR-R10 implementation scope and task boundaries
+  for the delivered RR-R10 scope and retained task boundaries
+- `docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md`
+  for whole-product dependencies and assessed future direction; preserve its
+  distinction between approved inclusion, proposed contracts and implementation
+- `docs/architecture/ADR-007-proportional-delivery-validation.md` for the
+  operating model and bounded validation policy
 - `docs/design/agent-driven-delivery-dashboard-design.md` and
   `docs/design/mockups/` for product and visual design
 - `docs/architecture/ADR-001-release-radar-boundaries.md` for architecture,
@@ -95,6 +100,13 @@ must receive independent review by someone other than its implementer.
 An agent may not review, approve, or independently verify its own
 implementation.
 
+Before dispatch, the orchestrator identifies the minimum review coverage justified
+by the actual change. One qualified independent reviewer may cover several risks;
+roles do not each require a separate task. Classify findings as Required, Optional,
+or Out of scope. Only Required findings block. New review coverage requires a named
+unresolved risk or an explicit owner requirement; reviewers cannot add approval
+layers or authorize scope expansion.
+
 ## Execution Authorization Boundaries
 
 - “Consider,” “discuss,” “evaluate,” or “recommend” authorizes no tool use or
@@ -151,6 +163,12 @@ only:
 - Test strategy
 - Acceptance criteria
 - Risk-triggered reviews
+- Assignment: owner, baseline branch/revision, file/shared-state ownership,
+  model and effort with rationale and escalation ceiling
+- Relevant accepted architecture and future consumers, with links; identify
+  migration, compatibility and recovery implications or state why none apply
+- Delivery endpoint: documentation disposition, checks and local commit expected;
+  separately state authorization for push, PR, merge, installation and app state
 
 Briefs must not reproduce entire designs or ADRs, reviewer transcripts, exact
 commit-parent choreography, long inventories of unchanged files,
@@ -175,15 +193,112 @@ Do not add complete review transcripts, exhaustive command output, candidate
 hashes, repeated Git-state evidence, or detailed closed-task chronology. Code
 or compilation alone does not make a task complete.
 
-## Agent Lifecycle and Concurrency
+## Task Ownership and Lifecycle
 
-- Do not reuse an Implementer as the independent reviewer or verifier of its
-  own work.
-- Do not run parallel agents against the same subsystem, files, or shared
-  mutable state without an explicit integration plan.
-- Parallelize only work with clearly separated ownership boundaries.
-- The primary agent remains responsible for coherent integration and resolving
-  conflicting recommendations.
+The orchestrator coordinates separate Codex tasks and monitors their outcomes.
+It must not spawn or reuse subagents. Under the owner's task-creation authorization,
+use fresh tasks for separate outcomes and fresh worktrees for delivery writers.
+Task creation is asynchronous: resolve setup, then monitor completion, blockers and
+required owner decisions. A successful dispatch is not a completed assignment.
+
+- **Orchestrator:** programme-level scope, dependencies, assignments, integration
+  ownership and follow-through. It owns the progress ledger by default. It does
+  not perform product implementation; route that work to bounded delivery tasks.
+- **Chief architect:** a separate peer task responsible for whole-application
+  direction, accepted/proposed decisions, future dependencies and tradeoffs. Consult
+  it for shared identities, persistence, public contracts, authority, recovery or
+  cross-feature boundaries. It cannot invent scope or override owner decisions.
+- **Delivery owner:** one complete brief/slice, including affected documentation,
+  direct verification, corrections and the authorized commit/PR endpoint. Use a
+  phase only when it is itself a bounded, coherent outcome. Feature architecture
+  and QA expertise may sit within this task; substantial prerequisite design can
+  have its own bounded task.
+- **Independent reviewer:** one specified candidate and its required corrections
+  in a fresh task. Provide the original outcome, relevant product constraints,
+  candidate and direct evidence; do not fork the implementer's conversation. An
+  author cannot independently review their own implementation or material design.
+- **Integration owner:** one bounded set of related changes. Usually the delivery
+  owner; create a separate task only for substantial coordination or conflicts.
+  Assign one writer for each integration checkout and shared resource.
+- **Delivery management:** records state and ensures the agreed endpoint is reached;
+  normally the orchestrator's responsibility, not an extra technical approval.
+
+Orchestrator and chief-architect responsibilities persist across slices, but their
+conversations may be replaced from the existing plan, ADRs and progress ledger.
+Delivery, integration and review tasks end with their assigned outcome; reuse them
+only for corrections to that same outcome. Do not recycle a task for an unrelated
+role. Archive only after work/processes are known to have stopped; archiving alone
+does not prove cancellation. Preserve useful results in the repository first.
+
+Delivery tasks may use subagents only for concrete bounded work with relevant
+requirements, explicit model/effort and separate ownership. Never use an implementer
+as their own independent reviewer. Do not create a chain of reviewers. If the
+interface cannot retire a subagent, stop using it when its assignment ends; use a
+fresh delivery task when fresh context/capacity is needed.
+
+Worktrees isolate checked-out files, not application SQLite, Keychain, installed
+apps, ports or all Git metadata. Serialize authorized shared-state mutations. Each
+worker starts from the assigned committed baseline containing the operating docs
+and product plan, not an implicit default branch or dirty canonical checkout.
+The orchestrator releases dependent work only after the needed contract/change is
+available in that worker's baseline. Parallel writers need disjoint ownership.
+Workers report commits, changed behavior/docs, direct checks and unresolved risks;
+only the designated ledger writer integrates status.
+
+## Model and Effort Assignments
+
+**Ultra is prohibited everywhere: tasks, subagents, defaults and escalation paths.**
+No fallback, profile or automatic delegation mode may select Ultra.
+
+Choose model capacity and reasoning effort separately, based on ambiguity, affected
+boundaries, consequences and available verification. These starting profiles are
+owner-selected operating defaults, not guarantees of model quality:
+
+| Work | Starting model / effort | Escalation when justified |
+| --- | --- | --- |
+| Orchestrator | `gpt-6-astra` / `medium` | `high` for conflicting dependencies or difficult scope/integration decisions |
+| Chief architecture | `gpt-6-astra` / `high` | `xhigh` only for a named difficult cross-product conflict within an authorized ceiling |
+| Feature architecture | `gpt-5.6-sol` / `high` | Astra `high` for shared contracts or application-wide assumptions |
+| Ordinary implementation | `gpt-5.6-terra` / `medium` | Sol `high` for substantial ambiguity, debugging or cross-component behavior |
+| Complex recovery/migration | `gpt-5.6-sol` / `high` | Astra `high` for difficult authority, compatibility or data preservation |
+| Bounded edits, fact extraction, recording verified results | `gpt-5.6-luna` / `low` or `medium` | Terra `medium` when interpretation is necessary |
+| QA | `gpt-5.6-terra` / `medium` for defined scenarios | Sol `high` for exploratory/recovery journeys and difficult diagnosis |
+| Independent review | `gpt-5.6-terra` / `high` for ordinary changes | Sol `high` for complex work; Astra `high` for consequential architecture/data risks |
+| Integration | `gpt-5.6-terra` / `medium` for straightforward changes | Sol `high` for behavioral conflicts; Astra `high` for architecture decisions |
+
+Set the actual model and effort at task/subagent dispatch; a brief alone does not
+configure execution. Confirm returned settings where the interface exposes them;
+otherwise report the verification limitation. Do not silently substitute an
+unavailable model or inherit an unspecified effort. A stronger reviewer is not a
+substitute for independent context, and more effort does not make models equivalent.
+
+The orchestrator selects profiles within the owner's agreed policy and assignment
+ceiling. The default ceiling is Astra `high`; `xhigh` or `max` needs a specific
+reason and owner authorization unless already included in that assignment. Ultra
+is never eligible. Check missing context, tooling and scope before escalating.
+Escalate a named unresolved problem, not every failed test; prefer a bounded stronger
+analysis to repeated retries or upgrading all work. Corrections retain the original
+scope and do not restart planning or add reviewers. Evaluate assignments using
+completion, rework, missed requirements, elapsed time and usage when available;
+record only useful conclusions in existing delivery records.
+
+## Follow-through and Enforcement Boundaries
+
+Completion includes the agreed working outcome, relevant documentation, direct
+checks, required independent review and authorized delivery endpoint. When local
+commits are authorized, make the scoped commit after verification; when a PR/push
+is authorized, follow through to that endpoint or report its specific blocker.
+Do not silently stop at uncommitted code, and do not infer external authorization.
+Ordinary corrections repeat only affected checks and applicable review. Optional
+suggestions never reopen completion or trigger another review cycle.
+
+This baseline defines operating instructions. It does not install Codex rules,
+hooks, model profiles or technical removal of subagent tools. Those mechanisms
+require a separately authorized, narrowly tested configuration change under I9 in
+the full-product plan. Use supported controls; do not claim prose enforces runtime
+permissions. Hooks must preserve STOP, owner-approval waits and legitimate blockers,
+must not grant authority or auto-publish, and must not create a new task database,
+review engine or unbounded continuation loop.
 
 ## UI Completion Standard
 

@@ -425,6 +425,57 @@ must account for portable helper behavior and nested executables, as well as
 
 ## Execution reliability: what rules and hooks can enforce
 
+### Operating baseline and task ownership
+
+The owner selected the operating model recorded in
+[ADR-007](../../architecture/ADR-007-proportional-delivery-validation.md) and root
+AGENTS.md: an orchestrator with no subagents coordinates separate delivery tasks;
+a separate chief architect maintains whole-product alignment. Writers use worktrees;
+delivery tasks may use bounded subagents. Independent review uses a fresh task for
+one candidate and its corrections. Integration has one owner for a bounded set,
+and the orchestrator normally owns progress and delivery follow-through. These
+capabilities do not imply a mandatory task for every role.
+
+The chief architect checks affected shared decisions D1–D13 and future consumers
+before a slice commits to a conflicting contract. Link relevant constraints in the
+brief, separating approved behavior from proposed direction. Worker conclusions
+cannot promote proposals or add scope. Continuing architectural responsibility
+survives conversation replacement through the existing ADRs, designs and this plan.
+No feature depends on undocumented memory in a long-running agent.
+
+Root AGENTS.md is the single model-assignment table. Model and effort are explicit
+task settings chosen for ambiguity and consequence; Luna/Terra handle suitable
+bounded work, Sol complex delivery, and Astra whole-product judgment. Escalation
+addresses a named unresolved problem within its authorized ceiling, after checking
+context and tooling. **Ultra is prohibited everywhere, including subagents and
+escalation.** Review independence and acceptance criteria are unchanged by model
+choice. Review findings do not create another review layer.
+
+The owner authorized updating/reviewing these operating documents and establishing
+a local committed baseline. The
+[baseline brief](../task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md)
+defines this documentation task. Owner review/approval of the committed baseline
+precedes the new-task pilot prompt; no pilot is launched by this update.
+
+The first proposed pilot is the C8 OS-metadata validator repair above: Terra Medium
+delivery, Sol High independent review covering reader correctness and filesystem
+safety, and bounded Astra High chief-architect input on the compatibility contract
+if needed. Use one review task for those concrete risks, not separate approval
+layers. Start from the approved baseline commit on
+`codex/full-product-architecture-plan`, not the old default checkout. The pilot
+brief must name its authorized endpoint and verify source behavior and the shipped
+contract; any installed-app change needs explicit authorization. It excludes the
+broader freshness work, lifecycle migrations, owner-state repair and hook rollout.
+
+Pilot completion uses the agreed outcome, affected documentation, direct regression
+checks, required independent review and authorized commit/PR endpoint. Record a
+short result on follow-through, context gaps, rework and usage where available in
+progress. Do not build a scorecard or recursive evidence system. The pilot is for
+this repository's delivery process, not approval to build I7's in-app execution
+engine. All 40 assessed capabilities and their approval distinctions remain intact.
+
+### Separate rules and hooks implementation
+
 The user asked about actual [Codex rules](https://learn.chatgpt.com/docs/agent-configuration/rules)
 and [hooks](https://learn.chatgpt.com/docs/hooks), not more prose in AGENTS.md.
 They can improve mechanical follow-through, but cannot settle ambiguous product

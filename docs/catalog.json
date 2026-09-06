@@ -416,6 +416,21 @@
       "isLeaf": true,
       "firstRead": "cd044b85-6519-4330-ae3c-dc0d9c20a65e",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-06-operating-baseline",
+      "path": "docs/delivery/task-briefs/2026-09-06-operating-baseline",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Operating baseline preparation; progress determines current authorization",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4017,6 +4032,22 @@
       "lifecycle": "proposed",
       "authorityLevel": "supporting",
       "parentCollection": "delivery.plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-operating-baseline-brief-2026-09-06",
+      "path": "docs/delivery/task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.operating-baseline-preparation",
+      "parentCollection": "delivery.task-briefs.2026-09-06-operating-baseline",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
