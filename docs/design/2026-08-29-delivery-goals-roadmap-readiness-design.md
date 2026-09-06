@@ -420,7 +420,10 @@ is exactly `RR-RM1` through `RR-RM11`.
 - Outcome: Give the owner an authoritative, lossless, versioned export and a
   transactional Portable Import that restores one complete supported Release
   Radar project without copying SQLite, guessing identity, or silently
-  dropping state.
+  dropping state. On 2026-09-06 the owner selected a self-contained package of
+  project records, managed documents and evidence files, including historical
+  provenance, under ADR-001's continuity amendment. The new package format and
+  implementation remain to be defined; v1 behavior is not silently changed.
 - Done when:
   1. The exporter, archive contract, and exporter-produced acceptance fixture
      are approved and independently verified.
@@ -471,6 +474,10 @@ is exactly `RR-RM1` through `RR-RM11`.
 - Outcome: Make an explicit owner-approved decision on whether to pursue a
   CloudKit-backed read-only iPhone companion after product scope, information
   architecture, privacy, recovery, and boundary implications are understood.
+- Authority selection, 2026-09-06: the Mac app owns delivery state and the
+  repository owns documents; the cloud publishes read-only copies. This choice
+  is settled in ADR-001. It does not complete RM8's remaining feasibility and
+  product decisions or authorize companion implementation.
 - Done when:
   1. The decision is recorded as pursue or do not pursue with its rationale.
   2. A pursue decision includes an approved architecture-boundary change and a

@@ -9,7 +9,7 @@ Release Radar is a personal, local-first delivery dashboard for folder-backed pr
 
 ## Decision
 
-Release Radar is a standalone, signed, sandboxed macOS application with bundle identifier `com.rekonlabs.ReleaseRadar`, minimum macOS version 14.0, and an app-owned Application Support data namespace derived from that bundle identifier. Delivery data is local app state and is never repository state or cloud state.
+Release Radar is a standalone, signed, sandboxed macOS application with bundle identifier `com.rekonlabs.ReleaseRadar`, minimum macOS version 14.0, and an app-owned Application Support data namespace derived from that bundle identifier. The Mac app is authoritative for delivery state. Repository documents and future read-only cloud publications do not become delivery authorities.
 
 The app process is the sole authority allowed to open and write its SQLite database. A separately bounded read-only observer may supply Codex thread, goal, waiting, completion, and freshness context through a supported sandbox-compatible connection. A distinct, narrowly typed mutation bridge may request validated transactional delivery commands from the app. The observer cannot mutate delivery state; the bridge cannot open SQLite, issue generic commands, observe unrelated state, or receive Pushover credentials.
 
@@ -30,6 +30,11 @@ Both actions are app-owned, bounded, and audited; failed, stale, denied, or
 mismatched authorization fails closed and preserves existing history.
 
 ## Existing-project onboarding and portable project archive v1 — 2026-08-25
+
+The v1 format below retains its defined compatibility behavior. It is not the
+target for future complete-project export: the owner-approved 2026-09-06 package
+direction below supersedes its contents as the RM5/RM6 product requirement.
+No new format version or implementation is established by this amendment.
 
 Existing-project onboarding has two non-overlapping owner workflows:
 
@@ -84,6 +89,47 @@ state, and copied SQLite databases are not portable complete-project archives.
 Portable importer implementation remains blocked until an authoritative
 exporter produces the acceptance fixture.
 
+## Owner-approved continuity and companion direction — 2026-09-06
+
+The owner selected these product policies. They control subsequent design while
+leaving schemas, migrations, package encoding, delivery briefs and implementation
+to their authorized slices. Other proposed architecture decisions remain proposed.
+
+**Archive and remove from tracking:** Archive retains the complete project and
+history, hides it from active views and suspends monitoring; Restore is reversible.
+Remove from tracking removes the operational project and local access capabilities,
+stops project monitoring and prevents pending app-owned actions from applying,
+and retains read-only audit/activity history and a removal record. The confirmation
+must state that history is retained. Both preserve repository files and other
+projects. Re-adding the folder creates a new registration
+that old requests cannot mutate. Removal is not full erasure; no erasure operation
+or destructive action is authorized by this policy decision.
+
+**Portable project package:** Export must contain the complete supported project
+records, managed documents and evidence files, including historical provenance.
+Supported goals, task plans, revisions, dependencies and later authoritative
+features must be represented rather than silently omitted. Preserve domain and
+artifact identities; use explicit destination root mappings and fresh folder
+authorization. Source-code checkouts, credentials and device access permissions
+are outside the package. Unavailable required content prevents a claim of complete
+export. Imported history is source history, not a fabricated local audit or a
+request to replay notifications or commands. Preserve the v1 rule that import
+creates a new project, rejects live collisions and revalidates its exact input;
+the package's file placement, failure recovery and database transaction must be
+designed together before implementation. A self-contained project package is
+distinct from a full application backup and from reversible project archiving.
+
+**Read-only companion authority:** The Mac app remains authoritative for delivery
+state; repository documents retain their authoritative location and catalogued
+identity. Cloud storage carries published copies for the read-only iPhone client,
+including the selected operational documents, evidence and history, with explicit
+publication and freshness information. Cloud and phone copies cannot independently
+edit or accept delivery/document state. This replaces the companion draft's
+cloud-source-of-truth and document-relocation direction. It does not authorize a
+cloud deployment or settle the remaining RM8 feasibility, content-limit, privacy,
+account, deletion-propagation, backup or recovery details. Publication is not a
+backup or automatic authority takeover after Mac loss.
+
 ## RR-R3 ticket-goal identity — 2026-08-25
 
 A ticket's approved goal is an explicit, persistent `(project, ticket, thread,
@@ -107,7 +153,7 @@ rewrites owner content.
 - Direct SQLite access by agent tools, observers, helpers, or project processes.
 - A combined read/write Codex integration or a generic shell/filesystem/JSON-RPC mutation surface.
 - Credentials outside the app-owned Keychain boundary or credentials supplied to agents.
-- A cloud backend, browser-hosted localhost dashboard, folderless projects, or owner-facing manual transition controls.
+- A cloud delivery authority, browser-hosted localhost dashboard, folderless projects, or owner-facing manual transition controls. The owner-approved future read-only companion publication boundary above does not transfer authority or authorize deployment.
 - Full Disk Access, Accessibility scraping, Codex database/rollout-file scraping, or presenting cached/fixture state as live.
 - A persisted Ready lane or automatic lane transitions inferred from dependencies or runtime observation.
 

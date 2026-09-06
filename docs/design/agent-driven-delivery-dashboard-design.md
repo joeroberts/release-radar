@@ -34,8 +34,9 @@ state and links back to project documents as evidence.
   synchronization with a project folder.
 - No manual phase/ticket editing surface for the owner.
 - No attempt to infer canonical delivery state from arbitrary Markdown.
-- No cloud backend, multi-user sharing, web app, or browser-hosted localhost
-  dashboard.
+- No cloud delivery authority, multi-user sharing, web app, or browser-hosted
+  localhost dashboard. The owner-approved future read-only companion publishes
+  copies under ADR-001's 2026-09-06 boundary; implementation remains separate.
 - No direct agent access to the app database or Pushover credentials.
 
 ## RekonDesignSystem integration scope

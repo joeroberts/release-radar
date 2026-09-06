@@ -1,5 +1,21 @@
 # Release Radar delivery state
 
+## Approved continuity decisions and current documentation work
+
+The owner selected removal from tracking with retained read-only history;
+self-contained portable project records, managed documents and evidence; and
+Mac/repository authority with read-only cloud publication to the companion.
+ADR-001 records these policies. The full-product plan, companion draft and affected
+controlling designs are reconciled without changing v1 archive behavior or claiming
+new implementation. Remaining schemas, migration/file recovery and publication
+details remain to be designed. Project-editing additions were not selected by these
+answers, and RekonDesignSystem's existing appearance scope is unchanged.
+
+The current task owns this documentation correction and the ledger. Local checks
+and one independent review cover the selected policies and their boundaries;
+review is pending. No implementation, external publication or app-state mutation
+is authorized by these product decisions.
+
 ## RekonDesignSystem scope clarification
 
 The owner reaffirmed RekonDesignSystem adoption and excluded adding or changing

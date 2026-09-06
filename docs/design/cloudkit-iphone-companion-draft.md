@@ -2,7 +2,7 @@
 
 - Status: Draft for future product and architecture discussion
 - Date: 2026-08-26
-- Approval state: Not approved; not an implementation brief or controlling architecture decision
+- Approval state: Mac/repository authority and read-only cloud publication selected by the owner on 2026-09-06 and recorded in ADR-001; remaining design is proposed, not an implementation brief
 
 ## Purpose
 
@@ -11,9 +11,10 @@ project delivery and agent status while away from the Mac. The companion would
 use the same owner's private iCloud account and would not introduce team
 collaboration, multi-user permissions, or mobile delivery mutations.
 
-This draft records a direction for later discussion. It does not supersede
-`docs/architecture/ADR-001-release-radar-boundaries.md`, alter the approved MVP,
-or release implementation work.
+This draft develops the owner-selected authority boundary in
+`docs/architecture/ADR-001-release-radar-boundaries.md`. It does not supersede that
+ADR or release implementation. Its former cloud-source-of-truth and authoritative
+document-relocation direction is not selected.
 
 ## Clarified scope
 
@@ -43,14 +44,13 @@ The intended operating model is deliberately narrow:
 
 ## Proposed direction
 
-Use the owner's **private CloudKit database as the structured cross-device
-source of truth** for Release Radar's operational data. Use iCloud Documents
-only where an artifact must remain an ordinary file that agents, text editors,
-or other filesystem-oriented tools can open directly.
+Keep the **Mac app authoritative for delivery state and repositories authoritative
+for their documents**. Publish read-only copies through the owner's private cloud
+storage for the iPhone. CloudKit records/assets remain the proposed publication
+mechanism; publication does not relocate source documents or transfer authority.
 
-CloudKit is the primary synchronization mechanism, not an optional afterthought.
-It is a better fit than copying the live SQLite database because it provides
-record identity, incremental changes, deletion handling, retry behavior,
+The proposed CloudKit publication mechanism uses record identity, incremental
+changes, deletion handling, retry behavior,
 account scoping, remote change delivery, and platform-supported synchronization.
 
 The high-level flow is:
@@ -59,33 +59,36 @@ The high-level flow is:
 Mac delivery mutation
         |
         v
-local SQLite transaction + durable CloudKit outbox
+authoritative local SQLite transaction + proposed publication outbox
         |
         v
-private CloudKit database
+read-only publication in private CloudKit
         |
         v
 iPhone local cache -> read-only SwiftUI projections
 ```
 
-The Mac remains the only mutation authority. CloudKit is the durable
-cross-device representation. SQLite remains useful as the Mac's transactional
-working store, offline cache, and outbox; it is not copied to the iPhone and is
-not opened from iCloud Drive.
+The Mac remains the delivery mutation authority. CloudKit carries published
+representations; the Mac's SQLite store is not merely a cache of cloud authority.
+The repository catalog owns document identity/authority, and the app explicitly
+accepts snapshots under its existing contract. Neither cloud publication nor phone
+readback accepts a changed catalog. SQLite is not copied to the phone or opened
+from iCloud Drive. Source loss requires an explicit backup/import recovery path;
+cloud publication alone does not become a full backup or authority takeover.
 
 ## Proposed storage boundaries
 
 | Information | Proposed storage | Notes |
 | --- | --- | --- |
-| Projects, phases, tickets, lanes, dependencies, blockers, and reviews | Private CloudKit | Structured records or an atomic status projection, depending on the final schema. |
-| Agent status and heartbeat | Private CloudKit | Includes publication and expiry timestamps so stale state is explicit. |
-| Activity, audit, notification history, and completion records | Private CloudKit | Read-only on iPhone; cloud replicas must not trigger delivery or retries. |
-| Planning, architecture, design, implementation, and tracking artifacts | CloudKit records/assets by default | Use iCloud Documents instead when ordinary file interoperability is required. |
-| Reports, screenshots, attachments, and evidence intended for mobile viewing | CloudKit assets or iCloud Documents | Store portable metadata and content; local build availability remains device-specific. |
+| Projects, phases, tickets, lanes, dependencies, blockers, and reviews | Mac SQLite authority; published CloudKit records | Structured records or consistent projections, depending on the final publication schema. |
+| Agent status and heartbeat | Mac-side supported observation; published CloudKit records | Publication and expiry timestamps preserve the source's freshness and availability limits. |
+| Activity, audit, notification history, and completion records | Mac history; read-only cloud publication | Phone copies must not trigger delivery or retries. |
+| Planning, architecture, design, implementation, and tracking artifacts | Repository originals; published CloudKit records/assets | Keep ordinary file interoperability and authoritative catalog identity in the repository. |
+| Reports, screenshots, attachments, and evidence intended for mobile viewing | Authorized originals; published CloudKit assets | Publish portable metadata and content without moving authoritative files; local build availability remains device-specific. |
 | Local source-code checkout | Mac filesystem | Outside the mobile data model. |
 | Absolute checkout path and security-scoped bookmark | Mac device only | Link a stable cloud project ID to the local checkout without publishing a meaningless device path or capability token. |
 | API tokens and notification credentials | Keychain | The read-only iPhone does not need Mac delivery credentials. |
-| SQLite database and synchronization engine state | Local to each device | Cache, index, outbox, and CloudKit engine state rather than a synchronized database file. |
+| SQLite database and synchronization engine state | Local to each device | Authoritative delivery store on Mac; read-only cache on phone; no synchronized database file. |
 
 Prompts, raw audits, implementation notes, and evidence are not categorically
 excluded from CloudKit. For this personal application they may be synchronized
@@ -149,28 +152,16 @@ not schedule notifications or replay Mac-side operational work.
 
 ## Planning-file interoperability
 
-CloudKit assets are appropriate when Release Radar is the authoritative reader
-and writer of an artifact. They keep the artifact inside the app's private
-CloudKit data model and avoid a second synchronization system.
+Repository artifacts remain ordinary files for Codex, Git, shell tools and text
+editors. Their authoritative location and catalogued identity stay in the
+repository. CloudKit assets are published copies for reading, not a replacement
+file workspace, and phone/cloud copies cannot be edited independently.
 
-Some planning and implementation artifacts currently matter specifically as
-ordinary Markdown, JSON, image, or report files. Codex, Git, shell tools, and
-text editors operate on filesystem paths rather than CloudKit records. If that
-interoperability remains a requirement, those artifacts should live in an
-app-owned iCloud Documents container while CloudKit stores their identity,
-classification, hashes, mobile metadata, and status.
-
-This is the only material justification for not storing every artifact solely
-as a CloudKit record. It is an interface constraint, not a generalized security
-concern. The approved design must select one authoritative representation for
-each artifact and must not create an unmanaged CloudKit/file mirror in which
-both copies can be edited independently.
-
-The design must also decide how repository-controlling artifacts are exposed to
-agents if their authoritative copy moves outside the code repository. Possible
-choices include direct operation in an authorized iCloud Documents workspace or
-an explicit checked-out projection managed by Release Radar. A casual copy or
-symlink that creates two apparent sources of truth is not sufficient.
+Publication design must identify the source artifact and content version, preserve
+pending/invalid/unavailable states, and avoid mixing incompatible generations.
+Moving authoritative documents into iCloud Documents or replacing them with
+checked-out cloud projections is outside the selected direction. Detailed update,
+withdrawal, size-limit and offline-download behavior remains to be designed.
 
 ## Publishing and offline behavior
 
@@ -252,11 +243,11 @@ document.
 
 ## Alternatives considered
 
-### Private CloudKit plus selective iCloud Documents — recommended direction
+### Private CloudKit publication — proposed mechanism within selected authority
 
-Use CloudKit for structured state, status, activity, and artifact metadata. Use
-CloudKit assets by default and iCloud Documents only where real filesystem
-interoperability is required.
+Use CloudKit for published state, status, activity and artifact metadata, with
+assets for published document/evidence content. Originals remain under Mac app
+or repository authority; no second editable source is introduced.
 
 This provides incremental synchronization, offline caches, remote change
 delivery, and a clear path to widgets or notifications without a custom
@@ -264,7 +255,8 @@ backend.
 
 ### iCloud Documents only
 
-Publish status and all operational data as versioned files. This is viable for
+As an alternative publication mechanism, publish copies of status and operational
+data as versioned files while retaining Mac/repository authority. This is viable for
 a single read-only consumer but requires custom indexing, change discovery,
 deletion handling, conflict behavior, and mobile projection work that CloudKit
 already provides. It is not the preferred default.
@@ -277,17 +269,16 @@ future requirement cannot be met by the owner's private iCloud account.
 
 ## Open questions for later discussion
 
-1. Must planning and implementation artifacts remain directly editable by
-   Codex, Git, shell tools, and external editors, or may Release Radar own them
-   as CloudKit assets?
-2. Which operational artifacts are authoritative CloudKit records, and which
-   are authoritative iCloud Documents indexed by CloudKit?
-3. Does the first iPhone release need full document reading, or only dashboard,
-   activity, and status views?
+1. How should publication select and version repository artifacts while preserving
+   the selected operational corpus and existing validation/acceptance states?
+2. How should document/evidence download limits and offline availability work?
+3. How should the complete companion corpus be sequenced through bounded outcomes
+   without declaring a dashboard-only prototype complete?
 4. Which Mac-side supported event source can publish truthful running, waiting,
    approval-needed, and completed agent states?
-5. How much activity and audit history should be retained and downloaded to the
-   phone?
+5. How should read-only retained history after removal appear on the phone, and
+   how should publication withdrawal and cached-content retention work? Local
+   removal retains history; phone download/retention details remain unresolved.
 6. Should CloudKit contain the complete normalized delivery graph initially, or
    only atomic mobile status projections plus artifacts?
 7. What owner-facing recovery is required for iCloud sign-out, account changes,
@@ -301,9 +292,8 @@ future requirement cannot be met by the owner's private iCloud account.
 
 Before this direction can become controlling architecture:
 
-- reconcile it explicitly with ADR-001's current local-only and sole-database-
-  authority decisions;
-- define the authoritative representation for each artifact class;
+- preserve ADR-001's selected Mac/repository authority and read-only publication;
+- define publication representations and lifecycle for each artifact class;
 - confirm the Mac-side agent-status publisher and freshness contract;
 - define CloudKit development, production-schema, account-change, deletion,
   and recovery behavior;
