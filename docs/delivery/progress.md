@@ -98,10 +98,25 @@ owner-state acceptance remain separately unauthorized and unclaimed.
 
 “Review usable project lifecycle candidate”
 (`01a07923-88cd-7780-bc43-8bb8e0423e22`) is active in fresh worktree `85d0`, actual
-Astra High confirmed, reviewing that exact published candidate for combined
-architecture/security/QA/UX risks. Required corrections return to the same delivery
-task, which owns commits/pushes/PR and the eventual owner-approved merge. The parent
-retains ledger ownership; no product changes are requested while review is pending.
+Astra High confirmed, completed its initial combined review of product `7601b619`
+and brief-only supplement `4b4deb0`. Independent checks passed 38/38, native
+documentation/diff checks and 1100/620 rendering/AX inspection. **Six Required
+findings block merge:** missing direct exact-folder recovery; catalog validation
+after security scope closes; migration marks pending setup complete; existing v1
+or invalid-catalog bootstrap dead ends; health misstates catalog/freshness; and
+registration generation is not checked atomically at documentation commit.
+These are source/control-flow findings not disproved by the passing tests.
+
+Corrections are assigned to the same Sol High delivery task under existing scope,
+with test-first negative/interleaving cases and directly affected checks. The same
+reviewer will recheck those corrections; no new review layer or owner design gate.
+PR #23 remains open and unapproved for merge. The reviewer reported all review and
+test/build processes stopped; its initial review result is preserved here before
+archival. Temporary review output remains at `/tmp/rr-pr23-independent-review`,
+`/tmp/rr-pr23-independent-review.log`, `/tmp/rr-pr23-independent-review-images` and
+the test-managed `ReleaseRadar-XCTestHost-75860` temporary directory. No cleanup
+occurred. The parent retains ledger ownership and monitors through the approved
+Git endpoint.
 No owner/application-state action or installation is authorized by source delivery.
 Durable source changes are tracked and published in PR #23. No cleanup occurred;
 the delivery owner will record remaining temporary verification paths in its brief.
