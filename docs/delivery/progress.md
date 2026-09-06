@@ -1,5 +1,30 @@
 # Release Radar delivery state
 
+## Remote starting baseline
+
+The owner authorized committing, pushing and merging the complete reviewed baseline.
+[PR #21](https://github.com/joeroberts/release-radar/pull/21) is its remote delivery
+record: C8, the approved operating model and full-product plan, RekonDesignSystem
+scope clarification, and approved continuity decisions. Use that PR's merge commit
+on `origin/codex/release-radar-mvp` as the next task's starting baseline.
+
+Publication checks on the reviewed source passed: **46 tests, 0 failures, 0 skipped**
+using the focused C8 command recorded in its brief, plus native documentation and
+scoped diff checks.
+The application connector again returned `appUnavailable`; Git delivery does not
+establish repository binding or catalog acceptance. Retained installation files and
+unrelated canonical changes are excluded. “Kick off C8 repair pilot”
+(`01a0782d-75da-7653-a5ce-3023c738d499`) was idle/completed and is now archived;
+its outcome and stopped worker records remain below.
+
+The next task should settle the remaining shared architecture contracts and deliver
+the usable project lifecycle under the approved plan and operating model. This
+publication does not launch that task or authorize the entire roadmap's implementation.
+Temporary verification output remains at `/tmp/release-radar-c8-merge-verification`,
+`/tmp/release-radar-c8-merge-verification.log`, and
+`/tmp/release-radar-reviewed-baseline-pr.md`; prior retained paths remain in the C8
+brief. No cleanup was performed.
+
 ## Approved continuity decisions
 
 The owner selected removal from tracking with retained read-only history;
