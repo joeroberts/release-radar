@@ -51,8 +51,10 @@ contract recommendations and PR #22 merge; lifecycle source delivery is now open
 
 Chief architecture delivered `ce7ae0a`, integrated locally as `879f883`: the
 existing full-product plan now reconciles D1–D13 and retains all 40 capabilities.
-The standing architect task is idle after this bounded output and remains the
-programme's architecture peer. No product implementation was performed.
+The architect's bounded output is complete and merged through PR #22. The task
+was confirmed idle/completed and is archived; future architecture work uses a
+fresh task reconstructed from durable decisions. No product implementation was
+performed by that task.
 
 “Review shared-contract lifecycle recommendations”
 (`01a078c3-0ccf-7ea0-958c-2c30529e690c`), confirmed Astra High, independently
