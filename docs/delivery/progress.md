@@ -3,13 +3,16 @@
 ## Current outcome and authorization
 
 The owner authorized updating and independently reviewing the agreed operating
-documents and establishing a local committed starting baseline. The controlling
+documents and establishing a local committed starting baseline. The
 [baseline brief](task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md)
-limits this task to repository documentation, one fresh independent review task and
-local commits. The current task owns integration and this ledger. The operating-document candidate is
+records the authorized scope: repository documentation, one fresh independent
+review task and local commits. The current task owns integration and this ledger.
+The independently reviewed operating-document candidate is
 committed as `c9374836e18390caa16851330bc8951f90479a64` on
 `codex/full-product-architecture-plan`, building on `1816b99`. Independent review
-and owner baseline approval remain pending.
+is complete with no required or optional findings. Subsequent commits record
+status and this bounded closeout; the final local branch head is the starting
+baseline presented to the owner. Owner baseline approval is pending.
 
 The operating policy is in root AGENTS.md and
 [ADR-007](../architecture/ADR-007-proportional-delivery-validation.md): the
@@ -61,18 +64,22 @@ received independent review; no required findings remained. Those checks establi
 planning evidence, not implementation of future features or this operating update.
 
 For this operating update, native documentation validation and scoped diff checks
-pass. All seven scoped files were verified and persisted in the canonical
-repository; the Release Radar managed guidance block is unchanged. The fresh
-independent operating-policy review is pending. No product
-tests are required for this documentation-only change. The final record will name
-the review result and starting baseline without a separate report checksum,
-review-of-review or new ledger.
+pass. All seven scoped files are persisted in the canonical repository; the
+Release Radar managed guidance block is unchanged. One fresh independent task,
+“Review Release Radar operating baseline”
+(`01a077f4-4e21-7e43-a721-b4f8e77d0ddc`), reviewed candidate `c937483` and found no
+required or optional defects. Its session metadata confirms `gpt-5.6-sol` with
+`high` effort. It verified scope/approval distinctions, all 40 preserved capability
+rows, roles, model policy, Ultra prohibition, delivery endpoints and runtime
+enforcement caveats. It made no repository changes. No product tests were needed
+for this documentation-only outcome.
 
 Fresh supported application inventory reports `isComplete: false`, catalog
 `prohibitedContent` and zero project repository bindings. The canonical checker
-again rejected `docs/.DS_Store` after the candidate was copied back. A passing clean-worktree check and local commit do
-not establish accepted application tracking. Binding/catalog acceptance, missing
-audit reconstruction and installed application recovery remain separate work.
+again rejected `docs/.DS_Store` after the candidate was copied back. A passing
+clean-worktree check and local commit do not establish accepted application
+tracking. Binding/catalog acceptance, missing audit reconstruction and installed
+application recovery remain separate work.
 
 ## Previous delivered baseline
 
@@ -86,22 +93,21 @@ catalog acceptance. The prior owner acceptance override remains in the
 These records do not establish post-reset health. No accepted ticket, phase or
 Delivery Goal was reopened. RM10 Roadmap Help remains distinct from delivered RR-R10.
 
-## Review task setup
+## Review-task discovery correction
 
-A separate Sol High task, “Review Release Radar operating baseline,” was requested
-for candidate `c937483`. Codex created a worktree at that revision but has only
-returned pending client ID `client-new-thread:e9ab78f1-4be2-4f7c-845f-4d9e9c1ca314`.
-The task is not yet listed with a runnable task ID, so independent review has not
-been observed and must not be claimed. Setup status needs resolution before this
-baseline can be presented as reviewed. No duplicate reviewer or subagent fallback
-was created. This is a Codex task-setup limitation, not a reason to alter product
-code or expand the operating process.
+The earlier report that review was blocked by task setup was incorrect. The task
+ran and completed, but the task-list tool omitted it. Local diagnostics mapped the
+pending creation ID to the actual task ID; direct task readback and a completion
+snapshot returned the finished review. No owner intervention, duplicate reviewer,
+configuration repair or subagent fallback was needed. Treat list absence as an
+unknown discovery state rather than proof that an assigned task did not run.
 
 ## Next eligible work
 
-Resolve review-task setup, finish independent review and local baseline preparation, then wait for owner
-review/approval before producing the new-task pilot prompt. The proposed pilot is
-C8 with Terra Medium delivery and Sol High independent review; consult the separate
+Present the reviewed committed baseline for owner review/approval. After that
+approval, provide the requested new-task pilot prompt; do not launch the pilot
+from this closeout. The proposed pilot is C8 with Terra Medium delivery and Sol
+High independent review; consult the separate
 chief architect at Astra High for the compatibility contract as needed. Its brief
 must preserve the narrow scope, name the approved starting commit and specify the
 actual authorized delivery endpoint. Broader lifecycle repairs follow the plan's

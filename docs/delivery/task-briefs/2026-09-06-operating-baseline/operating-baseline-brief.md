@@ -1,6 +1,7 @@
 # Operating baseline preparation
 
-Date: 2026-09-06. Status: authorized preparation; review and owner approval pending.
+Date: 2026-09-06. Status: preparation complete; independent review passed;
+owner baseline approval pending.
 
 ## Objective and outcome
 

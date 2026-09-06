@@ -4044,9 +4044,8 @@
       "artifactID": "rr-operating-baseline-brief-2026-09-06",
       "path": "docs/delivery/task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.operating-baseline-preparation",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-06-operating-baseline",
       "supersedes": [],
       "applicationSensitivity": [

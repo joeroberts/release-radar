@@ -239,7 +239,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-operating-baseline-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md](2026-09-06-operating-baseline/operating-baseline-brief.md) | document | controlling &#40;delivery.operating-baseline-preparation&#41; | active | none | none |
+| rr-operating-baseline-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md](2026-09-06-operating-baseline/operating-baseline-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
