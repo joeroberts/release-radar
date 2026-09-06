@@ -35,9 +35,13 @@ The owner also clarified that bounded tasks must be archived when their work and
 required corrections are complete. This is now recorded in AGENTS.md and ADR-007:
 the orchestrator owns archiving after durable results and stopped processes, and a
 new candidate outside the original correction scope or a separate handoff review
-gets a fresh task. The kickoff prompt carries that rule. The kickoff's one required
-collection-metadata correction is awaiting scoped closure; the new archival-policy
-clarification is awaiting independent review in a fresh task.
+gets a fresh task. The kickoff prompt carries that rule. Sol High review found the kickoff content
+sound; its one collection-metadata finding was corrected and confirmed resolved.
+“Review Release Radar operating baseline” is now archived. The separate Terra High
+task “Review task archival policy” (`01a0781f-c9f8-79e3-9024-11aba924772d`) reviewed
+the new policy and requested explicit matching completion conditions in the kickoff;
+that correction was made and confirmed resolved. No required findings remain.
+Both review tasks are archived. The pilot itself has not been launched.
 
 ## Product direction and approval boundaries
 

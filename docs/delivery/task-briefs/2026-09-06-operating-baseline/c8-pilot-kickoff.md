@@ -77,9 +77,13 @@ retain any remaining acceptance step explicitly rather than silently dropping it
 Monitor dispatched tasks through completion. A pending creation ID or missing
 list entry is not proof of setup failure: resolve the actual task ID through
 supported status and narrow local diagnostics before asking the owner to inspect
-it. Avoid duplicate workers or repeated unchanged polling. Archive bounded delivery
-and review tasks after their work has stopped and useful results are preserved.
-Do not reuse a completed reviewer for a new candidate or unrelated handoff.
+it. Avoid duplicate workers or repeated unchanged polling. Promptly archive bounded
+delivery, integration and review tasks only after the assigned outcome and required
+corrections are complete, results are preserved in the repository, and processes
+have stopped. Do not archive an incomplete task merely because it stopped or is
+blocked. Parent-level owner review/approval does not keep a completed child open.
+Reuse/restore only for required corrections to the same outcome; a new candidate
+outside that correction scope or a separate handoff review requires a fresh task.
 
 Conclude with commits, changed behavior/docs, direct checks, review result, remaining
 installed-acceptance or authorization needs, and a short assessment of the pilot's
