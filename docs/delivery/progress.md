@@ -48,7 +48,34 @@ Application synchronization is not
 claimed. The next owner decision is the chief architect's bounded contract
 recommendation, before the affected implementation.
 
-## Closed baseline and retained limitations
+## Shared-contract candidate and next owner decision
+
+Chief architecture delivered `ce7ae0a`, integrated locally as `879f883`: the
+existing full-product plan now reconciles D1–D13 and retains all 40 capabilities.
+The standing architect task is idle after this bounded output and remains the
+programme's architecture peer. No product implementation was performed.
+
+“Review shared-contract lifecycle recommendations”
+(`01a078c3-0ccf-7ea0-958c-2c30529e690c`), confirmed Astra High, independently
+reviewed `879f883` against `acfaeed`. **No Required findings.** Native documentation
+and diff checks passed; review confirmed the 40 capability IDs/order and the
+verbatim historical-ledger preservation. Optional older C8 future-tense passages
+are nonblocking because explicit closure is retained; no new review cycle is
+required. The reviewer reported all work/processes stopped and is archived after
+its result was preserved here. No product tests were
+run for this documentation-only candidate.
+
+Owner decisions before the lifecycle brief: accept new opaque project IDs with
+separate registration/request generation and preserved legacy IDs; accept setup
+Finish with zero phases and visible outstanding documentation tasks, using a
+previewed exact-root/project bootstrap handoff and separate explicit app actions.
+The [plan's decision table](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#material-owner-choices-and-when-they-are-needed)
+records alternatives and compatibility/recovery consequences. Product-design and
+shipped-guidance reconciliation belongs to that specifically approved slice.
+Later planning/IA/package decisions stay deferred rather than gating lifecycle.
+The candidate is ready for an authorized branch push/PR; merge remains owner-gated.
+
+## Retained baseline evidence
 
 [Historical C8 and baseline closeout](archive/2026-09-06-c8-and-baseline-closeout.md)
 preserves the prior ledger, task/review archival records, installed verification
