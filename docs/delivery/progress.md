@@ -51,8 +51,10 @@ contract recommendations and PR #22 merge; lifecycle source delivery is now open
 
 Chief architecture delivered `ce7ae0a`, integrated locally as `879f883`: the
 existing full-product plan now reconciles D1–D13 and retains all 40 capabilities.
-The standing architect task is idle after this bounded output and remains the
-programme's architecture peer. No product implementation was performed.
+The architect's bounded output is complete and merged through PR #22. The task
+was confirmed idle/completed and is archived; future architecture work uses a
+fresh task reconstructed from durable decisions. No product implementation was
+performed by that task.
 
 “Review shared-contract lifecycle recommendations”
 (`01a078c3-0ccf-7ea0-958c-2c30529e690c`), confirmed Astra High, independently
@@ -75,13 +77,39 @@ Later planning/IA/package decisions stay deferred rather than gating lifecycle.
 [PR #22](https://github.com/joeroberts/release-radar/pull/22) merged with owner
 approval as `c22a32ca4eb310973ba9cce5eb0df472d2262bfb`. Only the two immediate
 recommendations are accepted; later proposed choices remain deferred. The next
-assignment is complete lifecycle delivery at Sol High, justified by registration
-compatibility, documentation bootstrap and folder-recovery boundaries. The delivery
-owner must commit a bounded controlling brief before product implementation and
-produce tested source, affected documentation and a local candidate for one fresh
+assignment is “Deliver complete usable project lifecycle”
+(`01a078df-3ce2-7183-96a9-0cf10aca159c`) in fresh worktree `781f`, with actual
+Sol High confirmed, justified by registration compatibility, documentation
+bootstrap and folder-recovery boundaries. Its committed baseline is `3949f0f`,
+containing the approved merge and decision record. The delivery
+owner committed the controlling
+[usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
+as `b806554` before product implementation, with native documentation checks
+passing. Test-first implementation is active on `codex/usable-project-lifecycle`;
+the outcome is tested source, affected documentation and a local candidate for one fresh
 independent architecture/security/QA review. The parent retains ledger ownership.
 No owner/application-state action or installation is authorized by source delivery.
 Durable changes remain tracked; no new temporary files were created.
+
+The owner clarified programme follow-through: the orchestrator launches/monitors
+workers and answers settled questions from durable decisions and, where necessary,
+targeted history in “Review lifecycle and design system”
+(`01a075d9-72c4-7a63-9b04-e7a329a24c15`). Engineering choices within accepted
+outcomes are resolved with the delivery owner/chief architect. Worker plans and
+recommendations create no new owner gate; escalate only unresolved material
+tradeoffs and expressly reserved actions. No delivery pause or new review layer
+is implied by this clarification.
+
+The owner also requires writing tasks to own the remote Git endpoint: start from
+the named synchronized remote baseline, use a named branch with its remote
+upstream, commit coherent changes, push the branch/commits and create the PR.
+The orchestrator monitors review/corrections through owner-approved merge; a local
+commit alone is not a completed delivery. Architecture's first local candidate
+was integrated and merged through PR #22 by the parent; do not create a duplicate
+PR for that closed result. Active lifecycle delivery has been instructed to publish
+and track its own `codex/usable-project-lifecycle` branch and create its PR.
+Parent `codex/lifecycle-delivery` is published for the accepted decisions and ledger;
+its necessary updates will be integrated into the delivery PR through Git.
 
 ## Retained baseline evidence
 
