@@ -1,7 +1,8 @@
 # C8 source-repair pilot
 
-Date: 2026-09-06. Status: authorized local source delivery; compatibility decision recorded
-in `28b0792`. Installed acceptance remains separately authorized work.
+Date: 2026-09-06. Status: local source delivery complete and independently reviewed;
+installed acceptance remains outstanding. Retained as active supporting installation
+handoff material; current authorization and status are in the progress ledger.
 
 ## Objective and outcome
 
