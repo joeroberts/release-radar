@@ -140,6 +140,81 @@ owner authorization. None is merged into another feature.
 
 ## Catalog v1 contract
 
+### C8 compatibility decision — discovery exclusion v1
+
+Selected for the owner-authorized C8 source-repair pilot on 2026-09-06. This
+section amends only the blanket metadata prohibition in the original v1
+inventory paragraph below. It records the source-delivery rule, not implemented
+behavior, independent acceptance, installation, or application catalog acceptance.
+Other proposed contracts in the
+[full-product plan](../delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+remain proposed.
+
+Keep catalog schema version **1**, guidance version **2**, index markers and
+canonical catalog encoding/digest unchanged. Add the separately named Core
+constant `RepositoryDocumentContract.discoveryExclusionVersion = 1` for this
+first exclusion rule; mirror that version and rule in the shipped
+`ReleaseRadarDocumentationTool/catalog-v1.md` reference with exact-agreement
+coverage. This is a reader capability revision, not a repository-selectable
+ignore setting or a new catalog field. No schema bump, capability negotiation,
+database migration, or accepted-snapshot rewrite is needed.
+
+During discovery under `docs/`, exclude only an exact, case-sensitive
+`.DS_Store` basename whose descriptor-relative, no-follow metadata identifies
+an ordinary regular file. Check type before exclusion; never open or read its
+contents. Apply this at the docs root and within otherwise valid collections.
+Same-named directories, symlinks and other non-regular entries reject. Keep
+catalog path validation prohibitive: an artifact or collection entry naming
+excluded metadata rejects, so it cannot acquire managed evidence identity.
+Other hidden files, backups, prohibited ancestors, build output, unsafe paths
+and unregistered documents retain their existing rejection rules. Git ignore
+rules do not participate.
+
+Metadata-only creation, content changes or removal between stable validations
+must leave document/collection inventory, generated indexes and catalog digest
+unchanged. Preserve bounded enumeration, root/ancestor containment, no-follow
+opens, directory identity checks, document stamps, links, checksums and catalog
+stability checks. Directory-entry comparisons used by index-write stability
+verification must apply the same type-checked exclusion, including when the
+writer has staged its own temporary entries; a name-only filter is unsafe.
+Concurrent filesystem changes may still fail conservatively with
+`changedDuringRead` and require a fresh read. C8 does not authorize dropping
+stability checks to suppress such failures or masking real-document changes.
+
+Current consumers are the shared Core validator; documentation-tool check and
+index generation; app catalog preview, binding and acceptance; and managed
+evidence inventory, resolution, creation/adoption, import and root rebind.
+They consume one rule through Core, with no independent app/checker whitelist.
+Future C8 freshness and C12 health/recovery observations must distinguish this
+reader capability from valid/current/accepted/bound state. C10/C11 portability
+and P17 code-revision evidence retain repository/artifact identity and explicit
+provenance: the catalog digest is not a reader-version, code-revision or installed
+binary attestation. These consumers are compatibility constraints, not new C8
+implementation work.
+
+Older installed validators retain the original prohibition and reject even
+ordinary `.DS_Store` files. They can still validate an otherwise compatible v1
+tree without that metadata. A new source checker passing does not prove the
+installed app/helper has the new rule. Installation remains separately
+authorized; verify the installed reader and bundled checker against the
+canonical tree with metadata retained. Report real catalog, authorization and
+binding failures separately. Do not delete metadata, rebind, accept catalogs,
+reconstruct audits or rewrite evidence as recovery for an older validator.
+Reverting to an older binary may restore this rejection but requires no data
+migration; preserve existing IDs, snapshots and receipts. Actual catalog
+changes still require their existing explicit acceptance transition.
+
+Minimum source delivery updates are the shared contract constant, reader
+discovery and affected stability comparisons, the shipped catalog reference,
+and focused existing reader/validator/index and reference-agreement tests.
+Retain catalog-registration rejection in the validator. Verify root/nested
+metadata invariance, unsafe same-name entries, prohibited/unregistered content
+and actual index generation, alongside existing containment and change-during-
+read checks. No new persistence, command surface, observation service or broad
+design reconciliation is part of this decision.
+
+### Original v1 inventory and identity rules
+
 `docs/catalog.json` is repository contract metadata. It is not substantive
 document content and is the only regular file under `docs/` excluded from its
 own artifact inventory. Every other eligible regular file or durable asset

@@ -76,6 +76,42 @@ final class RepositoryDocumentCatalogTests: XCTestCase {
         reject("prohibitedContent") { try RepositoryDocumentValidator().validateCurrent(authorizedRoot: other) }
     }
 
+    func testDiscoveryExcludesOnlyRegularFinderMetadataWithoutChangingSnapshotIdentity() throws {
+        let root = try fixture()
+        let validator = RepositoryDocumentValidator()
+        let baseline = try validator.validateCurrent(authorizedRoot: root)
+        let rootMetadata = root.appendingPathComponent("docs/.DS_Store")
+        let nestedMetadata = root.appendingPathComponent("docs/plans/.DS_Store")
+
+        try Data("root metadata".utf8).write(to: rootMetadata)
+        try Data("nested metadata".utf8).write(to: nestedMetadata)
+        XCTAssertEqual(try validator.validateCurrent(authorizedRoot: root).digest, baseline.digest)
+
+        try Data("changed metadata".utf8).write(to: nestedMetadata)
+        XCTAssertEqual(try validator.validateCurrent(authorizedRoot: root).digest, baseline.digest)
+
+        try FileManager.default.removeItem(at: rootMetadata)
+        try FileManager.default.removeItem(at: nestedMetadata)
+        XCTAssertEqual(try validator.validateCurrent(authorizedRoot: root).digest, baseline.digest)
+
+        for isDirectory in [true, false] {
+            let unsafe = try fixture()
+            let metadata = unsafe.appendingPathComponent("docs/.DS_Store")
+            if isDirectory {
+                try FileManager.default.createDirectory(at: metadata, withIntermediateDirectories: false)
+            } else {
+                try FileManager.default.createSymbolicLink(at: metadata, withDestinationURL: unsafe.appendingPathComponent("outside"))
+            }
+            XCTAssertThrowsError(try validator.validateCurrent(authorizedRoot: unsafe))
+            try FileManager.default.removeItem(at: metadata)
+        }
+
+        let catalogued = try fixture()
+        try Data("metadata".utf8).write(to: catalogued.appendingPathComponent("docs/.DS_Store"))
+        try artifact(catalogued, "draft") { $0["path"] = "docs/.DS_Store" }
+        reject("prohibitedContent") { try validator.validateCurrent(authorizedRoot: catalogued) }
+    }
+
     func testChecksumsApplicableLinksAndTextEncodingReject() throws {
         let root = try fixture()
         try Data("changed".utf8).write(to: root.appendingPathComponent("docs/plans/evidence.md"))

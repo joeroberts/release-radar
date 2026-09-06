@@ -78,6 +78,17 @@ links, unlabelled active-to-archived references and checksum mismatches.
 AGENTS.md is outside `docs/`: valid path-based evidence for it need not have a
 catalog entry and must not be silently converted to managed evidence.
 
+## Discovery exclusion v1
+
+The catalog schema remains v1. Discovery exclusion v1 ignores only an exact,
+case-sensitive `.DS_Store` basename after descriptor-relative, no-follow metadata
+confirms it is an ordinary regular file. It is not opened, catalogued, included in
+the document inventory, or used as managed evidence. This applies at `docs/` and
+nested collections, including the index writer's stability comparison. A symlink
+or directory with that name, every other hidden/prohibited path, and any catalog
+entry naming `.DS_Store` reject. Creation, modification, or removal of an excluded
+regular file does not change the inventory, generated indexes, or catalog digest.
+
 Accepted catalog transitions preserve repository ID and artifact kind. Allowed
 lifecycle transitions are proposed→active, active→completed (documents/evidence),
 active→superseded (with an active replacement), and completed→archived (moved to

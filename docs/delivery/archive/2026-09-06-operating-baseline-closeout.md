@@ -1,0 +1,147 @@
+# Operating baseline closeout — historical record
+
+Historical and non-authoritative. Preserved when the owner launched the C8 pilot
+on 2026-09-06. Current authorization and eligibility are in
+[progress](../progress.md).
+
+# Release Radar delivery state
+
+## Current outcome and authorization
+
+The owner authorized updating and independently reviewing the agreed operating
+documents and establishing a local committed starting baseline. The
+[baseline brief](task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md)
+records the authorized scope: repository documentation, one fresh independent
+review task and local commits. The current task owns integration and this ledger.
+The independently reviewed operating-document candidate is
+committed as `c9374836e18390caa16851330bc8951f90479a64` on
+`codex/full-product-architecture-plan`, building on `1816b99`. Independent review
+is complete with no required or optional findings. Subsequent commits record
+status and bounded closeout. On 2026-09-06 the owner approved starting baseline
+`44dc75b1cf63837e22e5cf18773178576d55c618`. The current follow-through records that
+approval and provides the requested new-task kickoff prompt; no pilot is launched
+from this task.
+
+The operating policy is in root AGENTS.md and
+[ADR-007](../architecture/ADR-007-proportional-delivery-validation.md): the
+orchestrator coordinates separate tasks and has no subagents; the chief architect
+maintains whole-product direction; delivery/review/integration are bounded by their
+outcomes; models and effort vary by complexity and risk. **Ultra is prohibited in
+all tasks, subagents, defaults and escalation paths.** Required review is terminal
+apart from concrete defects, and optional recommendations do not expand scope.
+
+The [C8 kickoff prompt](task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md)
+is the handoff for a new Astra Medium orchestrator task. Its explicit authorization
+applies when the owner submits it in that new task. Do not launch the pilot here. No product code, rules/hooks installation, global Codex settings,
+application-state mutation, push, PR, merge or app installation is authorized by
+this baseline-preparation task. Operating-document changes do not establish
+technical enforcement of tool restrictions.
+
+The owner requested adding Codex goals to the kickoff prompt. It now explicitly
+requests one orchestrator goal for the reviewed local C8 source candidate and
+concrete installation handoff, with no invented token budget or automatic worker
+goals. Goal completion requires the stated evidence and task closeout; it neither
+completes installed C8 acceptance nor changes application Delivery Goals. Candidate
+`43e3655` passed native documentation and scoped diff checks. The fresh Terra High
+task “Review C8 kickoff goal scope” (`01a0782b-2ea9-78b3-b224-63ef8152b77e`)
+completed its bounded review with no findings and was archived after its result
+was preserved and work had stopped. Runtime metadata confirms Terra High.
+The canonical checker and supported application readback retain the known
+`docs/.DS_Store`/`prohibitedContent` blocker and zero project bindings. No goal is
+created here, and the pilot remains unstarted.
+
+The owner also clarified that bounded tasks must be archived when their work and
+required corrections are complete. This is now recorded in AGENTS.md and ADR-007:
+the orchestrator owns archiving after durable results and stopped processes, and a
+new candidate outside the original correction scope or a separate handoff review
+gets a fresh task. The kickoff prompt carries that rule. Sol High review found the kickoff content
+sound; its one collection-metadata finding was corrected and confirmed resolved.
+“Review Release Radar operating baseline” is now archived. The separate Terra High
+task “Review task archival policy” (`01a0781f-c9f8-79e3-9024-11aba924772d`) reviewed
+the new policy and requested explicit matching completion conditions in the kickoff;
+that correction was made and confirmed resolved. No required findings remain.
+Both review tasks are archived. The pilot itself has not been launched.
+
+## Product direction and approval boundaries
+
+The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+assesses 40 capabilities, all six approved roadmap goals and eleven tickets, the
+seven reviewed GitHub issues, lifecycle repairs, RekonDesignSystem and execution
+reliability. Retain the app-owned transactional core and trust boundaries; settle
+shared identities/planning/authority contracts and deliver complete bounded slices.
+The plan's architecture and sequence remain proposed. Baseline approval does not
+implicitly accept every proposed contract or authorize all implementation.
+
+The owner approved inclusion of P15–P19 and C12: requirements/decision traceability,
+plan revisions/change previews, evidence tied to code revision, ticket cancellation/
+replacement/splitting, workspace search/saved views, and health/guided recovery.
+Their detailed contracts remain to be settled in the applicable slices. The owner
+also approved planning C8's narrow regular-file .DS_Store discovery exclusion,
+with filesystem safety, real-document validation, regression tests and a versioned
+contract/shipped-reference update. This is a product repair, not a .gitignore change
+or recurring metadata deletion. C8 implementation has not begun.
+
+## Verification and remaining risks
+
+The existing product assessment used `ec511d8`, content-identical to reviewed
+GitHub default tree `fcb432bf2c6f5e5bab63418adb9b6ec647e1baef`. The baseline branch
+contains that source plus the reviewed planning commits. The older canonical branch
+and its unrelated changes remain intact; only scoped documentation is copied back.
+
+Earlier assessment verification comprised 95 focused onboarding/guidance/preview/
+store tests and inspection of empty installed Projects/Settings and design mockups.
+That did not prove the full owner journey: copied onboarding guidance cannot create
+the phase required by Finish. The folder-picker timeout and complete future-screen
+runtime remain unverified. The original plan, six additions and C8 planning update
+received independent review; no required findings remained. Those checks establish
+planning evidence, not implementation of future features or this operating update.
+
+For this operating update, native documentation validation and scoped diff checks
+pass. All seven scoped files are persisted in the canonical repository; the
+Release Radar managed guidance block is unchanged. One fresh independent task,
+“Review Release Radar operating baseline”
+(`01a077f4-4e21-7e43-a721-b4f8e77d0ddc`), reviewed candidate `c937483` and found no
+required or optional defects. Its session metadata confirms `gpt-5.6-sol` with
+`high` effort. It verified scope/approval distinctions, all 40 preserved capability
+rows, roles, model policy, Ultra prohibition, delivery endpoints and runtime
+enforcement caveats. It made no repository changes. No product tests were needed
+for this documentation-only outcome.
+
+Fresh supported application inventory reports `isComplete: false`, catalog
+`prohibitedContent` and zero project repository bindings. The canonical checker
+again rejected `docs/.DS_Store` after the candidate was copied back. A passing
+clean-worktree check and local commit do not establish accepted application
+tracking. Binding/catalog acceptance, missing audit reconstruction and installed
+application recovery remain separate work.
+
+## Previous delivered baseline
+
+September 2 RR-R10 Task 11B was integrated through
+[PR #17](https://github.com/joeroberts/release-radar/pull/17). Its
+[repair brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md)
+and [verification evidence](evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md)
+retain completed scope, installation, tests, independent review and historical
+catalog acceptance. The prior owner acceptance override remains in the
+[installation evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md).
+These records do not establish post-reset health. No accepted ticket, phase or
+Delivery Goal was reopened. RM10 Roadmap Help remains distinct from delivered RR-R10.
+
+## Review-task discovery correction
+
+The earlier report that review was blocked by task setup was incorrect. The task
+ran and completed, but the task-list tool omitted it. Local diagnostics mapped the
+pending creation ID to the actual task ID; direct task readback and a completion
+snapshot returned the finished review. No owner intervention, duplicate reviewer,
+configuration repair or subagent fallback was needed. Treat list absence as an
+unknown discovery state rather than proof that an assigned task did not run.
+
+## Next eligible work
+
+The owner has approved the operating baseline. Provide the committed kickoff
+prompt for a new Astra Medium orchestrator task. It specifies Terra Medium delivery,
+Sol High independent review and separate Astra High chief-architect input for the
+compatibility contract. The pilot begins only when the owner submits that prompt. Its brief
+must preserve the narrow scope, name the approved starting commit and specify the
+actual authorized delivery endpoint. Broader lifecycle repairs follow the plan's
+shared decisions; optional observer, companion, execution engine and I9 hooks do
+not block this pilot. Eligibility does not authorize execution or owner-state repair.

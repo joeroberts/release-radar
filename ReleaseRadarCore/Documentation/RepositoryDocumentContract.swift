@@ -3,6 +3,8 @@ import Foundation
 /// The caller must keep authorization to its resolved project root alive for the whole validation.
 public enum RepositoryDocumentContract {
     public static let catalogVersion = 1
+    /// Versioned reader capability; catalog v1 and its canonical digest are unchanged.
+    public static let discoveryExclusionVersion = 1
     public static let legacyGuidanceVersion = 1
     public static let guidanceVersion = 2
     public static let rekonSeedVersion = 1
