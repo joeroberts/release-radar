@@ -44,11 +44,10 @@ current supported connector inventory succeeds for the canonical root, but repor
 `appUnavailable` result did not recur on this read. Missing binding remains a
 separate recovery limitation, not a source-delivery blocker or permission to infer
 acceptance. No application mutation occurred. Native documentation checks passed.
-Application synchronization is not
-claimed. The next owner decision is the chief architect's bounded contract
-recommendation, before the affected implementation.
+Application synchronization is not claimed. The owner approved the two immediate
+contract recommendations and PR #22 merge; lifecycle source delivery is now open.
 
-## Shared-contract candidate and next owner decision
+## Approved shared contracts and active lifecycle delivery
 
 Chief architecture delivered `ce7ae0a`, integrated locally as `879f883`: the
 existing full-product plan now reconciles D1–D13 and retains all 40 capabilities.
@@ -65,19 +64,24 @@ required. The reviewer reported all work/processes stopped and is archived after
 its result was preserved here. No product tests were
 run for this documentation-only candidate.
 
-Owner decisions before the lifecycle brief: accept new opaque project IDs with
-separate registration/request generation and preserved legacy IDs; accept setup
+The owner approved these recommendations on 2026-09-06: new opaque project IDs with
+separate registration/request generation and preserved legacy IDs; setup
 Finish with zero phases and visible outstanding documentation tasks, using a
 previewed exact-root/project bootstrap handoff and separate explicit app actions.
 The [plan's decision table](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#material-owner-choices-and-when-they-are-needed)
 records alternatives and compatibility/recovery consequences. Product-design and
 shipped-guidance reconciliation belongs to that specifically approved slice.
 Later planning/IA/package decisions stay deferred rather than gating lifecycle.
-The candidate is pushed on `codex/programme-contracts` and open as
-[PR #22](https://github.com/joeroberts/release-radar/pull/22). The current wait is
-owner approval of the two immediate recommendations and PR merge. No merge or
-dependent product implementation has occurred. Durable changes are tracked in
-this repository and published in the PR; no new temporary files were created.
+[PR #22](https://github.com/joeroberts/release-radar/pull/22) merged with owner
+approval as `c22a32ca4eb310973ba9cce5eb0df472d2262bfb`. Only the two immediate
+recommendations are accepted; later proposed choices remain deferred. The next
+assignment is complete lifecycle delivery at Sol High, justified by registration
+compatibility, documentation bootstrap and folder-recovery boundaries. The delivery
+owner must commit a bounded controlling brief before product implementation and
+produce tested source, affected documentation and a local candidate for one fresh
+independent architecture/security/QA review. The parent retains ledger ownership.
+No owner/application-state action or installation is authorized by source delivery.
+Durable changes remain tracked; no new temporary files were created.
 
 ## Retained baseline evidence
 
