@@ -80,8 +80,11 @@ assignment is “Deliver complete usable project lifecycle”
 Sol High confirmed, justified by registration compatibility, documentation
 bootstrap and folder-recovery boundaries. Its committed baseline is `3949f0f`,
 containing the approved merge and decision record. The delivery
-owner must commit a bounded controlling brief before product implementation and
-produce tested source, affected documentation and a local candidate for one fresh
+owner committed the controlling
+[usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
+as `b806554` before product implementation, with native documentation checks
+passing. Test-first implementation is active on `codex/usable-project-lifecycle`;
+the outcome is tested source, affected documentation and a local candidate for one fresh
 independent architecture/security/QA review. The parent retains ledger ownership.
 No owner/application-state action or installation is authorized by source delivery.
 Durable changes remain tracked; no new temporary files were created.
