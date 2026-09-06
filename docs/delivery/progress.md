@@ -85,11 +85,26 @@ containing the approved merge and decision record. The delivery
 owner committed the controlling
 [usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
 as `b806554` before product implementation, with native documentation checks
-passing. Test-first implementation is active on `codex/usable-project-lifecycle`;
-the outcome is tested source, affected documentation and a local candidate for one fresh
-independent architecture/security/QA review. The parent retains ledger ownership.
+passing. The delivery owner committed and pushed candidate `7601b619` on
+`codex/usable-project-lifecycle` and opened
+[PR #23](https://github.com/joeroberts/release-radar/pull/23), including parent
+ledger updates through `cd573cd` via Git. Candidate checks report 187/187 focused
+tests, successful build and native documentation checks. The full suite reports
+547 passed / 1 failed: the isolated
+`AgentBridgeTransportAcceptanceTests.testTicketTaskToolsUseRegisteredBrokerAndRecoverExactRequests`
+requires the disabled controlled bridge. It was not enabled or installed.
+Compact/wide native rendering checks passed; installed permission-dialog and
+owner-state acceptance remain separately unauthorized and unclaimed.
+
+“Review usable project lifecycle candidate”
+(`01a07923-88cd-7780-bc43-8bb8e0423e22`) is active in fresh worktree `85d0`, actual
+Astra High confirmed, reviewing that exact published candidate for combined
+architecture/security/QA/UX risks. Required corrections return to the same delivery
+task, which owns commits/pushes/PR and the eventual owner-approved merge. The parent
+retains ledger ownership; no product changes are requested while review is pending.
 No owner/application-state action or installation is authorized by source delivery.
-Durable changes remain tracked; no new temporary files were created.
+Durable source changes are tracked and published in PR #23. No cleanup occurred;
+the delivery owner will record remaining temporary verification paths in its brief.
 
 The owner clarified programme follow-through: the orchestrator launches/monitors
 workers and answers settled questions from durable decisions and, where necessary,
