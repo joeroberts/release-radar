@@ -132,6 +132,39 @@ until separately authorized.
    uses the pinned RDS revision without Core dependency or appearance changes and
    passes focused native tests/build plus compact/wide accessibility inspection.
 
+## Candidate verification and remaining acceptance
+
+Candidate `7601b619144d235effb5bfae3e7703787fb493b3` builds successfully. Its
+focused onboarding, managed-documentation, app-route, native-rendering and store
+suites pass 187/187. The full suite passes 547/548; the sole failure is the
+pre-existing controlled-transport acceptance that requires an already enabled
+bridge, and an isolated rerun reports that exact disabled-bridge condition. The
+repository documentation check passes and the resolved RekonDesignSystem revision
+is `d0932aa6b6c21f420ea197a9cc7b14254c23695a`.
+
+The native lifecycle overview was accessibility-traversed and rendered at 1100 and
+620 points. Both PNGs were visually inspected against the applicable onboarding
+and settings mockups for the fixed dark appearance, calm RDS card language,
+readability, action hierarchy and compact/wide composition. The assertions and
+attachments remain temporary, non-controlling evidence in
+`/tmp/release-radar-lifecycle-candidate-focused.xcresult`; the exported lifecycle
+PNGs are
+`/tmp/release-radar-lifecycle-candidate-render-attachments/26C6F41C-0472-4485-923B-DBFB92438369.png`
+and
+`/tmp/release-radar-lifecycle-candidate-render-attachments/51A496EE-E8C8-45DB-976F-16670D11BFD0.png`.
+Other remaining temporary paths are `/tmp/release-radar-lifecycle-derived`,
+`/tmp/release-radar-lifecycle-full2.xcresult` and
+`/tmp/release-radar-lifecycle-transport.xcresult`; no cleanup is authorized.
+
+Installed folder-picker, authorization-dialog and VoiceOver acceptance remains
+unclaimed. If separately authorized, build this exact reviewed revision with the
+documented Xcode scheme, place the resulting app only at an owner-designated test
+location, launch it in an isolated macOS test account with an empty application
+container, initialize a disposable repository, and exercise copy, finish,
+relaunch, rename/exclusions, documentation preview/confirmation, same-folder
+reauthorization, simultaneous health failures and keyboard/VoiceOver recovery.
+Do not use owner application state or install over the owner's app for that check.
+
 ## Delivery endpoint
 
 Update affected shipped guidance and accepted product design with the delivered
