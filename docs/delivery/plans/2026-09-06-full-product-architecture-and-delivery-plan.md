@@ -3,6 +3,10 @@
 Date: 2026-09-06. Status: **Supporting; architecture and sequence proposed. Six
 additional outcomes approved for roadmap inclusion on 2026-09-06.**
 
+The owner also approved including the C8 OS-metadata validator repair described
+below. It is a bounded repair within documentation reliability, not a new feature
+or authorization to implement during this planning update.
+
 This document assesses the complete product direction in the repository, including
 unfinished proposals, all GitHub issues, project lifecycle repairs, RekonDesignSystem,
 and agent execution reliability. It proposes a coherent implementation sequence.
@@ -163,11 +167,48 @@ the wider direction confirmed by the owner.
 | C5 Archive and restore — #20 | No project lifecycle field/workflow. Add to existing store, not a second project registry. | Archive retains the graph/history and repository association, hides from default active views and suspends applicable operational activity. Restore changes lifecycle only and exposes access problems. Neither action needs a valid current catalog merely to manage local records. |
 | C6 Delete — #20 | Goals/tasks/history foreign keys, audit protection and receipts make naive cascades unsafe. | Confirm exact project and retained-history policy; atomically remove its operational graph and local capabilities, cancel affected work, preserve other projects and every repository file. Late callbacks/old requests cannot mutate a re-added registration. Clearly distinguish deletion from full erasure. |
 | C7 Backup, reset and recovery — repair | Migration preservation exists; no coordinated recovery across app/bridge connections and dependent services. | Separate preference reset, tracking-data reset and full backup restore. Quiesce all app-owned connections and pending work, replace state through app-owned operations, reopen services, inspect external plugin state, and recover missing permissions. Older backups cannot cause replay of already-sent notifications. A repository-only reconstruction is explicitly incomplete. |
-| C8 Documentation validation, catalog acceptance and maintenance — existing + #18 | Strong catalog/identity validator, generated indexes and typed operations. Refresh and status ownership are fragmented. | One root/registration-scoped observation drives Overview and evidence: checking, current, invalid, pending acceptance or inaccessible, with validation time. Authorized filesystem events plus activation/reopen invalidate stale success; coalesce reads and reject late results. Observation never accepts a catalog or repairs files. |
+| C8 Documentation validation, catalog acceptance and maintenance — existing + #18 + approved validator repair | Strong catalog/identity validator, generated indexes and typed operations. Refresh and status ownership are fragmented; blanket rejection of dot-prefixed paths makes ordinary Finder metadata invalidate documentation. | Apply the narrow OS-metadata discovery rule below. One root/registration-scoped observation drives Overview and evidence: checking, current, invalid, pending acceptance or inaccessible, with validation time. Authorized filesystem events plus activation/reopen invalidate stale success; coalesce reads and reject late results. Observation never accepts a catalog or repairs files. |
 | C9 Evidence preview, identity and lifecycle — existing | Managed artifact locators and bounded reads are reusable; legacy paths remain distinct. | Preserve repositoryID/artifactID through relocation, archive and import. Render only bounded authorized content; rejected/stale/missing evidence stays explicit. Maintenance, preview and export use the same identity and custody rules. Never replace identity with a cached path to make a check pass. |
 | C10 Portable export — approved RM5 | No complete exporter; seed import is not export. Existing v1 contract is too old. | Approve a revised complete archive, export all supported domain state and imported-history provenance, produce the acceptance fixture. Resolve multi-root and evidence-content policy explicitly. Reject unsupported state rather than omit it. Export is read-only and never claims to back up files or secrets it excludes. |
 | C11 Portable import — approved RM6 | Validation/transaction foundations fit; implementation depends on C10. | Preview and revalidate exact exporter output, freshly authorize destination roots, reject identity/root collisions, restore the complete supported graph atomically with exported domain IDs and new local capabilities. Imported observations remain historical; failures leave no partial project. Round-trip tasks, goals, evidence and history, not merely ticket counts. |
 | C12 Project health and guided recovery — owner-approved inclusion | Existing store, access, catalog, plugin and observer diagnostics provide the data; the consolidated owner workflow is missing. Extend C1–C9 rather than create a second diagnostic system. | One view identifies each problem, its affected project/root, last-check time and supported next action across folder access, catalog, store, plugin and observation. A successful check in one area cannot mask another failure. Actions invoke the existing exact-target owner operations and refresh the shared observation. Stale results, denied recovery and unavailable checks remain explicit. The health view must remain usable when the store itself is unavailable; viewing health never repairs or accepts anything automatically. |
+
+### C8 bounded repair: tolerate ordinary OS metadata
+
+The owner approved this repair direction for inclusion in the plan. The current
+`RepositoryDocumentReader.isProhibited` and directory walk reject dot-prefixed
+paths, following the [managed-documentation contract](../../design/managed-repository-documentation-contract.md).
+This is a validator design defect: Finder metadata must not invalidate otherwise
+valid documentation. Repeated deletion and changes to `.gitignore` are not the fix.
+
+Start with an exact `.DS_Store` basename exclusion for ordinary regular files
+during documentation discovery. Check file type without following symlinks before
+excluding it; a symlink or directory using that name must not bypass existing
+safety checks. Do not ignore all hidden files or everything matched by Git ignore
+rules. Excluded metadata is not a catalog artifact and cannot be registered as
+managed evidence. Keep actual documentation registration, root containment,
+symlink protection and other prohibited-content checks intact.
+
+Update the reader/validator behavior, the documented versioned exclusion rule and
+the shipped catalog reference together, with an explicit compatibility decision
+for installed validators. No database repair, repository rebinding, catalog
+acceptance, metadata deletion or agent-rule change is part of this fix.
+
+Acceptance uses the existing reader/validator tests and bundled checker:
+
+- Valid documentation containing regular `.DS_Store` files at the docs root and
+  nested collection paths validates. Creating, changing or removing only that
+  metadata leaves the document inventory and catalog digest unchanged.
+- Same-named symlinks/directories, other prohibited paths, unregistered actual
+  documents and attempts to catalog the excluded metadata still reject.
+- The app and bundled checker agree on the rule. Verify the installed reader/checker
+  tolerates the canonical metadata file without deleting it, while separately
+  reporting any real catalog, authorization or binding errors.
+
+Deliver this bounded repair early, before relying on canonical documentation
+validation to unblock other work. It does not depend on the lifecycle migrations
+or the later automatic-refresh work in slice 3. Its implementation still requires
+the ordinary explicit selection of that work; this update adds the plan only.
 
 ### Planning, work and owner navigation
 
@@ -430,7 +471,7 @@ repair must not wait for an observer, companion or execution-host feasibility re
 | 0 Joint contract reconciliation | Owner selects/amends D1–D13 as applicable; RM1 resolves the coupled IA/planning meanings; update affected accepted artifacts only under that explicit approval. Retain the six newly approved scope additions; resolve their detailed contracts without reopening the inclusion decision. Record other proposed feature outcomes so they cannot be lost. | This proposed assessment is the input. Resolve lifecycle/identity and planning semantics now; detailed APIs and task briefs belong to each upcoming slice. No hidden infrastructure build. |
 | 1 Usable project lifecycle | C1/C2/C3/C12 plus setup state, consolidated health and truthful registration readback: create/resume/edit a visible phase-less project, bootstrap docs through explicit steps, recover access directly. RDS pilot and Help for these flows. | D1/D2/D8/D11. Preserve store policy. Regression covers copied handoff and relaunch, not a manually inserted test phase. |
 | 2 Safe management and recovery | C4–C7: managed relocation/root handling, archive/restore/delete, coordinated backup/reset restoration, installed-plugin reconciliation and their C12 health/recovery actions. | D1–D3/D7/D8; complete deletion retention and stale-command behavior first. Deliver bounded substeps with owner-visible recovery; no destructive migration without explicit owner authorization. |
-| 3 Current documentation and evidence | C8/C9/#18/#19 share freshness and recovery. Overview, evidence and C12 health agree after external edits, access loss and catalog changes. | Existing validator plus lifecycle generations from 1/2. Can overlap navigation work with separate file ownership. Watching never accepts or repairs. |
+| 3 Current documentation and evidence | C8/C9/#18/#19 share freshness and recovery. Overview, evidence and C12 health agree after external edits, access loss and catalog changes. | Deliver C8's bounded OS-metadata validator repair early and independently; the broader freshness work uses lifecycle generations from 1/2. Can overlap navigation work with separate file ownership. Watching never accepts or repairs. |
 | 4 Coherent navigation and inspector | RM2's existing-surface journey, P7/P8 and #9: nonactive phase → ticket → dependencies → Back/Forward; accessible inspector and shared RDS controls. | D6 and agreed IA. Useful before new screens; no separate history implementations. |
 | 5 Complete recorded planning | P1–P4/P15/P16/P18: Project Plan, unresolved-intake signposts, copied-not-sent planning requests, chosen unplaced-work rules, lifecycle/order, placement and chosen shared-board scopes; explicit requirements/decision links, impact browsing, plan-change previews and ticket withdrawal/replacement/splitting with complete authoritative readback. | D4/D5/D6/D12; P15/P16/P18 inclusion is approved, while detailed contracts and the other proposed outcomes still require the applicable decisions. Preserve five lanes and accepted history; add migrations, commands, errors and archive representation together. |
 | 6 Outcomes, tasks and history | Workspace Delivery Goals and the separately identified execution-goal browser (P14), generic task adoption (#1), revision-bound delivery evidence (P17), workspace search/saved views (P19), event-time History and coherent attention semantics; RM10 Help completes the selected owner journeys. P6 execution links/suggestions only if separately selected. | D5–D7/D13; scoped read APIs and slice 4 navigation precede adoption/search; no new task engine. Some current-ticket adoption/history work can proceed before slice 5 once shared contracts settle. P14 must retain historical/unavailable distinctions; live visibility remains dependent on I1. |
@@ -463,7 +504,7 @@ xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
 | Onboarding/access/lifecycle | Focused policy/transaction tests plus real UI-to-app integration journey, restart/resume, invalid catalog/access, saved exclusions, wrong identity and rollback. Installed authorization dialogs need runtime verification. |
 | Persistence/deletion/reset/archive | Relevant migration/store/replay/goal/task tests, complete synthetic graph preservation or removal, fault/rollback paths, all-connection recovery, stale request rejection and notification unknown-outcome behavior. Round-trip complete export data. |
 | Navigation/planning/tasks/history | Scope and revision tests plus actual nonactive-phase/back-forward journey, both goal domains and unlinked/completed execution observations, unresolved intake excluded from recorded counts, copy success/failure, event-time facts, unplaced→placed identity preservation, compact inspector, keyboard/VoiceOver and adopted mockup comparison. |
-| Docs/evidence observation | Existing bounded reader/path tests plus external edit, stale callback, invalid/pending/inaccessible transitions, same-folder reconnect and relocation distinction; verify no implicit write/acceptance. |
+| Docs/evidence observation | Existing bounded reader/path tests plus C8 regular-metadata tolerance and preserved rejection cases; external edit, stale callback, invalid/pending/inaccessible transitions, same-folder reconnect and relocation distinction; verify no implicit write/acceptance. |
 | Integrations/distribution | Prove the specific authorization/transport/capability boundary, failure/reconnect/cancellation as applicable, and signed installed launch/relaunch. Synthetic snapshots cannot establish a supported live endpoint. |
 
 Run broader suites when a migration/shared policy or actual integration risk
@@ -512,6 +553,7 @@ another authority system. On approval, reconcile these exact sources:
 | ADR-001 archive v1 | Missing newer domain sections; one-root constraint; audit exclusion conflicts with retained assignment-event history; no-cloud boundary versus companion draft. | Revise archive explicitly. Keep cloud boundary unchanged unless RM8 approves a separate change. |
 | ADR-003 and Project Plan proposal | Active context versus proposed lifecycle “Current.” | Retain one active-context authority and choose separate lifecycle/order names. |
 | ADR-004/005/006 headers and implementation claims | “Pending/proposed” text competes with active controlling catalog and delivered behavior. | Reconcile status after checking approvals; do not infer authority from a header or mark proposals implemented. |
+| Managed-documentation contract / shipped catalog reference | Blanket prohibition of hidden OS files causes `.DS_Store` to invalidate otherwise valid documentation. | Implement C8's narrow, tested discovery exclusion and document its versioned compatibility rule; retain artifact and filesystem safety requirements. |
 | RR-R10 archive statements / roadmap | Export/import remain future RM5/6; the design requires v1 lane conversion to Backlog while ADR-001 preserves source lanes and DG2 requires lossless continuity. | Approve one versioned preservation/readiness contract, reject unsupported state without omission, and state delivered capability accurately. Keep RM10 Help distinct from completed RR-R10. |
 | Planning/UX studies and mockups | Outdated no-phase-discovery claim; two goal domains; additional surfaces not scheduled as implementation. | Preserve intended jobs, update obsolete diagnosis, make chosen IA and added outcomes explicit, label declined alternatives. |
 | Progress | September 2 acceptance/readback describes historical state, not the reset installation today. | Retain concise historical pointers; record current task and current observed limitations without reopening accepted work. |
@@ -527,15 +569,17 @@ owner's request; future compatibility does not authorize speculative implementat
 
 ## Assessment limitations and current activation state
 
-The current canonical repository contains prohibited `docs/.DS_Store`; installed
-documentation checking rejects it. Supported inventory reports no accepted
+The installed validator rejects the canonical repository's `docs/.DS_Store`.
+This is the planned C8 product repair, not a recurring owner-cleanup prerequisite.
+Supported inventory reports no accepted
 repository binding for the current Release Radar registration. That is consistent
 with the reported post-reset mismatch and differs from the historical September 2
 acceptance. Existing files alone do not establish restored app authority.
 
 This plan can be reviewed as proposed repository documentation. Its catalog change
-remains unaccepted by the app. Authorizing a later cleanup/binding/catalog operation
-is distinct from approving the plan's product decisions. Do not present this draft
+remains unaccepted by the app. Implementing C8 does not itself restore a missing
+binding or accept a catalog; those operations remain distinct from the validator
+repair and the plan's product decisions. Do not present this draft
 as an accepted application snapshot or reconstruct missing audits. No application
 state or agent configuration was changed during this planning pass.
 

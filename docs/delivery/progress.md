@@ -19,6 +19,14 @@ is approved and recorded in the plan as P15–P19 and C12. Detailed contracts,
 sequencing choices and implementation remain separate decisions. The existing
 six-goal/eleven-ticket catalog and accepted product boundaries are preserved.
 
+The owner also approved adding the OS-metadata validator repair to C8: tolerate
+ordinary `.DS_Store` files during discovery through a narrow documented/tested
+exclusion, preserve filesystem safety and real document validation, and update the
+contract and shipped reference with the code. Schedule it early and independently
+of lifecycle migrations or automatic refresh. This is a product repair, not a
+request to change `.gitignore` or repeatedly delete Finder metadata. Implementation
+is not part of this documentation update.
+
 The recommendation is to retain the app-owned transactional core and trust
 boundaries, resolve the shared identity/planning/authority contracts, and deliver
 complete bounded slices. The proposed plan accounts for all six approved roadmap
@@ -53,7 +61,11 @@ one independent review of the addition found no required or optional findings.
 Catalog identity, metadata and generated indexes remain unchanged. No product tests
 were rerun for this documentation-only change; the earlier 95 product tests are
 not verification of these future capabilities.
-The canonical checker currently rejects pre-existing `docs/.DS_Store`. Supported
+The C8 planning update passes native documentation and scoped diff checks; one
+independent review found no required or optional findings. No product tests were
+rerun for this planning-only update.
+The canonical checker still rejects `docs/.DS_Store` under the existing defective
+rule; the planned code repair has not been implemented. Supported
 application inventory reports no accepted repository binding for the current
 Release Radar registration. The proposed catalog remains unaccepted; a validated
 source checkout is not proof of application acceptance or restored tracking data.
@@ -81,7 +93,9 @@ model. Inclusion of the six additions is settled; refine their detailed contract
 in the identified slices without silently dropping them or reopening that decision.
 Optional observer, companion and execution-host decisions do not block core repair.
 
-Canonical metadata cleanup and application binding/catalog recovery remain separate
-owner-state actions requiring their exact authorized scope. Keep unrelated project
+Select the bounded C8 validator repair early, before canonical documentation
+validation is needed to unblock other repairs. Application binding/catalog recovery
+remains a separate owner-state action requiring its exact authorized scope; changing
+the validator cannot reconstruct missing state. Keep unrelated project
 state, repository changes, backups and diagnostics intact. No external publication,
 application repair or agent-configuration installation is part of this planning pass.
