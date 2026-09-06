@@ -2,140 +2,56 @@
 
 ## Current outcome and authorization
 
-The owner authorized updating and independently reviewing the agreed operating
-documents and establishing a local committed starting baseline. The
-[baseline brief](task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md)
-records the authorized scope: repository documentation, one fresh independent
-review task and local commits. The current task owns integration and this ledger.
-The independently reviewed operating-document candidate is
-committed as `c9374836e18390caa16851330bc8951f90479a64` on
-`codex/full-product-architecture-plan`, building on `1816b99`. Independent review
-is complete with no required or optional findings. Subsequent commits record
-status and bounded closeout. On 2026-09-06 the owner approved starting baseline
-`44dc75b1cf63837e22e5cf18773178576d55c618`. The current follow-through records that
-approval and provides the requested new-task kickoff prompt; no pilot is launched
-from this task.
+The owner launched the bounded C8 source-repair pilot on 2026-09-06 by submitting
+the [kickoff](task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md) in new
+task `01a0782d-75da-7653-a5ce-3023c738d499`. The controlling
+[C8 brief](task-briefs/2026-09-06-c8-source-repair/c8-source-repair-brief.md) preserves
+the local source-delivery endpoint. Handoff baseline: `69d62b0` on
+`codex/full-product-architecture-plan`; approved operating baseline: `44dc75b`.
+The older canonical checkout and its unrelated changes remain intact.
 
-The operating policy is in root AGENTS.md and
-[ADR-007](../architecture/ADR-007-proportional-delivery-validation.md): the
-orchestrator coordinates separate tasks and has no subagents; the chief architect
-maintains whole-product direction; delivery/review/integration are bounded by their
-outcomes; models and effort vary by complexity and risk. **Ultra is prohibited in
-all tasks, subagents, defaults and escalation paths.** Required review is terminal
-apart from concrete defects, and optional recommendations do not expand scope.
+One explicit execution goal tracks reviewed source delivery, local commits,
+durable results, bounded-task archival and the installation handoff. It has no
+token budget and does not change application Delivery Goals or owner acceptance.
+No push, PR, merge, installation, app/owner-state mutation, catalog acceptance,
+repository binding, audit reconstruction, metadata deletion or hooks are authorized.
 
-The [C8 kickoff prompt](task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md)
-is the handoff for a new Astra Medium orchestrator task. Its explicit authorization
-applies when the owner submits it in that new task. Do not launch the pilot here. No product code, rules/hooks installation, global Codex settings,
-application-state mutation, push, PR, merge or app installation is authorized by
-this baseline-preparation task. Operating-document changes do not establish
-technical enforcement of tool restrictions.
+## Active work and ownership
 
-The owner requested adding Codex goals to the kickoff prompt. It now explicitly
-requests one orchestrator goal for the reviewed local C8 source candidate and
-concrete installation handoff, with no invented token budget or automatic worker
-goals. Goal completion requires the stated evidence and task closeout; it neither
-completes installed C8 acceptance nor changes application Delivery Goals. Candidate
-`43e3655` passed native documentation and scoped diff checks. The fresh Terra High
-task “Review C8 kickoff goal scope” (`01a0782b-2ea9-78b3-b224-63ef8152b77e`)
-completed its bounded review with no findings and was archived after its result
-was preserved and work had stopped. Runtime metadata confirms Terra High.
-The canonical checker and supported application readback retain the known
-`docs/.DS_Store`/`prohibitedContent` blocker and zero project bindings. No goal is
-created here, and the pilot remains unstarted.
+The orchestrator owns progress and catalog/index coordination. Chief architecture
+completed the versioned compatibility rule in “Resolve C8 compatibility
+contract” (`01a0782e-d28d-71b1-990c-50d909bb150b`), dispatched and confirmed Astra
+High in an isolated worktree. Its scoped commit `28b0792` is integrated; it
+reported a clean worktree, passing documentation/diff checks and stopped processes.
+The bounded architecture task is archived after preserving its decision.
+The compatibility decision retains schema v1/guidance v2 and adds discovery
+exclusion v1 without changing digest meaning. Delivery starts from that result
+and this committed brief. Delivery will use Terra Medium; fresh independent review will use Sol High
+for reader correctness, compatibility and filesystem safety together.
 
-The owner also clarified that bounded tasks must be archived when their work and
-required corrections are complete. This is now recorded in AGENTS.md and ADR-007:
-the orchestrator owns archiving after durable results and stopped processes, and a
-new candidate outside the original correction scope or a separate handoff review
-gets a fresh task. The kickoff prompt carries that rule. Sol High review found the kickoff content
-sound; its one collection-metadata finding was corrected and confirmed resolved.
-“Review Release Radar operating baseline” is now archived. The separate Terra High
-task “Review task archival policy” (`01a0781f-c9f8-79e3-9024-11aba924772d`) reviewed
-the new policy and requested explicit matching completion conditions in the kickoff;
-that correction was made and confirmed resolved. No required findings remain.
-Both review tasks are archived. The pilot itself has not been launched.
+## Verification, risks and context
 
-## Product direction and approval boundaries
+The initial clean handoff-worktree documentation check passes. The known canonical
+`docs/.DS_Store` rejection and missing accepted project binding are separate from
+that source check. C8 repairs only regular metadata discovery, retaining unsafe
+path rejection and explicit catalog/evidence authority. Installed acceptance is
+outstanding and requires further owner authorization after a concrete handoff.
+
+Local runtime metadata exposed an inherited Astra Extra High setting at orchestrator
+startup instead of requested Medium. The task control was used to apply Astra
+Medium; confirm the subsequent runtime setting when available. Architect settings
+were confirmed Astra High. No Ultra is eligible. Record only useful completion,
+rework, context and usage observations as the pilot proceeds.
+
+## Product boundaries and next eligible work
 
 The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
-assesses 40 capabilities, all six approved roadmap goals and eleven tickets, the
-seven reviewed GitHub issues, lifecycle repairs, RekonDesignSystem and execution
-reliability. Retain the app-owned transactional core and trust boundaries; settle
-shared identities/planning/authority contracts and deliver complete bounded slices.
-The plan's architecture and sequence remain proposed. Baseline approval does not
-implicitly accept every proposed contract or authorize all implementation.
+retains all 40 capability rows and accepted/proposed distinctions. C8's broader
+freshness work, lifecycle repairs, portability, future planning surfaces and I9
+remain outside this pilot. Complete C8 source delivery, then present its concrete
+installation handoff; do not automatically begin another slice.
 
-The owner approved inclusion of P15–P19 and C12: requirements/decision traceability,
-plan revisions/change previews, evidence tied to code revision, ticket cancellation/
-replacement/splitting, workspace search/saved views, and health/guided recovery.
-Their detailed contracts remain to be settled in the applicable slices. The owner
-also approved planning C8's narrow regular-file .DS_Store discovery exclusion,
-with filesystem safety, real-document validation, regression tests and a versioned
-contract/shipped-reference update. This is a product repair, not a .gitignore change
-or recurring metadata deletion. C8 implementation has not begun.
-
-## Verification and remaining risks
-
-The existing product assessment used `ec511d8`, content-identical to reviewed
-GitHub default tree `fcb432bf2c6f5e5bab63418adb9b6ec647e1baef`. The baseline branch
-contains that source plus the reviewed planning commits. The older canonical branch
-and its unrelated changes remain intact; only scoped documentation is copied back.
-
-Earlier assessment verification comprised 95 focused onboarding/guidance/preview/
-store tests and inspection of empty installed Projects/Settings and design mockups.
-That did not prove the full owner journey: copied onboarding guidance cannot create
-the phase required by Finish. The folder-picker timeout and complete future-screen
-runtime remain unverified. The original plan, six additions and C8 planning update
-received independent review; no required findings remained. Those checks establish
-planning evidence, not implementation of future features or this operating update.
-
-For this operating update, native documentation validation and scoped diff checks
-pass. All seven scoped files are persisted in the canonical repository; the
-Release Radar managed guidance block is unchanged. One fresh independent task,
-“Review Release Radar operating baseline”
-(`01a077f4-4e21-7e43-a721-b4f8e77d0ddc`), reviewed candidate `c937483` and found no
-required or optional defects. Its session metadata confirms `gpt-5.6-sol` with
-`high` effort. It verified scope/approval distinctions, all 40 preserved capability
-rows, roles, model policy, Ultra prohibition, delivery endpoints and runtime
-enforcement caveats. It made no repository changes. No product tests were needed
-for this documentation-only outcome.
-
-Fresh supported application inventory reports `isComplete: false`, catalog
-`prohibitedContent` and zero project repository bindings. The canonical checker
-again rejected `docs/.DS_Store` after the candidate was copied back. A passing
-clean-worktree check and local commit do not establish accepted application
-tracking. Binding/catalog acceptance, missing audit reconstruction and installed
-application recovery remain separate work.
-
-## Previous delivered baseline
-
-September 2 RR-R10 Task 11B was integrated through
-[PR #17](https://github.com/joeroberts/release-radar/pull/17). Its
-[repair brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md)
-and [verification evidence](evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md)
-retain completed scope, installation, tests, independent review and historical
-catalog acceptance. The prior owner acceptance override remains in the
-[installation evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md).
-These records do not establish post-reset health. No accepted ticket, phase or
-Delivery Goal was reopened. RM10 Roadmap Help remains distinct from delivered RR-R10.
-
-## Review-task discovery correction
-
-The earlier report that review was blocked by task setup was incorrect. The task
-ran and completed, but the task-list tool omitted it. Local diagnostics mapped the
-pending creation ID to the actual task ID; direct task readback and a completion
-snapshot returned the finished review. No owner intervention, duplicate reviewer,
-configuration repair or subagent fallback was needed. Treat list absence as an
-unknown discovery state rather than proof that an assigned task did not run.
-
-## Next eligible work
-
-The owner has approved the operating baseline. Provide the committed kickoff
-prompt for a new Astra Medium orchestrator task. It specifies Terra Medium delivery,
-Sol High independent review and separate Astra High chief-architect input for the
-compatibility contract. The pilot begins only when the owner submits that prompt. Its brief
-must preserve the narrow scope, name the approved starting commit and specify the
-actual authorized delivery endpoint. Broader lifecycle repairs follow the plan's
-shared decisions; optional observer, companion, execution engine and I9 hooks do
-not block this pilot. Eligibility does not authorize execution or owner-state repair.
+The [Historical operating-baseline closeout](archive/2026-09-06-operating-baseline-closeout.md)
+preserves historical approvals, reviews and prior acceptance limitations. Current
+status is only this ledger. Prior RR-R10 delivery remains historically accepted;
+source repair does not establish current post-reset application health.

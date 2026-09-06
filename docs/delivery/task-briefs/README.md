@@ -41,6 +41,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness](2026-08-29-delivery-goals-roadmap-readiness) — leaf; Task scopes for 2026-08-29-delivery-goals-roadmap-readiness; current progress determines eligibility
 - [delivery.task-briefs.2026-08-29-release-radar-active-phase-selection](2026-08-29-release-radar-active-phase-selection) — leaf; Task scopes for 2026-08-29-release-radar-active-phase-selection; current progress determines eligibility
 - [delivery.task-briefs.2026-09-01-managed-repository-documentation-contract](2026-09-01-managed-repository-documentation-contract) — leaf; Task scopes for 2026-09-01-managed-repository-documentation-contract; current progress determines eligibility
+- [delivery.task-briefs.2026-09-06-c8-source-repair](2026-09-06-c8-source-repair) — leaf; C8 source-repair pilot; installed acceptance remains separate
 - [delivery.task-briefs.2026-09-06-operating-baseline](2026-09-06-operating-baseline) — leaf; Operating baseline preparation; progress determines current authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
@@ -220,6 +221,26 @@ Leaf: no child collections.
 | 34b9a03b-8249-4468-ac45-bc916038fc47 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md](2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md) | document | nonAuthoritative | completed | none | none |
 | c1b4b005-b1e4-452f-bfa2-9099999eb7e1 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md](2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md) | document | nonAuthoritative | completed | none | none |
 | 49eedb35-c8d8-420e-9212-2121b30950d2 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md](2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-06-c8-source-repair
+
+- Path: [docs/delivery/task-briefs/2026-09-06-c8-source-repair](2026-09-06-c8-source-repair)
+- Purpose: C8 source-repair pilot; installed acceptance remains separate
+- Allowed contents: Reviewed task briefs
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-c8-source-repair-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-c8-source-repair/c8-source-repair-brief.md](2026-09-06-c8-source-repair/c8-source-repair-brief.md) | document | controlling &#40;delivery.c8-source-repair&#41; | active | none | none |
 
 ### Children
 
