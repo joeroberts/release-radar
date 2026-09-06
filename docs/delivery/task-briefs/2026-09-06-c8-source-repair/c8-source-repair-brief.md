@@ -127,28 +127,48 @@ same type-checked rule for its staging stability comparison.
 
 Direct verification on that commit: the focused reader/index/reference suites
 passed 46 tests (`RepositoryDocumentCatalogTests`, `RepositoryDocumentIndexTests`,
-and the C8 reference test). A standalone source helper and the bundled helper in
-the staged app both ran `check` and `write` successfully against disposable copies
-of this repository's `docs/` tree containing regular root and nested `.DS_Store`
-files; the write reported zero generated-index changes. No owner repository,
-SQLite store, installed app, binding, catalog acceptance, or launch was used.
-
-The reviewed, unlaunched Release candidate is
-`dist/ReleaseRadar-C8-source-35e2ef6.app` (version `0.1.6`, build `1`, bundle ID
-`com.rekonlabs.ReleaseRadar`, Team ID `2UA854NLX4`, Apple Development signing
-identity `Apple Development: jaroberts4@gmail.com (PT7GS96H3L)`). Its main binary
-SHA-256 is `06931783b7717060baaaff682d8b5ebd32ddc3424e72c70e5f460984a864a28e`.
-The pre-existing `dist/ReleaseRadar.app` was not changed.
-
-After independent review and explicit owner authorization, the exact proposed
-installation action is:
+and the C8 reference test), run with:
 
 ```sh
-ditto "dist/ReleaseRadar-C8-source-35e2ef6.app" "/Applications/ReleaseRadar.app"
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar -destination 'platform=macOS' -derivedDataPath /tmp/release-radar-c8-green -only-testing:ReleaseRadarTests/RepositoryDocumentCatalogTests -only-testing:ReleaseRadarTests/RepositoryDocumentIndexTests -only-testing:ReleaseRadarTests/ManagedGuidanceCompatibilityTests/testDiscoveryExclusionVersionAndShippedReferenceAgree
 ```
 
-That action is intentionally not executed by this source checkpoint. Installed
-acceptance remains the separately authorized check of the installed reader and
-bundled checker against the actual repository with metadata retained, followed by
-supported application readback; missing binding and pending catalog acceptance
-remain separate recovery work.
+A standalone source helper and the bundled helper in the staged app both ran
+`check` and `write` successfully against disposable copies of this repository's
+`docs/` tree containing regular root and nested `.DS_Store` files; the write
+reported zero generated-index changes. No owner repository, SQLite store,
+installed app, binding, catalog acceptance, or launch was used.
+
+The reviewed, unlaunched Release candidate is
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/dist/ReleaseRadar-C8-source-35e2ef6.app`
+(version `0.1.6`, build `1`, bundle ID `com.rekonlabs.ReleaseRadar`, Team ID
+`2UA854NLX4`, Apple Development signing identity `Apple Development:
+jaroberts4@gmail.com (PT7GS96H3L)`). Its main binary SHA-256 is
+`06931783b7717060baaaff682d8b5ebd32ddc3424e72c70e5f460984a864a28e`. The
+pre-existing `dist/ReleaseRadar.app` was not changed.
+
+After independent review and explicit owner authorization, prepare and install
+only through the source-candidate native installer. The integrated handoff
+worktree must contain the C8 candidate and the same installer source; the check
+below rejects a changed installer. It also refuses to overwrite any pre-existing
+default staged bundle:
+
+```sh
+candidate="/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/dist/ReleaseRadar-C8-source-35e2ef6.app"
+handoff_root="/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/build/product-architecture-plan-worktree"
+default_stage="$handoff_root/dist/ReleaseRadar.app"
+git -C "$handoff_root" merge-base --is-ancestor 35e2ef60347e366ab43f8131ab5d99a99af6a6d8 HEAD
+git -C "$handoff_root" diff --quiet 35e2ef60347e366ab43f8131ab5d99a99af6a6d8..HEAD -- script/build_and_run.sh
+test -d "$candidate"
+test ! -e "$default_stage" || { echo "preserving existing $default_stage" >&2; exit 1; }
+ditto "$candidate" "$default_stage"
+"$handoff_root/script/build_and_run.sh" install-staged-release-no-launch
+```
+
+This sequence is not executed by this source checkpoint. The native installer,
+rather than `ditto` directly into `/Applications`, owns process shutdown,
+signature and identity verification, atomic promotion, backup and rollback.
+Installed acceptance remains the separately authorized check of the installed
+reader and bundled checker against the actual repository with metadata retained,
+followed by supported application readback; missing binding and pending catalog
+acceptance remain separate recovery work.
