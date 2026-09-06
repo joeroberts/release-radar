@@ -301,17 +301,19 @@ Existing IDs must not be rewritten simply because they were derived from paths.
 Reauthorization, relocation and archive restore preserve the local registration.
 Portable import preserves exported domain IDs but creates a new local registration
 and fresh capabilities; it rejects live collisions. An ordinary re-add after
-deletion must not accidentally reuse identity. Full backup restoration preserves
+removal must not accidentally reuse identity. Full backup restoration preserves
 the backed-up graph but rotates or invalidates active request generations so pre-restore
 callbacks cannot apply. Cloning is a different operation requiring ID and possibly
 repository-identity remapping, and is not currently a committed feature.
 
-Deletion needs more than `DELETE FROM projects`: newer relationships use NO ACTION;
+Removal needs more than `DELETE FROM projects`: newer relationships use NO ACTION;
 the audit FK uses SET NULL while generic callbacks prohibit audit changes; final
 audits cannot reference a removed live row; request receipts lack project ownership.
-Implement narrowly app-owned migration/deletion policy without globally relaxing
-audit protection. A deletion transaction and subsequent authorized restore must
-agree on historical project identity and replay scope.
+Implement narrowly app-owned migration/removal policy without globally relaxing
+audit protection. Retained history stays attributable after a re-add creates a
+new registration; re-add does not restore the removed operational graph.
+Archive/Restore preserves the original graph and registration. Full-backup recovery
+separately restores the backed-up graph under the request-invalidation rules above.
 
 Revised archive sections must include readiness/revisions; Delivery Goals,
 criteria and assignment history; task plans, definitions, order, supersession and
