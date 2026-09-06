@@ -6,8 +6,12 @@ The owner reaffirmed RekonDesignSystem adoption and excluded adding or changing
 light/dark support. The full-product plan and controlling dashboard design now
 require using its existing components, tokens and appearance as provided. The
 previous theme-decision prerequisite is removed; brand asset variants do not
-authorize app theme work. This documentation correction awaits bounded independent
-review and does not open product implementation.
+authorize app theme work. Candidate `251c7e9` passed the repository documentation
+check and scoped diff check. “Review RekonDesignSystem scope clarification”
+(`01a0787e-0ba2-70e3-8b84-37a4659843c1`), confirmed Terra High, completed with no
+findings and was archived after its result was preserved and work stopped. Canonical
+copies are verified. The connector still returns `appUnavailable`; no managed-current
+tracking or app-state change is claimed. This correction does not open implementation.
 
 ## Current outcome and authorization
 
