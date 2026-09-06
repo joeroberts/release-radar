@@ -75,8 +75,11 @@ Later planning/IA/package decisions stay deferred rather than gating lifecycle.
 [PR #22](https://github.com/joeroberts/release-radar/pull/22) merged with owner
 approval as `c22a32ca4eb310973ba9cce5eb0df472d2262bfb`. Only the two immediate
 recommendations are accepted; later proposed choices remain deferred. The next
-assignment is complete lifecycle delivery at Sol High, justified by registration
-compatibility, documentation bootstrap and folder-recovery boundaries. The delivery
+assignment is “Deliver complete usable project lifecycle”
+(`01a078df-3ce2-7183-96a9-0cf10aca159c`) in fresh worktree `781f`, with actual
+Sol High confirmed, justified by registration compatibility, documentation
+bootstrap and folder-recovery boundaries. Its committed baseline is `3949f0f`,
+containing the approved merge and decision record. The delivery
 owner must commit a bounded controlling brief before product implementation and
 produce tested source, affected documentation and a local candidate for one fresh
 independent architecture/security/QA review. The parent retains ledger ownership.
