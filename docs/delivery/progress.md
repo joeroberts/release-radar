@@ -31,6 +31,13 @@ application-state mutation, push, PR, merge or app installation is authorized by
 this baseline-preparation task. Operating-document changes do not establish
 technical enforcement of tool restrictions.
 
+The owner requested adding Codex goals to the kickoff prompt. It now explicitly
+requests one orchestrator goal for the reviewed local C8 source candidate and
+concrete installation handoff, with no invented token budget or automatic worker
+goals. Goal completion requires the stated evidence and task closeout; it neither
+completes installed C8 acceptance nor changes application Delivery Goals. This
+prompt-only update awaits its bounded independent review. No goal is created here.
+
 The owner also clarified that bounded tasks must be archived when their work and
 required corrections are complete. This is now recorded in AGENTS.md and ADR-007:
 the orchestrator owns archiving after durable results and stopped processes, and a

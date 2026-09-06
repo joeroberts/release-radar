@@ -30,6 +30,26 @@ validator repair with its contract/reference updates, run direct checks, obtain
 independent review and produce scoped local commits. The orchestrator coordinates
 and owns progress; it must not implement product code or spawn/reuse subagents.
 
+Create one Codex execution goal in this orchestrator task with this objective:
+"Deliver the independently reviewed C8 source candidate with required regression
+checks, affected documentation, scoped local commits and durable results. Archive
+completed bounded tasks after their results are preserved and processes have
+stopped. Provide the concrete installation handoff and explicitly record the
+remaining installed acceptance, within the scope and authorization below."
+
+This goal ends at the authorized local source-delivery checkpoint. Mark it complete
+only when direct evidence establishes every part of that objective; C8's installed
+acceptance remains outstanding. Codex execution goals do not change Release Radar
+Delivery Goals or owner acceptance. Goal completion and child-task archival are
+separate actions. Do not automatically create goals for workers or subagents, and
+leave the token budget unset because none is authorized here.
+
+Preserve STOP, approval waits, model/effort assignments and all scope limits while
+pursuing the goal. Report a real blocker and follow the runtime's goal-status rules;
+do not mark unfinished work complete, retry without new evidence, broaden scope or
+invent additional work to keep the goal running. Further installation authorization
+is a separate owner decision after the concrete handoff is ready.
+
 Create separate Codex tasks with explicit actual model/effort settings:
 - Chief architect: gpt-6-astra / high. Resolve C8's versioned compatibility approach
   against the full-product constraints. Keep the assignment bounded; record the
