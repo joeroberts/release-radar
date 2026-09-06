@@ -73,7 +73,11 @@ The [plan's decision table](plans/2026-09-06-full-product-architecture-and-deliv
 records alternatives and compatibility/recovery consequences. Product-design and
 shipped-guidance reconciliation belongs to that specifically approved slice.
 Later planning/IA/package decisions stay deferred rather than gating lifecycle.
-The candidate is ready for an authorized branch push/PR; merge remains owner-gated.
+The candidate is pushed on `codex/programme-contracts` and open as
+[PR #22](https://github.com/joeroberts/release-radar/pull/22). The current wait is
+owner approval of the two immediate recommendations and PR merge. No merge or
+dependent product implementation has occurred. Durable changes are tracked in
+this repository and published in the PR; no new temporary files were created.
 
 ## Retained baseline evidence
 
