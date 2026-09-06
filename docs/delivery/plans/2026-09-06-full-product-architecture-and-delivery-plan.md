@@ -7,6 +7,11 @@ The owner also approved including the C8 OS-metadata validator repair described
 below. It is a bounded repair within documentation reliability, not a new feature
 or authorization to implement during this planning update.
 
+RekonDesignSystem adoption is agreed. The owner's 2026-09-06 clarification requires
+using its existing components, tokens and appearance as provided; adding or changing
+light/dark support is out of scope. This settles presentation scope without approving
+the plan's other proposed contracts or opening implementation.
+
 This document assesses the complete product direction in the repository, including
 unfinished proposals, all GitHub issues, project lifecycle repairs, RekonDesignSystem,
 and agent execution reliability. It proposes a coherent implementation sequence.
@@ -240,7 +245,7 @@ the ordinary explicit selection of that work; this update adds the plan only.
 | --- | --- | --- |
 | I1 Supported Codex observation — conditional RM7 | Observer protocol and truthful unavailable/stale models exist; live event consumption does not. Runtime goal model lacks stable goal ID. | Prove attachment/authentication to the intended product/process before implementation. Then own subscription/reconnect/freshness, provider/thread/goal identities and scoped persistence. Wrong-project, delayed/duplicate/reordered events and outages cannot mutate formal state. If proof fails, approve no-go; ordinary delivery features continue. |
 | I2 Codex plugin lifecycle — existing, reset/distribution gap | Fixed signed helper and official CLI boundary are valuable. Saved “never installed” receipt currently drives not-installed status. | After reset, reconcile observed installation through supported inspection; distinguish absent, modified, inconsistent and unavailable. Keep the four-method lifecycle helper separate from observation and execution hosting. Wider distribution must replace owner-specific path assumptions with a proven confined boundary. |
-| I3 RekonDesignSystem — owner-requested integration direction | Compatible Swift/macOS baseline and reusable controls/tokens; app currently has no package dependency. | Adopt in the app UI target using a reproducible reviewed revision. Pilot complete onboarding/recovery/edit flows, then board/details/navigation/history. Map domain statuses explicitly, preserve native behavior and accessible identifiers, and verify compact/large-text/keyboard/contrast behavior. Theme and wordmark decisions precede broad replacement. |
+| I3 RekonDesignSystem — owner-approved integration direction | Compatible Swift/macOS baseline and reusable controls/tokens; app currently has no package dependency. | Adopt in the app UI target using a reproducible reviewed revision and its existing components, tokens and appearance. Pilot complete onboarding/recovery/edit flows, then board/details/navigation/history. Map domain statuses explicitly, preserve native behavior and accessible identifiers, and verify compact/large-text/keyboard/contrast behavior. Adding or changing light/dark support is out of scope. |
 | I4 Wordmark and maintenance — approved RM3/RM4 | Approved AppIcon exists; final production wordmark and scoped compiler warnings remain. | Deterministic light/dark wordmarks with licensed type or approved outlines; preserve approved icon. Fix optional-.none and test actor-isolation warnings without unrelated modernization. Validate appearance and affected tests. Existing other warnings are recorded, not silently folded into RM4. |
 | I5 Distribution — conditional RM9 | Signed sandboxed owner-Mac build; Release uses Apple Development and helper exceptions name owner-specific roots. | Decide owner-only, direct distribution or other channel early. Owner-only can conclude not required; wider delivery requires portable helper/install behavior plus appropriate signing/notarization and actual install/upgrade/relaunch checks. Certificate changes alone are insufficient. |
 | I6 iPhone companion — RM8 decision, broad proposed vision | Local projections and artifact identities are useful; cloud, publisher and mobile implementation are absent. | Decide full corpus and authority first. Draft includes planning, operational documents, evidence, history and agent status, not merely a status screen. If pursued, deliver that chosen outcome through bounded checkpoints with coherent publication generations, offline cache, inclusion/custody rules and account/deletion/recovery behavior. Live agent status depends on I1; delivery/document browsing does not. |
@@ -266,7 +271,7 @@ feature. No schema-only foundation is a completed owner feature.
 | D8 Artifact custody and freshness | Repository catalog owns document identity/authority; app accepts snapshots explicitly. One scoped validation observation; pending content never becomes accepted through watching, reconnect or import. | C3/C4/C8–C11, I6. Preserve accepted boundaries unless explicitly revised. |
 | D9 Companion authority | Recommend Mac-authoritative delivery and repository-authoritative documents, with explicit read-only cloud publication. This still needs an approved cloud boundary. The draft's alternative cloud authority/document relocation is a larger product choice, not synonymous with sync. | I6, C7/C10/C11, artifact custody/distribution. Decide at RM8 before CloudKit or asset movement. |
 | D10 Execution and distribution ownership | Keep observer, delivery command bridge, plugin installer and any executor distinct. Defer execution hosting until its decision/discovery proves a needed outcome. Record distribution audience early. | I1/I2/I5/I7/I8; affects helper entitlements and mobile capabilities. Feasibility can proceed independently of planning UI. |
-| D11 Presentation | Adopt RekonDesignSystem components directly, with a small explicit mapping of app statuses. Approve dark-only versus adaptive theme before a wholesale UI pass; production light/dark wordmarks do not by themselves establish an adaptive app palette. | I3/I4 and all visible slices. Decide theme/pilot before broad adoption. |
+| D11 Presentation — owner-set scope | Adopt RekonDesignSystem components, tokens and appearance directly, with a small explicit mapping of app statuses. Adding or changing light/dark support is out of scope. Existing light/dark wordmark assets do not require app theme support. | I3/I4 and all visible slices. Verify status mapping and the lifecycle pilot before broader adoption; no separate theme decision is pending. |
 | D12 Traceability and change authority | Preserve the source identity/version of requirements and decisions, typed relationships to delivery work, and the affected phase/task/document baselines of a proposal. Record rationale/disposition and reject stale application through existing revision checks. Explicit links reveal recorded impacts; neither prose inference nor proposal approval changes delivery state automatically. | P15/P16/P18, History, C10/C11 and I6. Set the shared contract in slice 0, then implement in slice 5; no generic change-control engine. |
 | D13 Delivery evidence identity | Associate evidence with repository and source revision, test scope/result source, documentation version and build/installation identity as applicable. Keep expected evidence, reported observations, source freshness and owner acceptance distinct. Bounded source-control read access requires its own authorization; it does not depend on live Codex observation. | P17, P9/P11/P12, C9–C11, I5/I6/I9. Decide with the early contracts; deliver in slice 6 without adding automatic GitHub mutations. |
 
@@ -379,16 +384,20 @@ or committing an owner-specific absolute package path.
 
 Use its theme, typography, borders, elevation, motion, tones, buttons, text fields,
 cards, badges, callouts, section panels and dialog surfaces directly in the app
-target. Core must not depend on it. Its current palette is fixed dark; compact
+target. Use the existing appearance as provided. Adding or changing light/dark
+support, app theme-selection controls or the design system's palette is out of
+scope. Wordmark variants and mockup appearance examples do not authorize that work.
+Core must not depend on it. At review its palette was fixed dark; compact
 density applies to selected components, not all native controls. Its string-based
 picker is not a domain identity API: use an ID-safe adapter or native typed picker
 for phases/goals with duplicate display names. Navigation, data loading, focus,
 announcements, keyboard commands, errors and responsive composition remain app
 responsibilities. Avoid a general wrapper library around every component.
 
-First approve the app's theme/status mapping and inspect a complete setup/recovery/
-edit pilot. Then migrate board/details and existing shared controls as those flows
-are repaired; apply the same components to the new planning and history surfaces.
+First verify the app's status mapping to existing design-system tones and inspect
+a complete setup/recovery/edit pilot. Then migrate board/details and existing shared
+controls as those flows are repaired; apply the same components to the new planning
+and history surfaces.
 Preserve the approved AppIcon; finish the RM3 wordmark using deterministic licensed
 type or outlines. Compare relevant approved mockups and explicitly adopted proposal
 mockups with the running app at compact/wide sizes, increased contrast, keyboard

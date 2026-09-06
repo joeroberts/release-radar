@@ -38,6 +38,17 @@ state and links back to project documents as evidence.
   dashboard.
 - No direct agent access to the app database or Pushover credentials.
 
+## RekonDesignSystem integration scope
+
+The owner confirmed on 2026-09-06 that Release Radar will use RekonDesignSystem's
+existing components, tokens and appearance as provided. Adding or changing
+light/dark support, app theme-selection controls or the design system's palette
+is out of scope. No separate theme decision is required before adoption.
+Map application statuses to existing design-system tones and preserve native
+interaction and accessibility. Existing light/dark wordmark requirements concern
+brand assets; those assets and mockup appearance examples do not require app theme
+support.
+
 ## Architecture
 
 The app is a menu-bar-capable SwiftUI macOS application with a local SQLite

@@ -1,5 +1,14 @@
 # Release Radar delivery state
 
+## RekonDesignSystem scope clarification
+
+The owner reaffirmed RekonDesignSystem adoption and excluded adding or changing
+light/dark support. The full-product plan and controlling dashboard design now
+require using its existing components, tokens and appearance as provided. The
+previous theme-decision prerequisite is removed; brand asset variants do not
+authorize app theme work. This documentation correction awaits bounded independent
+review and does not open product implementation.
+
 ## Current outcome and authorization
 
 C8's bounded `.DS_Store` repair is closed: source delivery is independently
