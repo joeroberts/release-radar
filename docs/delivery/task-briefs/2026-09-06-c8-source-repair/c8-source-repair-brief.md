@@ -149,18 +149,20 @@ pre-existing `dist/ReleaseRadar.app` was not changed.
 
 After independent review and explicit owner authorization, prepare and install
 only through the source-candidate native installer. The integrated handoff
-worktree must contain the C8 candidate and the same installer source; the check
-below rejects a changed installer. It also refuses to overwrite any pre-existing
-default staged bundle:
+worktree has the reviewed source and candidate. The following future-only,
+fail-fast sequence preserves the known pre-existing default staged bundle before
+placing the C8 candidate at the native installer's expected path:
 
 ```sh
+set -euo pipefail
 candidate="/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/dist/ReleaseRadar-C8-source-35e2ef6.app"
 handoff_root="/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/build/product-architecture-plan-worktree"
 default_stage="$handoff_root/dist/ReleaseRadar.app"
-git -C "$handoff_root" merge-base --is-ancestor 35e2ef60347e366ab43f8131ab5d99a99af6a6d8 HEAD
-git -C "$handoff_root" diff --quiet 35e2ef60347e366ab43f8131ab5d99a99af6a6d8..HEAD -- script/build_and_run.sh
+prior_stage="$handoff_root/dist/ReleaseRadar.pre-C8-source-35e2ef6.app"
 test -d "$candidate"
-test ! -e "$default_stage" || { echo "preserving existing $default_stage" >&2; exit 1; }
+test -e "$default_stage"
+test ! -e "$prior_stage"
+mv "$default_stage" "$prior_stage"
 ditto "$candidate" "$default_stage"
 "$handoff_root/script/build_and_run.sh" install-staged-release-no-launch
 ```
@@ -168,7 +170,32 @@ ditto "$candidate" "$default_stage"
 This sequence is not executed by this source checkpoint. The native installer,
 rather than `ditto` directly into `/Applications`, owns process shutdown,
 signature and identity verification, atomic promotion, backup and rollback.
+Before the installer starts, the prior staged bundle would remain recoverably at
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/build/product-architecture-plan-worktree/dist/ReleaseRadar.pre-C8-source-35e2ef6.app`;
+the sequence never removes it.
 Installed acceptance remains the separately authorized check of the installed
 reader and bundled checker against the actual repository with metadata retained,
 followed by supported application readback; missing binding and pending catalog
 acceptance remain separate recovery work.
+
+### Artifact disposition and retained verification
+
+The canonical durable candidate for owner review is
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/dist/ReleaseRadar-C8-source-35e2ef6.app`.
+The parent separately performed a read-only canonical staged-helper check with
+the actual retained `.DS_Store` metadata and reported it passed. That parent
+verification is distinct from this delivery task's disposable-fixture checks and
+does not establish installation or application acceptance.
+
+The worktree-local copy at
+`/Users/jroberts/.codex/worktrees/6130/release_radar/dist/ReleaseRadar-C8-source-35e2ef6.app`,
+`/Users/jroberts/.codex/worktrees/6130/release_radar/DerivedData`,
+`/tmp/release-radar-c8-red`, `/tmp/release-radar-c8-green`, and
+`/tmp/release-radar-c8-helper-build` are temporary build/test output. The
+remaining temporary fixture roots are
+`/private/tmp/release-radar-c8-helper.tURlit`,
+`/private/tmp/release-radar-c8-helper-plain.RyL1Ew`,
+`/private/tmp/release-radar-c8-helper-green.yAw8ws`,
+`/private/tmp/release-radar-c8-helper-green.ZiH8qN`, and
+`/private/tmp/release-radar-c8-staged-check.YIq4nP`. No cleanup is authorized
+or performed by this task.
