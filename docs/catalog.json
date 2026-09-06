@@ -4009,6 +4009,21 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-full-product-architecture-plan-2026-09-06",
+      "path": "docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }

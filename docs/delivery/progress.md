@@ -2,60 +2,69 @@
 
 ## Current outcome and authorization
 
-RR-R10 Task 11B installed-workflow repair is verified under the owner's explicit
-2026-09-02 authorization: review requirements, repair installed defects, validate,
-document, commit/push, PR and merge in the new dedicated worktree. PR #16
-(`dbe18bd`) is the available baseline. The canonical checkout's extensive dirty
-documentation and AGENTS.md changes are preserved.
+The owner authorized a full application/documentation/GitHub assessment and a
+feature-by-feature architecture and sequencing plan covering the complete intended
+product, including unfinished documented proposals, lifecycle repairs,
+RekonDesignSystem and actual Codex rules/hooks. The current deliverable is the
+[proposed full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md).
+It is supporting proposed documentation, not an accepted architecture change or
+authorization to implement product features, change agent configuration, mutate
+application state, publish a PR or merge work.
 
-The [repair brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md)
-retains the completed bounded scope alongside the original RR-R10 requirements.
-The [original Task 11B brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-final-outcome-brief.md)
-and [installation evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md)
-retain prior execution and owner overrides; their closeout hold is superseded.
+The recommendation is to retain the app-owned transactional core and trust
+boundaries, resolve the shared identity/planning/authority contracts, and deliver
+complete bounded slices. The proposed plan accounts for all six approved roadmap
+goals and eleven tickets, all seven GitHub issues (six open), and the additional
+directions in the Project Plan, UX and companion proposals. Roadmap Help RM10
+remains distinct from completed RR-R10.
 
-Task 11B previously completed at revision 17, audit
-`B16E76CE-65E5-45E2-9D72-9E2D56D5F156`. The coordinator subsequently accepted
-RR-R10 under explicit owner override, request
-`7832A18A-394F-4F2B-9F76-0F908A6E1B47`, audit
-`76F82263-C066-42C3-A991-1D0220F1AA6C`. Fresh installed accessibility readback
-confirms all 16 task rows checked, RR-R10 Accepted and RR-DG-R10 Active.
-No completed task definition, ticket lane or Delivery Goal is being reopened.
-RR-R10 is distinct from roadmap Help ticket RR-RM10.
+## Assessment verification and limitations
 
-## Current verification and risks
+Source review used `ec511d8`, content-identical to GitHub default tree
+`fcb432bf2c6f5e5bab63418adb9b6ec647e1baef`. The older canonical checkout and its
+extensive pre-existing changes are preserved. The plan is authored on the isolated
+local branch `codex/full-product-architecture-plan`; its scoped documentation
+changes are also preserved in the canonical repository.
 
-The corrected signed app is installed at `/Applications/ReleaseRadar.app`,
-CDHash `79ed0fff8e93bc5486f3c532b188e7493d99d40c`. It bundles the runnable
-documentation checker and catalog-v1 reference, exposes their actual paths,
-and no longer falsely rejects valid uncatalogued file-path evidence.
-Fresh RED reproduced both defects; GREEN passed five focused tests. Signed
-Release build, strict bundle signatures, installed example write/check and
-actual UI/inventory readback passed. Independent source and installed review:
-Required 0, Optional 0. Canonical documentation and generated indexes validate.
-Catalog acceptance request `45ED5DAF-5761-4AC4-8699-F814DCF132DE` committed audit
-`E04A0021-5909-43E8-8E09-E37BA5C3657C`; complete app readback confirms catalog v1
-digest `78d0ca8953f896dea11c507c042125b085bcf31bd315fdd497a935a23b217715`.
-The source integration and merge record is
-[PR #17](https://github.com/joeroberts/release-radar/pull/17).
-See the [repair evidence](evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md).
+During the assessment, 95 focused onboarding, guidance, documentation-preview and
+store tests passed. These tests do not prove the complete owner journey: the real
+handoff does not create the phase required to finish onboarding. Installed empty
+Projects/Settings and relevant mockups were inspected; proposed-screen runtime,
+full-suite acceptance and the reported folder-picker timeout were not established.
+No product code or owner application state was changed.
 
-RekonUILib's existing AGENTS.md evidence now resolves without conflict, with
-unchanged binding, roots, preservation groups, audits and receipts. Release
-Radar preserves the same owner-state groups and historical audit/receipt rows.
-Its pre-existing RR-R7 `.app` directory evidence remains rejected as unsafePath;
-that unrelated record is preserved, not hidden or path-repaired.
+The native documentation checker passes in the clean planning worktree. One
+independent substantive review identified two missing proposed UX outcomes; both
+were corrected and verified resolved. No required review findings remain. The
+plan now assesses 34 capabilities, with decisions, dependencies and acceptance
+journeys. This is plan validation, not product implementation acceptance.
+The canonical checker currently rejects pre-existing `docs/.DS_Store`. Supported
+application inventory reports no accepted repository binding for the current
+Release Radar registration. The proposed catalog remains unaccepted; a validated
+source checkout is not proof of application acceptance or restored tracking data.
+No cleanup, binding, catalog acceptance or reconstruction of missing audits occurred.
 
-Unaffected prior E2E, rendering, goal/replay and candidate evidence is retained;
-no full-suite rerun, new backup, restore rehearsal or cleanup is authorized.
-The connector responded successfully in this task without configuration changes.
-No owner SQLite access, repository rebinding, evidence rewriting or new task/
-goal/completion/acceptance operation occurred during the product repair.
+## Previous delivered baseline
+
+The September 2 RR-R10 Task 11B installed-workflow repair was integrated through
+[PR #17](https://github.com/joeroberts/release-radar/pull/17). Its
+[repair brief](task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md)
+and [verification evidence](evidence/2026-09-02-rr-r10-task-11b-installed-workflow-repair.md)
+retain the completed scope, signed installation, tests, independent review and
+historical catalog acceptance/readback. The owner's prior RR-R10 acceptance
+override is retained in the [installation evidence](evidence/2026-09-02-rr-r10-task-11b-installation.md).
+Those historical records do not establish post-reset health. No accepted work,
+task definition, ticket lane or Delivery Goal was reopened by this assessment.
 
 ## Next eligible work
 
-No successor product work is opened. Authorization covers this repair and its
-PR #17 source closeout only; no additional implementation or review is required.
-Do not mutate RekonUILib or Pursuit to work around Release Radar defects.
-[Issue #9](https://github.com/joeroberts/release-radar/issues/9) remains deferred.
-Existing protected records, backups, build output and diagnostics remain intact.
+Review the proposed plan's shared decisions and sequencing. Product implementation
+requires explicit selection/approval of the next complete slice and its applicable
+contract changes. The recommended first outcome is usable project registration,
+resume/edit and direct access recovery, informed by the full product model.
+Optional observer, companion and execution-host decisions do not block core repair.
+
+Canonical metadata cleanup and application binding/catalog recovery remain separate
+owner-state actions requiring their exact authorized scope. Keep unrelated project
+state, repository changes, backups and diagnostics intact. No external publication,
+application repair or agent-configuration installation is part of this planning pass.
