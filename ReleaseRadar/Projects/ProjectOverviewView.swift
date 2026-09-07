@@ -52,7 +52,8 @@ struct ProjectOverviewView: View {
                 ProjectGoalSummaryView(context: project.goalContext)
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+                    .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
 
                 if project.phases.isEmpty {
                     RekonCallout(tone: .information, systemImage: "flag.badge.plus") {
@@ -85,7 +86,8 @@ struct ProjectOverviewView: View {
                         Text("Project evidence").font(.headline)
                         ForEach(project.evidence) { EvidenceDetailView(evidence: $0) }
                     }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+                        .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+                        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
                 }
 
                 VStack(alignment: .leading, spacing: 14) {
@@ -113,7 +115,8 @@ struct ProjectOverviewView: View {
                                 }
                                 .padding(12)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(lane.lane.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                                .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 10))
+                                .overlay { RoundedRectangle(cornerRadius: 10).stroke(lane.lane.tint.opacity(0.6)) }
                             }
                         }
                     } else {
@@ -123,11 +126,13 @@ struct ProjectOverviewView: View {
                     }
                 }
                 .padding(20)
-                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+                .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+                .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
             }
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(RekonTheme.background)
         .task { if health == nil { refreshHealth() } }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
         .sheet(isPresented: $showsSettings) {
@@ -184,7 +189,7 @@ struct ProjectOverviewView: View {
             )
             if board != nil {
                 Button("Open phase board", action: openBoard)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     .accessibilityIdentifier("open-phase-board")
             }
         }
@@ -213,7 +218,7 @@ struct ProjectOverviewView: View {
                         using: CodexPromptHandoff.writeToGeneralPasteboard
                     )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(RekonSecondaryButtonStyle())
                 .accessibilityIdentifier("project-guidance-copy-prompt")
             }
             if let promptCopyResult {

@@ -22,21 +22,15 @@ struct ProjectsView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Projects")
-                                .font(.largeTitle.weight(.semibold))
-                            Text("Local delivery structure and owner attention at a glance")
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Button("Add Project…") {
+                    RekonScreenHeader(
+                        title: "Projects",
+                        subtitle: "Local delivery structure and owner attention at a glance",
+                        trailing: AnyView(Button("Add Project…") {
                             openWindow(id: "add-project")
                         }
-                        .accessibilityIdentifier("projects-add")
-                    }
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .accessibilityIdentifier("projects-add"))
+                    )
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
                         ForEach(projection.projects) { project in
@@ -80,21 +74,24 @@ struct ProjectsView: View {
                             .accessibilityIdentifier("project-\(project.id.rawValue)")
                         }
                     }
+                    .padding(.horizontal, 28)
                 }
-                .padding(28)
+                .padding(.bottom, 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .navigationTitle("Projects")
+            .background(RekonTheme.background)
         }
     }
 
     private func projectMetric(value: Int, label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("\(value)")
-                .font(.title2.weight(.medium))
+                .font(RekonTypography.sectionTitle)
+                .foregroundStyle(RekonTheme.primaryText)
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RekonTheme.secondaryText)
         }
     }
 }

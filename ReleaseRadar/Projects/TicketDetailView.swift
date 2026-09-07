@@ -1,4 +1,5 @@
 import SwiftUI
+import RekonDesignSystem
 
 struct TicketDetailView: View {
     let detail: TicketDetailProjection
@@ -194,6 +195,11 @@ struct TicketDetailView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(RekonTheme.borderSubtle)
+        }
     }
 }

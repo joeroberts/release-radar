@@ -1,5 +1,6 @@
 import AppKit
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 struct SettingsView: View {
@@ -8,38 +9,65 @@ struct SettingsView: View {
     @State private var applicationHealth: ApplicationHealthSnapshot?
     @State private var isCheckingApplicationHealth = false
     @State private var applicationHealthGeneration: UInt64 = 0
+    @State private var selectedTab: SettingsTab = .connections
     @FocusState private var focusedPluginAction: CodexPluginLifecycleAction?
 
     var body: some View {
-        TabView {
-            general
-                .tabItem { Label(SettingsTab.general.title, systemImage: SettingsTab.general.systemImage) }
-                .accessibilityIdentifier(SettingsTab.general.accessibilityID)
-            connections
-                .tabItem { Label(SettingsTab.connections.title, systemImage: SettingsTab.connections.systemImage) }
-                .accessibilityIdentifier(SettingsTab.connections.accessibilityID)
-            notifications
-                .tabItem { Label(SettingsTab.notifications.title, systemImage: SettingsTab.notifications.systemImage) }
-                .accessibilityIdentifier(SettingsTab.notifications.accessibilityID)
-            projects
-                .tabItem { Label(SettingsTab.projects.title, systemImage: SettingsTab.projects.systemImage) }
-                .accessibilityIdentifier(SettingsTab.projects.accessibilityID)
+        VStack(alignment: .leading, spacing: 0) {
+            RekonScreenHeader(title: "Settings", subtitle: "Configure local integrations and delivery behavior")
+
+            GeometryReader { geometry in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(SettingsTab.allCases) { tab in
+                            Button {
+                                selectedTab = tab
+                            } label: {
+                                VStack(spacing: 10) {
+                                    Text(tab.title)
+                                        .font(RekonTypography.controlLabel)
+                                    Capsule()
+                                        .fill(selectedTab == tab ? RekonTheme.accent : .clear)
+                                        .frame(height: 3)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .frame(width: max(132, geometry.size.width / CGFloat(SettingsTab.allCases.count)))
+                            .foregroundStyle(selectedTab == tab ? RekonTheme.primaryText : RekonTheme.secondaryText)
+                            .accessibilityIdentifier(tab.accessibilityID)
+                            .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
+                        }
+                    }
+                }
+            }
+            .frame(height: 52)
+
+            Rectangle().fill(RekonTheme.borderSubtle).frame(height: 1)
+
+            Group {
+                switch selectedTab {
+                case .general: general
+                case .connections: connections
+                case .notifications: notifications
+                case .projects: projects
+                }
+            }
         }
-        .frame(width: 680, height: 560)
-        .scenePadding()
+        .frame(minWidth: 520, maxWidth: .infinity, minHeight: 560, maxHeight: .infinity)
+        .background(RekonTheme.background)
         .accessibilityIdentifier("content-settings")
     }
 
     private var general: some View {
-        Form {
-            Section("Release Radar By Rekon Labs") {
+        settingsScroll {
+            RekonSectionPanel {
+                settingsSectionHeader("Release Radar By Rekon Labs", systemImage: "radar")
                 LabeledContent("Storage", value: "Local app-owned database")
                 LabeledContent("Delivery lanes", value: "Five persisted states")
                 Text("Runtime observations never change a formal delivery lane.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(RekonTheme.secondaryText)
             }
         }
-        .formStyle(.grouped)
     }
 
     private var connections: some View {
@@ -47,10 +75,11 @@ struct SettingsView: View {
             state: model.codexPluginState,
             operation: model.codexPluginOperation
         )
-        return Form {
-            Section("Release Radar Codex Plugin") {
+        return settingsScroll {
+            RekonSectionPanel {
+                settingsSectionHeader("Release Radar Codex Plugin", systemImage: "puzzlepiece.extension")
                 LabeledContent {
-                    Text(plugin.status)
+                    RekonBadge(plugin.status, tone: plugin.badgeTone, systemImage: plugin.systemImage)
                 } label: {
                     Label("Status", systemImage: plugin.systemImage)
                 }
@@ -59,41 +88,54 @@ struct SettingsView: View {
 
                 LabeledContent("Shipped version", value: model.codexPluginShippedVersion)
                 Text(plugin.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
 
-                if let message = model.codexPluginSettingsMessage {
+                if let recovery = plugin.recoveryDetail {
+                    RekonCallout(tone: .warning, systemImage: "exclamationmark.triangle") {
+                        Text("Recovery")
+                            .font(RekonTypography.controlLabelEmphasized)
+                        Text(recovery)
+                            .foregroundStyle(RekonTheme.secondaryText)
+                    }
+                }
+
+                if let message = plugin.uniqueOperationMessage(model.codexPluginSettingsMessage) {
                     Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(RekonTypography.metadata)
+                        .foregroundStyle(RekonTheme.secondaryText)
                         .accessibilityIdentifier("codex-plugin-result")
                 }
 
                 pluginActions(plugin.actions)
             }
 
-            Section("Codex live observation") {
+            RekonSectionPanel {
+                settingsSectionHeader("Codex live observation", systemImage: "bolt.horizontal.circle")
                 if let codexFailure = FailureStatePresentation(freshness: model.codexSnapshot.freshness) {
                     FailureStateView(presentation: codexFailure, style: .compact)
                 } else {
-                    LabeledContent("Observation", value: "Available")
+                    LabeledContent { RekonBadge("Available", tone: .success) } label: { Text("Observation") }
                 }
                 Text("No supported live attachment is configured. Cached observations are shown only as stale.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
             }
-            Section("Agent action bridge") {
+            RekonSectionPanel {
+                settingsSectionHeader("Agent action bridge", systemImage: "arrow.left.arrow.right")
                 Text("Typed, authenticated delivery actions are handled by the app and audited locally.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(RekonTheme.secondaryText)
             }
-            Section("Pushover") {
-                LabeledContent("Connection", value: model.isPushoverConfigured ? "Ready" : "Not configured")
+            RekonSectionPanel {
+                settingsSectionHeader("Pushover", systemImage: "bell")
+                LabeledContent {
+                    RekonBadge(model.isPushoverConfigured ? "Ready" : "Not configured", tone: model.isPushoverConfigured ? .success : .neutral)
+                } label: { Text("Connection") }
                 Text("Credentials are stored in the app's device-only Keychain items.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
             }
         }
-        .formStyle(.grouped)
         .confirmationDialog(
             pendingPluginConfirmation?.title ?? "",
             isPresented: Binding(
@@ -156,24 +198,25 @@ struct SettingsView: View {
             switch action {
             case .install:
                 Button("Install") { Task { await model.installCodexPlugin() } }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     .accessibilityIdentifier("codex-plugin-install")
             case .update:
                 Button("Update") { Task { await model.updateCodexPlugin() } }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     .accessibilityIdentifier("codex-plugin-update")
             case .remove:
                 Button("Remove", role: .destructive) { pendingPluginConfirmation = .remove }
+                    .buttonStyle(RekonSecondaryButtonStyle())
                     .accessibilityIdentifier("codex-plugin-remove")
                     .focused($focusedPluginAction, equals: .remove)
             case .reinstall:
                 Button("Reinstall") { pendingPluginConfirmation = .reinstall }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     .accessibilityIdentifier("codex-plugin-reinstall")
                     .focused($focusedPluginAction, equals: .reinstall)
             case .tryAgain:
                 Button("Try Again") { Task { await model.loadCodexPluginStatus(retrying: true) } }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     .accessibilityIdentifier("codex-plugin-retry")
             }
         }
@@ -188,27 +231,33 @@ struct SettingsView: View {
     }
 
     private var notifications: some View {
-        Form {
-            Section("Pushover") {
+        settingsScroll {
+            RekonSectionPanel {
+                settingsSectionHeader("Pushover", systemImage: "bell")
                 LabeledContent("Status", value: model.isPushoverConfigured ? "Ready" : "Not configured")
                 SecureField("Application token", text: $model.pushoverAppToken)
                     .textContentType(.password)
+                    .textFieldStyle(RekonQuietTextFieldStyle())
                 SecureField("User key", text: $model.pushoverUserKey)
                     .textContentType(.password)
+                    .textFieldStyle(RekonQuietTextFieldStyle())
                 HStack {
                     Button("Save credentials") {
                         Task { await model.savePushoverCredentials() }
                     }
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     Button("Remove", role: .destructive) {
                         Task { await model.removePushoverCredentials() }
                     }
+                    .buttonStyle(RekonSecondaryButtonStyle())
                     .disabled(!model.isPushoverConfigured)
                 }
                 if let message = model.pushoverSettingsMessage {
                     Text(message).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            Section("Alert rules") {
+            RekonSectionPanel {
+                settingsSectionHeader("Alert rules", systemImage: "checkmark.shield")
                 if let rules = model.alertRules {
                     alertRuleToggle(
                         "Blocked linked goals",
@@ -251,7 +300,6 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
     }
 
     private func alertRuleToggle(
@@ -260,22 +308,24 @@ struct SettingsView: View {
         accessibilityID: String,
         rules: AlertRuleSnapshot
     ) -> some View {
-        Toggle(
-            title,
+        RekonCheckbox(
             isOn: Binding(
                 get: { rules[kind] },
                 set: { enabled in
                     Task { await model.setAlertRule(kind, enabled: enabled) }
                 }
-            )
+            ),
+            title: title,
+            accessibilityLabel: title,
+            accessibilityIdentifier: accessibilityID
         )
         .disabled(model.alertRuleControlsDisabled)
-        .accessibilityIdentifier(accessibilityID)
     }
 
     private var projects: some View {
-        Form {
-            Section("Application health") {
+        settingsScroll {
+            RekonSectionPanel {
+                settingsSectionHeader("Application health", systemImage: "heart.text.square")
                 if let applicationHealth {
                     if let target = applicationHealth.projectTarget {
                         Text("\(target.projectID.rawValue) · registration \(target.registrationID) · generation \(target.requestGeneration)\(applicationHealth.rootPath.map { " · \($0)" } ?? "")")
@@ -304,7 +354,8 @@ struct SettingsView: View {
                 .disabled(isCheckingApplicationHealth)
                 .accessibilityIdentifier("settings-health-refresh")
             }
-            Section("Local projects") {
+            RekonSectionPanel {
+                settingsSectionHeader("Local projects", systemImage: "folder")
                 if let projects = model.dashboard?.projects, !projects.isEmpty {
                     ForEach(projects) { project in
                         LabeledContent(project.name, value: project.activePhaseName)
@@ -318,8 +369,25 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
         .task { refreshApplicationHealth() }
+    }
+
+    private func settingsSectionHeader(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(RekonTypography.cardTitle)
+            .foregroundStyle(RekonTheme.primaryText)
+    }
+
+    private func settingsScroll<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                content()
+            }
+            .padding(28)
+            .frame(maxWidth: 980, alignment: .leading)
+        }
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
     }
 
     private func refreshApplicationHealth() {
@@ -361,6 +429,18 @@ private enum PluginConfirmation: Identifiable {
         switch self {
         case .remove: .remove
         case .reinstall: .reinstall
+        }
+    }
+}
+
+private extension CodexPluginSettingsPresentation {
+    var badgeTone: RekonTone {
+        switch state {
+        case .installed: .success
+        case .checking, .notInstalled: .neutral
+        case .updateAvailable: .information
+        case .modified, .needsRepair: .warning
+        case .failed: .danger
         }
     }
 }

@@ -139,6 +139,76 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testRDSApplicationRoutesAtWideAndCompactWidths() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RDS-Routes-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+
+        let projectID = DashboardSampleData.projectID
+        let routes: [(String, AppRoute, String)] = [
+            ("projects", .projects, "Projects"),
+            ("needs-review", .needsReview, "Needs Review"),
+            ("notifications", .notifications, "Notifications"),
+            ("settings", .settings, "Connections"),
+            ("overview", .projectOverview(projectID), "Overview"),
+            ("phase-board", .phaseBoard(projectID), "Phase Board"),
+            ("dependencies", .dependencies(projectID), "Dependencies"),
+            ("activity", .activity(projectID), "Activity"),
+        ]
+
+        for width in [1100.0, 620.0] {
+            model.isSidebarCompact = width <= 620
+            for (name, route, expectedTitle) in routes {
+                model.selection = route
+                try await render(
+                    SidebarView(model: model),
+                    name: "rds-\(name)-\(Int(width))",
+                    width: width,
+                    expected: nil,
+                    expectedText: width <= 620
+                        ? [expectedTitle]
+                        : [expectedTitle, "Delivery", "Persisted locally"]
+                )
+            }
+        }
+    }
+
+    func testPhaseLessRoutesRenderAsSupportedRDSStatesAtWideAndCompactWidths() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RDS-PhaseLess-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed phase-less RDS rendering fixture") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('phase-less-rds', 'Phase-less Project')")
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let projectID = ProjectID(rawValue: "phase-less-rds")
+
+        for width in [1100.0, 620.0] {
+            model.isSidebarCompact = width <= 620
+            for (name, route, expectedTitle) in [
+                ("phase-board", AppRoute.phaseBoard(projectID), "Ready for a first phase"),
+                ("dependencies", AppRoute.dependencies(projectID), "No phase dependencies yet"),
+            ] {
+                model.selection = route
+                try await render(
+                    SidebarView(model: model),
+                    name: "rds-phase-less-\(name)-\(Int(width))",
+                    width: width,
+                    expected: nil,
+                    expectedText: [expectedTitle]
+                )
+            }
+        }
+    }
+
     func testProjectHealthFolderRecoveryButtonInvokesItsAuthorizedAction() async throws {
         var invocationCount = 0
         let projectID = ProjectID(rawValue: "project-recovery")
@@ -251,6 +321,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         hosting.layoutSubtreeIfNeeded()
         try await Task.sleep(for: .milliseconds(200))
         hosting.layoutSubtreeIfNeeded()
+        window.title = name
         if let seconds = ProcessInfo.processInfo.environment["RR_TASK7A_INSPECT_SECONDS"].flatMap(Double.init), seconds > 0 {
             print("Task 7A external inspection: \(name), \(Int(width))×850, PID \(ProcessInfo.processInfo.processIdentifier)")
             try await Task.sleep(for: .seconds(min(seconds, 60)))

@@ -1,5 +1,6 @@
 import SwiftUI
 import ReleaseRadarCore
+import RekonDesignSystem
 
 struct ActivityView: View {
     let activity: ProjectActivityProjection
@@ -9,29 +10,28 @@ struct ActivityView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Activity")
-                        .font(.largeTitle.weight(.semibold))
-                    Text("Persisted delivery history for \(projectName)")
-                        .foregroundStyle(.secondary)
-                }
+                RekonScreenHeader(title: "Activity", subtitle: "Persisted delivery history for \(projectName)")
 
                 if let codexFailure = FailureStatePresentation(freshness: freshness) {
                     FailureStateView(presentation: codexFailure)
+                        .padding(.horizontal, 28)
                 }
 
                 Text("Runtime state is last-observed context. Delivery lane remains the persisted formal state.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                    .padding(.horizontal, 28)
 
                 LazyVStack(alignment: .leading, spacing: 10) {
                     ForEach(activity.items) { item in
                         activityRow(item)
                     }
                 }
+                .padding(.horizontal, 28)
             }
-            .padding(24)
+            .padding(.bottom, 24)
         }
+        .background(RekonTheme.background)
         .accessibilityIdentifier("content-activity")
     }
 
@@ -62,23 +62,25 @@ struct ActivityView: View {
                     if let lane = item.deliveryLane {
                         Text("Lane · \(lane.dashboardTitle)")
                             .font(.caption)
+                            .foregroundStyle(RekonTheme.secondaryText)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(.quaternary, in: Capsule())
+                            .background(RekonTheme.elevatedSurface, in: Capsule())
                     }
                     if let runtime = item.runtimeState {
                         Text("Runtime · \(runtime.title)")
                             .font(.caption)
+                            .foregroundStyle(RekonTheme.accent)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(Color.blue.opacity(0.1), in: Capsule())
+                            .background(RekonTheme.accent.opacity(0.12), in: Capsule())
                     }
                 }
             }
         }
-        .padding(14)
-        .background(.background, in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(.separator.opacity(0.35)) }
+        .padding(16)
+        .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
         .accessibilityElement(children: .combine)
     }
 }
@@ -96,11 +98,11 @@ private extension ActivitySource {
 
     var tint: Color {
         switch self {
-        case .audit: .purple
-        case .runtime: .blue
-        case .review: .orange
-        case .completion: .green
-        case .notification: .red
+        case .audit: RekonTheme.violet
+        case .runtime: RekonTheme.accent
+        case .review: RekonTheme.warning
+        case .completion: RekonTheme.success
+        case .notification: RekonTheme.danger
         }
     }
 }

@@ -3,6 +3,26 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class FailureStatePresentationTests: XCTestCase {
+    func testPhaseLessProjectUsesSupportedEmptyStatesInsteadOfUnavailableTracking() {
+        XCTAssertEqual(ProjectEmptyStatePresentation.phaseBoard.title, "Ready for a first phase")
+        XCTAssertTrue(ProjectEmptyStatePresentation.phaseBoard.detail.contains("usable now"))
+        XCTAssertFalse(ProjectEmptyStatePresentation.phaseBoard.detail.localizedCaseInsensitiveContains("tracking state required"))
+
+        XCTAssertEqual(ProjectEmptyStatePresentation.dependencies.title, "No phase dependencies yet")
+        XCTAssertTrue(ProjectEmptyStatePresentation.dependencies.detail.contains("first phase"))
+        XCTAssertFalse(ProjectEmptyStatePresentation.dependencies.detail.localizedCaseInsensitiveContains("unavailable"))
+    }
+
+    func testPluginFailurePresentsConflictOnceWithTruthfulRecovery() {
+        let presentation = CodexPluginSettingsPresentation(state: .failed(.marketplaceConflict))
+
+        XCTAssertNil(presentation.uniqueOperationMessage(presentation.detail))
+        XCTAssertEqual(presentation.uniqueOperationMessage("A later operation failed."), "A later operation failed.")
+        XCTAssertTrue(presentation.recoveryDetail?.contains("Codex") == true)
+        XCTAssertTrue(presentation.recoveryDetail?.contains("try again") == true)
+        XCTAssertTrue(presentation.recoveryDetail?.contains("will not change") == true)
+    }
+
     func testOnboardingStatesUseInitializationAndTrackingStateTerminology() throws {
         let noStructure = FailureStatePresentation.noDeliveryStructure
         XCTAssertEqual(noStructure.title, "Project tracking not initialized")

@@ -1,4 +1,5 @@
 import SwiftUI
+import RekonDesignSystem
 
 struct TicketCardView: View {
     let card: TicketCardProjection
@@ -35,10 +36,14 @@ struct TicketCardView: View {
             }
             .padding(9)
             .frame(maxWidth: .infinity, minHeight: presentation == .fullOutcome ? 78 : 48, alignment: .topLeading)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 8))
+            .foregroundStyle(RekonTheme.primaryText)
+            .background(
+                isSelected ? RekonTheme.elevatedSurface : RekonTheme.surface,
+                in: RoundedRectangle(cornerRadius: 8)
+            )
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.accentColor : Color(nsColor: .separatorColor), lineWidth: isSelected ? 1.5 : 0.75)
+                    .stroke(isSelected ? RekonTheme.accent : RekonTheme.borderSubtle, lineWidth: isSelected ? 1.5 : 0.75)
             }
         }
         .buttonStyle(.plain)
@@ -53,15 +58,15 @@ struct TicketCardView: View {
     @ViewBuilder
     private func metadata(separated: Bool) -> some View {
         if let count = card.activeTaskCount {
-            signal(systemImage: "checklist", count: count, color: .secondary)
+            signal(systemImage: "checklist", count: count, color: RekonTheme.secondaryText)
         }
         if card.dependencyCount > 0 {
             if separated && card.activeTaskCount != nil { metadataSeparator }
-            signal(systemImage: "point.3.connected.trianglepath.dotted", count: card.dependencyCount, color: .secondary)
+            signal(systemImage: "point.3.connected.trianglepath.dotted", count: card.dependencyCount, color: RekonTheme.secondaryText)
         }
         if card.blockerCount > 0 {
             if separated && (card.activeTaskCount != nil || card.dependencyCount > 0) { metadataSeparator }
-            signal(systemImage: "exclamationmark.octagon", count: card.blockerCount, color: .red)
+            signal(systemImage: "exclamationmark.octagon", count: card.blockerCount, color: RekonTheme.danger)
         }
     }
 

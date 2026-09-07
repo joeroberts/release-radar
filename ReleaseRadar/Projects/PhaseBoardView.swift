@@ -1,4 +1,5 @@
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 enum BoardDensity: String, CaseIterable, Identifiable {
@@ -143,6 +144,7 @@ struct PhaseBoardView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("phase-board")
+        .background(RekonTheme.background)
         .onChange(of: filter) { _, _ in reconcileFilteredSelection() }
         .onChange(of: board) { previous, current in
             guard PhaseBoardKey(projectID: previous.project.id, phaseID: previous.phaseID)
@@ -173,13 +175,14 @@ struct PhaseBoardView: View {
     private var boardContext: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(board.project.name)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .font(RekonTypography.metadata.weight(.medium))
+                .foregroundStyle(RekonTheme.secondaryText)
             Text(board.phaseName)
-                .font(.title2.weight(.semibold))
+                .font(RekonTypography.screenTitle)
+                .foregroundStyle(RekonTheme.primaryText)
             Text("Lane position communicates delivery state; cards show work and constraints.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RekonTheme.secondaryText)
         }
     }
 
@@ -265,7 +268,11 @@ struct PhaseBoardView: View {
                 .padding(10)
                 .frame(width: laneWidth, alignment: .topLeading)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
-                .background(Color(nsColor: .underPageBackgroundColor), in: RoundedRectangle(cornerRadius: 11))
+                .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 11))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 11)
+                        .stroke(RekonTheme.borderSubtle)
+                }
                 .overlay(alignment: .top) {
                     Rectangle()
                         .fill(lane.lane.tint)
@@ -295,11 +302,11 @@ struct PhaseBoardView: View {
     private func laneCount(_ count: Int) -> some View {
         Text("\(count)")
             .font(.caption.weight(.medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(RekonTheme.secondaryText)
             .monospacedDigit()
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
-            .background(.quaternary, in: Capsule())
+            .background(RekonTheme.elevatedSurface, in: Capsule())
     }
 
     @ViewBuilder

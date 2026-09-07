@@ -1,5 +1,6 @@
 import AppKit
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 struct NeedsReviewView: View {
@@ -14,6 +15,7 @@ struct NeedsReviewView: View {
     var onAcceptDeliveryGoal: (DeliveryGoalAcceptanceReviewProjection) async -> Void = { _ in }
     var onReload: () async -> Void = {}
     var acceptanceNeedsReload = false
+    var usesCompactLayout = false
     @State private var selectedGoalID: DeliveryGoalAcceptanceReviewProjection.ID?
     @State private var pendingAssociationFolder: URL?
     @State private var isConfirmingAssociation = false
@@ -38,13 +40,23 @@ struct NeedsReviewView: View {
                     .accessibilityIdentifier("review-action-error")
             }
             Divider()
-            HSplitView {
-                inboxList
-                    .frame(minWidth: 260, idealWidth: 320, maxWidth: 380)
-                detail
-                    .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+            if usesCompactLayout {
+                VStack(spacing: 0) {
+                    inboxList
+                        .frame(height: 320)
+                    Divider()
+                    detail
+                }
+            } else {
+                HSplitView {
+                    inboxList
+                        .frame(minWidth: 260, idealWidth: 320, maxWidth: 380)
+                    detail
+                        .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
+        .background(RekonTheme.background)
         .accessibilityIdentifier("content-needs-review")
         .onAppear {
             if inbox.openItems.isEmpty { selectedGoalID = inbox.deliveryGoalAcceptances.first?.id }
@@ -77,67 +89,89 @@ struct NeedsReviewView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Needs Review")
-                    .font(.largeTitle.weight(.semibold))
-                Text("Owner decisions requested by imports and agents")
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Text("\(inbox.openItems.count + inbox.deliveryGoalAcceptances.count) open")
-                .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(.quaternary, in: Capsule())
-        }
-        .padding(24)
+        RekonScreenHeader(
+            title: "Needs Review",
+            subtitle: "Owner decisions requested by imports and agents",
+            trailing: AnyView(RekonBadge("\(inbox.openItems.count + inbox.deliveryGoalAcceptances.count) open", tone: .warning))
+        )
     }
 
     private var inboxList: some View {
-        List(selection: inboxSelection) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
             if !inbox.deliveryGoalAcceptances.isEmpty {
-                Section("Delivery Goal acceptance") {
+                inboxSectionTitle("Delivery Goal acceptance")
+                VStack(spacing: 8) {
                     ForEach(inbox.deliveryGoalAcceptances) { goal in
-                        VStack(alignment: .leading, spacing: 3) {
-                            Label(goal.title, systemImage: "target")
-                            Text("\(goal.phaseName) · Awaiting acceptance")
-                                .font(.caption).foregroundStyle(.secondary)
+                        Button {
+                            inboxSelection.wrappedValue = .goal(goal.id)
+                        } label: {
+                            inboxRow(isSelected: selectedGoalID == goal.id) {
+                                Label(goal.title, systemImage: "target")
+                                Text("\(goal.phaseName) · Awaiting acceptance")
+                                    .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                            }
                         }
-                        .tag(InboxSelection.goal(goal.id))
+                        .buttonStyle(.plain)
                         .accessibilityLabel("Delivery Goal \(goal.title), \(goal.phaseName), Awaiting acceptance")
                     }
                 }
             }
-            Section("Open") {
+            inboxSectionTitle("Open")
+            VStack(spacing: 8) {
                 ForEach(inbox.openItems) { item in
-                    HStack(spacing: 10) {
-                        Image(systemName: item.kind.systemImage)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 18)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.kind.title)
-                                .lineLimit(1)
-                            Text(item.ticketID?.rawValue ?? "Project review")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    Button {
+                        inboxSelection.wrappedValue = .item(item.id)
+                    } label: {
+                        inboxRow(isSelected: selectedItemID == item.id) {
+                            HStack(spacing: 10) {
+                                Image(systemName: item.kind.systemImage)
+                                    .foregroundStyle(RekonTheme.accent)
+                                    .frame(width: 18)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.kind.title).lineLimit(1)
+                                    Text(item.ticketID?.rawValue ?? "Project review")
+                                        .font(.caption)
+                                        .foregroundStyle(RekonTheme.secondaryText)
+                                }
+                            }
                         }
                     }
-                    .tag(InboxSelection.item(item.id))
+                    .buttonStyle(.plain)
                     .accessibilityLabel("\(item.kind.title), \(item.ticketID?.rawValue ?? "project review")")
                 }
             }
             if !inbox.completedItems.isEmpty {
-                Section("Completed") {
+                inboxSectionTitle("Completed")
+                VStack(spacing: 8) {
                     ForEach(inbox.completedItems) { item in
                         Text("\(item.kind.title) · \(item.status.rawValue.capitalized)")
-                            .tag(InboxSelection.item(item.id))
+                            .foregroundStyle(RekonTheme.secondaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
+            }
+            .padding(18)
         }
-        .listStyle(.sidebar)
+        .background(RekonTheme.backgroundRaised)
         .accessibilityIdentifier("review-inbox-list")
+    }
+
+    private func inboxSectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(RekonTypography.compactControlLabel)
+            .foregroundStyle(RekonTheme.secondaryText)
+            .textCase(.uppercase)
+    }
+
+    private func inboxRow<Content: View>(isSelected: Bool, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 4) { content() }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isSelected ? RekonTheme.elevatedSurface : RekonTheme.surface, in: RoundedRectangle(cornerRadius: 10))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(isSelected ? RekonTheme.accent : RekonTheme.borderSubtle) }
+            .foregroundStyle(RekonTheme.primaryText)
     }
 
     @ViewBuilder
@@ -159,7 +193,7 @@ struct NeedsReviewView: View {
                     Text("Accepting confirms this complete outcome as the owner. It does not change ticket lanes or Codex execution goals.")
                         .font(.callout).foregroundStyle(.secondary)
                     Button("Accept Delivery Goal") { Task { await onAcceptDeliveryGoal(goal) } }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(RekonPrimaryButtonStyle())
                         .disabled(isPerformingAction || authorizationRecovery != nil || acceptanceNeedsReload)
                         .accessibilityIdentifier("delivery-goal-accept")
                         .accessibilityHint("Record owner acceptance of \(goal.title) at phase plan revision \(goal.expectedPlanRevision).")
@@ -191,13 +225,13 @@ struct NeedsReviewView: View {
                         Button("Resolve") {
                             Task { await onDecision(.resolve, item) }
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(RekonPrimaryButtonStyle())
                         .accessibilityIdentifier("review-resolve")
 
                         Button("Dismiss") {
                             Task { await onDecision(.dismiss, item) }
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("review-dismiss")
                     }
                     .disabled(isPerformingAction || authorizationRecovery != nil)
@@ -206,11 +240,12 @@ struct NeedsReviewView: View {
                 .padding(28)
             }
         } else {
-            ContentUnavailableView(
-                "Inbox clear",
+            ProjectEmptyStateView(presentation: .init(
+                title: "Inbox clear",
+                detail: "No review decisions are waiting for this project.",
                 systemImage: "checkmark.circle",
-                description: Text("No review decisions are waiting for this project.")
-            )
+                accessibilityID: "empty-review-inbox"
+            ))
         }
     }
 

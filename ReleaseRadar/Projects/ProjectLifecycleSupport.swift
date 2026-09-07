@@ -132,9 +132,9 @@ struct ProjectSettingsEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Project settings").font(.largeTitle.weight(.semibold))
+            Text("Project settings").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
             TextField("Project name", text: $name)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(RekonQuietTextFieldStyle())
                 .accessibilityIdentifier("project-settings-name")
             RekonCard {
                 VStack(alignment: .leading, spacing: 10) {
@@ -144,13 +144,13 @@ struct ProjectSettingsEditor: View {
                             .foregroundStyle(RekonTheme.secondaryText)
                     }
                     ForEach(taskRows, id: \.id) { task in
-                        Toggle(task.title, isOn: Binding(
+                        RekonCheckbox(isOn: Binding(
                             get: { !excluded.contains(task.id) },
                             set: { include in
                                 if include { excluded.remove(task.id) } else { excluded.insert(task.id) }
                             }
-                        ))
-                        .accessibilityIdentifier("project-settings-task-\(task.id)")
+                        ), title: task.title, accessibilityLabel: task.title,
+                           accessibilityIdentifier: "project-settings-task-\(task.id)")
                     }
                 }
             }
@@ -163,6 +163,7 @@ struct ProjectSettingsEditor: View {
             HStack {
                 Spacer()
                 Button("Cancel", action: { dismiss() })
+                    .buttonStyle(RekonSecondaryButtonStyle())
                     .keyboardShortcut(.cancelAction)
                     .disabled(isSaving)
                 Button(isSaving ? "Saving…" : "Save") { performSave() }
@@ -174,6 +175,8 @@ struct ProjectSettingsEditor: View {
         }
         .padding(28)
         .frame(minWidth: 480, idealWidth: 580, minHeight: 380)
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
     }
 
     private var taskRows: [CodexTaskDescriptor] {
@@ -207,7 +210,7 @@ struct ProjectLifecycleHelpView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Project lifecycle help").font(.largeTitle.weight(.semibold))
+            Text("Project lifecycle help").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
             RekonCallout(tone: .information, systemImage: "folder.badge.gearshape") {
                 Text("Initialize locally").font(.headline)
                 Text("Choosing a folder saves an opaque project identity and folder authorization. A phase is optional, so you can open the project immediately.")
@@ -220,10 +223,17 @@ struct ProjectLifecycleHelpView: View {
                 Text("Recover safely").font(.headline)
                 Text("If storage, folder access, documentation, observation, or the workflow needs attention, use Project Health for the exact target and then retry from refreshed state.")
             }
-            HStack { Spacer(); Button("Done", action: { dismiss() }).keyboardShortcut(.defaultAction) }
+            HStack {
+                Spacer()
+                Button("Done", action: { dismiss() })
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+            }
         }
         .padding(28)
         .frame(minWidth: 520, idealWidth: 620)
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
         .accessibilityIdentifier("project-lifecycle-help")
     }
 }
