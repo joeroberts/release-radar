@@ -42,8 +42,19 @@ Fresh reviewer “Review C6 removal and retained history”
 (`01a07d25-5a7a-7d01-b30f-f8345a9e3b56`) confirmed clean exact `c06d34e` in isolated
 `e58c`, explicit Astra High/runtime unexposed. Review covers removal authority,
 historical identity, stale commands/receipts, notification outcomes, migration and
-native UI/QA. Writer is fast-forwarding the integrated candidate and creating its PR;
-review and separate owner merge approval remain pending.
+native UI/QA. [PR #30](https://github.com/joeroberts/release-radar/pull/30) is open at exact `c06d34e`;
+review and separate owner merge approval remain pending. Writer confirms clean matching
+branch/upstream and stopped test/build processes; delivery task is archived until any
+Required same-outcome correction.
+
+Author final counts: removal 7/7; broad selected serial 309/309. Before registration,
+full scheme 606/609 (two pending-catalog cases plus disabled-broker transport case).
+After registration, documentation selection 55/56: actual catalog/index/real-repository
+checks pass. The remaining disposable-copy conformance test copies docs without linked
+source/entitlement files and fails before its stale-index assertion. Its three links
+already exist identically in merged baseline `c8cba4b`; real-repository native check
+passes. No discovery document, fixture or transport configuration was altered to mask
+these unrelated limits.
 
 Author temporary paths retained: `/tmp/release-radar-c6-baseline`,
 `/tmp/release-radar-c6-red`, `/tmp/release-radar-c6-evidence.5yEcMu`,
