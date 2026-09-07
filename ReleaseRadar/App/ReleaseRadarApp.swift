@@ -152,6 +152,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         maintenanceSession?.disconnect()
         agentBridgeHost?.disconnectCallback()
         agentBridgeHost = nil
+        guard !AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) else {
+            return
+        }
         Task { await ReleaseRadarAppServices.shared.stopSharedServices() }
     }
 

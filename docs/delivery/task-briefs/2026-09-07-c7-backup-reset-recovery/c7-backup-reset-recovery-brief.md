@@ -150,9 +150,10 @@ Implementation therefore uses these bounded additions rather than a new service 
 - One app-owned recovery coordinator uses adjacent no-follow staging, rollback and a
   minimal durable marker/journal. It validates the exact package bytes and recognized
   schema, closes every app-owned store, replaces the database and sidecars only after
-  staging succeeds, and resolves interrupted replacement before normal app services
-  start. A fresh graph is published after recovery; old stores and callbacks remain
-  closed.
+  staging succeeds, carries unreadable-original preservation policy through the
+  replacement-installed crash marker, and resolves interrupted replacement before normal
+  app services start. A fresh graph is published after recovery; old stores and callbacks
+  remain closed.
 - Preference reset is a store transaction that restores the four existing alert-rule
   defaults and clears only ephemeral `AppModel` view state. Tracking reset prepares a
   replacement snapshot and applies `ProjectRemovalManager` semantics to every live
@@ -163,8 +164,9 @@ Implementation therefore uses these bounded additions rather than a new service 
   project/registration identity on subsequent external mutations. Restored queued work
   is suppressed and restored in-flight work becomes unknown; locally newer terminal
   notification facts, occurrence counters, removal records and historical audits are
-  retained when the original is readable. An unreadable original can still be replaced
-  with the preview naming unavailable newer-history reconciliation.
+  retained for every displaced registration, including projects absent from the backup,
+  when the original is readable. An unreadable original can still be replaced with the
+  preview naming unavailable newer-history reconciliation.
 - Recovery plugin inspection uses a new read-only status entry point only when the
   lifecycle helper is already enabled. It performs no registration, rebinding,
   installation, removal, update or receipt mutation. Missing receipts produce unknown
@@ -182,3 +184,5 @@ single-selection, directories-only native picker for one existing folder; Releas
 generates the package name inside that folder and keeps its adjacent staging directory
 there. Preview and creation each hold only a balanced temporary security scope on the
 selected folder, including the failure path. Restore remains read-only and unchanged.
+The synthetic native-picker host uses its PID-isolated temporary store and returns before
+shared application services on both launch and termination.

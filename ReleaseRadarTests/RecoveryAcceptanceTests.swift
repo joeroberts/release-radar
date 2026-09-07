@@ -329,6 +329,54 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(facts, [1, 1, 1, 1])
     }
 
+    func testRestoreRetainsHistoryForAProjectAbsentFromTheBackup() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(
+            in: store,
+            id: "backed-up",
+            registrationID: "original",
+            ticketID: "backed-up-ticket"
+        )
+        let packageURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("before-new-project.release-radar-backup")
+        let backup = ApplicationBackupManager(store: store, databaseURL: databaseURL)
+        _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
+        try await seedProject(
+            in: store,
+            id: "newer",
+            registrationID: "newer-registration",
+            ticketID: "newer-ticket"
+        )
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Newer project fact",
+            auditEventID: .init(rawValue: "newer-project-audit"),
+            auditScope: .init(
+                projectID: .init(rawValue: "newer"),
+                entityType: .project,
+                entityID: "newer"
+            )
+        ) { _ in () }
+        let recovery = ApplicationRecoveryManager(store: store, databaseURL: databaseURL)
+        let preview = try await recovery.previewRestore(packageURL: packageURL)
+        XCTAssertEqual(preview.displacedTargets.count, 2)
+
+        let result = try await recovery.restore(preview)
+
+        let retainedFacts = try await result.store.read { connection in
+            [
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM removed_projects WHERE historical_project_id = 'newer'"
+                ) ?? -1,
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM audit_events WHERE id = 'newer-project-audit'"
+                ) ?? -1,
+            ]
+        }
+        XCTAssertEqual(retainedFacts, [1, 1])
+    }
+
     func testRecoveryRollsBackIfReplacementFailsAfterMovingTheOriginal() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
@@ -541,6 +589,32 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: preservedOriginalURL), Data("not a sqlite store".utf8))
         let restoredProjectCount = try await result.store.read { try $0.scalarInt("SELECT COUNT(*) FROM projects") }
         XCTAssertEqual(restoredProjectCount, 1)
+    }
+
+    func testReplacementInstalledMarkerPreservesLegacyUnreadableOriginal() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let replacement = DeliveryStore(databaseURL: databaseURL)
+        await replacement.close()
+        let operationID = UUID()
+        let rollbackURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent(".release-radar-rollback-\(operationID.uuidString).sqlite")
+        let stagingURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent(".release-radar-restore-\(operationID.uuidString).staging.sqlite")
+        let originalBytes = Data("Unreadable original containing recoverable newer owner history".utf8)
+        try originalBytes.write(to: rollbackURL)
+        let marker: [String: Any] = [
+            "operationID": operationID.uuidString,
+            "phase": "replacementInstalled",
+            "rollbackPath": rollbackURL.path,
+            "stagingPath": stagingURL.path,
+        ]
+        try JSONSerialization.data(withJSONObject: marker).write(
+            to: ApplicationRecoveryManager.markerURL(for: databaseURL),
+            options: .atomic
+        )
+
+        XCTAssertTrue(try ApplicationRecoveryManager.resolveInterruptedOperation(databaseURL: databaseURL))
+        XCTAssertEqual(try Data(contentsOf: rollbackURL), originalBytes)
     }
 
     func testBackupRejectsUnexpectedInventoryAndDatabaseTampering() async throws {

@@ -5,9 +5,11 @@
 The C7 candidate provides a versioned full local backup package, separate preference and
 tracking resets, rollback-safe restore/relaunch recovery, stale-command invalidation,
 notification nonreplay, read-only plugin reconciliation and the related C12 Settings and
-Application health actions. Verification used only synthetic app-owned stores and transports;
-no owner database, credentials, repositories, plugin installation or notification service was
-mutated.
+Application health actions. Product verification used synthetic app-owned stores and
+transports and did not intentionally target an owner database, credentials, repositories,
+plugin installation or notification service. Effects from the accidentally launched normal
+test-built process remain unknown as recorded under Verification execution notes, so this is
+not a categorical claim that owner application state was untouched during the task.
 
 ## Direct checks
 
@@ -29,13 +31,15 @@ and the integrated Debug build completed successfully.
 
 ### R7 backup-destination correction
 
-The focused correction run passed 19 selected tests: all 17 `RecoveryAcceptanceTests` plus
-the native-panel configuration/package-placement test and the balanced security-scope
-success/failure test. A separate gated test exercised the actual `NSOpenPanel` in a signed,
-isolated XCTest host, selected a fresh existing folder under `/Users/Shared`, and passed after
-creating and validating one generated `.release-radar-backup` package there. The selected
-folder contained only the final package, `manifest.json` and `release-radar.sqlite` after the
-operation; no adjacent staging directory remained.
+The R7 command reported 19 passing cases: 17 recovery cases emitted by `xcodebuild` plus
+the native-panel configuration/package-placement case and the balanced security-scope
+success/failure case. It did not establish coverage of every method in the then-18-method
+`RecoveryAcceptanceTests` source file. A separate gated test exercised the actual
+`NSOpenPanel` in a signed, isolated XCTest host, selected a fresh existing folder under
+`/Users/Shared`, and passed after creating and validating one generated
+`.release-radar-backup` package there. The selected folder contained only the final package,
+`manifest.json` and `release-radar.sqlite` after the operation; no adjacent staging directory
+remained.
 
 The signed Release build passed strict deep code-signature validation. Its actual app
 entitlements retain the app sandbox, application group and network client, replace only the
@@ -43,12 +47,33 @@ source user-selected read-only entitlement with user-selected read/write, and co
 broad filesystem exception. Apple Development signing also injects `get-task-allow`; that
 generated development entitlement is not present in the shipping entitlement source.
 
-The native-picker XCTest host was also signed and sandboxed with user-selected read/write,
+The initial native-picker XCTest host was signed and sandboxed with user-selected read/write,
 but Xcode injected a broad read-only `/` test exception and test-manager Mach exceptions.
-Accordingly, that run is evidence for the native folder-selection flow, generated package
-placement and selected-folder write, while the separate signed Release build is the shipping
-entitlement evidence. The host used the existing PID-isolated temporary store path and its
-delegate suppressed notification and agent-bridge initialization.
+That initial run is therefore only evidence for the native folder-selection flow, generated
+package placement and selected-folder write. A later corrective run re-signed a fresh
+build-for-testing output from the production entitlement source, adding only `get-task-allow`
+and the three XCTest-required Mach lookup names. Strict signature validation and entitlement
+readback immediately before launch and after the test both confirmed no absolute-path
+filesystem exception. The single gated picker test then selected a fresh existing folder
+at `/Users/Shared/ReleaseRadar-C7-SignedPicker-Corrective.Po4gPJ`, created and validated
+`Release Radar Backup 3B5D4333-6401-4B1E-8CD7-3ABB1247142D.release-radar-backup` there,
+left no staging directory and exited successfully. The PID-isolated host suppressed launch
+services, and an XCTest-only termination guard returned before shared application services
+could initialize. This run used the temporary test output at
+`build/c7-corrective-signed-host/Build/Products/Debug/ReleaseRadar.app`, derived entitlement
+input `build/c7-corrective-signed-host/c7-test-runtime.entitlements` and allowlisted
+`ReleaseRadar-C7-no-broad-filesystem.xctestrun`. These are retained temporary verification
+artifacts, not durable product inputs. The run began from integrated source `ab53f1b` plus
+the bounded R1/R5 and termination-isolation working-tree corrections.
+
+### R1 and R5 corrective review
+
+Two reviewer regressions failed against integrated candidate `ab53f1b` and passed after the
+bounded corrections. A legacy `replacementInstalled` marker now preserves an unreadable
+rollback, while new markers carry the explicit preservation policy through every phase.
+Restore reconciliation now retains the displaced registration and attributed audit history
+for a newer project absent from the selected backup. The complete directly affected
+`RecoveryAcceptanceTests` run then passed 20 of 20 cases.
 
 ### Verification execution notes
 
