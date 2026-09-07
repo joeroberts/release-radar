@@ -27,11 +27,13 @@ SQLite remains exclusively app-owned. Preserve canonical recovery stash `7adfff2
 local exclusions, C8 app and retained `dist/PR-23-*` acceptance/rollback artifacts.
 Pursuit migration is stopped; RDS appearance is unchanged.
 
-“Deliver reversible project archive and restore” was dispatched fresh with explicit
+“Deliver reversible project archive and…” (`01a07bab-4a2b-7e53-b388-10800a2e3a6c`)
+was dispatched fresh with explicit
 Sol High from committed `6e67cd6`, containing merged C4 `32bb2ce` and the
 [controlling C5 brief](task-briefs/2026-09-07-c5-archive-restore/c5-archive-restore-brief.md).
-Exact task/worktree confirmation is pending. It must publish
-`codex/c5-archive-restore` with upstream and own source/tests/brief; parent retains
+The worker confirmed dedicated worktree `dc15`, baseline `6e67cd6`, and published
+`codex/c5-archive-restore` with matching upstream; runtime model/effort is unexposed.
+It owns source/tests/brief; parent retains
 ledger and shared catalog/index integration. Ceiling Astra High, Ultra prohibited.
 The complete outcome preserves graph/registration/history and association, suspends
 operational activity, supports discoverable restore without a valid catalog, and
