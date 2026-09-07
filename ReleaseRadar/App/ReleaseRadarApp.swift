@@ -270,7 +270,7 @@ struct ReleaseRadarApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Release Radar", id: "main") {
+        Window("Release Radar", id: "main") {
             if let model {
                 SidebarView(model: model)
                     .frame(minWidth: 760, minHeight: 520)
