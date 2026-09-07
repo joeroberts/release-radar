@@ -244,3 +244,226 @@ struct ProjectLifecycleHelpView: View {
         .accessibilityIdentifier("project-lifecycle-help")
     }
 }
+
+struct ProjectLifecycleConfirmationView: View {
+    @Environment(\.dismiss) private var dismiss
+    let preview: ProjectLifecyclePreview
+    let confirm: () async throws -> Void
+    @State private var isCommitting = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Label(actionTitle, systemImage: preview.target == .archived ? "archivebox" : "arrow.uturn.backward.circle")
+                .font(RekonTypography.screenTitle)
+                .foregroundStyle(RekonTheme.primaryText)
+            Text(explanation).foregroundStyle(RekonTheme.secondaryText)
+            RekonCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("This exact project").font(.headline)
+                    Text(preview.projectID.rawValue).font(.caption.monospaced()).textSelection(.enabled)
+                    Text("registration \(preview.registration.registrationID) · generation \(preview.registration.requestGeneration)")
+                        .font(.caption.monospaced()).foregroundStyle(RekonTheme.secondaryText).textSelection(.enabled)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 18) { retainedCounts }
+                        VStack(alignment: .leading, spacing: 8) { retainedCounts }
+                    }
+                }
+            }
+            if preview.target == .archived {
+                RekonCallout(tone: .information, systemImage: "checkmark.shield") {
+                    Text("No project data will be deleted").font(.headline)
+                    Text("The delivery graph, evidence references, registration identity, and history stay local. Pending notifications are suppressed and in-flight attempts are preserved as unknown.")
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                RekonCallout(tone: .information, systemImage: "bell.slash") {
+                    Text("Notifications stay historical").font(.headline)
+                    Text("Restore makes the project active again, but it never replays notifications suppressed during archive.")
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if let errorMessage {
+                RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                    Text("Project state was not changed").font(.headline)
+                    Text(errorMessage).foregroundStyle(RekonTheme.secondaryText)
+                }
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(isCommitting)
+                    .accessibilityLabel("Cancel")
+                    .accessibilityIdentifier("project-lifecycle-cancel")
+                Button(isCommitting ? "Saving…" : confirmTitle) { performConfirmation() }
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isCommitting)
+                    .accessibilityLabel(confirmTitle)
+                    .accessibilityIdentifier("project-lifecycle-confirm")
+            }
+        }
+        .padding(28)
+        .frame(minWidth: 500, idealWidth: 620)
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
+        .accessibilityIdentifier("project-lifecycle-confirmation")
+    }
+
+    @ViewBuilder private var retainedCounts: some View {
+        Text("\(preview.counts.phases) phases")
+        Text("\(preview.counts.tickets) tickets")
+        Text("\(preview.counts.evidence) evidence items")
+        Text("\(preview.counts.history) history events")
+    }
+
+    private var actionTitle: String {
+        preview.target == .archived ? "Archive \(preview.projectName)?" : "Restore \(preview.projectName)?"
+    }
+
+    private var confirmTitle: String {
+        preview.target == .archived ? "Archive Project" : "Restore Project"
+    }
+
+    private var explanation: String {
+        preview.target == .archived
+            ? "Archiving removes this project from active delivery surfaces and rejects new mutations until it is restored."
+            : "Restoring returns this project to active delivery surfaces and admits new work again."
+    }
+
+    private func performConfirmation() {
+        isCommitting = true
+        errorMessage = nil
+        Task {
+            do {
+                try await confirm()
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                isCommitting = false
+            }
+        }
+    }
+}
+
+struct ArchivedProjectView: View {
+    let project: ArchivedProjectProjection
+    let loadHealth: (() async -> ProjectHealthSnapshot)?
+    let previewRestore: () async throws -> ProjectLifecyclePreview
+    let restore: (ProjectLifecyclePreview) async throws -> Void
+    @State private var health: ProjectHealthSnapshot?
+    @State private var lifecyclePreview: ProjectLifecyclePreview?
+    @State private var errorMessage: String?
+    @State private var isWorking = false
+    @State private var showsConfirmation = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top) { heading; Spacer(); restoreButton }
+                    VStack(alignment: .leading, spacing: 12) { heading; restoreButton }
+                }
+                RekonCallout(tone: .information, systemImage: "lock") {
+                    Text("Read-only while archived").font(.headline)
+                    Text("The project graph, evidence references, registration, and history are retained. New agent, observation, and notification mutations are blocked until restore.")
+                        .foregroundStyle(RekonTheme.secondaryText)
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 14) { countCards }
+                    VStack(spacing: 14) { countCards }
+                }
+                RekonCard {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Preserved registration").font(.headline)
+                        Text(project.registration.registrationID).font(.caption.monospaced()).textSelection(.enabled)
+                        Text("Request generation \(project.registration.requestGeneration)")
+                            .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if loadHealth != nil {
+                    ProjectHealthView(snapshot: health, isRefreshing: isWorking, refresh: refreshHealth)
+                }
+                if let errorMessage {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Restore preview unavailable").font(.headline)
+                        Text(errorMessage).foregroundStyle(RekonTheme.secondaryText)
+                    }
+                }
+            }
+            .padding(28)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(RekonTheme.background)
+        .task { if loadHealth != nil && health == nil { refreshHealth() } }
+        .sheet(isPresented: $showsConfirmation) {
+            if let lifecyclePreview {
+                ProjectLifecycleConfirmationView(preview: lifecyclePreview) {
+                    try await restore(lifecyclePreview)
+                }
+            }
+        }
+    }
+
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(project.name).font(RekonTypography.screenTitle)
+            Label("Archived project", systemImage: "archivebox")
+                .foregroundStyle(RekonTheme.secondaryText)
+        }
+    }
+
+    private var restoreButton: some View {
+        Button(isWorking ? "Preparing…" : "Restore Project…") { prepareRestore() }
+            .buttonStyle(RekonPrimaryButtonStyle())
+            .disabled(isWorking)
+            .accessibilityLabel("Restore Project")
+            .accessibilityIdentifier("archived-project-restore")
+    }
+
+    @ViewBuilder private var countCards: some View {
+        countCard("Phases", project.counts.phases, "flag")
+        countCard("Tickets", project.counts.tickets, "rectangle.stack")
+        countCard("Evidence", project.counts.evidence, "paperclip")
+        countCard("History", project.counts.history, "clock.arrow.circlepath")
+    }
+
+    private func countCard(_ title: String, _ value: Int64, _ image: String) -> some View {
+        RekonCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: image).foregroundStyle(RekonTheme.accent)
+                Text("\(value)").font(RekonTypography.sectionTitle)
+                Text(title).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+            }
+            .frame(maxWidth: .infinity, minHeight: 90, alignment: .leading)
+        }
+    }
+
+    private func prepareRestore() {
+        isWorking = true
+        errorMessage = nil
+        Task {
+            defer { isWorking = false }
+            do {
+                lifecyclePreview = try await previewRestore()
+                showsConfirmation = true
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func refreshHealth() {
+        guard let loadHealth else { return }
+        isWorking = true
+        Task {
+            health = await loadHealth()
+            isWorking = false
+        }
+    }
+}

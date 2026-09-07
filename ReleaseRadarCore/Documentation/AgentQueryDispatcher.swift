@@ -142,7 +142,14 @@ private struct InventoryCapture: Sendable {
         // Projects and legacy evidence are normalized identically before and after v13.
         for other in [false, true] {
             let op = other ? "!=" : "="
-            let projectRows = try c.rows("SELECT * FROM projects WHERE id \(op) ?", bindings: [.text(context.projectID)])
+            var projectRows = try c.rows("SELECT * FROM projects WHERE id \(op) ?", bindings: [.text(context.projectID)])
+            if context.schemaVersion < 16 {
+                projectRows = projectRows.map { row in
+                    var normalized = row
+                    normalized["lifecycle"] = .text("active")
+                    return normalized
+                }
+            }
             result[(other ? "other." : "project.") + "identity"] = digest(projectRows.map(hash))
             let artifact = context.schemaVersion >= 13 ? "artifact_id" : "NULL AS artifact_id"
             let rows = try c.rows("SELECT id, project_id, ticket_id, path, is_available, \(artifact) FROM evidence WHERE project_id \(op) ?", bindings: [.text(context.projectID)])

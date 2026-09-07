@@ -54,11 +54,20 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [], auditEventID: nil, error: .ownerAcceptanceRequired)
         }
         if envelope.command.isDocumentationMutation {
+            guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+            }
             guard let body = try? canonicalRequestBody(envelope) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .documentation(.invalidRequest))
             }
             return await DocumentationCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
-                .dispatch(envelope, requestBody: body, origin: origin, admissionDeadline: admissionDeadline)
+                .dispatch(
+                    envelope,
+                    requestBody: body,
+                    origin: origin,
+                    admissionDeadline: admissionDeadline,
+                    expectedRegistration: project.registration
+                )
         }
         guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
             return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
@@ -88,6 +97,15 @@ public actor AgentCommandDispatcher {
                     if let admissionDeadline,
                        admissionDeadline <= Date().timeIntervalSince1970 {
                         throw DispatchControl.expired
+                    }
+                    do {
+                        try ProjectLifecycleManager.requireCurrentAuthorization(
+                            projectID: project.projectID,
+                            registration: project.registration,
+                            connection: connection
+                        )
+                    } catch {
+                        throw DispatchControl.archivedProject
                     }
                     if let prior = try connection.row(
                         "SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?",
@@ -134,6 +152,8 @@ public actor AgentCommandDispatcher {
                     return .init(entityIDs: [], auditEventID: nil, error: .appUnavailable)
                 case .requestIDReused:
                     return .init(entityIDs: [], auditEventID: nil, error: .requestIDReused)
+                case .archivedProject:
+                    return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
                 }
             }
         } catch let error as StoreError {
@@ -779,6 +799,7 @@ public actor AgentCommandDispatcher {
 
 private enum DispatchControl: Error, Sendable {
     case expired
+    case archivedProject
     case replay(AgentCommandResult)
     case requestIDReused
 }

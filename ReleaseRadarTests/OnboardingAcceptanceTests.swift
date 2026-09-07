@@ -44,7 +44,11 @@ final class OnboardingAcceptanceTests: XCTestCase {
                                                     worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root]))
             let preview = try await onboarding.inspect(folder: fixture.root)
             let projectID = try await onboarding.prepare(.init(preview: preview, projectName: "Import integration"))
-            let project = AuthorizedProject(projectID: projectID, canonicalRoot: fixture.root, authorizedRoots: [fixture.root])
+            let project = AuthorizedProject(
+                registration: preview.registration,
+                canonicalRoot: fixture.root,
+                authorizedRoots: [fixture.root]
+            )
             let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project]), bookmarkStore: bookmarks)
             let importer = RekonArtifactImporter(store: store, project: project, bookmarkStore: bookmarks)
             let importPreview = try importer.preview(fixture.root)
@@ -1625,7 +1629,7 @@ final class OnboardingAcceptanceTests: XCTestCase {
         let dispatcher = AgentCommandDispatcher(
             store: store,
             projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
-                .init(projectID: projectID, canonicalRoot: fixture.root, authorizedRoots: [fixture.root])
+                .init(registration: preview.registration, canonicalRoot: fixture.root, authorizedRoots: [fixture.root])
             ])
         )
         let phaseResult = await dispatcher.dispatch(.init(

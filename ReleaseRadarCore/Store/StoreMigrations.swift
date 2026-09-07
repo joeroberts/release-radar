@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 15
+    static let currentVersion: Int64 = 16
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -72,6 +72,9 @@ enum StoreMigrations {
             }
             if version < 15 {
                 try connection.executeScript(schemaVersion15)
+            }
+            if version < 16 {
+                try connection.executeScript(schemaVersion16)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -521,6 +524,7 @@ enum StoreMigrations {
         (6, "notification_events", "completed_at"),
         (6, "notification_events", "failure_code"),
         (11, "tickets", "plan_legacy_continuation"),
+        (16, "projects", "lifecycle"),
     ]
 
     private static let criticalObjects: [(version: Int64, type: String, name: String)] = [
@@ -961,6 +965,11 @@ enum StoreMigrations {
                  AND review_items.status = 'open'
            ) THEN 'pending' ELSE 'complete' END
     FROM projects;
+    """
+
+    private static let schemaVersion16 = """
+    ALTER TABLE projects ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'
+        CHECK (lifecycle IN ('active', 'archived'));
     """
 
     private static let schemaVersion1 = """

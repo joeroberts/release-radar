@@ -82,6 +82,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
                 let eventSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='delivery_goal_assignment_events'"))
                 try c.executeScript("""
                 DROP TABLE project_registrations;
+                ALTER TABLE projects DROP COLUMN lifecycle;
                 DROP TABLE delivery_goal_assignment_events;
                 \(eventSQL);
                 CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
@@ -129,7 +130,10 @@ final class EndToEndAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(migrated.0, 0); XCTAssertEqual(migrated.1, 0)
         XCTAssertEqual(migrated.2, 1); XCTAssertEqual(migrated.3, 0)
-        let registry = InMemoryAuthorizedProjectRegistry(projects: [.init(projectID: .init(rawValue: "p"), canonicalRoot: root, authorizedRoots: [root])])
+        let registration = try await registration(projectID: .init(rawValue: "p"), store: store)
+        let registry = InMemoryAuthorizedProjectRegistry(projects: [
+            .init(registration: registration, canonicalRoot: root, authorizedRoots: [root]),
+        ])
         var dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry, bookmarkStore: bookmarks)
         var requests: [(AgentCommandEnvelope, AgentCommandResult)] = []
         func request(_ command: AgentCommand) -> AgentCommandEnvelope {
@@ -520,6 +524,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             try c.executeScript("""
             BEGIN EXCLUSIVE;
             DROP TABLE project_registrations;
+            ALTER TABLE projects DROP COLUMN lifecycle;
             DROP TABLE delivery_goal_assignment_events;
             \(eventSQL);
             CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
@@ -547,7 +552,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
                                                 startAccessing: { _ in true }, stopAccessing: { _ in })
         let query = AgentQueryEnvelope(version: 1, projectRoot: root.path,
                                        query: .inventoryEvidence(projectID: "project-1", rootID: "root-1"))
-        let baseline = try Self.bootstrapRows(try SQLiteConnection(url: databaseURL, immutableReadOnly: true))
+        let baseline = try Self.normalizingImplicitProjectLifecycle(
+            Self.bootstrapRows(try SQLiteConnection(url: databaseURL, immutableReadOnly: true))
+        )
         let preflight = try DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
         let priorResult = await AgentQueryDispatcher(store: preflight, bookmarkStore: bookmarkStore).dispatch(query)
         let prior = try XCTUnwrap(priorResult.inventory)
@@ -566,7 +573,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         } == true)
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL), immutableReadOnly: true)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 13)
-        XCTAssertEqual(try Self.bootstrapRows(snapshot), baseline)
+        XCTAssertEqual(try Self.normalizingImplicitProjectLifecycle(Self.bootstrapRows(snapshot)), baseline)
         let postMigration = await AgentQueryDispatcher(store: store, bookmarkStore: bookmarkStore).dispatch(query)
         XCTAssertEqual(postMigration.inventory?.schemaVersion, Int(StoreMigrations.currentVersion))
         XCTAssertEqual(postMigration.inventory?.preservation, prior.preservation)
@@ -574,8 +581,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
         XCTAssertEqual(postMigration.inventory?.binding, prior.binding)
         XCTAssertTrue(postMigration.inventory?.isComplete == true)
 
+        let registration = try await registration(projectID: .init(rawValue: "project-1"), store: store)
         let registry = InMemoryAuthorizedProjectRegistry(projects: [
-            .init(projectID: .init(rawValue: "project-1"), canonicalRoot: root, authorizedRoots: [root]),
+            .init(registration: registration, canonicalRoot: root, authorizedRoots: [root]),
         ])
         let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry)
         let catalogRows: [(String, String)] = [
@@ -677,6 +685,19 @@ final class EndToEndAcceptanceTests: XCTestCase {
             }
         }
         return result
+    }
+
+    private static func normalizingImplicitProjectLifecycle(
+        _ rows: [String: [[String: SQLiteValue]]]
+    ) -> [String: [[String: SQLiteValue]]] {
+        var normalized = rows
+        normalized["projects"] = normalized["projects"]?.map { row in
+            guard row["lifecycle"] == nil else { return row }
+            var project = row
+            project["lifecycle"] = .text("active")
+            return project
+        }
+        return normalized
     }
 
     func testRelaunchRepairsVersionThreeDatabaseMissingAuditAttribution() async throws {
@@ -979,6 +1000,23 @@ final class EndToEndAcceptanceTests: XCTestCase {
         }
     }
 
+    private func registration(projectID: ProjectID, store: DeliveryStore) async throws -> ProjectRegistration {
+        try await store.read { connection in
+            guard let row = try connection.row(
+                "SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ), case let .text(registrationID)? = row["registration_id"],
+              case let .integer(requestGeneration)? = row["request_generation"] else {
+                throw SQLiteError(code: 20, message: "Expected project registration")
+            }
+            return .init(
+                projectID: projectID,
+                registrationID: registrationID,
+                requestGeneration: requestGeneration
+            )
+        }
+    }
+
     private func makeVersionThreeAuditDrift(at databaseURL: URL) throws {
         let connection = try SQLiteConnection(url: databaseURL)
         try removePostVersionNineSchema(connection)
@@ -1037,6 +1075,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         let evidenceSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='evidence'"))
         try connection.executeScript("""
         DROP TABLE project_registrations;
+        ALTER TABLE projects DROP COLUMN lifecycle;
         DROP TABLE project_documentation_bindings;
         DROP INDEX project_roots_project_identity_unique;
         ALTER TABLE evidence RENAME TO current_evidence;

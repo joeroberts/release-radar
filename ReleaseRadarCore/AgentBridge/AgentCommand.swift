@@ -111,11 +111,22 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
 
 public struct AuthorizedProject: Equatable, Sendable {
     public let projectID: ProjectID
+    public let registration: ProjectRegistration?
     public let canonicalRoot: URL
     public let authorizedRoots: [URL]
 
+    public init(registration: ProjectRegistration, canonicalRoot: URL, authorizedRoots: [URL]) {
+        self.projectID = registration.projectID
+        self.registration = registration
+        self.canonicalRoot = Self.canonicalize(canonicalRoot)
+        self.authorizedRoots = authorizedRoots.map(Self.canonicalize)
+    }
+
+    /// Compatibility for read-only/import previews and unregistered legacy fixtures.
+    /// Registered projects require the registration-bearing initializer for mutation.
     public init(projectID: ProjectID, canonicalRoot: URL, authorizedRoots: [URL]) {
         self.projectID = projectID
+        self.registration = nil
         self.canonicalRoot = Self.canonicalize(canonicalRoot)
         self.authorizedRoots = authorizedRoots.map(Self.canonicalize)
     }
@@ -154,15 +165,18 @@ public struct PersistedAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sen
     public func resolve(projectRoot: String) async -> AuthorizedProject? {
         let supplied = AuthorizedProject.canonicalize(URL(fileURLWithPath: projectRoot))
         return try? await store.read { connection in
-            guard let projectID = try connection.scalarText(
+            guard let row = try connection.row(
                 """
-                SELECT project_roots.project_id
+                SELECT project_roots.project_id, project_registrations.registration_id,
+                       project_registrations.request_generation
                 FROM project_roots
                 JOIN projects ON projects.id = project_roots.project_id
+                LEFT JOIN project_registrations ON project_registrations.project_id = projects.id
                 WHERE project_roots.path = ?
+                  AND projects.lifecycle = 'active'
                 """,
                 bindings: [.text(supplied.path)]
-            ) else {
+            ), case let .text(projectID)? = row["project_id"] else {
                 return nil
             }
 
@@ -177,6 +191,18 @@ public struct PersistedAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sen
             }
             guard roots.contains(supplied), let canonicalRoot = roots.first else {
                 return nil
+            }
+            if case let .text(registrationID)? = row["registration_id"],
+               case let .integer(requestGeneration)? = row["request_generation"] {
+                return AuthorizedProject(
+                    registration: ProjectRegistration(
+                        projectID: ProjectID(rawValue: projectID),
+                        registrationID: registrationID,
+                        requestGeneration: requestGeneration
+                    ),
+                    canonicalRoot: canonicalRoot,
+                    authorizedRoots: roots
+                )
             }
             return AuthorizedProject(
                 projectID: ProjectID(rawValue: projectID),

@@ -216,6 +216,31 @@ combined store/access/documentation/plugin/observer health surface even when the
 delivery store cannot open. Every result displays its check time and exact target
 when a saved registration is available; superseded refreshes are discarded.
 
+### Project archive and restore
+
+Projects opens on an explicit **Active** scope and keeps archived projects in a
+separate discoverable **Archived** scope. Archive is a reversible local lifecycle
+change, not deletion or portable export. The active overview prepares a confirmation
+that names the exact project and registration and counts the phases, tickets,
+evidence references and history that remain retained. Cancel or Escape makes no
+change. A confirmed archive preserves the complete project graph, roots, bookmarks,
+documentation binding, exclusions, registration identity and event history while
+advancing its request generation.
+
+Archived project detail is read-only. It shows retained counts, the preserved
+registration, a read-only health check and a previewed Restore action; it exposes
+no project settings, root management or repository-document action. Stale operational
+routes resolve to this detail. While archived, Release Radar excludes the project
+from active dashboard counts and evidence readback, rejects new app/agent/observer
+mutations, suppresses queued notifications and records in-flight attempts as unknown.
+Already-sent, failed and unknown delivery history remains factual.
+
+Restore advances the same registration's request generation and returns the project
+to active views without re-creating or remapping its graph. It never replays suppressed
+or ambiguous notification work, grants no folder capability, accepts no documentation
+catalog and writes no repository file. Missing folder access and invalid or pending
+documentation remain visible health problems for the owner to resolve separately.
+
 ### Phase board
 
 The project board contains a selected phase, phase dependencies, Codex sync

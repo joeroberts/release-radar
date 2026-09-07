@@ -18,7 +18,18 @@ enum DashboardLayout {
 
 struct DashboardProjection: Equatable, Sendable {
     let projects: [ProjectDashboardProjection]
+    let archivedProjects: [ArchivedProjectProjection]
     let boards: [PhaseBoardKey: PhaseBoardProjection]
+
+    init(
+        projects: [ProjectDashboardProjection],
+        archivedProjects: [ArchivedProjectProjection] = [],
+        boards: [PhaseBoardKey: PhaseBoardProjection]
+    ) {
+        self.projects = projects
+        self.archivedProjects = archivedProjects
+        self.boards = boards
+    }
 
     func board(for projectID: ProjectID) -> PhaseBoardProjection? {
         guard let phaseID = projects.first(where: { $0.id.rawValue.utf8.elementsEqual(projectID.rawValue.utf8) })?.activePhaseID else { return nil }
@@ -35,7 +46,7 @@ struct DashboardProjection: Equatable, Sendable {
         taskRows: TicketTaskPlanProjection.RowQuery = TicketTaskPlanProjection.queryRows
     ) async throws -> DashboardProjection {
         let projectIDs = try await store.read { c in
-            try c.dashboardRows("SELECT id FROM projects ORDER BY id").map { ProjectID(rawValue: try $0.text("id")) }
+            try c.dashboardRows("SELECT id FROM projects WHERE lifecycle = 'active' ORDER BY id").map { ProjectID(rawValue: try $0.text("id")) }
         }
         var readbacks: [ProjectID: [EvidenceReadback]] = [:]
         for projectID in projectIDs {
@@ -48,7 +59,8 @@ struct DashboardProjection: Equatable, Sendable {
                 SELECT projects.id, projects.name, project_active_phases.phase_id AS active_phase_id
                 FROM projects
                 LEFT JOIN project_active_phases ON project_active_phases.project_id = projects.id
-                WHERE NOT EXISTS (
+                WHERE projects.lifecycle = 'active'
+                  AND NOT EXISTS (
                     SELECT 1
                     FROM review_items
                     WHERE review_items.project_id = projects.id
@@ -61,6 +73,37 @@ struct DashboardProjection: Equatable, Sendable {
             )
             var projects: [ProjectDashboardProjection] = []
             var boards: [PhaseBoardKey: PhaseBoardProjection] = [:]
+            let archivedProjects = try connection.dashboardRows(
+                """
+                SELECT projects.id, projects.name, project_registrations.registration_id,
+                       project_registrations.request_generation,
+                       (SELECT COUNT(*) FROM phases WHERE phases.project_id = projects.id) AS phase_count,
+                       (SELECT COUNT(*) FROM tickets WHERE tickets.project_id = projects.id) AS ticket_count,
+                       (SELECT COUNT(*) FROM evidence WHERE evidence.project_id = projects.id) AS evidence_count,
+                       (SELECT COUNT(*) FROM audit_events WHERE audit_events.project_id = projects.id) AS history_count
+                FROM projects
+                JOIN project_registrations ON project_registrations.project_id = projects.id
+                WHERE projects.lifecycle = 'archived'
+                ORDER BY projects.name COLLATE NOCASE, projects.id
+                """
+            ).map { row in
+                let id = ProjectID(rawValue: try row.text("id"))
+                return ArchivedProjectProjection(
+                    id: id,
+                    name: try row.text("name"),
+                    registration: .init(
+                        projectID: id,
+                        registrationID: try row.text("registration_id"),
+                        requestGeneration: try row.integer("request_generation")
+                    ),
+                    counts: .init(
+                        phases: try row.integer("phase_count"),
+                        tickets: try row.integer("ticket_count"),
+                        evidence: try row.integer("evidence_count"),
+                        history: try row.integer("history_count")
+                    )
+                )
+            }
 
             for projectRow in projectRows {
                 let projectID = ProjectID(rawValue: try projectRow.text("id"))
@@ -179,9 +222,16 @@ struct DashboardProjection: Equatable, Sendable {
                 }
             }
 
-            return DashboardProjection(projects: projects, boards: boards)
+            return DashboardProjection(projects: projects, archivedProjects: archivedProjects, boards: boards)
         }
     }
+}
+
+struct ArchivedProjectProjection: Equatable, Sendable, Identifiable {
+    let id: ProjectID
+    let name: String
+    let registration: ProjectRegistration
+    let counts: ProjectLifecycleCounts
 }
 
 struct ProjectPhaseProjection: Equatable, Sendable, Identifiable {

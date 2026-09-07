@@ -17,8 +17,16 @@ struct DocumentationCommandDispatcher: Sendable {
             let receiptBody = Data(documentationDigest(requestBody).utf8)
             return try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
                 try context.verifyAuthorization(resolved)
-                // Replay is independent of the repository's later state, but still authorized.
-                if let result = try await store.documentationRead({ try Self.replay($0, requestID: envelope.requestID, body: receiptBody) }) { return result }
+                if let result = try await store.documentationRead({ connection in
+                    try Self.requireCurrentAuthorization(
+                        projectID: projectID,
+                        registration: expectedRegistration,
+                        connection: connection
+                    )
+                    return try Self.replay(connection, requestID: envelope.requestID, body: receiptBody)
+                }) {
+                    return result
+                }
                 let prepared = try Self.prepare(envelope.command, context: context)
                 let auditID = AuditEventID(rawValue: UUID().uuidString)
                 let result = AgentCommandResult(entityIDs: envelope.command.documentationIDs, auditEventID: auditID, error: nil)
@@ -30,18 +38,12 @@ struct DocumentationCommandDispatcher: Sendable {
                         auditScope: .init(projectID: .init(rawValue: projectID), entityType: envelope.command.documentationTarget != nil && envelope.command.documentationIDs.first == projectID ? .project : .evidence,
                                           entityID: envelope.command.documentationIDs.first ?? projectID)) { c in
                         if let deadline = admissionDeadline, deadline <= Date().timeIntervalSince1970 { throw DocumentationControl.expired }
+                        try Self.requireCurrentAuthorization(
+                            projectID: projectID,
+                            registration: expectedRegistration,
+                            connection: c
+                        )
                         if let result = try Self.replay(c, requestID: envelope.requestID, body: receiptBody) { throw DocumentationControl.replay(result) }
-                        if let registration = expectedRegistration {
-                            let matches = try c.scalarInt(
-                                "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'complete'",
-                                bindings: [
-                                    .text(registration.projectID.rawValue),
-                                    .text(registration.registrationID),
-                                    .integer(registration.requestGeneration),
-                                ]
-                            ) == 1
-                            guard matches else { throw DocumentationOperationError.staleRegistration }
-                        }
                         try context.verifyPersisted(c)
                         // Re-read while the authorized scope and the store transaction are held.
                         // No mutation occurs until this exact snapshot has been revalidated.
@@ -58,6 +60,21 @@ struct DocumentationCommandDispatcher: Sendable {
         catch DocumentationControl.expired { return .init(entityIDs: [], auditEventID: nil, error: .appUnavailable) }
         catch let error as DocumentationOperationError { return .init(entityIDs: [], auditEventID: nil, error: .documentation(error)) }
         catch { return .init(entityIDs: [], auditEventID: nil, error: .documentation(DocumentationCatalogContext.map(error))) }
+    }
+    private static func requireCurrentAuthorization(
+        projectID: String,
+        registration: ProjectRegistration?,
+        connection: SQLiteConnection
+    ) throws {
+        do {
+            try ProjectLifecycleManager.requireCurrentAuthorization(
+                projectID: .init(rawValue: projectID),
+                registration: registration,
+                connection: connection
+            )
+        } catch {
+            throw DocumentationOperationError.staleRegistration
+        }
     }
     private static func replay(_ c: SQLiteConnection, requestID: UUID, body: Data) throws -> AgentCommandResult? {
         guard let row = try c.row("SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?", bindings: [.text(requestID.uuidString)]) else { return nil }
