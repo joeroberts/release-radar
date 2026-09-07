@@ -1,0 +1,5 @@
+{
+  "absolute worktree/.git": "gitdir: ${FIXTURE_ROOT}/main repo/.git/worktrees/absolute-worktree\n",
+  "main repo/.git/worktrees/absolute-worktree/commondir": "../..\n",
+  "main repo/.git/worktrees/absolute-worktree/gitdir": "${FIXTURE_ROOT}/absolute worktree/.git\n"
+}

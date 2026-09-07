@@ -49,6 +49,46 @@ final class RepositoryRootRelocationTests: XCTestCase {
         }
     }
 
+    func testPreparedRelocationRejectsReplacedRegistrationWithoutChangingRoots() async throws {
+        let f = try await fixture()
+        let service = RepositoryRootRelocation(store: f.store, bookmarkStore: RelocationBookmarks())
+        let prepared = try await service.prepare(projectID: f.project, folder: f.next)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Replace local registration") { c in
+            try c.execute("UPDATE project_registrations SET registration_id = 'replacement' WHERE project_id = 'p'")
+        }
+        let before = try await snapshot(f.store)
+        do { _ = try await service.confirm(prepared); XCTFail("A stale relocation crossed a replaced registration") } catch {}
+        let after = try await snapshot(f.store)
+        XCTAssertEqual(before, after)
+    }
+
+    func testReceiptCannotCertifyAReplacedRegistration() async throws {
+        let f = try await fixture()
+        let service = RepositoryRootRelocation(store: f.store, bookmarkStore: RelocationBookmarks())
+        let prepared = try await service.prepare(projectID: f.project, folder: f.next)
+        _ = try await service.confirm(prepared)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Replace local registration") { c in
+            try c.execute("UPDATE project_registrations SET registration_id = 'replacement' WHERE project_id = 'p'")
+        }
+        do { _ = try await service.recover(prepared.recoveryToken); XCTFail("Old receipt certified a replaced registration") } catch {}
+    }
+
+    func testRelocationCanPromoteExactAuthorizedWorktreeWithoutChangingItsIdentity() async throws {
+        let f = try await fixture()
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Authorized worktree") { c in
+            try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('worktree', 'p', ?)", bindings: [.text(f.next.path)])
+            try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data) VALUES ('p', ?, ?)", bindings: [.text(f.next.path), .blob(Data(f.next.path.utf8))])
+        }
+        let service = RepositoryRootRelocation(store: f.store, bookmarkStore: RelocationBookmarks())
+        let prepared = try await service.prepare(projectID: f.project, folder: f.next)
+        let result = try await service.confirm(prepared)
+        XCTAssertEqual(result.rootID.rawValue, "worktree")
+        let binding = try await f.store.documentationBinding(projectID: f.project)
+        XCTAssertEqual(binding?.rootID.rawValue, "worktree")
+        let unrelated = try await f.store.read { try $0.scalarInt("SELECT COUNT(*) FROM project_roots WHERE id = 'unbound'") }
+        XCTAssertEqual(unrelated, 1)
+    }
+
     func testAcceptedUppercaseRepositoryIdentityCanRelocate() async throws {
         let f = try await fixture(uppercaseRepositoryID: true)
         let service = RepositoryRootRelocation(store: f.store, bookmarkStore: RelocationBookmarks())
@@ -158,6 +198,23 @@ final class RepositoryRootRelocationTests: XCTestCase {
         }
     }
 
+    func testPromotionRejectsAnotherProjectsBookmarkAtTheSameDestination() async throws {
+        let f = try await fixture()
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Conflicting destination authorization") { c in
+            try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('worktree', 'p', ?)", bindings: [.text(f.next.path)])
+            try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data) VALUES ('p', ?, ?)", bindings: [.text(f.next.path), .blob(Data(f.next.path.utf8))])
+            try c.execute("INSERT INTO projects (id, name) VALUES ('other', 'Other')")
+            try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data) VALUES ('other', ?, ?)", bindings: [.text(f.next.path), .blob(Data(f.next.path.utf8))])
+        }
+        let before = try await snapshot(f.store)
+        do {
+            _ = try await RepositoryRootRelocation(store: f.store, bookmarkStore: RelocationBookmarks()).prepare(projectID: f.project, folder: f.next)
+            XCTFail("Promotion ignored another project's destination authorization")
+        } catch {}
+        let after = try await snapshot(f.store)
+        XCTAssertEqual(after, before)
+    }
+
     func testChangedPreparedHandoffBindingBookmarkOrCatalogRejectAndLateFailureRollsBack() async throws {
         for scenario in ["handoff", "newHandoff", "bookmark", "binding", "catalog", "receipt", "audit"] {
             let f = try await fixture(handoff: scenario != "newHandoff")
@@ -220,6 +277,7 @@ final class RepositoryRootRelocationTests: XCTestCase {
         let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
         try await store.transact(actor: .init(id: "fixture"), reason: "Fixture") { c in
             try c.execute("INSERT INTO projects (id, name) VALUES ('p', 'Project')")
+            try c.execute("INSERT INTO project_registrations (project_id, registration_id) VALUES ('p', 'registration-p')")
             for (id, path) in [("unbound", directory.path), ("root", root.path)] {
                 try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES (?, 'p', ?)", bindings: [.text(id), .text(path)])
                 try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data) VALUES ('p', ?, ?)", bindings: [.text(path), .blob(Data(path.utf8))])

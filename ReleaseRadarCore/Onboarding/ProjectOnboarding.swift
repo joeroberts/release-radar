@@ -1138,6 +1138,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     }
 
 
+    public func rootSnapshot(projectID: ProjectID) async throws -> ProjectRootSnapshot {
+        try await ProjectRootManagement(store: store, bookmarkStore: bookmarkStore).snapshot(projectID: projectID)
+    }
+
+    public func rootSnapshotIsCurrent(_ snapshot: ProjectRootSnapshot) async throws -> Bool {
+        try await ProjectRootManagement(store: store, bookmarkStore: bookmarkStore).isCurrent(snapshot)
+    }
+
     public func registration(for projectID: ProjectID) async throws -> ProjectRegistration? {
         try await store.read { connection in
             guard let row = try connection.row(

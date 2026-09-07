@@ -19,9 +19,9 @@ worktree `039a`, branch `codex/c4-root-management`, from `80521d6` plus handoff
 `9d08db4`. The new orchestrator has contacted it directly and explicitly configured
 Sol High; the API response does not confirm effective runtime. The worker owns C4
 source, tests, brief and associated catalog/index changes; only the orchestrator
-writes this ledger. Its reported registration-replacement regression is now passing;
-worktree promotion and explicit grant/reconnect/revoke remain under implementation.
-Those reports are interim evidence, not C4 completion or independent review.
+writes this ledger. Source candidate `1801ded` is independently reviewed; PR #28 is awaiting
+shared-document integration and owner merge approval. No installed owner-app or
+real folder-picker grant acceptance is claimed.
 
 The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
 and accepted ADR boundaries retain the full phase: C4 safe accepted-catalog relocation
@@ -54,7 +54,119 @@ receipt/audit handling; C7 must rebuild both app and bridge store connections an
 suppress automatic replay of backup-restored notification work. Existing snapshot,
 notification recovery, plugin inspection and health services are the foundation.
 Portable import/export remains a later outcome. The consultant reported all work
-stopped; its bounded result is preserved here for archival.
+stopped; its bounded result is preserved here and the task is archived.
+
+C4's real Git fixture setup exposed the sandbox-incompatible `/usr/bin/git` xcrun
+shim; source shows the grant discovery uses that same executable, but the grant
+itself was not reached by that failed setup. Fresh bounded architecture consultation
+`01a07b92-732a-77b2-8b6a-d5c490c03e5c` (Astra High dispatch) recommended a C4-local
+membership predicate using the existing explicit-path no-follow reader unchanged.
+Validate common Git directory and linked-root backlinks with explicitly held folder
+scopes, stable recheck at confirm, and truthful outside-grant recovery. No catalog-only
+membership, implicit grant, reader-policy relaxation, Git repair or new helper is
+authorized. Normal absolute/relative worktrees and malformed/stale/denied cases need
+direct sandboxed checks. The delivery owner is implementing this bounded correction;
+final candidate review remains the single applicable implementation review. The
+consultant reported all work/processes stopped; useful guidance is preserved here
+and the consultation task is archived.
+
+## Parallel bounded discovery — 2026-09-07
+
+Owner authorization added four discovery/proposal tracks alongside recovery. After
+the coordinating owner task synchronized canonical `codex/release-radar-mvp` to
+`80521d6` and lifted its dispatch hold, each fresh task confirmed baseline `1d4ba4f`
+and published its named branch/upstream. Canonical retained build directories remain
+untouched. Product implementation and enabled configuration changes are not authorized
+by discovery; each PR merge still requires owner approval.
+
+| Task / ID | Explicit dispatch | Worktree / branch | Sole owned brief and findings |
+| --- | --- | --- | --- |
+| Discover supported live Codex observation — `01a07b8e-c2d9-7420-8f1e-adcf69445d79` | Sol High | `1858` / `codex/discovery-live-observation` | [Live observation](task-briefs/2026-09-07-parallel-discovery/live-observation-discovery.md) |
+| Discover complete read-only iPhone companion — `01a07b8e-c2d9-7420-8f1e-ada44d88d21e` | Sol High | `ec83` / `codex/discovery-iphone-companion` | [Companion](task-briefs/2026-09-07-parallel-discovery/iphone-companion-discovery.md) |
+| Discover role execution and Run Guard… — `01a07b8e-c2da-79a1-955e-0deb0a1e8a72` | Astra High | `498c` / `codex/discovery-run-ownership` | [Run ownership](task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md) |
+| Discover supported Codex rules and hooks — `01a07b8e-c2e3-76b2-9a33-73b4f7f1785e` | Terra Medium | `38ef` / `codex/discovery-rules-hooks` | [Rules/hooks](task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md) |
+
+All four report that effective runtime model/effort are unexposed; the table records
+actual explicit API dispatch settings, not independently verified runtime. Rules/hooks
+has a Sol High ceiling for a named runtime/compatibility question; other tracks have
+an Astra High ceiling. Ultra is prohibited. The orchestrator retains shared plan,
+catalog/index integration and exclusive ledger ownership; parallel writers edit only
+their assigned artifact. Their fresh independent substantive reviews follow concrete
+candidates and cover actual risks without reviewing previous reviews.
+
+Initial observations are provisional: the installed CLI advertises app-server
+transports, but this does not prove attachment to the intended desktop instance;
+internal task-list/read/wait capabilities likewise do not establish a supported
+external product integration. Companion investigation preserves the complete corpus
+and useful delivery/document browsing independently of I1. Rules/hooks discovery is
+non-enabling and must establish actual coverage and gaps. No pursue decision,
+implementation, runtime proof or managed catalog acceptance is claimed. The four
+briefs and generated index passed the native documentation check at preparation.
+
+Run ownership discovery reached [PR #25](https://github.com/joeroberts/release-radar/pull/25),
+proposal candidate `fc56d4a` plus review-result record `a4b16d0`. Fresh independent
+Astra High reviewer `01a07b94-0698-7e71-a298-954bec4022b3` found no Required or
+Optional findings; direct source/primary-document checks, native documentation check,
+diff check and 12 relative links passed. Recommendation: separately authorized
+synthetic feasibility proof with one Run Guard execution owner; production and
+control of existing desktop runs remain no-go without proof. This is not product
+implementation approval. Both the writer and reviewer report stopped work/processes;
+the result is persisted in the owned artifact and this ledger. The owner approved PR #25, which merged on 2026-09-07 as
+`7e38fb856de23b94e14dc34148251453a505513b`. Both completed tasks are archived.
+The synthetic execution proof remains separately unauthorized; no runtime feasibility
+or managed synchronization is claimed.
+
+Rules/hooks discovery is in [PR #24](https://github.com/joeroberts/release-radar/pull/24),
+corrected candidate `c71d880`. Fresh independent Sol High reviewer
+`01a07b93-5c22-78b1-a912-7f1529999b45` passed the bounded correction with no
+remaining Required or Optional findings. The result is a no-go for active runtime
+controls: context-sensitive hard-deny publication rules, active Stop continuation
+and Bash result hooks were removed from the pilot proposal rather than supported
+by new machinery. Documentation/diff checks and isolated rule evaluation passed;
+runtime loading/authorization-aware control and hook privacy/trust are unproven.
+No configuration is enabled. The owner approved PR #24, which merged on
+2026-09-07 as `fb57804fa0658b287982b82d88061f5493fe17b9`. The writer and reviewer
+are stopped and archived; their result is preserved here. A configuration pilot
+remains separately unauthorized. The author corrected and read back the PR
+body after shell quoting damaged command text; repository/application state was
+unchanged by that description correction. Retained temporary files are
+`/tmp/release-radar-rules-hooks.87hPRM/pilot.rules` and its `pr-body.md`; no cleanup
+is authorized or performed.
+
+Live observation candidate `95ad1fc` is in
+[PR #26](https://github.com/joeroberts/release-radar/pull/26), under independent
+Sol High review by `01a07b9a-1fa0-7ad0-b50e-f5afab079b66`. Companion candidate
+`22c5132` is in [PR #27](https://github.com/joeroberts/release-radar/pull/27), under
+independent Astra High review by `01a07ba1-d86f-78b3-ac3f-6c3563e1e199`.
+Live candidate `95ad1fc` passed fresh independent review with no findings;
+documentation/diff checks, primary sources and scoped installed capability readback
+passed. Writer/reviewer report stopped work and no temporary artifacts. PR #26 awaits
+owner merge approval and preserves a supported-contract no-go for the current desktop
+runtime, not an assertion about undocumented IPC. Companion has two Required prose
+corrections: preserve publication withdrawal after recovery, and apply withdrawal
+before generation/compatibility fallback. These remain with its author and reviewer.
+
+C4 [PR #28](https://github.com/joeroberts/release-radar/pull/28), product candidate
+`1801ded`, passed fresh combined Astra High review by
+`01a07ba1-5d2b-7921-8e72-558438f15167` with no Required or Optional findings.
+Independent checks passed 31 selected XCTest cases, native 620/1100 window/AX/Escape
+and Health actions, documentation and diff checks. The reviewer compared fresh images
+with approved Settings and [C4 evidence](task-briefs/2026-09-07-c4-root-management/c4-root-management-brief.md).
+The author reports 66 selected checks across focused runs. XCTest injects a read-only
+`/` entitlement: these checks prove production containment predicates and injected
+denials, not real NSOpenPanel grants under shipping entitlements. Shipping entitlements
+are unchanged; installation, owner-state validation and broad-suite green are unclaimed.
+The coordinator resolved only shared catalog/index/ledger conflicts in `779e9dd`,
+preserving product source at `1801ded`; the delivery branch must take this integration
+before merge. PR #28 still requires explicit owner approval.
+
+Reviewer work/processes are stopped. Temporary review outputs remain at
+`/tmp/c4-independent-review-01a07ba1` (DerivedData), its `-first.log`, `-first.xcresult`,
+`-health.log`, `-health.xcresult`, `-images` siblings, and test-host directories
+`ReleaseRadar-XCTestHost-{69284,69295,69296,69597,69599,69600}` under
+`/Users/jroberts/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/`.
+Author temporary paths remain listed in the C4 brief; no cleanup occurred or is
+authorized. Durable source/brief/captures are committed repository artifacts.
 
 ## Delivered lifecycle handoff — 2026-09-07
 
