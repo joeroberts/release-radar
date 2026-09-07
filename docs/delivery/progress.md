@@ -65,7 +65,10 @@ native/UI checks do not restart. No unrelated fixture/security change is authori
 Reviewer temporary repro source remains untracked in `f419/ReleaseRadarTests/`
 `C5IndependentReviewTests.swift`. Under `/tmp/`, prefix `c5-review-f419-` outputs are
 `build`, `focused.log`, `focused.xcresult`, `repro.log`, `repro.xcresult`, `attachments`.
-No cleanup is authorized.
+No cleanup is authorized. Reviewer confirmed build/test processes stopped and is
+archived until the same-outcome correction review. Isolated host directories
+`ReleaseRadar-XCTestHost-86475` and `ReleaseRadar-XCTestHost-86838` also remain under
+`/Users/jroberts/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/`.
 
 Repository documentation and diff checks pass after the five evidence registrations;
 no application catalog acceptance is claimed.
