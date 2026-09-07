@@ -50,6 +50,7 @@
 | a5d9d0f5-d689-405d-b175-f88534219a1f | [docs/delivery/evidence/2026-09-02-rr-r10-task-5-ui.md](evidence/2026-09-02-rr-r10-task-5-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c5-archive-restore-ui-2026-09-07 | [docs/delivery/evidence/2026-09-07-c5-archive-restore-ui.md](evidence/2026-09-07-c5-archive-restore-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c6-remove-tracking-ui-2026-09-07 | [docs/delivery/evidence/2026-09-07-c6-remove-tracking-ui.md](evidence/2026-09-07-c6-remove-tracking-ui.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-backup-reset-recovery-2026-09-07 | [docs/delivery/evidence/2026-09-07-c7-backup-reset-recovery.md](evidence/2026-09-07-c7-backup-reset-recovery.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
@@ -62,6 +63,13 @@
 | rr-c6-remove-confirmation-wide-2026-09-07 | [docs/delivery/evidence/c6-remove-confirmation-wide.png](evidence/c6-remove-confirmation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c6-removed-history-compact-2026-09-07 | [docs/delivery/evidence/c6-removed-history-compact.png](evidence/c6-removed-history-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c6-removed-history-wide-2026-09-07 | [docs/delivery/evidence/c6-removed-history-wide.png](evidence/c6-removed-history-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-application-health-compact-2026-09-07 | [docs/delivery/evidence/c7-application-health-compact.png](evidence/c7-application-health-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-application-health-recovery-2026-09-07 | [docs/delivery/evidence/c7-application-health-recovery.png](evidence/c7-application-health-recovery.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-application-health-wide-2026-09-07 | [docs/delivery/evidence/c7-application-health-wide.png](evidence/c7-application-health-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-settings-general-compact-2026-09-07 | [docs/delivery/evidence/c7-settings-general-compact.png](evidence/c7-settings-general-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-settings-general-wide-2026-09-07 | [docs/delivery/evidence/c7-settings-general-wide.png](evidence/c7-settings-general-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-settings-projects-compact-2026-09-07 | [docs/delivery/evidence/c7-settings-projects-compact.png](evidence/c7-settings-projects-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-c7-settings-projects-wide-2026-09-07 | [docs/delivery/evidence/c7-settings-projects-wide.png](evidence/c7-settings-projects-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 0199bdf8-78d1-460e-abe2-519f0fd34e0b | [docs/delivery/evidence/mdcp-m2c-onboarding-repair-compact.png](evidence/mdcp-m2c-onboarding-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 2497cc96-d6c8-42ea-87b3-1f6b7cabda8b | [docs/delivery/evidence/mdcp-m2c-onboarding-staged-wide.png](evidence/mdcp-m2c-onboarding-staged-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | ab3b7be3-fc39-48cf-8101-0fc4d24845ac | [docs/delivery/evidence/mdcp-m2c-overview-repair-compact.png](evidence/mdcp-m2c-overview-repair-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
