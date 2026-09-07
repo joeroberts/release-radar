@@ -1,5 +1,50 @@
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
+
+struct ProjectEmptyStatePresentation: Equatable, Sendable {
+    let title: String
+    let detail: String
+    let systemImage: String
+    let accessibilityID: String
+
+    static let phaseBoard = ProjectEmptyStatePresentation(
+        title: "Ready for a first phase",
+        detail: "This project is usable now. Add a first phase when delivery planning begins.",
+        systemImage: "flag",
+        accessibilityID: "empty-phase-board"
+    )
+
+    static let dependencies = ProjectEmptyStatePresentation(
+        title: "No phase dependencies yet",
+        detail: "Dependencies will appear after the first phase and its ticket relationships are added.",
+        systemImage: "arrow.triangle.branch",
+        accessibilityID: "empty-dependencies"
+    )
+}
+
+struct ProjectEmptyStateView: View {
+    let presentation: ProjectEmptyStatePresentation
+
+    var body: some View {
+        VStack(spacing: RekonTheme.Spacing.standard) {
+            RekonIconMedallion(systemImage: presentation.systemImage, tone: .information, size: 82)
+            Text(presentation.title)
+                .font(RekonTypography.sectionTitle)
+                .foregroundStyle(RekonTheme.primaryText)
+            Text(presentation.detail)
+                .font(RekonTypography.body)
+                .foregroundStyle(RekonTheme.secondaryText)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 520)
+        }
+        .padding(40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(RekonTheme.background)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(presentation.accessibilityID)
+    }
+}
 
 enum FailureStateTone: Equatable, Sendable {
     case neutral
@@ -8,9 +53,9 @@ enum FailureStateTone: Equatable, Sendable {
 
     var color: Color {
         switch self {
-        case .neutral: .secondary
-        case .warning: .orange
-        case .error: .red
+        case .neutral: RekonTheme.secondaryText
+        case .warning: RekonTheme.warning
+        case .error: RekonTheme.danger
         }
     }
 }
@@ -122,6 +167,14 @@ struct FailureStatePresentation: Equatable, Sendable {
                 tone: .warning,
                 accessibilityID: "failure-onboarding-marker-conflict"
             )
+        case .staleRegistration:
+            self.init(
+                title: "Project changed",
+                detail: onboardingError.localizedDescription,
+                systemImage: "arrow.clockwise.circle",
+                tone: .warning,
+                accessibilityID: "failure-stale-project-registration"
+            )
         }
     }
 
@@ -161,6 +214,14 @@ struct FailureStatePresentation: Equatable, Sendable {
                 systemImage: "arrow.triangle.branch",
                 tone: .warning,
                 accessibilityID: "failure-import-dependency"
+            )
+        case .documentationSetup:
+            self.init(
+                title: "Documentation setup needed",
+                detail: reviewItem.summary,
+                systemImage: "doc.badge.gearshape",
+                tone: .warning,
+                accessibilityID: "failure-documentation-setup"
             )
         case .unmatchedTask, .excludedTask, .agentReviewRequest, .unsupported:
             return nil
@@ -364,13 +425,20 @@ struct FailureStateView: View {
             switch style {
             case .full:
                 VStack(spacing: 12) {
-                    ContentUnavailableView(
-                        presentation.title,
-                        systemImage: presentation.systemImage,
-                        description: Text(presentation.detail)
-                    )
+                    RekonIconMedallion(systemImage: presentation.systemImage, tone: presentation.tone.rekonTone, size: 82)
+                    Text(presentation.title)
+                        .font(RekonTypography.sectionTitle)
+                        .foregroundStyle(RekonTheme.primaryText)
+                    Text(presentation.detail)
+                        .font(RekonTypography.body)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 560)
                     actionButton
                 }
+                .padding(40)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(RekonTheme.background)
             case .inline:
                 HStack(alignment: .top, spacing: 12) {
                     stateIcon
@@ -406,8 +474,8 @@ struct FailureStateView: View {
             Text(presentation.title)
                 .font(.subheadline.weight(.semibold))
             Text(presentation.detail)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(RekonTypography.metadata)
+                .foregroundStyle(RekonTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             actionButton
         }
@@ -417,10 +485,20 @@ struct FailureStateView: View {
     private var actionButton: some View {
         if let actionTitle, let action {
             Button(actionTitle, action: action)
-                .buttonStyle(.bordered)
+                .buttonStyle(RekonSecondaryButtonStyle())
                 .controlSize(.small)
                 .padding(.top, 4)
                 .accessibilityIdentifier("\(presentation.accessibilityID)-action")
+        }
+    }
+}
+
+private extension FailureStateTone {
+    var rekonTone: RekonTone {
+        switch self {
+        case .neutral: .neutral
+        case .warning: .warning
+        case .error: .danger
         }
     }
 }

@@ -1,5 +1,37 @@
 # Release Radar delivery state
 
+## Current outcome — 2026-09-07
+
+[PR #23](https://github.com/joeroberts/release-radar/pull/23) is open and
+unmerged, awaiting owner acceptance and explicit merge approval. The accepted
+candidate is `32f1bc654fa7a9ca99144e81fa5cb250d7a96bc1`. Independent correction
+review reports no Required or Optional findings. This current outcome supersedes
+the earlier authorization and defect snapshots below.
+
+The owner authorized the bounded shared RDS changes, signed build installation,
+and plugin-helper recovery during acceptance testing. RDS PR #6 is merged at
+`6d1fb9d341850ee1d13ba9391fada072534eb684`; Release Radar uses its public window
+chrome and boundary APIs, with no consumer-local chrome implementation. Full native
+launch, route-title change, inactive and reactivated captures show continuous dark
+chrome. Affected route/render checks passed 7/7, RDS chrome tests passed 6/6, and
+documentation checks passed. The broad suite recorded 574/576 passes; relocation
+passed its targeted rerun, while the unrelated transport acceptance test remains
+blocked on its bridge-enabled environmental precondition. This is not a fully
+green whole-product suite.
+
+The signed app and versioned DMG are tracked in the candidate; the installed
+`/Applications/ReleaseRadar.app` executable matches the tracked app. Plugin status
+is Installed 0.1.7. No remaining plugin-name conflict is reported. The controlling
+[usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
+retains the delivery scope. Independent review is complete; bounded delivery and
+RDS tasks are completing handoff for archival. Parent retains acceptance/merge
+coordination. Pursuit RDS migration is explicitly stopped; no source or dependency
+changes were made there. Temporary verification and rollback artifacts are retained;
+no cleanup or managed documentation synchronization is claimed.
+
+Next action: owner acceptance of the installed candidate, then the separately
+approved PR #23 merge. No additional implementation is implied by this closeout.
+
 ## Current programme authorization — 2026-09-06
 
 The owner opened implementation of the approved roadmap from merged baseline
@@ -44,16 +76,29 @@ current supported connector inventory succeeds for the canonical root, but repor
 `appUnavailable` result did not recur on this read. Missing binding remains a
 separate recovery limitation, not a source-delivery blocker or permission to infer
 acceptance. No application mutation occurred. Native documentation checks passed.
-Application synchronization is not
-claimed. The next owner decision is the chief architect's bounded contract
-recommendation, before the affected implementation.
+Application synchronization is not claimed. The owner approved the two immediate
+contract recommendations and PR #22 merge; lifecycle source delivery is now open.
 
-## Shared-contract candidate and next owner decision
+## Approved shared contracts and active lifecycle delivery
+
+Owner acceptance testing of PR #23 exposed incomplete RekonDesignSystem adoption
+across the shared shell and eight dashboard routes, duplicate plugin-conflict
+guidance and misleading phase-less route states. The same delivery task has pushed
+the bounded correction: 156 affected tests passed, followed by focused RDS,
+byte-stable native picker and Settings-window correction checks. The same reviewer
+cleared the corrections with no remaining Required findings. Parent opened the
+signed canonical `dist/PR-23-13568d0/ReleaseRadar.app` candidate and verified that
+Settings and repeated Cmd-, retain the existing main window. Only that candidate
+was running at readback. Review work is stopped and the reviewer is archived.
+End-to-end connection acceptance remains incomplete; PR #23 remains unmerged. Existing Codex
+plugin/MCP configuration remains untouched and the name conflict is unresolved.
 
 Chief architecture delivered `ce7ae0a`, integrated locally as `879f883`: the
 existing full-product plan now reconciles D1–D13 and retains all 40 capabilities.
-The standing architect task is idle after this bounded output and remains the
-programme's architecture peer. No product implementation was performed.
+The architect's bounded output is complete and merged through PR #22. The task
+was confirmed idle/completed and is archived; future architecture work uses a
+fresh task reconstructed from durable decisions. No product implementation was
+performed by that task.
 
 “Review shared-contract lifecycle recommendations”
 (`01a078c3-0ccf-7ea0-958c-2c30529e690c`), confirmed Astra High, independently
@@ -65,19 +110,88 @@ required. The reviewer reported all work/processes stopped and is archived after
 its result was preserved here. No product tests were
 run for this documentation-only candidate.
 
-Owner decisions before the lifecycle brief: accept new opaque project IDs with
-separate registration/request generation and preserved legacy IDs; accept setup
+The owner approved these recommendations on 2026-09-06: new opaque project IDs with
+separate registration/request generation and preserved legacy IDs; setup
 Finish with zero phases and visible outstanding documentation tasks, using a
 previewed exact-root/project bootstrap handoff and separate explicit app actions.
 The [plan's decision table](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#material-owner-choices-and-when-they-are-needed)
 records alternatives and compatibility/recovery consequences. Product-design and
 shipped-guidance reconciliation belongs to that specifically approved slice.
 Later planning/IA/package decisions stay deferred rather than gating lifecycle.
-The candidate is pushed on `codex/programme-contracts` and open as
-[PR #22](https://github.com/joeroberts/release-radar/pull/22). The current wait is
-owner approval of the two immediate recommendations and PR merge. No merge or
-dependent product implementation has occurred. Durable changes are tracked in
-this repository and published in the PR; no new temporary files were created.
+[PR #22](https://github.com/joeroberts/release-radar/pull/22) merged with owner
+approval as `c22a32ca4eb310973ba9cce5eb0df472d2262bfb`. Only the two immediate
+recommendations are accepted; later proposed choices remain deferred. The next
+assignment is “Deliver complete usable project lifecycle”
+(`01a078df-3ce2-7183-96a9-0cf10aca159c`) in fresh worktree `781f`, with actual
+Sol High confirmed, justified by registration compatibility, documentation
+bootstrap and folder-recovery boundaries. Its committed baseline is `3949f0f`,
+containing the approved merge and decision record. The delivery
+owner committed the controlling
+[usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
+as `b806554` before product implementation, with native documentation checks
+passing. The delivery owner committed and pushed candidate `7601b619` on
+`codex/usable-project-lifecycle` and opened
+[PR #23](https://github.com/joeroberts/release-radar/pull/23), including parent
+ledger updates through `cd573cd` via Git. Candidate checks report 187/187 focused
+tests, successful build and native documentation checks. The full suite reports
+547 passed / 1 failed: the isolated
+`AgentBridgeTransportAcceptanceTests.testTicketTaskToolsUseRegisteredBrokerAndRecoverExactRequests`
+requires the disabled controlled bridge. It was not enabled or installed.
+Compact/wide native rendering checks passed; installed permission-dialog and
+owner-state acceptance remain separately unauthorized and unclaimed.
+
+“Review usable project lifecycle candidate”
+(`01a07923-88cd-7780-bc43-8bb8e0423e22`) is active in fresh worktree `85d0`, actual
+Astra High confirmed, completed its initial combined review of product `7601b619`
+and brief-only supplement `4b4deb0`. Independent checks passed 38/38, native
+documentation/diff checks and 1100/620 rendering/AX inspection. **Six Required
+findings block merge:** missing direct exact-folder recovery; catalog validation
+after security scope closes; migration marks pending setup complete; existing v1
+or invalid-catalog bootstrap dead ends; health misstates catalog/freshness; and
+registration generation is not checked atomically at documentation commit.
+These are source/control-flow findings not disproved by the passing tests.
+
+The same Sol High delivery task pushed corrections to PR #23 and reports
+214/214 affected tests passing with zero skips, plus a successful documentation
+check. The same independent reviewer resolved five findings with 10/10 targeted
+checks, then found the actual onboarding Copy action still used the old prompt.
+The bounded two-file correction aligns Copy with its full-state preview; the
+delivery owner's affected suites passed 41/41 and the reviewer independently
+passed the native AX Copy-action regression. **All six Required findings are
+resolved; no new Required findings within correction scope.**
+PR #23 remains open and awaits owner merge approval. The reviewer reported all
+processes stopped and is archived after preserving this result. Actual
+Codex-executed bootstrap through installed relaunch/binding/audit, installed
+folder/authorization dialogs, VoiceOver and controlled bridge acceptance remain
+unverified; synthetic checks do not establish those installed journeys.
+Temporary initial review output remains at `/tmp/rr-pr23-independent-review`,
+`/tmp/rr-pr23-independent-review.log`, `/tmp/rr-pr23-independent-review-images` and
+the test-managed `ReleaseRadar-XCTestHost-75860` temporary directory. No cleanup
+occurred. The parent retains ledger ownership and monitors through the approved
+Git endpoint.
+No owner/application-state action or installation is authorized by source delivery.
+Durable source changes are tracked and published in PR #23. No cleanup occurred;
+the delivery owner will record remaining temporary verification paths in its brief.
+
+The owner clarified programme follow-through: the orchestrator launches/monitors
+workers and answers settled questions from durable decisions and, where necessary,
+targeted history in “Review lifecycle and design system”
+(`01a075d9-72c4-7a63-9b04-e7a329a24c15`). Engineering choices within accepted
+outcomes are resolved with the delivery owner/chief architect. Worker plans and
+recommendations create no new owner gate; escalate only unresolved material
+tradeoffs and expressly reserved actions. No delivery pause or new review layer
+is implied by this clarification.
+
+The owner also requires writing tasks to own the remote Git endpoint: start from
+the named synchronized remote baseline, use a named branch with its remote
+upstream, commit coherent changes, push the branch/commits and create the PR.
+The orchestrator monitors review/corrections through owner-approved merge; a local
+commit alone is not a completed delivery. Architecture's first local candidate
+was integrated and merged through PR #22 by the parent; do not create a duplicate
+PR for that closed result. Active lifecycle delivery has been instructed to publish
+and track its own `codex/usable-project-lifecycle` branch and create its PR.
+Parent `codex/lifecycle-delivery` is published for the accepted decisions and ledger;
+its necessary updates will be integrated into the delivery PR through Git.
 
 ## Retained baseline evidence
 

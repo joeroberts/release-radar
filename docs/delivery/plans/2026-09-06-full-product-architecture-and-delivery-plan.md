@@ -368,8 +368,17 @@ Concrete contradictions requiring reconciliation in the owning slice:
 
 ### Material owner choices and when they are needed
 
-Only the first two choices affect the upcoming lifecycle. Their recommended
-directions are concrete but not yet accepted by this reconciliation. Settled
+**Owner decision — 2026-09-06:** the owner approved the D1 registration
+compatibility recommendation and the D2/D8 setup completion/bootstrap handoff
+recommendation below, together with PR #22 merge. Those two recommendations now
+control lifecycle delivery, including their legacy-preservation and explicit
+authority boundaries. Other recommendations in this reconciliation remain
+proposed. The lifecycle slice may reconcile its affected product design and
+shipped guidance to these approved contracts; runtime governing configuration
+and owner/application-state mutations remain separately authorized.
+
+Only the first two choices affect the upcoming lifecycle; their recommended
+directions are now owner-approved as recorded above. Settled
 retention, package contents, Mac/repository/phone authority, six added outcomes
 and unchanged RDS appearance are not questions again.
 

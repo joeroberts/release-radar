@@ -24,6 +24,9 @@ public struct OnboardingPreview: Equatable, Sendable {
     public var projectGuidanceState: ProjectGuidanceState { documentationState.guidanceState }
     public let pendingProjectID: ProjectID?
     public let completedProjectID: ProjectID?
+    public let registration: ProjectRegistration
+    public let savedProjectName: String?
+    public let excludedTaskIDs: Set<String>
 
     public init(
         selectedFolder: URL,
@@ -36,7 +39,10 @@ public struct OnboardingPreview: Equatable, Sendable {
         projectGuidanceState: ProjectGuidanceState = .missing,
         documentationState: ProjectDocumentationState? = nil,
         pendingProjectID: ProjectID? = nil,
-        completedProjectID: ProjectID? = nil
+        completedProjectID: ProjectID? = nil,
+        registration: ProjectRegistration? = nil,
+        savedProjectName: String? = nil,
+        excludedTaskIDs: Set<String> = []
     ) {
         self.selectedFolder = selectedFolder
         self.gitRoot = gitRoot
@@ -48,6 +54,14 @@ public struct OnboardingPreview: Equatable, Sendable {
         self.documentationState = documentationState ?? .legacy(projectGuidanceState)
         self.pendingProjectID = pendingProjectID
         self.completedProjectID = completedProjectID
+        let fallbackProjectID = pendingProjectID ?? completedProjectID ?? ProjectID(rawValue: "project-\(UUID().uuidString.lowercased())")
+        self.registration = registration ?? .init(
+            projectID: fallbackProjectID,
+            registrationID: UUID().uuidString.lowercased(),
+            requestGeneration: 1
+        )
+        self.savedProjectName = savedProjectName
+        self.excludedTaskIDs = excludedTaskIDs
     }
 }
 
@@ -67,6 +81,22 @@ public struct OnboardingDecision: Equatable, Sendable {
         self.projectName = projectName
         self.excludedTaskIDs = excludedTaskIDs
         self.importRecognizedArtifacts = importRecognizedArtifacts
+    }
+}
+
+public struct ProjectSettingsSnapshot: Equatable, Sendable {
+    public let registration: ProjectRegistration
+    public let projectName: String
+    public let excludedTaskIDs: Set<String>
+
+    public init(
+        registration: ProjectRegistration,
+        projectName: String,
+        excludedTaskIDs: Set<String>
+    ) {
+        self.registration = registration
+        self.projectName = projectName
+        self.excludedTaskIDs = excludedTaskIDs
     }
 }
 
@@ -110,6 +140,7 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
     case projectNotPrepared
     case rootAlreadyOwned
     case reviewMarkerConflict
+    case staleRegistration
 
     public var errorDescription: String? {
         switch self {
@@ -119,6 +150,7 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
         case .projectNotPrepared: "Prepare the project before requesting its first phase."
         case .rootAlreadyOwned: "A selected root or worktree already belongs to another project."
         case .reviewMarkerConflict: "A reserved onboarding review marker conflicts with persisted project state."
+        case .staleRegistration: "This project request is stale. Reload the project before trying again."
         }
     }
 }
@@ -239,7 +271,18 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 return !roots.contains(where: { Self.contains(path, within: $0) })
             }
             let projectIdentity = try await projectIdentity(forRoot: authorizedSelected)
-            let projectID = try await projectID(forRoot: authorizedSelected) ?? ProjectID(rawValue: Self.projectID(for: authorizedSelected))
+            let existingProjectID = try await projectID(forRoot: authorizedSelected)
+            let registration: ProjectRegistration
+            let savedProjectName: String?
+            if let existingProjectID {
+                registration = try await self.registration(for: existingProjectID)
+                    ?? Self.newRegistration()
+                savedProjectName = try await projectName(for: existingProjectID)
+            } else {
+                registration = Self.newRegistration()
+                savedProjectName = nil
+            }
+            let projectID = registration.projectID
             let authorizedProject = AuthorizedProject(
                 projectID: projectID,
                 canonicalRoot: authorizedSelected,
@@ -264,7 +307,10 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 recognizedArtifactPreview: recognizedArtifactPreview,
                 documentationState: documentationState,
                 pendingProjectID: projectIdentity.pending,
-                completedProjectID: projectIdentity.completed
+                completedProjectID: projectIdentity.completed,
+                registration: registration,
+                savedProjectName: savedProjectName,
+                excludedTaskIDs: excluded
             )
         }
     }
@@ -307,7 +353,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             try await markReviewBookmarkStale(projectID: projectID, path: rootPath)
             throw ProjectAuthorizationError.bookmarkStale
         }
-        guard Self.canonical(resolved.url) == persistedRoot else {
+        guard Self.canonical(resolved.url).path == persistedRoot.path else {
             try await markReviewBookmarkStale(projectID: projectID, path: rootPath)
             throw ProjectAuthorizationError.bookmarkRootMismatch
         }
@@ -318,7 +364,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                     throw ProjectAuthorizationError.bookmarkStale
                 }
                 let activeRoot = Self.canonical(activeBookmark.url)
-                guard activeRoot == persistedRoot else {
+                guard activeRoot.path == persistedRoot.path else {
                     throw ProjectAuthorizationError.bookmarkRootMismatch
                 }
                 return try await body(AuthorizedProject(
@@ -357,6 +403,29 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 return ProjectGuidanceObservation(
                     projectRoot: project.canonicalRoot,
                     documentationState: await documentationState(projectID: project.projectID, rootURL: project.canonicalRoot, hasAuditedHandoff: hasAuditedHandoff)
+                )
+            }
+        } catch {
+            return ProjectGuidanceObservation(projectRoot: nil, state: .unavailable)
+        }
+    }
+
+    /// Used by health checks: validates the current saved authorization without
+    /// changing bookmark or review state when the check fails.
+    public func inspectProjectGuidanceContext(projectID: ProjectID) async -> ProjectGuidanceObservation {
+        do {
+            return try await withReadOnlyAuthorizedProject(projectID: projectID) { [self] project in
+                let hasAuditedHandoff = try await hasAuditedGuidanceHandoff(
+                    projectID: project.projectID,
+                    rootURL: project.canonicalRoot
+                )
+                return ProjectGuidanceObservation(
+                    projectRoot: project.canonicalRoot,
+                    documentationState: await documentationState(
+                        projectID: project.projectID,
+                        rootURL: project.canonicalRoot,
+                        hasAuditedHandoff: hasAuditedHandoff
+                    )
                 )
             }
         } catch {
@@ -531,7 +600,8 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         guard !decision.projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw OnboardingError.invalidProjectName
         }
-        let projectID = ProjectID(rawValue: Self.projectID(for: decision.preview.selectedFolder))
+        let registration = decision.preview.registration
+        let projectID = registration.projectID
         let roots = [decision.preview.selectedFolder] + decision.preview.authorizedWorktreeURLs
         let bookmarks = try roots.map { try bookmarkStore.makeBookmark(for: $0) }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Prepare folder-backed project onboarding") { connection in
@@ -544,10 +614,38 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                     throw OnboardingError.rootAlreadyOwned
                 }
             }
-            try connection.execute(
-                "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0) ON CONFLICT(id) DO UPDATE SET name = excluded.name",
-                bindings: [.text(projectID.rawValue), .text(decision.projectName)]
+            let existingRegistration = try connection.row(
+                "SELECT registration_id, request_generation, setup_state FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
             )
+            if let existingRegistration {
+                guard existingRegistration["registration_id"] == .text(registration.registrationID),
+                      existingRegistration["request_generation"] == .integer(registration.requestGeneration),
+                      existingRegistration["setup_state"] == .text("pending")
+                else { throw OnboardingError.staleRegistration }
+                try connection.execute(
+                    "UPDATE projects SET name = ? WHERE id = ?",
+                    bindings: [.text(decision.projectName), .text(projectID.rawValue)]
+                )
+            } else {
+                guard try connection.scalarInt(
+                    "SELECT COUNT(*) FROM projects WHERE id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ) == 0,
+                      try connection.scalarInt(
+                          "SELECT COUNT(*) FROM project_registrations WHERE registration_id = ?",
+                          bindings: [.text(registration.registrationID)]
+                      ) == 0
+                else { throw OnboardingError.staleRegistration }
+                try connection.execute(
+                    "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, ?, 0)",
+                    bindings: [.text(projectID.rawValue), .text(decision.projectName)]
+                )
+                try connection.execute(
+                    "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, ?, 'pending')",
+                    bindings: [.text(projectID.rawValue), .text(registration.registrationID), .integer(registration.requestGeneration)]
+                )
+            }
             try Self.ensureOnboardingReviewMarker(
                 kind: .pending,
                 projectID: projectID,
@@ -604,11 +702,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     }
 
     public func finish(_ decision: OnboardingDecision) async throws -> ProjectID {
-        let projectID = ProjectID(rawValue: Self.projectID(for: decision.preview.selectedFolder))
-        guard try await projectExists(projectID) else { throw OnboardingError.projectNotPrepared }
-        guard try await phaseCount(for: projectID) > 0 else { throw OnboardingError.noFirstPhase }
+        let registration = decision.preview.registration
+        let projectID = registration.projectID
         let included = decision.preview.includedTaskDescriptors.filter { !decision.excludedTaskIDs.contains($0.id) }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding") { connection in
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'pending'",
+                bindings: [.text(projectID.rawValue), .text(registration.registrationID), .integer(registration.requestGeneration)]
+            ) == 1 else { throw OnboardingError.staleRegistration }
             try connection.execute(
                 "DELETE FROM review_items WHERE project_id = ? AND (kind IN (?, ?) OR id IN (?, ?))",
                 bindings: [
@@ -619,6 +720,16 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                     .text(OnboardingReviewMarkerKind.phaseRequest.reviewItemID(for: projectID)),
                 ]
             )
+            try connection.execute(
+                "UPDATE project_registrations SET setup_state = 'complete' WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+            if Self.documentationNeedsAttention(decision.preview.documentationState) {
+                try connection.execute(
+                    "INSERT INTO review_items (id, project_id, ticket_id, kind, summary, status) VALUES (?, ?, NULL, 'documentation_setup', 'Complete repository documentation setup', 'open') ON CONFLICT(id) DO UPDATE SET status = 'open', summary = excluded.summary",
+                    bindings: [.text("\(projectID.rawValue)-documentation-setup"), .text(projectID.rawValue)]
+                )
+            }
             try connection.execute(
                 "DELETE FROM thread_exclusions WHERE project_id = ? AND reason = 'Excluded during onboarding'",
                 bindings: [.text(projectID.rawValue)]
@@ -639,20 +750,106 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         return projectID
     }
 
+    public func projectSettings(projectID: ProjectID) async throws -> ProjectSettingsSnapshot {
+        try await store.read { connection in
+            guard let row = try connection.row(
+                """
+                SELECT projects.name, project_registrations.registration_id,
+                       project_registrations.request_generation
+                FROM projects
+                JOIN project_registrations ON project_registrations.project_id = projects.id
+                WHERE projects.id = ?
+                """,
+                bindings: [.text(projectID.rawValue)]
+            ), case let .text(projectName)? = row["name"],
+              case let .text(registrationID)? = row["registration_id"],
+              case let .integer(requestGeneration)? = row["request_generation"]
+            else { throw OnboardingError.projectNotPrepared }
+            return .init(
+                registration: .init(
+                    projectID: projectID,
+                    registrationID: registrationID,
+                    requestGeneration: requestGeneration
+                ),
+                projectName: projectName,
+                excludedTaskIDs: try Self.excludedTaskIDs(projectID: projectID, connection: connection)
+            )
+        }
+    }
+
+    public func updateProjectSettings(
+        registration: ProjectRegistration,
+        projectName: String,
+        excludedTaskIDs: Set<String>
+    ) async throws -> ProjectSettingsSnapshot {
+        let trimmedName = projectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { throw OnboardingError.invalidProjectName }
+        let (nextGeneration, overflow) = registration.requestGeneration.addingReportingOverflow(1)
+        guard !overflow else { throw OnboardingError.staleRegistration }
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"),
+            reason: "Update project settings",
+            auditScope: .init(
+                projectID: registration.projectID,
+                entityType: .project,
+                entityID: registration.projectID.rawValue
+            )
+        ) { connection in
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'complete'",
+                bindings: [
+                    .text(registration.projectID.rawValue),
+                    .text(registration.registrationID),
+                    .integer(registration.requestGeneration),
+                ]
+            ) == 1 else { throw OnboardingError.staleRegistration }
+            try connection.execute(
+                "UPDATE projects SET name = ? WHERE id = ?",
+                bindings: [.text(trimmedName), .text(registration.projectID.rawValue)]
+            )
+            try connection.execute(
+                "DELETE FROM thread_exclusions WHERE project_id = ? AND reason = 'Excluded during onboarding'",
+                bindings: [.text(registration.projectID.rawValue)]
+            )
+            for taskID in excludedTaskIDs.sorted() {
+                try connection.execute(
+                    "INSERT INTO thread_exclusions (id, project_id, thread_id, reason) VALUES (?, ?, ?, 'Excluded during onboarding') ON CONFLICT(project_id, thread_id) DO NOTHING",
+                    bindings: [
+                        .text("\(registration.projectID.rawValue)-excluded-\(taskID)"),
+                        .text(registration.projectID.rawValue),
+                        .text(taskID),
+                    ]
+                )
+            }
+            try connection.execute(
+                "UPDATE project_registrations SET request_generation = ? WHERE project_id = ?",
+                bindings: [.integer(nextGeneration), .text(registration.projectID.rawValue)]
+            )
+        }
+        return try await projectSettings(projectID: registration.projectID)
+    }
+
     private func excludedTaskIDs(for selectedFolder: URL) async throws -> Set<String> {
         guard let projectID = try? await projectID(forRoot: selectedFolder) else { return [] }
         return try await store.read { connection in
-            var ids: Set<String> = []
-            var offset: Int64 = 0
-            while let row = try connection.row(
-                "SELECT thread_id FROM thread_exclusions WHERE project_id = ? ORDER BY id LIMIT 1 OFFSET ?",
-                bindings: [.text(projectID.rawValue), .integer(offset)]
-            ) {
-                if case let .text(id)? = row["thread_id"] { ids.insert(id) }
-                offset += 1
-            }
-            return ids
+            try Self.excludedTaskIDs(projectID: projectID, connection: connection)
         }
+    }
+
+    private static func excludedTaskIDs(
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws -> Set<String> {
+        var ids: Set<String> = []
+        var offset: Int64 = 0
+        while let row = try connection.row(
+            "SELECT thread_id FROM thread_exclusions WHERE project_id = ? ORDER BY id LIMIT 1 OFFSET ?",
+            bindings: [.text(projectID.rawValue), .integer(offset)]
+        ) {
+            if case let .text(id)? = row["thread_id"] { ids.insert(id) }
+            offset += 1
+        }
+        return ids
     }
 
     private func persistedProjectAuthorization(
@@ -697,6 +894,57 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 bookmarkIsStale: bookmarkIsStale,
                 bookmarkCount: bookmarkCount
             )
+        }
+    }
+
+    func withReadOnlyAuthorizedProject<T: Sendable>(
+        projectID: ProjectID,
+        _ body: @Sendable (AuthorizedProject) async throws -> T
+    ) async throws -> T {
+        let authorization = try await persistedProjectAuthorization(for: projectID)
+        guard authorization.projectExists else { throw ProjectAuthorizationError.projectNotFound }
+        guard let rootPath = authorization.rootPath else {
+            throw authorization.bookmarkCount == 0
+                ? ProjectAuthorizationError.projectRootMissing
+                : ProjectAuthorizationError.bookmarkMissing
+        }
+        guard let bookmark = authorization.bookmarkData else {
+            throw ProjectAuthorizationError.bookmarkMissing
+        }
+        guard !authorization.bookmarkIsStale else {
+            throw ProjectAuthorizationError.bookmarkStale
+        }
+        let persistedRoot = Self.canonical(URL(fileURLWithPath: rootPath))
+        let resolved: ResolvedProjectBookmark
+        do {
+            resolved = try bookmarkStore.resolve(bookmark)
+        } catch {
+            throw ProjectAuthorizationError.bookmarkResolutionFailed
+        }
+        guard !resolved.isStale else { throw ProjectAuthorizationError.bookmarkStale }
+        guard Self.canonical(resolved.url).path == persistedRoot.path else {
+            throw ProjectAuthorizationError.bookmarkRootMismatch
+        }
+        do {
+            return try await bookmarkStore.withSecurityScopedAccess(bookmark: bookmark) { activeBookmark in
+                guard !activeBookmark.isStale else { throw ProjectAuthorizationError.bookmarkStale }
+                let activeRoot = Self.canonical(activeBookmark.url)
+                guard activeRoot.path == persistedRoot.path else { throw ProjectAuthorizationError.bookmarkRootMismatch }
+                return try await body(.init(
+                    projectID: projectID,
+                    canonicalRoot: activeRoot,
+                    authorizedRoots: [activeRoot]
+                ))
+            }
+        } catch let error as ProjectAuthorizationError {
+            throw error
+        } catch let error as ProjectBookmarkError {
+            switch error {
+            case .securityScopeAccessDenied:
+                throw ProjectAuthorizationError.securityScopeAccessDenied
+            case .bookmarkCreationFailed, .bookmarkResolutionFailed:
+                throw ProjectAuthorizationError.bookmarkResolutionFailed
+            }
         }
     }
 
@@ -827,29 +1075,11 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 return (nil, nil)
             }
             let projectID = ProjectID(rawValue: ownerID)
-            let pendingMarkerCount = try connection.scalarInt(
-                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind = ? AND status = 'open'",
-                bindings: [.text(ownerID), .text(OnboardingReviewMarkerKind.pending.rawValue)]
-            ) ?? 0
-            if pendingMarkerCount == 1 {
-                return (projectID, nil)
-            }
-            let openOnboardingMarkerCount = try connection.scalarInt(
-                "SELECT COUNT(*) FROM review_items WHERE project_id = ? AND kind IN (?, ?) AND status = 'open'",
-                bindings: [
-                    .text(ownerID),
-                    .text(OnboardingReviewMarkerKind.pending.rawValue),
-                    .text(OnboardingReviewMarkerKind.phaseRequest.rawValue),
-                ]
-            ) ?? 0
-            let phaseCount = try connection.scalarInt(
-                "SELECT COUNT(*) FROM phases WHERE project_id = ?",
+            let setupState = try connection.scalarText(
+                "SELECT setup_state FROM project_registrations WHERE project_id = ?",
                 bindings: [.text(ownerID)]
-            ) ?? 0
-            guard openOnboardingMarkerCount == 0, phaseCount > 0 else {
-                return (nil, nil)
-            }
-            return (nil, projectID)
+            )
+            return setupState == "pending" ? (projectID, nil) : (nil, projectID)
         }
     }
 
@@ -908,9 +1138,40 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     }
 
 
-    private static func projectID(for folder: URL) -> String {
-        let digest = folder.path.utf8.reduce(UInt64(5381)) { ($0 << 5) &+ $0 &+ UInt64($1) }
-        return "project-\(String(digest, radix: 16))"
+    public func registration(for projectID: ProjectID) async throws -> ProjectRegistration? {
+        try await store.read { connection in
+            guard let row = try connection.row(
+                "SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ), case let .text(registrationID)? = row["registration_id"],
+              case let .integer(requestGeneration)? = row["request_generation"]
+            else { return nil }
+            return .init(projectID: projectID, registrationID: registrationID, requestGeneration: requestGeneration)
+        }
+    }
+
+    private func projectName(for projectID: ProjectID) async throws -> String? {
+        try await store.read { connection in
+            try connection.scalarText(
+                "SELECT name FROM projects WHERE id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+    }
+
+    private static func newRegistration() -> ProjectRegistration {
+        .init(
+            projectID: .init(rawValue: "project-\(UUID().uuidString.lowercased())"),
+            registrationID: UUID().uuidString.lowercased(),
+            requestGeneration: 1
+        )
+    }
+
+    private static func documentationNeedsAttention(_ state: ProjectDocumentationState) -> Bool {
+        switch state {
+        case .managed(hasAuditedHandoff: true, _, _), .legacy(.current): false
+        default: true
+        }
     }
 
     private static func canonical(_ url: URL) -> URL {

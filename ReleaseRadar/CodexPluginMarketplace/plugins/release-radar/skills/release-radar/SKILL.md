@@ -11,6 +11,36 @@ For initialization, a guidance update, or an audited repair, continue only when 
 
 Before any write, inspect every existing path component from the selected repository root through the root `AGENTS.md` and `docs/delivery/progress.md` with no-follow filesystem metadata. The selected root and existing `docs` and `docs/delivery` components must be real directories, not symlinks; each existing final file must be regular, not a symlink or other non-regular file. Report any discrepancy and stop without writing or calling Release Radar.
 
+## Lifecycle bootstrap
+
+When the copied prompt explicitly names the lifecycle bootstrap path and includes an exact project ID, separate registration ID, positive request generation, and exact authorized root, repository preparation is the only authorized outcome of this run. Treat that tuple as indivisible and stop on any missing or mismatched value.
+
+Inspect the exact root before proposing changes and distinguish these cases in the preview:
+
+- For a blank repository, propose the minimum `docs/catalog.json` v1, generated collection indexes, `docs/delivery/progress.md` source of truth, and exact legacy staging guidance v1 block needed for the packaged documentation check.
+- For a repository with existing documentation, preserve its content and instructions, catalog the existing durable documents, add only missing generated indexes, and append or preserve the exact legacy staging guidance v1 block. Never overwrite an existing progress ledger or reinterpret existing content as delivery state.
+- For unsafe paths, malformed guidance, ambiguous existing ledgers, invalid catalogs, or content that cannot be preserved within the catalog contract, report the discrepancy and stop.
+
+Show the complete proposed file set and intended changes before writing. After the owner-confirmed repository write, run `ReleaseRadarDocumentationTool write --root <exact authorized root>` only to generate the previewed indexes, then `check --root <exact authorized root>`, and read back every changed file. Report the exact repository ID, catalog version and digest. Stop there: lifecycle bootstrap does not authorize a Release Radar call, repository binding, catalog acceptance, v2 guidance installation, evidence mutation, phase creation, or any other delivery-state mutation. The owner must return to Release Radar to separately preview and confirm binding or catalog acceptance, then copy the subsequent audited-handoff prompt.
+
+The exact legacy staging block is:
+
+```markdown
+<!-- release-radar-guidance:v1:start -->
+## Release Radar tracking
+
+This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, or changing tracked delivery state, invoke the installed `release-radar` skill and follow it.
+
+- `docs/delivery/progress.md` is the repository's durable delivery source of truth.
+- Codex may update repository tracking documents under owner authorization.
+- Release Radar is the only writer of its SQLite database. Use its existing typed MCP mutations; never edit that database directly.
+- Do not claim synchronization without both a successful audited MCP result and direct readback of the corresponding repository files.
+- Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state.
+<!-- release-radar-guidance:end -->
+```
+
+The packaged catalog reference defines the accepted catalog shape and limits. Do not copy reference identities or paths blindly; create one fresh repository UUID for a genuinely new repository and preserve an existing valid repository ID.
+
 Before changing guidance, require an existing catalogued `docs/delivery/progress.md`, a valid `docs/catalog.json` v1, and matching generated indexes. Run the accepted `ReleaseRadarDocumentationTool check --root <exact authorized root>`; if the tool, ledger, or required catalog/indexes are missing, corrupt, unsafe, or stale, report the prerequisite and stop before any handoff write. Missing documentation must be prepared through separately owner-authorized work. This handoff does not authorize ledger or catalog creation, document moves, repository binding, catalog acceptance, or evidence adoption.
 
 Use `release_radar_inventory_evidence` to obtain a complete read-only inventory for the exact authorized root and project before choosing a handoff identity. Require `isComplete`, matching project/root identity, and exact persisted evidence rows; never guess from a basename, path prefix, checksum, or generated ID. A missing managed binding makes an already-v2 inventory incomplete even if legacy rows are returned; stop for separately authorized binding recovery before the handoff. Obtain the complete v1 inventory before upgrading guidance. Find the exact ticketless legacy `AGENTS.md` path and any `release-radar-handoff:v1:` IDs. If there is exactly one matching row with that prefix, reuse its existing handoff evidence ID unchanged. If no matching path or handoff ID exists, create one ID as `release-radar-handoff:v1:<fresh UUID>`. Multiple, mismatched, ticket-associated, managed-locator, incomplete, or unavailable results require recovery before any write. The `v1` evidence namespace remains stable across guidance upgrades; it is not the installed guidance version.

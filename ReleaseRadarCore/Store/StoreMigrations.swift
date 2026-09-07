@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 14
+    static let currentVersion: Int64 = 15
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -69,6 +69,9 @@ enum StoreMigrations {
                     )
                 }
                 try connection.executeScript(schemaVersion14)
+            }
+            if version < 15 {
+                try connection.executeScript(schemaVersion15)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -263,6 +266,12 @@ enum StoreMigrations {
                 ), normalizedSQL(actualSQL) == normalizedSQL(table.1) else { return false }
             }
         }
+        if version >= 15 {
+            guard let registrationSQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'project_registrations'"
+            ), normalizedSQL(registrationSQL) == normalizedSQL(projectRegistrationsTableSQL)
+            else { return false }
+        }
         return try connection.row("PRAGMA foreign_key_check") == nil
     }
 
@@ -445,6 +454,9 @@ enum StoreMigrations {
     ]
 
     private static let addedTables: [(version: Int64, name: String, columns: [String])] = [
+        (15, "project_registrations", [
+            "project_id", "registration_id", "request_generation", "setup_state",
+        ]),
         (13, "project_documentation_bindings", [
             "project_id", "root_id", "repository_id", "accepted_catalog_version",
             "accepted_catalog_digest", "accepted_catalog",
@@ -795,6 +807,7 @@ enum StoreMigrations {
         target: String,
         onDelete: String
     )] = [
+        (15, "project_registrations", "project_id", "projects", "id", "CASCADE"),
         (13, "project_documentation_bindings", "project_id", "projects", "id", "CASCADE"),
         (13, "project_documentation_bindings", "project_id,root_id", "project_roots", "project_id,id", "NO ACTION"),
         (1, "project_roots", "project_id", "projects", "id", "CASCADE"),
@@ -920,6 +933,34 @@ enum StoreMigrations {
     DROP TABLE delivery_goal_assignment_events_v13;
     CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
         ON delivery_goal_assignment_events(project_id, phase_id, ticket_id, revision);
+    """
+
+    private static let projectRegistrationsTableSQL = """
+    CREATE TABLE project_registrations (
+        project_id TEXT PRIMARY KEY NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        registration_id TEXT NOT NULL UNIQUE CHECK (typeof(registration_id) = 'text' AND length(registration_id) BETWEEN 1 AND 128),
+        request_generation INTEGER NOT NULL DEFAULT 1 CHECK (typeof(request_generation) = 'integer' AND request_generation > 0),
+        setup_state TEXT NOT NULL DEFAULT 'complete' CHECK (setup_state IN ('pending', 'complete'))
+    )
+    """
+
+    // Existing project IDs are retained byte-for-byte. Each receives a new opaque local
+    // registration identity, without inferring lifecycle state from paths or phases.
+    private static let schemaVersion15 = """
+    \(projectRegistrationsTableSQL);
+    INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state)
+    SELECT id,
+           lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) ||
+                 '-' || substr('89ab', (random() & 3) + 1, 1) || substr(hex(randomblob(2)), 2) ||
+                 '-' || hex(randomblob(6))),
+           1,
+           CASE WHEN EXISTS (
+               SELECT 1 FROM review_items
+               WHERE review_items.project_id = projects.id
+                 AND review_items.kind = 'onboarding_pending'
+                 AND review_items.status = 'open'
+           ) THEN 'pending' ELSE 'complete' END
+    FROM projects;
     """
 
     private static let schemaVersion1 = """

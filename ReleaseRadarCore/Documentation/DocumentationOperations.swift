@@ -4,7 +4,7 @@ import Foundation
 public enum DocumentationOperationError: String, Error, Codable, Sendable {
     case invalidRequest, rootUnavailable, rootMismatch, staleRoot, bindingMissing, bindingConflict
     case bindingMismatch, catalogUnaccepted, catalogInvalid, guidanceUnavailable, managedCommandRequired
-    case staleEvidence, evidenceConflict, unsafePath, missingFile, invalidTransition, inventoryTooLarge
+    case staleEvidence, staleRegistration, evidenceConflict, unsafePath, missingFile, invalidTransition, inventoryTooLarge
 }
 
 public struct DocumentationTarget: Codable, Equatable, Sendable {

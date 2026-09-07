@@ -129,6 +129,16 @@ struct CodexPluginSettingsPresentation: Equatable, Sendable {
         }
     }
 
+    func uniqueOperationMessage(_ message: String?) -> String? {
+        guard let message, message != detail else { return nil }
+        return message
+    }
+
+    var recoveryDetail: String? {
+        guard case .failed(.marketplaceConflict) = state else { return nil }
+        return "Resolve or rename the conflicting plugin or MCP entry in Codex, then try again. Release Radar will not change it."
+    }
+
     private func failureDetail(_ error: CodexPluginLifecycleError) -> String {
         switch error {
         case .codexUnavailable:

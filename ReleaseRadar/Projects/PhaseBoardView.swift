@@ -1,4 +1,5 @@
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 enum BoardDensity: String, CaseIterable, Identifiable {
@@ -96,7 +97,7 @@ struct PhaseBoardView: View {
                 HStack {
                     Text(filterSummary)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(RekonTheme.secondaryText)
                         .accessibilityIdentifier("board-filter-summary")
                         .focusable()
                         .focused($filterSummaryFocused)
@@ -113,7 +114,7 @@ struct PhaseBoardView: View {
                             needsHorizontalRecovery: needsHorizontalRecovery
                         )
 
-                        Divider()
+                        RekonSeparator(.vertical)
 
                         detail
                             .frame(width: 314)
@@ -128,7 +129,7 @@ struct PhaseBoardView: View {
                             )
                                 .frame(height: 390)
 
-                            Divider()
+                            RekonSeparator()
 
                             detail
                                 .frame(height: 260)
@@ -143,6 +144,7 @@ struct PhaseBoardView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("phase-board")
+        .background(RekonTheme.background)
         .onChange(of: filter) { _, _ in reconcileFilteredSelection() }
         .onChange(of: board) { previous, current in
             guard PhaseBoardKey(projectID: previous.project.id, phaseID: previous.phaseID)
@@ -173,34 +175,40 @@ struct PhaseBoardView: View {
     private var boardContext: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(board.project.name)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .font(RekonTypography.metadata.weight(.medium))
+                .foregroundStyle(RekonTheme.secondaryText)
             Text(board.phaseName)
-                .font(.title2.weight(.semibold))
+                .font(RekonTypography.screenTitle)
+                .foregroundStyle(RekonTheme.primaryText)
             Text("Lane position communicates delivery state; cards show work and constraints.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RekonTheme.secondaryText)
         }
     }
 
     private func densityPicker(laneWidth: CGFloat) -> some View {
-            Picker("Card density", selection: $density) {
-                ForEach(BoardDensity.allCases) { option in
-                    Text(option.displayName)
-                        .accessibilityLabel(
-                            option.accessibilityOptionLabel(
-                                isSelected: density == option,
-                                forLaneWidth: laneWidth
-                            )
-                        )
-                        .tag(option)
-                }
-            }
-            .pickerStyle(.menu)
-            .fixedSize()
-            .accessibilityIdentifier("board-density")
-            .accessibilityValue(density.accessibilityValue(forLaneWidth: laneWidth))
-            .accessibilityHint(density.accessibilityHelp(forLaneWidth: laneWidth))
+        HStack(spacing: 10) {
+            Text("Card density")
+                .font(RekonTypography.controlLabel)
+                .foregroundStyle(RekonTheme.primaryText)
+                .fixedSize()
+            RekonPicker(
+                selection: Binding(
+                    get: { density.displayName },
+                    set: { selection in
+                        if let selected = BoardDensity.allCases.first(where: { $0.displayName == selection }) {
+                            density = selected
+                        }
+                    }
+                ),
+                options: BoardDensity.allCases.map(\.displayName),
+                accessibilityLabel: "Card density",
+                accessibilityIdentifier: "board-density"
+            )
+            .frame(width: 190, height: 38)
+        }
+        .accessibilityValue(density.accessibilityValue(forLaneWidth: laneWidth))
+        .accessibilityHint(density.accessibilityHelp(forLaneWidth: laneWidth))
     }
 
     private func reconcileFilteredSelection() {
@@ -265,7 +273,11 @@ struct PhaseBoardView: View {
                 .padding(10)
                 .frame(width: laneWidth, alignment: .topLeading)
                 .frame(maxHeight: .infinity, alignment: .topLeading)
-                .background(Color(nsColor: .underPageBackgroundColor), in: RoundedRectangle(cornerRadius: 11))
+                .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 11))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 11)
+                        .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+                }
                 .overlay(alignment: .top) {
                     Rectangle()
                         .fill(lane.lane.tint)
@@ -295,11 +307,11 @@ struct PhaseBoardView: View {
     private func laneCount(_ count: Int) -> some View {
         Text("\(count)")
             .font(.caption.weight(.medium))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(RekonTheme.secondaryText)
             .monospacedDigit()
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
-            .background(.quaternary, in: Capsule())
+            .background(RekonTheme.elevatedSurface, in: Capsule())
     }
 
     @ViewBuilder

@@ -1,10 +1,12 @@
 import SwiftUI
 import ReleaseRadarCore
+import RekonDesignSystem
 
 struct ProjectsView: View {
     @Environment(\.openWindow) private var openWindow
     let projection: DashboardProjection
     let onboardingStore: DeliveryStore
+    var codexTasks: [CodexTaskDescriptor] = []
     let openProject: (ProjectID) -> Void
     let onboardingFinished: @MainActor () async -> Void
 
@@ -12,6 +14,7 @@ struct ProjectsView: View {
         if projection.projects.isEmpty {
             OnboardingView(
                 store: onboardingStore,
+                codexTasks: codexTasks,
                 onOpenExisting: openProject
             ) { _ in
                 await onboardingFinished()
@@ -19,49 +22,43 @@ struct ProjectsView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Projects")
-                                .font(.largeTitle.weight(.semibold))
-                            Text("Local delivery structure and owner attention at a glance")
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Button("Add Project…") {
+                    RekonScreenHeader(
+                        title: "Projects",
+                        subtitle: "Local delivery structure and owner attention at a glance",
+                        trailing: AnyView(Button("Add Project…") {
                             openWindow(id: "add-project")
                         }
-                        .accessibilityIdentifier("projects-add")
-                    }
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .accessibilityIdentifier("projects-add"))
+                    )
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
                         ForEach(projection.projects) { project in
                             Button {
                                 openProject(project.id)
                             } label: {
-                                VStack(alignment: .leading, spacing: 18) {
+                                RekonCard {
+                                    VStack(alignment: .leading, spacing: 18) {
                                     HStack(alignment: .top) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(project.name)
-                                                .font(.title3.weight(.semibold))
+                                                .font(RekonTypography.cardTitle)
                                             Text("Active phase")
-                                                .font(.caption)
-                                                .foregroundStyle(.tertiary)
+                                                .font(RekonTypography.metadata)
+                                                .foregroundStyle(RekonTheme.secondaryText)
                                             if project.activePhaseName == "No active phase" {
-                                                FailureStateView(
-                                                    presentation: .firstPhaseRequired,
-                                                    style: .compact
-                                                )
+                                                Text("Ready for planning")
+                                                    .foregroundStyle(RekonTheme.secondaryText)
                                             } else {
                                                 Text(project.activePhaseName)
-                                                    .foregroundStyle(.secondary)
+                                                    .font(RekonTypography.secondaryBody)
+                                                    .foregroundStyle(RekonTheme.secondaryText)
                                             }
                                         }
                                         Spacer()
                                         Image(systemName: "chevron.right")
                                             .font(.system(size: 14, weight: .light))
-                                            .foregroundStyle(.tertiary)
+                                            .foregroundStyle(RekonTheme.secondaryText)
                                     }
 
                                     ProjectGoalSummaryView(context: project.goalContext)
@@ -70,34 +67,32 @@ struct ProjectsView: View {
                                         projectMetric(value: project.currentWorkCount, label: "Current work")
                                         projectMetric(value: project.attentionCount, label: "Needs attention")
                                     }
-                                }
-                                .padding(20)
-                                .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
-                                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+                                    }
+                                    .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
                                 }
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("project-\(project.id.rawValue)")
                         }
                     }
+                    .padding(.horizontal, 28)
                 }
-                .padding(28)
+                .padding(.bottom, 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .navigationTitle("Projects")
+            .background(RekonTheme.background)
         }
     }
 
     private func projectMetric(value: Int, label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("\(value)")
-                .font(.title2.weight(.medium))
+                .font(RekonTypography.sectionTitle)
+                .foregroundStyle(RekonTheme.primaryText)
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RekonTheme.secondaryText)
         }
     }
 }
@@ -109,12 +104,12 @@ struct ProjectGoalSummaryView: View {
         HStack(alignment: .top, spacing: 9) {
             Image(systemName: context.linkQuality == .verified ? "checkmark.seal" : "questionmark.circle")
                 .font(.system(size: 16, weight: .light))
-                .foregroundStyle(context.linkQuality == .verified ? Color.green : Color.secondary)
+                .foregroundStyle(context.linkQuality == .verified ? RekonTheme.success : RekonTheme.secondaryText)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(context.linkQuality == .verified ? "Verified last-known goal" : "Last-known goal unavailable")
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(RekonTheme.secondaryText)
 
                 if let status = context.status {
                     Text(status)
@@ -124,18 +119,18 @@ struct ProjectGoalSummaryView: View {
                 if let text = context.text {
                     Text(text)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(RekonTheme.secondaryText)
                         .lineLimit(2)
                 } else {
                     Text("No persisted goal observation")
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(RekonTheme.secondaryText)
                 }
 
                 if let observedAt = context.lastObservedAt {
                     Text("Observed \(observedAt.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(RekonTypography.metadata)
+                        .foregroundStyle(RekonTheme.secondaryText)
                 }
             }
         }

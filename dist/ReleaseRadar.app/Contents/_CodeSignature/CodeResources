@@ -18,7 +18,7 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json</key>
 		<data>
-		N7KBp23xAGO3Mdo5wEwbZT/DxQ0=
+		Ykd1zwTfkS12cUDwXnIJSTkgd7M=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<data>
@@ -26,15 +26,19 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md</key>
 		<data>
-		NY380j0u4zXbtHpSvrmrl32a1BQ=
+		mF6GBINeOuZ4zFFhtkJVWCgJYSA=
 		</data>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<data>
-		s4L2dJTKgDIPpW4WGeuK0DH6Tqc=
+		bwrvU/CaLgXOBvnvFz4+z2jXHac=
 		</data>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<data>
-		kti163FtmW38Da/zAP9zT0LwckM=
+		VK5amwsw5LpDLlaZzTR8NmAP1K4=
+		</data>
+		<key>Resources/catalog-v1.md</key>
+		<data>
+		praxVLAljiOdRwsmoRDa7A/SLNA=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -43,7 +47,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			iRjqURrCUS03Z81ZbhNVM5AoqhI=
+			giwvKUsz3/ntuVMljHrUyVNwvA0=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -52,10 +56,19 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			J8svfBVkhMR0sBoZohIsP6/7bHc=
+			oc/bUVp2OTnKGcaoWwOTskvv6M4=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarAgentTools" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
+		</dict>
+		<key>Helpers/ReleaseRadarDocumentationTool</key>
+		<dict>
+			<key>cdhash</key>
+			<data>
+			0Unnkgaailj7VQ9G8hYCMIh2iwM=
+			</data>
+			<key>requirement</key>
+			<string>identifier ReleaseRadarDocumentationTool and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
 		</dict>
 		<key>Library/LaunchAgents/com.rekonlabs.ReleaseRadar.BridgeAgent.plist</key>
 		<dict>
@@ -96,7 +109,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ATCWGmHcVd+HEOlplF8fKLWp2PlgCnlVkKGCFo9YLBk=
+			W9bWm61U2rD11uMSUHoqZm71WcsLv6Tzb1ardcj9Ruc=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
@@ -110,21 +123,28 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			GEVbLMl4Gg9JHyrJyZ7XV4qRpT+B/aHzKLDicoXxr7o=
+			i0Z0Kqpq7xDaPlQySbZfmZ5b5vGPHzrm89g1qhgVaOU=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			mqi9z+k0XDiEpzO11asY9kA+HDwpRXxoYOXwbiNujQM=
+			gGWIVVl63xPV7r2HqedtmZVaCkIHeEBdjDP9mGrFv4k=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			6pyQybV7LtsVagPArikRhW7dZ07ohxqpPRJcF5Bfz98=
+			Vuab1zfVWY70Rlgs9uc6FlcAI79LM14AzcQKhPHqLNQ=
+			</data>
+		</dict>
+		<key>Resources/catalog-v1.md</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			rGDu9zHOqqoOIrzzD+bAtvDyskDbvn/CVVpkqgDSIGM=
 			</data>
 		</dict>
 	</dict>

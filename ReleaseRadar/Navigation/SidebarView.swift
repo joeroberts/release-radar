@@ -1,21 +1,30 @@
 import SwiftUI
+import RekonDesignSystem
 
 struct SidebarView: View {
     @Bindable var model: AppModel
-    @Environment(\.openSettings) private var openSettings
-
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
-                .frame(width: DashboardLayout.sidebarWidth(isCompact: model.isSidebarCompact))
-                .background(Color(nsColor: .underPageBackgroundColor))
+        GeometryReader { geometry in
+            HStack(alignment: .top, spacing: 0) {
+                sidebar
+                    .frame(
+                        width: DashboardLayout.sidebarWidth(isCompact: model.isSidebarCompact),
+                        height: geometry.size.height
+                    )
+                    .background(RekonTheme.backgroundRaised)
 
-            Divider()
+                RekonSeparator(.vertical)
+                    .frame(height: geometry.size.height)
 
-            detail
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(nsColor: .windowBackgroundColor))
+                detail
+                    .frame(maxWidth: .infinity)
+                    .frame(height: geometry.size.height)
+                    .background(RekonTheme.background)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+            .clipped()
         }
+        .foregroundStyle(RekonTheme.primaryText)
         .task {
             await model.initializeForLaunch()
         }
@@ -27,10 +36,11 @@ struct SidebarView: View {
                 if !model.isSidebarCompact {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Delivery")
-                            .font(.headline)
+                            .font(RekonTypography.compactTitle)
+                            .foregroundStyle(RekonTheme.primaryText)
                         Text("Local agent workspace")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(RekonTypography.metadata)
+                            .foregroundStyle(RekonTheme.secondaryText)
                     }
                     .transition(.opacity)
                 }
@@ -42,12 +52,16 @@ struct SidebarView: View {
                         model.isSidebarCompact.toggle()
                     }
                 } label: {
-                    Image(systemName: model.isSidebarCompact ? "chevron.right" : "chevron.left")
+                    Image(systemName: "sidebar.left")
                         .font(.system(size: 15, weight: .light))
                         .frame(width: 28, height: 28)
                 }
-                .buttonStyle(.borderless)
-                .help(model.isSidebarCompact ? "Expand Sidebar" : "Collapse Sidebar")
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .help(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
+                .accessibilityLabel(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
+                .accessibilityHint(model.isSidebarCompact
+                    ? "Shows navigation labels beside their icons."
+                    : "Hides navigation labels and keeps their icons visible.")
                 .accessibilityIdentifier("sidebar-collapse")
             }
             .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
@@ -55,26 +69,20 @@ struct SidebarView: View {
 
             VStack(spacing: 4) {
                 ForEach(AppRoute.primaryRoutes, id: \.self) { route in
-                    if route == .settings {
-                        sidebarButton(route: route, count: nil) {
-                            openSettings()
-                        }
-                    } else {
-                        sidebarButton(route: route, count: primaryCount(for: route)) {
-                            Task { await model.navigate(to: route) }
-                        }
+                    sidebarButton(route: route, count: primaryCount(for: route)) {
+                        Task { await model.navigate(to: route) }
                     }
                 }
             }
 
             if let currentProject = model.currentProject {
-                Divider()
+                RekonSeparator()
                     .padding(.horizontal, 12)
 
                 if !model.isSidebarCompact {
                     Text(currentProject.name)
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(RekonTheme.secondaryText)
                         .textCase(.uppercase)
                         .lineLimit(1)
                         .padding(.horizontal, 18)
@@ -94,7 +102,7 @@ struct SidebarView: View {
             if !model.isSidebarCompact {
                 Text("Persisted locally")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(RekonTheme.secondaryText.opacity(0.7))
                     .padding(.horizontal, 18)
                     .padding(.bottom, 14)
             }
@@ -108,7 +116,7 @@ struct SidebarView: View {
         count: Int?,
         action: @escaping () -> Void
     ) -> some View {
-        let isSelected = route != .settings && model.selection == route
+        let isSelected = model.selection == route
         return Button(action: action) {
             ZStack(alignment: .topTrailing) {
                 HStack(spacing: 12) {
@@ -129,10 +137,10 @@ struct SidebarView: View {
                 if let count, count > 0 {
                     Text("\(count)")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Color(nsColor: .systemRed))
+                        .foregroundStyle(RekonTheme.danger)
                         .padding(.horizontal, count > 9 ? 5 : 0)
                         .frame(minWidth: 19, minHeight: 19)
-                        .background(Color(nsColor: .systemRed).opacity(0.14), in: Capsule())
+                        .background(RekonTheme.danger.opacity(0.14), in: Capsule())
                         .offset(x: model.isSidebarCompact ? -2 : -4, y: 1)
                         .accessibilityLabel("\(count) items")
                 }
@@ -141,9 +149,14 @@ struct SidebarView: View {
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.14) : .clear)
+                    .fill(isSelected ? RekonTheme.elevatedSurface : .clear)
             )
-            .foregroundStyle(isSelected ? Color.accentColor : Color.primary.opacity(0.72))
+            .overlay(alignment: .leading) {
+                if isSelected {
+                    Capsule().fill(RekonTheme.accent).frame(width: 3).padding(.vertical, 8)
+                }
+            }
+            .foregroundStyle(isSelected ? RekonTheme.accent : RekonTheme.primaryText.opacity(0.78))
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 8)
@@ -161,7 +174,9 @@ struct SidebarView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let error = model.dashboardError {
+        if model.selection == .settings {
+            SettingsView(model: model)
+        } else if let error = model.dashboardError {
             FailureStateView(
                 presentation: .init(
                     title: "Delivery data unavailable",
@@ -182,6 +197,7 @@ struct SidebarView: View {
                 ProjectsView(
                     projection: dashboard,
                     onboardingStore: model.onboardingStore,
+                    codexTasks: model.codexTasksForOnboarding(),
                     openProject: { projectID in
                         Task { await model.openProject(projectID) }
                     },
@@ -239,10 +255,25 @@ struct SidebarView: View {
                             await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
                         },
                         repositoryRecovery: model.repositoryRecovery(for: projectID),
-                        onRepositoryRelocated: { await model.reloadAfterRepositoryRelocation() }
+                        onRepositoryRelocated: { await model.reloadAfterRepositoryRelocation() },
+                        loadProjectSettings: { try await model.projectSettings(for: projectID) },
+                        saveProjectSettings: { registration, name, exclusions in
+                            try await model.updateProjectSettings(
+                                registration: registration,
+                                projectName: name,
+                                excludedTaskIDs: exclusions
+                            )
+                        },
+                        availableCodexTasks: model.codexTasks(for: projectID),
+                        loadProjectHealth: { await model.projectHealth(for: projectID) },
+                        reauthorizeProjectHealth: {
+                            try await model.reauthorizeProjectHealthRoot(at: $0, projectID: projectID)
+                        },
+                        previewDocumentationSetup: { try await model.previewDocumentationSetup(registration: $0) },
+                        performDocumentationSetup: { try await model.performDocumentationSetup($0) }
                     )
                 } else {
-                    FailureStateView(presentation: .firstPhaseRequired, style: .full)
+                    ProjectEmptyStateView(presentation: .phaseBoard)
                 }
             case let .phaseBoard(projectID):
                 if let board = model.viewedBoard(for: projectID) {
@@ -277,7 +308,7 @@ struct SidebarView: View {
                         }
                     )
                 } else {
-                    FailureStateView(presentation: .firstPhaseRequired, style: .full)
+                    ProjectEmptyStateView(presentation: .phaseBoard)
                 }
             case let .dependencies(projectID):
                 if let graph = model.dependencyGraph(for: projectID) {
@@ -287,7 +318,11 @@ struct SidebarView: View {
                         freshness: model.codexSnapshot.freshness
                     )
                 } else {
-                    DetailUnavailableView(title: "Dependencies", image: "arrow.triangle.branch")
+                    if let project = dashboard.projects.first(where: { $0.id == projectID }), project.phases.isEmpty {
+                        ProjectEmptyStateView(presentation: .dependencies)
+                    } else {
+                        DetailUnavailableView(title: "Dependencies", image: "arrow.triangle.branch")
+                    }
                 }
             case let .activity(projectID):
                 if let activity = model.activity(for: projectID),
@@ -301,7 +336,7 @@ struct SidebarView: View {
                     DetailUnavailableView(title: "Activity", image: "clock.arrow.circlepath")
                 }
             case .settings:
-                DetailUnavailableView(title: "Settings", image: "gearshape")
+                EmptyView()
             }
         } else {
             ProgressView("Loading local delivery data…")
@@ -315,11 +350,12 @@ private struct DetailUnavailableView: View {
     let image: String
 
     var body: some View {
-        ContentUnavailableView(
-            title,
+        ProjectEmptyStateView(presentation: .init(
+            title: title,
+            detail: "Persisted project data is unavailable for this section.",
             systemImage: image,
-            description: Text("Persisted project data is unavailable for this section.")
-        )
+            accessibilityID: "empty-section-unavailable"
+        ))
         .navigationTitle(title)
     }
 }
@@ -336,5 +372,29 @@ private extension AppRoute {
         case .dependencies: "dependencies"
         case .activity: "activity"
         }
+    }
+}
+
+struct RekonScreenHeader: View {
+    let title: String
+    let subtitle: String
+    var trailing: AnyView? = nil
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(RekonTypography.screenTitle)
+                    .foregroundStyle(RekonTheme.primaryText)
+                Text(subtitle)
+                    .font(RekonTypography.secondaryBody)
+                    .foregroundStyle(RekonTheme.secondaryText)
+            }
+            Spacer(minLength: 12)
+            trailing
+        }
+        .padding(.horizontal, 28)
+        .padding(.top, 26)
+        .padding(.bottom, 20)
     }
 }

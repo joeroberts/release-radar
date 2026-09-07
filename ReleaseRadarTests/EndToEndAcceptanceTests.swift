@@ -81,6 +81,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
                 let historical = try SQLiteConnection(url: fixtures.appendingPathComponent("SchemaV11/release-radar-v11.sqlite"), immutableReadOnly: true)
                 let eventSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='delivery_goal_assignment_events'"))
                 try c.executeScript("""
+                DROP TABLE project_registrations;
                 DROP TABLE delivery_goal_assignment_events;
                 \(eventSQL);
                 CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
@@ -116,7 +117,10 @@ final class EndToEndAcceptanceTests: XCTestCase {
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL), immutableReadOnly: true)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), alreadyManaged ? 13 : 10)
         XCTAssertEqual(try Self.bootstrapRows(snapshot), sourceRows)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL, immutableReadOnly: true).scalarInt("PRAGMA user_version"), 14)
+        XCTAssertEqual(
+            try SQLiteConnection(url: databaseURL, immutableReadOnly: true).scalarInt("PRAGMA user_version"),
+            StoreMigrations.currentVersion
+        )
         let migrated = try await store.read { c in
             (try c.scalarInt("SELECT COUNT(*) FROM ticket_task_plans"),
              try c.scalarInt("SELECT COUNT(*) FROM delivery_goals"),
@@ -226,7 +230,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             let beforeInstall = try await store.read { try Self.bootstrapRows($0) }
             let readOnly = try DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
             let preflight = await AgentQueryDispatcher(store: readOnly, bookmarkStore: bookmarks).dispatch(query)
-            XCTAssertEqual(preflight.inventory?.schemaVersion, 14)
+            XCTAssertEqual(preflight.inventory?.schemaVersion, Int(StoreMigrations.currentVersion))
             XCTAssertTrue(preflight.inventory?.isComplete == true)
             // This is the final same-schema reopen, not a fresh v13 migration.
             let installed = DeliveryStore(databaseURL: databaseURL)
@@ -243,7 +247,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             XCTAssertEqual(board.lane(.inProgress)?.cards.first { $0.id.rawValue == "RR-R10" }?.activeTaskCount,
                            includesReviewedRepair ? 17 : 16)
             guard case let .loaded(plan)? = board.detail(for: .init(rawValue: "RR-R10"))?.taskPlan else {
-                return XCTFail("Expected the current v14 task plan before final adoption")
+                return XCTFail("Expected the current task plan before final adoption")
             }
             XCTAssertEqual(plan.revision, installationRevision)
             XCTAssertEqual(plan.tasks.map(\.id), additions.map(\.id))
@@ -515,6 +519,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             // Ticket rows and their migration lineage are never rewritten.
             try c.executeScript("""
             BEGIN EXCLUSIVE;
+            DROP TABLE project_registrations;
             DROP TABLE delivery_goal_assignment_events;
             \(eventSQL);
             CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
@@ -552,13 +557,18 @@ final class EndToEndAcceptanceTests: XCTestCase {
         let store = DeliveryStore(databaseURL: databaseURL)
         let availability = await store.availability
         XCTAssertEqual(availability, .available)
-        let migrated = try await store.read { try Self.bootstrapRows($0) }
-        XCTAssertEqual(migrated, baseline, "v14 migration must preserve every existing row")
+        var migrated = try await store.read { try Self.bootstrapRows($0) }
+        let registrations = migrated.removeValue(forKey: "project_registrations")
+        XCTAssertEqual(migrated, baseline, "current migration must preserve every existing row")
+        XCTAssertEqual(registrations?.count, 2)
+        XCTAssertTrue(registrations?.allSatisfy {
+            $0["request_generation"] == .integer(1) && $0["setup_state"] == .text("complete")
+        } == true)
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL), immutableReadOnly: true)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 13)
         XCTAssertEqual(try Self.bootstrapRows(snapshot), baseline)
         let postMigration = await AgentQueryDispatcher(store: store, bookmarkStore: bookmarkStore).dispatch(query)
-        XCTAssertEqual(postMigration.inventory?.schemaVersion, 14)
+        XCTAssertEqual(postMigration.inventory?.schemaVersion, Int(StoreMigrations.currentVersion))
         XCTAssertEqual(postMigration.inventory?.preservation, prior.preservation)
         XCTAssertEqual(postMigration.inventory?.evidence, prior.evidence)
         XCTAssertEqual(postMigration.inventory?.binding, prior.binding)
@@ -612,7 +622,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             requests.append((envelope, result))
         }
         let committed = try await store.read { try Self.bootstrapRows($0) }
-        let changed = Set(["ticket_task_plans", "ticket_tasks", "audit_events", "agent_command_requests"])
+        let changed = Set(["ticket_task_plans", "ticket_tasks", "audit_events", "agent_command_requests", "project_registrations"])
         XCTAssertEqual(committed.filter { !changed.contains($0.key) }, baseline.filter { !changed.contains($0.key) })
         XCTAssertEqual(committed["ticket_task_plans"]?.count, 1)
         XCTAssertEqual(committed["ticket_tasks"]?.count, 16)
@@ -1026,6 +1036,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         let historical = try SQLiteConnection(url: fixture, immutableReadOnly: true)
         let evidenceSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='evidence'"))
         try connection.executeScript("""
+        DROP TABLE project_registrations;
         DROP TABLE project_documentation_bindings;
         DROP INDEX project_roots_project_identity_unique;
         ALTER TABLE evidence RENAME TO current_evidence;

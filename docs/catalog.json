@@ -447,6 +447,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-06-usable-project-lifecycle",
+      "path": "docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Complete usable project lifecycle delivery; progress determines current authorization",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4104,6 +4119,21 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-usable-project-lifecycle-brief-2026-09-06",
+      "path": "docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-06-usable-project-lifecycle",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"

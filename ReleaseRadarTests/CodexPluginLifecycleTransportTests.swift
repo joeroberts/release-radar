@@ -146,4 +146,165 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
             .codexUnavailable
         )
     }
+
+    func testClientRebindsAStaleEnabledServiceBeforeInstalling() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 1, observedState: nil, error: .marketplaceConflict),
+            .init(wireVersion: 1, observedState: .absent, error: nil),
+            .init(
+                wireVersion: 1,
+                observedState: .clean(version: "0.1.7", digest: "shipped"),
+                error: nil
+            ),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.install()
+
+        XCTAssertEqual(
+            reply.observedState,
+            .clean(version: "0.1.7", digest: "shipped")
+        )
+        XCTAssertNil(reply.error)
+        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertEqual(remote.operations, [.status, .status, .install])
+    }
+
+    func testClientDoesNotInstallWhenConflictPersistsAfterOneRebind() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 1, observedState: nil, error: .marketplaceConflict),
+            .init(wireVersion: 1, observedState: nil, error: .marketplaceConflict),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.install()
+
+        XCTAssertEqual(reply.error, .marketplaceConflict)
+        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertEqual(remote.operations, [.status, .status])
+    }
+
+    func testClientRebindsAnUnavailableEnabledServiceBeforeReportingStatus() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 1, observedState: nil, error: .codexUnavailable),
+            .init(wireVersion: 1, observedState: .absent, error: nil),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.status()
+
+        XCTAssertEqual(reply.observedState, .absent)
+        XCTAssertNil(reply.error)
+        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertEqual(remote.operations, [.status, .status])
+    }
+
+    func testClientNeverRetriesAnInstallAfterAnUncertainMutationReply() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 1, observedState: .absent, error: nil),
+            .init(wireVersion: 1, observedState: nil, error: .codexUnavailable),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.install()
+
+        XCTAssertEqual(reply.error, .codexUnavailable)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertEqual(remote.operations, [.status, .install])
+    }
+
+    func testClientDoesNotRecoverOrInstallAfterAnUnsupportedStatusReply() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 2, observedState: nil, error: .marketplaceConflict),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.install()
+
+        XCTAssertEqual(reply.error, .malformedResult)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertEqual(remote.operations, [.status])
+    }
+
+    func testClientDoesNotInstallAfterAStatusReplyWithoutObservedState() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 1, observedState: nil, error: nil),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.install()
+
+        XCTAssertEqual(reply.error, .malformedResult)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertEqual(remote.operations, [.status])
+    }
+}
+
+private final class PluginLifecycleServiceStub: PluginLifecycleServiceManaging {
+    var status: SMAppService.Status
+    private(set) var registerCallCount = 0
+    private(set) var unregisterCallCount = 0
+
+    init(status: SMAppService.Status) {
+        self.status = status
+    }
+
+    func register() throws {
+        registerCallCount += 1
+        status = .enabled
+    }
+
+    func unregister() throws {
+        unregisterCallCount += 1
+        status = .notRegistered
+    }
+}
+
+private final class PluginLifecycleRemoteStub: @unchecked Sendable {
+    private let lock = NSLock()
+    private var replies: [CodexPluginHelperReply]
+    private(set) var operations: [CodexPluginLifecycleClient.Operation] = []
+
+    init(replies: [CodexPluginHelperReply]) {
+        self.replies = replies
+    }
+
+    func invoke(
+        _ operation: CodexPluginLifecycleClient.Operation
+    ) async -> CodexPluginHelperReply {
+        lock.withLock {
+            operations.append(operation)
+            return replies.removeFirst()
+        }
+    }
 }

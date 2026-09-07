@@ -1,4 +1,5 @@
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 struct DependencyGraphView: View {
@@ -14,13 +15,13 @@ struct DependencyGraphView: View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 0) {
                 header
-                Divider()
+                RekonSeparator()
 
                 if geometry.size.width >= 980 {
                     HStack(spacing: 0) {
                         graphWorkspace
                             .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
-                        Divider()
+                        RekonSeparator(.vertical)
                         inspector
                             .frame(width: 300)
                             .frame(maxHeight: .infinity)
@@ -30,7 +31,7 @@ struct DependencyGraphView: View {
                         VStack(spacing: 0) {
                             graphWorkspace
                                 .frame(height: max(480, geometry.size.height * 0.72))
-                            Divider()
+                            RekonSeparator()
                             inspector
                                 .frame(minHeight: 390)
                         }
@@ -39,14 +40,16 @@ struct DependencyGraphView: View {
             }
         }
         .accessibilityIdentifier("content-dependencies")
+        .background(RekonTheme.background)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Phase dependency map")
-                .font(.largeTitle.weight(.semibold))
+                .font(RekonTypography.screenTitle)
+                .foregroundStyle(RekonTheme.primaryText)
             Text("Selected path for \(selectedGraph.selected.ticket.id.rawValue) · direct and indirect relationships across the phase")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RekonTheme.secondaryText)
         }
         .padding(24)
     }
@@ -69,19 +72,23 @@ struct DependencyGraphView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
 
-                Divider()
+                RekonSeparator()
 
                 ScrollView([.horizontal, .vertical]) {
                     VStack(spacing: 0) {
                         columnHeaders(layout.columns, canvasWidth: canvasSize.width)
-                        Divider()
+                        RekonSeparator()
                         dependencyCanvas(layout: layout, canvasSize: canvasSize)
                     }
                     .frame(width: canvasSize.width)
                 }
                 .scrollIndicators(.automatic)
             }
-            .background(Color(nsColor: .underPageBackgroundColor).opacity(0.38))
+            .background(RekonTheme.backgroundRaised)
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+            }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Selected dependency path; \(layout.frames.count) of \(selectedGraph.nodes.count) phase tickets shown")
         }
@@ -124,7 +131,7 @@ struct DependencyGraphView: View {
             ForEach(columns) { column in
                 Text(column.title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(column.role == .selectedTicket ? Color.accentColor : .secondary)
+                    .foregroundStyle(column.role == .selectedTicket ? RekonTheme.accent : RekonTheme.secondaryText)
                     .frame(width: column.frame.width, height: 43)
                     .position(x: column.frame.midX, y: 21.5)
                     .accessibilityAddTraits(.isHeader)
@@ -211,7 +218,7 @@ struct DependencyGraphView: View {
                 .background(node.lane.graphColor.opacity(isSelected ? 0.28 : 0.15))
                 .overlay {
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected ? Color.accentColor : node.lane.graphColor, lineWidth: isSelected ? 2.5 : 1)
+                        .stroke(isSelected ? RekonTheme.accent : node.lane.graphColor, lineWidth: isSelected ? 2.5 : 1)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 if node.blockerCount > 0 {
@@ -260,15 +267,16 @@ struct DependencyGraphView: View {
                     FailureStateView(presentation: codexFailure, style: .compact)
                 }
 
-                Divider()
+                RekonSeparator()
                 relationshipSection("Directly requires", nodes: selection.directRequires)
-                Divider()
+                RekonSeparator()
                 relationshipSection("Indirectly requires", nodes: selection.indirectRequires)
-                Divider()
+                RekonSeparator()
                 relationshipSection("Unlocks", nodes: selection.unlocks)
             }
             .padding(20)
         }
+        .background(RekonTheme.backgroundRaised)
         .accessibilityIdentifier("dependency-inspector")
     }
 
@@ -318,11 +326,11 @@ struct DependencyGraphView: View {
 private extension TicketLane {
     var graphColor: Color {
         switch self {
-        case .backlog: .secondary
-        case .inProgress: .blue
-        case .needsReview: .orange
-        case .blocked: .red
-        case .accepted: .green
+        case .backlog: RekonTheme.secondaryText
+        case .inProgress: RekonTheme.accent
+        case .needsReview: RekonTheme.warning
+        case .blocked: RekonTheme.danger
+        case .accepted: RekonTheme.success
         }
     }
 }

@@ -43,6 +43,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-01-managed-repository-documentation-contract](2026-09-01-managed-repository-documentation-contract) — leaf; Task scopes for 2026-09-01-managed-repository-documentation-contract; current progress determines eligibility
 - [delivery.task-briefs.2026-09-06-c8-source-repair](2026-09-06-c8-source-repair) — leaf; C8 source-repair pilot; installed acceptance remains separate
 - [delivery.task-briefs.2026-09-06-operating-baseline](2026-09-06-operating-baseline) — leaf; Operating baseline preparation; progress determines current authorization
+- [delivery.task-briefs.2026-09-06-usable-project-lifecycle](2026-09-06-usable-project-lifecycle) — leaf; Complete usable project lifecycle delivery; progress determines current authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -262,6 +263,26 @@ Leaf: no child collections.
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-c8-pilot-kickoff-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md](2026-09-06-operating-baseline/c8-pilot-kickoff.md) | document | supporting | active | none | none |
 | rr-operating-baseline-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md](2026-09-06-operating-baseline/operating-baseline-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-06-usable-project-lifecycle
+
+- Path: [docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle](2026-09-06-usable-project-lifecycle)
+- Purpose: Complete usable project lifecycle delivery; progress determines current authorization
+- Allowed contents: Reviewed task briefs
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-usable-project-lifecycle-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md](2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md) | document | supporting | active | none | none |
 
 ### Children
 

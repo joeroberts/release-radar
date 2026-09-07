@@ -5,6 +5,192 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class AppRouteTests: XCTestCase {
+    func testMainWindowConsumesSharedRDSChromeWithoutALocalAppKitBridge() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("ReleaseRadar/App/ReleaseRadarApp.swift"),
+            encoding: .utf8
+        )
+
+        XCTAssertTrue(source.contains(".rekonWindowChrome()"))
+        XCTAssertFalse(source.contains("ReleaseRadarWindowChrome"))
+        XCTAssertFalse(source.contains(".windowStyle(.hiddenTitleBar)"))
+    }
+
+    func testResponsiveSettingsContentUsesTheAvailableWidth() {
+        XCTAssertEqual(SettingsLayout.contentWidth(for: 1_400), 1_344)
+        XCTAssertEqual(SettingsLayout.contentWidth(for: 620), 564)
+        XCTAssertEqual(SettingsLayout.contentWidth(for: 40), 0)
+    }
+
+    func testEmptyReviewLayoutSuppressesTheListAndZeroBadge() {
+        XCTAssertFalse(NeedsReviewLayout.showsInboxList(openItems: 0, deliveryGoals: 0, completedItems: 0))
+        XCTAssertTrue(NeedsReviewLayout.showsInboxList(openItems: 0, deliveryGoals: 0, completedItems: 1))
+        XCTAssertFalse(NeedsReviewLayout.showsCountBadge(openCount: 0))
+        XCTAssertTrue(NeedsReviewLayout.showsCountBadge(openCount: 1))
+        XCTAssertTrue(NeedsReviewLayout.usesCompactLayout(availableWidth: 539))
+        XCTAssertFalse(NeedsReviewLayout.usesCompactLayout(availableWidth: 1_380))
+    }
+
+    func testApplicationHealthActionsLeadToTheRelevantRecoverySurface() {
+        let attention: ProjectHealthSnapshot.Check.State = .attention
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "folder", state: attention, hasProjectTarget: true),
+            .openProject
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "documentation", state: attention, hasProjectTarget: true),
+            .openProject
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "plugin", state: attention, hasProjectTarget: true),
+            .reviewConnections
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "observer", state: attention, hasProjectTarget: true),
+            .reviewConnections
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "storage", state: .unavailable, hasProjectTarget: false),
+            .checkAgain
+        )
+        XCTAssertNil(ApplicationHealthAction.recommended(forCheckID: "plugin", state: .ready, hasProjectTarget: true))
+        XCTAssertNil(ApplicationHealthAction.recommended(forCheckID: "folder", state: attention, hasProjectTarget: false))
+    }
+
+    @MainActor
+    func testSettingsEntryPointsUseTheInShellSettingsRoute() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SettingsCommand-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            externalServicesSuppressed: true
+        )
+
+        await ReleaseRadarSettingsCommands.navigateToSettings(model: model)
+
+        XCTAssertEqual(model.selection, .settings)
+    }
+
+    @MainActor
+    func testApplicationHealthRemainsReachableWhenStoreIsUnavailable() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-Health-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("store.sqlite")
+        try Data("not-a-sqlite-database".utf8).write(to: databaseURL)
+        let model = AppModel(store: DeliveryStore(databaseURL: databaseURL))
+
+        let health = await model.applicationHealth()
+
+        XCTAssertNil(health.projectTarget)
+        XCTAssertEqual(health.checks.map(\.id), ["storage", "folder", "documentation", "plugin", "observer"])
+        XCTAssertEqual(health.checks.first?.state, .unavailable)
+        XCTAssertTrue(health.checks.dropFirst().contains { $0.state != .ready })
+    }
+
+    @MainActor
+    func testProjectHealthKeepsManagedFailureAndCachedObservationTimesTruthful() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasActivePointer: false)
+        let documents = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs", isDirectory: true)
+        try FileManager.default.copyItem(at: documents, to: fixture.projectRoot.appendingPathComponent("docs"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("AGENTS.md"))
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed health registration") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'health-registration', 2, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let lastObservedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        model.codexPluginState = .installed(version: "0.1.7")
+        model.codexSnapshot = .init(
+            capturedAt: lastObservedAt,
+            freshness: .init(state: .stale, lastObservedAt: lastObservedAt, reason: "Cached fixture"),
+            threads: []
+        )
+
+        let health = await model.projectHealth(for: fixture.projectID)
+        let documentation = try XCTUnwrap(health.checks.first { $0.id == "documentation" })
+        let plugin = try XCTUnwrap(health.checks.first { $0.id == "plugin" })
+        let observer = try XCTUnwrap(health.checks.first { $0.id == "observer" })
+
+        XCTAssertEqual(documentation.state, .attention)
+        XCTAssertTrue(documentation.title.contains("unavailable"))
+        XCTAssertEqual(plugin.state, .attention)
+        XCTAssertTrue(plugin.detail.contains("time unavailable"))
+        XCTAssertEqual(observer.state, .attention)
+        XCTAssertTrue(observer.detail.contains("Last seen"))
+        XCTAssertGreaterThan(health.checkedAt, lastObservedAt)
+    }
+
+    @MainActor
+    func testProjectHealthReauthorizesOnlyTheExactSavedFolderAndRetainsCatalogFailure() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasActivePointer: false)
+        try FileManager.default.createDirectory(
+            at: fixture.projectRoot.appendingPathComponent("docs"),
+            withIntermediateDirectories: true
+        )
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("AGENTS.md"))
+        try Data("{ invalid catalog".utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("docs/catalog.json"))
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed stale phase-less health fixture") { connection in
+            try connection.execute("DELETE FROM ticket_dependencies WHERE project_id = ?", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute("DELETE FROM tickets WHERE project_id = ?", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute("DELETE FROM phases WHERE project_id = ?", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'health-recovery-registration', 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ?",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+
+        do {
+            _ = try await model.reauthorizeProjectHealthRoot(at: fixture.projectRoot.deletingLastPathComponent(), projectID: fixture.projectID)
+            XCTFail("A different folder must be rejected")
+        } catch {
+            XCTAssertEqual(error as? ProjectAuthorizationError, .projectRootMismatch)
+        }
+        for (mode, expected) in [
+            (RR9BookmarkFailureMode.accessDenied, ProjectAuthorizationError.securityScopeAccessDenied),
+            (.stale, .bookmarkStale),
+        ] {
+            fixture.bookmarks.setFailureMode(mode)
+            do {
+                _ = try await model.reauthorizeProjectHealthRoot(at: fixture.projectRoot, projectID: fixture.projectID)
+                XCTFail("Expected \(mode) to be rejected")
+            } catch {
+                XCTAssertEqual(error as? ProjectAuthorizationError, expected)
+            }
+        }
+        fixture.bookmarks.setFailureMode(.none)
+
+        let recovered = try await model.reauthorizeProjectHealthRoot(at: fixture.projectRoot, projectID: fixture.projectID)
+
+        XCTAssertTrue(model.dashboard?.projects.first(where: { $0.id == fixture.projectID })?.phases.isEmpty == true)
+        XCTAssertEqual(recovered.checks.first(where: { $0.id == "folder" })?.state, .ready)
+        XCTAssertEqual(recovered.checks.first(where: { $0.id == "documentation" })?.state, .attention)
+        XCTAssertTrue(recovered.checks.first(where: { $0.id == "documentation" })?.title.contains("unavailable") == true)
+    }
+
     @MainActor
     func testTask10ViewedPhaseDoesNotChangeActivePhaseOrAuditAndSurvivesReload() async throws {
         let fixture = try await makeRR9OwnerFixture()
@@ -1866,6 +2052,139 @@ final class AppRouteTests: XCTestCase {
             "No active phase"
         )
         XCTAssertFalse(ActivePhaseSelectorPresentation(project: unselected, status: .idle).isDisabled)
+    }
+
+    @MainActor
+    func testRDSPlanningPickersPreserveByteDistinctPhaseAndGoalSelection() async throws {
+        let composed = "\u{e9}"
+        let decomposed = "e\u{301}"
+        let phases = [
+            ProjectPhaseProjection(id: .init(rawValue: composed), name: "Same phase"),
+            ProjectPhaseProjection(id: .init(rawValue: decomposed), name: "Same phase"),
+        ]
+        let goals = [
+            DeliveryGoalSummaryProjection(
+                goalID: .init(rawValue: composed), title: "First goal", outcome: "First", lifecycle: .draft,
+                doneCriteria: [], ticketIDs: []
+            ),
+            DeliveryGoalSummaryProjection(
+                goalID: .init(rawValue: decomposed), title: "Second goal", outcome: "Second", lifecycle: .draft,
+                doneCriteria: [], ticketIDs: []
+            ),
+        ]
+        let project = ProjectDashboardProjection(
+            id: .init(rawValue: "byte-project"), name: "Byte project", activePhaseID: phases[0].id,
+            activePhaseName: phases[0].name, phases: phases,
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0, attentionCount: 0
+        )
+        let board = PhaseBoardProjection(
+            project: project, phaseID: phases[0].id, phaseName: phases[0].name,
+            phasePlan: .init(state: .draft, revision: 0, readyRevision: nil, upcomingCount: 0,
+                             coveredUpcomingCount: 0, unassignedUpcomingCount: 0),
+            deliveryGoals: goals, lanes: [], details: [:]
+        )
+        var viewedPhaseID: PhaseID?
+        var filter: DeliveryGoalFilter = .all
+        let view = PhaseBoardPlanningControls(
+            board: board,
+            filter: Binding(get: { filter }, set: { filter = $0 }),
+            phaseSelectionStatus: .idle,
+            viewPhase: { viewedPhaseID = $0 },
+            makeActive: { _ in }, reload: {}, reauthorize: { _ in }
+        )
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = NSRect(x: 0, y: 0, width: 1_400, height: 360)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        window.orderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        hosting.layoutSubtreeIfNeeded()
+
+        let phasePicker = try XCTUnwrap(nativePopup(in: hosting, identifier: "viewed-phase-selector"))
+        phasePicker.selectItem(at: 1)
+        phasePicker.sendAction(phasePicker.action, to: phasePicker.target)
+        XCTAssertEqual(Data(try XCTUnwrap(viewedPhaseID).rawValue.utf8), Data(decomposed.utf8))
+
+        let goalPicker = try XCTUnwrap(nativePopup(in: hosting, identifier: "delivery-goal-filter"))
+        goalPicker.selectItem(at: 2)
+        goalPicker.sendAction(goalPicker.action, to: goalPicker.target)
+        guard case let .goal(selectedGoalID) = filter else { return XCTFail("Expected goal filter") }
+        XCTAssertEqual(Data(selectedGoalID.rawValue.utf8), Data(decomposed.utf8))
+    }
+
+    @MainActor
+    func testRDSActivePhasePickerNativeControlCannotActWhileSavingOrAwaitingReload() async throws {
+        let composed = "\u{e9}"
+        let decomposed = "e\u{301}"
+        let phases = [
+            ProjectPhaseProjection(id: .init(rawValue: composed), name: "Same phase"),
+            ProjectPhaseProjection(id: .init(rawValue: decomposed), name: "Same phase"),
+        ]
+        let project = ProjectDashboardProjection(
+            id: .init(rawValue: "disabled-project"), name: "Disabled project", activePhaseID: phases[0].id,
+            activePhaseName: phases[0].name, phases: phases,
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0, attentionCount: 0
+        )
+
+        var idleSelection: PhaseID?
+        let idleHosting = NSHostingView(rootView: ActivePhaseSelector(
+            project: project, surface: .overview, status: .idle,
+            onSelect: { idleSelection = $0 }, onReload: {}, onReauthorize: { _ in }
+        ))
+        idleHosting.frame = NSRect(x: 0, y: 0, width: 600, height: 220)
+        let idleWindow = NSWindow(contentRect: idleHosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        idleWindow.isReleasedWhenClosed = false
+        idleWindow.contentView = idleHosting
+        idleWindow.orderFront(nil)
+        defer { idleWindow.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        idleHosting.layoutSubtreeIfNeeded()
+        let idlePicker = try XCTUnwrap(nativePopup(in: idleHosting, identifier: "active-phase-selector-overview"))
+        idlePicker.selectItem(at: 1)
+        idlePicker.sendAction(idlePicker.action, to: idlePicker.target)
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(Data(try XCTUnwrap(idleSelection).rawValue.utf8), Data(decomposed.utf8))
+
+        for status in [ActivePhaseSelectionStatus.saving(phases[1].id), .savedNeedsReload(phases[1].id, phases[1].name)] {
+            var selectedIDs: [PhaseID] = []
+            let view = ActivePhaseSelector(
+                project: project, surface: .overview, status: status,
+                onSelect: { selectedIDs.append($0) }, onReload: {}, onReauthorize: { _ in }
+            )
+            let hosting = NSHostingView(rootView: view)
+            hosting.frame = NSRect(x: 0, y: 0, width: 600, height: 220)
+            let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.contentView = hosting
+            window.orderFront(nil)
+            defer { window.close() }
+            try await Task.sleep(for: .milliseconds(100))
+            hosting.layoutSubtreeIfNeeded()
+
+            let picker = try XCTUnwrap(nativePopup(in: hosting, identifier: "active-phase-selector-overview"))
+            XCTAssertFalse(picker.isEnabled, "The represented native picker must be disabled, not just visually styled")
+            picker.selectItem(at: 1)
+            picker.sendAction(picker.action, to: picker.target)
+            try await Task.sleep(for: .milliseconds(50))
+            XCTAssertTrue(selectedIDs.isEmpty)
+        }
+    }
+
+    @MainActor
+    private func nativePopup(in view: NSView, identifier: String) -> NSPopUpButton? {
+        if let popup = view as? NSPopUpButton, popup.accessibilityIdentifier() == identifier {
+            return popup
+        }
+        for subview in view.subviews {
+            if let popup = nativePopup(in: subview, identifier: identifier) {
+                return popup
+            }
+        }
+        return nil
     }
 
     @MainActor

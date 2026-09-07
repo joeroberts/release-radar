@@ -1,6 +1,7 @@
 import AppKit
 import Observation
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 @MainActor
@@ -108,6 +109,7 @@ struct RepositoryRecoveryView: View {
                     Text("If the repository moved, select its new location and confirm the exact accepted catalog.")
                         .font(.subheadline).foregroundStyle(.secondary)
                     Button("Select relocated repository…", action: chooseFolder)
+                        .buttonStyle(RekonSecondaryButtonStyle())
                         .disabled(model.isBusy)
                         .accessibilityIdentifier("repository-relocation-select")
                 } else {
@@ -117,7 +119,7 @@ struct RepositoryRecoveryView: View {
                 Text("No accepted managed repository binding.").font(.subheadline).foregroundStyle(.secondary)
             }
             if let prepared = model.prepared {
-                Divider()
+                RekonSeparator()
                 Text("Confirm repository relocation").font(.headline)
                 Text("From: \(prepared.oldRoot.path)").font(.caption.monospaced())
                 Text("To: \(prepared.selectedRoot.path)").font(.caption.monospaced())
@@ -130,8 +132,12 @@ struct RepositoryRecoveryView: View {
                 HStack {
                     Button("Confirm relocation") {
                         Task { if await model.confirm() { await onCommitted() } }
-                    }.buttonStyle(.borderedProminent).accessibilityIdentifier("repository-relocation-confirm")
-                    Button("Cancel") { model.cancel() }.accessibilityIdentifier("repository-relocation-cancel")
+                    }
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .accessibilityIdentifier("repository-relocation-confirm")
+                    Button("Cancel") { model.cancel() }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("repository-relocation-cancel")
                 }.disabled(model.isBusy)
             }
             DisclosureGroup("Recover an interrupted confirmation") {
@@ -140,9 +146,10 @@ struct RepositoryRecoveryView: View {
                         .font(.caption).foregroundStyle(.secondary)
                     TextField("Saved recovery token", text: $model.recoveryTokenText, axis: .vertical)
                         .font(.caption.monospaced()).lineLimit(3...6)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(RekonQuietTextFieldStyle())
                         .accessibilityIdentifier("repository-relocation-token")
                     Button("Check exact receipt") { Task { await model.recoverReceipt() } }
+                        .buttonStyle(RekonSecondaryButtonStyle())
                         .disabled(model.isBusy || model.recoveryTokenText.isEmpty)
                         .accessibilityIdentifier("repository-relocation-recover")
                 }
@@ -156,7 +163,12 @@ struct RepositoryRecoveryView: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+        }
         .task { await model.load() }
     }
     private func chooseFolder() {

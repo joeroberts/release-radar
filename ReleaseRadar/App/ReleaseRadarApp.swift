@@ -2,6 +2,7 @@ import AppKit
 import Darwin
 import OSLog
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 enum AppHostMode: Equatable {
@@ -270,23 +271,27 @@ struct ReleaseRadarApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Release Radar", id: "main") {
-            if let model {
-                SidebarView(model: model)
-                    .frame(minWidth: 760, minHeight: 520)
-            } else if let maintenanceSession {
-                DocumentationMaintenanceView(session: maintenanceSession)
-                    .frame(minWidth: 620, minHeight: 520)
-                    .task {
-                        appDelegate.maintenanceSession = maintenanceSession
-                        await maintenanceSession.connectExistingBridge()
-                    }
-            } else {
-                Text(maintenanceError ?? (AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance is unavailable"))
+        Window("Release Radar", id: "main") {
+            Group {
+                if let model {
+                    SidebarView(model: model)
+                        .frame(minWidth: 760, minHeight: 520)
+                } else if let maintenanceSession {
+                    DocumentationMaintenanceView(session: maintenanceSession)
+                        .frame(minWidth: 620, minHeight: 520)
+                        .task {
+                            appDelegate.maintenanceSession = maintenanceSession
+                            await maintenanceSession.connectExistingBridge()
+                        }
+                } else {
+                    Text(maintenanceError ?? (AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance is unavailable"))
+                }
             }
+            .rekonWindowChrome()
         }
         .defaultSize(width: 1600, height: 820)
         .commands {
+            ReleaseRadarSettingsCommands(model: model)
             CommandGroup(replacing: .appInfo) {
                 Button("About Release Radar By Rekon Labs") {
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
@@ -315,13 +320,31 @@ struct ReleaseRadarApp: App {
             }
         }
 
-        Settings {
-            if let model {
-                SettingsView(model: model)
-            } else {
-                Text(AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance: ordinary application services are disabled")
+    }
+}
+
+struct ReleaseRadarSettingsCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+    let model: AppModel?
+
+    var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") {
+                guard let model else { return }
+                Task { @MainActor in
+                    await Self.navigateToSettings(model: model)
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
+                }
             }
+            .keyboardShortcut(",", modifiers: .command)
+            .disabled(model == nil)
         }
+    }
+
+    @MainActor
+    static func navigateToSettings(model: AppModel) async {
+        await model.navigate(to: .settings)
     }
 }
 
@@ -358,8 +381,12 @@ private struct MenuBarContent: View {
             }
         }
 
-        SettingsLink {
-            Text("Settings")
+        Button("Settings") {
+            Task { @MainActor in
+                await ReleaseRadarSettingsCommands.navigateToSettings(model: model)
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "main")
+            }
         }
 
         Divider()

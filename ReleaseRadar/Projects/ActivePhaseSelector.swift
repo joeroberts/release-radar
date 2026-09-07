@@ -1,5 +1,6 @@
 import AppKit
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 enum ActivePhaseSelectorSurface: String, Sendable {
@@ -26,21 +27,29 @@ struct ActivePhaseSelectorPresentation: Equatable, Sendable {
         case .saving, .savedNeedsReload:
             return true
         case .idle, .mutationFailed:
-            return project.phases.count == 1 && project.phases.first?.id == project.activePhaseID
+            guard project.phases.count == 1, let activePhaseID = project.activePhaseID else { return false }
+            return project.phases.first.map {
+                hasSameUTF8Identity($0.id.rawValue, activePhaseID.rawValue)
+            } == true
         }
     }
 
     var accessibilityValue: String {
         if isSaving { return "Saving active phase" }
         guard let activePhaseID = project.activePhaseID,
-              let phase = project.phases.first(where: { $0.id == activePhaseID }) else {
+              let phase = project.phases.first(where: {
+                  hasSameUTF8Identity($0.id.rawValue, activePhaseID.rawValue)
+              }) else {
             return "No active phase"
         }
         return "\(phase.name) (\(phase.id.rawValue))"
     }
 
     var accessibilityHelp: String {
-        if project.phases.count == 1, project.phases.first?.id == project.activePhaseID {
+        if project.phases.count == 1,
+           let phaseID = project.phases.first?.id,
+           let activePhaseID = project.activePhaseID,
+           hasSameUTF8Identity(phaseID.rawValue, activePhaseID.rawValue) {
             return "No other phases are available for this project."
         }
         switch status {
@@ -82,21 +91,22 @@ struct ActivePhaseSelector: View {
                         Text("This changes the persisted active phase from \(project.activePhaseName). Ticket lanes and history are unchanged.")
                     }
             } else {
-            Picker("Active phase", selection: selection) {
-                Text("No active phase")
-                    .tag(Optional<PhaseID>.none)
-                    .disabled(true)
-                ForEach(project.phases) { phase in
-                    Text(optionLabel(for: phase))
-                        .tag(Optional(phase.id))
+                HStack(spacing: 12) {
+                    Text("Active phase")
+                        .font(RekonTypography.controlLabel)
+                        .foregroundStyle(RekonTheme.primaryText)
+                    RekonPicker(
+                        selection: selection,
+                        options: activePhaseOptions,
+                        accessibilityLabel: "Active phase",
+                        accessibilityIdentifier: surface.accessibilityIdentifier
+                    )
+                    .frame(minWidth: 180, idealWidth: 260, maxWidth: 360)
+                    .frame(height: 42)
                 }
-            }
-            .pickerStyle(.menu)
-            .fixedSize()
-            .disabled(presentation.isDisabled)
-            .accessibilityIdentifier(surface.accessibilityIdentifier)
-            .accessibilityValue(presentation.accessibilityValue)
-            .accessibilityHint(presentation.accessibilityHelp)
+                .disabled(presentation.isDisabled)
+                .accessibilityValue(presentation.accessibilityValue)
+                .accessibilityHint(presentation.accessibilityHelp)
             }
 
             statusView
@@ -108,14 +118,37 @@ struct ActivePhaseSelector: View {
         return false
     }
 
-    private var selection: Binding<PhaseID?> {
+    private var selection: Binding<String> {
         Binding(
-            get: { project.activePhaseID },
-            set: { phaseID in
-                guard let phaseID, phaseID != project.activePhaseID else { return }
-                Task { await onSelect(phaseID) }
+            get: {
+                guard let activePhaseID = project.activePhaseID,
+                      let option = activePhasePickerOptions.first(where: {
+                          hasSameUTF8Identity($0.value.rawValue, activePhaseID.rawValue)
+                      }) else {
+                    return "No active phase"
+                }
+                return option.selection
+            },
+            set: { selection in
+                guard !presentation.isDisabled,
+                      let option = activePhasePickerOptions.first(where: { $0.selection == selection }),
+                      project.activePhaseID.map({
+                          !hasSameUTF8Identity(option.value.rawValue, $0.rawValue)
+                      }) ?? true else { return }
+                Task { await onSelect(option.value) }
             }
         )
+    }
+
+    private var activePhaseOptions: [String] {
+        let options = activePhasePickerOptions.map(\.selection)
+        return project.activePhaseID == nil ? ["No active phase"] + options : options
+    }
+
+    private var activePhasePickerOptions: [ByteStablePickerOption<PhaseID>] {
+        ByteStablePickerOption.disambiguating(project.phases.map { phase in
+            (label: optionLabel(for: phase), byteIdentity: phase.id.rawValue, value: phase.id)
+        })
     }
 
     private func optionLabel(for phase: ProjectPhaseProjection) -> String {
@@ -183,12 +216,13 @@ struct ActivePhaseBoardRecoveryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(project.name)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .font(RekonTypography.metadata.weight(.medium))
+                .foregroundStyle(RekonTheme.secondaryText)
             Text("No active phase")
-                .font(.title2.weight(.semibold))
+                .font(RekonTypography.sectionTitle)
+                .foregroundStyle(RekonTheme.primaryText)
             Text("Choose an existing phase to establish this project's active board. No phase or ticket history will be changed.")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RekonTheme.secondaryText)
             ActivePhaseSelector(
                 project: project,
                 surface: .board,
@@ -200,6 +234,7 @@ struct ActivePhaseBoardRecoveryView: View {
         }
         .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(RekonTheme.background)
         .accessibilityIdentifier("active-phase-board-recovery")
     }
 }

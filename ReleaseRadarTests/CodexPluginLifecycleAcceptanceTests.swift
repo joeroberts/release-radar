@@ -47,12 +47,12 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.6")
+        XCTAssertEqual(package.version, "0.1.7")
         XCTAssertEqual(
             package.version,
             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         )
-        XCTAssertEqual(package.digest, "dad143d88e77af7e2ed4523c17c31a24fdd8810e87d02a2ccfe2c39ba5558f8c")
+        XCTAssertEqual(package.digest, "75f513d53675b6ae5679d2add575b76f9d32575d605f77702fd91a8c70d9f198")
     }
 
     func testBundledSkillDefinesOwnerAuthorizedAuditedRepositoryHandoff() throws {
@@ -63,14 +63,17 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             "ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md"
         )
         let skill = try String(contentsOf: skillURL, encoding: .utf8)
-        let fencedBlockStart = try XCTUnwrap(skill.range(of: "```markdown\n")).upperBound
+        let fencedBlockStart = try XCTUnwrap(
+            skill.range(of: "```markdown\n<!-- release-radar-guidance:v2:start -->")
+        ).lowerBound
+        let blockStart = skill.index(fencedBlockStart, offsetBy: "```markdown\n".count)
         let fencedBlockEnd = try XCTUnwrap(
-            skill.range(of: "\n```", range: fencedBlockStart..<skill.endIndex)
+            skill.range(of: "\n```", range: blockStart..<skill.endIndex)
         ).lowerBound
 
         XCTAssertFalse(skill.contains("Act only on an owner-requested initialization"))
         XCTAssertEqual(
-            String(skill[fencedBlockStart..<fencedBlockEnd]),
+            String(skill[blockStart..<fencedBlockEnd]),
             ProjectGuidanceInspection.managedBlock
         )
         XCTAssertTrue(skill.contains(

@@ -1,0 +1,14 @@
+{
+  "originHash" : "99b277d8e15587d30afc0d673741638eb094bd0c81a546d9d88be2772e6009e9",
+  "pins" : [
+    {
+      "identity" : "rekondesignsystem",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/joeroberts/RekonDesignSystem.git",
+      "state" : {
+        "revision" : "6d1fb9d341850ee1d13ba9391fada072534eb684"
+      }
+    }
+  ],
+  "version" : 3
+}

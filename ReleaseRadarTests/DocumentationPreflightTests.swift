@@ -3,7 +3,7 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class DocumentationPreflightTests: XCTestCase {
-    func testVersionFourteenPreflightIsReadOnlyAndRejectsVersionShapeMismatch() async throws {
+    func testCurrentPreflightIsReadOnlyAndRejectsVersionShapeMismatch() async throws {
         let directory = try temporaryDirectory()
         let db = directory.appendingPathComponent("store.sqlite")
         let store = DeliveryStore(databaseURL: db)
@@ -11,11 +11,11 @@ final class DocumentationPreflightTests: XCTestCase {
         let before = try files(directory)
         let preflight = try DeliveryStore(existingReadOnlyDatabaseURL: db)
         let version = await preflight.schemaVersionForDocumentation
-        XCTAssertEqual(version, 14)
+        XCTAssertEqual(version, Int(StoreMigrations.currentVersion))
         XCTAssertEqual(try files(directory), before)
         let raw = try SQLiteConnection(url: db)
         // A historical version must have its historical event-to-ticket shape.
-        for incompatibleVersion in [11, 12, 13, 15] {
+        for incompatibleVersion in [11, 12, 13, 14, 16] {
             try raw.execute("PRAGMA user_version = \(incompatibleVersion)")
             let unchanged = try files(directory)
             XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: db))
@@ -58,7 +58,7 @@ final class DocumentationPreflightTests: XCTestCase {
         XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: parentLink.appendingPathComponent("store.sqlite")))
         let fake = directory.appendingPathComponent("fake.sqlite")
         let raw = try SQLiteConnection(url: fake)
-        for version in [13, 14] {
+        for version in [13, 14, 15] {
             try raw.execute("PRAGMA user_version = \(version)")
             XCTAssertThrowsError(try DeliveryStore(existingReadOnlyDatabaseURL: fake))
         }

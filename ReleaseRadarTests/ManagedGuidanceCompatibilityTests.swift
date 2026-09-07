@@ -71,7 +71,7 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
 
     func testBundledCandidateAndUpgradePromptNameV2() throws {
         let package = try CodexPluginPackage(rootURL: Self.repository.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace"))
-        XCTAssertEqual(package.version, "0.1.6")
+        XCTAssertEqual(package.version, "0.1.7")
         let prompt = CodexPromptHandoff.prompt(for: .outdated(installed: 1, current: 2), projectRoot: URL(fileURLWithPath: "/Synthetic/Managed"))
         XCTAssertTrue(prompt.contains("guidance v2"))
         XCTAssertTrue(prompt.contains("existing handoff evidence ID"))
@@ -83,6 +83,7 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
         try await store.transact(actor: .init(id: "fixture"), reason: "Saved phase-less project at relocated root") { c in
             try c.execute("INSERT INTO projects (id, name) VALUES ('persisted-before-relocation', 'Saved project')")
+            try c.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('persisted-before-relocation', 'saved-registration', 1, 'complete')")
             try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('root', 'persisted-before-relocation', ?)", bindings: [.text(root.path)])
             try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES ('persisted-before-relocation', ?, ?, 0)", bindings: [.text(root.path), .blob(Data(root.path.utf8))])
             try c.execute("INSERT INTO project_documentation_bindings (project_id, root_id, repository_id, accepted_catalog_version, accepted_catalog_digest, accepted_catalog) VALUES ('persisted-before-relocation', 'root', ?, 1, ?, ?)", bindings: [.text(snapshot.catalog.repositoryID.lowercased()), .text(snapshot.digest), .blob(snapshot.canonicalCatalog)])
@@ -99,7 +100,7 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
             let preview = try await onboarding.inspect(folder: root)
             XCTAssertEqual(preview.documentationState, .managed(hasAuditedHandoff: true, catalogVersion: 1, catalogDigest: snapshot.digest))
             XCTAssertNil(preview.pendingProjectID)
-            XCTAssertNil(preview.completedProjectID)
+            XCTAssertEqual(preview.completedProjectID, ProjectID(rawValue: "persisted-before-relocation"))
             let after = try await counts(store)
             XCTAssertEqual(after, before)
         }
@@ -138,7 +139,8 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
             guard case let .managedUnavailable(audited, reason, validation) = state else { return XCTFail("Expected unavailable: \(failure)") }
             XCTAssertFalse(audited); XCTAssertEqual(reason, .catalogInvalid); XCTAssertNotNil(validation)
             XCTAssertEqual(state.guidanceState, .handoffIncomplete(version: 2))
-            XCTAssertNil(ProjectGuidancePresentation(documentationState: state).actionTitle)
+            XCTAssertEqual(ProjectGuidancePresentation(documentationState: state).actionTitle, "Copy repair prompt")
+            XCTAssertEqual(CodexPromptHandoff.kind(for: state), .repositoryRepair)
         }
     }
 

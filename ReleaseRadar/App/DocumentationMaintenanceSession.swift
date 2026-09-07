@@ -1,5 +1,6 @@
 import Observation
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 /// A single explicitly opened existing store, shared by owner readback/recovery
@@ -65,7 +66,7 @@ struct DocumentationMaintenanceView: View {
                     if recovery.evidence.isEmpty { Text("No evidence recorded").foregroundStyle(.secondary) }
                     ForEach(recovery.evidence) { row in
                         EvidenceDetailView(evidence: row).padding(.vertical, 6)
-                        Divider()
+                        RekonSeparator()
                     }
                 }
                 if let message = session.message { Text(message).font(.caption).foregroundStyle(.secondary) }
