@@ -42,7 +42,7 @@ final Astra High approval with no Required findings. Native docs/diff and CodeRa
 No whole-suite or shipping folder-grant claim: disabled-broker transport and an existing
 disposable-copy docs fixture remain explicit unrelated limits. Both bounded tasks are
 stopped/archived. [C6 UI evidence](evidence/2026-09-07-c6-remove-tracking-ui.md) is committed
-and catalogued; [historical handoff/temp inventory](archive/2026-09-07-c6-delivery-history.md)
+and catalogued; [Historical handoff/temp inventory](archive/2026-09-07-c6-delivery-history.md)
 preserves detailed results and retained paths. No cleanup is authorized.
 
 ## Delivered C5
