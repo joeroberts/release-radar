@@ -2,99 +2,53 @@
 
 ## Current phase — 2026-09-07
 
-Slice 2 recovery is active: C4 is merged; C5 archive/restore is dispatched, then C6
-removal with retained history and C7 coordinated backup/reset follow, with associated
-C12 health. The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
-retains all 40 capabilities and accepted/proposed distinctions. Later documentation,
-navigation, planning/traceability, history/search/evidence, portable continuity and
-conditional integrations remain included.
+Slice 2 recovery continues: C4 root management and C5 archive/restore are merged.
+C6 remove tracking with retained history is next, followed by C7 backup/reset and
+associated C12 recovery actions. The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+retains all 40 capabilities; later roadmap outcomes and accepted/proposed distinctions
+remain intact.
 
-Recovery orchestrator `01a07b81-ce26-7e70-8696-fc4427eb83a1` owns this ledger and
-shared documentation integration in worktree `f1ab`, published branch
-`codex/recovery-orchestration`. Assigned Astra Medium; runtime model settings are not
-exposed by the coordination API. It began at `80521d6`. Prior orchestrator
-`01a078bb-1a08-7222-96b1-58e842f5f809` is stopped/archived; its branch is retired,
-`b2425c1` remains on `origin/codex/archive-lifecycle-delivery-2026-09-07`, and `26a5`
-is recovery-only. Do not reuse them.
+Orchestrator `01a07b81-ce26-7e70-8696-fc4427eb83a1` owns this ledger/catalog integration
+in `f1ab`, branch `codex/recovery-orchestration`. Astra Medium; runtime unexposed.
+Canonical checkout, retained recovery stash/exclusions/C8 app and prior dist artifacts
+remain untouched. Pursuit migration is stopped; RDS appearance is unchanged.
 
-## Authorization and active C5 assignment
+## Authorization and C6 assignment
 
-Continuing owner authority covers approved product implementation, affected docs,
-synthetic checks, scoped commits, branch pushes and PR creation. **Ask before each
-PR merge.** Installation, real owner-data archive/relocation/deletion/reset, real
-notifications and other reserved application/external mutations need exact authority.
-SQLite remains exclusively app-owned. Preserve canonical recovery stash `7adfff2`,
-local exclusions, C8 app and retained `dist/PR-23-*` acceptance/rollback artifacts.
-Pursuit migration is stopped; RDS appearance is unchanged.
+Existing authority covers scoped implementation, synthetic checks, commits, pushes and
+PR creation. Each new PR merge requires explicit approval. C5's approval was consumed
+by its merge; it does not cover C6. Installation, real owner-data lifecycle actions,
+notifications, cloud/plugin changes and application catalog acceptance are not authorized.
+SQLite remains exclusively app-owned; repository-only work grants no application state.
 
-“Deliver reversible project archive and…” (`01a07bab-4a2b-7e53-b388-10800a2e3a6c`)
-was dispatched fresh with explicit
-Sol High from committed `6e67cd6`, containing merged C4 `32bb2ce` and the
-[controlling C5 brief](task-briefs/2026-09-07-c5-archive-restore/c5-archive-restore-brief.md).
-The worker confirmed dedicated worktree `dc15`, baseline `6e67cd6`, and published
-`codex/c5-archive-restore` with matching upstream; runtime model/effort is unexposed.
-It owns source/tests/brief; parent retains
-ledger and shared catalog/index integration. Ceiling Astra High, Ultra prohibited.
-The complete outcome preserves graph/registration/history and association, suspends
-operational activity, supports discoverable restore without a valid catalog, and
-prevents stale callbacks or notification replay.
+The [C6 brief](task-briefs/2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md)
+is persisted/catalogued against merged C5 `c8cba4b`. Dispatch will use a fresh worktree,
+`codex/c6-remove-tracking`, explicit Sol High, ceiling Astra High; no Ultra. The writer
+owns source/tests/brief; parent owns ledger/shared metadata. One fresh independent
+combined reviewer covers retention, migration, stale authority and native UI/QA.
 
-[PR #29](https://github.com/joeroberts/release-radar/pull/29) now has corrected
-candidate `8d56411ac67e18e1882c9f6171b35f055d04d4e2`. Owner explicitly authorized
-merge of the bounded corrected C5 outcome after required checks/review; do not ask
-again for this PR. Installation and owner-state actions remain unauthorized.
+## Delivered C5
 
-Initial fresh Astra High reviewer “Review C5 reversible archive and restore”
-(`01a07bf9-623b-71d2-9af1-ab70b5dc19e8`, `f419`) passed 93 selected tests/native
-checks but reproduced two Required P1 defects: archived documentation binding bypass
-and pre-archive authorization applying after restore. Both are corrected with
-transactional lifecycle/registration/generation checks before mutations and replay.
+[PR #29](https://github.com/joeroberts/release-radar/pull/29) merged with explicit owner
+approval as `c8cba4b223eeeba2f5a0b03d1f649fe5bc51eff9` from final reviewed `1017dad`.
+It delivers persistent reversible archive, discoverable read-only archived detail,
+operational suspension and generation-based stale-request rejection without replaying
+notifications or requiring valid catalog/access. Both independently found admission
+bugs and six C5-caused migration/preservation failures were corrected.
 
-Delivery's independent subagent `/root/c5_correction_review`
-(`01a07c15-0a43-7c61-b720-7e7d0713e315`, explicit Astra High) approved exact `8d56411`
-with no findings after 2 regression and 5 compatibility/replay checks. The orchestrator
-read its final verdict directly. Writer reports 344/344 exact-head targeted tests,
-zero failures/skips, clean worktree and documentation/diff checks passing. Native
-compact/wide verification remains valid because corrections changed no UI.
+Evidence: 344 targeted tests on admission correction; final 10/10 affected migration
+cases including malformed-schema rejection; initial 93 independent checks include
+native 620/1100 UI/AX. Final correction reviewer Astra High approved with no findings.
+[UI evidence](evidence/2026-09-07-c5-archive-restore-ui.md) and its five catalog entries
+are current. Native docs/diff checks pass. No whole-suite or shipping permission proof
+is claimed. PR description reflects final verification; CodeRabbit was pending
+supplemental review when normal GitHub merge succeeded without required-check override.
+Writer `01a07bab-4a2b-7e53-b388-10800a2e3a6c` and initial reviewer
+`01a07bf9-623b-71d2-9af1-ab70b5dc19e8` are archived, processes stopped. Delivery's
+independent correction subagent `01a07c15-0a43-7c61-b720-7e7d0713e315` is complete/stopped.
 
-Seven broader EndToEnd historical migration fixtures were found incompatible with
-C5's schema-v16 addition. These are C5-caused fixture failures, not clean-baseline
-pre-existing failures. Before merge, the same writer is resolving only these fixtures
-and rerunning affected migration cases; the same correction reviewer covers any
-resulting change. No production migration weakening, unrelated `/var` fixture repair,
-whole-suite repetition or additional reviewer is requested. The final PR description
-must reflect corrected verification and catalogued [UI evidence](evidence/2026-09-07-c5-archive-restore-ui.md).
-
-Reviewer temporary repro source remains untracked in `f419/ReleaseRadarTests/`
-`C5IndependentReviewTests.swift`. Under `/tmp/`, prefix `c5-review-f419-` outputs are
-`build`, `focused.log`, `focused.xcresult`, `repro.log`, `repro.xcresult`, `attachments`.
-No cleanup is authorized. Reviewer confirmed build/test processes stopped and is
-archived after its candidate review. Isolated host directories
-`ReleaseRadar-XCTestHost-86475` and `ReleaseRadar-XCTestHost-86838` also remain under
-`/Users/jroberts/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/`.
-
-Repository documentation and diff checks pass after the five evidence registrations;
-no application catalog acceptance is claimed.
-Writer remains active for the bounded C5 fixture correction at explicit Sol High.
-
-C5 temporary files remain; no deletion is authorized. Under `/tmp/`, all names below
-use prefix `release-radar-c5-`: build directories `direct`, `doc-tool`, `red`,
-`verify-adjacent`, `verify-c5`, `verify-render`, `verify-store`; result bundles
-`failing-0907.xcresult`, `direct-0828.xcresult` (interrupted/corrupt aggregate),
-`render-0813.xcresult`, `render-0814.xcresult`, `render-0815.xcresult`,
-`render-0822.xcresult`, `render-0823.xcresult`, `render-final.xcresult`,
-`render-final2.xcresult`; attachment directories `images-0823`,
-`render-final-attachments`, `render-final2-attachments`; diagnostics
-`dashboard-debug.log`, `dashboard-one.log`, `dashboard-repeat.log`, `direct-0828.log`,
-`root-debug.log`, `root-debug2.log`, `root-debug3.log`, `root-one.log`,
-`root-repeat.log`, `store-one.log`, `xcresult.err`. All durable UI evidence is committed
-under `docs/delivery/evidence/`; these are retained temporary verification outputs.
-Correction outputs under `/tmp/` with the same `release-radar-c5-` prefix remain:
-`corrections-red`, `corrections-green`, `corrections-green2`, `corrections-diagnose`,
-`corrections-diagnose.log`, `corrections-final`,
-`corrections-final-8d56411.xcresult`, `correction-independent-review-8d56411`.
-
-
+[Historical C5 coordination and retained temporary inventory](archive/2026-09-07-recovery-through-c5.md)
+preserves candidate/review history and exact temporary outputs. No cleanup is authorized.
 
 ## Delivered C4 and verification limits
 
