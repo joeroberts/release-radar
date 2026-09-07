@@ -9,11 +9,12 @@ struct ProjectsView: View {
     var codexTasks: [CodexTaskDescriptor] = []
     let openProject: (ProjectID) -> Void
     let openArchivedProject: (ProjectID) -> Void
+    var openRemovedProject: (ProjectRemovalID) -> Void = { _ in }
     let onboardingFinished: @MainActor () async -> Void
     @State private var scope = ProjectListScope.active
 
     var body: some View {
-        if projection.projects.isEmpty && projection.archivedProjects.isEmpty {
+        if projection.projects.isEmpty && projection.archivedProjects.isEmpty && projection.removedProjects.isEmpty {
             OnboardingView(
                 store: onboardingStore,
                 codexTasks: codexTasks,
@@ -84,12 +85,12 @@ struct ProjectsView: View {
                             }
                             .padding(.horizontal, 28)
                         }
-                    } else if projection.archivedProjects.isEmpty {
+                    } else if scope == .archived && projection.archivedProjects.isEmpty {
                         projectListEmptyState(
                             title: "No archived projects",
                             detail: "Archived projects remain preserved here until you restore them."
                         )
-                    } else {
+                    } else if scope == .archived {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
                             ForEach(projection.archivedProjects) { project in
                                 Button { openArchivedProject(project.id) } label: {
@@ -119,6 +120,44 @@ struct ProjectsView: View {
                             }
                         }
                         .padding(.horizontal, 28)
+                    } else if projection.removedProjects.isEmpty {
+                        projectListEmptyState(
+                            title: "No removed projects",
+                            detail: "Projects removed from tracking appear here with retained read-only history."
+                        )
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
+                            ForEach(projection.removedProjects) { project in
+                                Button { openRemovedProject(project.id) } label: {
+                                    RekonCard {
+                                        VStack(alignment: .leading, spacing: 16) {
+                                            HStack(alignment: .top) {
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text(project.projectName).font(RekonTypography.cardTitle)
+                                                    Label("Removed · History only", systemImage: "clock.badge.xmark")
+                                                        .font(RekonTypography.metadata)
+                                                        .foregroundStyle(RekonTheme.secondaryText)
+                                                    Text("Removed \(project.removedAt.formatted(date: .abbreviated, time: .shortened))")
+                                                        .font(.caption)
+                                                        .foregroundStyle(RekonTheme.secondaryText)
+                                                }
+                                                Spacer()
+                                                Image(systemName: "chevron.right").foregroundStyle(RekonTheme.secondaryText)
+                                            }
+                                            HStack(spacing: 24) {
+                                                projectMetric(value: Int(project.counts.phases), label: "Phases")
+                                                projectMetric(value: Int(project.counts.tickets), label: "Tickets")
+                                                projectMetric(value: Int(project.counts.history), label: "History")
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("removed-project-\(project.id.rawValue)")
+                            }
+                        }
+                        .padding(.horizontal, 28)
                     }
                 }
                 .padding(.bottom, 28)
@@ -133,9 +172,10 @@ struct ProjectsView: View {
         Picker("Project status", selection: $scope) {
             Text("Active (\(projection.projects.count))").tag(ProjectListScope.active)
             Text("Archived (\(projection.archivedProjects.count))").tag(ProjectListScope.archived)
+            Text("Removed (\(projection.removedProjects.count))").tag(ProjectListScope.removed)
         }
         .pickerStyle(.segmented)
-        .frame(maxWidth: 360)
+        .frame(maxWidth: 480)
         .accessibilityIdentifier("projects-status-scope")
     }
 
@@ -171,6 +211,7 @@ struct ProjectsView: View {
 private enum ProjectListScope: Hashable {
     case active
     case archived
+    case removed
 }
 
 struct ProjectGoalSummaryView: View {

@@ -12,6 +12,42 @@ final class ProjectArchiveAcceptanceTests: XCTestCase {
             try await seedProject(in: store)
         }
         let legacy = try SQLiteConnection(url: url)
+        for trigger in [
+            "ticket_task_plans_reject_delete",
+            "ticket_tasks_reject_delete",
+            "ticket_task_plans_reject_ticket_delete",
+            "ticket_task_plans_reject_project_delete",
+        ] {
+            try legacy.execute("DROP TRIGGER \(trigger)")
+        }
+        try legacy.execute("DROP INDEX audit_events_historical_project_index")
+        try legacy.execute("DROP TABLE retained_delivery_goal_assignment_events")
+        try legacy.execute("DROP TABLE retained_project_activity_events")
+        try legacy.execute("DROP TABLE project_removal_authorizations")
+        try legacy.execute("DROP TABLE removed_projects")
+        try legacy.execute("ALTER TABLE audit_events DROP COLUMN historical_registration_id")
+        try legacy.execute("ALTER TABLE audit_events DROP COLUMN historical_project_id")
+        try legacy.execute("ALTER TABLE agent_command_requests DROP COLUMN request_generation")
+        try legacy.execute("ALTER TABLE agent_command_requests DROP COLUMN registration_id")
+        try legacy.execute("ALTER TABLE agent_command_requests DROP COLUMN registration_project_id")
+        try legacy.execute("""
+        CREATE TRIGGER ticket_task_plans_reject_delete BEFORE DELETE ON ticket_task_plans
+        BEGIN SELECT RAISE(ABORT, 'ticket task plan history cannot be deleted'); END
+        """)
+        try legacy.execute("""
+        CREATE TRIGGER ticket_tasks_reject_delete BEFORE DELETE ON ticket_tasks
+        BEGIN SELECT RAISE(ABORT, 'ticket task history cannot be deleted'); END
+        """)
+        try legacy.execute("""
+        CREATE TRIGGER ticket_task_plans_reject_ticket_delete BEFORE DELETE ON tickets
+        WHEN EXISTS (SELECT 1 FROM ticket_task_plans WHERE project_id = OLD.project_id AND ticket_id = OLD.id)
+        BEGIN SELECT RAISE(ABORT, 'ticket owns task history'); END
+        """)
+        try legacy.execute("""
+        CREATE TRIGGER ticket_task_plans_reject_project_delete BEFORE DELETE ON projects
+        WHEN EXISTS (SELECT 1 FROM ticket_task_plans WHERE project_id = OLD.id)
+        BEGIN SELECT RAISE(ABORT, 'project owns task history'); END
+        """)
         try legacy.execute("ALTER TABLE projects DROP COLUMN lifecycle")
         try legacy.execute("PRAGMA user_version = 15")
 

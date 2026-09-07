@@ -78,6 +78,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
                 // Same recognized-v13 fixture convention as Task 7/7A. The real
                 // v11 migration alone grants continuation; never seed that flag.
                 try StoreMigrations.migrate(c)
+                try removeVersionSeventeenSchema(c, restoreTaskDeleteProtection: true)
                 let historical = try SQLiteConnection(url: fixtures.appendingPathComponent("SchemaV11/release-radar-v11.sqlite"), immutableReadOnly: true)
                 let eventSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='delivery_goal_assignment_events'"))
                 try c.executeScript("""
@@ -516,6 +517,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             // is the only operation that grants either ticket continuation.
             try StoreMigrations.migrate(c)
             XCTAssertEqual(try c.scalarInt("SELECT plan_legacy_continuation FROM tickets WHERE id='RR-R10'"), 1)
+            try removeVersionSeventeenSchema(c, restoreTaskDeleteProtection: true)
             let historical = try SQLiteConnection(url: fixtures.appendingPathComponent("SchemaV11/release-radar-v11.sqlite"), immutableReadOnly: true)
             let eventSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='delivery_goal_assignment_events'"))
             // Existing Task 7 fixture convention: restore only the historical
@@ -564,7 +566,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
         let store = DeliveryStore(databaseURL: databaseURL)
         let availability = await store.availability
         XCTAssertEqual(availability, .available)
-        var migrated = try await store.read { try Self.bootstrapRows($0) }
+        var migrated = try await store.read {
+            try Self.normalizingImplicitProjectLifecycle(Self.bootstrapRows($0))
+        }
         let registrations = migrated.removeValue(forKey: "project_registrations")
         XCTAssertEqual(migrated, baseline, "current migration must preserve every existing row")
         XCTAssertEqual(registrations?.count, 2)
@@ -629,7 +633,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
             XCTAssertNotNil(result.auditEventID)
             requests.append((envelope, result))
         }
-        let committed = try await store.read { try Self.bootstrapRows($0) }
+        let committed = try await store.read {
+            try Self.normalizingImplicitProjectLifecycle(Self.bootstrapRows($0))
+        }
         let changed = Set(["ticket_task_plans", "ticket_tasks", "audit_events", "agent_command_requests", "project_registrations"])
         XCTAssertEqual(committed.filter { !changed.contains($0.key) }, baseline.filter { !changed.contains($0.key) })
         XCTAssertEqual(committed["ticket_task_plans"]?.count, 1)
@@ -646,7 +652,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
             XCTAssertEqual(immediate, result)
             XCTAssertEqual(replayed, result)
         }
-        let replayRows = try await relaunched.read { try Self.bootstrapRows($0) }
+        let replayRows = try await relaunched.read {
+            try Self.normalizingImplicitProjectLifecycle(Self.bootstrapRows($0))
+        }
         XCTAssertEqual(replayRows, committed)
         let projection = try await DashboardProjection.load(from: relaunched)
         let board = try XCTUnwrap(projection.board(for: .init(rawValue: "project-1")))
@@ -691,11 +699,28 @@ final class EndToEndAcceptanceTests: XCTestCase {
         _ rows: [String: [[String: SQLiteValue]]]
     ) -> [String: [[String: SQLiteValue]]] {
         var normalized = rows
+        normalized.removeValue(forKey: "removed_projects")
+        normalized.removeValue(forKey: "retained_project_activity_events")
+        normalized.removeValue(forKey: "retained_delivery_goal_assignment_events")
+        normalized.removeValue(forKey: "project_removal_authorizations")
         normalized["projects"] = normalized["projects"]?.map { row in
             guard row["lifecycle"] == nil else { return row }
             var project = row
             project["lifecycle"] = .text("active")
             return project
+        }
+        normalized["audit_events"] = normalized["audit_events"]?.map { row in
+            var audit = row
+            audit.removeValue(forKey: "historical_project_id")
+            audit.removeValue(forKey: "historical_registration_id")
+            return audit
+        }
+        normalized["agent_command_requests"] = normalized["agent_command_requests"]?.map { row in
+            var receipt = row
+            receipt.removeValue(forKey: "registration_project_id")
+            receipt.removeValue(forKey: "registration_id")
+            receipt.removeValue(forKey: "request_generation")
+            return receipt
         }
         return normalized
     }
@@ -1073,6 +1098,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             .appendingPathComponent("Fixtures/SchemaV10/release-radar-v10.sqlite")
         let historical = try SQLiteConnection(url: fixture, immutableReadOnly: true)
         let evidenceSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='evidence'"))
+        try removeVersionSeventeenSchema(connection, restoreTaskDeleteProtection: false)
         try connection.executeScript("""
         DROP TABLE project_registrations;
         ALTER TABLE projects DROP COLUMN lifecycle;
@@ -1083,10 +1109,10 @@ final class EndToEndAcceptanceTests: XCTestCase {
         INSERT INTO evidence (id,project_id,ticket_id,path,is_available)
             SELECT id,project_id,ticket_id,path,is_available FROM current_evidence;
         DROP TABLE current_evidence;
-        DROP TRIGGER ticket_task_plans_reject_project_delete;
-        DROP TRIGGER ticket_task_plans_reject_ticket_delete;
-        DROP TRIGGER ticket_tasks_reject_delete;
-        DROP TRIGGER ticket_task_plans_reject_delete;
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_ticket_delete;
+        DROP TRIGGER IF EXISTS ticket_tasks_reject_delete;
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_delete;
         DROP TRIGGER ticket_tasks_reject_label_update;
         DROP TRIGGER ticket_tasks_reject_identity_update;
         DROP TABLE ticket_tasks;
@@ -1103,6 +1129,44 @@ final class EndToEndAcceptanceTests: XCTestCase {
         ALTER TABLE tickets DROP COLUMN plan_legacy_continuation;
         DROP TABLE codex_plugin_lifecycle;
         """)
+    }
+
+    private func removeVersionSeventeenSchema(
+        _ connection: SQLiteConnection,
+        restoreTaskDeleteProtection: Bool
+    ) throws {
+        try connection.executeScript("""
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_ticket_delete;
+        DROP TRIGGER IF EXISTS ticket_tasks_reject_delete;
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_delete;
+        DROP INDEX IF EXISTS audit_events_historical_project_index;
+        DROP TABLE IF EXISTS retained_delivery_goal_assignment_events;
+        DROP TABLE IF EXISTS retained_project_activity_events;
+        DROP TABLE IF EXISTS project_removal_authorizations;
+        DROP TABLE IF EXISTS removed_projects;
+        ALTER TABLE audit_events DROP COLUMN historical_registration_id;
+        ALTER TABLE audit_events DROP COLUMN historical_project_id;
+        ALTER TABLE agent_command_requests DROP COLUMN request_generation;
+        ALTER TABLE agent_command_requests DROP COLUMN registration_id;
+        ALTER TABLE agent_command_requests DROP COLUMN registration_project_id;
+        """)
+        guard restoreTaskDeleteProtection else { return }
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/SchemaV12/release-radar-v12.sqlite")
+        let historical = try SQLiteConnection(url: fixture, immutableReadOnly: true)
+        for trigger in [
+            "ticket_task_plans_reject_delete",
+            "ticket_tasks_reject_delete",
+            "ticket_task_plans_reject_ticket_delete",
+            "ticket_task_plans_reject_project_delete",
+        ] {
+            let sql = try XCTUnwrap(historical.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = ?",
+                bindings: [.text(trigger)]
+            ))
+            try connection.executeScript(sql)
+        }
     }
 
     private func makeDatabaseURL() throws -> URL {

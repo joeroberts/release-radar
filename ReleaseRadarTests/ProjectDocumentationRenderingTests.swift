@@ -7,6 +7,96 @@ import XCTest
 
 @MainActor
 final class ProjectDocumentationRenderingTests: XCTestCase {
+    func testProjectRemovalConfirmationAndRemovedHistoryAtWideAndCompactWidths() async throws {
+        let projectID = ProjectID(rawValue: "project-removal-rendering")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "registration-removal-rendering",
+            requestGeneration: 12
+        )
+        let counts = ProjectLifecycleCounts(phases: 2, tickets: 9, evidence: 4, history: 18)
+        let preview = ProjectRemovalPreview(
+            projectID: projectID,
+            projectName: "Historical Delivery",
+            lifecycle: .active,
+            registration: registration,
+            counts: counts
+        )
+        let record = RemovedProjectRecord(
+            id: .init(rawValue: "removal-rendering"),
+            projectID: projectID,
+            projectName: "Historical Delivery",
+            originalLifecycle: .active,
+            registration: registration,
+            removedAt: try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-09-07T12:00:00Z")),
+            counts: counts
+        )
+        let activity = ProjectActivityProjection(projectID: projectID, items: [
+            .init(
+                id: "retained-audit", source: .audit, title: "Project change",
+                detail: "Retained attributed history", observedAt: record.removedAt,
+                ticketID: nil, deliveryLane: nil, runtimeState: nil,
+                notificationState: nil, notificationStatusText: nil,
+                originatingThreadID: "thread-removal-rendering"
+            ),
+        ])
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                ProjectRemovalConfirmationView(preview: preview, confirm: {}),
+                name: "c6-remove-confirmation-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Remove Historical Delivery from tracking?", "project-removal-rendering",
+                    "registration-removal-rendering", "2 phases", "9 tickets", "4 evidence items",
+                    "18 history events", "Repository files are never changed",
+                    "Read-only history will remain", "cannot be restored", "Cancel", "Remove from Tracking",
+                ]
+            )
+            try await render(
+                RemovedProjectView(project: record, activity: activity),
+                name: "c6-removed-history-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Historical Delivery", "Removed from tracking", "Retained history is read-only",
+                    "registration-removal-rendering", "Retained attributed history",
+                ],
+                absentText: ["Restore Project", "Manage Project", "Remove from Tracking"]
+            )
+        }
+
+        var confirmationCalls = 0
+        try await render(
+            ProjectRemovalConfirmationView(preview: preview) {
+                confirmationCalls += 1
+                throw ProjectRemovalError.stalePreview
+            },
+            name: "c6-remove-error",
+            width: 620,
+            expected: nil,
+            expectedText: ["Project was not removed"],
+            pressTitles: ["Remove from Tracking"]
+        )
+        XCTAssertEqual(confirmationCalls, 1)
+        XCTAssertEqual(
+            ProjectRemovalError.stalePreview.errorDescription,
+            "The project changed after this removal confirmation was prepared. Review the latest counts and try again."
+        )
+
+        confirmationCalls = 0
+        try await render(
+            ProjectRemovalConfirmationView(preview: preview) { confirmationCalls += 1 },
+            name: "c6-remove-cancel",
+            width: 620,
+            expected: nil,
+            expectedText: ["Cancel", "Remove from Tracking"],
+            pressTitles: ["Cancel"]
+        )
+        XCTAssertEqual(confirmationCalls, 0)
+    }
+
     func testProjectArchiveAndArchivedDetailAtWideAndCompactWidths() async throws {
         let projectID = ProjectID(rawValue: "project-archive-rendering")
         let registration = ProjectRegistration(

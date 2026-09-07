@@ -19,15 +19,18 @@ enum DashboardLayout {
 struct DashboardProjection: Equatable, Sendable {
     let projects: [ProjectDashboardProjection]
     let archivedProjects: [ArchivedProjectProjection]
+    let removedProjects: [RemovedProjectRecord]
     let boards: [PhaseBoardKey: PhaseBoardProjection]
 
     init(
         projects: [ProjectDashboardProjection],
         archivedProjects: [ArchivedProjectProjection] = [],
+        removedProjects: [RemovedProjectRecord] = [],
         boards: [PhaseBoardKey: PhaseBoardProjection]
     ) {
         self.projects = projects
         self.archivedProjects = archivedProjects
+        self.removedProjects = removedProjects
         self.boards = boards
     }
 
@@ -101,6 +104,28 @@ struct DashboardProjection: Equatable, Sendable {
                         tickets: try row.integer("ticket_count"),
                         evidence: try row.integer("evidence_count"),
                         history: try row.integer("history_count")
+                    )
+                )
+            }
+            let removedProjects = try connection.dashboardRows(
+                "SELECT * FROM removed_projects ORDER BY removed_at DESC, project_name COLLATE NOCASE, removal_id"
+            ).map { row in
+                let projectID = ProjectID(rawValue: try row.text("historical_project_id"))
+                guard let lifecycle = ProjectLifecycle(rawValue: try row.text("original_lifecycle")),
+                      let removedAt = ISO8601DateFormatter().date(from: try row.text("removed_at")) else {
+                    throw DashboardProjectionError.invalidRemovedProject
+                }
+                return RemovedProjectRecord(
+                    id: .init(rawValue: try row.text("removal_id")), projectID: projectID,
+                    projectName: try row.text("project_name"), originalLifecycle: lifecycle,
+                    registration: .init(
+                        projectID: projectID, registrationID: try row.text("registration_id"),
+                        requestGeneration: try row.integer("request_generation")
+                    ),
+                    removedAt: removedAt,
+                    counts: .init(
+                        phases: try row.integer("phase_count"), tickets: try row.integer("ticket_count"),
+                        evidence: try row.integer("evidence_count"), history: try row.integer("history_count")
                     )
                 )
             }
@@ -222,7 +247,10 @@ struct DashboardProjection: Equatable, Sendable {
                 }
             }
 
-            return DashboardProjection(projects: projects, archivedProjects: archivedProjects, boards: boards)
+            return DashboardProjection(
+                projects: projects, archivedProjects: archivedProjects,
+                removedProjects: removedProjects, boards: boards
+            )
         }
     }
 }
@@ -493,6 +521,7 @@ enum DashboardProjectionError: Error, Equatable {
     case missingColumn(String)
     case invalidColumn(String)
     case invalidLane(String)
+    case invalidRemovedProject
 }
 
 extension TicketLane {
