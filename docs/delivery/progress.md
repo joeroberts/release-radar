@@ -2,9 +2,10 @@
 
 ## Current outcome — 2026-09-07
 
-[PR #23](https://github.com/joeroberts/release-radar/pull/23) is open and
-unmerged, awaiting owner acceptance and explicit merge approval. The accepted
-candidate is `32f1bc654fa7a9ca99144e81fa5cb250d7a96bc1`. Independent correction
+The owner accepted and authorized [PR #23](https://github.com/joeroberts/release-radar/pull/23)
+merge on 2026-09-07. It merged into `codex/release-radar-mvp` at
+`80521d6f081dbcb1e8ad6f6611322d23ce306db4`; its final branch head includes
+the status closeout at `1a21e46`. Independent correction
 review reports no Required or Optional findings. This current outcome supersedes
 the earlier authorization and defect snapshots below.
 
@@ -23,14 +24,22 @@ The signed app and versioned DMG are tracked in the candidate; the installed
 `/Applications/ReleaseRadar.app` executable matches the tracked app. Plugin status
 is Installed 0.1.7. No remaining plugin-name conflict is reported. The controlling
 [usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
-retains the delivery scope. Independent review is complete; bounded delivery and
-RDS tasks are completing handoff for archival. Parent retains acceptance/merge
+retains the completed milestone scope. Independent review is complete; the
+bounded delivery, reviewer and RDS tasks are archived. Parent retains programme
 coordination. Pursuit RDS migration is explicitly stopped; no source or dependency
 changes were made there. Temporary verification and rollback artifacts are retained;
 no cleanup or managed documentation synchronization is claimed.
 
-Next action: owner acceptance of the installed candidate, then the separately
-approved PR #23 merge. No additional implementation is implied by this closeout.
+Next eligible outcome under the continuing programme is slice 2 C4: safe managed
+repository relocation and explicit primary/worktree roots, using the existing
+relocation service and accepted identity/catalog boundaries. A fresh delivery task
+will inspect the merged implementation, persist its bounded brief, implement the
+missing complete journey, and submit a reviewed PR from the merged baseline.
+C5 archive/restore, C6 removal with retained history, and C7 coordinated backup/reset
+recovery remain included subsequent outcomes. Delivered plugin recovery is not
+reopened without a demonstrated remaining gap. Each new PR still needs owner merge
+approval; real owner-data relocation, destructive recovery and installation require
+their own exact authorization. The older snapshots below are historical.
 
 ## Current programme authorization — 2026-09-06
 
