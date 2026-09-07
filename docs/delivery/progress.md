@@ -56,6 +56,19 @@ notification recovery, plugin inspection and health services are the foundation.
 Portable import/export remains a later outcome. The consultant reported all work
 stopped; its bounded result is preserved here and the task is archived.
 
+C4's real Git fixture setup exposed the sandbox-incompatible `/usr/bin/git` xcrun
+shim; source shows the grant discovery uses that same executable, but the grant
+itself was not reached by that failed setup. Fresh bounded architecture consultation
+`01a07b92-732a-77b2-8b6a-d5c490c03e5c` (Astra High dispatch) recommended a C4-local
+membership predicate using the existing explicit-path no-follow reader unchanged.
+Validate common Git directory and linked-root backlinks with explicitly held folder
+scopes, stable recheck at confirm, and truthful outside-grant recovery. No catalog-only
+membership, implicit grant, reader-policy relaxation, Git repair or new helper is
+authorized. Normal absolute/relative worktrees and malformed/stale/denied cases need
+direct sandboxed checks. The delivery owner is implementing this bounded correction;
+final candidate review remains the single applicable implementation review. The
+consultant reported all work/processes stopped; useful guidance is preserved here.
+
 ## Parallel bounded discovery — 2026-09-07
 
 Owner authorization added four discovery/proposal tracks alongside recovery. After
