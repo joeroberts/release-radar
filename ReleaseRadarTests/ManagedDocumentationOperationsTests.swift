@@ -4,6 +4,36 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    func testProjectDocumentationPreviewKeepsSecurityScopeOpenForCatalogReadAndReleasesIt() async throws {
+        let fixture = try await makeFixture()
+        let registration = ProjectRegistration(
+            projectID: .init(rawValue: "p"),
+            registrationID: "scope-gated-registration",
+            requestGeneration: 1
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed scoped lifecycle registration") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('p', ?, 1, 'complete')",
+                bindings: [.text(registration.registrationID)]
+            )
+        }
+        let bookmarks = ScopeGatedBookmarkStore(root: fixture.root)
+        XCTAssertEqual(chmod(fixture.root.path, 0), 0)
+        defer { XCTAssertEqual(chmod(fixture.root.path, 0o700), 0) }
+        let coordinator = ProjectDocumentationSetupCoordinator(
+            store: fixture.store,
+            bookmarkStore: bookmarks
+        )
+
+        let preview = try await coordinator.preview(registration: registration)
+
+        XCTAssertEqual(preview.action, .bind)
+        XCTAssertFalse(bookmarks.isScopeActive)
+        var metadata = stat()
+        XCTAssertEqual(lstat(fixture.root.path, &metadata), 0)
+        XCTAssertEqual(metadata.st_mode & mode_t(0o777), 0)
+    }
+
     func testProjectLifecycleDocumentationSetupPreviewsThenPerformsOneAuditedBinding() async throws {
         let fixture = try await makeFixture()
         let registration = ProjectRegistration(
@@ -617,5 +647,34 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         }
         let registry = InMemoryAuthorizedProjectRegistry(projects: [.init(projectID: .init(rawValue: "p"), canonicalRoot: root, authorizedRoots: [root])])
         return (store, root, AgentCommandDispatcher(store: store, projectRegistry: registry, bookmarkStore: bookmarks(root)))
+    }
+}
+
+private final class ScopeGatedBookmarkStore: @unchecked Sendable, ProjectBookmarkStoring {
+    private let root: URL
+    private let lock = NSLock()
+    private var active = false
+
+    init(root: URL) { self.root = root }
+
+    var isScopeActive: Bool { lock.withLock { active } }
+
+    func makeBookmark(for url: URL) throws -> Data { Data(url.path.utf8) }
+
+    func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        .init(url: root, isStale: false)
+    }
+
+    func withSecurityScopedAccess<T: Sendable>(
+        bookmark: Data,
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T {
+        XCTAssertEqual(chmod(root.path, 0o700), 0)
+        lock.withLock { active = true }
+        defer {
+            lock.withLock { active = false }
+            XCTAssertEqual(chmod(root.path, 0), 0)
+        }
+        return try await body(.init(url: root, isStale: false))
     }
 }

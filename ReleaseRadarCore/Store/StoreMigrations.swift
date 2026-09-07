@@ -954,7 +954,12 @@ enum StoreMigrations {
                  '-' || substr('89ab', (random() & 3) + 1, 1) || substr(hex(randomblob(2)), 2) ||
                  '-' || hex(randomblob(6))),
            1,
-           'complete'
+           CASE WHEN EXISTS (
+               SELECT 1 FROM review_items
+               WHERE review_items.project_id = projects.id
+                 AND review_items.kind = 'onboarding_pending'
+                 AND review_items.status = 'open'
+           ) THEN 'pending' ELSE 'complete' END
     FROM projects;
     """
 

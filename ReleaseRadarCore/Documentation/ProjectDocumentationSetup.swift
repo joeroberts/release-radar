@@ -55,15 +55,18 @@ public actor ProjectDocumentationSetupCoordinator {
 
     public func preview(registration: ProjectRegistration) async throws -> ProjectDocumentationSetupPreview {
         try await requireCurrent(registration)
-        let authorization = try await FolderProjectOnboarding(
+        let (authorization, snapshot) = try await FolderProjectOnboarding(
             store: store,
             bookmarkStore: bookmarkStore
-        ).withReadOnlyAuthorizedProject(projectID: registration.projectID) { $0 }
-        let snapshot: RepositoryDocumentSnapshot
-        do {
-            snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: authorization.canonicalRoot)
-        } catch {
-            throw ProjectDocumentationSetupError.catalogUnavailable
+        ).withReadOnlyAuthorizedProject(projectID: registration.projectID) { authorization in
+            do {
+                let snapshot = try RepositoryDocumentValidator().validateCurrent(
+                    authorizedRoot: authorization.canonicalRoot
+                )
+                return (authorization, snapshot)
+            } catch {
+                throw ProjectDocumentationSetupError.catalogUnavailable
+            }
         }
         let persisted = try await store.read { connection in
             let rootID = try connection.scalarText(
