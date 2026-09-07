@@ -110,6 +110,20 @@ The same writer is restored at explicit Sol High from `ab53f1b` for only these c
 evidence accuracy and bounded R7 verification. Native launches require a source-proven
 synthetic initialization/termination route without broad filesystem exceptions; no new
 normal-app launch, harness, owner-state inspection or credential use is authorized.
+Final corrective candidate `19a428488a6ad73cffd09bec2dbd36be084f31e5` is pushed.
+Both R1/R5 regressions failed before correction and pass afterward; the complete directly
+affected RecoveryAcceptanceTests passed 20/20. New markers retain explicit unreadable-original
+policy; legacy crash markers preserve invalid rollback material. Displaced registration/history
+is preserved even when that project was absent from the selected backup. Evidence wording
+and run-selection counts are corrected.
+The existing synthetic host was re-signed from production filesystem entitlements with only
+required XCTest runtime exceptions. Strict signature verification and actual entitlement
+readback before and after launch show no broad filesystem exception. Its single native picker
+check selected `/Users/Shared/ReleaseRadar-C7-SignedPicker-Corrective.Po4gPJ`, created and
+validated one backup there, left no staging, and exited. The XCTest termination guard returns
+before shared-service initialization. No retry or normal launch was used for this check.
+Independent final correction review remains required; prior unrelated successful checks stand.
+
 No merge approval has been requested or given. Final phase acceptance remains outstanding.
 
 Verification incidents remain disclosed in the [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
