@@ -556,16 +556,13 @@ public actor ProjectRemovalManager {
                 phase_id, delivery_goal_id, originating_thread_id, delivery_lane, runtime_state
             )
             SELECT ?, 'runtime', observed_goals.id, observed_goals.status, observed_goals.text,
-                   observed_goals.last_observed_at, ticket_goal_links.ticket_id, tickets.phase_id,
-                   observed_goals.id, observed_goals.thread_id, tickets.lane, observed_goals.status
+                   observed_goals.last_observed_at, ticket_goal_links.ticket_id, NULL,
+                   observed_goals.id, observed_goals.thread_id, NULL, observed_goals.status
             FROM observed_goals
             LEFT JOIN ticket_goal_links
               ON ticket_goal_links.project_id = observed_goals.project_id
              AND ticket_goal_links.goal_id = observed_goals.id
              AND ticket_goal_links.thread_id = observed_goals.thread_id
-            LEFT JOIN tickets
-              ON tickets.project_id = ticket_goal_links.project_id
-             AND tickets.id = ticket_goal_links.ticket_id
             WHERE observed_goals.project_id = ?
             """,
             bindings: bindings
@@ -581,10 +578,8 @@ public actor ProjectRemovalManager {
                    (SELECT MAX(created_at) FROM audit_events
                     WHERE project_id = review_items.project_id
                       AND entity_type = 'review_item' AND entity_id = review_items.id),
-                   review_items.ticket_id, tickets.phase_id, tickets.lane
+                   review_items.ticket_id, NULL, NULL
             FROM review_items
-            LEFT JOIN tickets
-              ON tickets.project_id = review_items.project_id AND tickets.id = review_items.ticket_id
             WHERE review_items.project_id = ? AND review_items.status <> 'open'
             """,
             bindings: bindings
@@ -597,10 +592,8 @@ public actor ProjectRemovalManager {
             )
             SELECT ?, 'completion', completion_records.id, 'Completed', completion_records.summary,
                    completion_records.created_at, completion_records.ticket_id,
-                   tickets.phase_id, tickets.lane, 'completed'
+                   NULL, NULL, 'completed'
             FROM completion_records
-            JOIN tickets
-              ON tickets.project_id = completion_records.project_id AND tickets.id = completion_records.ticket_id
             WHERE completion_records.project_id = ?
             """,
             bindings: bindings
@@ -608,20 +601,36 @@ public actor ProjectRemovalManager {
         try connection.execute(
             """
             INSERT INTO retained_project_activity_events (
-                removal_id, source, source_id, title, detail, recorded_at, ticket_id,
+                removal_id, source, source_id, title, detail, occurred_at, recorded_at, ticket_id,
                 phase_id, delivery_lane, notification_state, notification_status_text
             )
             SELECT ?, 'notification', notification_events.id,
                    COALESCE(notification_events.title, notification_events.fingerprint),
                    COALESCE(notification_events.message, 'Persisted notification delivery event.'),
-                   notification_events.created_at, notification_events.ticket_id,
-                   tickets.phase_id, tickets.lane, notification_events.state,
-                   CASE notification_events.state
-                     WHEN 'queued' THEN 'Queued'
-                     WHEN 'attempt_started' THEN 'Sending'
-                     WHEN 'unknown' THEN 'Delivery unknown · Not retried automatically'
-                     WHEN 'sent' THEN 'Pushover delivered'
-                     WHEN 'suppressed' THEN 'Suppressed when project was removed'
+                   notification_events.created_at, notification_events.completed_at,
+                   notification_events.ticket_id, NULL, NULL, notification_events.state,
+                   CASE
+                     WHEN notification_events.state = 'queued' THEN 'Queued'
+                     WHEN notification_events.state = 'attempt_started' THEN 'Sending'
+                     WHEN notification_events.state = 'unknown' THEN 'Delivery unknown · Not retried automatically'
+                     WHEN notification_events.state = 'sent' THEN 'Pushover delivered'
+                     WHEN notification_events.state = 'suppressed'
+                       AND notification_events.failure_code = 'project_archived'
+                       THEN 'Suppressed when project was archived'
+                     WHEN notification_events.state = 'suppressed'
+                       AND notification_events.failure_code = 'project_removed'
+                       THEN 'Suppressed when project was removed'
+                     WHEN notification_events.state = 'suppressed' THEN 'Suppressed'
+                     WHEN notification_events.state = 'failed'
+                       AND notification_events.failure_code = 'credentials_missing'
+                       THEN 'Delivery failed · Credentials missing'
+                     WHEN notification_events.state = 'failed'
+                       AND notification_events.failure_code = 'provider_rejected'
+                       THEN 'Delivery failed · Provider rejected'
+                     WHEN notification_events.state = 'failed'
+                       AND notification_events.failure_code = 'invalid_provider_response'
+                       THEN 'Delivery failed · Invalid provider response'
+                     WHEN notification_events.state = 'failed' THEN 'Delivery failed · Transport unavailable'
                      ELSE 'Persisted delivery status'
                    END
             FROM notification_events

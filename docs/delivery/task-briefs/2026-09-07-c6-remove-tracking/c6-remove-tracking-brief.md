@@ -43,13 +43,18 @@ audits gain historical project/registration identity that survives the live fore
 non-audit activity and complete Delivery Goal assignment events are copied into retained
 history tables whose only parent is the removal record. Event occurrence, observation and
 recording timestamps remain distinct nullable facts, so the migration does not invent a
-missing time, actor, lane or provenance.
+missing time, actor, lane or provenance. Runtime, review, completion and notification
+records do not inherit a ticket's current phase or lane when they did not capture those
+facts at event time.
 
 New durable command receipts carry the exact project/registration/generation that created
 them. A replay is valid only for that same registration; legacy unscoped receipts are not
 retargeted or backfilled. Removal updates queued notification outcomes to suppressed and
 in-flight outcomes to unknown before retaining them, then invalidates occurrences and
-deletes the live notification rows so relaunch cannot replay them.
+deletes the live notification rows so relaunch cannot replay them. Existing terminal
+outcomes keep their original state, completion time and human-readable failure or
+suppression reason; only queued and in-flight outcomes receive removal-time terminal
+metadata.
 
 One store-owned transaction creates the removal record and retained snapshots, authorizes
 the exact project for the otherwise-protected task-history deletes, removes dependent plan
@@ -74,6 +79,9 @@ removed registration when present and otherwise returns to Projects.
 - Receipt/retry behavior is deterministic and correctly scoped to removed registration.
   Failed writes roll back all changes. Concurrent or pre-resolved requests, documentation
   mutations and app-owned callbacks cannot apply after removal or target a re-added project.
+- A prepared or resumable onboarding decision from before removal cannot recreate the
+  removed identity, registration or bookmarks. A fresh explicit folder inspection creates
+  a different project identity and registration before onboarding can proceed.
 - Monitoring and pending notifications stop being eligible. Sent/unknown outcomes stay
   truthful and old work never replays. Do not claim external execution was cancelled.
 - Removed records are discoverable as read-only retained history/removal information.

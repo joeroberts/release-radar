@@ -65,6 +65,53 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(*) FROM retained_delivery_goal_assignment_events WHERE removal_id = ?", bindings: [.text(removed.id.rawValue)]),
                 1
             )
+            XCTAssertEqual(
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM retained_project_activity_events WHERE removal_id = ? AND (phase_id IS NOT NULL OR delivery_lane IS NOT NULL)",
+                    bindings: [.text(removed.id.rawValue)]
+                ),
+                0
+            )
+            let archivedNotification = try XCTUnwrap(connection.row(
+                "SELECT occurred_at, recorded_at, notification_state, notification_status_text FROM retained_project_activity_events WHERE removal_id = ? AND source = 'notification' AND source_id = 'archived'",
+                bindings: [.text(removed.id.rawValue)]
+            ))
+            XCTAssertEqual(archivedNotification["occurred_at"], .text("2026-09-07T10:03:00Z"))
+            XCTAssertEqual(archivedNotification["recorded_at"], .text("2026-09-07T10:05:00Z"))
+            XCTAssertEqual(archivedNotification["notification_state"], .text("suppressed"))
+            XCTAssertEqual(archivedNotification["notification_status_text"], .text("Suppressed when project was archived"))
+            let failedNotification = try XCTUnwrap(connection.row(
+                "SELECT occurred_at, recorded_at, notification_state, notification_status_text FROM retained_project_activity_events WHERE removal_id = ? AND source = 'notification' AND source_id = 'failed'",
+                bindings: [.text(removed.id.rawValue)]
+            ))
+            XCTAssertEqual(failedNotification["occurred_at"], .text("2026-09-07T10:03:00Z"))
+            XCTAssertEqual(failedNotification["recorded_at"], .text("2026-09-07T10:06:00Z"))
+            XCTAssertEqual(failedNotification["notification_state"], .text("failed"))
+            XCTAssertEqual(failedNotification["notification_status_text"], .text("Delivery failed · Credentials missing"))
+            let queuedNotification = try XCTUnwrap(connection.row(
+                "SELECT occurred_at, recorded_at, notification_state, notification_status_text FROM retained_project_activity_events WHERE removal_id = ? AND source = 'notification' AND source_id = 'queued'",
+                bindings: [.text(removed.id.rawValue)]
+            ))
+            XCTAssertEqual(queuedNotification["occurred_at"], .text("2026-09-07T10:03:00Z"))
+            XCTAssertNotEqual(queuedNotification["recorded_at"], .null)
+            XCTAssertEqual(queuedNotification["notification_state"], .text("suppressed"))
+            XCTAssertEqual(queuedNotification["notification_status_text"], .text("Suppressed when project was removed"))
+            let attemptedNotification = try XCTUnwrap(connection.row(
+                "SELECT occurred_at, recorded_at, notification_state, notification_status_text FROM retained_project_activity_events WHERE removal_id = ? AND source = 'notification' AND source_id = 'attempt'",
+                bindings: [.text(removed.id.rawValue)]
+            ))
+            XCTAssertEqual(attemptedNotification["occurred_at"], .text("2026-09-07T10:03:00Z"))
+            XCTAssertNotEqual(attemptedNotification["recorded_at"], .null)
+            XCTAssertEqual(attemptedNotification["notification_state"], .text("unknown"))
+            XCTAssertEqual(attemptedNotification["notification_status_text"], .text("Delivery unknown · Not retried automatically"))
+            let sentNotification = try XCTUnwrap(connection.row(
+                "SELECT occurred_at, recorded_at, notification_state, notification_status_text FROM retained_project_activity_events WHERE removal_id = ? AND source = 'notification' AND source_id = 'sent'",
+                bindings: [.text(removed.id.rawValue)]
+            ))
+            XCTAssertEqual(sentNotification["occurred_at"], .text("2026-09-07T10:03:00Z"))
+            XCTAssertEqual(sentNotification["recorded_at"], .text("2026-09-07T10:04:00Z"))
+            XCTAssertEqual(sentNotification["notification_state"], .text("sent"))
+            XCTAssertEqual(sentNotification["notification_status_text"], .text("Pushover delivered"))
         }
         XCTAssertEqual(try Data(contentsOf: fixture.repositoryFile), Data("owner content\n".utf8))
 
@@ -277,6 +324,83 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
         }
     }
 
+    func testPreparedOnboardingDecisionCannotResurrectRemovedRegistration() async throws {
+        let fixture = try Fixture(testCase: self)
+        let onboarding = FolderProjectOnboarding(
+            store: fixture.store,
+            bookmarkStore: RemovalTestBookmarkStore()
+        )
+        let oldRegistration = ProjectRegistration(
+            projectID: fixture.projectID,
+            registrationID: "old-owner-decision",
+            requestGeneration: 1
+        )
+        let oldPreview = OnboardingPreview(
+            selectedFolder: fixture.root,
+            gitRoot: nil,
+            includedTaskDescriptors: [],
+            rejectedTaskDescriptors: [],
+            authorizedWorktreeURLs: [],
+            worktreesRequiringAuthorization: [],
+            registration: oldRegistration
+        )
+        let oldDecision = OnboardingDecision(preview: oldPreview, projectName: "Pending Project")
+        let preparedProjectID = try await onboarding.prepare(oldDecision)
+        XCTAssertEqual(preparedProjectID, fixture.projectID)
+
+        let removal = ProjectRemovalManager(store: fixture.store)
+        _ = try await removal.apply(try await removal.preview(projectID: fixture.projectID))
+
+        do {
+            _ = try await onboarding.prepare(oldDecision)
+            XCTFail("Expected the pre-removal decision to be rejected")
+        } catch {
+            XCTAssertEqual(error as? OnboardingError, .staleRegistration)
+        }
+        try await fixture.store.read { connection in
+            XCTAssertEqual(
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_registrations WHERE registration_id = ?",
+                    bindings: [.text(oldRegistration.registrationID)]
+                ),
+                0
+            )
+            XCTAssertEqual(
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ?",
+                    bindings: [.text(oldRegistration.projectID.rawValue)]
+                ),
+                0
+            )
+        }
+
+        let freshPreview = try await onboarding.inspect(folder: fixture.root)
+        XCTAssertNotEqual(freshPreview.registration.projectID, oldRegistration.projectID)
+        XCTAssertNotEqual(freshPreview.registration.registrationID, oldRegistration.registrationID)
+        let freshDecision = OnboardingDecision(preview: freshPreview, projectName: "Fresh Project")
+        let freshProjectID = try await onboarding.prepare(freshDecision)
+        XCTAssertEqual(freshProjectID, freshPreview.registration.projectID)
+        try await fixture.store.read { connection in
+            XCTAssertEqual(
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ?",
+                    bindings: [
+                        .text(freshPreview.registration.projectID.rawValue),
+                        .text(freshPreview.registration.registrationID),
+                    ]
+                ),
+                1
+            )
+            XCTAssertEqual(
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_bookmarks WHERE project_id = ?",
+                    bindings: [.text(freshPreview.registration.projectID.rawValue)]
+                ),
+                1
+            )
+        }
+    }
+
     func testVersionSixteenMigratesHistoricalIdentityAndLeavesLegacyReceiptsUnscoped() async throws {
         let fixture = try Fixture(testCase: self)
         try await fixture.seedCompleteProject()
@@ -469,10 +593,21 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
                 reason: "Seed notification outcomes",
                 auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
             ) { connection in
-                for (id, state) in [("queued", "queued"), ("attempt", "attempt_started"), ("sent", "sent")] {
+                for (id, state, completedAt, failureCode) in [
+                    ("queued", "queued", nil, nil),
+                    ("attempt", "attempt_started", nil, nil),
+                    ("sent", "sent", "2026-09-07T10:04:00Z", nil),
+                    ("archived", "suppressed", "2026-09-07T10:05:00Z", "project_archived"),
+                    ("failed", "failed", "2026-09-07T10:06:00Z", "credentials_missing"),
+                ] {
                     try connection.execute(
-                        "INSERT INTO notification_events (id, fingerprint, state, project_id, event_kind, subject_id, occurrence, title, message, created_at, attempt_count) VALUES (?, ?, ?, 'project-one', 'review_requested', ?, 1, 'History notice', 'Retain outcome', '2026-09-07T10:03:00Z', ?)",
-                        bindings: [.text(id), .text("fingerprint-\(id)"), .text(state), .text(id), .integer(state == "attempt_started" ? 1 : 0)]
+                        "INSERT INTO notification_events (id, fingerprint, state, project_id, event_kind, subject_id, occurrence, title, message, created_at, completed_at, failure_code, attempt_count) VALUES (?, ?, ?, 'project-one', 'review_requested', ?, 1, 'History notice', 'Retain outcome', '2026-09-07T10:03:00Z', ?, ?, ?)",
+                        bindings: [
+                            .text(id), .text("fingerprint-\(id)"), .text(state), .text(id),
+                            completedAt.map(SQLiteValue.text) ?? .null,
+                            failureCode.map(SQLiteValue.text) ?? .null,
+                            .integer(state == "attempt_started" ? 1 : 0),
+                        ]
                     )
                     try connection.execute(
                         "INSERT INTO notification_occurrences (subject_key, project_id, event_kind, subject_id, generation, is_active) VALUES (?, 'project-one', 'review_requested', ?, 1, 1)",
@@ -484,5 +619,22 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
                 )
             }
         }
+    }
+}
+
+private struct RemovalTestBookmarkStore: ProjectBookmarkStoring {
+    func makeBookmark(for url: URL) throws -> Data {
+        Data(url.standardizedFileURL.resolvingSymlinksInPath().path.utf8)
+    }
+
+    func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        .init(url: URL(fileURLWithPath: String(decoding: bookmark, as: UTF8.self)), isStale: false)
+    }
+
+    func withSecurityScopedAccess<T: Sendable>(
+        bookmark: Data,
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T {
+        try await body(resolve(bookmark))
     }
 }

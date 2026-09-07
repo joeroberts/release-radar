@@ -640,6 +640,10 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                       try connection.scalarInt(
                           "SELECT COUNT(*) FROM project_registrations WHERE registration_id = ?",
                           bindings: [.text(registration.registrationID)]
+                      ) == 0,
+                      try connection.scalarInt(
+                          "SELECT COUNT(*) FROM removed_projects WHERE historical_project_id = ? OR registration_id = ?",
+                          bindings: [.text(projectID.rawValue), .text(registration.registrationID)]
                       ) == 0
                 else { throw OnboardingError.staleRegistration }
                 try connection.execute(
