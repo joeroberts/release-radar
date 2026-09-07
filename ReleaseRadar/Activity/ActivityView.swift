@@ -18,8 +18,8 @@ struct ActivityView: View {
                 }
 
                 Text("Runtime state is last-observed context. Delivery lane remains the persisted formal state.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
                     .padding(.horizontal, 28)
 
                 LazyVStack(alignment: .leading, spacing: 10) {
@@ -47,17 +47,17 @@ struct ActivityView: View {
                     if let ticketID = item.ticketID {
                         Text(ticketID.rawValue)
                             .font(.system(.caption, design: .monospaced, weight: .medium))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(RekonTheme.secondaryText)
                     }
                     Spacer()
                     if let freshnessText = item.freshnessText {
-                        Text(freshnessText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            Text(freshnessText)
+                            .font(RekonTypography.metadata)
+                            .foregroundStyle(RekonTheme.secondaryText)
                     }
                 }
                 Text(item.detail)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(RekonTheme.secondaryText)
                 HStack(spacing: 8) {
                     if let lane = item.deliveryLane {
                         Text("Lane · \(lane.dashboardTitle)")

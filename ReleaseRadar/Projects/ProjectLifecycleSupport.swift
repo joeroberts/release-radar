@@ -151,6 +151,7 @@ struct ProjectSettingsEditor: View {
                             }
                         ), title: task.title, accessibilityLabel: task.title,
                            accessibilityIdentifier: "project-settings-task-\(task.id)")
+                            .frame(height: 32, alignment: .leading)
                     }
                 }
             }

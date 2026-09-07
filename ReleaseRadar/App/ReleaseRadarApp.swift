@@ -287,6 +287,7 @@ struct ReleaseRadarApp: App {
         }
         .defaultSize(width: 1600, height: 820)
         .commands {
+            ReleaseRadarSettingsCommands(model: model)
             CommandGroup(replacing: .appInfo) {
                 Button("About Release Radar By Rekon Labs") {
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
@@ -315,13 +316,31 @@ struct ReleaseRadarApp: App {
             }
         }
 
-        Settings {
-            if let model {
-                SettingsView(model: model)
-            } else {
-                Text(AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance: ordinary application services are disabled")
+    }
+}
+
+struct ReleaseRadarSettingsCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+    let model: AppModel?
+
+    var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") {
+                guard let model else { return }
+                Task { @MainActor in
+                    await Self.navigateToSettings(model: model)
+                    NSApp.activate(ignoringOtherApps: true)
+                    openWindow(id: "main")
+                }
             }
+            .keyboardShortcut(",", modifiers: .command)
+            .disabled(model == nil)
         }
+    }
+
+    @MainActor
+    static func navigateToSettings(model: AppModel) async {
+        await model.navigate(to: .settings)
     }
 }
 

@@ -6,6 +6,22 @@ import ReleaseRadarCore
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testAppSettingsCommandUsesTheInShellSettingsRoute() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SettingsCommand-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            externalServicesSuppressed: true
+        )
+
+        await ReleaseRadarSettingsCommands.navigateToSettings(model: model)
+
+        XCTAssertEqual(model.selection, .settings)
+    }
+
+    @MainActor
     func testApplicationHealthRemainsReachableWhenStoreIsUnavailable() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-Health-\(UUID().uuidString)", isDirectory: true)

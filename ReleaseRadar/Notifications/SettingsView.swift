@@ -319,6 +319,7 @@ struct SettingsView: View {
             accessibilityLabel: title,
             accessibilityIdentifier: accessibilityID
         )
+        .frame(height: 32, alignment: .leading)
         .disabled(model.alertRuleControlsDisabled)
     }
 

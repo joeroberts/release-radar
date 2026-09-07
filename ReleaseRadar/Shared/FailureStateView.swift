@@ -474,8 +474,8 @@ struct FailureStateView: View {
             Text(presentation.title)
                 .font(.subheadline.weight(.semibold))
             Text(presentation.detail)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(RekonTypography.metadata)
+                .foregroundStyle(RekonTheme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             actionButton
         }

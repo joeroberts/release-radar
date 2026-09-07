@@ -42,22 +42,23 @@ struct ProjectsView: View {
                                     HStack(alignment: .top) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(project.name)
-                                                .font(.title3.weight(.semibold))
+                                                .font(RekonTypography.cardTitle)
                                             Text("Active phase")
-                                                .font(.caption)
-                                                .foregroundStyle(.tertiary)
+                                                .font(RekonTypography.metadata)
+                                                .foregroundStyle(RekonTheme.secondaryText)
                                             if project.activePhaseName == "No active phase" {
                                                 Text("Ready for planning")
                                                     .foregroundStyle(RekonTheme.secondaryText)
                                             } else {
                                                 Text(project.activePhaseName)
-                                                    .foregroundStyle(.secondary)
+                                                    .font(RekonTypography.secondaryBody)
+                                                    .foregroundStyle(RekonTheme.secondaryText)
                                             }
                                         }
                                         Spacer()
                                         Image(systemName: "chevron.right")
                                             .font(.system(size: 14, weight: .light))
-                                            .foregroundStyle(.tertiary)
+                                            .foregroundStyle(RekonTheme.secondaryText)
                                     }
 
                                     ProjectGoalSummaryView(context: project.goalContext)
@@ -103,12 +104,12 @@ struct ProjectGoalSummaryView: View {
         HStack(alignment: .top, spacing: 9) {
             Image(systemName: context.linkQuality == .verified ? "checkmark.seal" : "questionmark.circle")
                 .font(.system(size: 16, weight: .light))
-                .foregroundStyle(context.linkQuality == .verified ? Color.green : Color.secondary)
+                .foregroundStyle(context.linkQuality == .verified ? RekonTheme.success : RekonTheme.secondaryText)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(context.linkQuality == .verified ? "Verified last-known goal" : "Last-known goal unavailable")
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(RekonTheme.secondaryText)
 
                 if let status = context.status {
                     Text(status)
@@ -118,18 +119,18 @@ struct ProjectGoalSummaryView: View {
                 if let text = context.text {
                     Text(text)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(RekonTheme.secondaryText)
                         .lineLimit(2)
                 } else {
                     Text("No persisted goal observation")
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(RekonTheme.secondaryText)
                 }
 
                 if let observedAt = context.lastObservedAt {
                     Text("Observed \(observedAt.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(RekonTypography.metadata)
+                        .foregroundStyle(RekonTheme.secondaryText)
                 }
             }
         }

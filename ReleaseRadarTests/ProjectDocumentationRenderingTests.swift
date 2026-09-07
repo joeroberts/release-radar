@@ -178,6 +178,70 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testRDSLifecycleSheetsAndPluginConflictRenderInExistingHost() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RDS-Sheets-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            externalServicesSuppressed: true,
+            seedSampleData: false
+        )
+        model.codexPluginState = .failed(.marketplaceConflict)
+        model.codexPluginSettingsMessage = CodexPluginSettingsPresentation(state: model.codexPluginState).detail
+        try await render(
+            SettingsView(model: model),
+            name: "rds-plugin-conflict-settings",
+            width: 760,
+            expected: nil,
+            expectedText: [
+                "Release Radar Codex Plugin",
+                "A different Release Radar plugin or MCP entry already owns this name.",
+                "Resolve or rename the conflicting plugin or MCP entry in Codex, then try again.",
+            ]
+        )
+
+        model.alertRules = try AlertRuleSnapshot(values: Dictionary(
+            uniqueKeysWithValues: AlertRuleKind.allCases.map { ($0, true) }
+        ))
+        try await render(
+            SettingsView(model: model),
+            name: "rds-notification-settings",
+            width: 760,
+            expected: nil,
+            pressIdentifiers: ["settings-notifications"]
+        )
+
+        let registration = ProjectRegistration(
+            projectID: .init(rawValue: "rds-sheet-project"),
+            registrationID: "rds-sheet-registration",
+            requestGeneration: 1
+        )
+        try await render(
+            ProjectSettingsEditor(
+                initial: .init(registration: registration, projectName: "RDS Project", excludedTaskIDs: []),
+                tasks: [.init(id: "task-1", workingDirectory: directory, title: "RDS adoption")],
+                save: { _, _ in
+                    XCTFail("Rendering must not save project settings")
+                    return .init(registration: registration, projectName: "RDS Project", excludedTaskIDs: [])
+                }
+            ),
+            name: "rds-project-settings-sheet",
+            width: 620,
+            expected: nil,
+            expectedText: ["Project settings", "Observed Codex tasks", "RDS adoption", "Save"]
+        )
+
+        try await render(
+            ProjectLifecycleHelpView(),
+            name: "rds-project-lifecycle-help",
+            width: 620,
+            expected: nil,
+            expectedText: ["Project lifecycle help", "Initialize locally", "Prepare repository documentation", "Recover safely"]
+        )
+    }
+
     func testPhaseLessRoutesRenderAsSupportedRDSStatesAtWideAndCompactWidths() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RDS-PhaseLess-\(UUID().uuidString)", isDirectory: true)

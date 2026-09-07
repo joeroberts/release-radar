@@ -1,4 +1,5 @@
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 extension DeliveryGoalLifecycle {
@@ -44,13 +45,14 @@ struct PhaseBoardPlanningControls: View {
             }
             Text("Plan: \(planSummary)")
                 .font(.subheadline)
+                .foregroundStyle(RekonTheme.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("phase-plan-summary")
                 .focusable()
             if board.phasePlan.state != .ready {
                 Label("Backlog and Blocked work cannot start until coverage is finalized.", systemImage: "exclamationmark.triangle")
                     .font(.caption)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(RekonTheme.warning)
                     .fixedSize(horizontal: false, vertical: true)
             }
             ViewThatFits(in: .horizontal) {
@@ -60,23 +62,31 @@ struct PhaseBoardPlanningControls: View {
             if board.filterableDeliveryGoals.isEmpty {
                 Text("No Delivery Goals recorded · \(board.phasePlan.unassignedUpcomingCount) unassigned upcoming tickets")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(RekonTheme.secondaryText)
             }
         }
     }
 
     private var phasePicker: some View {
-        Picker("Viewed phase", selection: Binding(
-            get: { Data(board.phaseID.rawValue.utf8) },
-            set: { viewPhase(PhaseID(rawValue: String(decoding: $0, as: UTF8.self))) }
-        )) {
-            ForEach(board.project.phases, id: \.byteIdentity) { phase in
-                Text("\(phase.name) · \(phase.id.rawValue)").tag(phase.byteIdentity)
-            }
+        HStack(spacing: 12) {
+            Text("Viewed phase")
+                .font(RekonTypography.controlLabel)
+                .foregroundStyle(RekonTheme.primaryText)
+            RekonPicker(
+                selection: Binding(
+                    get: { phaseOption(for: board.project.phases.first(where: { $0.id == board.phaseID })) },
+                    set: { selection in
+                        guard let phase = board.project.phases.first(where: { phaseOption(for: $0) == selection }) else { return }
+                        viewPhase(phase.id)
+                    }
+                ),
+                options: board.project.phases.map(phaseOption(for:)),
+                accessibilityLabel: "Viewed phase",
+                accessibilityIdentifier: "viewed-phase-selector"
+            )
+            .frame(minWidth: 280, idealWidth: 520, maxWidth: 620)
+            .frame(height: 42)
         }
-        .pickerStyle(.menu)
-        .fixedSize()
-        .accessibilityIdentifier("viewed-phase-selector")
         .accessibilityValue("\(board.phaseName), \(board.isActivePhase ? "active phase" : "not the active phase")")
         .accessibilityHint("Browse without changing the persisted active phase or delivery state.")
     }
@@ -90,38 +100,80 @@ struct PhaseBoardPlanningControls: View {
             }
             Text("Active phase: \(board.project.activePhaseName)")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RekonTheme.secondaryText)
                 .accessibilityIdentifier("board-active-phase")
         }
     }
 
     private var goalPicker: some View {
-        Picker("Delivery Goal", selection: $filter) {
-            Text("All goals").tag(DeliveryGoalFilter.all)
-            ForEach(board.filterableDeliveryGoals) { goal in
-                Text("\(goal.title) · \(goal.goalID.rawValue)").tag(DeliveryGoalFilter.goal(goal.goalID))
-            }
-            if filter == .unassigned { Text("Unassigned").tag(DeliveryGoalFilter.unassigned) }
-            if case let .goal(id) = filter,
-               !board.filterableDeliveryGoals.contains(where: { $0.id == Data(id.rawValue.utf8) }) {
-                Text("Unavailable Delivery Goal · \(id.rawValue)").tag(filter)
-            }
+        HStack(spacing: 12) {
+            Text("Delivery Goal")
+                .font(RekonTypography.controlLabel)
+                .foregroundStyle(RekonTheme.primaryText)
+            RekonPicker(
+                selection: Binding(
+                    get: { goalOption(for: filter) },
+                    set: { selection in
+                        if selection == "All goals" {
+                            filter = .all
+                        } else if selection == "Unassigned" {
+                            filter = .unassigned
+                        } else if let goal = board.filterableDeliveryGoals.first(where: { goalOption(for: .goal($0.goalID)) == selection }) {
+                            filter = .goal(goal.goalID)
+                        }
+                    }
+                ),
+                options: goalOptions,
+                accessibilityLabel: "Delivery Goal",
+                accessibilityIdentifier: "delivery-goal-filter"
+            )
+            .frame(minWidth: 280, idealWidth: 520, maxWidth: 620)
+            .frame(height: 42)
         }
-        .pickerStyle(.menu)
-        .fixedSize()
-        .accessibilityIdentifier("delivery-goal-filter")
         .accessibilityHint("Filter cards without changing their lanes or persisted state.")
     }
 
+    private var goalOptions: [String] {
+        var options = ["All goals"] + board.filterableDeliveryGoals.map { goalOption(for: .goal($0.goalID)) }
+        if filter == .unassigned {
+            options.append("Unassigned")
+        }
+        if case let .goal(id) = filter,
+           !board.filterableDeliveryGoals.contains(where: { $0.goalID == id }) {
+            options.append("Unavailable Delivery Goal · \(id.rawValue)")
+        }
+        return options
+    }
+
+    private func phaseOption(for phase: ProjectPhaseProjection?) -> String {
+        if let phase {
+            return "\(phase.name) · \(phase.id.rawValue)"
+        }
+        return "\(board.phaseName) · \(board.phaseID.rawValue)"
+    }
+
+    private func goalOption(for filter: DeliveryGoalFilter) -> String {
+        switch filter {
+        case .all:
+            return "All goals"
+        case .unassigned:
+            return "Unassigned"
+        case let .goal(id):
+            if let goal = board.filterableDeliveryGoals.first(where: { $0.goalID == id }) {
+                return "\(goal.title) · \(goal.goalID.rawValue)"
+            }
+            return "Unavailable Delivery Goal · \(id.rawValue)"
+        }
+    }
+
     private var unassignedFilter: some View {
-        Toggle("Show unassigned", isOn: Binding(get: { filter == .unassigned },
-            set: { filter = $0 ? .unassigned : .all }))
-            .toggleStyle(.checkbox)
-            .accessibilityIdentifier("delivery-goal-unassigned")
+        RekonCheckbox(
+            isOn: Binding(get: { filter == .unassigned }, set: { filter = $0 ? .unassigned : .all }),
+            title: "Show unassigned",
+            accessibilityLabel: "Show unassigned",
+            accessibilityIdentifier: "delivery-goal-unassigned"
+        )
+            .frame(width: 220, height: 42, alignment: .leading)
             .accessibilityHint("Show upcoming tickets without a Delivery Goal. Accepted history is excluded.")
     }
-}
-
-private extension ProjectPhaseProjection {
-    var byteIdentity: Data { Data(id.rawValue.utf8) }
 }
