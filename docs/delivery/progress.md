@@ -1,10 +1,67 @@
 # Release Radar delivery state
 
-## Current outcome — 2026-09-07
+## Active recovery orchestration — 2026-09-07
 
-[PR #23](https://github.com/joeroberts/release-radar/pull/23) is open and
-unmerged, awaiting owner acceptance and explicit merge approval. The accepted
-candidate is `32f1bc654fa7a9ca99144e81fa5cb250d7a96bc1`. Independent correction
+Task `01a07b81-ce26-7e70-8696-fc4427eb83a1` owns slice 2 coordination and this
+ledger in dedicated worktree `f1ab`, on published `codex/recovery-orchestration`
+with its matching origin upstream. It began at merged `80521d6f081dbcb1e8ad6f6611322d23ce306db4`
+and integrated only the prior documentation handoff through Git. Astra Medium is
+the assigned profile; the coordination API does not expose effective runtime settings.
+
+The previous orchestrator `01a078bb-1a08-7222-96b1-58e842f5f809` is stopped and
+archived. `codex/lifecycle-delivery` is retired; handoff `b2425c1` is retained on
+`origin/codex/archive-lifecycle-delivery-2026-09-07`, and worktree `26a5` is recovery-only.
+The older programme and lifecycle snapshots below are historical, not current
+assignments or merge status.
+
+C4 continues in the same unfinished delivery task `01a07b7a-f30a-7373-99ba-709e4f9c6a69`,
+worktree `039a`, branch `codex/c4-root-management`, from `80521d6` plus handoff
+`9d08db4`. The new orchestrator has contacted it directly and explicitly configured
+Sol High; the API response does not confirm effective runtime. The worker owns C4
+source, tests, brief and associated catalog/index changes; only the orchestrator
+writes this ledger. Its reported registration-replacement regression is now passing;
+worktree promotion and explicit grant/reconnect/revoke remain under implementation.
+Those reports are interim evidence, not C4 completion or independent review.
+
+The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+and accepted ADR boundaries retain the full phase: C4 safe accepted-catalog relocation
+and explicit primary/worktree roots, then C5 reversible archive/restore, C6 removal
+with retained read-only history and untouched repository files, C7 coordinated
+backup/reset recovery, and associated C12 health actions. Existing binding identifies
+the managed primary root; no duplicate authority is authorized. Later documentation,
+navigation, planning/traceability, history/search/evidence, portable continuity and
+conditional integrations remain included in the wider 40-capability programme.
+
+Continuing authority covers scoped implementation/documentation, synthetic direct
+checks, commits, pushes and PR creation. **Ask before each PR merge.** Real owner-data
+relocation/deletion/reset, installation and other reserved application/external
+mutations need exact authorization. Preserve canonical recovery stash `7adfff2`, local
+exclusions, the C8 app and `dist/PR-23-*` artifacts. Pursuit migration remains stopped;
+RDS appearance is unchanged. No SQLite or owner-state mutation occurred here.
+
+Read-only application inventory for the canonical root on 2026-09-07 still reports
+`bindingMissing` and `isComplete: false` for `project-fffdc0e0b15b9b86`. Repository
+coordination does not repair that binding or establish managed synchronization.
+
+Independent handoff review by “Assess recovery phase dependencies”
+(`01a07b84-3e56-7e10-8564-928bf214446d`, dispatched Astra High) found no Required
+findings in `80521d6..1203529`. Native documentation and diff checks passed in the
+orchestrator checkout; this is documentation evidence, not a new product test run.
+The consultation confirmed C4 → C5 → C6 → C7 with no unresolved owner product choice.
+C5 extends existing store/registration operations and suspends operational admission;
+C6 preserves attributable event facts before deleting live records and narrowly scopes
+receipt/audit handling; C7 must rebuild both app and bridge store connections and
+suppress automatic replay of backup-restored notification work. Existing snapshot,
+notification recovery, plugin inspection and health services are the foundation.
+Portable import/export remains a later outcome. The consultant reported all work
+stopped; its bounded result is preserved here for archival.
+
+## Delivered lifecycle handoff — 2026-09-07
+
+The owner accepted and authorized [PR #23](https://github.com/joeroberts/release-radar/pull/23)
+merge on 2026-09-07. It merged into `codex/release-radar-mvp` at
+`80521d6f081dbcb1e8ad6f6611322d23ce306db4`; its final branch head includes
+the status closeout at `1a21e46`. Independent correction
 review reports no Required or Optional findings. This current outcome supersedes
 the earlier authorization and defect snapshots below.
 
@@ -23,14 +80,21 @@ The signed app and versioned DMG are tracked in the candidate; the installed
 `/Applications/ReleaseRadar.app` executable matches the tracked app. Plugin status
 is Installed 0.1.7. No remaining plugin-name conflict is reported. The controlling
 [usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
-retains the delivery scope. Independent review is complete; bounded delivery and
-RDS tasks are completing handoff for archival. Parent retains acceptance/merge
+retains the completed milestone scope. Independent review is complete; the
+bounded delivery, reviewer and RDS tasks are archived. Parent retains programme
 coordination. Pursuit RDS migration is explicitly stopped; no source or dependency
 changes were made there. Temporary verification and rollback artifacts are retained;
 no cleanup or managed documentation synchronization is claimed.
 
-Next action: owner acceptance of the installed candidate, then the separately
-approved PR #23 merge. No additional implementation is implied by this closeout.
+Next eligible outcome under the continuing programme is slice 2 C4: safe managed
+repository relocation and explicit primary/worktree roots, using the existing
+relocation service and accepted identity/catalog boundaries. The active C4 assignment above now owns inspection, its bounded brief, the
+complete journey and a reviewed PR from the merged baseline.
+C5 archive/restore, C6 removal with retained history, and C7 coordinated backup/reset
+recovery remain included subsequent outcomes. Delivered plugin recovery is not
+reopened without a demonstrated remaining gap. Each new PR still needs owner merge
+approval; real owner-data relocation, destructive recovery and installation require
+their own exact authorization. The older snapshots below are historical.
 
 ## Current programme authorization — 2026-09-06
 

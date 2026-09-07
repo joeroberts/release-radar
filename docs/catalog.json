@@ -462,6 +462,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-07-parallel-discovery",
+      "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Bounded parallel decision and discovery briefs and findings; proposals are not implementation authority",
+      "allowedContents": [
+        "Discovery briefs and findings"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4164,6 +4179,66 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-live-observation-discovery-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/live-observation-discovery.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-iphone-companion-discovery-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/iphone-companion-discovery.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-run-ownership-discovery-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-rules-hooks-discovery-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"
