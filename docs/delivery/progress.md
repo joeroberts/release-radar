@@ -147,7 +147,8 @@ withdrawal survives recovery and overrides generation/compatibility fallback, wi
 offline purge delay explicit. No Required findings remain; two optional implementation
 notes do not block. This is proposal consistency, not CloudKit runtime feasibility
 or authority to build/publish. The reviewer reports no temp files or running processes;
-its useful result is preserved here. PR #27 awaits its separate owner merge decision.
+its useful result is preserved here. The stopped writer and reviewer are archived.
+PR #27 final head is `6385d496`; it awaits its separate owner merge decision.
 
 C4 [PR #28](https://github.com/joeroberts/release-radar/pull/28), product candidate
 `1801ded`, passed fresh combined Astra High review by
