@@ -16,7 +16,7 @@ budget. The retired orchestration handoff at `def4ebd` is preserved in Git.
 Canonical checkout, retained recovery stash/exclusions/C8 app and prior dist artifacts
 remain untouched. Pursuit migration is stopped; RDS appearance is unchanged.
 
-## Authorization and C7 correction
+## Current authorization
 
 Existing authority covers scoped implementation, synthetic checks, commits, pushes and
 PR creation. Each new PR merge requires separate owner approval. C6 approval was used
@@ -94,6 +94,11 @@ Default-service initialization and any resulting owner-state effects are unverif
 No owner-state inspection or repair is authorized. Further native verification must
 establish synthetic isolation before initialization and avoid a tool path that may
 launch the app normally; otherwise the signed runtime check remains blocked.
+A subsequent `xcrun xctest -h` invocation printed inherited environment values in the
+writer transcript, exposing Jira and Pushover credentials. The owner was informed that
+rotation is needed; no values are retained here, and no credential use or change is
+authorized. Further exploratory runtime attempts by this writer are stopped. It will
+preserve the candidate and explicit verification limits for independent corrective review.
 
 Six failures were reproduced synthetically; destination/signing and recovery-mode issues
 are source-backed. Eighteen existing selected/native tests passed. Same reviewer stopped

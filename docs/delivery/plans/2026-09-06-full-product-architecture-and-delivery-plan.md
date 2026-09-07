@@ -5,7 +5,7 @@ additional outcomes approved for roadmap inclusion on 2026-09-06.**
 
 Programme authorization now covers scoped implementation, local commits, branch
 pushes and PRs, with owner approval before every merge; see
-[current authorization](../progress.md#current-programme-authorization--2026-09-06).
+[current authorization](../progress.md#current-authorization).
 Earlier assessment-only restrictions below describe that completed assessment,
 not the new programme. Inclusion and execution authorization do not accept every
 proposed contract. The shared-contract reconciliation below is a review candidate,
