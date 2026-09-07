@@ -36,6 +36,16 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
     }
 
     func status() async -> CodexPluginHelperReply { await call(.status) }
+    func statusReadOnly() async -> CodexPluginHelperReply {
+        guard service.status == .enabled else {
+            return .init(
+                wireVersion: ReleaseRadarPluginLifecycleTransport.wireVersion,
+                observedState: nil,
+                error: .codexUnavailable
+            )
+        }
+        return validatedReply(await invoke(.status))
+    }
     func install() async -> CodexPluginHelperReply { await call(.install) }
     func remove() async -> CodexPluginHelperReply { await call(.remove) }
     func reinstall() async -> CodexPluginHelperReply { await call(.reinstall) }

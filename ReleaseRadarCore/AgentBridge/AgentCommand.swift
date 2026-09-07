@@ -5,6 +5,7 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
     public let requestID: UUID
     public let projectRoot: String
     public let assertedThreadID: String?
+    public let expectedRegistration: ProjectRegistration?
     public let reason: String
     public let command: AgentCommand
 
@@ -13,6 +14,7 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
         requestID: UUID,
         projectRoot: String,
         assertedThreadID: String? = nil,
+        expectedRegistration: ProjectRegistration? = nil,
         reason: String,
         command: AgentCommand
     ) {
@@ -20,6 +22,7 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
         self.requestID = requestID
         self.projectRoot = projectRoot
         self.assertedThreadID = assertedThreadID
+        self.expectedRegistration = expectedRegistration
         self.reason = reason
         self.command = command
     }
@@ -65,6 +68,7 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case crossProjectReference(String)
     case dependencyCycle(String)
     case requestIDReused
+    case staleProjectRegistration
     case appUnavailable
     case documentation(DocumentationOperationError)
     case ticketTaskPlanNotFound

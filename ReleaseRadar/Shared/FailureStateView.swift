@@ -330,6 +330,14 @@ struct FailureStatePresentation: Equatable, Sendable {
                 tone: .error,
                 accessibilityID: "failure-agent-validation"
             )
+        case .staleProjectRegistration:
+            self.init(
+                title: "Project authorization changed",
+                detail: "Recovery or project lifecycle changes invalidated this prepared action. Refresh the project registration before retrying. No delivery state changed.",
+                systemImage: "lock.trianglebadge.exclamationmark",
+                tone: .error,
+                accessibilityID: "failure-agent-stale-registration"
+            )
         case .appUnavailable:
             self.init(
                 title: "Action unavailable",

@@ -28,12 +28,14 @@ enum AgentBridgeApplicationError: Error, LocalizedError, Equatable {
 final class AgentBridgeApplicationHost: @unchecked Sendable {
     private let service: SMAppService
     private let callback: AgentBridgeAppCallback
+    private let ownedStore: DeliveryStore?
     private var connection: NSXPCConnection?
     private var registeredHere = false
 
     private init(
         dispatcher: AgentCommandDispatcher?,
         queries: AgentQueryDispatcher,
+        ownedStore: DeliveryStore? = nil,
         maintenanceMode: DocumentationMaintenanceMode? = nil,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
         afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void,
@@ -48,6 +50,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             afterDispatchBeforeReply: afterDispatchBeforeReply,
             afterReply: afterReply
         )
+        self.ownedStore = ownedStore
     }
 
     static func start(
@@ -64,6 +67,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         let host = AgentBridgeApplicationHost(
             dispatcher: dispatcher,
             queries: AgentQueryDispatcher(store: store),
+            ownedStore: store,
             beforeDispatch: beforeDispatch,
             afterDispatchBeforeReply: afterDispatchBeforeReply,
             afterReply: afterReply
@@ -92,6 +96,12 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     func disconnectCallback() {
         connection?.invalidate()
         connection = nil
+    }
+
+    func stopAndDrain() async {
+        await callback.stopAndDrain()
+        disconnectCallback()
+        await ownedStore?.close()
     }
 
     func unregister() throws {
@@ -207,6 +217,7 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
     private let beforeDispatch: @Sendable (AgentCommandEnvelope) async -> Void
     private let afterDispatchBeforeReply: @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
     private let afterReply: @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void
+    private let workGate = AgentBridgeCallbackWorkGate()
 
     init(
         dispatcher: AgentCommandDispatcher?,
@@ -231,6 +242,12 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
         withReply reply: @escaping (Data) -> Void
     ) {
         let replyGate = AgentBridgeDataReply(reply)
+        guard workGate.begin() else {
+            replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
+            return
+        }
+        var handedOff = false
+        defer { if !handedOff { workGate.end() } }
         let now = Date().timeIntervalSince1970
         if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any], object["query"] != nil {
             guard wireVersion == ReleaseRadarBridgeTransport.wireVersion, data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes,
@@ -240,9 +257,11 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
                 replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData()); return
             }
             Task {
+                defer { workGate.end() }
                 let result = await queries.dispatch(query, admissionDeadline: admissionDeadline)
                 replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.appUnavailableResultData())
             }
+            handedOff = true
             return
         }
         guard wireVersion == ReleaseRadarBridgeTransport.wireVersion,
@@ -266,6 +285,7 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
             replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData()); return
         }
         Task {
+            defer { workGate.end() }
             await beforeDispatch(envelope)
             guard admissionDeadline > Date().timeIntervalSince1970 else {
                 replyGate.send(ReleaseRadarBridgeTransport.appUnavailableResultData())
@@ -276,10 +296,13 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
                 : await dispatcher.dispatch(envelope, admissionDeadline: admissionDeadline)
             await afterDispatchBeforeReply(envelope, result)
             replyGate.send((try? JSONEncoder().encode(result)) ?? ReleaseRadarBridgeTransport.outcomeUnknownResultData())
-            Task {
-                await afterReply(envelope, result)
-            }
+            await afterReply(envelope, result)
         }
+        handedOff = true
+    }
+
+    func stopAndDrain() async {
+        await workGate.stopAndDrain()
     }
     static func permitsDocumentationMaintenance(_ envelope: AgentCommandEnvelope) -> Bool {
         if envelope.command.isDocumentationMutation { return true }
@@ -293,6 +316,45 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
         return false
     }
 
+}
+
+private final class AgentBridgeCallbackWorkGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var acceptsWork = true
+    private var inFlight = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func begin() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard acceptsWork else { return false }
+        inFlight += 1
+        return true
+    }
+
+    func end() {
+        lock.lock()
+        precondition(inFlight > 0)
+        inFlight -= 1
+        let completed = inFlight == 0 ? waiters : []
+        if inFlight == 0 { waiters.removeAll() }
+        lock.unlock()
+        for waiter in completed { waiter.resume() }
+    }
+
+    func stopAndDrain() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            acceptsWork = false
+            if inFlight == 0 {
+                lock.unlock()
+                continuation.resume()
+            } else {
+                waiters.append(continuation)
+                lock.unlock()
+            }
+        }
+    }
 }
 
 private final class AgentBridgeDataReply: @unchecked Sendable {

@@ -176,6 +176,19 @@ private struct MCPServer {
         if let threadID = try optionalString("assertedThreadID", in: arguments) {
             envelope["assertedThreadID"] = threadID
         }
+        let registrationFields = ["registrationProjectID", "registrationID", "requestGeneration"]
+        let suppliedRegistrationFields = registrationFields.filter { arguments[$0] != nil }
+        guard suppliedRegistrationFields.isEmpty || suppliedRegistrationFields.count == registrationFields.count else {
+            throw ToolFailure.invalidRequest("registrationProjectID, registrationID and requestGeneration must be supplied together")
+        }
+        if suppliedRegistrationFields.count == registrationFields.count {
+            let generation = try positiveRevision("requestGeneration", in: arguments)
+            envelope["expectedRegistration"] = [
+                "projectID": ["rawValue": try taskString("registrationProjectID", in: arguments, maximumBytes: 256)],
+                "registrationID": try taskString("registrationID", in: arguments, maximumBytes: 128),
+                "requestGeneration": generation,
+            ]
+        }
         let data = try JSONSerialization.data(withJSONObject: envelope)
         guard data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes else {
             throw ToolFailure.invalidRequest("Command envelope exceeds the transport limit")
@@ -403,7 +416,10 @@ private struct MCPServer {
     }
 
     private static func requireTaskFields(_ arguments: [String: Any], allowed: Set<String>) throws {
-        let envelopeFields: Set<String> = ["version", "requestID", "projectRoot", "reason", "assertedThreadID"]
+        let envelopeFields: Set<String> = [
+            "version", "requestID", "projectRoot", "reason", "assertedThreadID",
+            "registrationProjectID", "registrationID", "requestGeneration",
+        ]
         guard Set(arguments.keys).isSubset(of: allowed.union(envelopeFields)) else {
             throw ToolFailure.invalidRequest("Unsupported task command fields")
         }
@@ -647,6 +663,9 @@ private struct MCPServer {
             "projectRoot": ["type": "string", "minLength": 1],
             "assertedThreadID": ["type": "string", "minLength": 1],
             "reason": ["type": "string", "minLength": 1],
+            "registrationProjectID": ["type": "string", "minLength": 1, "maxLength": 256],
+            "registrationID": ["type": "string", "minLength": 1, "maxLength": 128],
+            "requestGeneration": ["type": "integer", "minimum": 1, "maximum": Int64.max],
         ]
         properties.merge(fields) { _, commandField in commandField }
         return [
@@ -656,6 +675,11 @@ private struct MCPServer {
                 "type": "object",
                 "properties": properties,
                 "required": ["version", "requestID", "projectRoot", "reason"] + required,
+                "dependentRequired": [
+                    "registrationProjectID": ["registrationID", "requestGeneration"],
+                    "registrationID": ["registrationProjectID", "requestGeneration"],
+                    "requestGeneration": ["registrationProjectID", "registrationID"],
+                ],
                 "additionalProperties": false,
             ],
         ]

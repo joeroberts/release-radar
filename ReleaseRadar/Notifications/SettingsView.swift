@@ -15,12 +15,14 @@ enum ApplicationHealthAction: Equatable {
     case openProject
     case reviewConnections
     case checkAgain
+    case restoreBackup
 
     var title: String {
         switch self {
         case .openProject: "Open Project"
         case .reviewConnections: "Review Connection"
         case .checkAgain: "Check Again"
+        case .restoreBackup: "Restore Backup"
         }
     }
 
@@ -32,6 +34,8 @@ enum ApplicationHealthAction: Equatable {
         guard state != .ready else { return nil }
         if id == "roots" || id.hasPrefix("root:") { return hasProjectTarget ? .openProject : .checkAgain }
         switch id {
+        case "recovery":
+            return .restoreBackup
         case "folder", "documentation":
             return hasProjectTarget ? .openProject : nil
         case "plugin", "observer":
@@ -51,7 +55,14 @@ struct SettingsView: View {
     @State private var isCheckingApplicationHealth = false
     @State private var applicationHealthGeneration: UInt64 = 0
     @State private var selectedTab: SettingsTab = .connections
+    @State private var pendingRecoveryConfirmation: RecoveryConfirmation?
+    @State private var recoveryRetryAction: RecoveryRetryAction?
     @FocusState private var focusedPluginAction: CodexPluginLifecycleAction?
+
+    init(model: AppModel, selectedTab: SettingsTab = .connections) {
+        self.model = model
+        _selectedTab = State(initialValue: selectedTab)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -97,6 +108,22 @@ struct SettingsView: View {
         .frame(minWidth: 520, maxWidth: .infinity, minHeight: 560, maxHeight: .infinity)
         .background(RekonTheme.background)
         .accessibilityIdentifier("content-settings")
+        .confirmationDialog(
+            pendingRecoveryConfirmation?.title ?? "",
+            isPresented: Binding(
+                get: { pendingRecoveryConfirmation != nil },
+                set: { if !$0 { pendingRecoveryConfirmation = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            recoveryConfirmationButtons
+            Button("Cancel", role: .cancel) { pendingRecoveryConfirmation = nil }
+                .keyboardShortcut(.defaultAction)
+        } message: {
+            if let pendingRecoveryConfirmation {
+                Text(pendingRecoveryConfirmation.message)
+            }
+        }
     }
 
     private var general: some View {
@@ -108,6 +135,67 @@ struct SettingsView: View {
                 Text("Runtime observations never change a formal delivery lane.")
                     .foregroundStyle(RekonTheme.secondaryText)
             }
+            RekonSectionPanel {
+                settingsSectionHeader("Backup and recovery", systemImage: "externaldrive.badge.timemachine")
+                Text("A full backup contains the supported local database, preferences, history, plugin receipts and notification history.")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                Text("Credentials, source repositories, portable project files and device permission grants are never included.")
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                ViewThatFits(in: .horizontal) {
+                    HStack { backupAndRestoreButtons }
+                    VStack(alignment: .leading) { backupAndRestoreButtons }
+                }
+            }
+            RekonSectionPanel {
+                settingsSectionHeader("Reset application preferences", systemImage: "arrow.counterclockwise.circle")
+                Text("Restore the four alert-rule defaults and clear temporary view selections. Projects, tracking history, plugin management and Keychain credentials remain unchanged.")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                Button("Reset Preferences…", role: .destructive) {
+                    pendingRecoveryConfirmation = .preferences
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(model.applicationRecoveryInFlight)
+                .accessibilityIdentifier("application-preferences-reset")
+            }
+            recoveryFeedback
+        }
+    }
+
+    @ViewBuilder
+    private var backupAndRestoreButtons: some View {
+        Button("Create Backup…") { chooseBackupDestination() }
+            .buttonStyle(RekonPrimaryButtonStyle())
+            .disabled(model.applicationRecoveryInFlight)
+            .accessibilityIdentifier("application-backup-create")
+        Button("Restore Backup…", role: .destructive) { chooseRestorePackage() }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .disabled(model.applicationRecoveryInFlight)
+            .accessibilityIdentifier("application-backup-restore")
+    }
+
+    @ViewBuilder
+    private var recoveryFeedback: some View {
+        if model.applicationRecoveryInFlight {
+            ProgressView("Coordinating application recovery…")
+                .controlSize(.small)
+                .accessibilityIdentifier("application-recovery-progress")
+        }
+        if let failure = model.applicationRecoveryFailure {
+            FailureStateView(presentation: failure, style: .compact)
+            Button("Try Again") {
+                model.applicationRecoveryFailure = nil
+                retryRecoveryAction()
+            }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .accessibilityIdentifier("application-recovery-retry")
+        }
+        if let message = model.applicationRecoveryMessage {
+            RekonCallout(tone: .success, systemImage: "checkmark.circle") {
+                Text("Recovery complete").font(RekonTypography.controlLabelEmphasized)
+                Text(message).foregroundStyle(RekonTheme.secondaryText)
+            }
+            .accessibilityIdentifier("application-recovery-success")
         }
     }
 
@@ -373,7 +461,11 @@ struct SettingsView: View {
                 isRefreshing: isCheckingApplicationHealth,
                 refresh: refreshApplicationHealth,
                 openProject: openApplicationHealthProject,
-                reviewConnections: { selectedTab = .connections }
+                reviewConnections: { selectedTab = .connections },
+                restoreBackup: {
+                    selectedTab = .general
+                    chooseRestorePackage()
+                }
             )
             RekonSectionPanel {
                 settingsSectionHeader("Local projects", systemImage: "folder")
@@ -389,6 +481,16 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            RekonSectionPanel {
+                settingsSectionHeader("Reset tracking data", systemImage: "trash.slash")
+                Text("Remove every active and archived project registration using retained-history semantics. Global preferences, plugin receipts and removal history are preserved.")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                Button("Reset Tracking Data…", role: .destructive) { prepareTrackingReset() }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .disabled(model.applicationRecoveryInFlight)
+                    .accessibilityIdentifier("application-tracking-reset")
+            }
+            recoveryFeedback
         }
         .task { refreshApplicationHealth() }
     }
@@ -430,6 +532,122 @@ struct SettingsView: View {
         guard let projectID = applicationHealth?.projectTarget?.projectID else { return }
         Task { await model.navigate(to: .projectOverview(projectID)) }
     }
+
+    private func chooseBackupDestination() {
+        guard let url = ApplicationRecoveryFilePanels.chooseBackupDestination() else { return }
+        recoveryRetryAction = .backup
+        Task {
+            do {
+                pendingRecoveryConfirmation = .backup(try await model.previewApplicationBackup(destinationURL: url))
+            } catch {
+                model.presentApplicationRecoveryFailure(error)
+            }
+        }
+    }
+
+    private func chooseRestorePackage() {
+        guard let url = ApplicationRecoveryFilePanels.chooseRestorePackage() else { return }
+        recoveryRetryAction = .restore
+        Task {
+            do {
+                pendingRecoveryConfirmation = .restore(try await model.previewApplicationRestore(packageURL: url))
+            } catch {
+                model.presentApplicationRecoveryFailure(error)
+            }
+        }
+    }
+
+    private func prepareTrackingReset() {
+        recoveryRetryAction = .tracking
+        Task {
+            do {
+                pendingRecoveryConfirmation = .tracking(try await model.previewTrackingReset())
+            } catch {
+                model.presentApplicationRecoveryFailure(error)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var recoveryConfirmationButtons: some View {
+        switch pendingRecoveryConfirmation {
+        case let .backup(preview):
+            Button("Create Backup") {
+                pendingRecoveryConfirmation = nil
+                recoveryRetryAction = .backup
+                Task { await model.createApplicationBackup(preview) }
+            }
+        case let .restore(preview):
+            Button("Restore Backup", role: .destructive) {
+                pendingRecoveryConfirmation = nil
+                recoveryRetryAction = .restore
+                Task { await model.restoreApplicationBackup(preview) }
+            }
+        case .preferences:
+            Button("Reset Preferences", role: .destructive) {
+                pendingRecoveryConfirmation = nil
+                recoveryRetryAction = .preferences
+                Task { await model.resetApplicationPreferences() }
+            }
+        case let .tracking(preview):
+            Button("Reset Tracking Data", role: .destructive) {
+                pendingRecoveryConfirmation = nil
+                recoveryRetryAction = .tracking
+                Task { await model.resetTracking(preview) }
+            }
+        case nil:
+            EmptyView()
+        }
+    }
+
+    private func retryRecoveryAction() {
+        switch recoveryRetryAction {
+        case .backup: chooseBackupDestination()
+        case .restore: chooseRestorePackage()
+        case .preferences: pendingRecoveryConfirmation = .preferences
+        case .tracking: prepareTrackingReset()
+        case nil: break
+        }
+    }
+}
+
+private enum RecoveryRetryAction {
+    case backup
+    case restore
+    case preferences
+    case tracking
+}
+
+private enum RecoveryConfirmation: Equatable {
+    case backup(ApplicationBackupPreview)
+    case restore(ApplicationRestorePreview)
+    case preferences
+    case tracking(ApplicationTrackingResetPreview)
+
+    var title: String {
+        switch self {
+        case .backup: "Create Full Backup?"
+        case .restore: "Restore This Backup?"
+        case .preferences: "Reset Application Preferences?"
+        case .tracking: "Reset All Tracking Data?"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case let .backup(preview):
+            return "Back up \(preview.projectCount) project\(preview.projectCount == 1 ? "" : "s") plus local preferences, history, audits, plugin receipts and notification history. Credentials, repositories, portable project files and device permissions are excluded."
+        case let .restore(preview):
+            let reconciliation = preview.newerHistoryReconciliationAvailable
+                ? "Newer local removal, audit and terminal notification facts will be reconciled."
+                : "The current store is unreadable; newer local history cannot be reconciled and will be reported unavailable."
+            return "Restore \(preview.restoredRegistrations.count) saved registration\(preview.restoredRegistrations.count == 1 ? "" : "s") and displace \(preview.displacedRegistrations.count) current registration\(preview.displacedRegistrations.count == 1 ? "" : "s"). \(reconciliation) Saved folder permissions will require reauthorization. Backed-up pending notifications will not be sent."
+        case .preferences:
+            return "Blocked-goal, completion-review and needs-review alerts will be enabled; paused-goal alerts will be disabled. Tracking data, history, plugin receipts and credentials are preserved."
+        case let .tracking(preview):
+            return "Remove \(preview.projects.count) active or archived project registration\(preview.projects.count == 1 ? "" : "s"). Retained activity, audits, prior removals, global preferences and plugin receipts remain available. This does not delete source repositories or credentials."
+        }
+    }
 }
 
 struct ApplicationHealthPanel: View {
@@ -438,6 +656,7 @@ struct ApplicationHealthPanel: View {
     let refresh: () -> Void
     let openProject: () -> Void
     let reviewConnections: () -> Void
+    let restoreBackup: () -> Void
     @State private var showsTechnicalDetails = false
 
     var body: some View {
@@ -562,6 +781,7 @@ struct ApplicationHealthPanel: View {
             case .openProject: openProject()
             case .reviewConnections: reviewConnections()
             case .checkAgain: refresh()
+            case .restoreBackup: restoreBackup()
             }
         }
         .buttonStyle(RekonSecondaryButtonStyle())
