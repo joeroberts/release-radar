@@ -59,7 +59,7 @@ this limitation disclosed. No installation or owner-state acceptance is claimed.
 Writer `01a07b7a-f30a-7373-99ba-709e4f9c6a69` and reviewer
 `01a07ba1-5d2b-7921-8e72-558438f15167` are stopped/archived.
 
-## Parallel discovery disposition and pending approval
+## Completed parallel discovery
 
 All four bounded discovery writers and reviewers are stopped/archived. Their
 artifacts contain the original briefs, source-backed findings and limitations.
@@ -77,8 +77,9 @@ artifacts contain the original briefs, source-backed findings and limitations.
   authenticated observation of the current desktop-owned runtime is no-go; historical
   browsing and companion delivery/document publication remain independent.
 - [Companion PR #27](https://github.com/joeroberts/release-radar/pull/27): final
-  `6385d49628a6ca83bd22caf8d02bac8edff1c679` passed corrected review and is mergeable,
-  **awaiting explicit owner merge approval**. It proposes complete read-only private
+  `6385d49628a6ca83bd22caf8d02bac8edff1c679` passed corrected review and merged with
+  owner approval as `d4bacea40aa4f40e6f41a9f7ca2337165b2a6b30`. It proposes complete
+  read-only private
   CloudKit publication with withdrawal preserved across recovery and cache fallback.
   No production feasibility, cloud provisioning or implementation is authorized.
 
