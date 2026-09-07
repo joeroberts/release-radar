@@ -19,8 +19,8 @@ worktree `039a`, branch `codex/c4-root-management`, from `80521d6` plus handoff
 `9d08db4`. The new orchestrator has contacted it directly and explicitly configured
 Sol High; the API response does not confirm effective runtime. The worker owns C4
 source, tests, brief and associated catalog/index changes; only the orchestrator
-writes this ledger. Source candidate `1801ded` is independently reviewed; PR #28 is awaiting
-shared-document integration and owner merge approval. No installed owner-app or
+writes this ledger. Source candidate `1801ded` is independently reviewed; ready PR #28 has final
+head `5816c71` after shared-document integration and awaits owner merge approval. No installed owner-app or
 real folder-picker grant acceptance is claimed.
 
 The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
@@ -158,7 +158,11 @@ denials, not real NSOpenPanel grants under shipping entitlements. Shipping entit
 are unchanged; installation, owner-state validation and broad-suite green are unclaimed.
 The coordinator resolved only shared catalog/index/ledger conflicts in `779e9dd`,
 preserving product source at `1801ded`; the delivery branch must take this integration
-before merge. PR #28 still requires explicit owner approval.
+before merge. That integration and review-result brief are now published at
+`5816c71`; PR #28 is ready and mergeable. CodeRabbit is queued, not claimed passed.
+Product source/tests/project content remains identical to reviewed `1801ded`.
+The delivery writer and independent reviewer are stopped and archived; PR #28
+still requires explicit owner approval.
 
 Reviewer work/processes are stopped. Temporary review outputs remain at
 `/tmp/c4-independent-review-01a07ba1` (DerivedData), its `-first.log`, `-first.xcresult`,
