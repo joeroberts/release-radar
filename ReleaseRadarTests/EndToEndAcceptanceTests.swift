@@ -82,6 +82,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
                 let eventSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='delivery_goal_assignment_events'"))
                 try c.executeScript("""
                 DROP TABLE project_registrations;
+                ALTER TABLE projects DROP COLUMN lifecycle;
                 DROP TABLE delivery_goal_assignment_events;
                 \(eventSQL);
                 CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
@@ -523,6 +524,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
             try c.executeScript("""
             BEGIN EXCLUSIVE;
             DROP TABLE project_registrations;
+            ALTER TABLE projects DROP COLUMN lifecycle;
             DROP TABLE delivery_goal_assignment_events;
             \(eventSQL);
             CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
@@ -550,7 +552,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
                                                 startAccessing: { _ in true }, stopAccessing: { _ in })
         let query = AgentQueryEnvelope(version: 1, projectRoot: root.path,
                                        query: .inventoryEvidence(projectID: "project-1", rootID: "root-1"))
-        let baseline = try Self.bootstrapRows(try SQLiteConnection(url: databaseURL, immutableReadOnly: true))
+        let baseline = try Self.normalizingImplicitProjectLifecycle(
+            Self.bootstrapRows(try SQLiteConnection(url: databaseURL, immutableReadOnly: true))
+        )
         let preflight = try DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
         let priorResult = await AgentQueryDispatcher(store: preflight, bookmarkStore: bookmarkStore).dispatch(query)
         let prior = try XCTUnwrap(priorResult.inventory)
@@ -569,7 +573,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         } == true)
         let snapshot = try SQLiteConnection(url: DeliveryStore.preMigrationSnapshotURL(for: databaseURL), immutableReadOnly: true)
         XCTAssertEqual(try snapshot.scalarInt("PRAGMA user_version"), 13)
-        XCTAssertEqual(try Self.bootstrapRows(snapshot), baseline)
+        XCTAssertEqual(try Self.normalizingImplicitProjectLifecycle(Self.bootstrapRows(snapshot)), baseline)
         let postMigration = await AgentQueryDispatcher(store: store, bookmarkStore: bookmarkStore).dispatch(query)
         XCTAssertEqual(postMigration.inventory?.schemaVersion, Int(StoreMigrations.currentVersion))
         XCTAssertEqual(postMigration.inventory?.preservation, prior.preservation)
@@ -681,6 +685,19 @@ final class EndToEndAcceptanceTests: XCTestCase {
             }
         }
         return result
+    }
+
+    private static func normalizingImplicitProjectLifecycle(
+        _ rows: [String: [[String: SQLiteValue]]]
+    ) -> [String: [[String: SQLiteValue]]] {
+        var normalized = rows
+        normalized["projects"] = normalized["projects"]?.map { row in
+            guard row["lifecycle"] == nil else { return row }
+            var project = row
+            project["lifecycle"] = .text("active")
+            return project
+        }
+        return normalized
     }
 
     func testRelaunchRepairsVersionThreeDatabaseMissingAuditAttribution() async throws {
@@ -1058,6 +1075,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         let evidenceSQL = try XCTUnwrap(historical.scalarText("SELECT sql FROM sqlite_schema WHERE name='evidence'"))
         try connection.executeScript("""
         DROP TABLE project_registrations;
+        ALTER TABLE projects DROP COLUMN lifecycle;
         DROP TABLE project_documentation_bindings;
         DROP INDEX project_roots_project_identity_unique;
         ALTER TABLE evidence RENAME TO current_evidence;
