@@ -43,9 +43,23 @@ Fresh reviewer “Review C6 removal and retained history”
 `e58c`, explicit Astra High/runtime unexposed. Review covers removal authority,
 historical identity, stale commands/receipts, notification outcomes, migration and
 native UI/QA. [PR #30](https://github.com/joeroberts/release-radar/pull/30) is open at exact `c06d34e`;
-review and separate owner merge approval remain pending. Writer confirms clean matching
-branch/upstream and stopped test/build processes; delivery task is archived until any
-Required same-outcome correction.
+review requests changes; separate owner merge approval remains pending. Initial writer
+handoff was clean/stopped and archived; the same task is restored at Sol High for three
+Required corrections:
+- P1 stale `FolderProjectOnboarding.prepare` decision recreates the removed registration
+  and bookmark; reject old decisions while permitting fresh explicit re-add.
+- P2 removal copies current ticket phase/lane into historical events; retain unknown
+  event-time context or distinctly label any current-at-removal snapshot.
+- P2 removal rewrites prior archive-suppressed notification reason and loses failure/timing
+  provenance; preserve terminal facts and terminalize only eligible pending work.
+
+Reviewer independently passed 74 focused/native checks, then reproduced these defects
+with bounded synthetic tests. Same reviewer handles corrected candidate only. Latent
+projectID-only goal observation callback has no shipping source caller and is Optional,
+not a blocker or authorization for observer work. Reviewer stopped; temporary outputs
+retained: `/tmp/c6-review-e58c-derived`, `/tmp/c6-review-e58c-tests.log`,
+`/tmp/c6-review-e58c/` (repro source/bundle/logs and synthetic stores). No cleanup.
+
 
 Author final counts: removal 7/7; broad selected serial 309/309. Before registration,
 full scheme 606/609 (two pending-catalog cases plus disabled-broker transport case).
