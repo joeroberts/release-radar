@@ -1,5 +1,37 @@
 # Release Radar delivery state
 
+## Current outcome — 2026-09-07
+
+[PR #23](https://github.com/joeroberts/release-radar/pull/23) is open and
+unmerged, awaiting owner acceptance and explicit merge approval. The accepted
+candidate is `32f1bc654fa7a9ca99144e81fa5cb250d7a96bc1`. Independent correction
+review reports no Required or Optional findings. This current outcome supersedes
+the earlier authorization and defect snapshots below.
+
+The owner authorized the bounded shared RDS changes, signed build installation,
+and plugin-helper recovery during acceptance testing. RDS PR #6 is merged at
+`6d1fb9d341850ee1d13ba9391fada072534eb684`; Release Radar uses its public window
+chrome and boundary APIs, with no consumer-local chrome implementation. Full native
+launch, route-title change, inactive and reactivated captures show continuous dark
+chrome. Affected route/render checks passed 7/7, RDS chrome tests passed 6/6, and
+documentation checks passed. The broad suite recorded 574/576 passes; relocation
+passed its targeted rerun, while the unrelated transport acceptance test remains
+blocked on its bridge-enabled environmental precondition. This is not a fully
+green whole-product suite.
+
+The signed app and versioned DMG are tracked in the candidate; the installed
+`/Applications/ReleaseRadar.app` executable matches the tracked app. Plugin status
+is Installed 0.1.7. No remaining plugin-name conflict is reported. The controlling
+[usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
+retains the delivery scope. Independent review is complete; bounded delivery and
+RDS tasks are completing handoff for archival. Parent retains acceptance/merge
+coordination. Pursuit RDS migration is explicitly stopped; no source or dependency
+changes were made there. Temporary verification and rollback artifacts are retained;
+no cleanup or managed documentation synchronization is claimed.
+
+Next action: owner acceptance of the installed candidate, then the separately
+approved PR #23 merge. No additional implementation is implied by this closeout.
+
 ## Current programme authorization — 2026-09-06
 
 The owner opened implementation of the approved roadmap from merged baseline
