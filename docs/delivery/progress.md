@@ -43,6 +43,19 @@ Read-only application inventory for the canonical root on 2026-09-07 still repor
 `bindingMissing` and `isComplete: false` for `project-fffdc0e0b15b9b86`. Repository
 coordination does not repair that binding or establish managed synchronization.
 
+Independent handoff review by “Assess recovery phase dependencies”
+(`01a07b84-3e56-7e10-8564-928bf214446d`, dispatched Astra High) found no Required
+findings in `80521d6..1203529`. Native documentation and diff checks passed in the
+orchestrator checkout; this is documentation evidence, not a new product test run.
+The consultation confirmed C4 → C5 → C6 → C7 with no unresolved owner product choice.
+C5 extends existing store/registration operations and suspends operational admission;
+C6 preserves attributable event facts before deleting live records and narrowly scopes
+receipt/audit handling; C7 must rebuild both app and bridge store connections and
+suppress automatic replay of backup-restored notification work. Existing snapshot,
+notification recovery, plugin inspection and health services are the foundation.
+Portable import/export remains a later outcome. The consultant reported all work
+stopped; its bounded result is preserved here for archival.
+
 ## Delivered lifecycle handoff — 2026-09-07
 
 The owner accepted and authorized [PR #23](https://github.com/joeroberts/release-radar/pull/23)
@@ -75,9 +88,8 @@ no cleanup or managed documentation synchronization is claimed.
 
 Next eligible outcome under the continuing programme is slice 2 C4: safe managed
 repository relocation and explicit primary/worktree roots, using the existing
-relocation service and accepted identity/catalog boundaries. A fresh delivery task
-will inspect the merged implementation, persist its bounded brief, implement the
-missing complete journey, and submit a reviewed PR from the merged baseline.
+relocation service and accepted identity/catalog boundaries. The active C4 assignment above now owns inspection, its bounded brief, the
+complete journey and a reviewed PR from the merged baseline.
 C5 archive/restore, C6 removal with retained history, and C7 coordinated backup/reset
 recovery remain included subsequent outcomes. Delivered plugin recovery is not
 reopened without a demonstrated remaining gap. Each new PR still needs owner merge
