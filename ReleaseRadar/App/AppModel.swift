@@ -397,10 +397,14 @@ final class AppModel {
     }
 
     func previewApplicationBackup(destinationURL: URL) async throws -> ApplicationBackupPreview {
-        try await ApplicationBackupManager(
-            store: store,
-            databaseURL: databaseURL
-        ).previewBackup(destinationURL: destinationURL)
+        try await ApplicationRecoverySecurityScope.withAccess(
+            to: destinationURL.deletingLastPathComponent()
+        ) {
+            try await ApplicationBackupManager(
+                store: self.store,
+                databaseURL: self.databaseURL
+            ).previewBackup(destinationURL: destinationURL)
+        }
     }
 
     func presentApplicationRecoveryFailure(_ error: Error) {
@@ -417,10 +421,14 @@ final class AppModel {
 
     func createApplicationBackup(_ preview: ApplicationBackupPreview) async {
         await performRecoveryOperation {
-            let receipt = try await ApplicationBackupManager(
-                store: self.store,
-                databaseURL: self.databaseURL
-            ).createBackup(preview)
+            let receipt = try await ApplicationRecoverySecurityScope.withAccess(
+                to: preview.destinationURL.deletingLastPathComponent()
+            ) {
+                try await ApplicationBackupManager(
+                    store: self.store,
+                    databaseURL: self.databaseURL
+                ).createBackup(preview)
+            }
             self.applicationRecoveryMessage = "Backup created at \(receipt.packageURL.lastPathComponent). Credentials, repositories and device permissions were not included."
         }
     }

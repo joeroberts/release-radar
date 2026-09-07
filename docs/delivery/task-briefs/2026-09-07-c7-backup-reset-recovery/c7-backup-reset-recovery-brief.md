@@ -175,3 +175,10 @@ reset are presented in General, tracking reset remains project-data management, 
 existing application-health panel reports recovery target, check time, limitations and
 the exact supported next action. Native confirmation and file panels provide cancel and
 retry paths without adding another navigation or workflow subsystem.
+
+The R7 correction grants the shipping app user-selected read/write access while retaining
+the sandbox, application group and network-client entitlements. Backup creation uses a
+single-selection, directories-only native picker for one existing folder; Release Radar
+generates the package name inside that folder and keeps its adjacent staging directory
+there. Preview and creation each hold only a balanced temporary security scope on the
+selected folder, including the failure path. Restore remains read-only and unchanged.

@@ -4,7 +4,92 @@ import XCTest
 import ReleaseRadarCore
 @testable import ReleaseRadar
 
+private enum SyntheticBackupScopeError: Error {
+    case expected
+}
+
 final class AppRouteTests: XCTestCase {
+    @MainActor
+    func testBackupDestinationPanelSelectsOneExistingFolderAndGeneratesItsPackageInside() throws {
+        let panel = ApplicationRecoveryFilePanels.makeBackupDestinationPanel()
+
+        XCTAssertFalse(panel.canChooseFiles)
+        XCTAssertTrue(panel.canChooseDirectories)
+        XCTAssertFalse(panel.allowsMultipleSelection)
+        XCTAssertFalse(panel.canCreateDirectories)
+        XCTAssertFalse(panel.resolvesAliases)
+
+        let folder = URL(fileURLWithPath: "/Users/Shared/Synthetic Backup Destination", isDirectory: true)
+        let identifier = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let package = ApplicationRecoveryFilePanels.backupPackageURL(
+            in: folder,
+            identifier: identifier
+        )
+        XCTAssertEqual(package.deletingLastPathComponent(), folder)
+        XCTAssertEqual(package.pathExtension, "release-radar-backup")
+        XCTAssertEqual(
+            package.lastPathComponent,
+            "Release Radar Backup 11111111-2222-3333-4444-555555555555.release-radar-backup"
+        )
+    }
+
+    @MainActor
+    func testBackupSecurityScopeIsBalancedForSuccessAndFailure() async throws {
+        let folder = URL(fileURLWithPath: "/Users/Shared/Synthetic Backup Destination", isDirectory: true)
+        var starts = 0
+        var stops = 0
+        let value = try await ApplicationRecoverySecurityScope.withAccess(
+            to: folder,
+            start: { _ in starts += 1; return true },
+            stop: { _ in stops += 1 }
+        ) {
+            "complete"
+        }
+        XCTAssertEqual(value, "complete")
+        XCTAssertEqual(starts, 1)
+        XCTAssertEqual(stops, 1)
+
+        do {
+            _ = try await ApplicationRecoverySecurityScope.withAccess(
+                to: folder,
+                start: { _ in starts += 1; return true },
+                stop: { _ in stops += 1 }
+            ) {
+                throw SyntheticBackupScopeError.expected
+            } as String
+            XCTFail("The synthetic failure must propagate")
+        } catch SyntheticBackupScopeError.expected {}
+        XCTAssertEqual(starts, 2)
+        XCTAssertEqual(stops, 2)
+    }
+
+    @MainActor
+    func testSignedNativeBackupPickerWritesValidatedPackageInSelectedExternalFolder() async throws {
+        guard let expectedFolderPath = ProcessInfo.processInfo.environment["C7_SIGNED_PICKER_FOLDER"] else {
+            throw XCTSkip("Run only for the signed native picker verification.")
+        }
+        let expectedFolder = URL(fileURLWithPath: expectedFolderPath, isDirectory: true).standardizedFileURL
+        let packageURL = try XCTUnwrap(ApplicationRecoveryFilePanels.chooseBackupDestination())
+        XCTAssertEqual(packageURL.deletingLastPathComponent().standardizedFileURL, expectedFolder)
+
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-C7-SignedPicker-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let model = AppModel(
+            store: store,
+            databaseURL: databaseURL,
+            externalServicesSuppressed: true
+        )
+        let preview = try await model.previewApplicationBackup(destinationURL: packageURL)
+        await model.createApplicationBackup(preview)
+
+        XCTAssertNil(model.applicationRecoveryFailure)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: packageURL.path))
+        let manifest = try ApplicationBackupManifest.load(from: packageURL)
+        XCTAssertEqual(manifest.databaseSHA256.count, 64)
+    }
+
     func testMainWindowConsumesSharedRDSChromeWithoutALocalAppKitBridge() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

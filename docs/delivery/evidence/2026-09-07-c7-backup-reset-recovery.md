@@ -27,6 +27,43 @@ and the integrated Debug build completed successfully.
   accessibility-visible actions and the Application health Restore Backup action.
 - A Debug `ReleaseRadar` build verifies the integrated app, core, bridge, helper and tool targets.
 
+### R7 backup-destination correction
+
+The focused correction run passed 19 selected tests: all 17 `RecoveryAcceptanceTests` plus
+the native-panel configuration/package-placement test and the balanced security-scope
+success/failure test. A separate gated test exercised the actual `NSOpenPanel` in a signed,
+isolated XCTest host, selected a fresh existing folder under `/Users/Shared`, and passed after
+creating and validating one generated `.release-radar-backup` package there. The selected
+folder contained only the final package, `manifest.json` and `release-radar.sqlite` after the
+operation; no adjacent staging directory remained.
+
+The signed Release build passed strict deep code-signature validation. Its actual app
+entitlements retain the app sandbox, application group and network client, replace only the
+source user-selected read-only entitlement with user-selected read/write, and contain no
+broad filesystem exception. Apple Development signing also injects `get-task-allow`; that
+generated development entitlement is not present in the shipping entitlement source.
+
+The native-picker XCTest host was also signed and sandboxed with user-selected read/write,
+but Xcode injected a broad read-only `/` test exception and test-manager Mach exceptions.
+Accordingly, that run is evidence for the native folder-selection flow, generated package
+placement and selected-folder write, while the separate signed Release build is the shipping
+entitlement evidence. The host used the existing PID-isolated temporary store path and its
+delegate suppressed notification and agent-bridge initialization.
+
+### Verification execution notes
+
+An initial accessibility attempt bound by application path and launched the test-built
+`ReleaseRadar` executable as a normal process (PID 48085) instead of attaching to an XCTest
+panel. It was terminated immediately by exact PID. Because a normal launch can initialize
+default application services, reads or mutations by that short-lived process are unknown;
+no owner data was inspected, repaired or used as evidence, and the pre-existing installed
+application process was not targeted. The successful retry used the isolated XCTest route
+and numeric-PID accessibility targeting, which cannot launch another app.
+
+A diagnostic `xcrun xctest -h` invocation unexpectedly printed inherited Jira and Pushover
+credential values into the task tool transcript. They were not used or copied into repository
+artifacts; rotation is required outside this repository.
+
 ## Visual comparison
 
 The render evidence was compared with the approved
