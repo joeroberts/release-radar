@@ -83,3 +83,40 @@ owner approval. Real archive/restore against owner state, installation, notifica
 to real recipients and all reserved external actions require exact separate authority.
 Report candidate, checks/limits, temporary files and stopped processes; orchestrator
 preserves the outcome and promptly archives the bounded task.
+
+## Bounded implementation refinement
+
+Schema v16 adds one constrained `projects.lifecycle` value (`active` or `archived`),
+defaulting every existing project to `active`. The existing project ID, registration ID,
+roots/bookmarks, documentation binding, graph and history remain in their current tables.
+Each successful archive or restore increments the existing registration request generation
+inside the same store-owned transaction; the registration identity itself is preserved.
+The preview captures the exact registration/generation, source lifecycle and graph counts,
+and commit revalidates them before changing anything. Generation overflow, stale previews,
+wrong lifecycle and store failure reject the whole transaction without a lifecycle, audit,
+receipt or notification partial write.
+
+Archive atomically deactivates the project's notification occurrences, marks queued
+notifications `suppressed`, and marks an `attempt_started` notification `unknown` with an
+archive-specific ambiguity code. Sent, failed and already-unknown history remains factual.
+Restore never requeues suppressed or unknown work. New notification creation, pending
+dispatch, persisted root admission, in-transaction agent-command admission and observation
+callbacks all require `active`; the dispatcher recheck closes the race after root resolution.
+Fresh work after restore uses the newly incremented generation and ordinary occurrence
+deduplication rather than replaying pre-archive work.
+
+`DashboardProjection` loads only active projects and their authorized evidence readback;
+it separately loads a catalog-agnostic archived summary without opening bookmarks.
+Projects gains an explicit Active/Archived scope. Archived rows navigate only to a
+read-only archived detail with retained graph/history counts, last-check health and a
+previewed Restore action. Old operational routes for an archived project resolve to that
+archived detail rather than another project. The active Overview exposes a previewed
+Archive action. Both confirmations name the exact project, summarize effects, support
+Cancel/Escape without mutation and retain actionable errors after a failed commit.
+
+Focused tests cover the v15→v16 default, full graph/registration preservation, transaction
+rollback, generation-stale previews and callbacks, active-only admission/projections,
+notification suppression/ambiguity/no-replay, zero-phase and unavailable-access/catalog
+restore, route recovery, and native compact/wide confirmation, empty, success and error
+states. Synthetic UI and service checks do not exercise real owner grants, recipients,
+installation or the shipping entitlement boundary.

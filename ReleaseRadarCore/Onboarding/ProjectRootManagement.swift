@@ -84,6 +84,9 @@ public struct ProjectRootManagement: Sendable {
 
     public func prepare(_ action: ProjectRootAction, folder: URL, snapshot: ProjectRootSnapshot,
                         requestID: UUID = UUID()) async throws -> PreparedProjectRootAction {
+        try await store.read {
+            try ProjectLifecycleManager.requireActive(projectID: snapshot.registration.projectID, connection: $0)
+        }
         guard try await isCurrent(snapshot.source) else { throw ProjectRootManagementError.stale }
         let existing = snapshot.source.roots.first { $0.path == folder.path }
         if action != .authorize {
@@ -118,7 +121,10 @@ public struct ProjectRootManagement: Sendable {
 
     @discardableResult
     public func confirm(_ prepared: PreparedProjectRootAction) async throws -> AuditEventID {
-        if let replay = try await store.read({ try Self.replay($0, prepared) }) { return replay }
+        if let replay = try await store.read({ connection in
+            try ProjectLifecycleManager.requireActive(projectID: prepared.registration.projectID, connection: connection)
+            return try Self.replay(connection, prepared)
+        }) { return replay }
         if let bookmark = prepared.bookmark {
             return try await withAccess(bookmark, folder: prepared.folder) {
                 if prepared.action == .authorize {
@@ -135,6 +141,7 @@ public struct ProjectRootManagement: Sendable {
         do {
             return try await store.transact(actor: .init(id: "release-radar-owner"), reason: p.action.title,
                 auditEventID: auditID, auditScope: .init(projectID: p.registration.projectID, entityType: .project, entityID: p.registration.projectID.rawValue)) { c in
+                try ProjectLifecycleManager.requireActive(projectID: p.registration.projectID, connection: c)
                 if let replay = try Self.replay(c, p) { throw RootActionReplay.result(replay) }
                 guard try RootManagementSource.read(c, projectID: p.registration.projectID) == p.source else { throw ProjectRootManagementError.stale }
                 let project = p.registration.projectID.rawValue

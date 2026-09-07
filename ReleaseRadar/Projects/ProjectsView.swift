@@ -8,10 +8,12 @@ struct ProjectsView: View {
     let onboardingStore: DeliveryStore
     var codexTasks: [CodexTaskDescriptor] = []
     let openProject: (ProjectID) -> Void
+    let openArchivedProject: (ProjectID) -> Void
     let onboardingFinished: @MainActor () async -> Void
+    @State private var scope = ProjectListScope.active
 
     var body: some View {
-        if projection.projects.isEmpty {
+        if projection.projects.isEmpty && projection.archivedProjects.isEmpty {
             OnboardingView(
                 store: onboardingStore,
                 codexTasks: codexTasks,
@@ -22,60 +24,102 @@ struct ProjectsView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    RekonScreenHeader(
-                        title: "Projects",
-                        subtitle: "Local delivery structure and owner attention at a glance",
-                        trailing: AnyView(Button("Add Project…") {
-                            openWindow(id: "add-project")
-                        }
-                        .buttonStyle(RekonPrimaryButtonStyle())
-                        .accessibilityIdentifier("projects-add"))
-                    )
+                    RekonScreenHeader(title: "Projects", subtitle: "Local delivery structure and owner attention at a glance")
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
-                        ForEach(projection.projects) { project in
-                            Button {
-                                openProject(project.id)
-                            } label: {
-                                RekonCard {
-                                    VStack(alignment: .leading, spacing: 18) {
-                                    HStack(alignment: .top) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(project.name)
-                                                .font(RekonTypography.cardTitle)
-                                            Text("Active phase")
-                                                .font(RekonTypography.metadata)
-                                                .foregroundStyle(RekonTheme.secondaryText)
-                                            if project.activePhaseName == "No active phase" {
-                                                Text("Ready for planning")
-                                                    .foregroundStyle(RekonTheme.secondaryText)
-                                            } else {
-                                                Text(project.activePhaseName)
-                                                    .font(RekonTypography.secondaryBody)
-                                                    .foregroundStyle(RekonTheme.secondaryText)
-                                            }
-                                        }
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 14, weight: .light))
-                                            .foregroundStyle(RekonTheme.secondaryText)
-                                    }
-
-                                    ProjectGoalSummaryView(context: project.goalContext)
-
-                                    HStack(spacing: 26) {
-                                        projectMetric(value: project.currentWorkCount, label: "Current work")
-                                        projectMetric(value: project.attentionCount, label: "Needs attention")
-                                    }
-                                    }
-                                    .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("project-\(project.id.rawValue)")
-                        }
+                    ViewThatFits(in: .horizontal) {
+                        HStack { scopePicker; Spacer(); addButton }
+                        VStack(alignment: .leading, spacing: 12) { scopePicker; addButton }
                     }
                     .padding(.horizontal, 28)
+
+                    if scope == .active {
+                        if projection.projects.isEmpty {
+                            projectListEmptyState(
+                                title: "No active projects",
+                                detail: "Restore an archived project or add a new one to resume delivery work."
+                            )
+                        } else {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
+                                ForEach(projection.projects) { project in
+                                    Button {
+                                        openProject(project.id)
+                                    } label: {
+                                        RekonCard {
+                                            VStack(alignment: .leading, spacing: 18) {
+                                                HStack(alignment: .top) {
+                                                    VStack(alignment: .leading, spacing: 4) {
+                                                        Text(project.name)
+                                                            .font(RekonTypography.cardTitle)
+                                                        Text("Active phase")
+                                                            .font(RekonTypography.metadata)
+                                                            .foregroundStyle(RekonTheme.secondaryText)
+                                                        if project.activePhaseName == "No active phase" {
+                                                            Text("Ready for planning")
+                                                                .foregroundStyle(RekonTheme.secondaryText)
+                                                        } else {
+                                                            Text(project.activePhaseName)
+                                                                .font(RekonTypography.secondaryBody)
+                                                                .foregroundStyle(RekonTheme.secondaryText)
+                                                        }
+                                                    }
+                                                    Spacer()
+                                                    Image(systemName: "chevron.right")
+                                                        .font(.system(size: 14, weight: .light))
+                                                        .foregroundStyle(RekonTheme.secondaryText)
+                                                }
+
+                                                ProjectGoalSummaryView(context: project.goalContext)
+
+                                                HStack(spacing: 26) {
+                                                    projectMetric(value: project.currentWorkCount, label: "Current work")
+                                                    projectMetric(value: project.attentionCount, label: "Needs attention")
+                                                }
+                                            }
+                                            .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityIdentifier("project-\(project.id.rawValue)")
+                                }
+                            }
+                            .padding(.horizontal, 28)
+                        }
+                    } else if projection.archivedProjects.isEmpty {
+                        projectListEmptyState(
+                            title: "No archived projects",
+                            detail: "Archived projects remain preserved here until you restore them."
+                        )
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 310), spacing: 16)], spacing: 16) {
+                            ForEach(projection.archivedProjects) { project in
+                                Button { openArchivedProject(project.id) } label: {
+                                    RekonCard {
+                                        VStack(alignment: .leading, spacing: 16) {
+                                            HStack(alignment: .top) {
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text(project.name).font(RekonTypography.cardTitle)
+                                                    Label("Archived · Read-only", systemImage: "archivebox")
+                                                        .font(RekonTypography.metadata)
+                                                        .foregroundStyle(RekonTheme.secondaryText)
+                                                }
+                                                Spacer()
+                                                Image(systemName: "chevron.right").foregroundStyle(RekonTheme.secondaryText)
+                                            }
+                                            HStack(spacing: 24) {
+                                                projectMetric(value: Int(project.counts.phases), label: "Phases")
+                                                projectMetric(value: Int(project.counts.tickets), label: "Tickets")
+                                                projectMetric(value: Int(project.counts.evidence), label: "Evidence")
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("archived-project-\(project.id.rawValue)")
+                            }
+                        }
+                        .padding(.horizontal, 28)
+                    }
                 }
                 .padding(.bottom, 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -83,6 +127,33 @@ struct ProjectsView: View {
             .navigationTitle("Projects")
             .background(RekonTheme.background)
         }
+    }
+
+    private var scopePicker: some View {
+        Picker("Project status", selection: $scope) {
+            Text("Active (\(projection.projects.count))").tag(ProjectListScope.active)
+            Text("Archived (\(projection.archivedProjects.count))").tag(ProjectListScope.archived)
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 360)
+        .accessibilityIdentifier("projects-status-scope")
+    }
+
+    private var addButton: some View {
+        Button("Add Project…") { openWindow(id: "add-project") }
+            .buttonStyle(RekonPrimaryButtonStyle())
+            .accessibilityIdentifier("projects-add")
+    }
+
+    private func projectListEmptyState(title: String, detail: String) -> some View {
+        RekonCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title).font(RekonTypography.cardTitle)
+                Text(detail).foregroundStyle(RekonTheme.secondaryText)
+            }
+            .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
+        }
+        .padding(.horizontal, 28)
     }
 
     private func projectMetric(value: Int, label: String) -> some View {
@@ -95,6 +166,11 @@ struct ProjectsView: View {
                 .foregroundStyle(RekonTheme.secondaryText)
         }
     }
+}
+
+private enum ProjectListScope: Hashable {
+    case active
+    case archived
 }
 
 struct ProjectGoalSummaryView: View {

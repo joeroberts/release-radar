@@ -160,6 +160,7 @@ public struct PersistedAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sen
                 FROM project_roots
                 JOIN projects ON projects.id = project_roots.project_id
                 WHERE project_roots.path = ?
+                  AND projects.lifecycle = 'active'
                 """,
                 bindings: [.text(supplied.path)]
             ) else {

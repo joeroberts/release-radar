@@ -24,6 +24,7 @@ public enum NotificationDeliveryState: String, Codable, Equatable, Sendable {
     case unknown
     case sent
     case failed
+    case suppressed
 }
 
 public struct MeaningfulDeliveryEvent: Equatable, Sendable {
@@ -82,6 +83,7 @@ public actor MeaningfulDeliveryEventRecorder {
             reason: "Record linked goal runtime state",
             auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
         ) { connection in
+            try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             guard try connection.scalarInt(
                 "SELECT COUNT(*) FROM observed_threads WHERE id = ? AND project_id = ?",
                 bindings: [.text(threadID), .text(projectID.rawValue)]
@@ -179,6 +181,7 @@ public actor MeaningfulDeliveryEventRecorder {
             reason: "Open project dashboard",
             auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
         ) { connection in
+            try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             try connection.execute(
                 "UPDATE projects SET first_dashboard_opened = 1 WHERE id = ?",
                 bindings: [.text(projectID.rawValue)]
@@ -202,6 +205,7 @@ extension MeaningfulDeliveryEvent {
         goalID: ObservedGoalID?,
         connection: SQLiteConnection
     ) throws -> MeaningfulDeliveryEvent? {
+        try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
         let rules = try AlertRuleSnapshot.load(from: connection)
         guard rules[kind.alertRuleKind] else { return nil }
         guard try connection.scalarInt(

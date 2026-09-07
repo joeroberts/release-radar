@@ -7,6 +7,73 @@ import XCTest
 
 @MainActor
 final class ProjectDocumentationRenderingTests: XCTestCase {
+    func testProjectArchiveAndArchivedDetailAtWideAndCompactWidths() async throws {
+        let projectID = ProjectID(rawValue: "project-archive-rendering")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "registration-archive-rendering",
+            requestGeneration: 8
+        )
+        let counts = ProjectLifecycleCounts(phases: 3, tickets: 12, evidence: 7, history: 24)
+        let preview = ProjectLifecyclePreview(
+            projectID: projectID,
+            projectName: "Archived Delivery",
+            source: .active,
+            target: .archived,
+            registration: registration,
+            counts: counts
+        )
+        let archived = ArchivedProjectProjection(
+            id: projectID,
+            name: "Archived Delivery",
+            registration: registration,
+            counts: counts
+        )
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                ProjectLifecycleConfirmationView(preview: preview, confirm: {}),
+                name: "c5-archive-confirmation-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: ["Archive Archived Delivery?", "3 phases", "12 tickets", "7 evidence items", "24 history events", "No project data will be deleted", "Cancel", "Archive Project"]
+            )
+            try await render(
+                ArchivedProjectView(project: archived, loadHealth: nil, previewRestore: { throw ProjectLifecycleError.stalePreview }, restore: { _ in }),
+                name: "c5-archived-detail-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: ["Archived Delivery", "Archived project", "Read-only", "Restore Project", "registration-archive-rendering", "12", "7"],
+                absentText: ["Manage Project", "Manage Repository Roots", "Copy setup prompt"]
+            )
+        }
+
+        var confirmationCalls = 0
+        try await render(
+            ProjectLifecycleConfirmationView(preview: preview) {
+                confirmationCalls += 1
+                throw ProjectLifecycleError.stalePreview
+            },
+            name: "c5-archive-error",
+            width: 620,
+            expected: nil,
+            expectedText: ["Project state was not changed", "The project changed after this confirmation was prepared"],
+            pressTitles: ["Archive Project"]
+        )
+        XCTAssertEqual(confirmationCalls, 1)
+
+        confirmationCalls = 0
+        try await render(
+            ProjectLifecycleConfirmationView(preview: preview) { confirmationCalls += 1 },
+            name: "c5-archive-cancel",
+            width: 620,
+            expected: nil,
+            expectedText: ["Cancel", "Archive Project"],
+            pressTitles: ["Cancel"]
+        )
+        XCTAssertEqual(confirmationCalls, 0)
+    }
+
     // Inspect only this isolated test process and its own titled native windows.
     func testOverviewDocumentationStateAtWideAndCompactWidths() async throws {
         let project = ProjectDashboardProjection(
@@ -444,6 +511,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         expectedText: [String] = [],
         absentText: [String] = [],
         pressIdentifiers: [String] = [],
+        pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:]
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
@@ -502,6 +570,14 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
             try await Task.sleep(for: .milliseconds(300))
         }
+        for pressTitle in pressTitles {
+            let button = try XCTUnwrap(
+                accessibilityButton(try XCTUnwrap(ownWindow), title: pressTitle),
+                "Missing accessibility button titled \(pressTitle)"
+            )
+            XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(300))
+        }
         let actual = accessibilityText(try XCTUnwrap(ownWindow))
         if let expected {
             XCTAssertTrue(
@@ -522,7 +598,10 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
         if name.hasPrefix("m5-overview"), let action = expected?.actionTitle { XCTAssertTrue(actual.contains(action)) }
         for (identifier, minimumSize) in minimumElementSizes {
-            let element = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier))
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing accessibility element \(identifier)"
+            )
             var value: CFTypeRef?
             XCTAssertEqual(AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &value), .success)
             var size = CGSize.zero
@@ -559,6 +638,30 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
                     if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
                        (value as? String)?.contains(identifier == "project-health-reauthorize" ? "Reauthorize Saved Folder" : "Manage Repository Roots") == true {
+                        return element
+                    }
+                }
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return nil
+    }
+
+    private func accessibilityButton(_ root: AXUIElement, title: String) -> AXUIElement? {
+        var pending = [root], count = 0
+        while let element = pending.popLast(), count < 1000 {
+            count += 1
+            var role: CFTypeRef?
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role) == .success,
+               role as? String == kAXButtonRole {
+                for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
+                    if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+                       (value as? String)?.contains(title) == true {
                         return element
                     }
                 }

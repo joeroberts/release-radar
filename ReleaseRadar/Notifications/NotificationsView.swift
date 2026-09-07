@@ -90,6 +90,7 @@ struct NotificationsView: View {
         case .failed, .unknown: RekonTheme.danger
         case .attemptStarted: RekonTheme.accent
         case .queued: RekonTheme.warning
+        case .suppressed: RekonTheme.secondaryText
         case nil: RekonTheme.secondaryText
         }
     }
