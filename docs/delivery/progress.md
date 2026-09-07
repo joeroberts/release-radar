@@ -102,6 +102,25 @@ non-enabling and must establish actual coverage and gaps. No pursue decision,
 implementation, runtime proof or managed catalog acceptance is claimed. The four
 briefs and generated index passed the native documentation check at preparation.
 
+Run ownership discovery reached [PR #25](https://github.com/joeroberts/release-radar/pull/25),
+proposal candidate `fc56d4a` plus review-result record `a4b16d0`. Fresh independent
+Astra High reviewer `01a07b94-0698-7e71-a298-954bec4022b3` found no Required or
+Optional findings; direct source/primary-document checks, native documentation check,
+diff check and 12 relative links passed. Recommendation: separately authorized
+synthetic feasibility proof with one Run Guard execution owner; production and
+control of existing desktop runs remain no-go without proof. This is not product
+implementation approval. Both the writer and reviewer report stopped work/processes;
+the result is persisted in the owned artifact and this ledger. PR merge awaits owner
+approval; no runtime feasibility or managed synchronization is claimed.
+
+Rules/hooks discovery is in [PR #24](https://github.com/joeroberts/release-radar/pull/24),
+candidate `6c61c4a`, undergoing fresh independent Sol High review in task
+`01a07b93-5c22-78b1-a912-7f1529999b45`. The author corrected and read back the PR
+body after shell quoting damaged command text; repository/application state was
+unchanged by that description correction. Retained temporary files are
+`/tmp/release-radar-rules-hooks.87hPRM/pilot.rules` and its `pr-body.md`; no cleanup
+is authorized or performed.
+
 ## Delivered lifecycle handoff — 2026-09-07
 
 The owner accepted and authorized [PR #23](https://github.com/joeroberts/release-radar/pull/23)
