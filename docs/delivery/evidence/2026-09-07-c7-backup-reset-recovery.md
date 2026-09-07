@@ -34,11 +34,11 @@ The render evidence was compared with the approved
 four-tab information architecture, blue outlined panels, hierarchy and responsive stacking.
 Recovery is added to General and Projects rather than introducing another navigation system.
 
-- [General Settings — wide](c7-backup-reset-recovery/screenshots/settings-general-wide.png)
-- [General Settings — compact](c7-backup-reset-recovery/screenshots/settings-general-compact.png)
-- [Projects Settings — wide](c7-backup-reset-recovery/screenshots/settings-projects-wide.png)
-- [Projects Settings — compact](c7-backup-reset-recovery/screenshots/settings-projects-compact.png)
-- [Application health recovery action](c7-backup-reset-recovery/screenshots/application-health-recovery.png)
+- [General Settings — wide](c7-settings-general-wide.png)
+- [General Settings — compact](c7-settings-general-compact.png)
+- [Projects Settings — wide](c7-settings-projects-wide.png)
+- [Projects Settings — compact](c7-settings-projects-compact.png)
+- [Application health recovery action](c7-application-health-recovery.png)
 
 The two general Application health width renders are retained in the same canonical screenshot
 directory for independent QA inspection.
