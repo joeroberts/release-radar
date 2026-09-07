@@ -1,6 +1,49 @@
 # Release Radar delivery state
 
-## Current outcome — 2026-09-07
+## Active recovery orchestration — 2026-09-07
+
+Task `01a07b81-ce26-7e70-8696-fc4427eb83a1` owns slice 2 coordination and this
+ledger in dedicated worktree `f1ab`, on published `codex/recovery-orchestration`
+with its matching origin upstream. It began at merged `80521d6f081dbcb1e8ad6f6611322d23ce306db4`
+and integrated only the prior documentation handoff through Git. Astra Medium is
+the assigned profile; the coordination API does not expose effective runtime settings.
+
+The previous orchestrator `01a078bb-1a08-7222-96b1-58e842f5f809` is stopped and
+archived. `codex/lifecycle-delivery` is retired; handoff `b2425c1` is retained on
+`origin/codex/archive-lifecycle-delivery-2026-09-07`, and worktree `26a5` is recovery-only.
+The older programme and lifecycle snapshots below are historical, not current
+assignments or merge status.
+
+C4 continues in the same unfinished delivery task `01a07b7a-f30a-7373-99ba-709e4f9c6a69`,
+worktree `039a`, branch `codex/c4-root-management`, from `80521d6` plus handoff
+`9d08db4`. The new orchestrator has contacted it directly and explicitly configured
+Sol High; the API response does not confirm effective runtime. The worker owns C4
+source, tests, brief and associated catalog/index changes; only the orchestrator
+writes this ledger. Its reported registration-replacement regression is now passing;
+worktree promotion and explicit grant/reconnect/revoke remain under implementation.
+Those reports are interim evidence, not C4 completion or independent review.
+
+The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+and accepted ADR boundaries retain the full phase: C4 safe accepted-catalog relocation
+and explicit primary/worktree roots, then C5 reversible archive/restore, C6 removal
+with retained read-only history and untouched repository files, C7 coordinated
+backup/reset recovery, and associated C12 health actions. Existing binding identifies
+the managed primary root; no duplicate authority is authorized. Later documentation,
+navigation, planning/traceability, history/search/evidence, portable continuity and
+conditional integrations remain included in the wider 40-capability programme.
+
+Continuing authority covers scoped implementation/documentation, synthetic direct
+checks, commits, pushes and PR creation. **Ask before each PR merge.** Real owner-data
+relocation/deletion/reset, installation and other reserved application/external
+mutations need exact authorization. Preserve canonical recovery stash `7adfff2`, local
+exclusions, the C8 app and `dist/PR-23-*` artifacts. Pursuit migration remains stopped;
+RDS appearance is unchanged. No SQLite or owner-state mutation occurred here.
+
+Read-only application inventory for the canonical root on 2026-09-07 still reports
+`bindingMissing` and `isComplete: false` for `project-fffdc0e0b15b9b86`. Repository
+coordination does not repair that binding or establish managed synchronization.
+
+## Delivered lifecycle handoff — 2026-09-07
 
 The owner accepted and authorized [PR #23](https://github.com/joeroberts/release-radar/pull/23)
 merge on 2026-09-07. It merged into `codex/release-radar-mvp` at
