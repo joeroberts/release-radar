@@ -173,8 +173,14 @@ public final class SQLiteConnection: @unchecked Sendable {
         lease?.invalidate()
     }
 
-    func withTransactionCallbackRestrictions<T>(_ body: () throws -> T) throws -> T {
-        let authorizerContext = SQLiteAuthorizerContext(isInTransaction: isInTransaction)
+    func withTransactionCallbackRestrictions<T>(
+        allowProjectRemovalHistoryWrites: Bool = false,
+        _ body: () throws -> T
+    ) throws -> T {
+        let authorizerContext = SQLiteAuthorizerContext(
+            isInTransaction: isInTransaction,
+            allowProjectRemovalHistoryWrites: allowProjectRemovalHistoryWrites
+        )
         let context = Unmanaged.passUnretained(authorizerContext).toOpaque()
         let result = sqlite3_set_authorizer(databaseHandle, deliveryStoreTransactionAuthorizer, context)
         guard result == SQLITE_OK else { throw currentError(code: result) }
@@ -270,9 +276,11 @@ public final class SQLiteConnection: @unchecked Sendable {
 
 private final class SQLiteAuthorizerContext {
     let isInTransaction: Bool
+    let allowProjectRemovalHistoryWrites: Bool
 
-    init(isInTransaction: Bool) {
+    init(isInTransaction: Bool, allowProjectRemovalHistoryWrites: Bool = false) {
         self.isInTransaction = isInTransaction
+        self.allowProjectRemovalHistoryWrites = allowProjectRemovalHistoryWrites
     }
 }
 
@@ -302,12 +310,26 @@ private func deliveryStoreTransactionAuthorizer(
         return transactionControlResult
     }
 
-    let protectedTable = "audit_events"
     let firstName = firstArgument.map { String(cString: $0) }
     let secondName = secondArgument.map { String(cString: $0) }
-    if firstName?.caseInsensitiveCompare(protectedTable) == .orderedSame
-        || secondName?.caseInsensitiveCompare(protectedTable) == .orderedSame {
+    let removalHistoryTables = [
+        "removed_projects",
+        "retained_project_activity_events",
+        "retained_delivery_goal_assignment_events",
+    ]
+    let protectedTable = (["audit_events", "project_removal_authorizations"] + removalHistoryTables).first { table in
+        firstName?.caseInsensitiveCompare(table) == .orderedSame
+            || secondName?.caseInsensitiveCompare(table) == .orderedSame
+    }
+    if let protectedTable {
         if action == SQLITE_READ {
+            return SQLITE_OK
+        }
+        let authorizerContext = context.map {
+            Unmanaged<SQLiteAuthorizerContext>.fromOpaque($0).takeUnretainedValue()
+        }
+        if removalHistoryTables.contains(where: { $0.caseInsensitiveCompare(protectedTable) == .orderedSame }),
+           authorizerContext?.allowProjectRemovalHistoryWrites == true {
             return SQLITE_OK
         }
         recordAuthorizerDenial(

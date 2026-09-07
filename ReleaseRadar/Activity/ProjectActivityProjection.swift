@@ -282,6 +282,105 @@ struct ProjectActivityProjection: Equatable, Sendable {
         }
     }
 
+    static func loadRemoved(
+        from store: DeliveryStore,
+        removalID: ProjectRemovalID
+    ) async throws -> ProjectActivityProjection {
+        try await store.read { connection in
+            guard let removal = try connection.row(
+                "SELECT historical_project_id, registration_id FROM removed_projects WHERE removal_id = ?",
+                bindings: [.text(removalID.rawValue)]
+            ) else { throw ProjectRemovalError.removalRecordNotFound }
+            let projectID = ProjectID(rawValue: try removal.activityText("historical_project_id"))
+            let registrationID = try removal.activityText("registration_id")
+            let formatter = ISO8601DateFormatter()
+
+            var assignmentsByAudit: [AuditEventID: [DeliveryGoalAssignmentEventRecord]] = [:]
+            for row in try connection.activityRows(
+                "SELECT * FROM retained_delivery_goal_assignment_events WHERE removal_id = ? ORDER BY revision, ticket_id",
+                bindings: [.text(removalID.rawValue)]
+            ) {
+                let auditID = AuditEventID(rawValue: try row.activityText("audit_event_id"))
+                assignmentsByAudit[auditID, default: []].append(.init(
+                    auditEventID: auditID,
+                    projectID: ProjectID(rawValue: try row.activityText("project_id")),
+                    phaseID: PhaseID(rawValue: try row.activityText("phase_id")),
+                    ticketID: TicketID(rawValue: try row.activityText("ticket_id")),
+                    previousGoalID: row.activityOptionalText("previous_goal_id").map(DeliveryGoalID.init(rawValue:)),
+                    currentGoalID: row.activityOptionalText("current_goal_id").map(DeliveryGoalID.init(rawValue:)),
+                    revision: try row.activityInteger("revision"),
+                    action: try row.activityText("action")
+                ))
+            }
+
+            var items = try connection.activityRows(
+                """
+                SELECT id, reason, created_at, entity_type, entity_id, thread_id
+                FROM audit_events
+                WHERE historical_project_id = ? AND historical_registration_id = ?
+                ORDER BY created_at DESC
+                """,
+                bindings: [.text(projectID.rawValue), .text(registrationID)]
+            ).map { row in
+                let auditID = AuditEventID(rawValue: try row.activityText("id"))
+                let entityType = row.activityOptionalText("entity_type").flatMap(AuditEntityType.init(rawValue:))
+                let entityID = row.activityOptionalText("entity_id")
+                let assignments = assignmentsByAudit[auditID] ?? []
+                let ticketID: TicketID?
+                switch entityType {
+                case .ticket, .ticketTaskPlan: ticketID = entityID.map(TicketID.init(rawValue:))
+                default: ticketID = assignments.first?.ticketID
+                }
+                return ProjectActivityItem(
+                    id: "audit-\(auditID.rawValue)", source: .audit,
+                    title: entityType == .deliveryGoal ? "Delivery Goal updated" : "Delivery record updated",
+                    detail: try row.activityText("reason"),
+                    observedAt: formatter.date(from: try row.activityText("created_at")),
+                    ticketID: ticketID, deliveryLane: nil, runtimeState: nil,
+                    notificationState: nil, notificationStatusText: nil,
+                    phaseID: assignments.first?.phaseID ?? (entityType == .phase ? entityID.map(PhaseID.init(rawValue:)) : nil),
+                    deliveryGoalID: entityType == .deliveryGoal ? entityID.map(DeliveryGoalID.init(rawValue:)) : nil,
+                    originatingThreadID: row.activityOptionalText("thread_id"), assignmentEvents: assignments
+                )
+            }
+
+            items += try connection.activityRows(
+                "SELECT * FROM retained_project_activity_events WHERE removal_id = ?",
+                bindings: [.text(removalID.rawValue)]
+            ).map { row in
+                guard let source = ActivitySource(rawValue: try row.activityText("source")) else {
+                    throw ProjectActivityProjectionError.invalidColumn("source")
+                }
+                let runtime = row.activityOptionalText("runtime_state").map(RuntimeStateLanguage.init(storedValue:))
+                let notification = row.activityOptionalText("notification_state").flatMap(NotificationDeliveryState.init(rawValue:))
+                let lane = row.activityOptionalText("delivery_lane").flatMap(TicketLane.init(rawValue:))
+                let timestamp = ["occurred_at", "observed_at", "recorded_at"]
+                    .compactMap { row.activityOptionalText($0).flatMap(formatter.date(from:)) }
+                    .first
+                return ProjectActivityItem(
+                    id: "\(source.rawValue)-\(try row.activityText("source_id"))", source: source,
+                    title: try row.activityText("title"), detail: try row.activityText("detail"),
+                    observedAt: timestamp,
+                    ticketID: row.activityOptionalText("ticket_id").map(TicketID.init(rawValue:)),
+                    deliveryLane: lane, runtimeState: runtime, notificationState: notification,
+                    notificationStatusText: row.activityOptionalText("notification_status_text"),
+                    phaseID: row.activityOptionalText("phase_id").map(PhaseID.init(rawValue:)),
+                    deliveryGoalID: row.activityOptionalText("delivery_goal_id").map(DeliveryGoalID.init(rawValue:)),
+                    originatingThreadID: row.activityOptionalText("originating_thread_id")
+                )
+            }
+            items.sort {
+                switch ($0.observedAt, $1.observedAt) {
+                case let (lhs?, rhs?): lhs == rhs ? $0.id < $1.id : lhs > rhs
+                case (_?, nil): true
+                case (nil, _?): false
+                case (nil, nil): $0.id < $1.id
+                }
+            }
+            return .init(projectID: projectID, items: items)
+        }
+    }
+
     private static func notificationStatus(
         state: NotificationDeliveryState?,
         failureCode: String?
@@ -332,5 +431,11 @@ private extension Dictionary where Key == String, Value == SQLiteValue {
     func activityOptionalText(_ column: String) -> String? {
         guard case let .text(text)? = self[column] else { return nil }
         return text
+    }
+
+    func activityInteger(_ column: String) throws -> Int64 {
+        guard let value = self[column] else { throw ProjectActivityProjectionError.missingColumn(column) }
+        guard case let .integer(integer) = value else { throw ProjectActivityProjectionError.invalidColumn(column) }
+        return integer
     }
 }

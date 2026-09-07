@@ -108,10 +108,11 @@ public actor AgentCommandDispatcher {
                         throw DispatchControl.archivedProject
                     }
                     if let prior = try connection.row(
-                        "SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?",
+                        "SELECT request_body, result_data, registration_project_id, registration_id, request_generation FROM agent_command_requests WHERE request_id = ?",
                         bindings: [.text(envelope.requestID.uuidString)]
                     ) {
-                        guard prior["request_body"] == .blob(requestBody),
+                        guard ProjectLifecycleManager.receiptScopeMatches(prior, registration: project.registration),
+                              prior["request_body"] == .blob(requestBody),
                               case let .blob(priorResultData)? = prior["result_data"],
                               let priorResult = try? JSONDecoder().decode(AgentCommandResult.self, from: priorResultData)
                         else {
@@ -135,13 +136,13 @@ public actor AgentCommandDispatcher {
                     let result = Self.resultForCommand(envelope.command, auditEventID: auditEventID, revision: revision)
                     let resultData = try JSONEncoder().encode(result)
                     try connection.execute(
-                        "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES (?, ?, ?, ?)",
+                        "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id, registration_id, request_generation) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         bindings: [
                             .text(envelope.requestID.uuidString),
                             .blob(requestBody),
                             .blob(resultData),
                             .text(ISO8601DateFormatter().string(from: Date())),
-                        ]
+                        ] + ProjectLifecycleManager.receiptScopeBindings(project.registration)
                     )
                     return result
                 }

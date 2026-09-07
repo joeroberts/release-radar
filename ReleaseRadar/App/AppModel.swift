@@ -32,6 +32,7 @@ private struct PreparedProjectProjections: Sendable {
     let reviewInboxes: [ProjectID: ReviewInboxProjection]
     let dependencyGraphs: [ProjectID: DependencyGraphProjection]
     let projectActivities: [ProjectID: ProjectActivityProjection]
+    let removedActivities: [ProjectRemovalID: ProjectActivityProjection]
     let projectDocumentationStates: [ProjectID: ProjectDocumentationState]
     let projectRoots: [ProjectID: URL]
     let selectedTicketID: TicketID
@@ -82,6 +83,7 @@ final class AppModel {
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
     private var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
     private var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
+    private var removedActivities: [ProjectRemovalID: ProjectActivityProjection] = [:]
     private var projectDocumentationStates: [ProjectID: ProjectDocumentationState] = [:]
     private var projectRoots: [ProjectID: URL] = [:]
     private var reviewActionStates: [ProjectID: ReviewActionState] = [:]
@@ -235,6 +237,12 @@ final class AppModel {
     }
 
     func navigate(to route: AppRoute) async {
+        if case let .removedProject(removalID) = route {
+            selectedProjectID = nil
+            selection = dashboard?.removedProjects.contains(where: { $0.id == removalID }) == true
+                ? route : .projects
+            return
+        }
         if case let .archivedProject(projectID) = route,
            dashboard?.projects.contains(where: { $0.id == projectID }) == true {
             await navigate(to: .projectOverview(projectID))
@@ -246,7 +254,12 @@ final class AppModel {
                 return
             }
             guard dashboard?.projects.contains(where: { $0.id == projectID }) == true else {
-                selection = .projects
+                if let removed = dashboard?.removedProjects.first(where: { $0.projectID == projectID }) {
+                    selectedProjectID = nil
+                    selection = .removedProject(removed.id)
+                } else {
+                    selection = .projects
+                }
                 return
             }
             do {
@@ -273,6 +286,19 @@ final class AppModel {
         selection = snapshot.lifecycle == .archived
             ? .archivedProject(snapshot.projectID)
             : .projectOverview(snapshot.projectID)
+    }
+
+    func previewProjectRemoval(projectID: ProjectID) async throws -> ProjectRemovalPreview {
+        try await ProjectRemovalManager(store: store).preview(projectID: projectID)
+    }
+
+    @discardableResult
+    func applyProjectRemoval(_ preview: ProjectRemovalPreview) async throws -> RemovedProjectRecord {
+        let record = try await ProjectRemovalManager(store: store).apply(preview)
+        selectedProjectID = nil
+        _ = await reloadProjectProjections()
+        selection = .removedProject(record.id)
+        return record
     }
 
     func loadDashboard() async {
@@ -388,6 +414,10 @@ final class AppModel {
 
     func activity(for projectID: ProjectID) -> ProjectActivityProjection? {
         projectActivities[projectID]
+    }
+
+    func removedActivity(for removalID: ProjectRemovalID) -> ProjectActivityProjection? {
+        removedActivities[removalID]
     }
 
     func projectGuidanceState(for projectID: ProjectID) -> ProjectGuidanceState {
@@ -1007,6 +1037,7 @@ final class AppModel {
         var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
         var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
         var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
+        var removedActivities: [ProjectRemovalID: ProjectActivityProjection] = [:]
         var projectDocumentationStates: [ProjectID: ProjectDocumentationState] = [:]
         var projectRoots: [ProjectID: URL] = [:]
         var selectedTicketID = self.selectedTicketID
@@ -1046,11 +1077,17 @@ final class AppModel {
                 selectedTicketID: preferredID
             )
         }
+        for removed in dashboard.removedProjects {
+            removedActivities[removed.id] = try await ProjectActivityProjection.loadRemoved(
+                from: store, removalID: removed.id
+            )
+        }
         return PreparedProjectProjections(
             dashboard: dashboard,
             reviewInboxes: reviewInboxes,
             dependencyGraphs: dependencyGraphs,
             projectActivities: projectActivities,
+            removedActivities: removedActivities,
             projectDocumentationStates: projectDocumentationStates,
             projectRoots: projectRoots,
             selectedTicketID: selectedTicketID,
@@ -1063,6 +1100,7 @@ final class AppModel {
         reviewInboxes = prepared.reviewInboxes
         dependencyGraphs = prepared.dependencyGraphs
         projectActivities = prepared.projectActivities
+        removedActivities = prepared.removedActivities
         projectDocumentationStates = prepared.projectDocumentationStates
         projectRoots = prepared.projectRoots
         selectedTicketID = prepared.selectedTicketID

@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 16
+    static let currentVersion: Int64 = 17
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -75,6 +75,9 @@ enum StoreMigrations {
             }
             if version < 16 {
                 try connection.executeScript(schemaVersion16)
+            }
+            if version < 17 {
+                try connection.executeScript(schemaVersion17)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -283,11 +286,23 @@ enum StoreMigrations {
         throughVersion version: Int64
     ) throws -> Bool {
         for trigger in criticalTriggers where trigger.version <= version {
+            let expectedSQL: String
+            if version >= 17 {
+                switch trigger.name {
+                case "ticket_task_plans_reject_delete": expectedSQL = ticketTaskPlansRejectDeleteVersionSeventeenTrigger
+                case "ticket_tasks_reject_delete": expectedSQL = ticketTasksRejectDeleteVersionSeventeenTrigger
+                case "ticket_task_plans_reject_ticket_delete": expectedSQL = ticketTaskPlansRejectTicketDeleteVersionSeventeenTrigger
+                case "ticket_task_plans_reject_project_delete": expectedSQL = ticketTaskPlansRejectProjectDeleteVersionSeventeenTrigger
+                default: expectedSQL = trigger.sql
+                }
+            } else {
+                expectedSQL = trigger.sql
+            }
             guard let sql = try connection.scalarText(
                 "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = ?",
                 bindings: [.text(trigger.name)]
             ) else { return false }
-            guard normalizedSQL(sql) == normalizedSQL(trigger.sql) else { return false }
+            guard normalizedSQL(sql) == normalizedSQL(expectedSQL) else { return false }
         }
         return true
     }
@@ -501,6 +516,24 @@ enum StoreMigrations {
             "project_id", "ticket_id", "id", "label", "title", "sort_order", "completion",
             "lifecycle", "created_at", "updated_at", "completed_at", "superseded_at",
         ]),
+        (17, "removed_projects", [
+            "removal_id", "historical_project_id", "project_name", "original_lifecycle",
+            "registration_id", "request_generation", "removed_at", "phase_count",
+            "ticket_count", "evidence_count", "history_count",
+        ]),
+        (17, "retained_project_activity_events", [
+            "removal_id", "source", "source_id", "title", "detail", "occurred_at",
+            "observed_at", "recorded_at", "ticket_id", "phase_id", "delivery_goal_id",
+            "originating_thread_id", "delivery_lane", "runtime_state", "notification_state",
+            "notification_status_text",
+        ]),
+        (17, "retained_delivery_goal_assignment_events", [
+            "removal_id", "audit_event_id", "project_id", "phase_id", "ticket_id",
+            "previous_goal_id", "current_goal_id", "revision", "action",
+        ]),
+        (17, "project_removal_authorizations", [
+            "project_id", "registration_id", "removal_id",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -525,6 +558,11 @@ enum StoreMigrations {
         (6, "notification_events", "failure_code"),
         (11, "tickets", "plan_legacy_continuation"),
         (16, "projects", "lifecycle"),
+        (17, "audit_events", "historical_project_id"),
+        (17, "audit_events", "historical_registration_id"),
+        (17, "agent_command_requests", "registration_project_id"),
+        (17, "agent_command_requests", "registration_id"),
+        (17, "agent_command_requests", "request_generation"),
     ]
 
     private static let criticalObjects: [(version: Int64, type: String, name: String)] = [
@@ -557,6 +595,9 @@ enum StoreMigrations {
         (12, "trigger", "ticket_tasks_reject_delete"),
         (12, "trigger", "ticket_task_plans_reject_ticket_delete"),
         (12, "trigger", "ticket_task_plans_reject_project_delete"),
+        (17, "index", "removed_projects_historical_registration_unique"),
+        (17, "index", "removed_projects_historical_project_index"),
+        (17, "index", "audit_events_historical_project_index"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -741,6 +782,73 @@ enum StoreMigrations {
     END
     """
 
+    private static let ticketTaskPlansRejectDeleteVersionSeventeenTrigger = """
+    CREATE TRIGGER ticket_task_plans_reject_delete
+    BEFORE DELETE ON ticket_task_plans
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket task plan history cannot be deleted');
+    END
+    """
+
+    private static let ticketTasksRejectDeleteVersionSeventeenTrigger = """
+    CREATE TRIGGER ticket_tasks_reject_delete
+    BEFORE DELETE ON ticket_tasks
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket task history cannot be deleted');
+    END
+    """
+
+    private static let ticketTaskPlansRejectTicketDeleteVersionSeventeenTrigger = """
+    CREATE TRIGGER ticket_task_plans_reject_ticket_delete
+    BEFORE DELETE ON tickets
+    WHEN EXISTS (
+        SELECT 1
+        FROM ticket_task_plans
+        WHERE project_id = OLD.project_id
+          AND ticket_id = OLD.id
+    )
+      AND NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket owns task history');
+    END
+    """
+
+    private static let ticketTaskPlansRejectProjectDeleteVersionSeventeenTrigger = """
+    CREATE TRIGGER ticket_task_plans_reject_project_delete
+    BEFORE DELETE ON projects
+    WHEN EXISTS (
+        SELECT 1
+        FROM ticket_task_plans
+        WHERE project_id = OLD.id
+    )
+      AND NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'project owns task history');
+    END
+    """
+
     private static let criticalTriggers: [(version: Int64, name: String, sql: String)] = [
         (1, "reject_phase_dependency_cycle_insert", phaseDependencyCycleInsertTrigger),
         (1, "reject_phase_dependency_cycle_update", phaseDependencyCycleUpdateTrigger),
@@ -801,6 +909,12 @@ enum StoreMigrations {
         (12, "ticket_tasks_active_order_index", "ticket_tasks", false,
          [("project_id", false), ("ticket_id", false), ("lifecycle", false),
           ("sort_order", false), ("label", false), ("id", false)]),
+        (17, "removed_projects_historical_registration_unique", "removed_projects", true,
+         [("historical_project_id", false), ("registration_id", false)]),
+        (17, "removed_projects_historical_project_index", "removed_projects", false,
+         [("historical_project_id", false), ("removed_at", true)]),
+        (17, "audit_events_historical_project_index", "audit_events", false,
+         [("historical_project_id", false), ("historical_registration_id", false), ("created_at", true)]),
     ]
 
     private static let requiredForeignKeys: [(
@@ -856,6 +970,8 @@ enum StoreMigrations {
         (12, "ticket_task_plans", "project_id", "projects", "id", "NO ACTION"),
         (12, "ticket_task_plans", "project_id,ticket_id", "tickets", "project_id,id", "NO ACTION"),
         (12, "ticket_tasks", "project_id,ticket_id", "ticket_task_plans", "project_id,ticket_id", "NO ACTION"),
+        (17, "retained_project_activity_events", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (17, "retained_delivery_goal_assignment_events", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -970,6 +1086,92 @@ enum StoreMigrations {
     private static let schemaVersion16 = """
     ALTER TABLE projects ADD COLUMN lifecycle TEXT NOT NULL DEFAULT 'active'
         CHECK (lifecycle IN ('active', 'archived'));
+    """
+
+    private static let schemaVersion17 = """
+    CREATE TABLE removed_projects (
+        removal_id TEXT PRIMARY KEY NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        project_name TEXT NOT NULL,
+        original_lifecycle TEXT NOT NULL CHECK (original_lifecycle IN ('active', 'archived')),
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL CHECK (request_generation > 0),
+        removed_at TEXT NOT NULL,
+        phase_count INTEGER NOT NULL CHECK (phase_count >= 0),
+        ticket_count INTEGER NOT NULL CHECK (ticket_count >= 0),
+        evidence_count INTEGER NOT NULL CHECK (evidence_count >= 0),
+        history_count INTEGER NOT NULL CHECK (history_count >= 0)
+    );
+    CREATE UNIQUE INDEX removed_projects_historical_registration_unique
+        ON removed_projects(historical_project_id, registration_id);
+    CREATE INDEX removed_projects_historical_project_index
+        ON removed_projects(historical_project_id, removed_at DESC);
+
+    CREATE TABLE retained_project_activity_events (
+        removal_id TEXT NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('runtime', 'review', 'completion', 'notification')),
+        source_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        detail TEXT NOT NULL,
+        occurred_at TEXT,
+        observed_at TEXT,
+        recorded_at TEXT,
+        ticket_id TEXT,
+        phase_id TEXT,
+        delivery_goal_id TEXT,
+        originating_thread_id TEXT,
+        delivery_lane TEXT CHECK (delivery_lane IS NULL OR delivery_lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+        runtime_state TEXT,
+        notification_state TEXT,
+        notification_status_text TEXT,
+        PRIMARY KEY(removal_id, source, source_id),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_delivery_goal_assignment_events (
+        removal_id TEXT NOT NULL,
+        audit_event_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        previous_goal_id TEXT,
+        current_goal_id TEXT,
+        revision INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        PRIMARY KEY(removal_id, audit_event_id, ticket_id),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE project_removal_authorizations (
+        project_id TEXT PRIMARY KEY NOT NULL,
+        registration_id TEXT NOT NULL,
+        removal_id TEXT NOT NULL
+    );
+
+    ALTER TABLE audit_events ADD COLUMN historical_project_id TEXT;
+    ALTER TABLE audit_events ADD COLUMN historical_registration_id TEXT;
+    UPDATE audit_events
+    SET historical_project_id = project_id,
+        historical_registration_id = (
+            SELECT registration_id FROM project_registrations
+            WHERE project_registrations.project_id = audit_events.project_id
+        )
+    WHERE project_id IS NOT NULL;
+    CREATE INDEX audit_events_historical_project_index
+        ON audit_events(historical_project_id, historical_registration_id, created_at DESC);
+
+    ALTER TABLE agent_command_requests ADD COLUMN registration_project_id TEXT;
+    ALTER TABLE agent_command_requests ADD COLUMN registration_id TEXT;
+    ALTER TABLE agent_command_requests ADD COLUMN request_generation INTEGER;
+
+    DROP TRIGGER ticket_task_plans_reject_delete;
+    DROP TRIGGER ticket_tasks_reject_delete;
+    DROP TRIGGER ticket_task_plans_reject_ticket_delete;
+    DROP TRIGGER ticket_task_plans_reject_project_delete;
+    \(ticketTaskPlansRejectDeleteVersionSeventeenTrigger);
+    \(ticketTasksRejectDeleteVersionSeventeenTrigger);
+    \(ticketTaskPlansRejectTicketDeleteVersionSeventeenTrigger);
+    \(ticketTaskPlansRejectProjectDeleteVersionSeventeenTrigger);
     """
 
     private static let schemaVersion1 = """

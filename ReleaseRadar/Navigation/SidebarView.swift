@@ -204,6 +204,9 @@ struct SidebarView: View {
                     openArchivedProject: { projectID in
                         Task { await model.navigate(to: .archivedProject(projectID)) }
                     },
+                    openRemovedProject: { removalID in
+                        Task { await model.navigate(to: .removedProject(removalID)) }
+                    },
                     onboardingFinished: {
                         await model.reloadAfterOnboarding()
                     }
@@ -275,7 +278,9 @@ struct SidebarView: View {
                         previewDocumentationSetup: { try await model.previewDocumentationSetup(registration: $0) },
                         performDocumentationSetup: { try await model.performDocumentationSetup($0) },
                         previewArchive: { try await model.previewProjectLifecycle(projectID: projectID, transition: .archive) },
-                        archive: { try await model.applyProjectLifecycle($0) }
+                        archive: { try await model.applyProjectLifecycle($0) },
+                        previewRemoval: { try await model.previewProjectRemoval(projectID: projectID) },
+                        remove: { _ = try await model.applyProjectRemoval($0) }
                     )
                 } else {
                     ProjectEmptyStateView(presentation: .phaseBoard)
@@ -286,10 +291,19 @@ struct SidebarView: View {
                         project: project,
                         loadHealth: { await model.projectHealth(for: projectID) },
                         previewRestore: { try await model.previewProjectLifecycle(projectID: projectID, transition: .restore) },
-                        restore: { try await model.applyProjectLifecycle($0) }
+                        restore: { try await model.applyProjectLifecycle($0) },
+                        previewRemoval: { try await model.previewProjectRemoval(projectID: projectID) },
+                        remove: { _ = try await model.applyProjectRemoval($0) }
                     )
                 } else {
                     DetailUnavailableView(title: "Archived Project", image: "archivebox")
+                }
+            case let .removedProject(removalID):
+                if let project = dashboard.removedProjects.first(where: { $0.id == removalID }),
+                   let activity = model.removedActivity(for: removalID) {
+                    RemovedProjectView(project: project, activity: activity)
+                } else {
+                    DetailUnavailableView(title: "Removed Project", image: "clock.badge.xmark")
                 }
             case let .phaseBoard(projectID):
                 if let board = model.viewedBoard(for: projectID) {
@@ -385,6 +399,7 @@ private extension AppRoute {
         case .settings: "settings"
         case .projectOverview: "project-overview"
         case .archivedProject: "archived-project"
+        case .removedProject: "removed-project"
         case .phaseBoard: "phase-board"
         case .dependencies: "dependencies"
         case .activity: "activity"

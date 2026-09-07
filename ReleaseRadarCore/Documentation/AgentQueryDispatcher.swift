@@ -113,7 +113,21 @@ private struct InventoryCapture: Sendable {
               isComplete: observation.error == nil, preservation: preservation, audits: audits, receipts: receipts)
     }
     private static func fingerprints(_ c: SQLiteConnection, table: String, id: String) throws -> [PreservationFingerprint] {
-        try c.rows("SELECT * FROM \(table) ORDER BY \(id)").map { row in
+        try c.rows("SELECT * FROM \(table) ORDER BY \(id)").map { storedRow in
+            var row = storedRow
+            if table == "audit_events" {
+                // Retention identity is additive migration metadata; the existing
+                // audit fingerprint remains stable while its live row is enriched.
+                row.removeValue(forKey: "historical_project_id")
+                row.removeValue(forKey: "historical_registration_id")
+            } else if table == "agent_command_requests" {
+                // A legacy receipt gains nullable scope columns at v17. Omit only
+                // absent legacy scope; exact scope remains fingerprinted when set.
+                for key in ["registration_project_id", "registration_id", "request_generation"]
+                    where row[key] == .null {
+                    row.removeValue(forKey: key)
+                }
+            }
             guard case let .text(value) = row[id] else { throw DocumentationOperationError.invalidRequest }
             return .init(idHash: documentationDigest(Data(value.utf8)), digest: hash(row))
         }.sorted { $0.idHash < $1.idHash }

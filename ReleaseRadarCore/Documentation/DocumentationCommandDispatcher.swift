@@ -23,7 +23,7 @@ struct DocumentationCommandDispatcher: Sendable {
                         registration: expectedRegistration,
                         connection: connection
                     )
-                    return try Self.replay(connection, requestID: envelope.requestID, body: receiptBody)
+                    return try Self.replay(connection, requestID: envelope.requestID, body: receiptBody, registration: expectedRegistration)
                 }) {
                     return result
                 }
@@ -43,15 +43,15 @@ struct DocumentationCommandDispatcher: Sendable {
                             registration: expectedRegistration,
                             connection: c
                         )
-                        if let result = try Self.replay(c, requestID: envelope.requestID, body: receiptBody) { throw DocumentationControl.replay(result) }
+                        if let result = try Self.replay(c, requestID: envelope.requestID, body: receiptBody, registration: expectedRegistration) { throw DocumentationControl.replay(result) }
                         try context.verifyPersisted(c)
                         // Re-read while the authorized scope and the store transaction are held.
                         // No mutation occurs until this exact snapshot has been revalidated.
                         let current = try Self.prepare(envelope.command, context: context)
                         guard current == prepared else { throw DocumentationOperationError.catalogUnaccepted }
                         try Self.apply(envelope.command, snapshot: current, context: context, connection: c)
-                        try c.execute("INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES (?, ?, ?, ?)",
-                                      bindings: [.text(envelope.requestID.uuidString), .blob(receiptBody), .blob(resultData), .text(ISO8601DateFormatter().string(from: Date()))])
+                        try c.execute("INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id, registration_id, request_generation) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                      bindings: [.text(envelope.requestID.uuidString), .blob(receiptBody), .blob(resultData), .text(ISO8601DateFormatter().string(from: Date()))] + ProjectLifecycleManager.receiptScopeBindings(expectedRegistration))
                         return result
                     }
                 } catch let DocumentationControl.replay(result) { return result }
@@ -76,9 +76,10 @@ struct DocumentationCommandDispatcher: Sendable {
             throw DocumentationOperationError.staleRegistration
         }
     }
-    private static func replay(_ c: SQLiteConnection, requestID: UUID, body: Data) throws -> AgentCommandResult? {
-        guard let row = try c.row("SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?", bindings: [.text(requestID.uuidString)]) else { return nil }
-        guard row["request_body"] == .blob(body), case let .blob(bytes) = row["result_data"],
+    private static func replay(_ c: SQLiteConnection, requestID: UUID, body: Data, registration: ProjectRegistration?) throws -> AgentCommandResult? {
+        guard let row = try c.row("SELECT request_body, result_data, registration_project_id, registration_id, request_generation FROM agent_command_requests WHERE request_id = ?", bindings: [.text(requestID.uuidString)]) else { return nil }
+        guard ProjectLifecycleManager.receiptScopeMatches(row, registration: registration),
+              row["request_body"] == .blob(body), case let .blob(bytes) = row["result_data"],
               let result = try? JSONDecoder().decode(AgentCommandResult.self, from: bytes) else { throw DocumentationControl.requestIDReused }
         return result
     }
