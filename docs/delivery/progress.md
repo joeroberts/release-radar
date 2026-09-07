@@ -53,6 +53,13 @@ Required corrections:
 - P2 removal rewrites prior archive-suppressed notification reason and loses failure/timing
   provenance; preserve terminal facts and terminalize only eligible pending work.
 
+Corrected PR head `68a8282252608ab9c78edfa153140b8abe2f99ad` now rejects removed
+historical onboarding identities, leaves unknown event phase/lane unknown, and preserves
+terminal notification reason/timing. Writer reports 44/44 Removal/Onboarding plus 45/45
+catalog/index tests; permanent regressions added, no UI code changed. Same Astra High
+reviewer restored for only these corrections. Writer is clean/pushed/stopped and archived
+pending any further Required same-outcome correction; merge approval remains pending.
+
 Reviewer independently passed 74 focused/native checks, then reproduced these defects
 with bounded synthetic tests. Same reviewer handles corrected candidate only. Latent
 projectID-only goal observation callback has no shipping source caller and is Optional,
