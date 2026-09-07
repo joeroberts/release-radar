@@ -44,6 +44,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-06-c8-source-repair](2026-09-06-c8-source-repair) — leaf; C8 source-repair pilot; installed acceptance remains separate
 - [delivery.task-briefs.2026-09-06-operating-baseline](2026-09-06-operating-baseline) — leaf; Operating baseline preparation; progress determines current authorization
 - [delivery.task-briefs.2026-09-06-usable-project-lifecycle](2026-09-06-usable-project-lifecycle) — leaf; Complete usable project lifecycle delivery; progress determines current authorization
+- [delivery.task-briefs.2026-09-07-c4-root-management](2026-09-07-c4-root-management) — leaf; C4 managed roots and C12 recovery; progress determines authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -283,6 +284,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-usable-project-lifecycle-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md](2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md) | document | supporting | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-07-c4-root-management
+
+- Path: [docs/delivery/task-briefs/2026-09-07-c4-root-management](2026-09-07-c4-root-management)
+- Purpose: C4 managed roots and C12 recovery; progress determines authorization
+- Allowed contents: Reviewed task briefs
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-c4-root-management-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c4-root-management/c4-root-management-brief.md](2026-09-07-c4-root-management/c4-root-management-brief.md) | document | supporting | active | none | none |
 
 ### Children
 

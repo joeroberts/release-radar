@@ -56,6 +56,8 @@ final class AppRouteTests: XCTestCase {
             ApplicationHealthAction.recommended(forCheckID: "storage", state: .unavailable, hasProjectTarget: false),
             .checkAgain
         )
+        XCTAssertEqual(ApplicationHealthAction.recommended(forCheckID: "root:worktree", state: attention, hasProjectTarget: true), .openProject)
+        XCTAssertEqual(ApplicationHealthAction.recommended(forCheckID: "roots", state: .unavailable, hasProjectTarget: false), .checkAgain)
         XCTAssertNil(ApplicationHealthAction.recommended(forCheckID: "plugin", state: .ready, hasProjectTarget: true))
         XCTAssertNil(ApplicationHealthAction.recommended(forCheckID: "folder", state: attention, hasProjectTarget: false))
     }
@@ -108,6 +110,9 @@ final class AppRouteTests: XCTestCase {
                 bindings: [.text(fixture.projectID.rawValue)]
             )
         }
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Unavailable worktree fixture") { connection in
+            try connection.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('missing-worktree', ?, ?)", bindings: [.text(fixture.projectID.rawValue), .text(fixture.projectRoot.appendingPathComponent("missing-worktree").path)])
+        }
         let lastObservedAt = Date(timeIntervalSince1970: 1_700_000_000)
         let model = AppModel(
             store: fixture.store,
@@ -134,6 +139,9 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(observer.state, .attention)
         XCTAssertTrue(observer.detail.contains("Last seen"))
         XCTAssertGreaterThan(health.checkedAt, lastObservedAt)
+        let worktree = try XCTUnwrap(health.checks.first { $0.id == "root:missing-worktree" })
+        XCTAssertEqual(worktree.state, .attention)
+        XCTAssertTrue(worktree.detail.contains("missing-worktree"))
     }
 
     @MainActor

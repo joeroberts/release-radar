@@ -32,6 +32,7 @@ struct ProjectHealthView: View {
     let isRefreshing: Bool
     let refresh: () -> Void
     var reauthorize: (() -> Void)? = nil
+    var manageRoots: (() -> Void)? = nil
 
     var body: some View {
         RekonSectionPanel {
@@ -63,6 +64,11 @@ struct ProjectHealthView: View {
                     Button("Reauthorize Saved Folder…", action: reauthorize)
                         .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("project-health-reauthorize")
+                }
+                if let manageRoots {
+                    Button("Manage Repository Roots", action: manageRoots)
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("project-health-manage-roots")
                 }
                 Text("Checked \(snapshot.checkedAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption2)

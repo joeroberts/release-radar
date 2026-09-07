@@ -43,6 +43,7 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         let store = DeliveryStore(databaseURL: database)
         try await store.transact(actor: .init(id: "fixture"), reason: "UI fixture") { c in
             try c.execute("INSERT INTO projects (id, name) VALUES ('p', 'Documentation Project')")
+            try c.execute("INSERT INTO project_registrations (project_id, registration_id) VALUES ('p', 'registration-p')")
             try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES ('root', 'p', ?)", bindings: [.text(root.path)])
             try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data) VALUES ('p', ?, ?)", bindings: [.text(root.path), .blob(Data(root.path.utf8))])
             try c.execute("INSERT INTO project_documentation_bindings VALUES ('p', 'root', ?, 1, ?, ?)", bindings: [.text(snapshot.catalog.repositoryID), .text(snapshot.digest), .blob(snapshot.canonicalCatalog)])
@@ -60,6 +61,7 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         try await render(SidebarView(model: appModel), name: "m3c-phase-less-overview", width: 1100, height: 1100)
         await model.prepare(folder: next)
         XCTAssertNotNil(model.prepared)
+        XCTAssertEqual(model.rootSnapshot?.roots.first?.role, .primary)
         XCTAssertFalse(model.recoveryTokenText.contains(next.path))
         for width in [1100.0, 620.0] {
             try await render(RepositoryRecoveryView(model: model).padding(28), name: "m3c-confirmation-\(Int(width))", width: width, height: 950)
@@ -103,6 +105,45 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         XCTAssertEqual(model.evidence.first?.managedDocument?.failure, .bindingMismatch)
     }
 
+    func testWorktreePreviewCancelAndRevocationAtCompactAndWideSizes() async throws {
+        let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("C4-UI-\(UUID().uuidString)")
+        let primary = directory.appendingPathComponent("primary"), worktree = directory.appendingPathComponent("worktree")
+        try FileManager.default.createDirectory(at: primary, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: worktree, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Worktree UI fixture") { c in
+            try c.execute("INSERT INTO projects (id, name) VALUES ('p', 'Project')")
+            try c.execute("INSERT INTO project_registrations (project_id, registration_id) VALUES ('p', 'registration-p')")
+            for (id, url) in [("primary", primary), ("worktree", worktree)] {
+                try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES (?, 'p', ?)", bindings: [.text(id), .text(url.path)])
+                try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES ('p', ?, ?, ?)", bindings: [.text(url.path), .blob(Data(url.path.utf8)), .integer(id == "worktree" ? 1 : 0)])
+            }
+        }
+        let model = RepositoryRecoveryModel(store: store, projectID: .init(rawValue: "p"), allowsRelocation: true, bookmarkStore: RelocationBookmarks())
+        await model.load()
+        XCTAssertFalse(try XCTUnwrap(model.rootSnapshot?.roots.first { $0.role == .worktree }).isAccessible)
+        await model.prepareRootAction(.reconnect, folder: primary, expectedPath: worktree.path)
+        XCTAssertNil(model.rootAction)
+        XCTAssertTrue(model.message?.contains("exact saved worktree") == true)
+        for width in [620.0, 1100.0] {
+            await model.prepareRootAction(.revoke, folder: worktree)
+            XCTAssertNotNil(model.rootAction)
+            try await render(ScrollView { RepositoryRecoveryView(model: model).padding(28) }, name: "c4-worktree-revoke-\(Int(width))", width: width, height: 1100, pressEscape: true)
+            XCTAssertNil(model.rootAction, "Escape must cancel the prepared root action")
+            XCTAssertEqual(model.rootSnapshot?.roots.count, 2)
+        }
+        await model.prepareRootAction(.reconnect, folder: worktree, expectedPath: worktree.path)
+        let reconnected = await model.confirmRootAction()
+        XCTAssertTrue(reconnected)
+        XCTAssertTrue(try XCTUnwrap(model.rootSnapshot?.roots.first { $0.role == .worktree }).isAccessible)
+        await model.prepareRootAction(.revoke, folder: worktree)
+        let revoked = await model.confirmRootAction()
+        XCTAssertTrue(revoked)
+        XCTAssertEqual(model.rootSnapshot?.roots.count, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: worktree.path))
+    }
+
     private func accessibilityText(_ root: AXUIElement) -> String {
         var pending = [root], text: [String] = [], count = 0
         while let element = pending.popLast(), count < 1000 {
@@ -117,7 +158,7 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         return text.joined(separator: "\n")
     }
 
-    private func render<V: View>(_ view: V, name: String, width: Double, height: Double) async throws {
+    private func render<V: View>(_ view: V, name: String, width: Double, height: Double, pressEscape: Bool = false) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: height)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
         hosting.appearance = NSAppearance(named: .darkAqua)
@@ -190,6 +231,13 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
             XCTAssertTrue(axText.contains("Confirm relocation"))
             XCTAssertTrue(axText.contains("Cancel"))
             XCTAssertTrue(axText.contains("Accepted catalog"))
+            XCTAssertTrue(axText.contains("Primary repository root"))
+            XCTAssertTrue(axText.contains("Authorize worktree"))
+        }
+        if name.hasPrefix("c4-worktree") {
+            for label in ["Authorized worktree", "Folder access unavailable", "Confirm root action", "Cancel"] {
+                XCTAssertTrue(axText.contains(label), "Missing actual root recovery AX state: \(label)")
+            }
         }
         print("M3C isolated render PID \(ProcessInfo.processInfo.processIdentifier): AX status \(status.rawValue), native hosting children \(childCount), capture \(name)")
         let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
@@ -197,5 +245,11 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
         let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        if pressEscape {
+            let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                windowNumber: window.windowNumber, context: nil, characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}", isARepeat: false, keyCode: 53))
+            XCTAssertTrue(window.performKeyEquivalent(with: event), "Native Escape key did not reach Cancel")
+            await Task.yield()
+        }
     }
 }

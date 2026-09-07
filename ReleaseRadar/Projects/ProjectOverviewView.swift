@@ -31,6 +31,7 @@ struct ProjectOverviewView: View {
     @State private var healthGeneration: UInt64 = 0
     @State private var showsSettings = false
     @State private var showsHelp = false
+    @State private var showsRootManagement = false
     @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
     @State private var documentationSetupMessage: String?
     @State private var isPerformingDocumentationSetup = false
@@ -72,7 +73,8 @@ struct ProjectOverviewView: View {
                         snapshot: health,
                         isRefreshing: isRefreshingHealth,
                         refresh: refreshHealth,
-                        reauthorize: healthReauthorizationAction
+                        reauthorize: healthReauthorizationAction,
+                        manageRoots: repositoryRecovery == nil ? nil : { showsRootManagement = true }
                     )
                     if let healthRecoveryMessage {
                         Text(healthRecoveryMessage)
@@ -82,7 +84,7 @@ struct ProjectOverviewView: View {
                     }
                 }
                 if let repositoryRecovery {
-                    RepositoryRecoveryView(model: repositoryRecovery, onCommitted: onRepositoryRelocated)
+                    RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted)
                 }
                 if !project.evidence.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
@@ -143,6 +145,17 @@ struct ProjectOverviewView: View {
         }
         .background(RekonTheme.background)
         .task { if health == nil { refreshHealth() } }
+        .sheet(isPresented: $showsRootManagement) {
+            if let repositoryRecovery {
+                VStack(alignment: .trailing) {
+                    ScrollView { RepositoryRecoveryView(model: repositoryRecovery, onCommitted: rootActionCommitted).padding(24) }
+                    Button("Done") { showsRootManagement = false }
+                        .buttonStyle(RekonSecondaryButtonStyle()).padding([.bottom, .trailing], 24)
+                }
+                .frame(minWidth: 520, idealWidth: 720, minHeight: 500, idealHeight: 750)
+                .background(RekonTheme.background)
+            }
+        }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
         .sheet(isPresented: $showsSettings) {
             if let settings, let saveProjectSettings {
@@ -316,6 +329,11 @@ struct ProjectOverviewView: View {
                 )
             }
         }
+    }
+
+    private func rootActionCommitted() async {
+        await onRepositoryRelocated()
+        refreshHealth()
     }
 
     private func refreshHealth() {

@@ -463,6 +463,16 @@ final class AppModel {
             state: documentationReady ? .ready : .attention
         ))
 
+        let roots = try? await projectOnboarding.rootSnapshot(projectID: projectID)
+        if let roots {
+            for root in roots.roots where root.role == .worktree {
+                checks.append(.init(id: "root:\(root.id.rawValue)", title: "Worktree access: \(root.isAccessible ? "ready" : "needs attention")",
+                    detail: "\(root.path) · \(root.accessDetail)", state: root.isAccessible ? .ready : .attention))
+            }
+        } else {
+            checks.append(.init(id: "roots", title: "Saved roots not checked", detail: "Reload repository roots to verify the current registration and each worktree authorization.", state: .unavailable))
+        }
+
         let plugin = CodexPluginSettingsPresentation(state: codexPluginState)
         let pluginReady: Bool
         if case .installed = codexPluginState, codexPluginObservedAt != nil { pluginReady = true } else { pluginReady = false }
@@ -478,6 +488,14 @@ final class AppModel {
             detail: connection.detail,
             state: codexSnapshot.freshness.state == .live ? .ready : .attention
         ))
+        if let roots {
+            let current = (try? await projectOnboarding.rootSnapshotIsCurrent(roots)) == true
+            if !current || roots.registration != settings?.registration ||
+                (documentation.projectRoot != nil && roots.roots.first(where: { $0.role == .primary })?.path != documentation.projectRoot?.path) {
+                return .init(projectID: projectID, registration: nil, rootPath: nil, checkedAt: checkedAt,
+                    checks: [.init(id: "roots", title: "Project roots changed during checking", detail: "Check health again for the current saved registration and roots. Earlier results are no longer current.", state: .unavailable)])
+            }
+        }
         return .init(
             projectID: projectID,
             registration: settings?.registration,

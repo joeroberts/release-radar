@@ -32,9 +32,10 @@ public struct PreparedRepositoryRootRelocation: Sendable {
     fileprivate let newRootID: ProjectRootID
     fileprivate let source: RelocationSource
     fileprivate let bookmark: Data
+    fileprivate let destination: RelocationDestination
     fileprivate let requestHash: Data
     public var recoveryToken: RepositoryRootRelocationRecoveryToken {
-        .init(version: 1, requestID: requestID, projectID: projectID, rootID: newRootID,
+        .init(version: 2, requestID: requestID, projectID: projectID, rootID: newRootID, registration: source.registration,
               requestHash: String(decoding: requestHash, as: UTF8.self))
     }
 }
@@ -45,6 +46,7 @@ public struct RepositoryRootRelocationRecoveryToken: Equatable, Codable, Sendabl
     public let requestID: UUID
     public let projectID: ProjectID
     public let rootID: ProjectRootID
+    public let registration: ProjectRegistration?
     public let requestHash: String
 }
 
@@ -63,12 +65,13 @@ public struct RepositoryRootRelocation: Sendable {
         self.store = store; self.bookmarkStore = bookmarkStore
     }
 
-    public func prepare(projectID: ProjectID, folder: URL, requestID: UUID = UUID()) async throws -> PreparedRepositoryRootRelocation {
+    public func prepare(projectID: ProjectID, folder: URL, requestID: UUID = UUID(), expectedRegistration: ProjectRegistration? = nil) async throws -> PreparedRepositoryRootRelocation {
         guard folder.isFileURL, folder.standardizedFileURL.path == folder.path,
               folder.resolvingSymlinksInPath().path == folder.path else { throw RepositoryRootRelocationError.unsafeRoot }
         let source = try await store.documentationRead { try RelocationSource.read($0, projectID: projectID) }
+        guard expectedRegistration == nil || expectedRegistration == source.registration else { throw RepositoryRootRelocationError.sourceChanged }
         guard source.path != folder.path else { throw RepositoryRootRelocationError.sameRoot }
-        try await store.read { try Self.requireUnowned($0, folder: folder) }
+        let destination = try await store.read { try RelocationDestination.read($0, projectID: projectID, folder: folder) }
         let bookmark: Data
         do { bookmark = try bookmarkStore.makeBookmark(for: folder) }
         catch { throw RepositoryRootRelocationError.authorizationFailed }
@@ -76,14 +79,14 @@ public struct RepositoryRootRelocation: Sendable {
             try Self.validateCandidate(folder: folder, binding: source.binding, hasHandoff: source.handoff != nil)
         }
         try await store.read { try Self.requireHandoffDestination($0, projectID: projectID, folder: folder) }
-        let newRootID = ProjectRootID(rawValue: UUID().uuidString)
+        let newRootID = destination.rootID ?? ProjectRootID(rawValue: UUID().uuidString)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
-        let identity = RelocationIdentity(operation: "owner-repository-root-relocation-v1", requestID: requestID,
-            newRootID: newRootID, source: source, selectedPath: folder.path, bookmarkDigest: documentationDigest(bookmark))
+        let identity = RelocationIdentity(operation: "owner-repository-root-relocation-v2", requestID: requestID,
+            newRootID: newRootID, source: source, destination: destination, selectedPath: folder.path, bookmarkDigest: documentationDigest(bookmark))
         let hash = Data(documentationDigest(try encoder.encode(identity)).utf8)
         return .init(requestID: requestID, projectID: projectID, oldRoot: URL(fileURLWithPath: source.path),
             selectedRoot: folder, repositoryID: source.binding.repositoryID, catalogVersion: source.binding.acceptedCatalogVersion,
-            catalogDigest: source.binding.acceptedCatalogDigest, newRootID: newRootID, source: source, bookmark: bookmark, requestHash: hash)
+            catalogDigest: source.binding.acceptedCatalogDigest, newRootID: newRootID, source: source, bookmark: bookmark, destination: destination, requestHash: hash)
     }
 
     /// Read-only recovery of one exact receipt. Nil means no committed receipt;
@@ -104,14 +107,16 @@ public struct RepositoryRootRelocation: Sendable {
                     auditEventID: auditID, auditScope: .init(projectID: prepared.projectID, entityType: .project, entityID: prepared.projectID.rawValue)) { c in
                     if let replay = try Self.replay(c, prepared) { throw RelocationReplay.result(replay) }
                     guard try RelocationSource.read(c, projectID: prepared.projectID) == prepared.source else { throw RepositoryRootRelocationError.sourceChanged }
-                    try Self.requireUnowned(c, folder: prepared.selectedRoot)
+                    guard try RelocationDestination.read(c, projectID: prepared.projectID, folder: prepared.selectedRoot) == prepared.destination else { throw RepositoryRootRelocationError.sourceChanged }
                     try Self.requireHandoffDestination(c, projectID: prepared.projectID, folder: prepared.selectedRoot)
                     // Synchronous no-follow revalidation is inside the one store-owned
                     // transaction, before its first change, while new scope is held.
                     try Self.validateCandidate(folder: prepared.selectedRoot, binding: prepared.source.binding, hasHandoff: prepared.source.handoff != nil)
                     let project = prepared.projectID.rawValue
-                    try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?)", bindings: [.text(prepared.newRootID.rawValue), .text(project), .text(prepared.selectedRoot.path)])
-                    try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0)", bindings: [.text(project), .text(prepared.selectedRoot.path), .blob(prepared.bookmark)])
+                    if prepared.destination.rootID == nil {
+                        try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?)", bindings: [.text(prepared.newRootID.rawValue), .text(project), .text(prepared.selectedRoot.path)])
+                    }
+                    try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0) ON CONFLICT(project_id, path) DO UPDATE SET bookmark_data = excluded.bookmark_data, is_stale = 0", bindings: [.text(project), .text(prepared.selectedRoot.path), .blob(prepared.bookmark)])
                     try c.execute("UPDATE project_documentation_bindings SET root_id = ? WHERE project_id = ? AND root_id = ?", bindings: [.text(prepared.newRootID.rawValue), .text(project), .text(prepared.source.binding.rootID.rawValue)])
                     if let handoff = prepared.source.handoff {
                         try c.execute("UPDATE evidence SET path = ? WHERE project_id = ? AND id = ?", bindings: [.text(prepared.selectedRoot.appendingPathComponent(RepositoryDocumentContract.guidancePath).path), .text(project), .text(handoff.id.rawValue)])
@@ -149,10 +154,6 @@ public struct RepositoryRootRelocation: Sendable {
             try catalog.reader.verifyStable()
         } catch { throw RepositoryRootRelocationError.catalogMismatch }
     }
-    private static func requireUnowned(_ c: SQLiteConnection, folder: URL) throws {
-        guard try c.scalarInt("SELECT COUNT(*) FROM project_roots WHERE path = ?", bindings: [.text(folder.path)]) == 0,
-              try c.scalarInt("SELECT COUNT(*) FROM project_bookmarks WHERE path = ?", bindings: [.text(folder.path)]) == 0 else { throw RepositoryRootRelocationError.rootAlreadyOwned }
-    }
     private static func requireHandoffDestination(_ c: SQLiteConnection, projectID: ProjectID, folder: URL) throws {
         guard try c.scalarInt("SELECT COUNT(*) FROM evidence WHERE project_id = ? AND path = ?", bindings: [.text(projectID.rawValue), .text(folder.appendingPathComponent(RepositoryDocumentContract.guidancePath).path)]) == 0 else { throw RepositoryRootRelocationError.handoffConflict }
     }
@@ -160,8 +161,10 @@ public struct RepositoryRootRelocation: Sendable {
         try replay(c, token: prepared.recoveryToken)
     }
     private static func replay(_ c: SQLiteConnection, token: RepositoryRootRelocationRecoveryToken) throws -> RepositoryRootRelocationResult? {
-        guard token.version == 1, token.requestHash.count == 64,
+        guard token.version == 2, let registration = token.registration,
+              registration.projectID == token.projectID, token.requestHash.count == 64,
               token.requestHash.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else { throw RepositoryRootRelocationError.requestIDReused }
+        guard try RelocationSource.registration(c, projectID: token.projectID) == registration else { throw RepositoryRootRelocationError.sourceChanged }
         guard let row = try c.row("SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?", bindings: [.text(token.requestID.uuidString)]) else { return nil }
         guard row["request_body"] == .blob(Data(token.requestHash.utf8)), case let .blob(data) = row["result_data"],
               let result = try? JSONDecoder().decode(RepositoryRootRelocationResult.self, from: data),
@@ -173,14 +176,23 @@ public struct RepositoryRootRelocation: Sendable {
 private enum RelocationReplay: Error { case result(RepositoryRootRelocationResult) }
 private struct RelocationIdentity: Encodable {
     let operation: String; let requestID: UUID; let newRootID: ProjectRootID
-    let source: RelocationSource; let selectedPath: String; let bookmarkDigest: String
+    let source: RelocationSource; let destination: RelocationDestination; let selectedPath: String; let bookmarkDigest: String
 }
 fileprivate struct RelocationSource: Equatable, Encodable, Sendable {
+    let registration: ProjectRegistration
     let binding: ProjectDocumentationBinding
     let path: String
     let bookmarkDigest: String?
     let bookmarkStale: Int64?
     let handoff: LocatedEvidenceRecord?
+
+    static func registration(_ c: SQLiteConnection, projectID: ProjectID) throws -> ProjectRegistration {
+        guard let row = try c.row("SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
+              case let .text(id) = row["registration_id"], case let .integer(generation) = row["request_generation"] else {
+            throw RepositoryRootRelocationError.sourceChanged
+        }
+        return .init(projectID: projectID, registrationID: id, requestGeneration: generation)
+    }
 
     static func read(_ c: SQLiteConnection, projectID: ProjectID) throws -> Self {
         guard let binding = try DocumentationRootContext.binding(c, projectID: projectID.rawValue),
@@ -204,6 +216,28 @@ fileprivate struct RelocationSource: Equatable, Encodable, Sendable {
                   case let .integer(available) = row["is_available"] else { throw RepositoryRootRelocationError.handoffConflict }
             handoff = .init(id: .init(rawValue: id), projectID: projectID, ticketID: nil, locator: .filePath(handoffPath), isAvailable: available == 1)
         }
-        return .init(binding: binding, path: path, bookmarkDigest: digest, bookmarkStale: stale, handoff: handoff)
+        return .init(registration: try registration(c, projectID: projectID), binding: binding, path: path, bookmarkDigest: digest, bookmarkStale: stale, handoff: handoff)
+    }
+}
+
+fileprivate struct RelocationDestination: Equatable, Encodable, Sendable {
+    let rootID: ProjectRootID?
+    let bookmarkDigest: String?
+    let bookmarkStale: Int64?
+
+    static func read(_ c: SQLiteConnection, projectID: ProjectID, folder: URL) throws -> Self {
+        guard try c.scalarInt("SELECT COUNT(*) FROM project_bookmarks WHERE path = ? AND project_id != ?", bindings: [.text(folder.path), .text(projectID.rawValue)]) == 0 else { throw RepositoryRootRelocationError.rootAlreadyOwned }
+        let root = try c.row("SELECT id, project_id FROM project_roots WHERE path = ?", bindings: [.text(folder.path)])
+        let bookmark = try c.row("SELECT project_id, bookmark_data, is_stale FROM project_bookmarks WHERE path = ?", bindings: [.text(folder.path)])
+        guard root == nil || root?["project_id"] == .text(projectID.rawValue),
+              bookmark == nil || bookmark?["project_id"] == .text(projectID.rawValue),
+              bookmark == nil || root != nil else { throw RepositoryRootRelocationError.rootAlreadyOwned }
+        let id: ProjectRootID?
+        if case let .text(value) = root?["id"] { id = .init(rawValue: value) } else { id = nil }
+        let digest: String?
+        if case let .blob(data) = bookmark?["bookmark_data"] { digest = documentationDigest(data) } else { digest = nil }
+        let stale: Int64?
+        if case let .integer(value) = bookmark?["is_stale"] { stale = value } else { stale = nil }
+        return .init(rootID: id, bookmarkDigest: digest, bookmarkStale: stale)
     }
 }
