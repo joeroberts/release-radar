@@ -349,6 +349,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
 
     func testProjectHealthFolderRecoveryButtonInvokesItsAuthorizedAction() async throws {
         var invocationCount = 0
+        var rootsInvocationCount = 0
         let projectID = ProjectID(rawValue: "project-recovery")
         let snapshot = ProjectHealthSnapshot(
             projectID: projectID,
@@ -361,14 +362,15 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             ]
         )
         try await render(
-            ProjectHealthView(snapshot: snapshot, isRefreshing: false, refresh: {}, reauthorize: { invocationCount += 1 }),
+            ProjectHealthView(snapshot: snapshot, isRefreshing: false, refresh: {}, reauthorize: { invocationCount += 1 }, manageRoots: { rootsInvocationCount += 1 }),
             name: "lifecycle-folder-recovery",
             width: 620,
             expected: nil,
             expectedText: ["Reauthorize Saved Folder…", "Catalog remains invalid."],
-            pressIdentifiers: ["project-health-reauthorize"]
+            pressIdentifiers: ["project-health-reauthorize", "project-health-manage-roots"]
         )
         XCTAssertEqual(invocationCount, 1)
+        XCTAssertEqual(rootsInvocationCount, 1)
     }
 
     func testOnboardingNativeCopyUsesTheSameExistingDocumentationBootstrapShownInPreview() async throws {
@@ -551,11 +553,12 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 return element
             }
             var role: CFTypeRef?
-            if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role) == .success,
+            if ["project-health-reauthorize", "project-health-manage-roots"].contains(identifier),
+               AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role) == .success,
                role as? String == kAXButtonRole {
                 for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
                     if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-                       (value as? String)?.contains("Reauthorize Saved Folder") == true {
+                       (value as? String)?.contains(identifier == "project-health-reauthorize" ? "Reauthorize Saved Folder" : "Manage Repository Roots") == true {
                         return element
                     }
                 }

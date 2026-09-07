@@ -30,6 +30,7 @@ enum ApplicationHealthAction: Equatable {
         hasProjectTarget: Bool
     ) -> ApplicationHealthAction? {
         guard state != .ready else { return nil }
+        if id == "roots" || id.hasPrefix("root:") { return hasProjectTarget ? .openProject : .checkAgain }
         switch id {
         case "folder", "documentation":
             return hasProjectTarget ? .openProject : nil

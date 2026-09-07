@@ -1,0 +1,5 @@
+{
+  "linked worktree/.git": "gitdir: ../main repo/.git/worktrees/linked-worktree\n",
+  "main repo/.git/worktrees/linked-worktree/commondir": "../..\n",
+  "main repo/.git/worktrees/linked-worktree/gitdir": "../../../../linked worktree/.git\n"
+}
