@@ -45,6 +45,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-06-operating-baseline](2026-09-06-operating-baseline) — leaf; Operating baseline preparation; progress determines current authorization
 - [delivery.task-briefs.2026-09-06-usable-project-lifecycle](2026-09-06-usable-project-lifecycle) — leaf; Complete usable project lifecycle delivery; progress determines current authorization
 - [delivery.task-briefs.2026-09-07-c4-root-management](2026-09-07-c4-root-management) — leaf; C4 managed roots and C12 recovery; progress determines authorization
+- [delivery.task-briefs.2026-09-07-c5-archive-restore](2026-09-07-c5-archive-restore) — leaf; C5 reversible archive and restore delivery; progress controls current authorization
 - [delivery.task-briefs.2026-09-07-parallel-discovery](2026-09-07-parallel-discovery) — leaf; Bounded parallel decision and discovery briefs and findings; proposals are not implementation authority
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
@@ -305,6 +306,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-c4-root-management-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c4-root-management/c4-root-management-brief.md](2026-09-07-c4-root-management/c4-root-management-brief.md) | document | supporting | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-07-c5-archive-restore
+
+- Path: [docs/delivery/task-briefs/2026-09-07-c5-archive-restore](2026-09-07-c5-archive-restore)
+- Purpose: C5 reversible archive and restore delivery; progress controls current authorization
+- Allowed contents: Controlling task brief and bounded delivery evidence
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-c5-archive-restore-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c5-archive-restore/c5-archive-restore-brief.md](2026-09-07-c5-archive-restore/c5-archive-restore-brief.md) | document | supporting | active | none | none |
 
 ### Children
 

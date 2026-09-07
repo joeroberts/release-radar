@@ -492,6 +492,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-07-c5-archive-restore",
+      "path": "docs/delivery/task-briefs/2026-09-07-c5-archive-restore",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "C5 reversible archive and restore delivery; progress controls current authorization",
+      "allowedContents": [
+        "Controlling task brief and bounded delivery evidence"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4329,6 +4344,21 @@
       "supersedes": [],
       "applicationSensitivity": [
         "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-c5-archive-restore-brief-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-c5-archive-restore/c5-archive-restore-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-c5-archive-restore",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"

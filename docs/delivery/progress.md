@@ -20,7 +20,8 @@ worktree `039a`, branch `codex/c4-root-management`, from `80521d6` plus handoff
 Sol High; the API response does not confirm effective runtime. The worker owns C4
 source, tests, brief and associated catalog/index changes; only the orchestrator
 writes this ledger. Source candidate `1801ded` is independently reviewed; ready PR #28 has final
-head `5816c71` after shared-document integration and awaits owner merge approval. No installed owner-app or
+head `5816c71` after shared-document integration merged with owner approval as
+`32bb2cee59f34f7dfc9eae4b7a86391f77bf742d`. C5 archive/restore is next. No installed owner-app or
 real folder-picker grant acceptance is claimed.
 
 The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
@@ -140,8 +141,9 @@ Sol High review by `01a07b9a-1fa0-7ad0-b50e-f5afab079b66`. Companion candidate
 independent Astra High review by `01a07ba1-d86f-78b3-ac3f-6c3563e1e199`.
 Live candidate `95ad1fc` passed fresh independent review with no findings;
 documentation/diff checks, primary sources and scoped installed capability readback
-passed. Writer/reviewer report stopped work and no temporary artifacts. PR #26 awaits
-owner merge approval and preserves a supported-contract no-go for the current desktop
+passed. Writer/reviewer report stopped work and no temporary artifacts. PR #26 merged
+with owner approval as `bf263b1e002302d0fe4a0024bbcb73d8fcda4f19` and preserves a
+supported-contract no-go for the current desktop
 runtime, not an assertion about undocumented IPC. Companion corrected candidate `6385d49` passed its same independent reviewer:
 withdrawal survives recovery and overrides generation/compatibility fallback, with
 offline purge delay explicit. No Required findings remain; two optional implementation
@@ -166,7 +168,10 @@ before merge. That integration and review-result brief are now published at
 `5816c71`; PR #28 is ready and mergeable. CodeRabbit subsequently reported SUCCESS; merge state is CLEAN.
 Product source/tests/project content remains identical to reviewed `1801ded`.
 The delivery writer and independent reviewer are stopped and archived; PR #28
-still requires explicit owner approval.
+merged with owner approval on 2026-09-07 as
+`32bb2cee59f34f7dfc9eae4b7a86391f77bf742d`. C5 → C6 → C7 and associated C12
+remain authorized; PR #27, installation and owner-data acceptance remain separately
+unapproved.
 
 Reviewer work/processes are stopped. Temporary review outputs remain at
 `/tmp/c4-independent-review-01a07ba1` (DerivedData), its `-first.log`, `-first.xcresult`,
