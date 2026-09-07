@@ -43,4 +43,6 @@ Direct checks: 66 current named XCTest checks passed across the focused runs. Co
 
 Initial registration and promotion regressions failed for the expected behavior before correction. The broad affected run had one AX helper failure: its label fallback selected the wrong button; the bounded fallback correction and both actual health actions passed. A synthetic Git setup failure exposed the unsupported shim dependency, which C4 no longer uses; the later absolute-link fixture normalization correction preserved Git-generated metadata in the sandbox. Existing transport acceptance remains outside this task and no fully green broad-suite claim is made.
 
-Independent candidate review is pending. No application catalog acceptance or owner-state synchronization is claimed; repository documentation validation is separate.
+Independent combined review approved candidate `1801ded6ece1af31681463859b8376546db925a0` with no Required or Optional findings. The reviewer passed 31 focused tests, including fresh native 620/1100-point rendering, accessibility, Escape cancellation and the Health action, plus documentation and diff checks. Review processes stopped and the parent archived the review task.
+
+XCTest injects a read-only `/` entitlement. Synthetic checks establish containment predicates and denied-bookmark handling; real NSOpenPanel grants under shipping entitlements remain unverified. No application catalog acceptance or owner-state synchronization is claimed; repository documentation validation is separate.
