@@ -492,6 +492,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             reason: "Reauthorize project folder access",
             auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
         ) { connection in
+            try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             guard try connection.scalarText(
                 "SELECT path FROM project_roots WHERE project_id = ? AND (NOT EXISTS (SELECT 1 FROM project_documentation_bindings WHERE project_id = project_roots.project_id) OR id = (SELECT root_id FROM project_documentation_bindings WHERE project_id = project_roots.project_id)) ORDER BY rowid LIMIT 1",
                 bindings: [.text(projectID.rawValue)]
@@ -521,6 +522,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             reason: "Associate first project folder authorization",
             auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
         ) { connection in
+            try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             let rootCount = try connection.scalarInt(
                 "SELECT COUNT(*) FROM project_roots WHERE project_id = ?",
                 bindings: [.text(projectID.rawValue)]
@@ -557,7 +559,8 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 """
                 SELECT projects.id, projects.name, projects.first_dashboard_opened
                 FROM projects
-                WHERE NOT EXISTS (
+                WHERE projects.lifecycle = 'active'
+                  AND NOT EXISTS (
                     SELECT 1 FROM project_roots
                     WHERE project_roots.project_id = projects.id
                 )
@@ -689,6 +692,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     public func requestFirstPhaseDefinition(projectID: ProjectID) async throws {
         guard try await projectExists(projectID) else { throw OnboardingError.projectNotPrepared }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Request agent-defined first phase") { connection in
+            try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             try Self.ensureOnboardingReviewMarker(
                 kind: .phaseRequest,
                 projectID: projectID,
@@ -706,6 +710,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let projectID = registration.projectID
         let included = decision.preview.includedTaskDescriptors.filter { !decision.excludedTaskIDs.contains($0.id) }
         try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding") { connection in
+            try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             guard try connection.scalarInt(
                 "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'pending'",
                 bindings: [.text(projectID.rawValue), .text(registration.registrationID), .integer(registration.requestGeneration)]
@@ -795,6 +800,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 entityID: registration.projectID.rawValue
             )
         ) { connection in
+            try ProjectLifecycleManager.requireActive(projectID: registration.projectID, connection: connection)
             guard try connection.scalarInt(
                 "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'complete'",
                 bindings: [

@@ -291,6 +291,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
         case .attemptStarted: "Sending"
         case .unknown: "Delivery unknown · Not retried automatically"
         case .sent: "Pushover delivered"
+        case .suppressed: "Suppressed when project was archived"
         case .failed:
             switch failureCode {
             case "credentials_missing": "Delivery failed · Credentials missing"

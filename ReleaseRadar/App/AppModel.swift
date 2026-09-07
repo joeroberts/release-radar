@@ -235,7 +235,16 @@ final class AppModel {
     }
 
     func navigate(to route: AppRoute) async {
+        if case let .archivedProject(projectID) = route,
+           dashboard?.projects.contains(where: { $0.id == projectID }) == true {
+            await navigate(to: .projectOverview(projectID))
+            return
+        }
         if let projectID = route.projectID {
+            if dashboard?.archivedProjects.contains(where: { $0.id == projectID }) == true {
+                selection = .archivedProject(projectID)
+                return
+            }
             guard dashboard?.projects.contains(where: { $0.id == projectID }) == true else {
                 selection = .projects
                 return
@@ -248,6 +257,22 @@ final class AppModel {
             }
         }
         selection = route
+    }
+
+    func previewProjectLifecycle(
+        projectID: ProjectID,
+        transition: ProjectLifecycleTransition
+    ) async throws -> ProjectLifecyclePreview {
+        try await ProjectLifecycleManager(store: store).preview(projectID: projectID, transition: transition)
+    }
+
+    func applyProjectLifecycle(_ preview: ProjectLifecyclePreview) async throws {
+        let snapshot = try await ProjectLifecycleManager(store: store).apply(preview)
+        selectedProjectID = snapshot.projectID
+        _ = await reloadProjectProjections()
+        selection = snapshot.lifecycle == .archived
+            ? .archivedProject(snapshot.projectID)
+            : .projectOverview(snapshot.projectID)
     }
 
     func loadDashboard() async {

@@ -336,6 +336,7 @@ final class StoreAcceptanceTests: XCTestCase {
         let legacy = try SQLiteConnection(url: url)
         let reviewsBefore = try legacy.rows("SELECT id, project_id, kind, summary, status FROM review_items ORDER BY id")
         try legacy.execute("DROP TABLE project_registrations")
+        try legacy.execute("ALTER TABLE projects DROP COLUMN lifecycle")
         try legacy.execute("PRAGMA user_version = 14")
 
         let migrated = DeliveryStore(databaseURL: url)
@@ -419,7 +420,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "1004a04554ae24f2cff30c3d403ae8f15514ec4c43bdbe347f9a44ca34b5805b")
+                       "4e44d118b4c6e113b66de4a3ec7c13db4caaed5b7b844d28abc256a85bf3eab0")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
@@ -2732,6 +2733,7 @@ final class StoreAcceptanceTests: XCTestCase {
         try db.executeScript("""
         BEGIN EXCLUSIVE TRANSACTION;
         DROP TABLE project_registrations;
+        ALTER TABLE projects DROP COLUMN lifecycle;
         ALTER TABLE delivery_goal_assignment_events RENAME TO synthetic_current_assignment_events;
         \(historicalEventSQL);
         INSERT INTO delivery_goal_assignment_events
@@ -3256,6 +3258,7 @@ final class StoreAcceptanceTests: XCTestCase {
         let legacyEvidenceSQL = try XCTUnwrap(frozen.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'evidence'"))
         try connection.executeScript("""
         DROP TABLE project_registrations;
+        ALTER TABLE projects DROP COLUMN lifecycle;
         DROP TABLE project_documentation_bindings;
         DROP INDEX project_roots_project_identity_unique;
         ALTER TABLE evidence RENAME TO evidence_current;

@@ -82,7 +82,13 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
 
     private func recoverAmbiguousAttempts() async throws {
         let count = try await store.read { connection in
-            try connection.scalarInt("SELECT COUNT(*) FROM notification_events WHERE state = 'attempt_started'") ?? 0
+            try connection.scalarInt(
+                """
+                SELECT COUNT(*) FROM notification_events
+                JOIN projects ON projects.id = notification_events.project_id
+                WHERE notification_events.state = 'attempt_started' AND projects.lifecycle = 'active'
+                """
+            ) ?? 0
         }
         guard count > 0 else { return }
         await beforeLaunchRecovery()
@@ -95,6 +101,10 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
                 UPDATE notification_events
                 SET state = 'unknown', completed_at = ?, failure_code = 'ambiguous_attempt'
                 WHERE state = 'attempt_started'
+                  AND EXISTS (
+                    SELECT 1 FROM projects
+                    WHERE projects.id = notification_events.project_id AND projects.lifecycle = 'active'
+                  )
                 """,
                 bindings: [.text(ISO8601DateFormatter().string(from: Date()))]
             )
@@ -106,7 +116,13 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
             var ids: [String] = []
             var offset: Int64 = 0
             while let id = try connection.scalarText(
-                "SELECT id FROM notification_events WHERE state = 'queued' ORDER BY created_at, rowid LIMIT 1 OFFSET ?",
+                """
+                SELECT notification_events.id
+                FROM notification_events
+                JOIN projects ON projects.id = notification_events.project_id
+                WHERE notification_events.state = 'queued' AND projects.lifecycle = 'active'
+                ORDER BY notification_events.created_at, notification_events.rowid LIMIT 1 OFFSET ?
+                """,
                 bindings: [.integer(offset)]
             ) {
                 ids.append(id)
@@ -152,10 +168,15 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
         ) { connection in
             guard let row = try connection.row(
                 """
-                SELECT id, project_id, event_kind, subject_id, occurrence, fingerprint,
-                       title, message, ticket_id, goal_id
+                SELECT notification_events.id, notification_events.project_id,
+                       notification_events.event_kind, notification_events.subject_id,
+                       notification_events.occurrence, notification_events.fingerprint,
+                       notification_events.title, notification_events.message,
+                       notification_events.ticket_id, notification_events.goal_id
                 FROM notification_events
-                WHERE id = ? AND state = 'queued'
+                JOIN projects ON projects.id = notification_events.project_id
+                WHERE notification_events.id = ? AND notification_events.state = 'queued'
+                  AND projects.lifecycle = 'active'
                 """,
                 bindings: [.text(id)]
             ) else {
@@ -180,6 +201,11 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
             actor: .init(id: "notification-dispatcher"),
             reason: "Record notification delivery"
         ) { connection in
+            guard let projectID = try connection.scalarText(
+                "SELECT project_id FROM notification_events WHERE id = ? AND state = 'attempt_started'",
+                bindings: [.text(id)]
+            ) else { throw NotificationDispatchError.notQueued }
+            try ProjectLifecycleManager.requireActive(projectID: .init(rawValue: projectID), connection: connection)
             try connection.execute(
                 """
                 UPDATE notification_events
@@ -200,6 +226,11 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
             actor: .init(id: "notification-dispatcher"),
             reason: "Record notification failure"
         ) { connection in
+            guard let projectID = try connection.scalarText(
+                "SELECT project_id FROM notification_events WHERE id = ? AND state IN ('queued', 'attempt_started')",
+                bindings: [.text(id)]
+            ) else { throw NotificationDispatchError.notQueued }
+            try ProjectLifecycleManager.requireActive(projectID: .init(rawValue: projectID), connection: connection)
             try connection.execute(
                 """
                 UPDATE notification_events

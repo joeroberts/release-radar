@@ -246,7 +246,7 @@ struct FailureStatePresentation: Equatable, Sendable {
                 tone: .warning,
                 accessibilityID: "failure-pushover-unknown"
             )
-        case .queued, .attemptStarted, .sent, nil:
+        case .queued, .attemptStarted, .sent, .suppressed, nil:
             return nil
         }
     }

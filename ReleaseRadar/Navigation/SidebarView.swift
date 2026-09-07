@@ -201,6 +201,9 @@ struct SidebarView: View {
                     openProject: { projectID in
                         Task { await model.openProject(projectID) }
                     },
+                    openArchivedProject: { projectID in
+                        Task { await model.navigate(to: .archivedProject(projectID)) }
+                    },
                     onboardingFinished: {
                         await model.reloadAfterOnboarding()
                     }
@@ -270,10 +273,23 @@ struct SidebarView: View {
                             try await model.reauthorizeProjectHealthRoot(at: $0, projectID: projectID)
                         },
                         previewDocumentationSetup: { try await model.previewDocumentationSetup(registration: $0) },
-                        performDocumentationSetup: { try await model.performDocumentationSetup($0) }
+                        performDocumentationSetup: { try await model.performDocumentationSetup($0) },
+                        previewArchive: { try await model.previewProjectLifecycle(projectID: projectID, transition: .archive) },
+                        archive: { try await model.applyProjectLifecycle($0) }
                     )
                 } else {
                     ProjectEmptyStateView(presentation: .phaseBoard)
+                }
+            case let .archivedProject(projectID):
+                if let project = dashboard.archivedProjects.first(where: { $0.id == projectID }) {
+                    ArchivedProjectView(
+                        project: project,
+                        loadHealth: { await model.projectHealth(for: projectID) },
+                        previewRestore: { try await model.previewProjectLifecycle(projectID: projectID, transition: .restore) },
+                        restore: { try await model.applyProjectLifecycle($0) }
+                    )
+                } else {
+                    DetailUnavailableView(title: "Archived Project", image: "archivebox")
                 }
             case let .phaseBoard(projectID):
                 if let board = model.viewedBoard(for: projectID) {
@@ -368,6 +384,7 @@ private extension AppRoute {
         case .notifications: "notifications"
         case .settings: "settings"
         case .projectOverview: "project-overview"
+        case .archivedProject: "archived-project"
         case .phaseBoard: "phase-board"
         case .dependencies: "dependencies"
         case .activity: "activity"

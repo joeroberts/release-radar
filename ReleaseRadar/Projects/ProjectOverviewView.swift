@@ -22,6 +22,8 @@ struct ProjectOverviewView: View {
     var reauthorizeProjectHealth: ((URL) async throws -> ProjectHealthSnapshot)? = nil
     var previewDocumentationSetup: ((ProjectRegistration) async throws -> ProjectDocumentationSetupPreview)? = nil
     var performDocumentationSetup: ((ProjectDocumentationSetupPreview) async throws -> AuditEventID?)? = nil
+    var previewArchive: (() async throws -> ProjectLifecyclePreview)? = nil
+    var archive: ((ProjectLifecyclePreview) async throws -> Void)? = nil
     @State private var promptCopyResult: CodexPromptCopyResult?
     @State private var settings: ProjectSettingsSnapshot?
     @State private var health: ProjectHealthSnapshot?
@@ -35,6 +37,10 @@ struct ProjectOverviewView: View {
     @State private var documentationSetupPreview: ProjectDocumentationSetupPreview?
     @State private var documentationSetupMessage: String?
     @State private var isPerformingDocumentationSetup = false
+    @State private var lifecyclePreview: ProjectLifecyclePreview?
+    @State private var lifecyclePreviewError: String?
+    @State private var isLoadingLifecyclePreview = false
+    @State private var showsLifecycleConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -42,6 +48,12 @@ struct ProjectOverviewView: View {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top) { projectHeading; Spacer(); projectActions }
                     VStack(alignment: .leading, spacing: 12) { projectHeading; projectActions }
+                }
+                if let lifecyclePreviewError {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Archive preview unavailable").font(.headline)
+                        Text(lifecyclePreviewError).foregroundStyle(RekonTheme.secondaryText)
+                    }
                 }
 
                 HStack(spacing: 14) {
@@ -157,6 +169,13 @@ struct ProjectOverviewView: View {
             }
         }
         .sheet(isPresented: $showsHelp) { ProjectLifecycleHelpView() }
+        .sheet(isPresented: $showsLifecycleConfirmation) {
+            if let lifecyclePreview, let archive {
+                ProjectLifecycleConfirmationView(preview: lifecyclePreview) {
+                    try await archive(lifecyclePreview)
+                }
+            }
+        }
         .sheet(isPresented: $showsSettings) {
             if let settings, let saveProjectSettings {
                 ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks) { name, excluded in
@@ -187,6 +206,27 @@ struct ProjectOverviewView: View {
             Button("Help") { showsHelp = true }
                 .buttonStyle(RekonSecondaryButtonStyle())
                 .accessibilityIdentifier("project-help")
+            if previewArchive != nil, archive != nil {
+                Button(isLoadingLifecyclePreview ? "Preparing…" : "Archive…") { prepareArchive() }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .disabled(isLoadingLifecyclePreview)
+                    .accessibilityIdentifier("project-archive")
+            }
+        }
+    }
+
+    private func prepareArchive() {
+        guard let previewArchive else { return }
+        isLoadingLifecyclePreview = true
+        lifecyclePreviewError = nil
+        Task {
+            defer { isLoadingLifecyclePreview = false }
+            do {
+                lifecyclePreview = try await previewArchive()
+                showsLifecycleConfirmation = true
+            } catch {
+                lifecyclePreviewError = error.localizedDescription
+            }
         }
     }
 
