@@ -227,7 +227,8 @@ sidebar collapse control, centering the truly empty Needs Review state without a
 zero badge or empty list column, making Settings panels responsive, repairing alert
 rule spacing and hit targets, clarifying Application Health status and recovery
 actions, and replacing neutral gray card/control/separator boundaries with subdued
-use of the existing RDS accent. Native traffic-light controls, window behavior,
+use of authoritative RDS public APIs rather than an application-local style layer.
+Native traffic-light controls, window behavior,
 semantic warning/error colors, current persisted behavior and the General tab's
 existing content remain unchanged.
 

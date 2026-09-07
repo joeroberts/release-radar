@@ -115,7 +115,6 @@ struct PhaseBoardView: View {
                         )
 
                         Divider()
-                            .releaseRadarSeparator()
 
                         detail
                             .frame(width: 314)
@@ -131,7 +130,6 @@ struct PhaseBoardView: View {
                                 .frame(height: 390)
 
                             Divider()
-                                .releaseRadarSeparator()
 
                             detail
                                 .frame(height: 260)
@@ -278,7 +276,7 @@ struct PhaseBoardView: View {
                 .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 11))
                 .overlay {
                     RoundedRectangle(cornerRadius: 11)
-                        .stroke(RekonTheme.accent.opacity(0.46))
+                        .stroke(RekonTheme.borderSubtle)
                 }
                 .overlay(alignment: .top) {
                     Rectangle()

@@ -4,12 +4,18 @@ import RekonDesignSystem
 import SwiftUI
 
 enum NeedsReviewLayout {
+    static let minimumSplitWidth: CGFloat = 700
+
     static func showsInboxList(openItems: Int, deliveryGoals: Int, completedItems: Int) -> Bool {
         openItems + deliveryGoals + completedItems > 0
     }
 
     static func showsCountBadge(openCount: Int) -> Bool {
         openCount > 0
+    }
+
+    static func usesCompactLayout(availableWidth: CGFloat) -> Bool {
+        availableWidth < minimumSplitWidth
     }
 }
 
@@ -25,7 +31,6 @@ struct NeedsReviewView: View {
     var onAcceptDeliveryGoal: (DeliveryGoalAcceptanceReviewProjection) async -> Void = { _ in }
     var onReload: () async -> Void = {}
     var acceptanceNeedsReload = false
-    var usesCompactLayout = false
     @State private var selectedGoalID: DeliveryGoalAcceptanceReviewProjection.ID?
     @State private var pendingAssociationFolder: URL?
     @State private var isConfirmingAssociation = false
@@ -61,25 +66,27 @@ struct NeedsReviewView: View {
                     .padding(.horizontal, 24)
                     .accessibilityIdentifier("review-action-error")
             }
-            Divider()
-                .releaseRadarSeparator()
+            RekonSeparator()
             if !showsInboxList {
                 detail
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if usesCompactLayout {
-                VStack(spacing: 0) {
-                    inboxList
-                        .frame(height: 320)
-                    Divider()
-                        .releaseRadarSeparator()
-                    detail
-                }
             } else {
-                HSplitView {
-                    inboxList
-                        .frame(minWidth: 260, idealWidth: 320, maxWidth: 380)
-                    detail
-                        .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                GeometryReader { geometry in
+                    if NeedsReviewLayout.usesCompactLayout(availableWidth: geometry.size.width) {
+                        VStack(spacing: 0) {
+                            inboxList
+                                .frame(height: 320)
+                            RekonSeparator()
+                            detail
+                        }
+                    } else {
+                        HSplitView {
+                            inboxList
+                                .frame(minWidth: 260, idealWidth: 320, maxWidth: 380)
+                            detail
+                                .frame(minWidth: 420, maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                    }
                 }
             }
         }
@@ -199,7 +206,7 @@ struct NeedsReviewView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(isSelected ? RekonTheme.elevatedSurface : RekonTheme.surface, in: RoundedRectangle(cornerRadius: 10))
-            .overlay { RoundedRectangle(cornerRadius: 10).stroke(RekonTheme.accent.opacity(isSelected ? 1 : 0.46)) }
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(isSelected ? RekonTheme.accent : RekonTheme.borderSubtle) }
             .foregroundStyle(RekonTheme.primaryText)
     }
 
@@ -261,7 +268,6 @@ struct NeedsReviewView: View {
                             Task { await onDecision(.dismiss, item) }
                         }
                         .buttonStyle(RekonSecondaryButtonStyle())
-                        .releaseRadarControlBoundary()
                         .accessibilityIdentifier("review-dismiss")
                     }
                     .disabled(isPerformingAction || authorizationRecovery != nil)

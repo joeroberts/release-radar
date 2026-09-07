@@ -5,30 +5,18 @@ import ReleaseRadarCore
 @testable import ReleaseRadar
 
 final class AppRouteTests: XCTestCase {
-    @MainActor
-    func testMainWindowChromeBlendsWithTheAppWithoutRemovingNativeControls() {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 900, height: 640),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
+    func testMainWindowConsumesSharedRDSChromeWithoutALocalAppKitBridge() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("ReleaseRadar/App/ReleaseRadarApp.swift"),
+            encoding: .utf8
         )
-        window.isReleasedWhenClosed = false
-        defer { window.close() }
 
-        ReleaseRadarWindowChrome.apply(to: window)
-
-        XCTAssertTrue(window.titlebarAppearsTransparent)
-        XCTAssertEqual(window.titleVisibility, .hidden)
-        XCTAssertEqual(window.backgroundColor, ReleaseRadarWindowChrome.backgroundColor)
-        XCTAssertTrue(window.styleMask.contains(.fullSizeContentView))
-        XCTAssertTrue(window.isMovableByWindowBackground)
-        XCTAssertTrue(window.styleMask.contains(.closable))
-        XCTAssertTrue(window.styleMask.contains(.miniaturizable))
-        XCTAssertTrue(window.styleMask.contains(.resizable))
-        XCTAssertFalse(window.standardWindowButton(.closeButton)?.isHidden ?? true)
-        XCTAssertFalse(window.standardWindowButton(.miniaturizeButton)?.isHidden ?? true)
-        XCTAssertFalse(window.standardWindowButton(.zoomButton)?.isHidden ?? true)
+        XCTAssertTrue(source.contains(".rekonWindowChrome()"))
+        XCTAssertFalse(source.contains("ReleaseRadarWindowChrome"))
+        XCTAssertFalse(source.contains(".windowStyle(.hiddenTitleBar)"))
     }
 
     func testResponsiveSettingsContentUsesTheAvailableWidth() {
@@ -42,6 +30,8 @@ final class AppRouteTests: XCTestCase {
         XCTAssertTrue(NeedsReviewLayout.showsInboxList(openItems: 0, deliveryGoals: 0, completedItems: 1))
         XCTAssertFalse(NeedsReviewLayout.showsCountBadge(openCount: 0))
         XCTAssertTrue(NeedsReviewLayout.showsCountBadge(openCount: 1))
+        XCTAssertTrue(NeedsReviewLayout.usesCompactLayout(availableWidth: 539))
+        XCTAssertFalse(NeedsReviewLayout.usesCompactLayout(availableWidth: 1_380))
     }
 
     func testApplicationHealthActionsLeadToTheRelevantRecoverySurface() {
@@ -71,7 +61,7 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
-    func testAppSettingsCommandUsesTheInShellSettingsRoute() async throws {
+    func testSettingsEntryPointsUseTheInShellSettingsRoute() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SettingsCommand-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

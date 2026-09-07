@@ -66,7 +66,6 @@ struct DocumentationMaintenanceView: View {
                     ForEach(recovery.evidence) { row in
                         EvidenceDetailView(evidence: row).padding(.vertical, 6)
                         Divider()
-                            .releaseRadarSeparator()
                     }
                 }
                 if let message = session.message { Text(message).font(.caption).foregroundStyle(.secondary) }

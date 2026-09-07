@@ -13,9 +13,8 @@ struct SidebarView: View {
                     )
                     .background(RekonTheme.backgroundRaised)
 
-                Rectangle()
-                    .fill(RekonTheme.accent.opacity(0.34))
-                    .frame(width: 1, height: geometry.size.height)
+                RekonSeparator(.vertical)
+                    .frame(height: geometry.size.height)
 
                 detail
                     .frame(maxWidth: .infinity)
@@ -58,7 +57,6 @@ struct SidebarView: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(RekonSecondaryButtonStyle())
-                .releaseRadarControlBoundary()
                 .help(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
                 .accessibilityLabel(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
                 .accessibilityHint(model.isSidebarCompact
@@ -78,8 +76,7 @@ struct SidebarView: View {
             }
 
             if let currentProject = model.currentProject {
-                Divider()
-                    .releaseRadarSeparator()
+                RekonSeparator()
                     .padding(.horizontal, 12)
 
                 if !model.isSidebarCompact {
@@ -225,8 +222,7 @@ struct SidebarView: View {
                         },
                         onAcceptDeliveryGoal: { await model.acceptDeliveryGoal($0) },
                         onReload: { await model.reloadDeliveryGoalAcceptance(projectID: inbox.projectID) },
-                        acceptanceNeedsReload: model.deliveryGoalAcceptanceNeedsReload(for: inbox.projectID),
-                        usesCompactLayout: model.isSidebarCompact
+                        acceptanceNeedsReload: model.deliveryGoalAcceptanceNeedsReload(for: inbox.projectID)
                     )
                 } else {
                     DetailUnavailableView(title: "Needs Review", image: "checkmark.bubble")
@@ -400,40 +396,5 @@ struct RekonScreenHeader: View {
         .padding(.horizontal, 28)
         .padding(.top, 26)
         .padding(.bottom, 20)
-    }
-}
-
-private struct ReleaseRadarBoundaryModifier: ViewModifier {
-    @Environment(\.isEnabled) private var isEnabled
-    let cornerRadius: CGFloat
-    let opacity: Double
-
-    func body(content: Content) -> some View {
-        content.overlay {
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(
-                    RekonTheme.accent.opacity(isEnabled ? opacity : opacity * 0.42),
-                    lineWidth: RekonBorder.hairline
-                )
-                .allowsHitTesting(false)
-        }
-    }
-}
-
-extension View {
-    func releaseRadarNeutralBoundary(cornerRadius: CGFloat) -> some View {
-        modifier(ReleaseRadarBoundaryModifier(cornerRadius: cornerRadius, opacity: 0.46))
-    }
-
-    func releaseRadarControlBoundary() -> some View {
-        modifier(ReleaseRadarBoundaryModifier(cornerRadius: RekonTheme.Radius.control, opacity: 0.64))
-    }
-
-    func releaseRadarSeparator() -> some View {
-        overlay {
-            Rectangle()
-                .fill(RekonTheme.accent.opacity(0.34))
-                .allowsHitTesting(false)
-        }
     }
 }

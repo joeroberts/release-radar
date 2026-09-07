@@ -82,7 +82,7 @@ struct SettingsView: View {
             }
             .frame(height: 52)
 
-            Rectangle().fill(RekonTheme.accent.opacity(0.34)).frame(height: 1)
+            RekonSeparator()
 
             Group {
                 switch selectedTab {
@@ -100,7 +100,7 @@ struct SettingsView: View {
 
     private var general: some View {
         settingsScroll {
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Release Radar By Rekon Labs", systemImage: "radar")
                 LabeledContent("Storage", value: "Local app-owned database")
                 LabeledContent("Delivery lanes", value: "Five persisted states")
@@ -116,7 +116,7 @@ struct SettingsView: View {
             operation: model.codexPluginOperation
         )
         return settingsScroll {
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Release Radar Codex Plugin", systemImage: "puzzlepiece.extension")
                 LabeledContent {
                     RekonBadge(plugin.status, tone: plugin.badgeTone, systemImage: plugin.systemImage)
@@ -150,7 +150,7 @@ struct SettingsView: View {
                 pluginActions(plugin.actions)
             }
 
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Codex live observation", systemImage: "bolt.horizontal.circle")
                 if let codexFailure = FailureStatePresentation(freshness: model.codexSnapshot.freshness) {
                     FailureStateView(presentation: codexFailure, style: .compact)
@@ -161,12 +161,12 @@ struct SettingsView: View {
                     .font(RekonTypography.metadata)
                     .foregroundStyle(RekonTheme.secondaryText)
             }
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Agent action bridge", systemImage: "arrow.left.arrow.right")
                 Text("Typed, authenticated delivery actions are handled by the app and audited locally.")
                     .foregroundStyle(RekonTheme.secondaryText)
             }
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Pushover", systemImage: "bell")
                 LabeledContent {
                     RekonBadge(model.isPushoverConfigured ? "Ready" : "Not configured", tone: model.isPushoverConfigured ? .success : .neutral)
@@ -247,7 +247,6 @@ struct SettingsView: View {
             case .remove:
                 Button("Remove", role: .destructive) { pendingPluginConfirmation = .remove }
                     .buttonStyle(RekonSecondaryButtonStyle())
-                    .releaseRadarControlBoundary()
                     .accessibilityIdentifier("codex-plugin-remove")
                     .focused($focusedPluginAction, equals: .remove)
             case .reinstall:
@@ -273,17 +272,15 @@ struct SettingsView: View {
 
     private var notifications: some View {
         settingsScroll {
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Pushover", systemImage: "bell")
                 LabeledContent("Status", value: model.isPushoverConfigured ? "Ready" : "Not configured")
                 SecureField("Application token", text: $model.pushoverAppToken)
                     .textContentType(.password)
                     .textFieldStyle(RekonQuietTextFieldStyle())
-                    .releaseRadarControlBoundary()
                 SecureField("User key", text: $model.pushoverUserKey)
                     .textContentType(.password)
                     .textFieldStyle(RekonQuietTextFieldStyle())
-                    .releaseRadarControlBoundary()
                 HStack {
                     Button("Save credentials") {
                         Task { await model.savePushoverCredentials() }
@@ -293,14 +290,13 @@ struct SettingsView: View {
                         Task { await model.removePushoverCredentials() }
                     }
                     .buttonStyle(RekonSecondaryButtonStyle())
-                    .releaseRadarControlBoundary()
                     .disabled(!model.isPushoverConfigured)
                 }
                 if let message = model.pushoverSettingsMessage {
                     Text(message).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Alert rules", systemImage: "checkmark.shield")
                 if let rules = model.alertRules {
                     alertRuleToggle(
@@ -352,28 +348,21 @@ struct SettingsView: View {
         accessibilityID: String,
         rules: AlertRuleSnapshot
     ) -> some View {
-        Toggle(
-            title,
-            isOn: Binding(
-                get: { rules[kind] },
-                set: { enabled in
-                    Task { await model.setAlertRule(kind, enabled: enabled) }
-                }
+        RekonCard {
+            RekonCheckbox(
+                isOn: Binding(
+                    get: { rules[kind] },
+                    set: { enabled in
+                        Task { await model.setAlertRule(kind, enabled: enabled) }
+                    }
+                ),
+                title: title,
+                accessibilityLabel: title,
+                accessibilityIdentifier: accessibilityID
             )
-        )
-        .toggleStyle(.checkbox)
-        .font(RekonTypography.controlLabel)
-        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .padding(.horizontal, 14)
-        .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(RekonTheme.accent.opacity(0.46))
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         }
-        .contentShape(Rectangle())
         .disabled(model.alertRuleControlsDisabled)
-        .accessibilityLabel(title)
-        .accessibilityIdentifier(accessibilityID)
     }
 
     private var projects: some View {
@@ -385,7 +374,7 @@ struct SettingsView: View {
                 openProject: openApplicationHealthProject,
                 reviewConnections: { selectedTab = .connections }
             )
-            settingsPanel {
+            RekonSectionPanel {
                 settingsSectionHeader("Local projects", systemImage: "folder")
                 if let projects = model.dashboard?.projects, !projects.isEmpty {
                     ForEach(projects) { project in
@@ -407,11 +396,6 @@ struct SettingsView: View {
         Label(title, systemImage: systemImage)
             .font(RekonTypography.cardTitle)
             .foregroundStyle(RekonTheme.primaryText)
-    }
-
-    private func settingsPanel<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        RekonSectionPanel(content: content)
-            .releaseRadarNeutralBoundary(cornerRadius: 20)
     }
 
     private func settingsScroll<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
@@ -495,7 +479,6 @@ struct ApplicationHealthPanel: View {
                     .foregroundStyle(RekonTheme.secondaryText)
             }
         }
-        .releaseRadarNeutralBoundary(cornerRadius: 20)
         .accessibilityIdentifier("settings-application-health")
     }
 
@@ -525,7 +508,6 @@ struct ApplicationHealthPanel: View {
     private var refreshButton: some View {
         Button(isRefreshing ? "Checking…" : (snapshot == nil ? "Check Application Health" : "Check Again"), action: refresh)
             .buttonStyle(RekonSecondaryButtonStyle())
-            .releaseRadarControlBoundary()
             .disabled(isRefreshing)
             .accessibilityIdentifier("settings-health-refresh")
     }
@@ -536,24 +518,20 @@ struct ApplicationHealthPanel: View {
             state: check.state,
             hasProjectTarget: hasProjectTarget
         )
-        return ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: 12) {
-                checkDescription(check)
-                Spacer(minLength: 12)
-                if let action { actionButton(action, checkID: check.id) }
-            }
-            VStack(alignment: .leading, spacing: 12) {
-                checkDescription(check)
-                if let action { actionButton(action, checkID: check.id) }
+        return RekonCard {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 12) {
+                    checkDescription(check)
+                    Spacer(minLength: 12)
+                    if let action { actionButton(action, checkID: check.id) }
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    checkDescription(check)
+                    if let action { actionButton(action, checkID: check.id) }
+                }
             }
         }
-        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(RekonTheme.accent.opacity(0.46))
-        }
         .accessibilityIdentifier("settings-health-\(check.id)")
     }
 
@@ -586,7 +564,6 @@ struct ApplicationHealthPanel: View {
             }
         }
         .buttonStyle(RekonSecondaryButtonStyle())
-        .releaseRadarControlBoundary()
         .accessibilityIdentifier("settings-health-action-\(checkID)")
     }
 

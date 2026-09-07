@@ -110,7 +110,6 @@ struct RepositoryRecoveryView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                     Button("Select relocated repository…", action: chooseFolder)
                         .buttonStyle(RekonSecondaryButtonStyle())
-                        .releaseRadarControlBoundary()
                         .disabled(model.isBusy)
                         .accessibilityIdentifier("repository-relocation-select")
                 } else {
@@ -121,7 +120,6 @@ struct RepositoryRecoveryView: View {
             }
             if let prepared = model.prepared {
                 Divider()
-                    .releaseRadarSeparator()
                 Text("Confirm repository relocation").font(.headline)
                 Text("From: \(prepared.oldRoot.path)").font(.caption.monospaced())
                 Text("To: \(prepared.selectedRoot.path)").font(.caption.monospaced())
@@ -139,7 +137,6 @@ struct RepositoryRecoveryView: View {
                     .accessibilityIdentifier("repository-relocation-confirm")
                     Button("Cancel") { model.cancel() }
                         .buttonStyle(RekonSecondaryButtonStyle())
-                        .releaseRadarControlBoundary()
                         .accessibilityIdentifier("repository-relocation-cancel")
                 }.disabled(model.isBusy)
             }
@@ -150,11 +147,9 @@ struct RepositoryRecoveryView: View {
                     TextField("Saved recovery token", text: $model.recoveryTokenText, axis: .vertical)
                         .font(.caption.monospaced()).lineLimit(3...6)
                         .textFieldStyle(RekonQuietTextFieldStyle())
-                        .releaseRadarControlBoundary()
                         .accessibilityIdentifier("repository-relocation-token")
                     Button("Check exact receipt") { Task { await model.recoverReceipt() } }
                         .buttonStyle(RekonSecondaryButtonStyle())
-                        .releaseRadarControlBoundary()
                         .disabled(model.isBusy || model.recoveryTokenText.isEmpty)
                         .accessibilityIdentifier("repository-relocation-recover")
                 }
@@ -170,7 +165,7 @@ struct RepositoryRecoveryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .foregroundStyle(RekonTheme.primaryText)
         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.accent.opacity(0.46)) }
+        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
         .task { await model.load() }
     }
     private func chooseFolder() {

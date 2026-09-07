@@ -80,7 +80,7 @@ struct ActivityView: View {
         }
         .padding(16)
         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-        .releaseRadarNeutralBoundary(cornerRadius: 14)
+        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
         .accessibilityElement(children: .combine)
     }
 }

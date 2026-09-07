@@ -16,14 +16,12 @@ struct DependencyGraphView: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
                 Divider()
-                    .releaseRadarSeparator()
 
                 if geometry.size.width >= 980 {
                     HStack(spacing: 0) {
                         graphWorkspace
                             .frame(minWidth: 620, maxWidth: .infinity, maxHeight: .infinity)
                         Divider()
-                            .releaseRadarSeparator()
                         inspector
                             .frame(width: 300)
                             .frame(maxHeight: .infinity)
@@ -34,7 +32,6 @@ struct DependencyGraphView: View {
                             graphWorkspace
                                 .frame(height: max(480, geometry.size.height * 0.72))
                             Divider()
-                                .releaseRadarSeparator()
                             inspector
                                 .frame(minHeight: 390)
                         }
@@ -76,13 +73,11 @@ struct DependencyGraphView: View {
                 .padding(.vertical, 12)
 
                 Divider()
-                    .releaseRadarSeparator()
 
                 ScrollView([.horizontal, .vertical]) {
                     VStack(spacing: 0) {
                         columnHeaders(layout.columns, canvasWidth: canvasSize.width)
                         Divider()
-                            .releaseRadarSeparator()
                         dependencyCanvas(layout: layout, canvasSize: canvasSize)
                     }
                     .frame(width: canvasSize.width)
@@ -90,7 +85,7 @@ struct DependencyGraphView: View {
                 .scrollIndicators(.automatic)
             }
             .background(RekonTheme.backgroundRaised)
-            .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.accent.opacity(0.46)) }
+            .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Selected dependency path; \(layout.frames.count) of \(selectedGraph.nodes.count) phase tickets shown")
         }
@@ -270,13 +265,10 @@ struct DependencyGraphView: View {
                 }
 
                 Divider()
-                    .releaseRadarSeparator()
                 relationshipSection("Directly requires", nodes: selection.directRequires)
                 Divider()
-                    .releaseRadarSeparator()
                 relationshipSection("Indirectly requires", nodes: selection.indirectRequires)
                 Divider()
-                    .releaseRadarSeparator()
                 relationshipSection("Unlocks", nodes: selection.unlocks)
             }
             .padding(20)

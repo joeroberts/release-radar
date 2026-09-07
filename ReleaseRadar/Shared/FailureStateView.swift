@@ -449,11 +449,7 @@ struct FailureStateView: View {
                 .background(presentation.tone.color.opacity(0.09), in: RoundedRectangle(cornerRadius: 11))
                 .overlay {
                     RoundedRectangle(cornerRadius: 11)
-                        .stroke(
-                            presentation.tone == .neutral
-                                ? RekonTheme.accent.opacity(0.46)
-                                : presentation.tone.color.opacity(0.32)
-                        )
+                        .stroke(presentation.tone.color.opacity(0.24))
                 }
             case .compact:
                 HStack(alignment: .top, spacing: 8) {
@@ -490,7 +486,6 @@ struct FailureStateView: View {
         if let actionTitle, let action {
             Button(actionTitle, action: action)
                 .buttonStyle(RekonSecondaryButtonStyle())
-                .releaseRadarControlBoundary()
                 .controlSize(.small)
                 .padding(.top, 4)
                 .accessibilityIdentifier("\(presentation.accessibilityID)-action")

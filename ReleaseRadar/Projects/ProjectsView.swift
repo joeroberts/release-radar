@@ -70,7 +70,6 @@ struct ProjectsView: View {
                                     }
                                     .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
                                 }
-                                .releaseRadarNeutralBoundary(cornerRadius: RekonTheme.Radius.card)
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("project-\(project.id.rawValue)")
