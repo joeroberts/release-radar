@@ -54,7 +54,40 @@ receipt/audit handling; C7 must rebuild both app and bridge store connections an
 suppress automatic replay of backup-restored notification work. Existing snapshot,
 notification recovery, plugin inspection and health services are the foundation.
 Portable import/export remains a later outcome. The consultant reported all work
-stopped; its bounded result is preserved here for archival.
+stopped; its bounded result is preserved here and the task is archived.
+
+## Parallel bounded discovery — 2026-09-07
+
+Owner authorization added four discovery/proposal tracks alongside recovery. After
+the coordinating owner task synchronized canonical `codex/release-radar-mvp` to
+`80521d6` and lifted its dispatch hold, each fresh task confirmed baseline `1d4ba4f`
+and published its named branch/upstream. Canonical retained build directories remain
+untouched. Product implementation and enabled configuration changes are not authorized
+by discovery; each PR merge still requires owner approval.
+
+| Task / ID | Explicit dispatch | Worktree / branch | Sole owned brief and findings |
+| --- | --- | --- | --- |
+| Discover supported live Codex observation — `01a07b8e-c2d9-7420-8f1e-adcf69445d79` | Sol High | `1858` / `codex/discovery-live-observation` | [Live observation](task-briefs/2026-09-07-parallel-discovery/live-observation-discovery.md) |
+| Discover complete read-only iPhone companion — `01a07b8e-c2d9-7420-8f1e-ada44d88d21e` | Sol High | `ec83` / `codex/discovery-iphone-companion` | [Companion](task-briefs/2026-09-07-parallel-discovery/iphone-companion-discovery.md) |
+| Discover role execution and Run Guard… — `01a07b8e-c2da-79a1-955e-0deb0a1e8a72` | Astra High | `498c` / `codex/discovery-run-ownership` | [Run ownership](task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md) |
+| Discover supported Codex rules and hooks — `01a07b8e-c2e3-76b2-9a33-73b4f7f1785e` | Terra Medium | `38ef` / `codex/discovery-rules-hooks` | [Rules/hooks](task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md) |
+
+All four report that effective runtime model/effort are unexposed; the table records
+actual explicit API dispatch settings, not independently verified runtime. Rules/hooks
+has a Sol High ceiling for a named runtime/compatibility question; other tracks have
+an Astra High ceiling. Ultra is prohibited. The orchestrator retains shared plan,
+catalog/index integration and exclusive ledger ownership; parallel writers edit only
+their assigned artifact. Their fresh independent substantive reviews follow concrete
+candidates and cover actual risks without reviewing previous reviews.
+
+Initial observations are provisional: the installed CLI advertises app-server
+transports, but this does not prove attachment to the intended desktop instance;
+internal task-list/read/wait capabilities likewise do not establish a supported
+external product integration. Companion investigation preserves the complete corpus
+and useful delivery/document browsing independently of I1. Rules/hooks discovery is
+non-enabling and must establish actual coverage and gaps. No pursue decision,
+implementation, runtime proof or managed catalog acceptance is claimed. The four
+briefs and generated index passed the native documentation check at preparation.
 
 ## Delivered lifecycle handoff — 2026-09-07
 
