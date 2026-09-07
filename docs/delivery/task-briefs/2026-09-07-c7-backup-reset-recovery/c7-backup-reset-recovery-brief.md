@@ -73,3 +73,64 @@ verification and required independent review/corrections. Separate owner approva
 merge; prior C6 approval does not extend. Preserve canonical evidence and report precise
 temporary/process inventory before bounded task retirement. The architecture handoff is
 preparation, not a claim of delivered C7 runtime behavior.
+
+## Current-source architecture handoff
+
+The read-only C7 consultation at `3503793` found no unresolved owner policy decision.
+One Sol High writer owns the complete coupled outcome, with sequential checkpoints
+for backup/reopen, reset retention, and integrated Settings/health. These are verification
+checkpoints, not permission to omit part of C7. The writer may choose simpler equivalent
+engineering mechanisms while preserving the following acceptance boundaries.
+
+- Preference reset restores existing four alert-rule defaults (blocked, completion-review
+  and needs-review enabled; paused disabled) and ephemeral view state. Preserve project
+  setup/exclusions, capabilities, plugin intent/receipts, history and Keychain. Tracking
+  reset removes every live active/archived registration with C6 retained-history semantics,
+  preserving existing/new removal records, read-only audits/history and global preferences/
+  plugin receipts. It is not whole-database deletion. Full backup covers supported whole
+  local store/configuration, not source repositories or portable document packages.
+- `ReleaseRadarAppServices.shared` owns the UI store and notification/plugin services;
+  `AgentBridgeApplicationHost.start` opens another store. Current stores close only at
+  deinit, and XPC disconnection does not drain callback tasks/after-reply work. Establish
+  explicit stop-admission, drain and close across app-owned connections, then publish a
+  fresh service graph. Old store instances stay invalid. Recovery startup precedes normal
+  open/migration/notification/plugin work, including crash relaunch; ordinary launch
+  initialization can drain notifications and auto-update plugins and is not recovery resume.
+- Use rollback-safe staging with exact source revalidation, bounded no-follow placement,
+  SQLite-sidecar handling and minimal durable recovery/rollback state. Each destructive
+  step has a recoverable prior state; do not unlink a live store. Existing `VACUUM INTO`
+  can be an internal snapshot primitive, not arbitrary-SQLite import authorization or the
+  complete backup format. Preserve recognized-schema and migration validation.
+- Test a pre-recovery command absent from restored receipts, not only committed replay.
+  Root-only envelopes currently resolve today's registration, so generation increment
+  alone does not reject late external work. Carry expected identity/incarnation through
+  applicable request and prepared-action boundaries; reject ambiguous legacy requests
+  after recovery. Repeated restoration of the same old backup must not recreate a prior
+  accepted authority tuple. Preserve domain IDs and historical source attribution.
+- Never drain backed-up queues as fresh sends. Retain locally known sent/unknown terminal
+  facts and relevant C6 notification identity across replacement; uncertain restored pending
+  work is explicitly non-sendable. Prevent occurrence-counter rewind or observation refresh
+  from manufacturing alerts. Preserve unknown external outcomes without querying/sending to
+  Pushover. C6 retained rows alone lack fingerprint/provider-receipt/attempt detail and must
+  not be treated as a complete nonreplay record.
+- Preserve newer removal/audit facts when restoring older operational state. Preview names
+  restored/displaced registrations; historical links never resolve by path/name. Exercise
+  restore-before-removal then remove-again against the historical project/registration
+  uniqueness constraint. Resolve fresh recovery incarnation and history linkage without
+  rewriting historical IDs. An unreadable original stays recoverable; unavailable newer
+  history is disclosed, not fabricated.
+- Recovery plugin inspection must use read-only status through an already enabled helper,
+  not the normal client path that may register/rebind/unregister. Report unavailable if
+  that service is not enabled; no automatic updates. Missing receipts mean unverified
+  management, not absent installation. Compare observed digest only with an actual known
+  receipt/package; otherwise integrity stays unknown/inconsistent. C12 works even when the
+  store cannot open, with check target/time and exact supported recovery actions.
+
+Existing verification entry points: `StoreAcceptanceTests` and
+`AgentBridgeTransportAcceptanceTests` for connection/drain/reopen;
+`ProjectArchiveAcceptanceTests`/`ProjectRemovalAcceptanceTests` for reset retention;
+`NotificationAcceptanceTests` suspended-send/relaunch cases for nonreplay;
+plugin lifecycle acceptance/transport tests for receipt-loss and zero-mutation status;
+`AppRouteTests`, `OnboardingAcceptanceTests` and `ProjectDocumentationRenderingTests`
+for `AppModel.applicationHealth()`, Settings and bookmark recovery. Use synthetic
+transports rather than enabling the owner's disabled launch agent to make tests pass.

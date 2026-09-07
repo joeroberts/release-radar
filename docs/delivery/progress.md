@@ -24,9 +24,12 @@ exclusively app-owned. Canonical checkout/application state is preserved.
 The [C7 brief](task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md)
 starts from merged C6 `df7157b`. Fresh read-only consultation “Resolve C7 coordinated
 recovery boundaries” (`01a07d4b-28f0-7bf0-aa64-810d1e389e2f`) confirmed clean isolated
-`f1e8` at `3503793`, explicit Astra High/ceiling High, runtime unexposed. It is resolving
-current service/connection recovery and retained-history/nonreplay contracts before
-a fresh delivery writer starts. The full approved C7 outcome remains included;
+`f1e8` at `3503793`, explicit Astra High/ceiling High, runtime unexposed. It completed the current-source handoff with no policy ambiguity, changes, tests,
+temporary artifacts or running processes, and is archived. The existing brief now
+records exact reset contents, app/bridge close-and-drain, rollback/crash startup,
+request-incarnation invalidation, historical retention, notification nonreplay and
+mutation-free plugin inspection. One fresh Sol High writer will own the full coupled
+C7 outcome through bounded backup/reopen, reset-retention and Settings/health checkpoints. The full approved C7 outcome remains included;
 engineering sequencing does not omit backup, distinct resets, recovery or C12 readback.
 
 ## Delivered C6
