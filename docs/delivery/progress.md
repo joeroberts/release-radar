@@ -57,8 +57,12 @@ Corrected PR head `68a8282252608ab9c78edfa153140b8abe2f99ad` now rejects removed
 historical onboarding identities, leaves unknown event phase/lane unknown, and preserves
 terminal notification reason/timing. Writer reports 44/44 Removal/Onboarding plus 45/45
 catalog/index tests; permanent regressions added, no UI code changed. Same Astra High
-reviewer restored for only these corrections. Writer is clean/pushed/stopped and archived
-pending any further Required same-outcome correction; merge approval remains pending.
+reviewer approved exact `68a8282`: all three Required findings resolved, 2/2 fresh native
+regressions passed, correction diff and native documentation check passed. Earlier
+74/native checks remain applicable to unchanged behavior. Writer and reviewer are
+clean/stopped/archived; separate owner merge approval remains pending. New reviewer
+log `/tmp/c6-review-e58c-correction-tests.log` is retained alongside the existing
+reused build/results and repro inventory; no cleanup is authorized.
 
 Reviewer independently passed 74 focused/native checks, then reproduced these defects
 with bounded synthetic tests. Same reviewer handles corrected candidate only. Latent
