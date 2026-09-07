@@ -48,17 +48,22 @@ and were compared with `docs/design/mockups/settings.png` and
 retain labelled actions, and do not expose project settings, repository-root
 management, or documentation setup while archived.
 
-## Verification limitation
+## Migration compatibility correction
 
-The directly affected storage, notification, onboarding, bridge, route, and
-dashboard suites passed. One pre-existing containment fixture was excluded from
-the dashboard batch by its exact name:
-`DashboardProjectionTests.testInactiveBoardPreservesAuthorizedEvidenceMetadataAndRecovery`.
-Its independent reproducer fails before the projection runs because this macOS
-Foundation reports the Darwin temporary directory below `/var`; the hardened
-descriptor reader correctly rejects `/var` because it is a symlink. The same
-environmental condition prevents the existing `ProjectRootManagementTests`
-fixtures from reaching root-management behavior. No production containment or
-authorization rule was weakened. C5 lifecycle, rollback, stale-preview,
-notification ambiguity, mutation-admission, projection, route, restart, and
-zero-phase behavior passed in `ProjectArchiveAcceptanceTests`.
+A post-review migration run exposed two C5-specific issues. The synthetic v3,
+v7, and v13 End-to-End fixtures had been built by downgrading a current database
+without removing the v16 `projects.lifecycle` column. Those fixtures now remove
+that future column before claiming a historical version, while strict schema
+recognition and the production migration remain unchanged.
+
+The run also demonstrated a production compatibility issue in preservation
+readback: a pre-v16 project has an implicit active lifecycle, while the v16
+migration persists that same state as `active`. Preservation hashing now
+normalizes only a missing pre-v16 lifecycle to that migration default. Explicit
+v16 `active` and `archived` values remain distinct and unchanged. The Task 7A
+raw-row fixture comparison applies the same missing-only normalization.
+
+The ten directly affected historical migration cases passed after this bounded
+correction, including the four malformed-schema fail-closed controls. The prior
+targeted C5 batch passed 344 tests including the dashboard containment case; it
+and the unchanged native UI were not rerun for this migration-only correction.
