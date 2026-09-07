@@ -142,9 +142,12 @@ Live candidate `95ad1fc` passed fresh independent review with no findings;
 documentation/diff checks, primary sources and scoped installed capability readback
 passed. Writer/reviewer report stopped work and no temporary artifacts. PR #26 awaits
 owner merge approval and preserves a supported-contract no-go for the current desktop
-runtime, not an assertion about undocumented IPC. Companion has two Required prose
-corrections: preserve publication withdrawal after recovery, and apply withdrawal
-before generation/compatibility fallback. These remain with its author and reviewer.
+runtime, not an assertion about undocumented IPC. Companion corrected candidate `6385d49` passed its same independent reviewer:
+withdrawal survives recovery and overrides generation/compatibility fallback, with
+offline purge delay explicit. No Required findings remain; two optional implementation
+notes do not block. This is proposal consistency, not CloudKit runtime feasibility
+or authority to build/publish. The reviewer reports no temp files or running processes;
+its useful result is preserved here. PR #27 awaits its separate owner merge decision.
 
 C4 [PR #28](https://github.com/joeroberts/release-radar/pull/28), product candidate
 `1801ded`, passed fresh combined Astra High review by
@@ -159,7 +162,7 @@ are unchanged; installation, owner-state validation and broad-suite green are un
 The coordinator resolved only shared catalog/index/ledger conflicts in `779e9dd`,
 preserving product source at `1801ded`; the delivery branch must take this integration
 before merge. That integration and review-result brief are now published at
-`5816c71`; PR #28 is ready and mergeable. CodeRabbit is queued, not claimed passed.
+`5816c71`; PR #28 is ready and mergeable. CodeRabbit subsequently reported SUCCESS; merge state is CLEAN.
 Product source/tests/project content remains identical to reviewed `1801ded`.
 The delivery writer and independent reviewer are stopped and archived; PR #28
 still requires explicit owner approval.
