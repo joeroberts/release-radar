@@ -179,6 +179,110 @@ final class ProjectArchiveAcceptanceTests: XCTestCase {
         XCTAssertEqual(latePhaseCount, 0)
     }
 
+    func testArchivedProjectRejectsOperationalDocumentationBindingWithoutBlockingReadOnlyContext() async throws {
+        let projectID = projectID
+        let root = try documentationRoot()
+        let store = DeliveryStore(databaseURL: root.deletingLastPathComponent().appendingPathComponent("store.sqlite"))
+        try await seedProject(in: store, root: root)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed documentation bookmark") { connection in
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id, path, bookmark_data) VALUES ('project-one', ?, ?)",
+                bindings: [.text(root.path), .blob(Data(root.path.utf8))]
+            )
+        }
+        let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
+        let target = DocumentationTarget(
+            projectID: projectID.rawValue,
+            rootID: "root-one",
+            repositoryID: snapshot.catalog.repositoryID.lowercased(),
+            catalogVersion: snapshot.version,
+            catalogDigest: snapshot.digest
+        )
+        let manager = ProjectLifecycleManager(store: store)
+        _ = try await manager.apply(try await manager.preview(projectID: projectID, transition: .archive))
+
+        let readContext = try await store.documentationRead {
+            try DocumentationRootContext.read(
+                $0,
+                path: root.path,
+                projectID: projectID.rawValue,
+                rootID: "root-one"
+            )
+        }
+        XCTAssertEqual(readContext.projectID, projectID.rawValue)
+        let before = try await lifecycleMutationRows(store)
+        let result = await AgentCommandDispatcher(
+            store: store,
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store),
+            bookmarkStore: ArchiveBookmarkStore()
+        ).dispatch(.init(
+            version: 1,
+            requestID: UUID(),
+            projectRoot: root.path,
+            reason: "Archived documentation binding must be rejected",
+            command: .bindDocumentationRepository(target: target)
+        ))
+
+        XCTAssertEqual(result.error, .unauthorizedProjectRoot)
+        let after = try await lifecycleMutationRows(store)
+        XCTAssertEqual(after, before)
+        let bindingCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings WHERE project_id = 'project-one'")
+        }
+        XCTAssertEqual(bindingCount, 0)
+    }
+
+    func testPreArchiveResolvedCommandCannotMutateAfterRestore() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-C5-Stale-Resolution-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let store = DeliveryStore(databaseURL: try databaseURL())
+        try await seedProject(in: store, root: root)
+        let gate = ArchiveResolutionGate(registry: PersistedAuthorizedProjectRegistry(store: store))
+        let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: gate)
+        let operation = Task {
+            await dispatcher.dispatch(.init(
+                version: 1,
+                requestID: UUID(),
+                projectRoot: root.path,
+                reason: "Stale pre-archive operation",
+                command: .upsertPhase(phaseID: "stale-phase", name: "Must not exist")
+            ))
+        }
+        await gate.waitUntilResolved()
+        let manager = ProjectLifecycleManager(store: store)
+        _ = try await manager.apply(try await manager.preview(projectID: projectID, transition: .archive))
+        _ = try await manager.apply(try await manager.preview(projectID: projectID, transition: .restore))
+        let before = try await lifecycleMutationRows(store)
+        await gate.release()
+
+        let result = await operation.value
+        XCTAssertEqual(result.error, .unauthorizedProjectRoot)
+        let after = try await lifecycleMutationRows(store)
+        XCTAssertEqual(after, before)
+        let phaseCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM phases WHERE id = 'stale-phase'")
+        }
+        XCTAssertEqual(phaseCount, 0)
+
+        let fresh = await AgentCommandDispatcher(
+            store: store,
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
+        ).dispatch(.init(
+            version: 1,
+            requestID: UUID(),
+            projectRoot: root.path,
+            reason: "Fresh post-restore operation",
+            command: .upsertPhase(phaseID: "fresh-phase", name: "Fresh phase")
+        ))
+        XCTAssertNil(fresh.error)
+        let freshPhaseCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM phases WHERE id = 'fresh-phase'")
+        }
+        XCTAssertEqual(freshPhaseCount, 1)
+    }
+
     func testArchivedObservationCallbackCannotMutateOrQueueNotification() async throws {
         let store = DeliveryStore(databaseURL: try databaseURL())
         try await seedProject(in: store)
@@ -276,6 +380,21 @@ final class ProjectArchiveAcceptanceTests: XCTestCase {
         return directory.appendingPathComponent("store.sqlite")
     }
 
+    private func documentationRoot() throws -> URL {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".release-radar-c5-archive-test-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let root = directory.appendingPathComponent("repository", isDirectory: true)
+        let source = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/RepositoryDocuments/valid", isDirectory: true)
+        try FileManager.default.copyItem(at: source, to: root)
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+            .write(to: root.appendingPathComponent("AGENTS.md"))
+        return root
+    }
+
     private func seedProject(in store: DeliveryStore, root: URL? = nil) async throws {
         let projectID = projectID
         try await store.transact(
@@ -368,6 +487,36 @@ private struct LifecycleMutationRows: Equatable {
 private struct ArchiveNotificationState: Equatable {
     let events: [String: String]
     let activeOccurrences: Int64
+}
+
+private actor ArchiveResolutionGate: AuthorizedProjectRegistry {
+    private let registry: PersistedAuthorizedProjectRegistry
+    private var didResolve = false
+    private var resolvedWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiter: CheckedContinuation<Void, Never>?
+
+    init(registry: PersistedAuthorizedProjectRegistry) {
+        self.registry = registry
+    }
+
+    func resolve(projectRoot: String) async -> AuthorizedProject? {
+        let project = await registry.resolve(projectRoot: projectRoot)
+        didResolve = true
+        resolvedWaiters.forEach { $0.resume() }
+        resolvedWaiters.removeAll()
+        await withCheckedContinuation { releaseWaiter = $0 }
+        return project
+    }
+
+    func waitUntilResolved() async {
+        guard !didResolve else { return }
+        await withCheckedContinuation { resolvedWaiters.append($0) }
+    }
+
+    func release() {
+        releaseWaiter?.resume()
+        releaseWaiter = nil
+    }
 }
 
 private struct ArchiveBookmarkStore: ProjectBookmarkStoring {

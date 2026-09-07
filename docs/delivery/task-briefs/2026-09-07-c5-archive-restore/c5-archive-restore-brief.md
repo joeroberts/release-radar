@@ -102,8 +102,13 @@ archive-specific ambiguity code. Sent, failed and already-unknown history remain
 Restore never requeues suppressed or unknown work. New notification creation, pending
 dispatch, persisted root admission, in-transaction agent-command admission and observation
 callbacks all require `active`; the dispatcher recheck closes the race after root resolution.
-Fresh work after restore uses the newly incremented generation and ordinary occurrence
-deduplication rather than replaying pre-archive work.
+Every registered `AuthorizedProject` carries the registration and request generation resolved
+with its root. Ordinary and operational documentation mutations compare that exact snapshot
+with current registration state inside the store transaction, before receipt replay or writes.
+This rejects work resolved before archive even after restore makes the project active again;
+fresh work after restore resolves the newly incremented generation and proceeds normally.
+Read-only documentation context remains available while archived. Notification work uses
+ordinary occurrence deduplication rather than replaying pre-archive work.
 
 `DashboardProjection` loads only active projects and their authorized evidence readback;
 it separately loads a catalog-agnostic archived summary without opening bookmarks.
@@ -116,7 +121,9 @@ Cancel/Escape without mutation and retain actionable errors after a failed commi
 
 Focused tests cover the v15→v16 default, full graph/registration preservation, transaction
 rollback, generation-stale previews and callbacks, active-only admission/projections,
-notification suppression/ambiguity/no-replay, zero-phase and unavailable-access/catalog
-restore, route recovery, and native compact/wide confirmation, empty, success and error
-states. Synthetic UI and service checks do not exercise real owner grants, recipients,
-installation or the shipping entitlement boundary.
+documentation-mutation rejection with archived read-only access, stale pre-archive command
+rejection across restore, fresh post-restore admission, notification suppression/ambiguity/
+no-replay, zero-phase and unavailable-access/catalog restore, route recovery, and native
+compact/wide confirmation, empty, success and error states. Synthetic UI and service checks
+do not exercise real owner grants, recipients, installation or the shipping entitlement
+boundary.

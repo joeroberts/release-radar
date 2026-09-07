@@ -129,7 +129,10 @@ final class EndToEndAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(migrated.0, 0); XCTAssertEqual(migrated.1, 0)
         XCTAssertEqual(migrated.2, 1); XCTAssertEqual(migrated.3, 0)
-        let registry = InMemoryAuthorizedProjectRegistry(projects: [.init(projectID: .init(rawValue: "p"), canonicalRoot: root, authorizedRoots: [root])])
+        let registration = try await registration(projectID: .init(rawValue: "p"), store: store)
+        let registry = InMemoryAuthorizedProjectRegistry(projects: [
+            .init(registration: registration, canonicalRoot: root, authorizedRoots: [root]),
+        ])
         var dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry, bookmarkStore: bookmarks)
         var requests: [(AgentCommandEnvelope, AgentCommandResult)] = []
         func request(_ command: AgentCommand) -> AgentCommandEnvelope {
@@ -574,8 +577,9 @@ final class EndToEndAcceptanceTests: XCTestCase {
         XCTAssertEqual(postMigration.inventory?.binding, prior.binding)
         XCTAssertTrue(postMigration.inventory?.isComplete == true)
 
+        let registration = try await registration(projectID: .init(rawValue: "project-1"), store: store)
         let registry = InMemoryAuthorizedProjectRegistry(projects: [
-            .init(projectID: .init(rawValue: "project-1"), canonicalRoot: root, authorizedRoots: [root]),
+            .init(registration: registration, canonicalRoot: root, authorizedRoots: [root]),
         ])
         let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: registry)
         let catalogRows: [(String, String)] = [
@@ -976,6 +980,23 @@ final class EndToEndAcceptanceTests: XCTestCase {
             try connection.execute("INSERT INTO phases (id, project_id, name) VALUES ('phase-1', 'project-1', 'MVP')")
             try connection.execute("INSERT INTO project_active_phases (project_id, phase_id) VALUES ('project-1', 'phase-1')")
             try connection.execute("INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('RR-10', 'project-1', 'phase-1', 'Final integration', 'in_progress')")
+        }
+    }
+
+    private func registration(projectID: ProjectID, store: DeliveryStore) async throws -> ProjectRegistration {
+        try await store.read { connection in
+            guard let row = try connection.row(
+                "SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ), case let .text(registrationID)? = row["registration_id"],
+              case let .integer(requestGeneration)? = row["request_generation"] else {
+                throw SQLiteError(code: 20, message: "Expected project registration")
+            }
+            return .init(
+                projectID: projectID,
+                registrationID: registrationID,
+                requestGeneration: requestGeneration
+            )
         }
     }
 

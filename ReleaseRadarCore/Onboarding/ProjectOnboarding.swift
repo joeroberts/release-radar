@@ -209,6 +209,7 @@ public enum ProjectAuthorizationError: Error, LocalizedError, Equatable, Sendabl
 
 private struct PersistedProjectAuthorization: Sendable {
     let projectExists: Bool
+    let registration: ProjectRegistration?
     let rootPath: String?
     let bookmarkData: Data?
     let bookmarkIsStale: Bool
@@ -284,7 +285,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             }
             let projectID = registration.projectID
             let authorizedProject = AuthorizedProject(
-                projectID: projectID,
+                registration: registration,
                 canonicalRoot: authorizedSelected,
                 authorizedRoots: roots
             )
@@ -367,11 +368,12 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 guard activeRoot.path == persistedRoot.path else {
                     throw ProjectAuthorizationError.bookmarkRootMismatch
                 }
-                return try await body(AuthorizedProject(
-                    projectID: projectID,
-                    canonicalRoot: activeRoot,
-                    authorizedRoots: [activeRoot]
-                ))
+                let project = if let registration = authorization.registration {
+                    AuthorizedProject(registration: registration, canonicalRoot: activeRoot, authorizedRoots: [activeRoot])
+                } else {
+                    AuthorizedProject(projectID: projectID, canonicalRoot: activeRoot, authorizedRoots: [activeRoot])
+                }
+                return try await body(project)
             }
         } catch let error as ProjectAuthorizationError {
             if error == .bookmarkStale || error == .bookmarkRootMismatch {
@@ -675,7 +677,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         if decision.importRecognizedArtifacts,
            let importPreview = decision.preview.recognizedArtifactPreview {
             let authorizedProject = AuthorizedProject(
-                projectID: projectID,
+                registration: registration,
                 canonicalRoot: decision.preview.selectedFolder,
                 authorizedRoots: roots
             )
@@ -866,6 +868,22 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 "SELECT COUNT(*) FROM projects WHERE id = ?",
                 bindings: [.text(projectID.rawValue)]
             ) == 1
+            let registrationRow = try connection.row(
+                "SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+            let registration: ProjectRegistration?
+            if let registrationRow,
+               case let .text(registrationID)? = registrationRow["registration_id"],
+               case let .integer(requestGeneration)? = registrationRow["request_generation"] {
+                registration = .init(
+                    projectID: projectID,
+                    registrationID: registrationID,
+                    requestGeneration: requestGeneration
+                )
+            } else {
+                registration = nil
+            }
             let rootPath = try connection.scalarText(
                 "SELECT path FROM project_roots WHERE project_id = ? AND (NOT EXISTS (SELECT 1 FROM project_documentation_bindings WHERE project_id = project_roots.project_id) OR id = (SELECT root_id FROM project_documentation_bindings WHERE project_id = project_roots.project_id)) ORDER BY rowid LIMIT 1",
                 bindings: [.text(projectID.rawValue)]
@@ -881,6 +899,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                   ) else {
                 return .init(
                     projectExists: projectExists,
+                    registration: registration,
                     rootPath: rootPath,
                     bookmarkData: nil,
                     bookmarkIsStale: false,
@@ -895,6 +914,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             else { bookmarkIsStale = true }
             return .init(
                 projectExists: projectExists,
+                registration: registration,
                 rootPath: rootPath,
                 bookmarkData: bookmarkData,
                 bookmarkIsStale: bookmarkIsStale,
@@ -936,11 +956,12 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 guard !activeBookmark.isStale else { throw ProjectAuthorizationError.bookmarkStale }
                 let activeRoot = Self.canonical(activeBookmark.url)
                 guard activeRoot.path == persistedRoot.path else { throw ProjectAuthorizationError.bookmarkRootMismatch }
-                return try await body(.init(
-                    projectID: projectID,
-                    canonicalRoot: activeRoot,
-                    authorizedRoots: [activeRoot]
-                ))
+                let project = if let registration = authorization.registration {
+                    AuthorizedProject(registration: registration, canonicalRoot: activeRoot, authorizedRoots: [activeRoot])
+                } else {
+                    AuthorizedProject(projectID: projectID, canonicalRoot: activeRoot, authorizedRoots: [activeRoot])
+                }
+                return try await body(project)
             }
         } catch let error as ProjectAuthorizationError {
             throw error

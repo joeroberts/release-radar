@@ -18,6 +18,14 @@ The same test pressed **Archive Project** and kept an actionable stale-preview
 failure visible without dismissing the confirmation; pressing **Cancel** did
 not invoke the lifecycle mutation.
 
+The post-review correction added focused non-UI coverage proving that an archived
+project rejects operational documentation binding without losing read-only
+documentation context, and that an ordinary command resolved before archive cannot
+mutate after restore while a freshly resolved post-restore command succeeds. The
+bridge now revalidates the exact registration generation inside both mutation
+transactions before consulting durable receipts. No UI code or captured native state
+changed, so the native render was not rerun for this correction.
+
 The confirmation initially clipped the preservation explanation in visual
 inspection. The text was allowed to grow vertically, the same native test
 passed again, and the final attachments below were re-inspected with the full

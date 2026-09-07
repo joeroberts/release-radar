@@ -54,11 +54,20 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [], auditEventID: nil, error: .ownerAcceptanceRequired)
         }
         if envelope.command.isDocumentationMutation {
+            guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+            }
             guard let body = try? canonicalRequestBody(envelope) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .documentation(.invalidRequest))
             }
             return await DocumentationCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
-                .dispatch(envelope, requestBody: body, origin: origin, admissionDeadline: admissionDeadline)
+                .dispatch(
+                    envelope,
+                    requestBody: body,
+                    origin: origin,
+                    admissionDeadline: admissionDeadline,
+                    expectedRegistration: project.registration
+                )
         }
         guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
             return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
@@ -90,7 +99,11 @@ public actor AgentCommandDispatcher {
                         throw DispatchControl.expired
                     }
                     do {
-                        try ProjectLifecycleManager.requireActive(projectID: project.projectID, connection: connection)
+                        try ProjectLifecycleManager.requireCurrentAuthorization(
+                            projectID: project.projectID,
+                            registration: project.registration,
+                            connection: connection
+                        )
                     } catch {
                         throw DispatchControl.archivedProject
                     }

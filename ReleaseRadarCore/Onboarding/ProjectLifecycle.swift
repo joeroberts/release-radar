@@ -177,6 +177,36 @@ public actor ProjectLifecycleManager {
         }
     }
 
+    static func requireCurrentAuthorization(
+        projectID: ProjectID,
+        registration: ProjectRegistration?,
+        connection: SQLiteConnection
+    ) throws {
+        try requireActive(projectID: projectID, connection: connection)
+        if let registration {
+            guard registration.projectID == projectID,
+                  try connection.scalarInt(
+                      "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ?",
+                      bindings: [
+                          .text(projectID.rawValue),
+                          .text(registration.registrationID),
+                          .integer(registration.requestGeneration),
+                      ]
+                  ) == 1 else {
+                throw ProjectLifecycleError.stalePreview
+            }
+        } else {
+            // Mutation compatibility is limited to projects that genuinely predate
+            // registration; a registered project may never use an unversioned grant.
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            ) == 0 else {
+                throw ProjectLifecycleError.stalePreview
+            }
+        }
+    }
+
     private static func snapshot(
         projectID: ProjectID,
         connection: SQLiteConnection
