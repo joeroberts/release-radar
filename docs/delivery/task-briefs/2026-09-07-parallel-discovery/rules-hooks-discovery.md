@@ -40,12 +40,12 @@ orchestrator before archival.
 
 ### Conclusion
 
-**Pursue a small, repository-local pilot only after separate owner authorization.**
-Codex supports both command rules and lifecycle hooks, but neither is a complete
-security boundary or a substitute for task authorization, direct verification,
-or independent review. The pilot should contain two narrow controls and one
-reminder; it should not create a task database, parse transcripts, or perform
-GitHub mutations.
+**No-go for a runtime I9 pilot on the currently demonstrated capability.**
+Codex supports command rules and lifecycle hooks, but the proposed uses cannot
+preserve task-scoped authorization, distinguish legitimate completion exits, or
+demonstrate data minimization. They remain unsuitable as a substitute for task
+authorization, direct verification, or independent review. No configuration,
+hook executable, or rule should be adopted from this discovery.
 
 ### Verified support
 
@@ -63,68 +63,71 @@ codex/example`; `git pull origin codex/example` produced no match. This proves
 the installed checker evaluates a narrow prefix rule. It does **not** prove
 runtime loading, project trust, hook trust, or hook execution.
 
-### Smallest proposed pilot
+### Why the initially plausible pilot is rejected
 
-1. A project-local rule file denies only unambiguously unauthorized publication
-   prefixes—initially `git push`, `gh pr create`, and `gh pr merge`—with a
-   justification directing the agent to seek owner authorization. It has
-   `match`/`not_match` examples and is checked with `codex execpolicy check`.
-   It does not allow commands, change sandbox/approval settings, or attempt to
-   classify shell wrappers beyond Codex's documented parser.
-2. A trusted, synchronous `PostToolUse` hook watches `Bash` only and emits
-   concise, non-secret context for the explicitly selected test, local commit,
-   and authorized-PR commands. It records a result only after the command
-   returns, including a non-zero exit. It neither runs a command nor treats
-   tool success as product success.
-3. A trusted `Stop` hook reads only explicit, task-scoped completion fields
-   supplied by the future pilot configuration. It may request **one** bounded
-   continuation when a selected check or documented endpoint is absent. It
-   must return normally for owner STOP, interruption, approval-required state,
-   questions, explicit blockers, review-only tasks, or an already-active Stop
-   continuation. Persistent absence is reported, not looped.
+1. A `forbidden` rule for `git push`, `gh pr create`, or `gh pr merge` is
+   context-blind: Rules compare argv prefixes and the strictest matching rule
+   wins, whereas this programme authorizes those endpoints per task and owner
+   decision. `forbidden` blocks without a prompt. An unspecified escape would
+   either bypass the same control surface or fail the normal authorized
+   endpoint. Do not hard-forbid these commands.
+2. `Stop` supplies common fields plus `turn_id`, `stop_hook_active`, and
+   `last_assistant_message`; it has no matcher and no structured task type,
+   endpoint, approval-wait, question, or blocker state. Transcript parsing is
+   explicitly excluded and not stable. `stop_hook_active` can cap a
+   continuation but cannot identify a legitimate exit. Do not adopt a Stop
+   reminder without a separately specified, stable, fail-open state source and
+   ownership contract.
+3. A `PostToolUse` matcher for `Bash` receives every covered command's full
+   input and response, including unrelated failing output. Merely emitting
+   selected non-secret context does not minimize what a repository executable
+   receives. Do not adopt it without proof of input minimization, no
+   persistence/network behavior, and executable-change trust semantics.
 
-The future configuration task should use `.codex/hooks.json` plus a small
-repo-owned executable (not a global hook), because official documentation says
-that project hooks load only in trusted projects and are independently
-reviewed. No hook should inspect `transcript_path`: the official contract says
-that transcript format is not stable for hooks.
+Project-local hooks still require project and definition trust, but that does
+not establish whether changing a referenced executable retriggers trust. No
+hook should inspect `transcript_path`: the official contract says that
+transcript format is not stable for hooks.
 
 ### Explicit gaps and no-go boundaries
 
 - Rules cannot require a test, documentation disposition, local commit, or PR;
-  they only decide matching command permission outside the sandbox.
+  they only decide matching command permission outside the sandbox and cannot
+  observe task-specific authorization.
 - Hook coverage excludes hosted tools and may exclude specialized paths, so the
   pilot must not claim universal enforcement or prevent owner-authorized work
   through another supported path.
 - `PostToolUse` cannot reverse a push, commit, or other completed action;
   publication authority remains with the owner and normal approval system.
 - Hooks may run concurrently, and asynchronous hooks cannot control the action
-  that triggered them. The proposed policy/reminder hooks are synchronous and
-  intentionally independent, not a pipeline.
+  that triggered them. A hook is not a pipeline or an authorization engine.
 - There is no verified mechanism here to disable subagent creation only for an
   orchestrator while retaining delivery-task capabilities. That remains an
   unresolved runtime-capability question and is excluded from this pilot.
 
 ### Compatibility, privacy, and recovery
 
-Rules are documented as experimental, so the configuration must pin the
-verified Codex version in the future pilot evidence and re-run its isolated
-checker after upgrades. Hook output must contain no credentials, owner data, or
-transcript content; oversized hook output can be written to local temporary
-storage by Codex. Failure to load, trust, or execute a hook must leave the
-normal approval and task workflow available and report the condition—never
-block recovery or manufacture completion.
+Rules are documented as experimental, so any later exploration must pin the
+verified Codex version and re-run its isolated checker after upgrades. Hooks
+receive input as well as produce output; both could contain credentials or owner
+data, and oversized output can be written to local temporary storage by Codex.
+A later proof must establish minimization before a repo-owned executable sees
+any data, no persistence/network behavior, and whether modifying that executable
+requires a fresh trust decision. Failure to load, trust, or execute a hook must
+leave the normal approval and task workflow available and report the
+condition—never block recovery or manufacture completion.
 
 ### Future authorized test plan
 
-In a dedicated configuration worktree, test (1) exact rule matches and nearby
-non-matches, (2) denied publish versus an owner-authorized escape documented in
-the task endpoint, (3) successful and failing selected test commands,
-(4) no continuation on STOP/approval/blocker/review states, (5) exactly one
-continuation for a genuinely missing selected field, and (6) restart/trust
-behavior in the installed client. Obtain one independent review covering the
-command-policy and recovery/continuation risks. Do not install or enable
-anything as part of this discovery.
+Before any new configuration proposal, an independently reviewed feasibility
+task must establish (1) a supported approval-aware control that allows the
+normal task-authorized publish endpoint while denying the same endpoint without
+authorization, (2) a stable, owned, fail-open task-state interface that
+distinguishes every required Stop exit without transcripts, and (3) a
+data-minimized hook input boundary, no persistence/network behavior, and fresh
+trust behavior after executable changes. It must test those exact properties in
+the installed client, not merely `execpolicy`. Absent those proofs, retain this
+no-go and do not install or enable anything.
 
 ### Disposition
 
