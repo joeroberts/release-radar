@@ -54,6 +54,23 @@ Explicit Astra High; runtime settings unexposed. It covers persistence, authoriz
 notification recovery and native UI/QA. Review and owner merge approval remain pending.
 Repository documentation and diff checks pass after the five evidence registrations;
 no application catalog acceptance is claimed.
+Writer confirmed PR/branch `e81828d`, clean worktree, final documentation/diff checks
+passing and no active xcodebuild-test/xctest processes; delivery task is archived
+pending only Required same-outcome corrections.
+
+C5 temporary files remain; no deletion is authorized. Under `/tmp/`, all names below
+use prefix `release-radar-c5-`: build directories `direct`, `doc-tool`, `red`,
+`verify-adjacent`, `verify-c5`, `verify-render`, `verify-store`; result bundles
+`failing-0907.xcresult`, `direct-0828.xcresult` (interrupted/corrupt aggregate),
+`render-0813.xcresult`, `render-0814.xcresult`, `render-0815.xcresult`,
+`render-0822.xcresult`, `render-0823.xcresult`, `render-final.xcresult`,
+`render-final2.xcresult`; attachment directories `images-0823`,
+`render-final-attachments`, `render-final2-attachments`; diagnostics
+`dashboard-debug.log`, `dashboard-one.log`, `dashboard-repeat.log`, `direct-0828.log`,
+`root-debug.log`, `root-debug2.log`, `root-debug3.log`, `root-one.log`,
+`root-repeat.log`, `store-one.log`, `xcresult.err`. All durable UI evidence is committed
+under `docs/delivery/evidence/`; these are retained temporary verification outputs.
+
 
 ## Delivered C4 and verification limits
 
