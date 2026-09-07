@@ -51,12 +51,27 @@ this is not a full-suite pass or shipping folder-grant proof.
 Fresh independent task “Review C5 reversible archive and restore”
 (`01a07bf9-623b-71d2-9af1-ab70b5dc19e8`) confirmed clean candidate `e81828d` in `f419`.
 Explicit Astra High; runtime settings unexposed. It covers persistence, authorization,
-notification recovery and native UI/QA. Review and owner merge approval remain pending.
+notification recovery and native UI/QA. Review found two Required P1 admission defects; owner merge approval is not yet requested.
+Independent checks passed 93/93 (C5 10, Notification 28, Store 54, native UI 1).
+Two bounded negative reproducers then confirmed:
+- Documentation mutations bypass active admission (`AgentCommandDispatcher.swift:56`);
+  an archived project accepted binding and added an audit/receipt.
+- Ordinary resolved authorization omits registration/generation; a pre-archive request
+  created a phase after restore advanced generation 1→3.
+Correction must reject operational documentation while archived and revalidate captured
+registration/generation transactionally, while preserving fresh post-restore work.
+The same reviewer will check the corrected candidate's affected boundaries; unchanged
+native/UI checks do not restart. No unrelated fixture/security change is authorized.
+Reviewer temporary repro source remains untracked in `f419/ReleaseRadarTests/`
+`C5IndependentReviewTests.swift`. Under `/tmp/`, prefix `c5-review-f419-` outputs are
+`build`, `focused.log`, `focused.xcresult`, `repro.log`, `repro.xcresult`, `attachments`.
+No cleanup is authorized.
+
 Repository documentation and diff checks pass after the five evidence registrations;
 no application catalog acceptance is claimed.
 Writer confirmed PR/branch `e81828d`, clean worktree, final documentation/diff checks
-passing and no active xcodebuild-test/xctest processes; delivery task is archived
-pending only Required same-outcome corrections.
+passing and no active xcodebuild-test/xctest processes; delivery task was archived, then restored for the two Required same-outcome corrections
+at explicit Sol High.
 
 C5 temporary files remain; no deletion is authorized. Under `/tmp/`, all names below
 use prefix `release-radar-c5-`: build directories `direct`, `doc-tool`, `red`,
