@@ -107,12 +107,14 @@ or invalid-catalog bootstrap dead ends; health misstates catalog/freshness; and
 registration generation is not checked atomically at documentation commit.
 These are source/control-flow findings not disproved by the passing tests.
 
-Corrections are assigned to the same Sol High delivery task under existing scope,
-with test-first negative/interleaving cases and directly affected checks. The same
-reviewer will recheck those corrections; no new review layer or owner design gate.
-PR #23 remains open and unapproved for merge. The reviewer reported all review and
-test/build processes stopped; its initial review result is preserved here before
-archival. Temporary review output remains at `/tmp/rr-pr23-independent-review`,
+The same Sol High delivery task has pushed corrections to PR #23 and reports
+214/214 affected tests passing with zero skips, plus a successful documentation
+check. The same independent reviewer was restored for a bounded recheck of all
+six findings against the corrected PR head; independent clearance remains pending.
+No new review layer or owner design gate was added. PR #23 remains open and
+unapproved for merge. The reviewer was archived after its initial result and
+process shutdown, then restored only for these corrections.
+Temporary initial review output remains at `/tmp/rr-pr23-independent-review`,
 `/tmp/rr-pr23-independent-review.log`, `/tmp/rr-pr23-independent-review-images` and
 the test-managed `ReleaseRadar-XCTestHost-75860` temporary directory. No cleanup
 occurred. The parent retains ledger ownership and monitors through the approved
