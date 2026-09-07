@@ -67,7 +67,8 @@ membership, implicit grant, reader-policy relaxation, Git repair or new helper i
 authorized. Normal absolute/relative worktrees and malformed/stale/denied cases need
 direct sandboxed checks. The delivery owner is implementing this bounded correction;
 final candidate review remains the single applicable implementation review. The
-consultant reported all work/processes stopped; useful guidance is preserved here.
+consultant reported all work/processes stopped; useful guidance is preserved here
+and the consultation task is archived.
 
 ## Parallel bounded discovery — 2026-09-07
 
@@ -110,8 +111,10 @@ diff check and 12 relative links passed. Recommendation: separately authorized
 synthetic feasibility proof with one Run Guard execution owner; production and
 control of existing desktop runs remain no-go without proof. This is not product
 implementation approval. Both the writer and reviewer report stopped work/processes;
-the result is persisted in the owned artifact and this ledger. PR merge awaits owner
-approval; no runtime feasibility or managed synchronization is claimed.
+the result is persisted in the owned artifact and this ledger. The owner approved PR #25, which merged on 2026-09-07 as
+`7e38fb856de23b94e14dc34148251453a505513b`. Both completed tasks are archived.
+The synthetic execution proof remains separately unauthorized; no runtime feasibility
+or managed synchronization is claimed.
 
 Rules/hooks discovery is in [PR #24](https://github.com/joeroberts/release-radar/pull/24),
 candidate `6c61c4a`, undergoing fresh independent Sol High review in task
