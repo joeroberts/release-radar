@@ -2000,6 +2000,139 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testRDSPlanningPickersPreserveByteDistinctPhaseAndGoalSelection() async throws {
+        let composed = "\u{e9}"
+        let decomposed = "e\u{301}"
+        let phases = [
+            ProjectPhaseProjection(id: .init(rawValue: composed), name: "Same phase"),
+            ProjectPhaseProjection(id: .init(rawValue: decomposed), name: "Same phase"),
+        ]
+        let goals = [
+            DeliveryGoalSummaryProjection(
+                goalID: .init(rawValue: composed), title: "First goal", outcome: "First", lifecycle: .draft,
+                doneCriteria: [], ticketIDs: []
+            ),
+            DeliveryGoalSummaryProjection(
+                goalID: .init(rawValue: decomposed), title: "Second goal", outcome: "Second", lifecycle: .draft,
+                doneCriteria: [], ticketIDs: []
+            ),
+        ]
+        let project = ProjectDashboardProjection(
+            id: .init(rawValue: "byte-project"), name: "Byte project", activePhaseID: phases[0].id,
+            activePhaseName: phases[0].name, phases: phases,
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0, attentionCount: 0
+        )
+        let board = PhaseBoardProjection(
+            project: project, phaseID: phases[0].id, phaseName: phases[0].name,
+            phasePlan: .init(state: .draft, revision: 0, readyRevision: nil, upcomingCount: 0,
+                             coveredUpcomingCount: 0, unassignedUpcomingCount: 0),
+            deliveryGoals: goals, lanes: [], details: [:]
+        )
+        var viewedPhaseID: PhaseID?
+        var filter: DeliveryGoalFilter = .all
+        let view = PhaseBoardPlanningControls(
+            board: board,
+            filter: Binding(get: { filter }, set: { filter = $0 }),
+            phaseSelectionStatus: .idle,
+            viewPhase: { viewedPhaseID = $0 },
+            makeActive: { _ in }, reload: {}, reauthorize: { _ in }
+        )
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = NSRect(x: 0, y: 0, width: 1_400, height: 360)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        window.orderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        hosting.layoutSubtreeIfNeeded()
+
+        let phasePicker = try XCTUnwrap(nativePopup(in: hosting, identifier: "viewed-phase-selector"))
+        phasePicker.selectItem(at: 1)
+        phasePicker.sendAction(phasePicker.action, to: phasePicker.target)
+        XCTAssertEqual(Data(try XCTUnwrap(viewedPhaseID).rawValue.utf8), Data(decomposed.utf8))
+
+        let goalPicker = try XCTUnwrap(nativePopup(in: hosting, identifier: "delivery-goal-filter"))
+        goalPicker.selectItem(at: 2)
+        goalPicker.sendAction(goalPicker.action, to: goalPicker.target)
+        guard case let .goal(selectedGoalID) = filter else { return XCTFail("Expected goal filter") }
+        XCTAssertEqual(Data(selectedGoalID.rawValue.utf8), Data(decomposed.utf8))
+    }
+
+    @MainActor
+    func testRDSActivePhasePickerNativeControlCannotActWhileSavingOrAwaitingReload() async throws {
+        let composed = "\u{e9}"
+        let decomposed = "e\u{301}"
+        let phases = [
+            ProjectPhaseProjection(id: .init(rawValue: composed), name: "Same phase"),
+            ProjectPhaseProjection(id: .init(rawValue: decomposed), name: "Same phase"),
+        ]
+        let project = ProjectDashboardProjection(
+            id: .init(rawValue: "disabled-project"), name: "Disabled project", activePhaseID: phases[0].id,
+            activePhaseName: phases[0].name, phases: phases,
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 0, attentionCount: 0
+        )
+
+        var idleSelection: PhaseID?
+        let idleHosting = NSHostingView(rootView: ActivePhaseSelector(
+            project: project, surface: .overview, status: .idle,
+            onSelect: { idleSelection = $0 }, onReload: {}, onReauthorize: { _ in }
+        ))
+        idleHosting.frame = NSRect(x: 0, y: 0, width: 600, height: 220)
+        let idleWindow = NSWindow(contentRect: idleHosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        idleWindow.isReleasedWhenClosed = false
+        idleWindow.contentView = idleHosting
+        idleWindow.orderFront(nil)
+        defer { idleWindow.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        idleHosting.layoutSubtreeIfNeeded()
+        let idlePicker = try XCTUnwrap(nativePopup(in: idleHosting, identifier: "active-phase-selector-overview"))
+        idlePicker.selectItem(at: 1)
+        idlePicker.sendAction(idlePicker.action, to: idlePicker.target)
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(Data(try XCTUnwrap(idleSelection).rawValue.utf8), Data(decomposed.utf8))
+
+        for status in [ActivePhaseSelectionStatus.saving(phases[1].id), .savedNeedsReload(phases[1].id, phases[1].name)] {
+            var selectedIDs: [PhaseID] = []
+            let view = ActivePhaseSelector(
+                project: project, surface: .overview, status: status,
+                onSelect: { selectedIDs.append($0) }, onReload: {}, onReauthorize: { _ in }
+            )
+            let hosting = NSHostingView(rootView: view)
+            hosting.frame = NSRect(x: 0, y: 0, width: 600, height: 220)
+            let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.contentView = hosting
+            window.orderFront(nil)
+            defer { window.close() }
+            try await Task.sleep(for: .milliseconds(100))
+            hosting.layoutSubtreeIfNeeded()
+
+            let picker = try XCTUnwrap(nativePopup(in: hosting, identifier: "active-phase-selector-overview"))
+            XCTAssertFalse(picker.isEnabled, "The represented native picker must be disabled, not just visually styled")
+            picker.selectItem(at: 1)
+            picker.sendAction(picker.action, to: picker.target)
+            try await Task.sleep(for: .milliseconds(50))
+            XCTAssertTrue(selectedIDs.isEmpty)
+        }
+    }
+
+    @MainActor
+    private func nativePopup(in view: NSView, identifier: String) -> NSPopUpButton? {
+        if let popup = view as? NSPopUpButton, popup.accessibilityIdentifier() == identifier {
+            return popup
+        }
+        for subview in view.subviews {
+            if let popup = nativePopup(in: subview, identifier: identifier) {
+                return popup
+            }
+        }
+        return nil
+    }
+
+    @MainActor
     func testOwnerTicketTransitionAppliesAcceptanceMatrixAndReloadsOnlyAfterSuccess() async throws {
         struct Scenario {
             let name: String

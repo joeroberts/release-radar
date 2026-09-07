@@ -15,6 +15,32 @@ extension DeliveryGoalLifecycle {
     }
 }
 
+struct ByteStablePickerOption<Value> {
+    let selection: String
+    let value: Value
+
+    static func disambiguating(_ candidates: [(label: String, byteIdentity: String, value: Value)]) -> [Self] {
+        candidates.map { candidate in
+            let labelCollides = candidates.filter { $0.label == candidate.label }.count > 1
+            let selection = labelCollides
+                ? "\(candidate.label) · ID bytes \(utf8Hex(candidate.byteIdentity))"
+                : candidate.label
+            return Self(selection: selection, value: candidate.value)
+        }
+    }
+
+    private static func utf8Hex(_ value: String) -> String {
+        value.utf8.map { byte in
+            let hex = String(byte, radix: 16, uppercase: true)
+            return hex.count == 1 ? "0\(hex)" : hex
+        }.joined()
+    }
+}
+
+func hasSameUTF8Identity(_ lhs: String, _ rhs: String) -> Bool {
+    lhs.utf8.elementsEqual(rhs.utf8)
+}
+
 struct PhaseBoardPlanningControls: View {
     let board: PhaseBoardProjection
     @Binding var filter: DeliveryGoalFilter
@@ -74,13 +100,17 @@ struct PhaseBoardPlanningControls: View {
                 .foregroundStyle(RekonTheme.primaryText)
             RekonPicker(
                 selection: Binding(
-                    get: { phaseOption(for: board.project.phases.first(where: { $0.id == board.phaseID })) },
+                    get: {
+                        phasePickerOptions.first {
+                            hasSameUTF8Identity($0.value.id.rawValue, board.phaseID.rawValue)
+                        }?.selection ?? "\(board.phaseName) · \(board.phaseID.rawValue)"
+                    },
                     set: { selection in
-                        guard let phase = board.project.phases.first(where: { phaseOption(for: $0) == selection }) else { return }
-                        viewPhase(phase.id)
+                        guard let option = phasePickerOptions.first(where: { $0.selection == selection }) else { return }
+                        viewPhase(option.value.id)
                     }
                 ),
-                options: board.project.phases.map(phaseOption(for:)),
+                options: phasePickerOptions.map(\.selection),
                 accessibilityLabel: "Viewed phase",
                 accessibilityIdentifier: "viewed-phase-selector"
             )
@@ -112,18 +142,16 @@ struct PhaseBoardPlanningControls: View {
                 .foregroundStyle(RekonTheme.primaryText)
             RekonPicker(
                 selection: Binding(
-                    get: { goalOption(for: filter) },
+                    get: {
+                        goalPickerOptions.first(where: { $0.value == filter })?.selection
+                            ?? unavailableGoalOption(for: filter)
+                    },
                     set: { selection in
-                        if selection == "All goals" {
-                            filter = .all
-                        } else if selection == "Unassigned" {
-                            filter = .unassigned
-                        } else if let goal = board.filterableDeliveryGoals.first(where: { goalOption(for: .goal($0.goalID)) == selection }) {
-                            filter = .goal(goal.goalID)
-                        }
+                        guard let option = goalPickerOptions.first(where: { $0.selection == selection }) else { return }
+                        filter = option.value
                     }
                 ),
-                options: goalOptions,
+                options: goalPickerOptions.map(\.selection),
                 accessibilityLabel: "Delivery Goal",
                 accessibilityIdentifier: "delivery-goal-filter"
             )
@@ -133,35 +161,42 @@ struct PhaseBoardPlanningControls: View {
         .accessibilityHint("Filter cards without changing their lanes or persisted state.")
     }
 
-    private var goalOptions: [String] {
-        var options = ["All goals"] + board.filterableDeliveryGoals.map { goalOption(for: .goal($0.goalID)) }
+    private var phasePickerOptions: [ByteStablePickerOption<ProjectPhaseProjection>] {
+        ByteStablePickerOption.disambiguating(board.project.phases.map { phase in
+            (label: "\(phase.name) · \(phase.id.rawValue)", byteIdentity: phase.id.rawValue, value: phase)
+        })
+    }
+
+    private var goalPickerOptions: [ByteStablePickerOption<DeliveryGoalFilter>] {
+        var candidates: [(label: String, byteIdentity: String, value: DeliveryGoalFilter)] = [
+            (label: "All goals", byteIdentity: "reserved:all", value: .all)
+        ]
+        candidates += board.filterableDeliveryGoals.map { goal in
+            (label: "\(goal.title) · \(goal.goalID.rawValue)", byteIdentity: goal.goalID.rawValue, value: .goal(goal.goalID))
+        }
         if filter == .unassigned {
-            options.append("Unassigned")
+            candidates.append((label: "Unassigned", byteIdentity: "reserved:unassigned", value: .unassigned))
         }
         if case let .goal(id) = filter,
-           !board.filterableDeliveryGoals.contains(where: { $0.goalID == id }) {
-            options.append("Unavailable Delivery Goal · \(id.rawValue)")
+           !board.filterableDeliveryGoals.contains(where: {
+               hasSameUTF8Identity($0.goalID.rawValue, id.rawValue)
+           }) {
+            candidates.append((
+                label: "Unavailable Delivery Goal · \(id.rawValue)",
+                byteIdentity: id.rawValue,
+                value: .goal(id)
+            ))
         }
-        return options
+        return ByteStablePickerOption.disambiguating(candidates)
     }
 
-    private func phaseOption(for phase: ProjectPhaseProjection?) -> String {
-        if let phase {
-            return "\(phase.name) · \(phase.id.rawValue)"
-        }
-        return "\(board.phaseName) · \(board.phaseID.rawValue)"
-    }
-
-    private func goalOption(for filter: DeliveryGoalFilter) -> String {
+    private func unavailableGoalOption(for filter: DeliveryGoalFilter) -> String {
         switch filter {
         case .all:
             return "All goals"
         case .unassigned:
             return "Unassigned"
         case let .goal(id):
-            if let goal = board.filterableDeliveryGoals.first(where: { $0.goalID == id }) {
-                return "\(goal.title) · \(goal.goalID.rawValue)"
-            }
             return "Unavailable Delivery Goal · \(id.rawValue)"
         }
     }
