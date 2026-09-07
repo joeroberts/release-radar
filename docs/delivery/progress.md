@@ -49,6 +49,16 @@ contract recommendations and PR #22 merge; lifecycle source delivery is now open
 
 ## Approved shared contracts and active lifecycle delivery
 
+Owner acceptance testing of PR #23 exposed incomplete RekonDesignSystem adoption
+across the shared shell and eight dashboard routes, duplicate plugin-conflict
+guidance and misleading phase-less route states. The same delivery task has pushed
+the bounded correction and reports 156 affected tests passing plus documentation
+checks. The same independent reviewer is checking the actual implementation and
+wide/compact renders. Prior source review clearance does not establish visual or
+end-to-end acceptance. A distinct signed candidate is being prepared for the
+owner-authorized running-app check; PR #23 remains unmerged. Existing Codex
+plugin/MCP configuration remains untouched and the name conflict is unresolved.
+
 Chief architecture delivered `ce7ae0a`, integrated locally as `879f883`: the
 existing full-product plan now reconciles D1–D13 and retains all 40 capabilities.
 The architect's bounded output is complete and merged through PR #22. The task
