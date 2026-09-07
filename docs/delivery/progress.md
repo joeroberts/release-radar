@@ -117,8 +117,15 @@ The synthetic execution proof remains separately unauthorized; no runtime feasib
 or managed synchronization is claimed.
 
 Rules/hooks discovery is in [PR #24](https://github.com/joeroberts/release-radar/pull/24),
-candidate `6c61c4a`, undergoing fresh independent Sol High review in task
-`01a07b93-5c22-78b1-a912-7f1529999b45`. The author corrected and read back the PR
+corrected candidate `c71d880`. Fresh independent Sol High reviewer
+`01a07b93-5c22-78b1-a912-7f1529999b45` passed the bounded correction with no
+remaining Required or Optional findings. The result is a no-go for active runtime
+controls: context-sensitive hard-deny publication rules, active Stop continuation
+and Bash result hooks were removed from the pilot proposal rather than supported
+by new machinery. Documentation/diff checks and isolated rule evaluation passed;
+runtime loading/authorization-aware control and hook privacy/trust are unproven.
+No configuration is enabled. PR #24 awaits owner merge approval; reviewer work
+and processes are stopped, and its result is preserved here. The author corrected and read back the PR
 body after shell quoting damaged command text; repository/application state was
 unchanged by that description correction. Retained temporary files are
 `/tmp/release-radar-rules-hooks.87hPRM/pilot.rules` and its `pr-body.md`; no cleanup
