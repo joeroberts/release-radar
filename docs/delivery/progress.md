@@ -37,8 +37,58 @@ It owns source/tests/brief; parent retains
 ledger and shared catalog/index integration. Ceiling Astra High, Ultra prohibited.
 The complete outcome preserves graph/registration/history and association, suspends
 operational activity, supports discoverable restore without a valid catalog, and
-prevents stale callbacks or notification replay. One fresh independent reviewer will
-cover persistence/admission/recovery and UI risks after direct verification.
+prevents stale callbacks or notification replay.
+
+[PR #29](https://github.com/joeroberts/release-radar/pull/29) contains author candidate
+`8c85e48`, integrated with catalogued [native UI evidence](evidence/2026-09-07-c5-archive-restore-ui.md)
+at `e81828d`. Author reports C5 10/10, Store/Notification 82/82, affected
+Onboarding/Bridge/Route/Dashboard 173/173 and native compact/wide 1/1. The dashboard
+batch excludes `testInactiveBoardPreservesAuthorizedEvidenceMetadataAndRecovery`;
+the author reports that fixture and existing root-management fixtures fail before
+relevant behavior on this host's `/var` symlink containment. No protection was weakened;
+this is not a full-suite pass or shipping folder-grant proof.
+
+Fresh independent task “Review C5 reversible archive and restore”
+(`01a07bf9-623b-71d2-9af1-ab70b5dc19e8`) confirmed clean candidate `e81828d` in `f419`.
+Explicit Astra High; runtime settings unexposed. It covers persistence, authorization,
+notification recovery and native UI/QA. Review found two Required P1 admission defects; owner merge approval is not yet requested.
+Independent checks passed 93/93 (C5 10, Notification 28, Store 54, native UI 1).
+Two bounded negative reproducers then confirmed:
+- Documentation mutations bypass active admission (`AgentCommandDispatcher.swift:56`);
+  an archived project accepted binding and added an audit/receipt.
+- Ordinary resolved authorization omits registration/generation; a pre-archive request
+  created a phase after restore advanced generation 1→3.
+Correction must reject operational documentation while archived and revalidate captured
+registration/generation transactionally, while preserving fresh post-restore work.
+The same reviewer will check the corrected candidate's affected boundaries; unchanged
+native/UI checks do not restart. No unrelated fixture/security change is authorized.
+Reviewer temporary repro source remains untracked in `f419/ReleaseRadarTests/`
+`C5IndependentReviewTests.swift`. Under `/tmp/`, prefix `c5-review-f419-` outputs are
+`build`, `focused.log`, `focused.xcresult`, `repro.log`, `repro.xcresult`, `attachments`.
+No cleanup is authorized. Reviewer confirmed build/test processes stopped and is
+archived until the same-outcome correction review. Isolated host directories
+`ReleaseRadar-XCTestHost-86475` and `ReleaseRadar-XCTestHost-86838` also remain under
+`/Users/jroberts/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/`.
+
+Repository documentation and diff checks pass after the five evidence registrations;
+no application catalog acceptance is claimed.
+Writer confirmed PR/branch `e81828d`, clean worktree, final documentation/diff checks
+passing and no active xcodebuild-test/xctest processes; delivery task was archived, then restored for the two Required same-outcome corrections
+at explicit Sol High.
+
+C5 temporary files remain; no deletion is authorized. Under `/tmp/`, all names below
+use prefix `release-radar-c5-`: build directories `direct`, `doc-tool`, `red`,
+`verify-adjacent`, `verify-c5`, `verify-render`, `verify-store`; result bundles
+`failing-0907.xcresult`, `direct-0828.xcresult` (interrupted/corrupt aggregate),
+`render-0813.xcresult`, `render-0814.xcresult`, `render-0815.xcresult`,
+`render-0822.xcresult`, `render-0823.xcresult`, `render-final.xcresult`,
+`render-final2.xcresult`; attachment directories `images-0823`,
+`render-final-attachments`, `render-final2-attachments`; diagnostics
+`dashboard-debug.log`, `dashboard-one.log`, `dashboard-repeat.log`, `direct-0828.log`,
+`root-debug.log`, `root-debug2.log`, `root-debug3.log`, `root-one.log`,
+`root-repeat.log`, `store-one.log`, `xcresult.err`. All durable UI evidence is committed
+under `docs/delivery/evidence/`; these are retained temporary verification outputs.
+
 
 ## Delivered C4 and verification limits
 
