@@ -30,6 +30,28 @@ Runtime model/effort is unexposed; explicit dispatch was Sol High. The writer
 owns source/tests/brief; parent owns ledger/shared metadata. One fresh independent
 combined reviewer covers retention, migration, stale authority and native UI/QA.
 
+C6 author candidate `79be22e` is integrated with five catalogued UI evidence artifacts
+at `c06d34ea57262360e889eccb4aeff1bcb6f4e552`. Native documentation/diff checks pass.
+Author reports removal 7/7 and the serial affected-suite selection passing. Full serial
+scheme had the then-pending evidence registration and one environment-gated registered
+broker transport case; no whole-suite pass is claimed. A parallel shared-temp read
+transient passed on isolated retry and serial selection. No transport configuration
+change is authorized.
+
+Fresh reviewer “Review C6 removal and retained history”
+(`01a07d25-5a7a-7d01-b30f-f8345a9e3b56`) confirmed clean exact `c06d34e` in isolated
+`e58c`, explicit Astra High/runtime unexposed. Review covers removal authority,
+historical identity, stale commands/receipts, notification outcomes, migration and
+native UI/QA. Writer is fast-forwarding the integrated candidate and creating its PR;
+review and separate owner merge approval remain pending.
+
+Author temporary paths retained: `/tmp/release-radar-c6-baseline`,
+`/tmp/release-radar-c6-red`, `/tmp/release-radar-c6-evidence.5yEcMu`,
+`/tmp/release-radar-c6-evidence-final.qQrH4d`, `/tmp/release-radar-c6-export.log`.
+No cleanup is authorized. All durable UI evidence is committed under
+`docs/delivery/evidence/`.
+
+
 ## Delivered C5
 
 [PR #29](https://github.com/joeroberts/release-radar/pull/29) merged with explicit owner
