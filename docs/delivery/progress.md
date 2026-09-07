@@ -39,42 +39,43 @@ The complete outcome preserves graph/registration/history and association, suspe
 operational activity, supports discoverable restore without a valid catalog, and
 prevents stale callbacks or notification replay.
 
-[PR #29](https://github.com/joeroberts/release-radar/pull/29) contains author candidate
-`8c85e48`, integrated with catalogued [native UI evidence](evidence/2026-09-07-c5-archive-restore-ui.md)
-at `e81828d`. Author reports C5 10/10, Store/Notification 82/82, affected
-Onboarding/Bridge/Route/Dashboard 173/173 and native compact/wide 1/1. The dashboard
-batch excludes `testInactiveBoardPreservesAuthorizedEvidenceMetadataAndRecovery`;
-the author reports that fixture and existing root-management fixtures fail before
-relevant behavior on this host's `/var` symlink containment. No protection was weakened;
-this is not a full-suite pass or shipping folder-grant proof.
+[PR #29](https://github.com/joeroberts/release-radar/pull/29) now has corrected
+candidate `8d56411ac67e18e1882c9f6171b35f055d04d4e2`. Owner explicitly authorized
+merge of the bounded corrected C5 outcome after required checks/review; do not ask
+again for this PR. Installation and owner-state actions remain unauthorized.
 
-Fresh independent task “Review C5 reversible archive and restore”
-(`01a07bf9-623b-71d2-9af1-ab70b5dc19e8`) confirmed clean candidate `e81828d` in `f419`.
-Explicit Astra High; runtime settings unexposed. It covers persistence, authorization,
-notification recovery and native UI/QA. Review found two Required P1 admission defects; owner merge approval is not yet requested.
-Independent checks passed 93/93 (C5 10, Notification 28, Store 54, native UI 1).
-Two bounded negative reproducers then confirmed:
-- Documentation mutations bypass active admission (`AgentCommandDispatcher.swift:56`);
-  an archived project accepted binding and added an audit/receipt.
-- Ordinary resolved authorization omits registration/generation; a pre-archive request
-  created a phase after restore advanced generation 1→3.
-Correction must reject operational documentation while archived and revalidate captured
-registration/generation transactionally, while preserving fresh post-restore work.
-The same reviewer will check the corrected candidate's affected boundaries; unchanged
-native/UI checks do not restart. No unrelated fixture/security change is authorized.
+Initial fresh Astra High reviewer “Review C5 reversible archive and restore”
+(`01a07bf9-623b-71d2-9af1-ab70b5dc19e8`, `f419`) passed 93 selected tests/native
+checks but reproduced two Required P1 defects: archived documentation binding bypass
+and pre-archive authorization applying after restore. Both are corrected with
+transactional lifecycle/registration/generation checks before mutations and replay.
+
+Delivery's independent subagent `/root/c5_correction_review`
+(`01a07c15-0a43-7c61-b720-7e7d0713e315`, explicit Astra High) approved exact `8d56411`
+with no findings after 2 regression and 5 compatibility/replay checks. The orchestrator
+read its final verdict directly. Writer reports 344/344 exact-head targeted tests,
+zero failures/skips, clean worktree and documentation/diff checks passing. Native
+compact/wide verification remains valid because corrections changed no UI.
+
+Seven broader EndToEnd historical migration fixtures were found incompatible with
+C5's schema-v16 addition. These are C5-caused fixture failures, not clean-baseline
+pre-existing failures. Before merge, the same writer is resolving only these fixtures
+and rerunning affected migration cases; the same correction reviewer covers any
+resulting change. No production migration weakening, unrelated `/var` fixture repair,
+whole-suite repetition or additional reviewer is requested. The final PR description
+must reflect corrected verification and catalogued [UI evidence](evidence/2026-09-07-c5-archive-restore-ui.md).
+
 Reviewer temporary repro source remains untracked in `f419/ReleaseRadarTests/`
 `C5IndependentReviewTests.swift`. Under `/tmp/`, prefix `c5-review-f419-` outputs are
 `build`, `focused.log`, `focused.xcresult`, `repro.log`, `repro.xcresult`, `attachments`.
 No cleanup is authorized. Reviewer confirmed build/test processes stopped and is
-archived until the same-outcome correction review. Isolated host directories
+archived after its candidate review. Isolated host directories
 `ReleaseRadar-XCTestHost-86475` and `ReleaseRadar-XCTestHost-86838` also remain under
 `/Users/jroberts/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/`.
 
 Repository documentation and diff checks pass after the five evidence registrations;
 no application catalog acceptance is claimed.
-Writer confirmed PR/branch `e81828d`, clean worktree, final documentation/diff checks
-passing and no active xcodebuild-test/xctest processes; delivery task was archived, then restored for the two Required same-outcome corrections
-at explicit Sol High.
+Writer remains active for the bounded C5 fixture correction at explicit Sol High.
 
 C5 temporary files remain; no deletion is authorized. Under `/tmp/`, all names below
 use prefix `release-radar-c5-`: build directories `direct`, `doc-tool`, `red`,
@@ -88,6 +89,11 @@ use prefix `release-radar-c5-`: build directories `direct`, `doc-tool`, `red`,
 `root-debug.log`, `root-debug2.log`, `root-debug3.log`, `root-one.log`,
 `root-repeat.log`, `store-one.log`, `xcresult.err`. All durable UI evidence is committed
 under `docs/delivery/evidence/`; these are retained temporary verification outputs.
+Correction outputs under `/tmp/` with the same `release-radar-c5-` prefix remain:
+`corrections-red`, `corrections-green`, `corrections-green2`, `corrections-diagnose`,
+`corrections-diagnose.log`, `corrections-final`,
+`corrections-final-8d56411.xcresult`, `correction-independent-review-8d56411`.
+
 
 
 ## Delivered C4 and verification limits
