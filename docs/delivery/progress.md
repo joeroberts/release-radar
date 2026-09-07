@@ -124,12 +124,25 @@ controls: context-sensitive hard-deny publication rules, active Stop continuatio
 and Bash result hooks were removed from the pilot proposal rather than supported
 by new machinery. Documentation/diff checks and isolated rule evaluation passed;
 runtime loading/authorization-aware control and hook privacy/trust are unproven.
-No configuration is enabled. PR #24 awaits owner merge approval; reviewer work
-and processes are stopped, and its result is preserved here. The author corrected and read back the PR
+No configuration is enabled. The owner approved PR #24, which merged on
+2026-09-07 as `fb57804fa0658b287982b82d88061f5493fe17b9`. The writer and reviewer
+are stopped and archived; their result is preserved here. A configuration pilot
+remains separately unauthorized. The author corrected and read back the PR
 body after shell quoting damaged command text; repository/application state was
 unchanged by that description correction. Retained temporary files are
 `/tmp/release-radar-rules-hooks.87hPRM/pilot.rules` and its `pr-body.md`; no cleanup
 is authorized or performed.
+
+Live observation candidate `95ad1fc` is in
+[PR #26](https://github.com/joeroberts/release-radar/pull/26), under independent
+Sol High review by `01a07b9a-1fa0-7ad0-b50e-f5afab079b66`. Companion candidate
+`22c5132` is in [PR #27](https://github.com/joeroberts/release-radar/pull/27), under
+independent Astra High review by `01a07ba1-d86f-78b3-ac3f-6c3563e1e199`.
+Neither proposal is accepted or merged yet. C4 candidate `1801ded` has 66 reported
+selected passing checks, including sandboxed absolute/relative Git metadata and
+native compact/wide UI. Fresh combined Astra High reviewer
+`01a07ba1-5d2b-7921-8e72-558438f15167` owns its independent behavior, authorization
+and UX checks; C4 is not yet complete. These reviews create no extra product gate.
 
 ## Delivered lifecycle handoff — 2026-09-07
 
