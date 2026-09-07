@@ -3,6 +3,46 @@ import ReleaseRadarCore
 import RekonDesignSystem
 import SwiftUI
 
+enum SettingsLayout {
+    static let horizontalPadding: CGFloat = 28
+
+    static func contentWidth(for availableWidth: CGFloat) -> CGFloat {
+        max(0, availableWidth - horizontalPadding * 2)
+    }
+}
+
+enum ApplicationHealthAction: Equatable {
+    case openProject
+    case reviewConnections
+    case checkAgain
+
+    var title: String {
+        switch self {
+        case .openProject: "Open Project"
+        case .reviewConnections: "Review Connection"
+        case .checkAgain: "Check Again"
+        }
+    }
+
+    static func recommended(
+        forCheckID id: String,
+        state: ProjectHealthSnapshot.Check.State,
+        hasProjectTarget: Bool
+    ) -> ApplicationHealthAction? {
+        guard state != .ready else { return nil }
+        switch id {
+        case "folder", "documentation":
+            return hasProjectTarget ? .openProject : nil
+        case "plugin", "observer":
+            return .reviewConnections
+        case "storage":
+            return .checkAgain
+        default:
+            return nil
+        }
+    }
+}
+
 struct SettingsView: View {
     @Bindable var model: AppModel
     @State private var pendingPluginConfirmation: PluginConfirmation?
@@ -42,7 +82,7 @@ struct SettingsView: View {
             }
             .frame(height: 52)
 
-            Rectangle().fill(RekonTheme.borderSubtle).frame(height: 1)
+            Rectangle().fill(RekonTheme.accent.opacity(0.34)).frame(height: 1)
 
             Group {
                 switch selectedTab {
@@ -60,7 +100,7 @@ struct SettingsView: View {
 
     private var general: some View {
         settingsScroll {
-            RekonSectionPanel {
+            settingsPanel {
                 settingsSectionHeader("Release Radar By Rekon Labs", systemImage: "radar")
                 LabeledContent("Storage", value: "Local app-owned database")
                 LabeledContent("Delivery lanes", value: "Five persisted states")
@@ -76,7 +116,7 @@ struct SettingsView: View {
             operation: model.codexPluginOperation
         )
         return settingsScroll {
-            RekonSectionPanel {
+            settingsPanel {
                 settingsSectionHeader("Release Radar Codex Plugin", systemImage: "puzzlepiece.extension")
                 LabeledContent {
                     RekonBadge(plugin.status, tone: plugin.badgeTone, systemImage: plugin.systemImage)
@@ -110,7 +150,7 @@ struct SettingsView: View {
                 pluginActions(plugin.actions)
             }
 
-            RekonSectionPanel {
+            settingsPanel {
                 settingsSectionHeader("Codex live observation", systemImage: "bolt.horizontal.circle")
                 if let codexFailure = FailureStatePresentation(freshness: model.codexSnapshot.freshness) {
                     FailureStateView(presentation: codexFailure, style: .compact)
@@ -121,12 +161,12 @@ struct SettingsView: View {
                     .font(RekonTypography.metadata)
                     .foregroundStyle(RekonTheme.secondaryText)
             }
-            RekonSectionPanel {
+            settingsPanel {
                 settingsSectionHeader("Agent action bridge", systemImage: "arrow.left.arrow.right")
                 Text("Typed, authenticated delivery actions are handled by the app and audited locally.")
                     .foregroundStyle(RekonTheme.secondaryText)
             }
-            RekonSectionPanel {
+            settingsPanel {
                 settingsSectionHeader("Pushover", systemImage: "bell")
                 LabeledContent {
                     RekonBadge(model.isPushoverConfigured ? "Ready" : "Not configured", tone: model.isPushoverConfigured ? .success : .neutral)
@@ -207,6 +247,7 @@ struct SettingsView: View {
             case .remove:
                 Button("Remove", role: .destructive) { pendingPluginConfirmation = .remove }
                     .buttonStyle(RekonSecondaryButtonStyle())
+                    .releaseRadarControlBoundary()
                     .accessibilityIdentifier("codex-plugin-remove")
                     .focused($focusedPluginAction, equals: .remove)
             case .reinstall:
@@ -232,15 +273,17 @@ struct SettingsView: View {
 
     private var notifications: some View {
         settingsScroll {
-            RekonSectionPanel {
+            settingsPanel {
                 settingsSectionHeader("Pushover", systemImage: "bell")
                 LabeledContent("Status", value: model.isPushoverConfigured ? "Ready" : "Not configured")
                 SecureField("Application token", text: $model.pushoverAppToken)
                     .textContentType(.password)
                     .textFieldStyle(RekonQuietTextFieldStyle())
+                    .releaseRadarControlBoundary()
                 SecureField("User key", text: $model.pushoverUserKey)
                     .textContentType(.password)
                     .textFieldStyle(RekonQuietTextFieldStyle())
+                    .releaseRadarControlBoundary()
                 HStack {
                     Button("Save credentials") {
                         Task { await model.savePushoverCredentials() }
@@ -250,13 +293,14 @@ struct SettingsView: View {
                         Task { await model.removePushoverCredentials() }
                     }
                     .buttonStyle(RekonSecondaryButtonStyle())
+                    .releaseRadarControlBoundary()
                     .disabled(!model.isPushoverConfigured)
                 }
                 if let message = model.pushoverSettingsMessage {
                     Text(message).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            RekonSectionPanel {
+            settingsPanel {
                 settingsSectionHeader("Alert rules", systemImage: "checkmark.shield")
                 if let rules = model.alertRules {
                     alertRuleToggle(
@@ -308,54 +352,40 @@ struct SettingsView: View {
         accessibilityID: String,
         rules: AlertRuleSnapshot
     ) -> some View {
-        RekonCheckbox(
+        Toggle(
+            title,
             isOn: Binding(
                 get: { rules[kind] },
                 set: { enabled in
                     Task { await model.setAlertRule(kind, enabled: enabled) }
                 }
-            ),
-            title: title,
-            accessibilityLabel: title,
-            accessibilityIdentifier: accessibilityID
+            )
         )
-        .frame(height: 32, alignment: .leading)
+        .toggleStyle(.checkbox)
+        .font(RekonTypography.controlLabel)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .padding(.horizontal, 14)
+        .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(RekonTheme.accent.opacity(0.46))
+        }
+        .contentShape(Rectangle())
         .disabled(model.alertRuleControlsDisabled)
+        .accessibilityLabel(title)
+        .accessibilityIdentifier(accessibilityID)
     }
 
     private var projects: some View {
         settingsScroll {
-            RekonSectionPanel {
-                settingsSectionHeader("Application health", systemImage: "heart.text.square")
-                if let applicationHealth {
-                    if let target = applicationHealth.projectTarget {
-                        Text("\(target.projectID.rawValue) · registration \(target.registrationID) · generation \(target.requestGeneration)\(applicationHealth.rootPath.map { " · \($0)" } ?? "")")
-                            .font(.caption.monospaced())
-                            .textSelection(.enabled)
-                            .accessibilityIdentifier("settings-health-target")
-                    } else {
-                        Text("No project target is available. Storage, plugin, and observer recovery remain accessible here.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    ForEach(applicationHealth.checks) { check in
-                        LabeledContent(check.title, value: check.detail)
-                            .accessibilityIdentifier("settings-health-\(check.id)")
-                    }
-                    Text("Checked \(applicationHealth.checkedAt.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Check local storage, folder access, documentation, Codex observation, and the installed workflow.")
-                        .foregroundStyle(.secondary)
-                }
-                Button(isCheckingApplicationHealth ? "Checking…" : "Check Health") {
-                    refreshApplicationHealth()
-                }
-                .disabled(isCheckingApplicationHealth)
-                .accessibilityIdentifier("settings-health-refresh")
-            }
-            RekonSectionPanel {
+            ApplicationHealthPanel(
+                snapshot: applicationHealth,
+                isRefreshing: isCheckingApplicationHealth,
+                refresh: refreshApplicationHealth,
+                openProject: openApplicationHealthProject,
+                reviewConnections: { selectedTab = .connections }
+            )
+            settingsPanel {
                 settingsSectionHeader("Local projects", systemImage: "folder")
                 if let projects = model.dashboard?.projects, !projects.isEmpty {
                     ForEach(projects) { project in
@@ -379,13 +409,21 @@ struct SettingsView: View {
             .foregroundStyle(RekonTheme.primaryText)
     }
 
-    private func settingsScroll<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                content()
+    private func settingsPanel<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        RekonSectionPanel(content: content)
+            .releaseRadarNeutralBoundary(cornerRadius: 20)
+    }
+
+    private func settingsScroll<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    content()
+                }
+                .frame(width: SettingsLayout.contentWidth(for: geometry.size.width), alignment: .leading)
+                .padding(.horizontal, SettingsLayout.horizontalPadding)
+                .padding(.vertical, 28)
             }
-            .padding(28)
-            .frame(maxWidth: 980, alignment: .leading)
         }
         .foregroundStyle(RekonTheme.primaryText)
         .background(RekonTheme.background)
@@ -400,6 +438,202 @@ struct SettingsView: View {
             guard generation == applicationHealthGeneration else { return }
             applicationHealth = health
             isCheckingApplicationHealth = false
+        }
+    }
+
+    private func openApplicationHealthProject() {
+        guard let projectID = applicationHealth?.projectTarget?.projectID else { return }
+        Task { await model.navigate(to: .projectOverview(projectID)) }
+    }
+}
+
+struct ApplicationHealthPanel: View {
+    let snapshot: ApplicationHealthSnapshot?
+    let isRefreshing: Bool
+    let refresh: () -> Void
+    let openProject: () -> Void
+    let reviewConnections: () -> Void
+    @State private var showsTechnicalDetails = false
+
+    var body: some View {
+        RekonSectionPanel {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 16) {
+                    heading
+                    Spacer(minLength: 16)
+                    refreshButton
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    heading
+                    refreshButton
+                }
+            }
+
+            if let snapshot {
+                RekonBadge(summary, tone: attentionCount == 0 ? .success : .warning, systemImage: attentionCount == 0 ? "checkmark.circle" : "exclamationmark.triangle")
+                    .accessibilityIdentifier("settings-health-summary")
+
+                VStack(spacing: 10) {
+                    ForEach(snapshot.checks) { check in
+                        checkRow(check, hasProjectTarget: snapshot.projectTarget != nil)
+                    }
+                }
+
+                DisclosureGroup("Technical details", isExpanded: $showsTechnicalDetails) {
+                    technicalDetails(snapshot)
+                        .padding(.top, 10)
+                }
+                .font(RekonTypography.controlLabel)
+                .foregroundStyle(RekonTheme.secondaryText)
+                .accessibilityIdentifier("settings-health-technical-details")
+
+                Text("Checked \(snapshot.checkedAt.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.caption2)
+                    .foregroundStyle(RekonTheme.secondaryText)
+            } else {
+                Text("Check local storage, folder access, repository documentation, Codex observation, and the installed workflow.")
+                    .foregroundStyle(RekonTheme.secondaryText)
+            }
+        }
+        .releaseRadarNeutralBoundary(cornerRadius: 20)
+        .accessibilityIdentifier("settings-application-health")
+    }
+
+    private var attentionCount: Int {
+        snapshot?.checks.filter { $0.state != .ready }.count ?? 0
+    }
+
+    private var summary: String {
+        switch attentionCount {
+        case 0: "All checks are ready"
+        case 1: "1 check needs attention"
+        default: "\(attentionCount) checks need attention"
+        }
+    }
+
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label("Application health", systemImage: "heart.text.square")
+                .font(RekonTypography.cardTitle)
+                .foregroundStyle(RekonTheme.primaryText)
+            Text("See what is ready and go directly to the surface that can resolve each problem.")
+                .font(RekonTypography.metadata)
+                .foregroundStyle(RekonTheme.secondaryText)
+        }
+    }
+
+    private var refreshButton: some View {
+        Button(isRefreshing ? "Checking…" : (snapshot == nil ? "Check Application Health" : "Check Again"), action: refresh)
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .releaseRadarControlBoundary()
+            .disabled(isRefreshing)
+            .accessibilityIdentifier("settings-health-refresh")
+    }
+
+    private func checkRow(_ check: ProjectHealthSnapshot.Check, hasProjectTarget: Bool) -> some View {
+        let action = ApplicationHealthAction.recommended(
+            forCheckID: check.id,
+            state: check.state,
+            hasProjectTarget: hasProjectTarget
+        )
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 12) {
+                checkDescription(check)
+                Spacer(minLength: 12)
+                if let action { actionButton(action, checkID: check.id) }
+            }
+            VStack(alignment: .leading, spacing: 12) {
+                checkDescription(check)
+                if let action { actionButton(action, checkID: check.id) }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(RekonTheme.accent.opacity(0.46))
+        }
+        .accessibilityIdentifier("settings-health-\(check.id)")
+    }
+
+    private func checkDescription(_ check: ProjectHealthSnapshot.Check) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon(for: check.state))
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(color(for: check.state))
+                .frame(width: 20)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(check.title)
+                    .font(RekonTypography.controlLabelEmphasized)
+                    .foregroundStyle(RekonTheme.primaryText)
+                Text(check.detail)
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func actionButton(_ action: ApplicationHealthAction, checkID: String) -> some View {
+        Button(action.title) {
+            switch action {
+            case .openProject: openProject()
+            case .reviewConnections: reviewConnections()
+            case .checkAgain: refresh()
+            }
+        }
+        .buttonStyle(RekonSecondaryButtonStyle())
+        .releaseRadarControlBoundary()
+        .accessibilityIdentifier("settings-health-action-\(checkID)")
+    }
+
+    @ViewBuilder
+    private func technicalDetails(_ snapshot: ApplicationHealthSnapshot) -> some View {
+        if let target = snapshot.projectTarget {
+            VStack(alignment: .leading, spacing: 6) {
+                technicalValue("Project ID", target.projectID.rawValue)
+                technicalValue("Registration", target.registrationID)
+                technicalValue("Generation", String(target.requestGeneration))
+                if let rootPath = snapshot.rootPath {
+                    technicalValue("Folder", rootPath)
+                }
+            }
+            .accessibilityIdentifier("settings-health-target")
+        } else {
+            Text("No saved project target is available for this check.")
+                .font(RekonTypography.metadata)
+        }
+    }
+
+    private func technicalValue(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(RekonTheme.secondaryText)
+            Text(value)
+                .font(.caption.monospaced())
+                .foregroundStyle(RekonTheme.primaryText)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func icon(for state: ProjectHealthSnapshot.Check.State) -> String {
+        switch state {
+        case .ready: "checkmark.circle.fill"
+        case .attention: "exclamationmark.triangle.fill"
+        case .unavailable: "xmark.circle.fill"
+        }
+    }
+
+    private func color(for state: ProjectHealthSnapshot.Check.State) -> Color {
+        switch state {
+        case .ready: RekonTheme.success
+        case .attention: RekonTheme.warning
+        case .unavailable: RekonTheme.danger
         }
     }
 }

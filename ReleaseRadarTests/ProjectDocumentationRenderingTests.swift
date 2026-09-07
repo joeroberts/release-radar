@@ -205,13 +205,22 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         model.alertRules = try AlertRuleSnapshot(values: Dictionary(
             uniqueKeysWithValues: AlertRuleKind.allCases.map { ($0, true) }
         ))
-        try await render(
-            SettingsView(model: model),
-            name: "rds-notification-settings",
-            width: 760,
-            expected: nil,
-            pressIdentifiers: ["settings-notifications"]
-        )
+        for width in [1100.0, 620.0] {
+            try await render(
+                SettingsView(model: model),
+                name: "rds-notification-settings-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: ["Alert rules", "Blocked linked goals", "Paused goals"],
+                pressIdentifiers: ["settings-notifications"],
+                minimumElementSizes: [
+                    "alert-blocked-goals": CGSize(width: 240, height: 44),
+                    "alert-agent-completion-review": CGSize(width: 240, height: 44),
+                    "alert-needs-review": CGSize(width: 240, height: 44),
+                    "alert-paused-goals": CGSize(width: 240, height: 44),
+                ]
+            )
+        }
 
         let registration = ProjectRegistration(
             projectID: .init(rawValue: "rds-sheet-project"),
@@ -240,6 +249,71 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             expected: nil,
             expectedText: ["Project lifecycle help", "Initialize locally", "Prepare repository documentation", "Recover safely"]
         )
+    }
+
+    func testEmptyReviewInboxRendersWithoutAnEmptyColumnOrZeroBadge() async throws {
+        let projectID = ProjectID(rawValue: "empty-review-project")
+        var selection: ReviewItemID?
+        let view = NeedsReviewView(
+            inbox: .init(projectID: projectID, openItems: [], completedItems: []),
+            selectedItemID: Binding(get: { selection }, set: { selection = $0 }),
+            isPerformingAction: false,
+            actionFailure: nil,
+            projectName: "Empty Review Project",
+            authorizationRecovery: nil,
+            onDecision: { _, _ in },
+            onRecoverAuthorization: { _, _ in }
+        )
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                view,
+                name: "empty-review-inbox-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: ["Inbox clear", "No review decisions are waiting for this project."],
+                absentText: ["0 open", "OPEN"]
+            )
+        }
+    }
+
+    func testApplicationHealthPanelPresentsReadableRecoveryActionsAtWideAndCompactWidths() async throws {
+        let projectID = ProjectID(rawValue: "health-project")
+        let snapshot = ApplicationHealthSnapshot(
+            projectTarget: .init(projectID: projectID, registrationID: "health-registration", requestGeneration: 4),
+            rootPath: "/Synthetic/HealthProject",
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: [
+                .init(id: "storage", title: "Local storage ready", detail: "The current schema is available.", state: .ready),
+                .init(id: "folder", title: "Folder access needs attention", detail: "Reauthorize the saved folder.", state: .attention),
+                .init(id: "documentation", title: "Documentation needs attention", detail: "Complete repository setup.", state: .attention),
+                .init(id: "plugin", title: "Codex workflow ready", detail: "Version 0.1.7 is installed.", state: .ready),
+                .init(id: "observer", title: "Codex observation unavailable", detail: "No live attachment is configured.", state: .attention),
+            ]
+        )
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                ApplicationHealthPanel(
+                    snapshot: snapshot,
+                    isRefreshing: false,
+                    refresh: {},
+                    openProject: {},
+                    reviewConnections: {}
+                ),
+                name: "application-health-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "3 checks need attention",
+                    "Folder access needs attention",
+                    "Open Project",
+                    "Review Connection",
+                    "Technical details",
+                    "Check Again",
+                ]
+            )
+        }
     }
 
     func testPhaseLessRoutesRenderAsSupportedRDSStatesAtWideAndCompactWidths() async throws {
@@ -366,7 +440,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         width: Double,
         expected: ProjectGuidancePresentation?,
         expectedText: [String] = [],
-        pressIdentifiers: [String] = []
+        absentText: [String] = [],
+        pressIdentifiers: [String] = [],
+        minimumElementSizes: [String: CGSize] = [:]
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
@@ -418,12 +494,24 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                 }
             }
         }
+        let initialActual = accessibilityText(try XCTUnwrap(ownWindow))
+        for pressIdentifier in pressIdentifiers {
+            let button = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: pressIdentifier))
+            XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(300))
+        }
         let actual = accessibilityText(try XCTUnwrap(ownWindow))
         if let expected {
-            XCTAssertTrue(actual.contains(expected.status), "Missing actual guidance status: \(expected.status)")
+            XCTAssertTrue(
+                initialActual.contains(expected.status) || actual.contains(expected.status),
+                "Missing actual guidance status: \(expected.status)"
+            )
         }
         for text in expectedText {
             XCTAssertTrue(actual.contains(text), "Missing actual lifecycle content: \(text)")
+        }
+        for text in absentText {
+            XCTAssertFalse(actual.contains(text), "Unexpected lifecycle content: \(text)")
         }
         if name.contains("managed-unavailable") {
             XCTAssertTrue(actual.contains("catalog acceptance"), "Missing actual pending-catalog recovery")
@@ -431,10 +519,17 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertFalse(actual.contains("Copy repair prompt"))
         }
         if name.hasPrefix("m5-overview"), let action = expected?.actionTitle { XCTAssertTrue(actual.contains(action)) }
-        for pressIdentifier in pressIdentifiers {
-            let button = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: pressIdentifier))
-            XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
-            try await Task.sleep(for: .milliseconds(300))
+        for (identifier, minimumSize) in minimumElementSizes {
+            let element = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier))
+            var value: CFTypeRef?
+            XCTAssertEqual(AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &value), .success)
+            var size = CGSize.zero
+            let rawValue = try XCTUnwrap(value)
+            XCTAssertEqual(CFGetTypeID(rawValue), AXValueGetTypeID())
+            let axValue = rawValue as! AXValue
+            XCTAssertTrue(AXValueGetValue(axValue, .cgSize, &size))
+            XCTAssertGreaterThanOrEqual(size.width, minimumSize.width, "\(identifier) is too narrow")
+            XCTAssertGreaterThanOrEqual(size.height, minimumSize.height, "\(identifier) is too short")
         }
         print("M5 isolated render PID \(ProcessInfo.processInfo.processIdentifier): actual AX status and recovery verified; capture \(name)")
         let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))

@@ -3,6 +3,16 @@ import ReleaseRadarCore
 import RekonDesignSystem
 import SwiftUI
 
+enum NeedsReviewLayout {
+    static func showsInboxList(openItems: Int, deliveryGoals: Int, completedItems: Int) -> Bool {
+        openItems + deliveryGoals + completedItems > 0
+    }
+
+    static func showsCountBadge(openCount: Int) -> Bool {
+        openCount > 0
+    }
+}
+
 struct NeedsReviewView: View {
     let inbox: ReviewInboxProjection
     @Binding var selectedItemID: ReviewItemID?
@@ -29,6 +39,18 @@ struct NeedsReviewView: View {
         return selectedItemID == nil && inbox.openItems.isEmpty ? inbox.deliveryGoalAcceptances.first : nil
     }
 
+    private var openCount: Int {
+        inbox.openItems.count + inbox.deliveryGoalAcceptances.count
+    }
+
+    private var showsInboxList: Bool {
+        NeedsReviewLayout.showsInboxList(
+            openItems: inbox.openItems.count,
+            deliveryGoals: inbox.deliveryGoalAcceptances.count,
+            completedItems: inbox.completedItems.count
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -40,11 +62,16 @@ struct NeedsReviewView: View {
                     .accessibilityIdentifier("review-action-error")
             }
             Divider()
-            if usesCompactLayout {
+                .releaseRadarSeparator()
+            if !showsInboxList {
+                detail
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if usesCompactLayout {
                 VStack(spacing: 0) {
                     inboxList
                         .frame(height: 320)
                     Divider()
+                        .releaseRadarSeparator()
                     detail
                 }
             } else {
@@ -92,7 +119,9 @@ struct NeedsReviewView: View {
         RekonScreenHeader(
             title: "Needs Review",
             subtitle: "Owner decisions requested by imports and agents",
-            trailing: AnyView(RekonBadge("\(inbox.openItems.count + inbox.deliveryGoalAcceptances.count) open", tone: .warning))
+            trailing: NeedsReviewLayout.showsCountBadge(openCount: openCount)
+                ? AnyView(RekonBadge("\(openCount) open", tone: .warning))
+                : nil
         )
     }
 
@@ -170,7 +199,7 @@ struct NeedsReviewView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(isSelected ? RekonTheme.elevatedSurface : RekonTheme.surface, in: RoundedRectangle(cornerRadius: 10))
-            .overlay { RoundedRectangle(cornerRadius: 10).stroke(isSelected ? RekonTheme.accent : RekonTheme.borderSubtle) }
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(RekonTheme.accent.opacity(isSelected ? 1 : 0.46)) }
             .foregroundStyle(RekonTheme.primaryText)
     }
 
@@ -232,6 +261,7 @@ struct NeedsReviewView: View {
                             Task { await onDecision(.dismiss, item) }
                         }
                         .buttonStyle(RekonSecondaryButtonStyle())
+                        .releaseRadarControlBoundary()
                         .accessibilityIdentifier("review-dismiss")
                     }
                     .disabled(isPerformingAction || authorizationRecovery != nil)

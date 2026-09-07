@@ -50,6 +50,15 @@ interaction and accessibility. Existing light/dark wordmark requirements concern
 brand assets; those assets and mockup appearance examples do not require app theme
 support.
 
+Release Radar applies the existing RDS blue accent at the app boundary for neutral
+card and control outlines and for subdued structural separators. Selection and
+focus retain the stronger accent treatment; warnings and errors retain their
+semantic RDS colors. The native titlebar blends into the RDS background while
+preserving standard traffic-light controls, dragging, resizing and accessibility.
+Settings panels keep consistent horizontal margins and expand or contract with the
+window. The General tab remains a product summary; changing its content or adding
+preferences requires a separate owner product decision.
+
 ## Architecture
 
 The app is a menu-bar-capable SwiftUI macOS application with a local SQLite

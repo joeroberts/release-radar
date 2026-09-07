@@ -14,7 +14,7 @@ struct SidebarView: View {
                     .background(RekonTheme.backgroundRaised)
 
                 Rectangle()
-                    .fill(RekonTheme.borderSubtle)
+                    .fill(RekonTheme.accent.opacity(0.34))
                     .frame(width: 1, height: geometry.size.height)
 
                 detail
@@ -53,12 +53,17 @@ struct SidebarView: View {
                         model.isSidebarCompact.toggle()
                     }
                 } label: {
-                    Image(systemName: model.isSidebarCompact ? "chevron.right" : "chevron.left")
+                    Image(systemName: "sidebar.left")
                         .font(.system(size: 15, weight: .light))
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(RekonSecondaryButtonStyle())
-                .help(model.isSidebarCompact ? "Expand Sidebar" : "Collapse Sidebar")
+                .releaseRadarControlBoundary()
+                .help(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
+                .accessibilityLabel(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
+                .accessibilityHint(model.isSidebarCompact
+                    ? "Shows navigation labels beside their icons."
+                    : "Hides navigation labels and keeps their icons visible.")
                 .accessibilityIdentifier("sidebar-collapse")
             }
             .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
@@ -74,6 +79,7 @@ struct SidebarView: View {
 
             if let currentProject = model.currentProject {
                 Divider()
+                    .releaseRadarSeparator()
                     .padding(.horizontal, 12)
 
                 if !model.isSidebarCompact {
@@ -394,5 +400,40 @@ struct RekonScreenHeader: View {
         .padding(.horizontal, 28)
         .padding(.top, 26)
         .padding(.bottom, 20)
+    }
+}
+
+private struct ReleaseRadarBoundaryModifier: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
+    let cornerRadius: CGFloat
+    let opacity: Double
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(
+                    RekonTheme.accent.opacity(isEnabled ? opacity : opacity * 0.42),
+                    lineWidth: RekonBorder.hairline
+                )
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+extension View {
+    func releaseRadarNeutralBoundary(cornerRadius: CGFloat) -> some View {
+        modifier(ReleaseRadarBoundaryModifier(cornerRadius: cornerRadius, opacity: 0.46))
+    }
+
+    func releaseRadarControlBoundary() -> some View {
+        modifier(ReleaseRadarBoundaryModifier(cornerRadius: RekonTheme.Radius.control, opacity: 0.64))
+    }
+
+    func releaseRadarSeparator() -> some View {
+        overlay {
+            Rectangle()
+                .fill(RekonTheme.accent.opacity(0.34))
+                .allowsHitTesting(false)
+        }
     }
 }

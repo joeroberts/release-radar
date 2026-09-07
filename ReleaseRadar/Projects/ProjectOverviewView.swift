@@ -53,7 +53,7 @@ struct ProjectOverviewView: View {
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
+                    .releaseRadarNeutralBoundary(cornerRadius: 14)
 
                 if project.phases.isEmpty {
                     RekonCallout(tone: .information, systemImage: "flag.badge.plus") {
@@ -87,7 +87,7 @@ struct ProjectOverviewView: View {
                         ForEach(project.evidence) { EvidenceDetailView(evidence: $0) }
                     }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
+                        .releaseRadarNeutralBoundary(cornerRadius: 14)
                 }
 
                 VStack(alignment: .leading, spacing: 14) {
@@ -127,7 +127,7 @@ struct ProjectOverviewView: View {
                 }
                 .padding(20)
                 .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
+                .releaseRadarNeutralBoundary(cornerRadius: 14)
             }
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -159,11 +159,13 @@ struct ProjectOverviewView: View {
             if loadProjectSettings != nil {
                 Button(isLoadingSettings ? "Loading…" : "Manage Project", action: openSettings)
                     .buttonStyle(RekonSecondaryButtonStyle())
+                    .releaseRadarControlBoundary()
                     .disabled(isLoadingSettings)
                     .accessibilityIdentifier("project-manage")
             }
             Button("Help") { showsHelp = true }
                 .buttonStyle(RekonSecondaryButtonStyle())
+                .releaseRadarControlBoundary()
                 .accessibilityIdentifier("project-help")
         }
     }
@@ -219,6 +221,7 @@ struct ProjectOverviewView: View {
                     )
                 }
                 .buttonStyle(RekonSecondaryButtonStyle())
+                .releaseRadarControlBoundary()
                 .accessibilityIdentifier("project-guidance-copy-prompt")
             }
             if let promptCopyResult {
@@ -231,6 +234,7 @@ struct ProjectOverviewView: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
+        .releaseRadarNeutralBoundary(cornerRadius: 14)
         .accessibilityIdentifier("project-guidance-status")
     }
 
@@ -244,6 +248,7 @@ struct ProjectOverviewView: View {
                     .foregroundStyle(RekonTheme.secondaryText)
                 Button("Preview Documentation Action") { loadDocumentationPreview(registration) }
                     .buttonStyle(RekonSecondaryButtonStyle())
+                    .releaseRadarControlBoundary()
                     .disabled(isPerformingDocumentationSetup)
                     .accessibilityIdentifier("project-documentation-preview")
                 if let preview = documentationSetupPreview {
@@ -269,6 +274,7 @@ struct ProjectOverviewView: View {
                     Text(documentationSetupMessage).font(.caption).foregroundStyle(RekonTheme.secondaryText)
                 }
             }
+            .releaseRadarNeutralBoundary(cornerRadius: 20)
         }
     }
 
@@ -287,6 +293,7 @@ struct ProjectOverviewView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
         }
+        .releaseRadarNeutralBoundary(cornerRadius: RekonTheme.Radius.card)
     }
 
     private func openSettings() {

@@ -43,7 +43,7 @@ struct TicketCardView: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? RekonTheme.accent : RekonTheme.borderSubtle, lineWidth: isSelected ? 1.5 : 0.75)
+                    .stroke(RekonTheme.accent.opacity(isSelected ? 1 : 0.46), lineWidth: isSelected ? 1.5 : 0.75)
             }
         }
         .buttonStyle(.plain)
@@ -71,7 +71,7 @@ struct TicketCardView: View {
     }
 
     private var metadataSeparator: some View {
-        Divider().frame(height: metadataFontSize * 1.25)
+        Divider().releaseRadarSeparator().frame(height: metadataFontSize * 1.25)
     }
 
     private func signal(systemImage: String, count: Int, color: Color) -> some View {

@@ -218,3 +218,24 @@ the app-owned plugin operation. The existing authorization for scoped commits,
 branch push, and PR update remains; merge, broad system-service changes, owner-data
 reset, direct plugin/configuration mutation outside the app operation, publication,
 and cleanup remain unauthorized.
+
+## Owner-authorized UI correction checkpoint — 2026-09-07
+
+The owner authorized a same-outcome correction pass for the running macOS app. It
+is limited to blending the native titlebar into the RDS background, clarifying the
+sidebar collapse control, centering the truly empty Needs Review state without a
+zero badge or empty list column, making Settings panels responsive, repairing alert
+rule spacing and hit targets, clarifying Application Health status and recovery
+actions, and replacing neutral gray card/control/separator boundaries with subdued
+use of the existing RDS accent. Native traffic-light controls, window behavior,
+semantic warning/error colors, current persisted behavior and the General tab's
+existing content remain unchanged.
+
+Focused tests cover native window capabilities, responsive widths, empty-review
+suppression, alert-rule accessibility sizes, health recovery routing, and compact
+and wide native rendering. Completion also requires a signed build, visual and
+accessibility inspection of the installed app at ordinary and compact sizes, plugin
+lifecycle readback after replacement, and one fresh independent UX/code review.
+The existing installation and launch authorization applies to this corrected
+candidate; merge, external publication, owner-data reset, direct SQLite/Codex
+configuration mutation and cleanup remain unauthorized.

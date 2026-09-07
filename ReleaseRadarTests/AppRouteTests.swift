@@ -6,6 +6,71 @@ import ReleaseRadarCore
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testMainWindowChromeBlendsWithTheAppWithoutRemovingNativeControls() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 640),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+
+        ReleaseRadarWindowChrome.apply(to: window)
+
+        XCTAssertTrue(window.titlebarAppearsTransparent)
+        XCTAssertEqual(window.titleVisibility, .hidden)
+        XCTAssertEqual(window.backgroundColor, ReleaseRadarWindowChrome.backgroundColor)
+        XCTAssertTrue(window.styleMask.contains(.fullSizeContentView))
+        XCTAssertTrue(window.isMovableByWindowBackground)
+        XCTAssertTrue(window.styleMask.contains(.closable))
+        XCTAssertTrue(window.styleMask.contains(.miniaturizable))
+        XCTAssertTrue(window.styleMask.contains(.resizable))
+        XCTAssertFalse(window.standardWindowButton(.closeButton)?.isHidden ?? true)
+        XCTAssertFalse(window.standardWindowButton(.miniaturizeButton)?.isHidden ?? true)
+        XCTAssertFalse(window.standardWindowButton(.zoomButton)?.isHidden ?? true)
+    }
+
+    func testResponsiveSettingsContentUsesTheAvailableWidth() {
+        XCTAssertEqual(SettingsLayout.contentWidth(for: 1_400), 1_344)
+        XCTAssertEqual(SettingsLayout.contentWidth(for: 620), 564)
+        XCTAssertEqual(SettingsLayout.contentWidth(for: 40), 0)
+    }
+
+    func testEmptyReviewLayoutSuppressesTheListAndZeroBadge() {
+        XCTAssertFalse(NeedsReviewLayout.showsInboxList(openItems: 0, deliveryGoals: 0, completedItems: 0))
+        XCTAssertTrue(NeedsReviewLayout.showsInboxList(openItems: 0, deliveryGoals: 0, completedItems: 1))
+        XCTAssertFalse(NeedsReviewLayout.showsCountBadge(openCount: 0))
+        XCTAssertTrue(NeedsReviewLayout.showsCountBadge(openCount: 1))
+    }
+
+    func testApplicationHealthActionsLeadToTheRelevantRecoverySurface() {
+        let attention: ProjectHealthSnapshot.Check.State = .attention
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "folder", state: attention, hasProjectTarget: true),
+            .openProject
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "documentation", state: attention, hasProjectTarget: true),
+            .openProject
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "plugin", state: attention, hasProjectTarget: true),
+            .reviewConnections
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "observer", state: attention, hasProjectTarget: true),
+            .reviewConnections
+        )
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(forCheckID: "storage", state: .unavailable, hasProjectTarget: false),
+            .checkAgain
+        )
+        XCTAssertNil(ApplicationHealthAction.recommended(forCheckID: "plugin", state: .ready, hasProjectTarget: true))
+        XCTAssertNil(ApplicationHealthAction.recommended(forCheckID: "folder", state: attention, hasProjectTarget: false))
+    }
+
+    @MainActor
     func testAppSettingsCommandUsesTheInShellSettingsRoute() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SettingsCommand-\(UUID().uuidString)", isDirectory: true)

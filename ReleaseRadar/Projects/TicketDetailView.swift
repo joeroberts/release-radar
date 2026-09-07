@@ -199,7 +199,7 @@ struct TicketDetailView: View {
         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 10))
         .overlay {
             RoundedRectangle(cornerRadius: 10)
-                .stroke(RekonTheme.borderSubtle)
+                .stroke(RekonTheme.accent.opacity(0.46))
         }
     }
 }

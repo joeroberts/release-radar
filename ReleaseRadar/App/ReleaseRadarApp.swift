@@ -2,6 +2,7 @@ import AppKit
 import Darwin
 import OSLog
 import ReleaseRadarCore
+import RekonDesignSystem
 import SwiftUI
 
 enum AppHostMode: Equatable {
@@ -271,19 +272,23 @@ struct ReleaseRadarApp: App {
 
     var body: some Scene {
         Window("Release Radar", id: "main") {
-            if let model {
-                SidebarView(model: model)
-                    .frame(minWidth: 760, minHeight: 520)
-            } else if let maintenanceSession {
-                DocumentationMaintenanceView(session: maintenanceSession)
-                    .frame(minWidth: 620, minHeight: 520)
-                    .task {
-                        appDelegate.maintenanceSession = maintenanceSession
-                        await maintenanceSession.connectExistingBridge()
-                    }
-            } else {
-                Text(maintenanceError ?? (AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance is unavailable"))
+            Group {
+                if let model {
+                    SidebarView(model: model)
+                        .frame(minWidth: 760, minHeight: 520)
+                } else if let maintenanceSession {
+                    DocumentationMaintenanceView(session: maintenanceSession)
+                        .frame(minWidth: 620, minHeight: 520)
+                        .task {
+                            appDelegate.maintenanceSession = maintenanceSession
+                            await maintenanceSession.connectExistingBridge()
+                        }
+                } else {
+                    Text(maintenanceError ?? (AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) ? "Release Radar XCTest host is isolated" : "Documentation maintenance is unavailable"))
+                }
             }
+            .background(RekonTheme.background.ignoresSafeArea())
+            .background(ReleaseRadarWindowChromeReader())
         }
         .defaultSize(width: 1600, height: 820)
         .commands {
@@ -316,6 +321,40 @@ struct ReleaseRadarApp: App {
             }
         }
 
+    }
+}
+
+@MainActor
+enum ReleaseRadarWindowChrome {
+    static var backgroundColor: NSColor { NSColor(RekonTheme.background) }
+
+    static func apply(to window: NSWindow) {
+        window.styleMask.insert(.fullSizeContentView)
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.backgroundColor = backgroundColor
+        window.isMovableByWindowBackground = true
+    }
+}
+
+private struct ReleaseRadarWindowChromeReader: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        WindowReaderView()
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        if let window = nsView.window {
+            ReleaseRadarWindowChrome.apply(to: window)
+        }
+    }
+
+    private final class WindowReaderView: NSView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let window {
+                ReleaseRadarWindowChrome.apply(to: window)
+            }
+        }
     }
 }
 
@@ -366,6 +405,7 @@ private struct MenuBarContent: View {
                 .foregroundStyle(.secondary)
         } else {
             Divider()
+                .releaseRadarSeparator()
             ForEach(recentNotifications) { item in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title).font(.headline)
@@ -382,6 +422,7 @@ private struct MenuBarContent: View {
         }
 
         Divider()
+            .releaseRadarSeparator()
 
         Button("Quit") {
             NSApplication.shared.terminate(nil)

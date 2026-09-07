@@ -62,6 +62,7 @@ struct ProjectHealthView: View {
                    let reauthorize {
                     Button("Reauthorize Saved Folder…", action: reauthorize)
                         .buttonStyle(RekonSecondaryButtonStyle())
+                        .releaseRadarControlBoundary()
                         .accessibilityIdentifier("project-health-reauthorize")
                 }
                 Text("Checked \(snapshot.checkedAt.formatted(date: .abbreviated, time: .shortened))")
@@ -72,6 +73,7 @@ struct ProjectHealthView: View {
                     .foregroundStyle(RekonTheme.secondaryText)
             }
         }
+        .releaseRadarNeutralBoundary(cornerRadius: 20)
         .accessibilityIdentifier("project-health")
     }
 
@@ -87,6 +89,7 @@ struct ProjectHealthView: View {
     private var refreshButton: some View {
         Button(isRefreshing ? "Checking…" : "Check Health", action: refresh)
             .buttonStyle(RekonSecondaryButtonStyle())
+            .releaseRadarControlBoundary()
             .disabled(isRefreshing)
             .accessibilityIdentifier("project-health-refresh")
     }
@@ -135,6 +138,7 @@ struct ProjectSettingsEditor: View {
             Text("Project settings").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
             TextField("Project name", text: $name)
                 .textFieldStyle(RekonQuietTextFieldStyle())
+                .releaseRadarControlBoundary()
                 .accessibilityIdentifier("project-settings-name")
             RekonCard {
                 VStack(alignment: .leading, spacing: 10) {
@@ -165,6 +169,7 @@ struct ProjectSettingsEditor: View {
                 Spacer()
                 Button("Cancel", action: { dismiss() })
                     .buttonStyle(RekonSecondaryButtonStyle())
+                    .releaseRadarControlBoundary()
                     .keyboardShortcut(.cancelAction)
                     .disabled(isSaving)
                 Button(isSaving ? "Saving…" : "Save") { performSave() }
