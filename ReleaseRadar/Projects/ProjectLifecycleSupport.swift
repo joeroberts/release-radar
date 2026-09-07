@@ -350,23 +350,168 @@ struct ProjectLifecycleConfirmationView: View {
     }
 }
 
+struct ProjectRemovalConfirmationView: View {
+    @Environment(\.dismiss) private var dismiss
+    let preview: ProjectRemovalPreview
+    let confirm: () async throws -> Void
+    @State private var isRemoving = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Label("Remove \(preview.projectName) from tracking?", systemImage: "trash")
+                .font(RekonTypography.screenTitle)
+                .foregroundStyle(RekonTheme.primaryText)
+            Text("Release Radar will delete this project’s live delivery graph, saved folder authorization, and operational capabilities. Repository files are never changed.")
+                .foregroundStyle(RekonTheme.secondaryText)
+            RekonCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Exact project registration").font(.headline)
+                    Text(preview.projectID.rawValue).font(.caption.monospaced()).textSelection(.enabled)
+                    Text("registration \(preview.registration.registrationID) · generation \(preview.registration.requestGeneration)")
+                        .font(.caption.monospaced()).foregroundStyle(RekonTheme.secondaryText).textSelection(.enabled)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 18) { removalCounts }
+                        VStack(alignment: .leading, spacing: 8) { removalCounts }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            RekonCallout(tone: .warning, systemImage: "clock.badge.checkmark") {
+                Text("Read-only history will remain").font(.headline)
+                Text("Audit attribution, delivery events, review and completion context, and notification outcomes remain discoverable under Removed Projects. This action cannot be restored; add the folder again to create a new registration.")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let errorMessage {
+                RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                    Text("Project was not removed").font(.headline)
+                    Text(errorMessage).foregroundStyle(RekonTheme.secondaryText)
+                }
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(isRemoving)
+                    .accessibilityIdentifier("project-removal-cancel")
+                Button(isRemoving ? "Removing…" : "Remove from Tracking") { performRemoval() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(RekonTheme.danger)
+                    .controlSize(.large)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isRemoving)
+                    .accessibilityIdentifier("project-removal-confirm")
+            }
+        }
+        .padding(28)
+        .frame(minWidth: 520, idealWidth: 650)
+        .foregroundStyle(RekonTheme.primaryText)
+        .background(RekonTheme.background)
+        .accessibilityIdentifier("project-removal-confirmation")
+    }
+
+    @ViewBuilder private var removalCounts: some View {
+        Text("\(preview.counts.phases) phases")
+        Text("\(preview.counts.tickets) tickets")
+        Text("\(preview.counts.evidence) evidence items")
+        Text("\(preview.counts.history) history events")
+    }
+
+    private func performRemoval() {
+        isRemoving = true
+        errorMessage = nil
+        Task {
+            do {
+                try await confirm()
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                isRemoving = false
+            }
+        }
+    }
+}
+
+struct RemovedProjectView: View {
+    let project: RemovedProjectRecord
+    let activity: ProjectActivityProjection
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 14) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top) { heading; Spacer(); retainedCounts }
+                    VStack(alignment: .leading, spacing: 14) { heading; retainedCounts }
+                }
+                RekonCallout(tone: .information, systemImage: "lock") {
+                    Text("Retained history is read-only").font(.headline)
+                    Text("This is the historical record for the removed registration. It has no saved folder access, live delivery graph, notifications, or restore action.")
+                        .foregroundStyle(RekonTheme.secondaryText)
+                }
+                Text("registration \(project.registration.registrationID) · generation \(project.registration.requestGeneration)")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .textSelection(.enabled)
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 26)
+            .padding(.bottom, 18)
+            RekonSeparator()
+            ActivityView(
+                activity: activity,
+                projectName: project.projectName,
+                freshness: .init(state: .unavailable, lastObservedAt: nil),
+                showsFreshness: false
+            )
+        }
+        .background(RekonTheme.background)
+        .accessibilityIdentifier("removed-project-history")
+    }
+
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(project.projectName).font(RekonTypography.screenTitle)
+            Label("Removed from tracking \(project.removedAt.formatted(date: .abbreviated, time: .shortened))", systemImage: "clock.badge.xmark")
+                .foregroundStyle(RekonTheme.secondaryText)
+        }
+    }
+
+    private var retainedCounts: some View {
+        HStack(spacing: 18) {
+            Text("\(project.counts.phases) phases")
+            Text("\(project.counts.tickets) tickets")
+            Text("\(project.counts.history) history")
+        }
+        .font(.caption)
+        .foregroundStyle(RekonTheme.secondaryText)
+    }
+}
+
 struct ArchivedProjectView: View {
     let project: ArchivedProjectProjection
     let loadHealth: (() async -> ProjectHealthSnapshot)?
     let previewRestore: () async throws -> ProjectLifecyclePreview
     let restore: (ProjectLifecyclePreview) async throws -> Void
+    var previewRemoval: () async throws -> ProjectRemovalPreview = {
+        throw ProjectRemovalError.projectNotFound
+    }
+    var remove: (ProjectRemovalPreview) async throws -> Void = { _ in }
     @State private var health: ProjectHealthSnapshot?
     @State private var lifecyclePreview: ProjectLifecyclePreview?
     @State private var errorMessage: String?
     @State private var isWorking = false
     @State private var showsConfirmation = false
+    @State private var removalPreview: ProjectRemovalPreview?
+    @State private var showsRemovalConfirmation = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top) { heading; Spacer(); restoreButton }
-                    VStack(alignment: .leading, spacing: 12) { heading; restoreButton }
+                    HStack(alignment: .top) { heading; Spacer(); actionButtons }
+                    VStack(alignment: .leading, spacing: 12) { heading; actionButtons }
                 }
                 RekonCallout(tone: .information, systemImage: "lock") {
                     Text("Read-only while archived").font(.headline)
@@ -391,7 +536,7 @@ struct ArchivedProjectView: View {
                 }
                 if let errorMessage {
                     RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
-                        Text("Restore preview unavailable").font(.headline)
+                        Text("Project action unavailable").font(.headline)
                         Text(errorMessage).foregroundStyle(RekonTheme.secondaryText)
                     }
                 }
@@ -405,6 +550,13 @@ struct ArchivedProjectView: View {
             if let lifecyclePreview {
                 ProjectLifecycleConfirmationView(preview: lifecyclePreview) {
                     try await restore(lifecyclePreview)
+                }
+            }
+        }
+        .sheet(isPresented: $showsRemovalConfirmation) {
+            if let removalPreview {
+                ProjectRemovalConfirmationView(preview: removalPreview) {
+                    try await remove(removalPreview)
                 }
             }
         }
@@ -424,6 +576,16 @@ struct ArchivedProjectView: View {
             .disabled(isWorking)
             .accessibilityLabel("Restore Project")
             .accessibilityIdentifier("archived-project-restore")
+    }
+
+    private var actionButtons: some View {
+        HStack {
+            restoreButton
+            Button(isWorking ? "Preparing…" : "Remove…") { prepareRemoval() }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(isWorking)
+                .accessibilityIdentifier("archived-project-remove")
+        }
     }
 
     @ViewBuilder private var countCards: some View {
@@ -464,6 +626,20 @@ struct ArchivedProjectView: View {
         Task {
             health = await loadHealth()
             isWorking = false
+        }
+    }
+
+    private func prepareRemoval() {
+        isWorking = true
+        errorMessage = nil
+        Task {
+            defer { isWorking = false }
+            do {
+                removalPreview = try await previewRemoval()
+                showsRemovalConfirmation = true
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

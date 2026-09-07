@@ -123,7 +123,7 @@ public struct RepositoryRootRelocation: Sendable {
                     }
                     try c.execute("DELETE FROM project_bookmarks WHERE project_id = ? AND path = ?", bindings: [.text(project), .text(prepared.source.path)])
                     try c.execute("DELETE FROM project_roots WHERE project_id = ? AND id = ?", bindings: [.text(project), .text(prepared.source.binding.rootID.rawValue)])
-                    try c.execute("INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES (?, ?, ?, ?)", bindings: [.text(prepared.requestID.uuidString), .blob(prepared.requestHash), .blob(resultData), .text(ISO8601DateFormatter().string(from: Date()))])
+                    try c.execute("INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id, registration_id, request_generation) VALUES (?, ?, ?, ?, ?, ?, ?)", bindings: [.text(prepared.requestID.uuidString), .blob(prepared.requestHash), .blob(resultData), .text(ISO8601DateFormatter().string(from: Date()))] + ProjectLifecycleManager.receiptScopeBindings(prepared.source.registration))
                     return result
                 }
             } catch let RelocationReplay.result(result) { return result }
@@ -165,8 +165,9 @@ public struct RepositoryRootRelocation: Sendable {
               registration.projectID == token.projectID, token.requestHash.count == 64,
               token.requestHash.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else { throw RepositoryRootRelocationError.requestIDReused }
         guard try RelocationSource.registration(c, projectID: token.projectID) == registration else { throw RepositoryRootRelocationError.sourceChanged }
-        guard let row = try c.row("SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?", bindings: [.text(token.requestID.uuidString)]) else { return nil }
-        guard row["request_body"] == .blob(Data(token.requestHash.utf8)), case let .blob(data) = row["result_data"],
+        guard let row = try c.row("SELECT request_body, result_data, registration_project_id, registration_id, request_generation FROM agent_command_requests WHERE request_id = ?", bindings: [.text(token.requestID.uuidString)]) else { return nil }
+        guard ProjectLifecycleManager.receiptScopeMatches(row, registration: registration),
+              row["request_body"] == .blob(Data(token.requestHash.utf8)), case let .blob(data) = row["result_data"],
               let result = try? JSONDecoder().decode(RepositoryRootRelocationResult.self, from: data),
               result.projectID == token.projectID, result.rootID == token.rootID else { throw RepositoryRootRelocationError.requestIDReused }
         return result

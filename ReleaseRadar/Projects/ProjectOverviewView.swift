@@ -24,6 +24,8 @@ struct ProjectOverviewView: View {
     var performDocumentationSetup: ((ProjectDocumentationSetupPreview) async throws -> AuditEventID?)? = nil
     var previewArchive: (() async throws -> ProjectLifecyclePreview)? = nil
     var archive: ((ProjectLifecyclePreview) async throws -> Void)? = nil
+    var previewRemoval: (() async throws -> ProjectRemovalPreview)? = nil
+    var remove: ((ProjectRemovalPreview) async throws -> Void)? = nil
     @State private var promptCopyResult: CodexPromptCopyResult?
     @State private var settings: ProjectSettingsSnapshot?
     @State private var health: ProjectHealthSnapshot?
@@ -41,6 +43,8 @@ struct ProjectOverviewView: View {
     @State private var lifecyclePreviewError: String?
     @State private var isLoadingLifecyclePreview = false
     @State private var showsLifecycleConfirmation = false
+    @State private var removalPreview: ProjectRemovalPreview?
+    @State private var showsRemovalConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -51,7 +55,7 @@ struct ProjectOverviewView: View {
                 }
                 if let lifecyclePreviewError {
                     RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
-                        Text("Archive preview unavailable").font(.headline)
+                        Text("Project action unavailable").font(.headline)
                         Text(lifecyclePreviewError).foregroundStyle(RekonTheme.secondaryText)
                     }
                 }
@@ -176,6 +180,13 @@ struct ProjectOverviewView: View {
                 }
             }
         }
+        .sheet(isPresented: $showsRemovalConfirmation) {
+            if let removalPreview, let remove {
+                ProjectRemovalConfirmationView(preview: removalPreview) {
+                    try await remove(removalPreview)
+                }
+            }
+        }
         .sheet(isPresented: $showsSettings) {
             if let settings, let saveProjectSettings {
                 ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks) { name, excluded in
@@ -212,6 +223,12 @@ struct ProjectOverviewView: View {
                     .disabled(isLoadingLifecyclePreview)
                     .accessibilityIdentifier("project-archive")
             }
+            if previewRemoval != nil, remove != nil {
+                Button(isLoadingLifecyclePreview ? "Preparing…" : "Remove…") { prepareRemoval() }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .disabled(isLoadingLifecyclePreview)
+                    .accessibilityIdentifier("project-remove")
+            }
         }
     }
 
@@ -224,6 +241,21 @@ struct ProjectOverviewView: View {
             do {
                 lifecyclePreview = try await previewArchive()
                 showsLifecycleConfirmation = true
+            } catch {
+                lifecyclePreviewError = error.localizedDescription
+            }
+        }
+    }
+
+    private func prepareRemoval() {
+        guard let previewRemoval else { return }
+        isLoadingLifecyclePreview = true
+        lifecyclePreviewError = nil
+        Task {
+            defer { isLoadingLifecyclePreview = false }
+            do {
+                removalPreview = try await previewRemoval()
+                showsRemovalConfirmation = true
             } catch {
                 lifecyclePreviewError = error.localizedDescription
             }

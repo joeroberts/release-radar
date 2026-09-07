@@ -166,6 +166,66 @@ public actor DeliveryStore {
         )
     }
 
+    func transactRemovingProject<T: Sendable>(
+        projectID: ProjectID,
+        registrationID: String,
+        removalID: ProjectRemovalID,
+        actor: DeliveryActor,
+        reason: String,
+        _ body: @Sendable (SQLiteConnection) throws -> T
+    ) throws -> T {
+        guard readOnlyFiles == nil else { throw StoreError.unavailable("Documentation preflight is read-only") }
+        let connection = try availableConnection()
+        try connection.execute("BEGIN IMMEDIATE TRANSACTION")
+        let scopedConnection = connection.makeScopedConnection(access: .transaction)
+        defer { scopedConnection.invalidate() }
+        let auditEventID = AuditEventID(rawValue: UUID().uuidString)
+        do {
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ?",
+                bindings: [.text(projectID.rawValue), .text(registrationID)]
+            ) == 1 else { throw ProjectRemovalError.stalePreview }
+            try connection.execute(
+                "INSERT INTO project_removal_authorizations (project_id, registration_id, removal_id) VALUES (?, ?, ?)",
+                bindings: [.text(projectID.rawValue), .text(registrationID), .text(removalID.rawValue)]
+            )
+            let result = try connection.withTransactionCallbackRestrictions(allowProjectRemovalHistoryWrites: true) {
+                try body(scopedConnection)
+            }
+            guard connection.isInTransaction else {
+                throw SQLiteError(code: SQLITE_MISUSE, message: "The transaction callback ended the store-owned transaction")
+            }
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_removal_authorizations WHERE project_id = ? AND registration_id = ? AND removal_id = ?",
+                bindings: [.text(projectID.rawValue), .text(registrationID), .text(removalID.rawValue)]
+            ) == 1 else {
+                throw StoreError.unavailable("Project removal was not authorized for the current registration")
+            }
+            try connection.execute("DELETE FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)])
+            try connection.execute("DELETE FROM project_removal_authorizations WHERE project_id = ?", bindings: [.text(projectID.rawValue)])
+            try connection.execute(
+                """
+                INSERT INTO audit_events (
+                    id, actor_id, thread_id, thread_attribution, project_id, entity_type,
+                    entity_id, reason, created_at, historical_project_id, historical_registration_id
+                ) VALUES (?, ?, ?, ?, NULL, 'project', ?, ?, ?, ?, ?)
+                """,
+                bindings: [
+                    .text(auditEventID.rawValue), .text(actor.id),
+                    actor.threadID.map(SQLiteValue.text) ?? .null,
+                    .text(actor.threadAttribution.rawValue), .text(projectID.rawValue),
+                    .text(reason), .text(ISO8601DateFormatter().string(from: Date())),
+                    .text(projectID.rawValue), .text(registrationID),
+                ]
+            )
+            try connection.execute("COMMIT")
+            return result
+        } catch {
+            try? connection.execute("ROLLBACK")
+            throw error
+        }
+    }
+
     public func transact<T: Sendable>(
         actor: DeliveryActor,
         reason: String,
@@ -179,24 +239,48 @@ public actor DeliveryStore {
         let scopedConnection = connection.makeScopedConnection(access: .transaction)
         defer { scopedConnection.invalidate() }
         do {
+            let registrationBefore = try auditScope.flatMap { scope in
+                try connection.scalarText(
+                    "SELECT registration_id FROM project_registrations WHERE project_id = ?",
+                    bindings: [.text(scope.projectID.rawValue)]
+                )
+            }
             let result = try connection.withTransactionCallbackRestrictions {
                 try body(scopedConnection)
             }
             guard connection.isInTransaction else {
                 throw SQLiteError(code: SQLITE_MISUSE, message: "The transaction callback ended the store-owned transaction")
             }
+            let registrationAfter = try auditScope.flatMap { scope in
+                try connection.scalarText(
+                    "SELECT registration_id FROM project_registrations WHERE project_id = ?",
+                    bindings: [.text(scope.projectID.rawValue)]
+                )
+            }
+            let liveProjectID: SQLiteValue
+            if let auditScope,
+               try connection.scalarInt(
+                   "SELECT COUNT(*) FROM projects WHERE id = ?",
+                   bindings: [.text(auditScope.projectID.rawValue)]
+               ) == 1 {
+                liveProjectID = .text(auditScope.projectID.rawValue)
+            } else {
+                liveProjectID = .null
+            }
             try connection.execute(
-                "INSERT INTO audit_events (id, actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id, reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO audit_events (id, actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id, reason, created_at, historical_project_id, historical_registration_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 bindings: [
                     .text(auditEventID.rawValue),
                     .text(actor.id),
                     actor.threadID.map(SQLiteValue.text) ?? .null,
                     .text(actor.threadAttribution.rawValue),
-                    auditScope.map { .text($0.projectID.rawValue) } ?? .null,
+                    liveProjectID,
                     auditScope.map { .text($0.entityType.rawValue) } ?? .null,
                     auditScope.map { .text($0.entityID) } ?? .null,
                     .text(reason),
                     .text(ISO8601DateFormatter().string(from: Date())),
+                    auditScope.map { .text($0.projectID.rawValue) } ?? .null,
+                    (registrationAfter ?? registrationBefore).map(SQLiteValue.text) ?? .null,
                 ]
             )
             try connection.execute("COMMIT")

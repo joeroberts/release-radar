@@ -34,6 +34,33 @@ cancellation, companion/cloud/plugin work, unrelated navigation and shared RDS c
 No repository file deletion or relocation is part of removal. No real owner-data removal,
 installation or external notifications are authorized; use synthetic app-owned stores.
 
+## Controlling implementation refinement
+
+Schema v17 will separate retained history from live authority. A removal record owns the
+historical project ID, project name, original lifecycle, registration ID/generation,
+removal time and preview counts without a foreign key to `projects`. Existing scoped
+audits gain historical project/registration identity that survives the live foreign key;
+non-audit activity and complete Delivery Goal assignment events are copied into retained
+history tables whose only parent is the removal record. Event occurrence, observation and
+recording timestamps remain distinct nullable facts, so the migration does not invent a
+missing time, actor, lane or provenance.
+
+New durable command receipts carry the exact project/registration/generation that created
+them. A replay is valid only for that same registration; legacy unscoped receipts are not
+retargeted or backfilled. Removal updates queued notification outcomes to suppressed and
+in-flight outcomes to unknown before retaining them, then invalidates occurrences and
+deletes the live notification rows so relaunch cannot replay them.
+
+One store-owned transaction creates the removal record and retained snapshots, authorizes
+the exact project for the otherwise-protected task-history deletes, removes dependent plan
+and task rows in foreign-key order, deletes the live project row and capabilities, clears
+the transient authorization, and records the owner audit against historical identity. Any
+failure rolls back all of those changes. The existing archive lifecycle remains unchanged.
+Projects adds a separate Removed scope and read-only removed-project detail/history route;
+active and archived detail expose the exact-project removal preview, while removed detail
+offers neither operational controls nor restore. A stale route resolves to the matching
+removed registration when present and otherwise returns to Projects.
+
 ## Acceptance and material risks
 
 - Accessible exact-project preview names what is removed and what history/files remain.

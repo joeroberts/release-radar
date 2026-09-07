@@ -6,13 +6,14 @@ struct ActivityView: View {
     let activity: ProjectActivityProjection
     let projectName: String
     let freshness: CodexObservationFreshness
+    var showsFreshness = true
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 RekonScreenHeader(title: "Activity", subtitle: "Persisted delivery history for \(projectName)")
 
-                if let codexFailure = FailureStatePresentation(freshness: freshness) {
+                if showsFreshness, let codexFailure = FailureStatePresentation(freshness: freshness) {
                     FailureStateView(presentation: codexFailure)
                         .padding(.horizontal, 28)
                 }

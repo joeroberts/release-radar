@@ -160,7 +160,7 @@ public struct ProjectRootManagement: Sendable {
                     guard let bookmark = p.bookmark else { throw ProjectRootManagementError.unavailable }
                     try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0) ON CONFLICT(project_id, path) DO UPDATE SET bookmark_data = excluded.bookmark_data, is_stale = 0", bindings: [.text(project), .text(p.folder.path), .blob(bookmark)])
                 }
-                try c.execute("INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at) VALUES (?, ?, ?, ?)", bindings: [.text(p.requestID.uuidString), .blob(p.requestHash), .blob(try JSONEncoder().encode(auditID)), .text(ISO8601DateFormatter().string(from: Date()))])
+                try c.execute("INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id, registration_id, request_generation) VALUES (?, ?, ?, ?, ?, ?, ?)", bindings: [.text(p.requestID.uuidString), .blob(p.requestHash), .blob(try JSONEncoder().encode(auditID)), .text(ISO8601DateFormatter().string(from: Date()))] + ProjectLifecycleManager.receiptScopeBindings(p.registration))
                 return auditID
             }
         } catch let RootActionReplay.result(id) { return id }
@@ -196,8 +196,9 @@ public struct ProjectRootManagement: Sendable {
     }
     private static func replay(_ c: SQLiteConnection, _ p: PreparedProjectRootAction) throws -> AuditEventID? {
         guard try RootManagementSource.registration(c, projectID: p.registration.projectID) == p.registration else { throw ProjectRootManagementError.stale }
-        guard let row = try c.row("SELECT request_body, result_data FROM agent_command_requests WHERE request_id = ?", bindings: [.text(p.requestID.uuidString)]) else { return nil }
-        guard row["request_body"] == .blob(p.requestHash), case let .blob(data) = row["result_data"],
+        guard let row = try c.row("SELECT request_body, result_data, registration_project_id, registration_id, request_generation FROM agent_command_requests WHERE request_id = ?", bindings: [.text(p.requestID.uuidString)]) else { return nil }
+        guard ProjectLifecycleManager.receiptScopeMatches(row, registration: p.registration),
+              row["request_body"] == .blob(p.requestHash), case let .blob(data) = row["result_data"],
               let id = try? JSONDecoder().decode(AuditEventID.self, from: data) else { throw ProjectRootManagementError.stale }
         return id
     }

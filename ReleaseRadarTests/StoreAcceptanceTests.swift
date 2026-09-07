@@ -335,6 +335,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         let legacy = try SQLiteConnection(url: url)
         let reviewsBefore = try legacy.rows("SELECT id, project_id, kind, summary, status FROM review_items ORDER BY id")
+        try removeVersionSeventeenSchema(legacy, restoreTaskDeleteProtection: true)
         try legacy.execute("DROP TABLE project_registrations")
         try legacy.execute("ALTER TABLE projects DROP COLUMN lifecycle")
         try legacy.execute("PRAGMA user_version = 14")
@@ -420,7 +421,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "4e44d118b4c6e113b66de4a3ec7c13db4caaed5b7b844d28abc256a85bf3eab0")
+                       "0db65aa49d5e32419a617e70946c0549faa3c3a52c5bd15368fde7d2c7bf0fc8")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
@@ -2728,6 +2729,7 @@ final class StoreAcceptanceTests: XCTestCase {
         let db = try SQLiteConnection(url: url)
         let historicalEventSQL = try XCTUnwrap(db.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'delivery_goal_assignment_events'"))
         try StoreMigrations.migrate(db)
+        try removeVersionSeventeenSchema(db, restoreTaskDeleteProtection: true)
         // Synthetic v13 derives the historical event definition from the immutable
         // v12 fixture. The pinned v13 manifest verifies the complete source schema.
         try db.executeScript("""
@@ -3256,6 +3258,7 @@ final class StoreAcceptanceTests: XCTestCase {
         // code. Strip v13 as well; the genuine frozen fixtures remain untouched.
         let frozen = try SQLiteConnection(url: copyVerifiedVersionTwelveFixture())
         let legacyEvidenceSQL = try XCTUnwrap(frozen.scalarText("SELECT sql FROM sqlite_schema WHERE name = 'evidence'"))
+        try removeVersionSeventeenSchema(connection, restoreTaskDeleteProtection: false)
         try connection.executeScript("""
         DROP TABLE project_registrations;
         ALTER TABLE projects DROP COLUMN lifecycle;
@@ -3290,6 +3293,42 @@ final class StoreAcceptanceTests: XCTestCase {
         DROP INDEX IF EXISTS tickets_project_phase_identity_unique;
         ALTER TABLE tickets DROP COLUMN plan_legacy_continuation;
         """)
+    }
+
+    private func removeVersionSeventeenSchema(
+        _ connection: SQLiteConnection,
+        restoreTaskDeleteProtection: Bool
+    ) throws {
+        try connection.executeScript("""
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_ticket_delete;
+        DROP TRIGGER IF EXISTS ticket_tasks_reject_delete;
+        DROP TRIGGER IF EXISTS ticket_task_plans_reject_delete;
+        DROP INDEX IF EXISTS audit_events_historical_project_index;
+        DROP TABLE IF EXISTS retained_delivery_goal_assignment_events;
+        DROP TABLE IF EXISTS retained_project_activity_events;
+        DROP TABLE IF EXISTS project_removal_authorizations;
+        DROP TABLE IF EXISTS removed_projects;
+        ALTER TABLE audit_events DROP COLUMN historical_registration_id;
+        ALTER TABLE audit_events DROP COLUMN historical_project_id;
+        ALTER TABLE agent_command_requests DROP COLUMN request_generation;
+        ALTER TABLE agent_command_requests DROP COLUMN registration_id;
+        ALTER TABLE agent_command_requests DROP COLUMN registration_project_id;
+        """)
+        guard restoreTaskDeleteProtection else { return }
+        let frozen = try SQLiteConnection(url: copyVerifiedVersionTwelveFixture(), immutableReadOnly: true)
+        for trigger in [
+            "ticket_task_plans_reject_delete",
+            "ticket_tasks_reject_delete",
+            "ticket_task_plans_reject_ticket_delete",
+            "ticket_task_plans_reject_project_delete",
+        ] {
+            let sql = try XCTUnwrap(frozen.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'trigger' AND name = ?",
+                bindings: [.text(trigger)]
+            ))
+            try connection.executeScript(sql)
+        }
     }
 
     private func assertMigrationUnavailable(
