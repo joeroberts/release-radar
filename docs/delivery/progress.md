@@ -22,9 +22,11 @@ cloud/plugin mutation or application catalog acceptance is authorized. SQLite re
 exclusively app-owned. Canonical checkout/application state is preserved.
 
 The [C7 brief](task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md)
-starts from merged C6 `df7157b`. A fresh bounded read-only architecture consultation
-will resolve current service/connection recovery and retained-history/nonreplay contracts
-before a fresh delivery writer starts. The full approved C7 outcome remains included;
+starts from merged C6 `df7157b`. Fresh read-only consultation “Resolve C7 coordinated
+recovery boundaries” (`01a07d4b-28f0-7bf0-aa64-810d1e389e2f`) confirmed clean isolated
+`f1e8` at `3503793`, explicit Astra High/ceiling High, runtime unexposed. It is resolving
+current service/connection recovery and retained-history/nonreplay contracts before
+a fresh delivery writer starts. The full approved C7 outcome remains included;
 engineering sequencing does not omit backup, distinct resets, recovery or C12 readback.
 
 ## Delivered C6
