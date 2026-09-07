@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+@testable import ReleaseRadar
 @testable import ReleaseRadarCore
 
 final class RecoveryAcceptanceTests: XCTestCase {
@@ -211,7 +212,7 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let secondNotificationState = try await notificationState(in: secondRestore.store)
         let retainedRemovalCount = try await secondRestore.store.read { try $0.scalarInt("SELECT COUNT(*) FROM removed_projects") }
         XCTAssertEqual(secondNotificationState, "suppressed")
-        XCTAssertEqual(retainedRemovalCount, 1)
+        XCTAssertEqual(retainedRemovalCount, 2)
         let transport = RecoveryRecordingPushoverTransport()
         let notificationDispatcher = PushoverNotificationDispatcher(
             store: secondRestore.store,
@@ -227,7 +228,105 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let secondRemoval = ProjectRemovalManager(store: secondRestore.store)
         _ = try await secondRemoval.apply(try await secondRemoval.preview(projectID: .init(rawValue: "project-one")))
         let repeatedRemovalCount = try await secondRestore.store.read { try $0.scalarInt("SELECT COUNT(*) FROM removed_projects") }
-        XCTAssertEqual(repeatedRemovalCount, 2)
+        XCTAssertEqual(repeatedRemovalCount, 3)
+    }
+
+    func testRestorePreservesTheCurrentBlockedObservationWithoutSendingItAgain() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(in: store, id: "project-one", registrationID: "registration-one")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed linked goal") { connection in
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('thread-one', 'project-one', 'active', '2026-09-07T12:00:00Z')")
+            try connection.execute("INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES ('thread-link-one', 'project-one', 'ticket-one', 'thread-one')")
+        }
+        let recorder = MeaningfulDeliveryEventRecorder(store: store)
+        try await recorder.recordGoalObservation(
+            projectID: .init(rawValue: "project-one"), threadID: "thread-one", goalID: "goal-one",
+            status: .active, observedAt: Date(timeIntervalSince1970: 1)
+        )
+        try await store.transact(actor: .init(id: "fixture"), reason: "Link observed goal") { connection in
+            try connection.execute("INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES ('goal-link-one', 'project-one', 'ticket-one', 'thread-one', 'goal-one')")
+        }
+        let packageURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("active-goal.release-radar-backup", isDirectory: true)
+        let backup = ApplicationBackupManager(store: store, databaseURL: databaseURL)
+        _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
+
+        try await recorder.recordGoalObservation(
+            projectID: .init(rawValue: "project-one"), threadID: "thread-one", goalID: "goal-one",
+            status: .blocked, observedAt: Date(timeIntervalSince1970: 2)
+        )
+        let transport = RecoveryRecordingPushoverTransport()
+        let dispatcher = PushoverNotificationDispatcher(
+            store: store,
+            credentials: StaticPushoverCredentialsProvider(
+                credentials: .init(appToken: "synthetic-token", userKey: "synthetic-user")
+            ),
+            transport: transport
+        )
+        await dispatcher.prepareForLaunch()
+        await dispatcher.dispatchPending()
+        let initialSendCount = await transport.sendCount()
+        XCTAssertEqual(initialSendCount, 1)
+
+        let recovery = ApplicationRecoveryManager(store: store, databaseURL: databaseURL)
+        let result = try await recovery.restore(try await recovery.previewRestore(packageURL: packageURL))
+        try await MeaningfulDeliveryEventRecorder(store: result.store).recordGoalObservation(
+            projectID: .init(rawValue: "project-one"), threadID: "thread-one", goalID: "goal-one",
+            status: .blocked, observedAt: Date(timeIntervalSince1970: 3)
+        )
+        let restoredDispatcher = PushoverNotificationDispatcher(
+            store: result.store,
+            credentials: StaticPushoverCredentialsProvider(
+                credentials: .init(appToken: "synthetic-token", userKey: "synthetic-user")
+            ),
+            transport: transport
+        )
+        await restoredDispatcher.prepareForLaunch()
+        await restoredDispatcher.dispatchPending()
+
+        let finalSendCount = await transport.sendCount()
+        XCTAssertEqual(finalSendCount, 1)
+        let restoredStatus = try await result.store.read {
+            try $0.scalarText("SELECT status FROM observed_goals WHERE id = 'goal-one'")
+        }
+        let occurrenceActive = try await result.store.read {
+            try $0.scalarInt("SELECT is_active FROM notification_occurrences WHERE subject_key = 'project-one|goal_blocked|goal-one'")
+        }
+        XCTAssertEqual(restoredStatus, "blocked")
+        XCTAssertEqual(occurrenceActive, 1)
+    }
+
+    func testRestoreRetainsCurrentAttributedHistoryUnderItsDisplacedRegistration() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(in: store, id: "project-one", registrationID: "registration-one")
+        let packageURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("historical-provenance.release-radar-backup", isDirectory: true)
+        let backup = ApplicationBackupManager(store: store, databaseURL: databaseURL)
+        _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
+
+        try await store.transact(
+            actor: .init(id: "fixture"), reason: "Record newer attributable facts",
+            auditEventID: .init(rawValue: "newer-assignment-audit"),
+            auditScope: .init(projectID: .init(rawValue: "project-one"), entityType: .deliveryGoal, entityID: "newer-goal")
+        ) { connection in
+            try connection.execute("INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES ('newer-completion', 'project-one', 'ticket-one', 'Newer completion', '2026-09-07T13:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES ('project-one', 'phase-project-one', 'newer-goal', 'Newer goal', 'Retain it', 'draft', 0, '2026-09-07T13:00:00Z', '2026-09-07T13:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_assignment_events (audit_event_id, project_id, phase_id, ticket_id, previous_goal_id, current_goal_id, revision, action) VALUES ('newer-assignment-audit', 'project-one', 'phase-project-one', 'ticket-one', NULL, 'newer-goal', 0, 'assigned')")
+        }
+
+        let recovery = ApplicationRecoveryManager(store: store, databaseURL: databaseURL)
+        let result = try await recovery.restore(try await recovery.previewRestore(packageURL: packageURL))
+        let facts = try await result.store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM removed_projects WHERE historical_project_id = 'project-one' AND registration_id = 'registration-one'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id = 'newer-assignment-audit' AND project_id IS NULL AND historical_project_id = 'project-one' AND historical_registration_id = 'registration-one'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_project_activity_events WHERE source = 'completion' AND source_id = 'newer-completion'") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_delivery_goal_assignment_events assignments JOIN removed_projects removed USING (removal_id) WHERE assignments.audit_event_id = 'newer-assignment-audit' AND removed.registration_id = 'registration-one'") ?? -1,
+            ]
+        }
+        XCTAssertEqual(facts, [1, 1, 1, 1])
     }
 
     func testRecoveryRollsBackIfReplacementFailsAfterMovingTheOriginal() async throws {
@@ -272,6 +371,37 @@ final class RecoveryAcceptanceTests: XCTestCase {
         }
     }
 
+    func testRestoreRejectsAChangedRegistrationSetAfterPreviewAndResumesThePriorStore() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(in: store, id: "project-one", registrationID: "registration-one")
+        let packageURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("stale-restore.release-radar-backup", isDirectory: true)
+        let backup = ApplicationBackupManager(store: store, databaseURL: databaseURL)
+        _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
+        let recovery = ApplicationRecoveryManager(store: store, databaseURL: databaseURL)
+        let preview = try await recovery.previewRestore(packageURL: packageURL)
+        let confirmation = RecoveryConfirmation.restore(preview).message
+        XCTAssertTrue(confirmation.contains("project-one (project-one, registration-one)"))
+        try await seedProject(
+            in: store,
+            id: "project-two",
+            registrationID: "registration-two",
+            ticketID: "ticket-two"
+        )
+
+        do {
+            _ = try await recovery.restore(preview)
+            XCTFail("A restore preview cannot displace a registration added after confirmation")
+        } catch let failure as ApplicationRecoveryInstallFailure {
+            XCTAssertEqual(failure.cause, .stalePreview)
+            let projectCount = try await failure.recoveredStore.read {
+                try $0.scalarInt("SELECT COUNT(*) FROM projects")
+            }
+            XCTAssertEqual(projectCount, 2)
+        }
+    }
+
     func testInterruptedRecoveryMarkerRestoresOriginalStoreOnNextLaunch() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
@@ -300,6 +430,33 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: ApplicationRecoveryManager.markerURL(for: databaseURL).path))
     }
 
+    func testInterruptedRecoveryBeforeOriginalRemovalKeepsTheLiveStoreOnNextLaunch() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(in: store, id: "project-one", registrationID: "registration-one")
+        let packageURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("copy-crash.release-radar-backup", isDirectory: true)
+        let backup = ApplicationBackupManager(store: store, databaseURL: databaseURL)
+        _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
+        let recovery = ApplicationRecoveryManager(
+            store: store,
+            databaseURL: databaseURL,
+            faultInjection: .leaveInterruptedAfterRollbackCopied
+        )
+
+        do {
+            _ = try await recovery.restore(try await recovery.previewRestore(packageURL: packageURL))
+            XCTFail("The synthetic copy boundary must interrupt replacement")
+        } catch ApplicationRecoveryError.injectedFailure {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: databaseURL.path))
+        }
+
+        try ApplicationRecoveryManager.resolveInterruptedOperation(databaseURL: databaseURL)
+        let reopened = DeliveryStore(databaseURL: databaseURL)
+        let projectCount = try await reopened.read { try $0.scalarInt("SELECT COUNT(*) FROM projects") }
+        XCTAssertEqual(projectCount, 1)
+    }
+
     func testRecoveryMarkerCannotRedirectRollbackOutsideTheStoreDirectory() throws {
         let databaseURL = try makeDatabaseURL()
         let victimURL = databaseURL.deletingLastPathComponent().deletingLastPathComponent()
@@ -325,6 +482,41 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: victimURL), Data("unrelated".utf8))
     }
 
+    func testOriginalMovedMarkerRestoresRollbackAcrossAPartialSidecarRemoval() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await seedProject(in: store, id: "project-one", registrationID: "registration-one")
+        await store.close()
+        let operationID = UUID()
+        let rollbackURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent(".release-radar-rollback-\(operationID.uuidString).sqlite")
+        let stagingURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent(".release-radar-restore-\(operationID.uuidString).staging.sqlite")
+        try FileManager.default.copyItem(at: databaseURL, to: rollbackURL)
+        let rollbackJournal = URL(fileURLWithPath: rollbackURL.path + "-journal")
+        let liveJournal = URL(fileURLWithPath: databaseURL.path + "-journal")
+        try Data("rollback-sidecar".utf8).write(to: rollbackJournal)
+        try Data("partially-removed-live-sidecar".utf8).write(to: liveJournal)
+        let marker: [String: Any] = [
+            "operationID": operationID.uuidString,
+            "phase": "originalMoved",
+            "rollbackPath": rollbackURL.path,
+            "stagingPath": stagingURL.path,
+        ]
+        try JSONSerialization.data(withJSONObject: marker).write(
+            to: ApplicationRecoveryManager.markerURL(for: databaseURL),
+            options: .atomic
+        )
+        try FileManager.default.removeItem(at: databaseURL)
+
+        try ApplicationRecoveryManager.resolveInterruptedOperation(databaseURL: databaseURL)
+
+        XCTAssertEqual(try Data(contentsOf: liveJournal), Data("rollback-sidecar".utf8))
+        let reopened = DeliveryStore(databaseURL: databaseURL)
+        let projectCount = try await reopened.read { try $0.scalarInt("SELECT COUNT(*) FROM projects") }
+        XCTAssertEqual(projectCount, 1)
+    }
+
     func testRestoreCanReplaceUnreadableOriginalWithoutClaimingHistoryReconciliation() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
@@ -345,6 +537,8 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let result = try await recovery.restore(preview)
 
         XCTAssertFalse(result.newerHistoryWasReconciled)
+        let preservedOriginalURL = try XCTUnwrap(result.preservedOriginalURL)
+        XCTAssertEqual(try Data(contentsOf: preservedOriginalURL), Data("not a sqlite store".utf8))
         let restoredProjectCount = try await result.store.read { try $0.scalarInt("SELECT COUNT(*) FROM projects") }
         XCTAssertEqual(restoredProjectCount, 1)
     }

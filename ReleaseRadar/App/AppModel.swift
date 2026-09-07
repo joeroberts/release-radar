@@ -83,6 +83,7 @@ final class AppModel {
     private var projectOnboarding: FolderProjectOnboarding
     private let recoveryServices: ReleaseRadarAppServices?
     private var recoveryStartupError: String?
+    private var recoveryResumedAtLaunch: Bool
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
     private let dashboardLoader: @Sendable (DeliveryStore) async throws -> DashboardProjection
     private let requestIDGenerator: () -> UUID
@@ -127,6 +128,7 @@ final class AppModel {
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
         recoveryStartupError: String? = nil,
+        recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
         seedSampleData: Bool = false
     ) {
@@ -145,6 +147,7 @@ final class AppModel {
         self.requestIDGenerator = requestIDGenerator
         self.recoveryServices = recoveryServices
         self.recoveryStartupError = recoveryStartupError
+        self.recoveryResumedAtLaunch = recoveryResumedAtLaunch
         self.notificationCoordinator = notificationCoordinator
             ?? AppNotificationCoordinator(
                 store: store,
@@ -171,6 +174,7 @@ final class AppModel {
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
         recoveryStartupError: String? = nil,
+        recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
         seedSampleData: Bool = false,
         rr9ActivePhaseCaptureScenario: RR9ActivePhaseCaptureScenario?,
@@ -190,6 +194,7 @@ final class AppModel {
             requestIDGenerator: requestIDGenerator,
             recoveryServices: recoveryServices,
             recoveryStartupError: recoveryStartupError,
+            recoveryResumedAtLaunch: recoveryResumedAtLaunch,
             externalServicesSuppressed: externalServicesSuppressed,
             seedSampleData: seedSampleData
         )
@@ -451,7 +456,7 @@ final class AppModel {
             try await self.adoptRecovery(result)
             let history = result.newerHistoryWasReconciled
                 ? "Newer local removal, audit and terminal notification facts were retained."
-                : "The prior store was unreadable, so newer local history could not be reconciled."
+                : "The prior store was unreadable, so newer local history could not be reconciled. Its original bytes were preserved at \(result.preservedOriginalURL?.path ?? "an unavailable location")."
             self.applicationRecoveryMessage = "Backup restored. \(history) Folder permissions require reauthorization and queued backup notifications will not be sent."
         }
     }
@@ -511,6 +516,7 @@ final class AppModel {
     private func adoptRecovery(_ result: ApplicationRecoveryResult) async throws {
         store = result.store
         recoveryStartupError = nil
+        recoveryResumedAtLaunch = false
         if let recoveryServices {
             recoveryServices.adoptRecoveredStore(result.store)
             notificationCoordinator = recoveryServices.notificationCoordinator
@@ -762,7 +768,8 @@ final class AppModel {
     }
 
     func applicationHealth() async -> ApplicationHealthSnapshot {
-        if case .available = await store.availability,
+        let storeAvailability = await store.availability
+        if case .available = storeAvailability,
            let projectID = dashboard?.projects.first?.id {
             let project = await projectHealth(for: projectID)
             var checks = project.checks
@@ -783,7 +790,7 @@ final class AppModel {
         }
 
         let storageAvailable: Bool
-        if case .available = await store.availability { storageAvailable = true }
+        if case .available = storeAvailability { storageAvailable = true }
         else { storageAvailable = false }
         let plugin = CodexPluginSettingsPresentation(state: codexPluginState)
         let pluginReady: Bool
@@ -806,11 +813,17 @@ final class AppModel {
             .init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: "\(plugin.detail) \(pluginObservation)", state: pluginReady ? .ready : .attention),
             .init(id: "observer", title: "Codex observation: \(observer.status)", detail: observer.detail, state: codexSnapshot.freshness.state == .live ? .ready : .attention),
         ]
-        if let recoveryStartupError {
+        let recoveryDetail: String? = switch storeAvailability {
+        case .available:
+            recoveryStartupError
+        case let .unavailable(recovery):
+            "\(recovery.message) Original database: \(recovery.originalDatabaseURL.path)."
+        }
+        if let recoveryDetail {
             checks.insert(.init(
                 id: "recovery",
                 title: "Recovery requires attention",
-                detail: "Target: \(databaseURL.path). \(recoveryStartupError) Choose Restore Backup to validate and recover from a supported full backup; no plugin, permission or notification side effect occurs during inspection.",
+                detail: "Target: \(databaseURL.path). \(recoveryDetail) Choose Restore Backup to validate and recover from a supported full backup; no plugin, permission or notification side effect occurs during inspection.",
                 state: .unavailable
             ), at: 1)
         } else if let applicationRecoveryMessage {
@@ -880,6 +893,7 @@ final class AppModel {
 
     func acceptDeliveryGoal(_ item: DeliveryGoalAcceptanceReviewProjection) async {
         let projectID = item.projectID
+        let expectedRegistration = dashboard?.projects.first { $0.id == projectID }?.registration
         guard dashboardError == nil,
               !scopedIsPerformingReviewAction(for: projectID),
               !deliveryGoalAcceptanceNeedsReload(for: projectID),
@@ -896,6 +910,7 @@ final class AppModel {
                     projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project]))
                     .dispatch(.init(version: AgentCommandDispatcher.commandEnvelopeVersion,
                         requestID: requestID, projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
                         reason: "Owner accepted Delivery Goal \(item.goalID.rawValue)",
                         command: .transitionDeliveryGoal(projectID: projectID.rawValue,
                             phaseID: item.phaseID.rawValue, goalID: item.goalID.rawValue,
@@ -936,6 +951,7 @@ final class AppModel {
         to lane: TicketLane,
         ticketTaskPlanRevision: Int64? = nil
     ) async throws -> AgentCommandResult {
+        let expectedRegistration = dashboard?.projects.first { $0.id == projectID }?.registration
         if lane == .accepted, ticketID.rawValue.contains("\0") {
             return .init(
                 entityIDs: [],
@@ -954,6 +970,7 @@ final class AppModel {
                     version: AgentCommandDispatcher.commandEnvelopeVersion,
                     requestID: requestID,
                     projectRoot: project.canonicalRoot.path,
+                    expectedRegistration: expectedRegistration,
                     reason: "Owner transitioned ticket \(ticketID.rawValue) to \(lane.rawValue)",
                     command: .transitionTicket(
                         ticketID: ticketID.rawValue,
@@ -971,6 +988,7 @@ final class AppModel {
     }
 
     func setActivePhase(projectID: ProjectID, phaseID: PhaseID) async {
+        let expectedRegistration = dashboard?.projects.first { $0.id == projectID }?.registration
         guard dashboard?.projects.first(where: { $0.id == projectID })?.activePhaseID != phaseID else {
             return
         }
@@ -1020,6 +1038,7 @@ final class AppModel {
                         version: AgentCommandDispatcher.commandEnvelopeVersion,
                         requestID: requestID,
                         projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
                         reason: "Owner selected active phase \(phaseID.rawValue)",
                         command: .setActivePhase(phaseID: phaseID.rawValue)
                     ),
@@ -1111,6 +1130,7 @@ final class AppModel {
     }
 
     func performReviewDecision(_ decision: ReviewDecision, item: ReviewItemProjection) async {
+        let expectedRegistration = dashboard?.projects.first { $0.id == item.projectID }?.registration
         performingReviewActionProjectIDs.insert(item.projectID)
         reviewActionStates[item.projectID] = nil
         defer { performingReviewActionProjectIDs.remove(item.projectID) }
@@ -1130,6 +1150,7 @@ final class AppModel {
                         version: AgentCommandDispatcher.commandEnvelopeVersion,
                         requestID: UUID(),
                         projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
                         reason: "\(verb) review \(item.id.rawValue)",
                         command: command
                     ),
@@ -1510,7 +1531,7 @@ final class AppModel {
         }
         codexPluginOperation = .checking
         codexPluginAnnouncement = CodexPluginOperation.checking.announcement
-        if recoveryStartupError != nil {
+        if recoveryStartupError != nil || recoveryResumedAtLaunch {
             applyRecoveryCodexStatus(await codexPluginCoordinator.recoveryStatus())
             codexPluginOperation = nil
             return

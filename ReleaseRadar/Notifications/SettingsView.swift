@@ -618,7 +618,7 @@ private enum RecoveryRetryAction {
     case tracking
 }
 
-private enum RecoveryConfirmation: Equatable {
+enum RecoveryConfirmation: Equatable {
     case backup(ApplicationBackupPreview)
     case restore(ApplicationRestorePreview)
     case preferences
@@ -641,12 +641,21 @@ private enum RecoveryConfirmation: Equatable {
             let reconciliation = preview.newerHistoryReconciliationAvailable
                 ? "Newer local removal, audit and terminal notification facts will be reconciled."
                 : "The current store is unreadable; newer local history cannot be reconciled and will be reported unavailable."
-            return "Restore \(preview.restoredRegistrations.count) saved registration\(preview.restoredRegistrations.count == 1 ? "" : "s") and displace \(preview.displacedRegistrations.count) current registration\(preview.displacedRegistrations.count == 1 ? "" : "s"). \(reconciliation) Saved folder permissions will require reauthorization. Backed-up pending notifications will not be sent."
+            let restored = Self.targetList(preview.restoredTargets)
+            let displaced = Self.targetList(preview.displacedTargets)
+            return "Restore saved targets: \(restored). Displace current targets: \(displaced). \(reconciliation) Saved folder permissions will require reauthorization. Backed-up pending notifications will not be sent."
         case .preferences:
             return "Blocked-goal, completion-review and needs-review alerts will be enabled; paused-goal alerts will be disabled. Tracking data, history, plugin receipts and credentials are preserved."
         case let .tracking(preview):
             return "Remove \(preview.projects.count) active or archived project registration\(preview.projects.count == 1 ? "" : "s"). Retained activity, audits, prior removals, global preferences and plugin receipts remain available. This does not delete source repositories or credentials."
         }
+    }
+
+    private static func targetList(_ targets: [ApplicationRecoveryTarget]) -> String {
+        guard !targets.isEmpty else { return "none" }
+        return targets.map {
+            "\($0.name) (\($0.registration.projectID.rawValue), \($0.registration.registrationID))"
+        }.joined(separator: "; ")
     }
 }
 

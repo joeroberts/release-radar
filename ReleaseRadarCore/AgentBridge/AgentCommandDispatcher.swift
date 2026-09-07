@@ -291,9 +291,8 @@ public actor AgentCommandDispatcher {
     private func registrationScopeIsCurrent(
         _ envelope: AgentCommandEnvelope,
         project: AuthorizedProject,
-        origin: AgentCommandOrigin
+        origin _: AgentCommandOrigin
     ) async -> Bool {
-        guard case .externalAgent = origin else { return true }
         if let expected = envelope.expectedRegistration {
             return expected == project.registration
         }

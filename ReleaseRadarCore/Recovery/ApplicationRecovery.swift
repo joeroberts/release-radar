@@ -17,10 +17,18 @@ public struct ApplicationTrackingResetPreview: Equatable, Sendable {
 public struct ApplicationRestorePreview: Equatable, Sendable {
     public let packageURL: URL
     public let backupID: UUID
-    public let restoredRegistrations: [ProjectRegistration]
-    public let displacedRegistrations: [ProjectRegistration]
+    public let restoredTargets: [ApplicationRecoveryTarget]
+    public let displacedTargets: [ApplicationRecoveryTarget]
     public let newerHistoryReconciliationAvailable: Bool
     let databaseSHA256: String
+
+    public var restoredRegistrations: [ProjectRegistration] { restoredTargets.map(\.registration) }
+    public var displacedRegistrations: [ProjectRegistration] { displacedTargets.map(\.registration) }
+}
+
+public struct ApplicationRecoveryTarget: Equatable, Sendable {
+    public let name: String
+    public let registration: ProjectRegistration
 }
 
 public struct ApplicationRecoveryResult: Sendable {
@@ -28,17 +36,20 @@ public struct ApplicationRecoveryResult: Sendable {
     public let operationID: UUID
     public let requiresFreshServiceGraph: Bool
     public let newerHistoryWasReconciled: Bool
+    public let preservedOriginalURL: URL?
 
     public init(
         store: DeliveryStore,
         operationID: UUID,
         requiresFreshServiceGraph: Bool,
-        newerHistoryWasReconciled: Bool
+        newerHistoryWasReconciled: Bool,
+        preservedOriginalURL: URL? = nil
     ) {
         self.store = store
         self.operationID = operationID
         self.requiresFreshServiceGraph = requiresFreshServiceGraph
         self.newerHistoryWasReconciled = newerHistoryWasReconciled
+        self.preservedOriginalURL = preservedOriginalURL
     }
 }
 
@@ -74,6 +85,7 @@ public enum ApplicationRecoveryError: Error, LocalizedError, Equatable, Sendable
 
 enum ApplicationRecoveryFaultInjection: Equatable, Sendable {
     case none
+    case leaveInterruptedAfterRollbackCopied
     case failAfterOriginalMoved
     case leaveInterruptedAfterOriginalMoved
 }
@@ -180,11 +192,17 @@ public actor ApplicationRecoveryManager {
                 try Self.markRecovery(operationID: operationID, kind: "tracking_reset", connection: connection)
             }
             await stagingStore.close()
-            return try await install(stagingURL: stagingURL, operationID: operationID, historyReconciled: true)
+            return try await install(
+                stagingURL: stagingURL,
+                operationID: operationID,
+                historyReconciled: true,
+                preserveRollback: false
+            )
         } catch let failure as ApplicationRecoveryInstallFailure {
             throw failure
         } catch {
-            if faultInjection == .leaveInterruptedAfterOriginalMoved { throw error }
+            if faultInjection == .leaveInterruptedAfterOriginalMoved
+                || faultInjection == .leaveInterruptedAfterRollbackCopied { throw error }
             await store.resumeAfterRecoveryFailure()
             throw ApplicationRecoveryInstallFailure(cause: Self.recoveryCause(error), recoveredStore: store)
         }
@@ -194,11 +212,11 @@ public actor ApplicationRecoveryManager {
         let validated = try Self.validateBackupPackage(packageURL)
         let backupConnection = try SQLiteConnection(url: validated.databaseURL, immutableReadOnly: true, createIfMissing: false)
         defer { backupConnection.close() }
-        let restored = try Self.registrations(in: backupConnection)
-        let displaced: [ProjectRegistration]
+        let restored = try Self.recoveryTargets(in: backupConnection)
+        let displaced: [ApplicationRecoveryTarget]
         let canReconcile: Bool
         do {
-            displaced = try await store.read { try Self.registrations(in: $0) }
+            displaced = try await store.read { try Self.recoveryTargets(in: $0) }
             canReconcile = true
         } catch {
             displaced = []
@@ -207,8 +225,8 @@ public actor ApplicationRecoveryManager {
         return .init(
             packageURL: packageURL,
             backupID: validated.manifest.backupID,
-            restoredRegistrations: restored,
-            displacedRegistrations: displaced,
+            restoredTargets: restored,
+            displacedTargets: displaced,
             newerHistoryReconciliationAvailable: canReconcile,
             databaseSHA256: validated.manifest.databaseSHA256
         )
@@ -246,30 +264,50 @@ public actor ApplicationRecoveryManager {
             var historyReconciled = false
             if preview.newerHistoryReconciliationAvailable {
                 try await store.createRecoverySnapshot(at: currentSnapshotURL)
+                let currentConnection = try SQLiteConnection(
+                    url: currentSnapshotURL,
+                    immutableReadOnly: true,
+                    createIfMissing: false
+                )
+                let currentTargets: [ApplicationRecoveryTarget]
+                do {
+                    currentTargets = try Self.recoveryTargets(in: currentConnection)
+                    currentConnection.close()
+                } catch {
+                    currentConnection.close()
+                    throw error
+                }
+                guard currentTargets == preview.displacedTargets else {
+                    throw ApplicationRecoveryError.stalePreview
+                }
+                try Self.prepareRestoredStore(at: stagingURL, operationID: operationID)
                 try Self.reconcileNewerFacts(from: currentSnapshotURL, into: stagingURL)
                 historyReconciled = true
             } else {
                 await store.sealForRecovery()
+                try Self.prepareRestoredStore(at: stagingURL, operationID: operationID)
             }
-            try Self.prepareRestoredStore(at: stagingURL, operationID: operationID)
             return try await install(
                 stagingURL: stagingURL,
                 operationID: operationID,
-                historyReconciled: historyReconciled
+                historyReconciled: historyReconciled,
+                preserveRollback: !preview.newerHistoryReconciliationAvailable
             )
         } catch let failure as ApplicationRecoveryInstallFailure {
             throw failure
         } catch {
-            if faultInjection == .leaveInterruptedAfterOriginalMoved { throw error }
+            if faultInjection == .leaveInterruptedAfterOriginalMoved
+                || faultInjection == .leaveInterruptedAfterRollbackCopied { throw error }
             await store.resumeAfterRecoveryFailure()
             throw ApplicationRecoveryInstallFailure(cause: Self.recoveryCause(error), recoveredStore: store)
         }
     }
 
-    public static func resolveInterruptedOperation(databaseURL: URL) throws {
+    @discardableResult
+    public static func resolveInterruptedOperation(databaseURL: URL) throws -> Bool {
         try validateStoreLocation(databaseURL)
         let markerURL = markerURL(for: databaseURL)
-        guard FileManager.default.fileExists(atPath: markerURL.path) else { return }
+        guard FileManager.default.fileExists(atPath: markerURL.path) else { return false }
         guard try BackupPathValidator.isRegularFileWithoutFollowingLinks(markerURL) else {
             throw ApplicationRecoveryError.unsafeStorePlacement
         }
@@ -280,8 +318,16 @@ public actor ApplicationRecoveryManager {
         try validate(marker: marker, rollbackURL: rollbackURL, stagingURL: stagingURL, databaseURL: databaseURL)
         switch marker.phase {
         case .prepared:
+            if !FileManager.default.fileExists(atPath: databaseURL.path),
+               FileManager.default.fileExists(atPath: rollbackURL.path) {
+                removeStoreFiles(at: databaseURL)
+                try restoreRollback(rollbackURL: rollbackURL, databaseURL: databaseURL)
+            } else {
+                removeStoreFiles(at: rollbackURL)
+            }
             removeStoreFiles(at: stagingURL)
         case .originalMoved:
+            removeStoreFiles(at: databaseURL)
             try restoreRollback(rollbackURL: rollbackURL, databaseURL: databaseURL)
             removeStoreFiles(at: stagingURL)
         case .replacementInstalled:
@@ -294,6 +340,7 @@ public actor ApplicationRecoveryManager {
             }
         }
         try FileManager.default.removeItem(at: markerURL)
+        return true
     }
 
     static func markerURL(for databaseURL: URL) -> URL {
@@ -303,7 +350,8 @@ public actor ApplicationRecoveryManager {
     private func install(
         stagingURL: URL,
         operationID: UUID,
-        historyReconciled: Bool
+        historyReconciled: Bool,
+        preserveRollback: Bool
     ) async throws -> ApplicationRecoveryResult {
         try Self.validateStoreLocation(databaseURL)
         let rollbackURL = adjacentURL(label: "rollback-\(operationID.uuidString).sqlite")
@@ -315,10 +363,16 @@ public actor ApplicationRecoveryManager {
             stagingPath: stagingURL.path
         )
         try Self.writeMarker(prepared, to: markerURL)
+        var rollbackReady = false
         do {
             await store.close()
-            try Self.moveStoreFiles(from: databaseURL, to: rollbackURL, requireDatabase: true)
+            try Self.copyStoreFiles(from: databaseURL, to: rollbackURL, requireDatabase: true)
+            rollbackReady = true
+            if faultInjection == .leaveInterruptedAfterRollbackCopied {
+                throw ApplicationRecoveryError.injectedFailure
+            }
             try Self.writeMarker(prepared.withPhase(.originalMoved), to: markerURL)
+            Self.removeStoreFiles(at: databaseURL)
             if faultInjection == .failAfterOriginalMoved || faultInjection == .leaveInterruptedAfterOriginalMoved {
                 throw ApplicationRecoveryError.injectedFailure
             }
@@ -327,7 +381,9 @@ public actor ApplicationRecoveryManager {
             guard Self.storeIsValid(at: databaseURL) else {
                 throw ApplicationRecoveryError.replacementFailed
             }
-            Self.removeStoreFiles(at: rollbackURL)
+            if !preserveRollback {
+                Self.removeStoreFiles(at: rollbackURL)
+            }
             try FileManager.default.removeItem(at: markerURL)
             let freshStore = DeliveryStore(databaseURL: databaseURL)
             guard await freshStore.availability == .available else {
@@ -337,14 +393,16 @@ public actor ApplicationRecoveryManager {
                 store: freshStore,
                 operationID: operationID,
                 requiresFreshServiceGraph: true,
-                newerHistoryWasReconciled: historyReconciled
+                newerHistoryWasReconciled: historyReconciled,
+                preservedOriginalURL: preserveRollback ? rollbackURL : nil
             )
         } catch {
-            if faultInjection == .leaveInterruptedAfterOriginalMoved {
+            if faultInjection == .leaveInterruptedAfterOriginalMoved
+                || faultInjection == .leaveInterruptedAfterRollbackCopied {
                 throw error
             }
             var recoveredPriorState = false
-            if FileManager.default.fileExists(atPath: rollbackURL.path) {
+            if rollbackReady && FileManager.default.fileExists(atPath: rollbackURL.path) {
                 Self.removeStoreFiles(at: databaseURL)
                 if (try? Self.restoreRollback(rollbackURL: rollbackURL, databaseURL: databaseURL)) != nil {
                     recoveredPriorState = Self.storeIsValid(at: databaseURL)
@@ -456,12 +514,147 @@ public actor ApplicationRecoveryManager {
                 SELECT * FROM current_state.audit_events
                 WHERE historical_project_id IS NOT NULL AND project_id IS NULL;
 
-            INSERT OR IGNORE INTO notification_occurrences (
+            INSERT OR IGNORE INTO removed_projects (
+                removal_id, historical_project_id, project_name, original_lifecycle,
+                registration_id, request_generation, removed_at, phase_count,
+                ticket_count, evidence_count, history_count
+            )
+            SELECT lower(hex(randomblob(16))), projects.id, projects.name, projects.lifecycle,
+                registrations.registration_id, registrations.request_generation,
+                strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+                (SELECT COUNT(*) FROM current_state.phases WHERE project_id = projects.id),
+                (SELECT COUNT(*) FROM current_state.tickets WHERE project_id = projects.id),
+                (SELECT COUNT(*) FROM current_state.evidence WHERE project_id = projects.id),
+                (SELECT COUNT(*) FROM current_state.audit_events WHERE project_id = projects.id)
+            FROM current_state.projects projects
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = projects.id
+            WHERE projects.id IN (SELECT id FROM projects);
+
+            INSERT OR IGNORE INTO audit_events (
+                id, actor_id, thread_id, reason, created_at, thread_attribution,
+                project_id, entity_type, entity_id,
+                historical_project_id, historical_registration_id
+            )
+            SELECT audit.id, audit.actor_id, audit.thread_id, audit.reason, audit.created_at,
+                audit.thread_attribution, NULL, audit.entity_type, audit.entity_id,
+                audit.project_id, registrations.registration_id
+            FROM current_state.audit_events audit
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = audit.project_id
+            WHERE audit.project_id IN (SELECT id FROM projects);
+
+            INSERT OR IGNORE INTO retained_project_activity_events (
+                removal_id, source, source_id, title, detail, observed_at, ticket_id,
+                delivery_goal_id, originating_thread_id, runtime_state
+            )
+            SELECT removed.removal_id, 'runtime', goals.id, goals.status, goals.text,
+                goals.last_observed_at, links.ticket_id, goals.id, goals.thread_id, goals.status
+            FROM current_state.observed_goals goals
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = goals.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = goals.project_id
+             AND removed.registration_id = registrations.registration_id
+            LEFT JOIN current_state.ticket_goal_links links
+              ON links.project_id = goals.project_id
+             AND links.goal_id = goals.id AND links.thread_id = goals.thread_id;
+
+            INSERT OR IGNORE INTO retained_project_activity_events (
+                removal_id, source, source_id, title, detail, recorded_at, ticket_id
+            )
+            SELECT removed.removal_id, 'review', reviews.id, 'Review ' || reviews.status,
+                reviews.summary,
+                (SELECT MAX(created_at) FROM current_state.audit_events audit
+                 WHERE audit.project_id = reviews.project_id
+                   AND audit.entity_type = 'review_item' AND audit.entity_id = reviews.id),
+                reviews.ticket_id
+            FROM current_state.review_items reviews
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = reviews.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = reviews.project_id
+             AND removed.registration_id = registrations.registration_id
+            WHERE reviews.status <> 'open';
+
+            INSERT OR IGNORE INTO retained_project_activity_events (
+                removal_id, source, source_id, title, detail, occurred_at, ticket_id, runtime_state
+            )
+            SELECT removed.removal_id, 'completion', completions.id, 'Completed',
+                completions.summary, completions.created_at, completions.ticket_id, 'completed'
+            FROM current_state.completion_records completions
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = completions.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = completions.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_project_activity_events (
+                removal_id, source, source_id, title, detail, occurred_at, recorded_at,
+                ticket_id, notification_state, notification_status_text
+            )
+            SELECT removed.removal_id, 'notification', notifications.id,
+                COALESCE(notifications.title, notifications.fingerprint),
+                COALESCE(notifications.message, 'Persisted notification delivery event.'),
+                notifications.created_at, notifications.completed_at, notifications.ticket_id,
+                notifications.state, 'Preserved from the displaced application registration'
+            FROM current_state.notification_events notifications
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = notifications.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = notifications.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_delivery_goal_assignment_events (
+                removal_id, audit_event_id, project_id, phase_id, ticket_id,
+                previous_goal_id, current_goal_id, revision, action
+            )
+            SELECT removed.removal_id, assignments.audit_event_id, assignments.project_id,
+                assignments.phase_id, assignments.ticket_id, assignments.previous_goal_id,
+                assignments.current_goal_id, assignments.revision, assignments.action
+            FROM current_state.delivery_goal_assignment_events assignments
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = assignments.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = assignments.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT INTO observed_threads (id, project_id, status, last_observed_at)
+            SELECT id, project_id, status, last_observed_at
+            FROM current_state.observed_threads
+            WHERE project_id IN (SELECT id FROM projects)
+            ON CONFLICT(id) DO UPDATE SET
+                status = excluded.status,
+                last_observed_at = excluded.last_observed_at
+            WHERE observed_threads.project_id = excluded.project_id
+              AND excluded.last_observed_at > observed_threads.last_observed_at;
+
+            INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at)
+            SELECT goals.id, goals.project_id, goals.thread_id, goals.status,
+                goals.text, goals.last_observed_at
+            FROM current_state.observed_goals goals
+            WHERE goals.project_id IN (SELECT id FROM projects)
+              AND EXISTS (
+                SELECT 1 FROM observed_threads threads
+                WHERE threads.id = goals.thread_id AND threads.project_id = goals.project_id
+              )
+            ON CONFLICT(id) DO UPDATE SET
+                thread_id = excluded.thread_id,
+                status = excluded.status,
+                text = excluded.text,
+                last_observed_at = excluded.last_observed_at
+            WHERE observed_goals.project_id = excluded.project_id
+              AND excluded.last_observed_at > observed_goals.last_observed_at;
+
+            INSERT INTO notification_occurrences (
                 subject_key, project_id, event_kind, subject_id, generation, is_active
             )
-            SELECT subject_key, project_id, event_kind, subject_id, generation, 0
+            SELECT subject_key, project_id, event_kind, subject_id, generation, is_active
             FROM current_state.notification_occurrences
-            WHERE project_id IN (SELECT id FROM projects);
+            WHERE project_id IN (SELECT id FROM projects)
+            ON CONFLICT(subject_key) DO UPDATE SET
+                generation = excluded.generation,
+                is_active = excluded.is_active;
 
             INSERT OR IGNORE INTO notification_events (
                 id, fingerprint, state, ticket_id, goal_id, provider_receipt,
@@ -490,13 +683,6 @@ public actor ApplicationRecoveryManager {
                 WHERE state IN ('sent', 'unknown', 'failed', 'suppressed')
             );
 
-            UPDATE notification_occurrences
-            SET generation = MAX(generation, COALESCE((
-                    SELECT generation FROM current_state.notification_occurrences current
-                    WHERE current.subject_key = notification_occurrences.subject_key
-                ), generation)),
-                is_active = 0
-            WHERE subject_key IN (SELECT subject_key FROM current_state.notification_occurrences);
             """)
             try connection.execute("COMMIT")
         } catch {
@@ -505,17 +691,27 @@ public actor ApplicationRecoveryManager {
         }
     }
 
-    private static func registrations(in connection: SQLiteConnection) throws -> [ProjectRegistration] {
+    private static func recoveryTargets(in connection: SQLiteConnection) throws -> [ApplicationRecoveryTarget] {
         try connection.rows(
-            "SELECT project_id, registration_id, request_generation FROM project_registrations ORDER BY project_id"
+            """
+            SELECT projects.name, registrations.project_id,
+                registrations.registration_id, registrations.request_generation
+            FROM project_registrations registrations
+            JOIN projects ON projects.id = registrations.project_id
+            ORDER BY projects.name, registrations.project_id
+            """
         ).compactMap { row in
-            guard case let .text(projectID)? = row["project_id"],
+            guard case let .text(name)? = row["name"],
+                  case let .text(projectID)? = row["project_id"],
                   case let .text(registrationID)? = row["registration_id"],
                   case let .integer(generation)? = row["request_generation"] else { return nil }
-            return ProjectRegistration(
-                projectID: .init(rawValue: projectID),
-                registrationID: registrationID,
-                requestGeneration: generation
+            return ApplicationRecoveryTarget(
+                name: name,
+                registration: .init(
+                    projectID: .init(rawValue: projectID),
+                    registrationID: registrationID,
+                    requestGeneration: generation
+                )
             )
         }
     }
@@ -571,6 +767,22 @@ public actor ApplicationRecoveryManager {
                   rename(sourcePath, destinationPath) == 0 else {
                 throw ApplicationRecoveryError.unsafeStorePlacement
             }
+        }
+    }
+
+    private static func copyStoreFiles(from source: URL, to destination: URL, requireDatabase: Bool) throws {
+        for suffix in sidecarSuffixes {
+            let sourceURL = URL(fileURLWithPath: source.path + suffix)
+            let destinationURL = URL(fileURLWithPath: destination.path + suffix)
+            var metadata = stat()
+            if lstat(sourceURL.path, &metadata) != 0 {
+                if suffix.isEmpty && requireDatabase { throw ApplicationRecoveryError.replacementFailed }
+                continue
+            }
+            guard metadata.st_mode & S_IFMT == S_IFREG else {
+                throw ApplicationRecoveryError.unsafeStorePlacement
+            }
+            try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
         }
     }
 

@@ -59,9 +59,12 @@ struct DashboardProjection: Equatable, Sendable {
         return try await store.read { connection in
             let projectRows = try connection.dashboardRows(
                 """
-                SELECT projects.id, projects.name, project_active_phases.phase_id AS active_phase_id
+                SELECT projects.id, projects.name, project_active_phases.phase_id AS active_phase_id,
+                       project_registrations.registration_id,
+                       project_registrations.request_generation
                 FROM projects
                 LEFT JOIN project_active_phases ON project_active_phases.project_id = projects.id
+                LEFT JOIN project_registrations ON project_registrations.project_id = projects.id
                 WHERE projects.lifecycle = 'active'
                   AND NOT EXISTS (
                     SELECT 1
@@ -133,6 +136,13 @@ struct DashboardProjection: Equatable, Sendable {
             for projectRow in projectRows {
                 let projectID = ProjectID(rawValue: try projectRow.text("id"))
                 let projectName = try projectRow.text("name")
+                let registration = try projectRow.nullableText("registration_id").map {
+                    ProjectRegistration(
+                        projectID: projectID,
+                        registrationID: $0,
+                        requestGeneration: try projectRow.integer("request_generation")
+                    )
+                }
                 let goalContext = try connection.projectGoalContext(projectID: projectID)
                 let phases = try connection.dashboardRows(
                     "SELECT id, name FROM phases WHERE project_id = ? ORDER BY name COLLATE NOCASE, id",
@@ -152,7 +162,7 @@ struct DashboardProjection: Equatable, Sendable {
                     bindings: [.text(projectID.rawValue), activePhase.map { .text($0.id.rawValue) } ?? .null]
                 ).map { try $0.text("lane") }
                 let project = ProjectDashboardProjection(
-                    id: projectID, name: projectName,
+                    id: projectID, name: projectName, registration: registration,
                     activePhaseID: activePhase?.id, activePhaseName: activePhase?.name ?? "No active phase",
                     phases: phases, goalContext: goalContext,
                     currentWorkCount: activeLanes.filter { $0 != TicketLane.accepted.rawValue }.count,
@@ -270,6 +280,7 @@ struct ProjectPhaseProjection: Equatable, Sendable, Identifiable {
 struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
     let id: ProjectID
     let name: String
+    let registration: ProjectRegistration?
     let activePhaseID: PhaseID?
     let activePhaseName: String
     let phases: [ProjectPhaseProjection]
@@ -281,6 +292,7 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
     init(
         id: ProjectID,
         name: String,
+        registration: ProjectRegistration? = nil,
         activePhaseID: PhaseID? = nil,
         activePhaseName: String,
         phases: [ProjectPhaseProjection] = [],
@@ -291,6 +303,7 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
     ) {
         self.id = id
         self.name = name
+        self.registration = registration
         self.activePhaseID = activePhaseID
         self.activePhaseName = activePhaseName
         self.phases = phases

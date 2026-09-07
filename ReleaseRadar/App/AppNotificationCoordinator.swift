@@ -100,6 +100,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     private(set) var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
     let codexPluginShippedVersion: String
     private(set) var recoveryStartupError: String?
+    private(set) var recoveryResumedAtLaunch = false
     private let codexPluginPackage: CodexPluginPackage?
     private var agentBridgeHost: AgentBridgeApplicationHost?
 
@@ -107,7 +108,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
         let startupError: String?
         do {
-            try ApplicationRecoveryManager.resolveInterruptedOperation(databaseURL: databaseURL)
+            recoveryResumedAtLaunch = try ApplicationRecoveryManager.resolveInterruptedOperation(databaseURL: databaseURL)
             startupError = nil
         } catch {
             startupError = error.localizedDescription
@@ -151,6 +152,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     func adoptRecoveredStore(_ store: DeliveryStore) {
         self.store = store
         recoveryStartupError = nil
+        recoveryResumedAtLaunch = false
         notificationCoordinator = AppNotificationCoordinator(
             store: store,
             dispatcher: PushoverNotificationDispatcher(store: store, credentials: keychain)

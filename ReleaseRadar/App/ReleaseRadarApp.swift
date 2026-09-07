@@ -248,6 +248,7 @@ struct ReleaseRadarApp: App {
             notificationCoordinator: services.notificationCoordinator,
             recoveryServices: services,
             recoveryStartupError: services.recoveryStartupError,
+            recoveryResumedAtLaunch: services.recoveryResumedAtLaunch,
             externalServicesSuppressed: externalServicesSuppressed,
             seedSampleData: seedSampleData,
             rr9ActivePhaseCaptureScenario: AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
@@ -264,6 +265,7 @@ struct ReleaseRadarApp: App {
             notificationCoordinator: services.notificationCoordinator,
             recoveryServices: services,
             recoveryStartupError: services.recoveryStartupError,
+            recoveryResumedAtLaunch: services.recoveryResumedAtLaunch,
             externalServicesSuppressed: externalServicesSuppressed,
             seedSampleData: seedSampleData
         )
