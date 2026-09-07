@@ -62,7 +62,8 @@ regressions passed, correction diff and native documentation check passed. Earli
 74/native checks remain applicable to unchanged behavior. Writer and reviewer are
 clean/stopped/archived; separate owner merge approval remains pending. New reviewer
 log `/tmp/c6-review-e58c-correction-tests.log` is retained alongside the existing
-reused build/results and repro inventory; no cleanup is authorized.
+reused build/results and repro inventory. Temporary PR body
+`/tmp/release-radar-c6-pr30-final-body.md` is also retained; no cleanup is authorized.
 
 Reviewer independently passed 74 focused/native checks, then reproduced these defects
 with bounded synthetic tests. Same reviewer handles corrected candidate only. Latent
