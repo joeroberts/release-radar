@@ -316,6 +316,47 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertNil(try db.row("PRAGMA foreign_key_check"))
     }
 
+    func testVersionFifteenMigrationPreservesOnlyRecognizedOpenOnboardingAsPending() async throws {
+        let url = try makeDatabaseURL()
+        let seed = DeliveryStore(databaseURL: url)
+        try await seed.transact(actor: .init(id: "fixture"), reason: "Seed pre-registration lifecycle states") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES ('pending', 'Pending'), ('completed', 'Completed'), ('unknown', 'Unknown')"
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, kind, summary, status) VALUES ('pending-marker', 'pending', 'onboarding_pending', 'Pending setup', 'open')"
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, kind, summary, status) VALUES ('closed-marker', 'completed', 'onboarding_pending', 'Finished setup', 'resolved')"
+            )
+            try connection.execute(
+                "INSERT INTO review_items (id, project_id, kind, summary, status) VALUES ('unrelated-review', 'unknown', 'uncertain_import', 'Unrelated review', 'open')"
+            )
+        }
+        let legacy = try SQLiteConnection(url: url)
+        let reviewsBefore = try legacy.rows("SELECT id, project_id, kind, summary, status FROM review_items ORDER BY id")
+        try legacy.execute("DROP TABLE project_registrations")
+        try legacy.execute("PRAGMA user_version = 14")
+
+        let migrated = DeliveryStore(databaseURL: url)
+        guard case .available = await migrated.availability else {
+            return XCTFail("Expected v15 migration")
+        }
+
+        let states = try await migrated.read {
+            try $0.rows("SELECT project_id, setup_state FROM project_registrations ORDER BY project_id")
+        }
+        XCTAssertEqual(states, [
+            ["project_id": .text("completed"), "setup_state": .text("complete")],
+            ["project_id": .text("pending"), "setup_state": .text("pending")],
+            ["project_id": .text("unknown"), "setup_state": .text("complete")],
+        ])
+        let reviewsAfter = try await migrated.read {
+            try $0.rows("SELECT id, project_id, kind, summary, status FROM review_items ORDER BY id")
+        }
+        XCTAssertEqual(reviewsAfter, reviewsBefore)
+    }
+
     func testVersionFourteenLateFailurePreservesVersionThirteenAndSnapshotThenRecovers() async throws {
         let url = try makePopulatedVersionThirteenDatabaseURL()
         let db = try SQLiteConnection(url: url)

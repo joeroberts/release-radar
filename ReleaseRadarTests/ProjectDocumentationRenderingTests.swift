@@ -139,6 +139,71 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testProjectHealthFolderRecoveryButtonInvokesItsAuthorizedAction() async throws {
+        var invocationCount = 0
+        let projectID = ProjectID(rawValue: "project-recovery")
+        let snapshot = ProjectHealthSnapshot(
+            projectID: projectID,
+            registration: .init(projectID: projectID, registrationID: "registration-recovery", requestGeneration: 1),
+            rootPath: "/Synthetic/Recovery",
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: [
+                .init(id: "folder", title: "Folder access expired", detail: "Select the same saved folder again.", state: .attention),
+                .init(id: "documentation", title: "Managed documentation unavailable", detail: "Catalog remains invalid.", state: .attention),
+            ]
+        )
+        try await render(
+            ProjectHealthView(snapshot: snapshot, isRefreshing: false, refresh: {}, reauthorize: { invocationCount += 1 }),
+            name: "lifecycle-folder-recovery",
+            width: 620,
+            expected: nil,
+            expectedText: ["Reauthorize Saved Folder…", "Catalog remains invalid."],
+            pressIdentifiers: ["project-health-reauthorize"]
+        )
+        XCTAssertEqual(invocationCount, 1)
+    }
+
+    func testOnboardingNativeCopyUsesTheSameExistingDocumentationBootstrapShownInPreview() async throws {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
+        let root = directory.appendingPathComponent("repository", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        try Data("# Existing owner documentation\n".utf8).write(to: root.appendingPathComponent("README.md"))
+        try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let preview = OnboardingPreview(
+            selectedFolder: root,
+            gitRoot: nil,
+            includedTaskDescriptors: [],
+            rejectedTaskDescriptors: [],
+            authorizedWorktreeURLs: [],
+            worktreesRequiringAuthorization: [],
+            documentationState: .legacy(.outdated(installed: 1, current: 2))
+        )
+        var copied = ""
+        let view = OnboardingView(
+            store: store,
+            navigationTitle: "lifecycle-native-copy",
+            onOpenExisting: { _ in XCTFail("Must remain in initialization") },
+            pasteboardWriter: { copied = $0; return true },
+            initialPreview: preview,
+            onFinished: { _ in XCTFail("Copy does not finish initialization") }
+        )
+
+        try await render(
+            view,
+            name: "lifecycle-native-copy",
+            width: 620,
+            expected: ProjectGuidancePresentation(documentationState: preview.documentationState),
+            pressIdentifiers: ["onboarding-initialize-confirm", "onboarding-copy-codex-prompt"]
+        )
+
+        XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+        XCTAssertTrue(copied.localizedCaseInsensitiveContains("existing documentation"))
+        XCTAssertFalse(copied.contains("Require an existing catalogued"))
+    }
+
     private var states: [(String, ProjectDocumentationState)] {
         [
             ("v1-update", .legacy(.outdated(installed: 1, current: 2))),
@@ -165,8 +230,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         _ view: V,
         name: String,
         width: Double,
-        expected: ProjectGuidancePresentation,
-        expectedText: [String] = []
+        expected: ProjectGuidancePresentation?,
+        expectedText: [String] = [],
+        pressIdentifiers: [String] = []
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
@@ -218,7 +284,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         let actual = accessibilityText(try XCTUnwrap(ownWindow))
-        XCTAssertTrue(actual.contains(expected.status), "Missing actual guidance status: \(expected.status)")
+        if let expected {
+            XCTAssertTrue(actual.contains(expected.status), "Missing actual guidance status: \(expected.status)")
+        }
         for text in expectedText {
             XCTAssertTrue(actual.contains(text), "Missing actual lifecycle content: \(text)")
         }
@@ -227,7 +295,12 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertFalse(actual.contains("Copy setup prompt"))
             XCTAssertFalse(actual.contains("Copy repair prompt"))
         }
-        if name.hasPrefix("m5-overview"), let action = expected.actionTitle { XCTAssertTrue(actual.contains(action)) }
+        if name.hasPrefix("m5-overview"), let action = expected?.actionTitle { XCTAssertTrue(actual.contains(action)) }
+        for pressIdentifier in pressIdentifiers {
+            let button = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: pressIdentifier))
+            XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(300))
+        }
         print("M5 isolated render PID \(ProcessInfo.processInfo.processIdentifier): actual AX status and recovery verified; capture \(name)")
         let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
         hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
@@ -236,5 +309,33 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func accessibilityElement(_ root: AXUIElement, identifier: String) -> AXUIElement? {
+        var pending = [root], count = 0
+        while let element = pending.popLast(), count < 1000 {
+            count += 1
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &value) == .success,
+               value as? String == identifier {
+                return element
+            }
+            var role: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role) == .success,
+               role as? String == kAXButtonRole {
+                for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
+                    if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+                       (value as? String)?.contains("Reauthorize Saved Folder") == true {
+                        return element
+                    }
+                }
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return nil
     }
 }

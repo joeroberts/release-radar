@@ -24,6 +24,103 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectHealthKeepsManagedFailureAndCachedObservationTimesTruthful() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasActivePointer: false)
+        let documents = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs", isDirectory: true)
+        try FileManager.default.copyItem(at: documents, to: fixture.projectRoot.appendingPathComponent("docs"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("AGENTS.md"))
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed health registration") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'health-registration', 2, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let lastObservedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        model.codexPluginState = .installed(version: "0.1.7")
+        model.codexSnapshot = .init(
+            capturedAt: lastObservedAt,
+            freshness: .init(state: .stale, lastObservedAt: lastObservedAt, reason: "Cached fixture"),
+            threads: []
+        )
+
+        let health = await model.projectHealth(for: fixture.projectID)
+        let documentation = try XCTUnwrap(health.checks.first { $0.id == "documentation" })
+        let plugin = try XCTUnwrap(health.checks.first { $0.id == "plugin" })
+        let observer = try XCTUnwrap(health.checks.first { $0.id == "observer" })
+
+        XCTAssertEqual(documentation.state, .attention)
+        XCTAssertTrue(documentation.title.contains("unavailable"))
+        XCTAssertEqual(plugin.state, .attention)
+        XCTAssertTrue(plugin.detail.contains("time unavailable"))
+        XCTAssertEqual(observer.state, .attention)
+        XCTAssertTrue(observer.detail.contains("Last seen"))
+        XCTAssertGreaterThan(health.checkedAt, lastObservedAt)
+    }
+
+    @MainActor
+    func testProjectHealthReauthorizesOnlyTheExactSavedFolderAndRetainsCatalogFailure() async throws {
+        let fixture = try await makeRR9OwnerFixture(hasActivePointer: false)
+        try FileManager.default.createDirectory(
+            at: fixture.projectRoot.appendingPathComponent("docs"),
+            withIntermediateDirectories: true
+        )
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("AGENTS.md"))
+        try Data("{ invalid catalog".utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("docs/catalog.json"))
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed stale phase-less health fixture") { connection in
+            try connection.execute("DELETE FROM ticket_dependencies WHERE project_id = ?", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute("DELETE FROM tickets WHERE project_id = ?", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute("DELETE FROM phases WHERE project_id = ?", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'health-recovery-registration', 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ?",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true)
+        await model.loadDashboard()
+
+        do {
+            _ = try await model.reauthorizeProjectHealthRoot(at: fixture.projectRoot.deletingLastPathComponent(), projectID: fixture.projectID)
+            XCTFail("A different folder must be rejected")
+        } catch {
+            XCTAssertEqual(error as? ProjectAuthorizationError, .projectRootMismatch)
+        }
+        for (mode, expected) in [
+            (RR9BookmarkFailureMode.accessDenied, ProjectAuthorizationError.securityScopeAccessDenied),
+            (.stale, .bookmarkStale),
+        ] {
+            fixture.bookmarks.setFailureMode(mode)
+            do {
+                _ = try await model.reauthorizeProjectHealthRoot(at: fixture.projectRoot, projectID: fixture.projectID)
+                XCTFail("Expected \(mode) to be rejected")
+            } catch {
+                XCTAssertEqual(error as? ProjectAuthorizationError, expected)
+            }
+        }
+        fixture.bookmarks.setFailureMode(.none)
+
+        let recovered = try await model.reauthorizeProjectHealthRoot(at: fixture.projectRoot, projectID: fixture.projectID)
+
+        XCTAssertTrue(model.dashboard?.projects.first(where: { $0.id == fixture.projectID })?.phases.isEmpty == true)
+        XCTAssertEqual(recovered.checks.first(where: { $0.id == "folder" })?.state, .ready)
+        XCTAssertEqual(recovered.checks.first(where: { $0.id == "documentation" })?.state, .attention)
+        XCTAssertTrue(recovered.checks.first(where: { $0.id == "documentation" })?.title.contains("unavailable") == true)
+    }
+
+    @MainActor
     func testTask10ViewedPhaseDoesNotChangeActivePhaseOrAuditAndSurvivesReload() async throws {
         let fixture = try await makeRR9OwnerFixture()
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Independent project browsing fixture") { c in

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ReleaseRadarCore
 import RekonDesignSystem
@@ -18,6 +19,7 @@ struct ProjectOverviewView: View {
     var saveProjectSettings: ((ProjectRegistration, String, Set<String>) async throws -> ProjectSettingsSnapshot)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
+    var reauthorizeProjectHealth: ((URL) async throws -> ProjectHealthSnapshot)? = nil
     var previewDocumentationSetup: ((ProjectRegistration) async throws -> ProjectDocumentationSetupPreview)? = nil
     var performDocumentationSetup: ((ProjectDocumentationSetupPreview) async throws -> AuditEventID?)? = nil
     @State private var promptCopyResult: CodexPromptCopyResult?
@@ -25,6 +27,7 @@ struct ProjectOverviewView: View {
     @State private var health: ProjectHealthSnapshot?
     @State private var isLoadingSettings = false
     @State private var isRefreshingHealth = false
+    @State private var healthRecoveryMessage: String?
     @State private var healthGeneration: UInt64 = 0
     @State private var showsSettings = false
     @State private var showsHelp = false
@@ -61,7 +64,18 @@ struct ProjectOverviewView: View {
                 guidanceCard
                 documentationSetupControls
                 if loadProjectHealth != nil {
-                    ProjectHealthView(snapshot: health, isRefreshing: isRefreshingHealth, refresh: refreshHealth)
+                    ProjectHealthView(
+                        snapshot: health,
+                        isRefreshing: isRefreshingHealth,
+                        refresh: refreshHealth,
+                        reauthorize: healthReauthorizationAction
+                    )
+                    if let healthRecoveryMessage {
+                        Text(healthRecoveryMessage)
+                            .font(.caption)
+                            .foregroundStyle(RekonTheme.warning)
+                            .accessibilityIdentifier("project-health-recovery-result")
+                    }
                 }
                 if let repositoryRecovery {
                     RepositoryRecoveryView(model: repositoryRecovery, onCommitted: onRepositoryRelocated)
@@ -192,7 +206,7 @@ struct ProjectOverviewView: View {
                 Button(actionTitle) {
                     promptCopyResult = CodexPromptHandoff.copy(
                         prompt: CodexPromptHandoff.prompt(
-                            for: documentationState.guidanceState,
+                            for: documentationState,
                             projectRoot: projectRoot,
                             registration: health?.registration ?? settings?.registration
                         ),
@@ -303,6 +317,30 @@ struct ProjectOverviewView: View {
         }
     }
 
+    private func chooseAndReauthorizeProjectHealthRoot() {
+        guard let reauthorizeProjectHealth else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Reauthorize"
+        panel.message = "Choose this project's exact saved folder."
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        healthRecoveryMessage = nil
+        Task {
+            do {
+                health = try await reauthorizeProjectHealth(folder)
+            } catch {
+                healthRecoveryMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private var healthReauthorizationAction: (() -> Void)? {
+        guard reauthorizeProjectHealth != nil else { return nil }
+        return { chooseAndReauthorizeProjectHealthRoot() }
+    }
+
     private func loadDocumentationPreview(_ registration: ProjectRegistration) {
         guard let previewDocumentationSetup else { return }
         isPerformingDocumentationSetup = true
@@ -387,7 +425,12 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
             }
             detail = "Guidance v2 is readable, but managed operations are closed. " + recovery + (audited ? "" : " The guidance handoff also still needs its audited evidence.")
             systemImage = "exclamationmark.triangle"
-            actionTitle = nil
+            switch reason {
+            case .catalogInvalid, .guidanceUnavailable, .invalidTransition, .missingFile:
+                actionTitle = "Copy repair prompt"
+            default:
+                actionTitle = nil
+            }
         }
     }
 

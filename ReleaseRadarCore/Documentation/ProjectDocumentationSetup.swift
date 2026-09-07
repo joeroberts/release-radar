@@ -44,6 +44,7 @@ public enum ProjectDocumentationSetupError: Error, LocalizedError, Equatable, Se
 public actor ProjectDocumentationSetupCoordinator {
     private let store: DeliveryStore
     private let bookmarkStore: any ProjectBookmarkStoring
+    private let beforeTransactionalDispatch: @Sendable () async -> Void
 
     public init(
         store: DeliveryStore,
@@ -51,19 +52,33 @@ public actor ProjectDocumentationSetupCoordinator {
     ) {
         self.store = store
         self.bookmarkStore = bookmarkStore
+        self.beforeTransactionalDispatch = {}
+    }
+
+    init(
+        store: DeliveryStore,
+        bookmarkStore: any ProjectBookmarkStoring,
+        beforeTransactionalDispatch: @escaping @Sendable () async -> Void
+    ) {
+        self.store = store
+        self.bookmarkStore = bookmarkStore
+        self.beforeTransactionalDispatch = beforeTransactionalDispatch
     }
 
     public func preview(registration: ProjectRegistration) async throws -> ProjectDocumentationSetupPreview {
         try await requireCurrent(registration)
-        let authorization = try await FolderProjectOnboarding(
+        let (authorization, snapshot) = try await FolderProjectOnboarding(
             store: store,
             bookmarkStore: bookmarkStore
-        ).withReadOnlyAuthorizedProject(projectID: registration.projectID) { $0 }
-        let snapshot: RepositoryDocumentSnapshot
-        do {
-            snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: authorization.canonicalRoot)
-        } catch {
-            throw ProjectDocumentationSetupError.catalogUnavailable
+        ).withReadOnlyAuthorizedProject(projectID: registration.projectID) { authorization in
+            do {
+                let snapshot = try RepositoryDocumentValidator().validateCurrent(
+                    authorizedRoot: authorization.canonicalRoot
+                )
+                return (authorization, snapshot)
+            } catch {
+                throw ProjectDocumentationSetupError.catalogUnavailable
+            }
         }
         let persisted = try await store.read { connection in
             let rootID = try connection.scalarText(
@@ -135,11 +150,21 @@ public actor ProjectDocumentationSetupCoordinator {
             reason: "Owner-confirmed project documentation setup",
             command: command
         )
-        let body = try JSONEncoder().encode(envelope)
+        let body = try JSONEncoder().encode(OwnerDocumentationMutationRequest(
+            registration: preview.registration,
+            envelope: envelope
+        ))
+        await beforeTransactionalDispatch()
         let result = await DocumentationCommandDispatcher(
             store: store,
             bookmarkStore: bookmarkStore
-        ).dispatch(envelope, requestBody: body, origin: .ownerApp, admissionDeadline: nil)
+        ).dispatch(
+            envelope,
+            requestBody: body,
+            origin: .ownerApp,
+            admissionDeadline: nil,
+            expectedRegistration: preview.registration
+        )
         if let error = result.error { throw ProjectDocumentationSetupError.command(error) }
         return result.auditEventID
     }
@@ -157,4 +182,9 @@ public actor ProjectDocumentationSetupCoordinator {
         }
         guard matches else { throw ProjectDocumentationSetupError.staleRegistration }
     }
+}
+
+private struct OwnerDocumentationMutationRequest: Codable, Sendable {
+    let registration: ProjectRegistration
+    let envelope: AgentCommandEnvelope
 }

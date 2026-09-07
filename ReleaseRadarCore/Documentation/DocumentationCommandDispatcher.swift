@@ -5,7 +5,7 @@ struct DocumentationCommandDispatcher: Sendable {
     let bookmarkStore: any ProjectBookmarkStoring
 
     func dispatch(_ envelope: AgentCommandEnvelope, requestBody: Data, origin: AgentCommandOrigin,
-                  admissionDeadline: TimeInterval?) async -> AgentCommandResult {
+                  admissionDeadline: TimeInterval?, expectedRegistration: ProjectRegistration? = nil) async -> AgentCommandResult {
         do {
             try envelope.command.validateDocumentation()
             let projectID: String
@@ -31,6 +31,17 @@ struct DocumentationCommandDispatcher: Sendable {
                                           entityID: envelope.command.documentationIDs.first ?? projectID)) { c in
                         if let deadline = admissionDeadline, deadline <= Date().timeIntervalSince1970 { throw DocumentationControl.expired }
                         if let result = try Self.replay(c, requestID: envelope.requestID, body: receiptBody) { throw DocumentationControl.replay(result) }
+                        if let registration = expectedRegistration {
+                            let matches = try c.scalarInt(
+                                "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'complete'",
+                                bindings: [
+                                    .text(registration.projectID.rawValue),
+                                    .text(registration.registrationID),
+                                    .integer(registration.requestGeneration),
+                                ]
+                            ) == 1
+                            guard matches else { throw DocumentationOperationError.staleRegistration }
+                        }
                         try context.verifyPersisted(c)
                         // Re-read while the authorized scope and the store transaction are held.
                         // No mutation occurs until this exact snapshot has been revalidated.

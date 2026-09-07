@@ -251,6 +251,9 @@ struct SidebarView: View {
                         },
                         availableCodexTasks: model.codexTasks(for: projectID),
                         loadProjectHealth: { await model.projectHealth(for: projectID) },
+                        reauthorizeProjectHealth: {
+                            try await model.reauthorizeProjectHealthRoot(at: $0, projectID: projectID)
+                        },
                         previewDocumentationSetup: { try await model.previewDocumentationSetup(registration: $0) },
                         performDocumentationSetup: { try await model.performDocumentationSetup($0) }
                     )

@@ -139,7 +139,8 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
             guard case let .managedUnavailable(audited, reason, validation) = state else { return XCTFail("Expected unavailable: \(failure)") }
             XCTAssertFalse(audited); XCTAssertEqual(reason, .catalogInvalid); XCTAssertNotNil(validation)
             XCTAssertEqual(state.guidanceState, .handoffIncomplete(version: 2))
-            XCTAssertNil(ProjectGuidancePresentation(documentationState: state).actionTitle)
+            XCTAssertEqual(ProjectGuidancePresentation(documentationState: state).actionTitle, "Copy repair prompt")
+            XCTAssertEqual(CodexPromptHandoff.kind(for: state), .repositoryRepair)
         }
     }
 
