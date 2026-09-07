@@ -24,8 +24,9 @@ SQLite remains exclusively app-owned; repository-only work grants no application
 The [C6 brief](task-briefs/2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md)
 is persisted/catalogued against merged C5 `c8cba4b`. Fresh task creation was dispatched
 from exact committed baseline `db0b3d4`, explicit Sol High, ceiling Astra High; no Ultra.
-Setup returned `client-new-thread:df9e76b7-c1f3-497f-9943-ed6e5f577ac1`; actual task ID,
-worktree and `codex/c6-remove-tracking` upstream confirmation remain pending. The writer
+Task `01a07cd4-149e-7a63-a3d4-fdfb81783a9d` confirmed clean baseline `db0b3d4` in
+fresh worktree `d36f`, with published `codex/c6-remove-tracking` and matching upstream.
+Runtime model/effort is unexposed; explicit dispatch was Sol High. The writer
 owns source/tests/brief; parent owns ledger/shared metadata. One fresh independent
 combined reviewer covers retention, migration, stale authority and native UI/QA.
 
