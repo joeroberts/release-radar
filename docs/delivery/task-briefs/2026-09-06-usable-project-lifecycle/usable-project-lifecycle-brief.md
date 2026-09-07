@@ -134,13 +134,18 @@ until separately authorized.
 
 ## Candidate verification and remaining acceptance
 
-Candidate `7601b619144d235effb5bfae3e7703787fb493b3` builds successfully. Its
-focused onboarding, managed-documentation, app-route, native-rendering and store
-suites pass 187/187. The full suite passes 547/548; the sole failure is the
-pre-existing controlled-transport acceptance that requires an already enabled
-bridge, and an isolated rerun reports that exact disabled-bridge condition. The
-repository documentation check passes and the resolved RekonDesignSystem revision
-is `d0932aa6b6c21f420ea197a9cc7b14254c23695a`.
+Corrected product checkpoint `f98bf14782fe17f22d9c3b9ef736ff7ba9ca7bcb`
+closes the six Required findings from the first independent review: exact-folder
+health recovery, scoped catalog validation, conservative v14 migration, complete
+bootstrap/upgrade/repair prompt routing, truthful health freshness, and atomic
+registration-generation validation. After integrating the parent ledger through
+`6e79849`, merge checkpoint `f63b628` passes 214/214 focused onboarding,
+managed-documentation, app-route, native-rendering, compatibility, installation-
+resource and store tests with zero skips. The initial candidate's wider full-suite
+run remains 547/548; its sole failure was the pre-existing controlled-transport
+acceptance that requires an already enabled bridge, and an isolated rerun reported
+that exact disabled-bridge condition. The resolved RekonDesignSystem revision is
+`d0932aa6b6c21f420ea197a9cc7b14254c23695a`.
 
 The native lifecycle overview was accessibility-traversed and rendered at 1100 and
 620 points. Both PNGs were visually inspected against the applicable onboarding
@@ -154,16 +159,18 @@ and
 `/tmp/release-radar-lifecycle-candidate-render-attachments/51A496EE-E8C8-45DB-976F-16670D11BFD0.png`.
 Other remaining temporary paths are `/tmp/release-radar-lifecycle-derived`,
 `/tmp/release-radar-lifecycle-full2.xcresult` and
-`/tmp/release-radar-lifecycle-transport.xcresult`; no cleanup is authorized.
+`/tmp/release-radar-lifecycle-transport.xcresult`. Corrected post-merge source and
+native evidence is in `/tmp/release-radar-lifecycle-corrected-post-merge.xcresult`;
+no cleanup is authorized.
 
 Installed folder-picker, authorization-dialog and VoiceOver acceptance remains
-unclaimed. If separately authorized, build this exact reviewed revision with the
-documented Xcode scheme, place the resulting app only at an owner-designated test
-location, launch it in an isolated macOS test account with an empty application
-container, initialize a disposable repository, and exercise copy, finish,
-relaunch, rename/exclusions, documentation preview/confirmation, same-folder
-reauthorization, simultaneous health failures and keyboard/VoiceOver recovery.
-Do not use owner application state or install over the owner's app for that check.
+unclaimed. If separately authorized, build the reviewed revision with the documented
+Xcode scheme and use only an owner-designated disposable test location, empty app
+container and disposable repository. Exercise copy, finish, relaunch,
+rename/exclusions, documentation preview/confirmation, same-folder reauthorization,
+simultaneous health failures and keyboard/VoiceOver recovery. A separate macOS
+account is optional, not a prerequisite. Do not use owner application state or
+install over the owner's app for that check.
 
 ## Delivery endpoint
 
