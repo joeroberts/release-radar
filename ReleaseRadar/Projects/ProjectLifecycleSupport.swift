@@ -31,6 +31,7 @@ struct ProjectHealthView: View {
     let snapshot: ProjectHealthSnapshot?
     let isRefreshing: Bool
     let refresh: () -> Void
+    var reauthorize: (() -> Void)? = nil
 
     var body: some View {
         RekonSectionPanel {
@@ -56,6 +57,12 @@ struct ProjectHealthView: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("project-health-\(check.id)")
+                }
+                if snapshot.checks.contains(where: { $0.id == "folder" && $0.state != .ready }),
+                   let reauthorize {
+                    Button("Reauthorize Saved Folder…", action: reauthorize)
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("project-health-reauthorize")
                 }
                 Text("Checked \(snapshot.checkedAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption2)

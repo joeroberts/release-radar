@@ -82,6 +82,57 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         XCTAssertEqual(after.2, "release-radar-owner")
     }
 
+    func testDocumentationSetupRejectsGenerationChangedBetweenPreviewAndTransactionalCommit() async throws {
+        let fixture = try await makeFixture()
+        let registration = ProjectRegistration(
+            projectID: .init(rawValue: "p"),
+            registrationID: "interleaved-registration",
+            requestGeneration: 1
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed interleaved registration") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('p', ?, 1, 'complete')",
+                bindings: [.text(registration.registrationID)]
+            )
+        }
+        let gate = DocumentationCommitGate()
+        let coordinator = ProjectDocumentationSetupCoordinator(
+            store: fixture.store,
+            bookmarkStore: bookmarks(fixture.root),
+            beforeTransactionalDispatch: { await gate.enterAndWait() }
+        )
+        let preview = try await coordinator.preview(registration: registration)
+        let before = try await fixture.store.read { connection in
+            try ["project_documentation_bindings", "agent_command_requests", "audit_events"].map {
+                try connection.scalarInt("SELECT COUNT(*) FROM \($0)")
+            }
+        }
+
+        let operation = Task { try await coordinator.perform(preview) }
+        await gate.waitUntilEntered()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Advance registration generation") { connection in
+            try connection.execute(
+                "UPDATE project_registrations SET request_generation = 2 WHERE project_id = 'p'"
+            )
+        }
+        await gate.release()
+
+        do {
+            _ = try await operation.value
+            XCTFail("A stale generation must not commit documentation state")
+        } catch {
+            XCTAssertEqual(error as? ProjectDocumentationSetupError, .command(.documentation(.staleRegistration)))
+        }
+        let after = try await fixture.store.read { connection in
+            try ["project_documentation_bindings", "agent_command_requests", "audit_events"].map {
+                try connection.scalarInt("SELECT COUNT(*) FROM \($0)")
+            }
+        }
+        XCTAssertEqual(after[0], before[0])
+        XCTAssertEqual(after[1], before[1])
+        XCTAssertEqual(after[2], (before[2] ?? 0) + 1, "Only the fixture generation advance is audited")
+    }
+
     func testValidUncataloguedLegacyEvidenceResolvesWithoutConflictOrMutation() async throws {
         let f = try await makeFixture()
         let bound = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: try target(f.root))))
@@ -676,5 +727,28 @@ private final class ScopeGatedBookmarkStore: @unchecked Sendable, ProjectBookmar
             XCTAssertEqual(chmod(root.path, 0), 0)
         }
         return try await body(.init(url: root, isStale: false))
+    }
+}
+
+private actor DocumentationCommitGate {
+    private var entered = false
+    private var enteredWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func enterAndWait() async {
+        entered = true
+        enteredWaiters.forEach { $0.resume() }
+        enteredWaiters.removeAll()
+        await withCheckedContinuation { releaseWaiters.append($0) }
+    }
+
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { enteredWaiters.append($0) }
+    }
+
+    func release() {
+        releaseWaiters.forEach { $0.resume() }
+        releaseWaiters.removeAll()
     }
 }

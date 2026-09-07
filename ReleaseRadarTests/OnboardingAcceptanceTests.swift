@@ -157,6 +157,74 @@ final class OnboardingAcceptanceTests: XCTestCase {
         XCTAssertTrue(prompt.localizedCaseInsensitiveContains("audited handoff"))
     }
 
+    @MainActor
+    func testBlankAndExistingDocumentationProjectsResumeIntoBootstrapWithoutSyntheticLifecycleState() async throws {
+        for hasExistingDocumentation in [false, true] {
+            let fixture = try FolderFixture()
+            if hasExistingDocumentation {
+                try Data("# Owner documentation\n\nKeep this content.\n".utf8)
+                    .write(to: fixture.root.appendingPathComponent("README.md"))
+                try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8)
+                    .write(to: fixture.root.appendingPathComponent("AGENTS.md"))
+            }
+            let store = DeliveryStore(databaseURL: fixture.databaseURL)
+            let onboarding = FolderProjectOnboarding(
+                store: store,
+                bookmarkStore: fixture.bookmarks,
+                worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+            )
+            let preview = try await onboarding.inspect(folder: fixture.root)
+            let decision = OnboardingDecision(preview: preview, projectName: "Bootstrap Project")
+            _ = try await onboarding.prepare(decision)
+            _ = try await onboarding.finish(decision)
+
+            let relaunched = FolderProjectOnboarding(
+                store: DeliveryStore(databaseURL: fixture.databaseURL),
+                bookmarkStore: fixture.bookmarks,
+                worktreeDiscovery: FixtureWorktreeDiscovery(worktrees: [fixture.root])
+            )
+            let resumed = try await relaunched.inspect(folder: fixture.root)
+
+            XCTAssertEqual(resumed.completedProjectID, preview.registration.projectID)
+            XCTAssertEqual(resumed.registration, preview.registration)
+            XCTAssertEqual(CodexPromptHandoff.kind(for: resumed.documentationState), .repositoryBootstrap)
+            var copied = ""
+            XCTAssertEqual(
+                CodexPromptHandoff.copy(
+                    for: resumed.documentationState,
+                    projectRoot: fixture.root,
+                    registration: resumed.registration,
+                    using: { copied = $0; return true }
+                ),
+                .copied
+            )
+            XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+            XCTAssertTrue(copied.localizedCaseInsensitiveContains("preserve"))
+            XCTAssertTrue(copied.contains(preview.registration.registrationID))
+            if hasExistingDocumentation {
+                XCTAssertEqual(
+                    try String(contentsOf: fixture.root.appendingPathComponent("README.md"), encoding: .utf8),
+                    "# Owner documentation\n\nKeep this content.\n"
+                )
+            }
+        }
+        XCTAssertEqual(
+            CodexPromptHandoff.kind(for: .stagedCatalog(hasAuditedHandoff: false, preview: .valid(version: 1, digest: "catalog"))),
+            .managedUpgrade
+        )
+        XCTAssertEqual(
+            CodexPromptHandoff.kind(for: .stagedCatalog(hasAuditedHandoff: false, preview: .invalid(.init(.malformedCatalog)))),
+            .repositoryRepair
+        )
+        XCTAssertEqual(
+            CodexPromptHandoff.kind(for: .managedUnavailable(hasAuditedHandoff: false, reason: .catalogInvalid, validationError: .checksumMismatch)),
+            .repositoryRepair
+        )
+        XCTAssertNil(
+            CodexPromptHandoff.kind(for: .managedUnavailable(hasAuditedHandoff: false, reason: .bindingMissing, validationError: nil))
+        )
+    }
+
     func testInitializeProjectTrackingAllowsLegacyForeignKeyAuditReadWithoutAllowingAuditMutation() async throws {
         let fixture = try FolderFixture()
         let sentinelURL = fixture.root.appendingPathComponent("owner-sentinel.txt")

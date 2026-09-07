@@ -42,11 +42,19 @@ enum CodexPromptCopyResult: Equatable, Sendable {
 }
 
 struct CodexPromptHandoff: Sendable {
+    enum Kind: Equatable, Sendable {
+        case repositoryBootstrap
+        case managedUpgrade
+        case handoffRepair
+        case repositoryRepair
+    }
+
     private static let setupPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill. You are authorizing this task to create or update only the exact Release Radar guidance v2 managed block in the authorized repository's root \(RepositoryDocumentContract.guidancePath), while preserving every other instruction and all existing delivery content. Require an existing catalogued \(RepositoryDocumentContract.progressPath), preserve it byte-for-byte, and validate the existing \(RepositoryDocumentContract.catalogPath) and generated indexes with the repository documentation check; stop before any handoff write and report missing or invalid prerequisites for separately authorized preparation, without creating a ledger or catalog, moving documents, binding a repository, or accepting a catalog. Use the supported read-only inventory to preserve the exact existing handoff evidence ID when one matches this project's ticketless root \(RepositoryDocumentContract.guidancePath); reject incomplete, ambiguous, or mismatched results. Follow the skill's repository handoff: write and read back the permitted guidance, record that exact file with the existing ticketless evidence mutation, retain the complete request across uncertain outcomes, and report pending audit or discrepancies."
     private static func auditRepairPrompt(version: Int) -> String {
         "Explicitly invoke and follow the installed $release-radar:release-radar skill. Release Radar reports this repository's guidance handoff incomplete: the v\(version) managed block already matches, but its required ticketless evidence record is absent. You are authorizing this task to read back the exact root \(RepositoryDocumentContract.guidancePath) and complete the handoff through the skill's audited repair path without changing unrelated repository instructions, delivery documentation, or delivery state. Preserve the complete request across uncertain outcomes and report any pending audit or discrepancy instead of guessing."
     }
     private static let lifecycleBootstrapPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill's lifecycle bootstrap path. First perform a read-only inspection of the exact authorized root. For a blank repository, create the minimum Release Radar documentation bootstrap (catalog, generated indexes, delivery progress source of truth, and the exact staging guidance v1 block) without replacing unrelated content. For a repository with existing documentation, preserve and catalog that existing documentation, repairing only what the checker proves is required and staging the exact v1 block without claiming an audited handoff. Preview the exact repository files before writing them, then run the packaged documentation check and report the resulting catalog identity. Repository preparation does not bind or accept anything in Release Radar: repository binding, catalog acceptance, and the audited handoff are separate explicit owner actions. Stop after repository readback so the owner can preview and confirm the app-owned binding or acceptance. Do not infer those actions, and do not alter Release Radar delivery state from the repository preparation step."
+    private static let repositoryRepairPrompt = "Explicitly invoke and follow the installed $release-radar:release-radar skill's repository repair path. Inspect the exact authorized root read-only first, preserve existing documentation and unrelated instructions, and repair only the catalog, generated indexes, managed guidance, and applicable checksums that the packaged documentation check proves invalid or missing. Preview the exact repository files before writing them and run the packaged documentation check afterward. Do not bind a repository, accept a catalog, create delivery state, or claim an audited handoff; those remain separate explicit owner actions in Release Radar."
     static let copyButtonAccessibilityLabel = "Copy Codex prompt"
     static let copyButtonAccessibilityIdentifier = "onboarding-copy-codex-prompt"
     static let clipboardDisclosure = "Only the prompt is copied. It remains on the clipboard until replaced."
@@ -79,6 +87,56 @@ struct CodexPromptHandoff: Sendable {
             .joined(separator: "\n\n")
     }
 
+    static func kind(for state: ProjectDocumentationState) -> Kind? {
+        switch state {
+        case let .legacy(guidance):
+            switch guidance {
+            case .missing, .outdated: .repositoryBootstrap
+            case .needsRepair: .repositoryRepair
+            case .handoffIncomplete: .handoffRepair
+            case .current, .unavailable: nil
+            }
+        case let .stagedCatalog(_, preview):
+            switch preview { case .valid: .managedUpgrade; case .invalid: .repositoryRepair }
+        case let .managed(audited, _, _):
+            audited ? nil : .handoffRepair
+        case let .managedUnavailable(_, reason, _):
+            switch reason {
+            case .catalogInvalid, .guidanceUnavailable, .invalidTransition, .missingFile: .repositoryRepair
+            default: nil
+            }
+        }
+    }
+
+    static func prompt(
+        for state: ProjectDocumentationState,
+        projectRoot: URL,
+        registration: ProjectRegistration? = nil
+    ) -> String {
+        let root = projectRoot.standardizedFileURL.resolvingSymlinksInPath().path
+        let rootBinding = "The exact Release Radar-authorized repository root is `\(root)`. Confirm that this Codex task's canonical repository root exactly matches it. If it does not match, stop before writing any file or calling Release Radar and tell the owner to open a task rooted at that exact folder."
+        let identity = registration.map {
+            "The Release Radar project ID is `\($0.projectID.rawValue)`, its separate registration ID is `\($0.registrationID)`, and this copied request is generation `\($0.requestGeneration)`. Treat all three as an exact tuple; reject a stale or mismatched request and reload the project."
+        }
+        let handoff: String
+        switch kind(for: state) {
+        case .repositoryBootstrap: handoff = lifecycleBootstrapPrompt
+        case .managedUpgrade: handoff = setupPrompt
+        case .handoffRepair:
+            handoff = auditRepairPrompt(version: RepositoryDocumentContract.guidanceVersion)
+        case .repositoryRepair: handoff = repositoryRepairPrompt
+        case nil: handoff = setupPrompt
+        }
+        let contents = Bundle.main.bundleURL.appendingPathComponent("Contents")
+        let tooling = """
+        Documentation checker: \(contents.appendingPathComponent("Helpers/ReleaseRadarDocumentationTool").path)
+        Catalog v1 reference: \(contents.appendingPathComponent("Resources/catalog-v1.md").path)
+        Use the checker with `check --root <exact authorized root>` (quote paths). Its `--help` describes usage. These installed resources require no Release Radar source checkout. They do not authorize preparation, guidance changes, binding or catalog acceptance beyond the handoff above.
+        """
+        return ([rootBinding] + (identity.map { [$0] } ?? []) + [handoff, tooling])
+            .joined(separator: "\n\n")
+    }
+
     @MainActor
     static func copy(
         prompt: String,
@@ -90,6 +148,16 @@ struct CodexPromptHandoff: Sendable {
     @MainActor
     static func copy(
         for state: ProjectGuidanceState,
+        projectRoot: URL,
+        registration: ProjectRegistration? = nil,
+        using writer: @MainActor (String) -> Bool
+    ) -> CodexPromptCopyResult {
+        copy(prompt: prompt(for: state, projectRoot: projectRoot, registration: registration), using: writer)
+    }
+
+    @MainActor
+    static func copy(
+        for state: ProjectDocumentationState,
         projectRoot: URL,
         registration: ProjectRegistration? = nil,
         using writer: @MainActor (String) -> Bool
@@ -407,7 +475,7 @@ struct OnboardingView: View {
                             .textSelection(.enabled)
                             .accessibilityIdentifier("onboarding-authorized-project-root")
                         Text(CodexPromptHandoff.prompt(
-                            for: projectGuidanceState,
+                            for: preview?.documentationState ?? .legacy(projectGuidanceState),
                             projectRoot: projectRoot,
                             registration: preview?.registration
                         ))

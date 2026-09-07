@@ -92,6 +92,7 @@ final class AppModel {
     private var performingReviewActionProjectIDs: Set<ProjectID> = []
     private var alertRulesFailureState: AlertRulesFailureState?
     private var didInitializeCodexPluginLifecycle = false
+    private var codexPluginObservedAt: Date?
     private var projectionReloadGeneration: UInt64 = 0
 #if DEBUG
     private var rr9ActivePhaseCaptureScenario: RR9ActivePhaseCaptureScenario?
@@ -450,7 +451,11 @@ final class AppModel {
         }
 
         let documentationPresentation = ProjectGuidancePresentation(documentationState: documentation.documentationState)
-        let documentationReady = documentation.documentationState.guidanceState == .current(version: ProjectGuidanceInspection.currentVersion)
+        let documentationReady: Bool
+        switch documentation.documentationState {
+        case .managed(hasAuditedHandoff: true, _, _), .legacy(.current): documentationReady = true
+        default: documentationReady = false
+        }
         checks.append(.init(
             id: "documentation",
             title: documentationPresentation.status,
@@ -460,8 +465,11 @@ final class AppModel {
 
         let plugin = CodexPluginSettingsPresentation(state: codexPluginState)
         let pluginReady: Bool
-        if case .installed = codexPluginState { pluginReady = true } else { pluginReady = false }
-        checks.append(.init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: plugin.detail, state: pluginReady ? .ready : .attention))
+        if case .installed = codexPluginState, codexPluginObservedAt != nil { pluginReady = true } else { pluginReady = false }
+        let pluginObservation = codexPluginObservedAt.map {
+            "Observed \($0.formatted(date: .abbreviated, time: .shortened))."
+        } ?? "Observation time unavailable."
+        checks.append(.init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: "\(plugin.detail) \(pluginObservation)", state: pluginReady ? .ready : .attention))
 
         let connection = CodexConnectionPresentation(freshness: codexSnapshot.freshness)
         checks.append(.init(
@@ -496,7 +504,10 @@ final class AppModel {
         else { storageAvailable = false }
         let plugin = CodexPluginSettingsPresentation(state: codexPluginState)
         let pluginReady: Bool
-        if case .installed = codexPluginState { pluginReady = true } else { pluginReady = false }
+        if case .installed = codexPluginState, codexPluginObservedAt != nil { pluginReady = true } else { pluginReady = false }
+        let pluginObservation = codexPluginObservedAt.map {
+            "Observed \($0.formatted(date: .abbreviated, time: .shortened))."
+        } ?? "Observation time unavailable."
         let observer = CodexConnectionPresentation(freshness: codexSnapshot.freshness)
         return .init(
             projectTarget: nil,
@@ -513,7 +524,7 @@ final class AppModel {
                 ),
                 .init(id: "folder", title: "Folder access not checked", detail: "Open a saved project to check its exact folder authorization.", state: .unavailable),
                 .init(id: "documentation", title: "Documentation not checked", detail: "Open a saved project to check its exact repository documentation target.", state: .unavailable),
-                .init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: plugin.detail, state: pluginReady ? .ready : .attention),
+                .init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: "\(plugin.detail) \(pluginObservation)", state: pluginReady ? .ready : .attention),
                 .init(id: "observer", title: "Codex observation: \(observer.status)", detail: observer.detail, state: codexSnapshot.freshness.state == .live ? .ready : .attention),
             ]
         )
@@ -770,6 +781,12 @@ final class AppModel {
                 canReauthorize: true
             )
         }
+    }
+
+    func reauthorizeProjectHealthRoot(at folder: URL, projectID: ProjectID) async throws -> ProjectHealthSnapshot {
+        try await projectOnboarding.reauthorizeProjectRoot(folder, for: projectID)
+        _ = await reloadProjectProjections()
+        return await projectHealth(for: projectID)
     }
 
     func reloadDashboardAfterCommittedAgentCommand() async {
@@ -1181,6 +1198,7 @@ final class AppModel {
         }
         guard let codexPluginCoordinator else {
             codexPluginState = .failed(.integrityInvalid)
+            codexPluginObservedAt = Date()
             return
         }
         codexPluginOperation = .checking
@@ -1193,6 +1211,7 @@ final class AppModel {
         guard codexPluginOperation == nil else { return }
         guard let codexPluginCoordinator else {
             codexPluginState = .failed(.integrityInvalid)
+            codexPluginObservedAt = Date()
             return
         }
         let operation: CodexPluginOperation = retrying ? .tryAgain : .checking
@@ -1236,6 +1255,7 @@ final class AppModel {
         operation: CodexPluginOperation
     ) {
         codexPluginState = result.state
+        codexPluginObservedAt = Date()
         codexPluginOperation = nil
         codexPluginAnnouncement = CodexPluginSettingsPresentation(state: result.state).status
         if result.changedInstallation {
