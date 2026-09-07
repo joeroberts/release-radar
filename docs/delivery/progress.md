@@ -28,8 +28,11 @@ recovery boundaries” (`01a07d4b-28f0-7bf0-aa64-810d1e389e2f`) confirmed clean 
 temporary artifacts or running processes, and is archived. The existing brief now
 records exact reset contents, app/bridge close-and-drain, rollback/crash startup,
 request-incarnation invalidation, historical retention, notification nonreplay and
-mutation-free plugin inspection. One fresh Sol High writer will own the full coupled
-C7 outcome through bounded backup/reopen, reset-retention and Settings/health checkpoints. The full approved C7 outcome remains included;
+mutation-free plugin inspection. Fresh Sol High delivery creation was dispatched from exact `872fb3e`, requested branch
+`codex/c7-backup-reset-recovery`, with full coupled C7 ownership through backup/reopen,
+reset-retention and Settings/health checkpoints. Setup ID
+`client-new-thread:8d07b104-440a-44a2-8c9f-d7319c565436` awaits actual task/worktree
+confirmation; no duplicate dispatch. The full approved C7 outcome remains included;
 engineering sequencing does not omit backup, distinct resets, recovery or C12 readback.
 
 ## Delivered C6
