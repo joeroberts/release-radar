@@ -19,9 +19,9 @@ worktree `039a`, branch `codex/c4-root-management`, from `80521d6` plus handoff
 `9d08db4`. The new orchestrator has contacted it directly and explicitly configured
 Sol High; the API response does not confirm effective runtime. The worker owns C4
 source, tests, brief and associated catalog/index changes; only the orchestrator
-writes this ledger. Its reported registration-replacement regression is now passing;
-worktree promotion and explicit grant/reconnect/revoke remain under implementation.
-Those reports are interim evidence, not C4 completion or independent review.
+writes this ledger. Source candidate `1801ded` is independently reviewed; PR #28 is awaiting
+shared-document integration and owner merge approval. No installed owner-app or
+real folder-picker grant acceptance is claimed.
 
 The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
 and accepted ADR boundaries retain the full phase: C4 safe accepted-catalog relocation
@@ -138,11 +138,35 @@ Live observation candidate `95ad1fc` is in
 Sol High review by `01a07b9a-1fa0-7ad0-b50e-f5afab079b66`. Companion candidate
 `22c5132` is in [PR #27](https://github.com/joeroberts/release-radar/pull/27), under
 independent Astra High review by `01a07ba1-d86f-78b3-ac3f-6c3563e1e199`.
-Neither proposal is accepted or merged yet. C4 candidate `1801ded` has 66 reported
-selected passing checks, including sandboxed absolute/relative Git metadata and
-native compact/wide UI. Fresh combined Astra High reviewer
-`01a07ba1-5d2b-7921-8e72-558438f15167` owns its independent behavior, authorization
-and UX checks; C4 is not yet complete. These reviews create no extra product gate.
+Live candidate `95ad1fc` passed fresh independent review with no findings;
+documentation/diff checks, primary sources and scoped installed capability readback
+passed. Writer/reviewer report stopped work and no temporary artifacts. PR #26 awaits
+owner merge approval and preserves a supported-contract no-go for the current desktop
+runtime, not an assertion about undocumented IPC. Companion has two Required prose
+corrections: preserve publication withdrawal after recovery, and apply withdrawal
+before generation/compatibility fallback. These remain with its author and reviewer.
+
+C4 [PR #28](https://github.com/joeroberts/release-radar/pull/28), product candidate
+`1801ded`, passed fresh combined Astra High review by
+`01a07ba1-5d2b-7921-8e72-558438f15167` with no Required or Optional findings.
+Independent checks passed 31 selected XCTest cases, native 620/1100 window/AX/Escape
+and Health actions, documentation and diff checks. The reviewer compared fresh images
+with approved Settings and [C4 evidence](task-briefs/2026-09-07-c4-root-management/c4-root-management-brief.md).
+The author reports 66 selected checks across focused runs. XCTest injects a read-only
+`/` entitlement: these checks prove production containment predicates and injected
+denials, not real NSOpenPanel grants under shipping entitlements. Shipping entitlements
+are unchanged; installation, owner-state validation and broad-suite green are unclaimed.
+The coordinator resolved only shared catalog/index/ledger conflicts in `779e9dd`,
+preserving product source at `1801ded`; the delivery branch must take this integration
+before merge. PR #28 still requires explicit owner approval.
+
+Reviewer work/processes are stopped. Temporary review outputs remain at
+`/tmp/c4-independent-review-01a07ba1` (DerivedData), its `-first.log`, `-first.xcresult`,
+`-health.log`, `-health.xcresult`, `-images` siblings, and test-host directories
+`ReleaseRadar-XCTestHost-{69284,69295,69296,69597,69599,69600}` under
+`/Users/jroberts/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/`.
+Author temporary paths remain listed in the C4 brief; no cleanup occurred or is
+authorized. Durable source/brief/captures are committed repository artifacts.
 
 ## Delivered lifecycle handoff — 2026-09-07
 
