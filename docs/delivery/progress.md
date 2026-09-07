@@ -96,8 +96,20 @@ its picker/write evidence does not by itself settle the exact shipping-boundary 
 Independent correction review must assess that remaining verification limitation.
 
 The same writer's scope is now complete through candidate handoff; its worktree is clean,
-branch pushed, and it reports all owned C7-R7 app processes stopped. The same independent
-Astra High reviewer will inspect the integrated candidate and all eight Required corrections.
+branch pushed, and it reports all owned C7-R7 app processes stopped. Independent corrective review of `ab53f1ba748351785f126309cc2281adaefa8ff1` completed:
+12 committed focused correction tests passed; two negative cases reproduced Required P1
+defects. R1 crash-resume `replacementInstalled` cleanup loses unreadable original rollback;
+R5 reconciliation drops displaced registration/history when that project was absent from
+the selected backup. R2/R3/R4/R6/R8 selected checks pass. R7 source conforms, but exact
+shipping-permission picker proof remains Required. Evidence must distinguish known synthetic
+results from unknown normal-launch effects and accurately state selected test counts.
+The reviewer is stopped/archived; its old untracked reproducer was already absent before
+checkout recovery. New temporary `3c78/ReleaseRadarTests/C7CorrectiveReviewTests.swift`
+and `/tmp/c7-corrective-review-01a07da3/` are retained, with old `/tmp` evidence.
+The same writer is restored at explicit Sol High from `ab53f1b` for only these corrections,
+evidence accuracy and bounded R7 verification. Native launches require a source-proven
+synthetic initialization/termination route without broad filesystem exceptions; no new
+normal-app launch, harness, owner-state inspection or credential use is authorized.
 No merge approval has been requested or given. Final phase acceptance remains outstanding.
 
 Verification incidents remain disclosed in the [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
