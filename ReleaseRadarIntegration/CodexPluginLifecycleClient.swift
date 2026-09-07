@@ -48,10 +48,10 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
     private func call(_ operation: Operation) async -> CodexPluginHelperReply {
         do {
             try registerIfNeeded()
-            let initialStatus = await invoke(.status)
+            let initialStatus = validatedReply(await invoke(.status))
             let currentStatus = try await recoverRegistrationIfNeeded(after: initialStatus)
             guard currentStatus.error == nil, operation != .status else { return currentStatus }
-            return await invoke(operation)
+            return validatedReply(await invoke(operation))
         } catch {
             return Self.failureReply(for: error)
         }
@@ -94,7 +94,27 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
             return reply
         }
         try rebindService()
-        return await invoke(.status)
+        return validatedReply(await invoke(.status))
+    }
+
+    private func validatedReply(_ reply: CodexPluginHelperReply) -> CodexPluginHelperReply {
+        guard reply.wireVersion == ReleaseRadarPluginLifecycleTransport.wireVersion else {
+            return malformedReply()
+        }
+        switch (reply.observedState, reply.error) {
+        case (.some, nil), (nil, .some):
+            return reply
+        default:
+            return malformedReply()
+        }
+    }
+
+    private func malformedReply() -> CodexPluginHelperReply {
+        .init(
+            wireVersion: ReleaseRadarPluginLifecycleTransport.wireVersion,
+            observedState: nil,
+            error: .malformedResult
+        )
     }
 
     private func rebindService() throws {

@@ -232,6 +232,42 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
         XCTAssertEqual(service.registerCallCount, 0)
         XCTAssertEqual(remote.operations, [.status, .install])
     }
+
+    func testClientDoesNotRecoverOrInstallAfterAnUnsupportedStatusReply() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 2, observedState: nil, error: .marketplaceConflict),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.install()
+
+        XCTAssertEqual(reply.error, .malformedResult)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertEqual(remote.operations, [.status])
+    }
+
+    func testClientDoesNotInstallAfterAStatusReplyWithoutObservedState() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 1, observedState: nil, error: nil),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.install()
+
+        XCTAssertEqual(reply.error, .malformedResult)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertEqual(remote.operations, [.status])
+    }
 }
 
 private final class PluginLifecycleServiceStub: PluginLifecycleServiceManaging {
