@@ -114,7 +114,7 @@ struct PhaseBoardView: View {
                             needsHorizontalRecovery: needsHorizontalRecovery
                         )
 
-                        Divider()
+                        RekonSeparator(.vertical)
 
                         detail
                             .frame(width: 314)
@@ -129,7 +129,7 @@ struct PhaseBoardView: View {
                             )
                                 .frame(height: 390)
 
-                            Divider()
+                            RekonSeparator()
 
                             detail
                                 .frame(height: 260)
@@ -276,7 +276,7 @@ struct PhaseBoardView: View {
                 .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 11))
                 .overlay {
                     RoundedRectangle(cornerRadius: 11)
-                        .stroke(RekonTheme.borderSubtle)
+                        .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
                 }
                 .overlay(alignment: .top) {
                     Rectangle()

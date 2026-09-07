@@ -53,7 +53,10 @@ struct ProjectOverviewView: View {
                     .padding(18)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+                    }
 
                 if project.phases.isEmpty {
                     RekonCallout(tone: .information, systemImage: "flag.badge.plus") {
@@ -87,7 +90,10 @@ struct ProjectOverviewView: View {
                         ForEach(project.evidence) { EvidenceDetailView(evidence: $0) }
                     }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+                        }
                 }
 
                 VStack(alignment: .leading, spacing: 14) {
@@ -127,7 +133,10 @@ struct ProjectOverviewView: View {
                 }
                 .padding(20)
                 .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-                .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+                }
             }
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)

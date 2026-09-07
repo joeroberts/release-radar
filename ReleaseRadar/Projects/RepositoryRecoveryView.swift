@@ -119,7 +119,7 @@ struct RepositoryRecoveryView: View {
                 Text("No accepted managed repository binding.").font(.subheadline).foregroundStyle(.secondary)
             }
             if let prepared = model.prepared {
-                Divider()
+                RekonSeparator()
                 Text("Confirm repository relocation").font(.headline)
                 Text("From: \(prepared.oldRoot.path)").font(.caption.monospaced())
                 Text("To: \(prepared.selectedRoot.path)").font(.caption.monospaced())
@@ -165,7 +165,10 @@ struct RepositoryRecoveryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .foregroundStyle(RekonTheme.primaryText)
         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
-        .overlay { RoundedRectangle(cornerRadius: 14).stroke(RekonTheme.borderSubtle) }
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+        }
         .task { await model.load() }
     }
     private func chooseFolder() {

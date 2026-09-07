@@ -206,7 +206,13 @@ struct NeedsReviewView: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(isSelected ? RekonTheme.elevatedSurface : RekonTheme.surface, in: RoundedRectangle(cornerRadius: 10))
-            .overlay { RoundedRectangle(cornerRadius: 10).stroke(isSelected ? RekonTheme.accent : RekonTheme.borderSubtle) }
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(
+                        isSelected ? RekonTheme.accent : RekonTheme.border.opacity(0.82),
+                        lineWidth: RekonBorder.hairline
+                    )
+            }
             .foregroundStyle(RekonTheme.primaryText)
     }
 
