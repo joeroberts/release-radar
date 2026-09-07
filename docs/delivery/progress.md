@@ -85,11 +85,41 @@ containing the approved merge and decision record. The delivery
 owner committed the controlling
 [usable lifecycle brief](task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md)
 as `b806554` before product implementation, with native documentation checks
-passing. Test-first implementation is active on `codex/usable-project-lifecycle`;
-the outcome is tested source, affected documentation and a local candidate for one fresh
-independent architecture/security/QA review. The parent retains ledger ownership.
+passing. The delivery owner committed and pushed candidate `7601b619` on
+`codex/usable-project-lifecycle` and opened
+[PR #23](https://github.com/joeroberts/release-radar/pull/23), including parent
+ledger updates through `cd573cd` via Git. Candidate checks report 187/187 focused
+tests, successful build and native documentation checks. The full suite reports
+547 passed / 1 failed: the isolated
+`AgentBridgeTransportAcceptanceTests.testTicketTaskToolsUseRegisteredBrokerAndRecoverExactRequests`
+requires the disabled controlled bridge. It was not enabled or installed.
+Compact/wide native rendering checks passed; installed permission-dialog and
+owner-state acceptance remain separately unauthorized and unclaimed.
+
+“Review usable project lifecycle candidate”
+(`01a07923-88cd-7780-bc43-8bb8e0423e22`) is active in fresh worktree `85d0`, actual
+Astra High confirmed, completed its initial combined review of product `7601b619`
+and brief-only supplement `4b4deb0`. Independent checks passed 38/38, native
+documentation/diff checks and 1100/620 rendering/AX inspection. **Six Required
+findings block merge:** missing direct exact-folder recovery; catalog validation
+after security scope closes; migration marks pending setup complete; existing v1
+or invalid-catalog bootstrap dead ends; health misstates catalog/freshness; and
+registration generation is not checked atomically at documentation commit.
+These are source/control-flow findings not disproved by the passing tests.
+
+Corrections are assigned to the same Sol High delivery task under existing scope,
+with test-first negative/interleaving cases and directly affected checks. The same
+reviewer will recheck those corrections; no new review layer or owner design gate.
+PR #23 remains open and unapproved for merge. The reviewer reported all review and
+test/build processes stopped; its initial review result is preserved here before
+archival. Temporary review output remains at `/tmp/rr-pr23-independent-review`,
+`/tmp/rr-pr23-independent-review.log`, `/tmp/rr-pr23-independent-review-images` and
+the test-managed `ReleaseRadar-XCTestHost-75860` temporary directory. No cleanup
+occurred. The parent retains ledger ownership and monitors through the approved
+Git endpoint.
 No owner/application-state action or installation is authorized by source delivery.
-Durable changes remain tracked; no new temporary files were created.
+Durable source changes are tracked and published in PR #23. No cleanup occurred;
+the delivery owner will record remaining temporary verification paths in its brief.
 
 The owner clarified programme follow-through: the orchestrator launches/monitors
 workers and answers settled questions from durable decisions and, where necessary,
