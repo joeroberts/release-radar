@@ -241,6 +241,26 @@ or ambiguous notification work, grants no folder capability, accepts no document
 catalog and writes no repository file. Missing folder access and invalid or pending
 documentation remain visible health problems for the owner to resolve separately.
 
+### Application backup, reset and recovery
+
+General Settings presents full application backup and restore separately from preference
+reset. The confirmation preview names the complete supported local-store contents and
+states that credentials, source repositories, portable project files and device permission
+grants are excluded. Preference reset restores only the four alert-rule defaults and
+temporary view selections. Projects Settings presents tracking-data reset separately; it
+removes active and archived registrations through retained-history removal semantics while
+preserving global preferences, plugin receipts and historical records.
+
+Restore validates a versioned app-backup package before confirmation, names restored and
+displaced registrations, and states whether newer local history can be reconciled. During
+replacement the app stops new bridge and notification work, drains admitted operations,
+closes its stores and resumes only with a fresh service graph. Restored queued notifications
+are not sent; ambiguous attempts remain unknown, newer terminal delivery facts are retained
+when readable, bookmarks require reauthorization and all live registration authority is
+rotated. Startup recovery remains available through Application health when the current
+store cannot open. Plugin recovery inspection is read-only and reports unknown management
+when its retained receipt is unavailable.
+
 ### Phase board
 
 The project board contains a selected phase, phase dependencies, Codex sync

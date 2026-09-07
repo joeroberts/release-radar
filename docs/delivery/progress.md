@@ -80,25 +80,37 @@ with read-write=true, keep every other entitlement unchanged, select one existin
 with a single-selection directories-only picker, confine generated backup and staging
 inside it, and balance temporary security scope without persistent grants. Verify the
 signed app's real entitlements and picker with an isolated synthetic store and a fresh
-folder outside its container. Delivery is active; final candidate is not yet available.
+folder outside its container. The R7 candidate is now available for corrective review.
 No installation, owner-data operations, credential changes, real notifications, plugin
 mutations or cloud changes are authorized. The same independent reviewer will assess
 remaining corrections at Astra High after the final candidate is pushed. PR #31 was
 freshly verified OPEN at `c8f282e`; PRs #28–#30 are MERGED. No C7 source is accepted yet.
 
-R7 verification checkpoint: two focused writer tests passed; the first native picker
-check skipped because its synthetic-folder environment value was not forwarded.
-CUA then launched the test-built app normally rather than attaching to its test panel.
-The writer stopped only the new PID 48085; the pre-existing installed app was untouched.
-Default-service initialization and any resulting owner-state effects are unverified.
-No owner-state inspection or repair is authorized. Further native verification must
-establish synthetic isolation before initialization and avoid a tool path that may
-launch the app normally; otherwise the signed runtime check remains blocked.
-A subsequent `xcrun xctest -h` invocation printed inherited environment values in the
-writer transcript, exposing Jira and Pushover credentials. The owner was informed that
-rotation is needed; no values are retained here, and no credential use or change is
-authorized. Further exploratory runtime attempts by this writer are stopped. It will
-preserve the candidate and explicit verification limits for independent corrective review.
+R7 is pushed at `587701b1e91c8e4fd51888349eaaa9321542d6be`. The writer reports 19/19
+focused tests passed, a native single-folder picker test generated and validated a backup
+inside a fresh external synthetic folder without leftover staging, and a Release build with
+strict deep signing verification. Actual Release entitlements have the authorized read-write
+selection, unchanged sandbox/app-group/network scope, generated get-task-allow and no broad
+filesystem exception. The XCTest host has injected read-only `/` and test-manager exceptions;
+its picker/write evidence does not by itself settle the exact shipping-boundary requirement.
+Independent correction review must assess that remaining verification limitation.
+
+The same writer's scope is now complete through candidate handoff; its worktree is clean,
+branch pushed, and it reports all owned C7-R7 app processes stopped. The same independent
+Astra High reviewer will inspect the integrated candidate and all eight Required corrections.
+No merge approval has been requested or given. Final phase acceptance remains outstanding.
+
+Verification incidents remain disclosed in the [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
+A CUA attempt launched the test-built app normally; only that new PID 48085 was stopped.
+Default-service initialization and resulting owner-state effects are unverified. A later
+`xcrun xctest -h` printed inherited credentials in the writer transcript. The owner was told
+Jira and Pushover credentials should be rotated. No values are retained in repository docs;
+no credential use/change or owner-state inspection/repair is authorized. No further
+exploratory runtime launches were authorized for that writer.
+
+Retained R7 temporary artifacts: writer `build/c7-r7`, `build/c7-r7-final-tests`,
+`build/c7-r7-native`, `build/c7-r7-native-host`, `build/c7-r7-release`, and external synthetic
+`/Users/Shared/ReleaseRadar-C7-SignedPicker.QVvAJK` with generated package. No cleanup authorized.
 
 Six failures were reproduced synthetically; destination/signing and recovery-mode issues
 are source-backed. Eighteen existing selected/native tests passed. Same reviewer stopped

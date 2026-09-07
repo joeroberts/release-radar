@@ -4,7 +4,92 @@ import XCTest
 import ReleaseRadarCore
 @testable import ReleaseRadar
 
+private enum SyntheticBackupScopeError: Error {
+    case expected
+}
+
 final class AppRouteTests: XCTestCase {
+    @MainActor
+    func testBackupDestinationPanelSelectsOneExistingFolderAndGeneratesItsPackageInside() throws {
+        let panel = ApplicationRecoveryFilePanels.makeBackupDestinationPanel()
+
+        XCTAssertFalse(panel.canChooseFiles)
+        XCTAssertTrue(panel.canChooseDirectories)
+        XCTAssertFalse(panel.allowsMultipleSelection)
+        XCTAssertFalse(panel.canCreateDirectories)
+        XCTAssertFalse(panel.resolvesAliases)
+
+        let folder = URL(fileURLWithPath: "/Users/Shared/Synthetic Backup Destination", isDirectory: true)
+        let identifier = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let package = ApplicationRecoveryFilePanels.backupPackageURL(
+            in: folder,
+            identifier: identifier
+        )
+        XCTAssertEqual(package.deletingLastPathComponent(), folder)
+        XCTAssertEqual(package.pathExtension, "release-radar-backup")
+        XCTAssertEqual(
+            package.lastPathComponent,
+            "Release Radar Backup 11111111-2222-3333-4444-555555555555.release-radar-backup"
+        )
+    }
+
+    @MainActor
+    func testBackupSecurityScopeIsBalancedForSuccessAndFailure() async throws {
+        let folder = URL(fileURLWithPath: "/Users/Shared/Synthetic Backup Destination", isDirectory: true)
+        var starts = 0
+        var stops = 0
+        let value = try await ApplicationRecoverySecurityScope.withAccess(
+            to: folder,
+            start: { _ in starts += 1; return true },
+            stop: { _ in stops += 1 }
+        ) {
+            "complete"
+        }
+        XCTAssertEqual(value, "complete")
+        XCTAssertEqual(starts, 1)
+        XCTAssertEqual(stops, 1)
+
+        do {
+            _ = try await ApplicationRecoverySecurityScope.withAccess(
+                to: folder,
+                start: { _ in starts += 1; return true },
+                stop: { _ in stops += 1 }
+            ) {
+                throw SyntheticBackupScopeError.expected
+            } as String
+            XCTFail("The synthetic failure must propagate")
+        } catch SyntheticBackupScopeError.expected {}
+        XCTAssertEqual(starts, 2)
+        XCTAssertEqual(stops, 2)
+    }
+
+    @MainActor
+    func testSignedNativeBackupPickerWritesValidatedPackageInSelectedExternalFolder() async throws {
+        guard let expectedFolderPath = ProcessInfo.processInfo.environment["C7_SIGNED_PICKER_FOLDER"] else {
+            throw XCTSkip("Run only for the signed native picker verification.")
+        }
+        let expectedFolder = URL(fileURLWithPath: expectedFolderPath, isDirectory: true).standardizedFileURL
+        let packageURL = try XCTUnwrap(ApplicationRecoveryFilePanels.chooseBackupDestination())
+        XCTAssertEqual(packageURL.deletingLastPathComponent().standardizedFileURL, expectedFolder)
+
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-C7-SignedPicker-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let model = AppModel(
+            store: store,
+            databaseURL: databaseURL,
+            externalServicesSuppressed: true
+        )
+        let preview = try await model.previewApplicationBackup(destinationURL: packageURL)
+        await model.createApplicationBackup(preview)
+
+        XCTAssertNil(model.applicationRecoveryFailure)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: packageURL.path))
+        let manifest = try ApplicationBackupManifest.load(from: packageURL)
+        XCTAssertEqual(manifest.databaseSHA256.count, 64)
+    }
+
     func testMainWindowConsumesSharedRDSChromeWithoutALocalAppKitBridge() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -91,8 +176,18 @@ final class AppRouteTests: XCTestCase {
         let health = await model.applicationHealth()
 
         XCTAssertNil(health.projectTarget)
-        XCTAssertEqual(health.checks.map(\.id), ["storage", "folder", "documentation", "plugin", "observer"])
+        XCTAssertEqual(health.checks.map(\.id), ["storage", "recovery", "folder", "documentation", "plugin", "observer"])
         XCTAssertEqual(health.checks.first?.state, .unavailable)
+        let recovery = try XCTUnwrap(health.checks.first { $0.id == "recovery" })
+        XCTAssertTrue(recovery.detail.contains(databaseURL.path))
+        XCTAssertEqual(
+            ApplicationHealthAction.recommended(
+                forCheckID: recovery.id,
+                state: recovery.state,
+                hasProjectTarget: false
+            ),
+            .restoreBackup
+        )
         XCTAssertTrue(health.checks.dropFirst().contains { $0.state != .ready })
     }
 
@@ -1918,6 +2013,33 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testRecoveryResumedLaunchUsesReadOnlyPluginStatus() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RecoveryPluginLaunch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let manager = AppLifecycleManager(replies: [
+            .init(wireVersion: 1, observedState: .absent, error: nil),
+        ])
+        let model = AppModel(
+            store: store,
+            codexPluginCoordinator: .init(
+                manager: manager,
+                store: CodexPluginLifecycleStore(store: store),
+                shippedVersion: "0.1.3",
+                shippedDigest: "current"
+            ),
+            recoveryResumedAtLaunch: true
+        )
+
+        await model.initializeCodexPluginLifecycleForLaunch()
+
+        let calls = await manager.operations()
+        XCTAssertEqual(calls, [AppLifecycleManager.Operation.statusReadOnly])
+    }
+
+    @MainActor
     func testAppLaunchChecksPluginOnlyAfterDashboardLoad() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-AppPluginLaunchOrder-\(UUID().uuidString)", isDirectory: true)
@@ -2425,6 +2547,39 @@ final class AppRouteTests: XCTestCase {
         let final = try await rr9SelectionState(store: fixture.store, projectID: fixture.projectID)
         XCTAssertEqual(final.commandRequests, 1)
         XCTAssertEqual(final.selectionAudits, 1)
+    }
+
+    @MainActor
+    func testOwnerActionRejectsTheRegistrationCapturedBeforeRecovery() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed recovery authority") { connection in
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('rr9-owner-project', 'registration-before-recovery', 1, 'complete')")
+        }
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Simulate recovery authority rotation") { connection in
+            try connection.execute("UPDATE project_registrations SET registration_id = 'registration-after-recovery', request_generation = 2 WHERE project_id = 'rr9-owner-project'")
+            try connection.execute("UPDATE application_recovery_state SET requires_scoped_commands = 1 WHERE singleton_id = 1")
+        }
+
+        let result = try await model.transitionTicket(
+            projectID: fixture.projectID,
+            ticketID: .init(rawValue: "ROAD-1"),
+            to: .inProgress
+        )
+
+        XCTAssertEqual(result.error, .staleProjectRegistration)
+        let persisted = try await fixture.store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? -1,
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE id = 'ROAD-1' AND lane = 'backlog'") ?? -1,
+            ]
+        }
+        XCTAssertEqual(persisted, [0, 1])
     }
 
     @MainActor
@@ -3919,7 +4074,7 @@ private actor LaunchOrderLifecycleManager: CodexPluginLifecycleManaging {
 }
 
 private actor AppLifecycleManager: CodexPluginLifecycleManaging {
-    enum Operation: Equatable { case status, install, remove, reinstall }
+    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall }
     private var replies: [CodexPluginHelperReply]
     private var calls: [Operation] = []
 
@@ -3928,6 +4083,7 @@ private actor AppLifecycleManager: CodexPluginLifecycleManaging {
     }
 
     func status() async -> CodexPluginHelperReply { next(.status) }
+    func statusReadOnly() async -> CodexPluginHelperReply { next(.statusReadOnly) }
     func install() async -> CodexPluginHelperReply { next(.install) }
     func remove() async -> CodexPluginHelperReply { next(.remove) }
     func reinstall() async -> CodexPluginHelperReply { next(.reinstall) }

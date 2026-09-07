@@ -57,6 +57,9 @@ public actor AgentCommandDispatcher {
             guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
             }
+            guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+            }
             guard let body = try? canonicalRequestBody(envelope) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .documentation(.invalidRequest))
             }
@@ -71,6 +74,9 @@ public actor AgentCommandDispatcher {
         }
         guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
             return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+        }
+        guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
+            return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
         }
 
         do {
@@ -282,11 +288,27 @@ public actor AgentCommandDispatcher {
         return nil
     }
 
+    private func registrationScopeIsCurrent(
+        _ envelope: AgentCommandEnvelope,
+        project: AuthorizedProject,
+        origin _: AgentCommandOrigin
+    ) async -> Bool {
+        if let expected = envelope.expectedRegistration {
+            return expected == project.registration
+        }
+        return (try? await store.read {
+            try $0.scalarInt(
+                "SELECT requires_scoped_commands FROM application_recovery_state WHERE singleton_id = 1"
+            ) == 0
+        }) == true
+    }
+
     private func canonicalRequestBody(_ envelope: AgentCommandEnvelope) throws -> Data {
         struct Body: Codable {
             let version: Int
             let projectRoot: String
             let assertedThreadID: String?
+            let expectedRegistration: ProjectRegistration?
             let reason: String
             let command: AgentCommand
         }
@@ -294,6 +316,7 @@ public actor AgentCommandDispatcher {
             version: envelope.version,
             projectRoot: envelope.projectRoot,
             assertedThreadID: envelope.assertedThreadID,
+            expectedRegistration: envelope.expectedRegistration,
             reason: envelope.reason,
             command: envelope.command
         )

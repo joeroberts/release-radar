@@ -11,6 +11,7 @@ actor AppNotificationCoordinator {
     private var dashboardRefreshHandler: DashboardRefreshHandler?
     private var pendingSuccessfulCommandRefresh = false
     private var successfulCommandRefreshDrainInProgress = false
+    private var acceptsWork = true
 
     init(store: DeliveryStore, dispatcher: PushoverNotificationDispatcher) {
         self.store = store
@@ -27,11 +28,13 @@ actor AppNotificationCoordinator {
     }
 
     func initializeForLaunch() async {
+        guard acceptsWork else { return }
         await dispatcher.prepareForLaunch()
         await dispatchPending()
     }
 
     func dispatchPending() async {
+        guard acceptsWork else { return }
         await dispatcher.dispatchPending()
         await refreshProjectsWithNotifications()
     }
@@ -40,9 +43,16 @@ actor AppNotificationCoordinator {
         _: AgentCommandEnvelope,
         result: AgentCommandResult
     ) async {
+        guard acceptsWork else { return }
         guard result.error == nil else { return }
         pendingSuccessfulCommandRefresh = true
         await drainSuccessfulCommandRefreshIfPossible()
+    }
+
+    func stopAndDrain() async {
+        acceptsWork = false
+        pendingSuccessfulCommandRefresh = false
+        await dispatcher.stopAndDrain()
     }
 
     private func drainSuccessfulCommandRefreshIfPossible() async {
@@ -80,17 +90,33 @@ actor AppNotificationCoordinator {
     }
 }
 
-struct ReleaseRadarAppServices: Sendable {
+@MainActor
+final class ReleaseRadarAppServices: @unchecked Sendable {
     static let shared = ReleaseRadarAppServices()
 
-    let store: DeliveryStore
+    private(set) var store: DeliveryStore
     let keychain: PushoverKeychainStore
-    let notificationCoordinator: AppNotificationCoordinator
-    let codexPluginCoordinator: CodexPluginLifecycleCoordinator?
+    private(set) var notificationCoordinator: AppNotificationCoordinator
+    private(set) var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
     let codexPluginShippedVersion: String
+    private(set) var recoveryStartupError: String?
+    private(set) var recoveryResumedAtLaunch = false
+    private let codexPluginPackage: CodexPluginPackage?
+    private var agentBridgeHost: AgentBridgeApplicationHost?
 
     private init() {
-        let store = DeliveryStore(databaseURL: DeliveryStore.applicationSupportDatabaseURL())
+        let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
+        let startupError: String?
+        do {
+            recoveryResumedAtLaunch = try ApplicationRecoveryManager.resolveInterruptedOperation(databaseURL: databaseURL)
+            startupError = nil
+        } catch {
+            startupError = error.localizedDescription
+        }
+        recoveryStartupError = startupError
+        let store = startupError == nil
+            ? DeliveryStore(databaseURL: databaseURL)
+            : DeliveryStore(unavailableDatabaseURL: databaseURL, message: startupError!)
         let keychain = PushoverKeychainStore()
         self.store = store
         self.keychain = keychain
@@ -102,6 +128,7 @@ struct ReleaseRadarAppServices: Sendable {
             .appendingPathComponent("CodexPluginMarketplace", isDirectory: true),
            let package = try? CodexPluginPackage(rootURL: packageURL)
         {
+            codexPluginPackage = package
             codexPluginShippedVersion = package.version
             codexPluginCoordinator = CodexPluginLifecycleCoordinator(
                 manager: CodexPluginLifecycleClient(),
@@ -110,8 +137,53 @@ struct ReleaseRadarAppServices: Sendable {
                 shippedDigest: package.digest
             )
         } else {
+            codexPluginPackage = nil
             codexPluginShippedVersion = "Unknown"
             codexPluginCoordinator = nil
         }
+    }
+
+    func stopAndDrainForRecovery() async throws {
+        await notificationCoordinator.stopAndDrain()
+        await agentBridgeHost?.stopAndDrain()
+        agentBridgeHost = nil
+    }
+
+    func adoptRecoveredStore(_ store: DeliveryStore) {
+        self.store = store
+        recoveryStartupError = nil
+        recoveryResumedAtLaunch = false
+        notificationCoordinator = AppNotificationCoordinator(
+            store: store,
+            dispatcher: PushoverNotificationDispatcher(store: store, credentials: keychain)
+        )
+        if let package = codexPluginPackage {
+            codexPluginCoordinator = CodexPluginLifecycleCoordinator(
+                manager: CodexPluginLifecycleClient(),
+                store: CodexPluginLifecycleStore(store: store),
+                shippedVersion: package.version,
+                shippedDigest: package.digest
+            )
+        } else {
+            codexPluginCoordinator = nil
+        }
+    }
+
+    func startSharedAgentBridge() async throws {
+        guard recoveryStartupError == nil else { return }
+        guard agentBridgeHost == nil else { return }
+        let coordinator = notificationCoordinator
+        agentBridgeHost = try await AgentBridgeApplicationHost.start(
+            databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
+            afterReply: { envelope, result in
+                await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
+            }
+        )
+    }
+
+    func stopSharedServices() async {
+        await notificationCoordinator.stopAndDrain()
+        await agentBridgeHost?.stopAndDrain()
+        agentBridgeHost = nil
     }
 }

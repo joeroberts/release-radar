@@ -65,17 +65,25 @@ final class AppModel {
     var pushoverSettingsMessage: String?
     var alertRules: AlertRuleSnapshot?
     var alertRuleUpdateInFlight: AlertRuleKind?
+    var applicationRecoveryInFlight = false
+    var applicationRecoveryMessage: String?
+    var applicationRecoveryFailure: FailureStatePresentation?
+    var applicationRecoveryCheckedAt: Date?
 
     private var repositoryRecoveries: [ProjectID: RepositoryRecoveryModel] = [:]
-    private let store: DeliveryStore
+    private var store: DeliveryStore
+    private let databaseURL: URL
     private let seedSampleData: Bool
     private let externalServicesSuppressed: Bool
     private let codexObserver: any CodexObserver
-    private let codexPluginCoordinator: CodexPluginLifecycleCoordinator?
+    private var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
     let codexPluginShippedVersion: String
     private let pushoverKeychain: PushoverKeychainStore
-    private let notificationCoordinator: AppNotificationCoordinator
-    private let projectOnboarding: FolderProjectOnboarding
+    private var notificationCoordinator: AppNotificationCoordinator
+    private var projectOnboarding: FolderProjectOnboarding
+    private let recoveryServices: ReleaseRadarAppServices?
+    private var recoveryStartupError: String?
+    private var recoveryResumedAtLaunch: Bool
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
     private let dashboardLoader: @Sendable (DeliveryStore) async throws -> DashboardProjection
     private let requestIDGenerator: () -> UUID
@@ -104,6 +112,7 @@ final class AppModel {
 
     init(
         store: DeliveryStore,
+        databaseURL: URL? = nil,
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
         codexPluginCoordinator: CodexPluginLifecycleCoordinator? = nil,
         codexPluginShippedVersion: String = "0.1.0",
@@ -117,11 +126,15 @@ final class AppModel {
             try await DashboardProjection.load(from: $0)
         },
         requestIDGenerator: @escaping () -> UUID = { UUID() },
+        recoveryServices: ReleaseRadarAppServices? = nil,
+        recoveryStartupError: String? = nil,
+        recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
         seedSampleData: Bool = false
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
+        self.databaseURL = databaseURL ?? store.databaseURL
         self.seedSampleData = seedSampleData
         self.externalServicesSuppressed = externalServicesSuppressed
         self.codexObserver = codexObserver
@@ -132,6 +145,9 @@ final class AppModel {
         self.reviewInboxLoader = reviewInboxLoader
         self.dashboardLoader = dashboardLoader
         self.requestIDGenerator = requestIDGenerator
+        self.recoveryServices = recoveryServices
+        self.recoveryStartupError = recoveryStartupError
+        self.recoveryResumedAtLaunch = recoveryResumedAtLaunch
         self.notificationCoordinator = notificationCoordinator
             ?? AppNotificationCoordinator(
                 store: store,
@@ -142,6 +158,7 @@ final class AppModel {
 #if DEBUG
     convenience init(
         store: DeliveryStore,
+        databaseURL: URL? = nil,
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
         codexPluginCoordinator: CodexPluginLifecycleCoordinator? = nil,
         codexPluginShippedVersion: String = "0.1.0",
@@ -155,6 +172,9 @@ final class AppModel {
             try await DashboardProjection.load(from: $0)
         },
         requestIDGenerator: @escaping () -> UUID = { UUID() },
+        recoveryServices: ReleaseRadarAppServices? = nil,
+        recoveryStartupError: String? = nil,
+        recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
         seedSampleData: Bool = false,
         rr9ActivePhaseCaptureScenario: RR9ActivePhaseCaptureScenario?,
@@ -162,6 +182,7 @@ final class AppModel {
     ) {
         self.init(
             store: store,
+            databaseURL: databaseURL,
             codexObserver: codexObserver,
             codexPluginCoordinator: codexPluginCoordinator,
             codexPluginShippedVersion: codexPluginShippedVersion,
@@ -171,6 +192,9 @@ final class AppModel {
             reviewInboxLoader: reviewInboxLoader,
             dashboardLoader: dashboardLoader,
             requestIDGenerator: requestIDGenerator,
+            recoveryServices: recoveryServices,
+            recoveryStartupError: recoveryStartupError,
+            recoveryResumedAtLaunch: recoveryResumedAtLaunch,
             externalServicesSuppressed: externalServicesSuppressed,
             seedSampleData: seedSampleData
         )
@@ -372,6 +396,197 @@ final class AppModel {
         }
     }
 
+    func previewApplicationBackup(destinationURL: URL) async throws -> ApplicationBackupPreview {
+        try await ApplicationRecoverySecurityScope.withAccess(
+            to: destinationURL.deletingLastPathComponent()
+        ) {
+            try await ApplicationBackupManager(
+                store: self.store,
+                databaseURL: self.databaseURL
+            ).previewBackup(destinationURL: destinationURL)
+        }
+    }
+
+    func presentApplicationRecoveryFailure(_ error: Error) {
+        applicationRecoveryMessage = nil
+        applicationRecoveryCheckedAt = Date()
+        applicationRecoveryFailure = .init(
+            title: "Recovery preview unavailable",
+            detail: error.localizedDescription,
+            systemImage: "exclamationmark.arrow.triangle.2.circlepath",
+            tone: .error,
+            accessibilityID: "application-recovery-failure"
+        )
+    }
+
+    func createApplicationBackup(_ preview: ApplicationBackupPreview) async {
+        await performRecoveryOperation {
+            let receipt = try await ApplicationRecoverySecurityScope.withAccess(
+                to: preview.destinationURL.deletingLastPathComponent()
+            ) {
+                try await ApplicationBackupManager(
+                    store: self.store,
+                    databaseURL: self.databaseURL
+                ).createBackup(preview)
+            }
+            self.applicationRecoveryMessage = "Backup created at \(receipt.packageURL.lastPathComponent). Credentials, repositories and device permissions were not included."
+        }
+    }
+
+    func resetApplicationPreferences() async {
+        await performRecoveryOperation {
+            self.alertRules = try await ApplicationPreferenceReset(store: self.store).apply()
+            self.clearEphemeralViewState()
+            _ = await self.reloadProjectProjections()
+            self.applicationRecoveryMessage = "Application preferences were reset. Projects, tracking history, plugin management and credentials were preserved."
+        }
+    }
+
+    func previewTrackingReset() async throws -> ApplicationTrackingResetPreview {
+        try await makeRecoveryManager().previewTrackingReset()
+    }
+
+    func resetTracking(_ preview: ApplicationTrackingResetPreview) async {
+        await performRecoveryOperation {
+            let result = try await self.makeRecoveryManager().resetTracking(preview)
+            try await self.adoptRecovery(result)
+            self.applicationRecoveryMessage = "Tracking data was reset for \(preview.projects.count) project registration\(preview.projects.count == 1 ? "" : "s"). Retained history and global preferences remain available."
+        }
+    }
+
+    func previewApplicationRestore(packageURL: URL) async throws -> ApplicationRestorePreview {
+        try await makeRecoveryManager().previewRestore(packageURL: packageURL)
+    }
+
+    func restoreApplicationBackup(_ preview: ApplicationRestorePreview) async {
+        await performRecoveryOperation {
+            let result = try await self.makeRecoveryManager().restore(preview)
+            try await self.adoptRecovery(result)
+            let history = result.newerHistoryWasReconciled
+                ? "Newer local removal, audit and terminal notification facts were retained."
+                : "The prior store was unreadable, so newer local history could not be reconciled. Its original bytes were preserved at \(result.preservedOriginalURL?.path ?? "an unavailable location")."
+            self.applicationRecoveryMessage = "Backup restored. \(history) Folder permissions require reauthorization and queued backup notifications will not be sent."
+        }
+    }
+
+    private func makeRecoveryManager() -> ApplicationRecoveryManager {
+        let services = recoveryServices
+        return ApplicationRecoveryManager(
+            store: store,
+            databaseURL: databaseURL,
+            quiesce: {
+                try await services?.stopAndDrainForRecovery()
+            }
+        )
+    }
+
+    private func performRecoveryOperation(_ operation: () async throws -> Void) async {
+        guard !applicationRecoveryInFlight else { return }
+        applicationRecoveryInFlight = true
+        applicationRecoveryMessage = nil
+        applicationRecoveryFailure = nil
+        defer {
+            applicationRecoveryInFlight = false
+            applicationRecoveryCheckedAt = Date()
+        }
+        do {
+            try await operation()
+        } catch let failure as ApplicationRecoveryInstallFailure {
+            var detail = failure.localizedDescription
+            do {
+                try await adoptRecovery(.init(
+                    store: failure.recoveredStore,
+                    operationID: UUID(),
+                    requiresFreshServiceGraph: true,
+                    newerHistoryWasReconciled: false
+                ))
+            } catch {
+                detail += " The prior data was restored, but application services could not resume: \(error.localizedDescription)"
+            }
+            applicationRecoveryFailure = .init(
+                title: "Recovery action failed",
+                detail: detail,
+                systemImage: "exclamationmark.arrow.triangle.2.circlepath",
+                tone: .error,
+                accessibilityID: "application-recovery-failure"
+            )
+        } catch {
+            applicationRecoveryFailure = .init(
+                title: "Recovery action failed",
+                detail: error.localizedDescription,
+                systemImage: "exclamationmark.arrow.triangle.2.circlepath",
+                tone: .error,
+                accessibilityID: "application-recovery-failure"
+            )
+        }
+    }
+
+    private func adoptRecovery(_ result: ApplicationRecoveryResult) async throws {
+        store = result.store
+        recoveryStartupError = nil
+        recoveryResumedAtLaunch = false
+        if let recoveryServices {
+            recoveryServices.adoptRecoveredStore(result.store)
+            notificationCoordinator = recoveryServices.notificationCoordinator
+            codexPluginCoordinator = recoveryServices.codexPluginCoordinator
+        } else {
+            notificationCoordinator = AppNotificationCoordinator(
+                store: result.store,
+                dispatcher: PushoverNotificationDispatcher(store: result.store, credentials: pushoverKeychain)
+            )
+            codexPluginCoordinator = nil
+        }
+        projectOnboarding = FolderProjectOnboarding(store: result.store)
+        clearEphemeralViewState()
+        selection = .projects
+        selectedProjectID = nil
+        dashboard = nil
+        dashboardError = nil
+
+        if let codexPluginCoordinator {
+            let recovery = await codexPluginCoordinator.recoveryStatus()
+            applyRecoveryCodexStatus(recovery)
+        }
+        await loadDashboard()
+        if !externalServicesSuppressed {
+            await notificationCoordinator.initializeForLaunch()
+            try await recoveryServices?.startSharedAgentBridge()
+        }
+    }
+
+    private func clearEphemeralViewState() {
+        viewedPhaseIDs.removeAll()
+        deliveryGoalReloadRequired.removeAll()
+        repositoryRecoveries.removeAll()
+        reviewInboxes.removeAll()
+        dependencyGraphs.removeAll()
+        projectActivities.removeAll()
+        removedActivities.removeAll()
+        projectDocumentationStates.removeAll()
+        projectRoots.removeAll()
+        reviewActionStates.removeAll()
+        activePhaseSelectionStatuses.removeAll()
+        selectedReviewItemID = nil
+    }
+
+    private func applyRecoveryCodexStatus(_ recovery: CodexPluginRecoverySnapshot) {
+        switch (recovery.management, recovery.observedState, recovery.error) {
+        case let (.known(receipt), .some(observed), nil):
+            codexPluginState = CodexPluginLifecycleReducer.presentation(
+                receipt: receipt,
+                observed: observed,
+                shippedVersion: codexPluginShippedVersion
+            )
+        case (_, _, let error?):
+            codexPluginState = .failed(error)
+        case (.unknown, _, nil):
+            codexPluginState = .failed(.integrityUnknown)
+        case (.known, nil, nil):
+            codexPluginState = .failed(.malformedResult)
+        }
+        codexPluginObservedAt = recovery.checkedAt
+    }
+
     func reloadAfterOnboarding() async {
         selection = .projects
         await loadDashboard()
@@ -561,19 +776,29 @@ final class AppModel {
     }
 
     func applicationHealth() async -> ApplicationHealthSnapshot {
-        if case .available = await store.availability,
+        let storeAvailability = await store.availability
+        if case .available = storeAvailability,
            let projectID = dashboard?.projects.first?.id {
             let project = await projectHealth(for: projectID)
+            var checks = project.checks
+            if let applicationRecoveryMessage {
+                checks.insert(.init(
+                    id: "recovery-result",
+                    title: "Latest recovery action completed",
+                    detail: applicationRecoveryMessage,
+                    state: .ready
+                ), at: 0)
+            }
             return .init(
                 projectTarget: project.registration,
                 rootPath: project.rootPath,
                 checkedAt: project.checkedAt,
-                checks: project.checks
+                checks: checks
             )
         }
 
         let storageAvailable: Bool
-        if case .available = await store.availability { storageAvailable = true }
+        if case .available = storeAvailability { storageAvailable = true }
         else { storageAvailable = false }
         let plugin = CodexPluginSettingsPresentation(state: codexPluginState)
         let pluginReady: Bool
@@ -582,24 +807,46 @@ final class AppModel {
             "Observed \($0.formatted(date: .abbreviated, time: .shortened))."
         } ?? "Observation time unavailable."
         let observer = CodexConnectionPresentation(freshness: codexSnapshot.freshness)
+        var checks: [ProjectHealthSnapshot.Check] = [
+            .init(
+                id: "storage",
+                title: storageAvailable ? "Local storage ready" : "Local storage unavailable",
+                detail: storageAvailable
+                    ? "The current Release Radar schema is available."
+                    : "Release Radar could not open its local store. Project records remain unavailable until storage recovery succeeds.",
+                state: storageAvailable ? .ready : .unavailable
+            ),
+            .init(id: "folder", title: "Folder access not checked", detail: "Open a saved project to check its exact folder authorization.", state: .unavailable),
+            .init(id: "documentation", title: "Documentation not checked", detail: "Open a saved project to check its exact repository documentation target.", state: .unavailable),
+            .init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: "\(plugin.detail) \(pluginObservation)", state: pluginReady ? .ready : .attention),
+            .init(id: "observer", title: "Codex observation: \(observer.status)", detail: observer.detail, state: codexSnapshot.freshness.state == .live ? .ready : .attention),
+        ]
+        let recoveryDetail: String? = switch storeAvailability {
+        case .available:
+            recoveryStartupError
+        case let .unavailable(recovery):
+            "\(recovery.message) Original database: \(recovery.originalDatabaseURL.path)."
+        }
+        if let recoveryDetail {
+            checks.insert(.init(
+                id: "recovery",
+                title: "Recovery requires attention",
+                detail: "Target: \(databaseURL.path). \(recoveryDetail) Choose Restore Backup to validate and recover from a supported full backup; no plugin, permission or notification side effect occurs during inspection.",
+                state: .unavailable
+            ), at: 1)
+        } else if let applicationRecoveryMessage {
+            checks.insert(.init(
+                id: "recovery-result",
+                title: "Latest recovery action completed",
+                detail: applicationRecoveryMessage,
+                state: .ready
+            ), at: 1)
+        }
         return .init(
             projectTarget: nil,
             rootPath: nil,
             checkedAt: Date(),
-            checks: [
-                .init(
-                    id: "storage",
-                    title: storageAvailable ? "Local storage ready" : "Local storage unavailable",
-                    detail: storageAvailable
-                        ? "The current Release Radar schema is available."
-                        : "Release Radar could not open its local store. Project records remain unavailable until storage recovery succeeds.",
-                    state: storageAvailable ? .ready : .unavailable
-                ),
-                .init(id: "folder", title: "Folder access not checked", detail: "Open a saved project to check its exact folder authorization.", state: .unavailable),
-                .init(id: "documentation", title: "Documentation not checked", detail: "Open a saved project to check its exact repository documentation target.", state: .unavailable),
-                .init(id: "plugin", title: "Codex workflow: \(plugin.status)", detail: "\(plugin.detail) \(pluginObservation)", state: pluginReady ? .ready : .attention),
-                .init(id: "observer", title: "Codex observation: \(observer.status)", detail: observer.detail, state: codexSnapshot.freshness.state == .live ? .ready : .attention),
-            ]
+            checks: checks
         )
     }
 
@@ -654,6 +901,7 @@ final class AppModel {
 
     func acceptDeliveryGoal(_ item: DeliveryGoalAcceptanceReviewProjection) async {
         let projectID = item.projectID
+        let expectedRegistration = dashboard?.projects.first { $0.id == projectID }?.registration
         guard dashboardError == nil,
               !scopedIsPerformingReviewAction(for: projectID),
               !deliveryGoalAcceptanceNeedsReload(for: projectID),
@@ -670,6 +918,7 @@ final class AppModel {
                     projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project]))
                     .dispatch(.init(version: AgentCommandDispatcher.commandEnvelopeVersion,
                         requestID: requestID, projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
                         reason: "Owner accepted Delivery Goal \(item.goalID.rawValue)",
                         command: .transitionDeliveryGoal(projectID: projectID.rawValue,
                             phaseID: item.phaseID.rawValue, goalID: item.goalID.rawValue,
@@ -710,6 +959,7 @@ final class AppModel {
         to lane: TicketLane,
         ticketTaskPlanRevision: Int64? = nil
     ) async throws -> AgentCommandResult {
+        let expectedRegistration = dashboard?.projects.first { $0.id == projectID }?.registration
         if lane == .accepted, ticketID.rawValue.contains("\0") {
             return .init(
                 entityIDs: [],
@@ -728,6 +978,7 @@ final class AppModel {
                     version: AgentCommandDispatcher.commandEnvelopeVersion,
                     requestID: requestID,
                     projectRoot: project.canonicalRoot.path,
+                    expectedRegistration: expectedRegistration,
                     reason: "Owner transitioned ticket \(ticketID.rawValue) to \(lane.rawValue)",
                     command: .transitionTicket(
                         ticketID: ticketID.rawValue,
@@ -745,6 +996,7 @@ final class AppModel {
     }
 
     func setActivePhase(projectID: ProjectID, phaseID: PhaseID) async {
+        let expectedRegistration = dashboard?.projects.first { $0.id == projectID }?.registration
         guard dashboard?.projects.first(where: { $0.id == projectID })?.activePhaseID != phaseID else {
             return
         }
@@ -794,6 +1046,7 @@ final class AppModel {
                         version: AgentCommandDispatcher.commandEnvelopeVersion,
                         requestID: requestID,
                         projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
                         reason: "Owner selected active phase \(phaseID.rawValue)",
                         command: .setActivePhase(phaseID: phaseID.rawValue)
                     ),
@@ -885,6 +1138,7 @@ final class AppModel {
     }
 
     func performReviewDecision(_ decision: ReviewDecision, item: ReviewItemProjection) async {
+        let expectedRegistration = dashboard?.projects.first { $0.id == item.projectID }?.registration
         performingReviewActionProjectIDs.insert(item.projectID)
         reviewActionStates[item.projectID] = nil
         defer { performingReviewActionProjectIDs.remove(item.projectID) }
@@ -904,6 +1158,7 @@ final class AppModel {
                         version: AgentCommandDispatcher.commandEnvelopeVersion,
                         requestID: UUID(),
                         projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
                         reason: "\(verb) review \(item.id.rawValue)",
                         command: command
                     ),
@@ -1284,6 +1539,11 @@ final class AppModel {
         }
         codexPluginOperation = .checking
         codexPluginAnnouncement = CodexPluginOperation.checking.announcement
+        if recoveryStartupError != nil || recoveryResumedAtLaunch {
+            applyRecoveryCodexStatus(await codexPluginCoordinator.recoveryStatus())
+            codexPluginOperation = nil
+            return
+        }
         let result = await codexPluginCoordinator.performAutomaticUpdateIfEligible()
         applyCodexPluginResult(result, operation: .checking)
     }

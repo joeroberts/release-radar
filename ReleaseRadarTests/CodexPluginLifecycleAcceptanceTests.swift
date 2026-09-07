@@ -595,6 +595,35 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(removeAudit, 1)
     }
 
+    func testRecoveryStatusTreatsMissingReceiptAsUnknownWithoutWritingOrChangingInstallation() async throws {
+        let (store, lifecycleStore) = try makeLifecycleStore(prefix: "RecoveryUnknown")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Remove synthetic recovery receipt") {
+            try $0.execute("DELETE FROM codex_plugin_lifecycle WHERE plugin_id = 'release-radar'")
+        }
+        let manager = ScriptedLifecycleManager(replies: [
+            .init(wireVersion: 1, observedState: .clean(version: "0.2.0", digest: "known"), error: nil),
+        ])
+        let coordinator = CodexPluginLifecycleCoordinator(
+            manager: manager,
+            store: lifecycleStore,
+            shippedVersion: "0.2.0",
+            shippedDigest: "known",
+            now: { Date(timeIntervalSince1970: 42) }
+        )
+        let auditBefore = try await auditCount(in: store)
+
+        let snapshot = await coordinator.recoveryStatus()
+
+        XCTAssertEqual(snapshot.management, .unknown)
+        XCTAssertEqual(snapshot.observedState, .clean(version: "0.2.0", digest: "known"))
+        XCTAssertNil(snapshot.error)
+        XCTAssertEqual(snapshot.checkedAt, Date(timeIntervalSince1970: 42))
+        let operations = await manager.operations()
+        let auditAfter = try await auditCount(in: store)
+        XCTAssertEqual(operations, [.statusReadOnly])
+        XCTAssertEqual(auditAfter, auditBefore)
+    }
+
     func testTimeoutAndMalformedCommandRepliesDoNotPollOrAudit() async throws {
         let cases: [(CodexPluginHelperReply, CodexPluginPresentationState)] = [
             (.init(wireVersion: 1, observedState: nil, error: .timeout), .failed(.timeout)),
@@ -756,7 +785,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
 }
 
 private actor ScriptedLifecycleManager: CodexPluginLifecycleManaging {
-    enum Operation: Equatable { case status, install, remove, reinstall }
+    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall }
     private var replies: [CodexPluginHelperReply]
     private var calls: [Operation] = []
 
@@ -765,6 +794,7 @@ private actor ScriptedLifecycleManager: CodexPluginLifecycleManaging {
     }
 
     func status() async -> CodexPluginHelperReply { next(.status) }
+    func statusReadOnly() async -> CodexPluginHelperReply { next(.statusReadOnly) }
     func install() async -> CodexPluginHelperReply { next(.install) }
     func remove() async -> CodexPluginHelperReply { next(.remove) }
     func reinstall() async -> CodexPluginHelperReply { next(.reinstall) }
