@@ -2,10 +2,38 @@ import Foundation
 import ReleaseRadarCore
 import ServiceManagement
 
+protocol PluginLifecycleServiceManaging: AnyObject {
+    var status: SMAppService.Status { get }
+    func register() throws
+    func unregister() throws
+}
+
+extension SMAppService: PluginLifecycleServiceManaging {}
+
 final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked Sendable {
-    private let service = SMAppService.agent(plistName: ReleaseRadarPluginLifecycleTransport.launchAgentPlistName)
+    typealias RemoteInvoker = @Sendable (Operation) async -> CodexPluginHelperReply
+
+    enum Operation: Equatable {
+        case status
+        case install
+        case remove
+        case reinstall
+    }
+
+    private let service: any PluginLifecycleServiceManaging
+    private let invokeRemote: RemoteInvoker?
     private let lock = NSLock()
     private var connection: NSXPCConnection?
+
+    init(
+        service: any PluginLifecycleServiceManaging = SMAppService.agent(
+            plistName: ReleaseRadarPluginLifecycleTransport.launchAgentPlistName
+        ),
+        invokeRemote: RemoteInvoker? = nil
+    ) {
+        self.service = service
+        self.invokeRemote = invokeRemote
+    }
 
     func status() async -> CodexPluginHelperReply { await call(.status) }
     func install() async -> CodexPluginHelperReply { await call(.install) }
@@ -13,47 +41,17 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
     func reinstall() async -> CodexPluginHelperReply { await call(.reinstall) }
 
     func unregister() {
-        lock.withLock {
-            connection?.invalidate()
-            connection = nil
-        }
+        invalidateConnection()
         try? service.unregister()
-    }
-
-    private enum Operation {
-        case status
-        case install
-        case remove
-        case reinstall
     }
 
     private func call(_ operation: Operation) async -> CodexPluginHelperReply {
         do {
             try registerIfNeeded()
-            let connection = try connected()
-            return await withCheckedContinuation { continuation in
-                let gate = PluginLifecycleReplyGate(continuation)
-                guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
-                    gate.resume(.init(wireVersion: 1, observedState: nil, error: .codexUnavailable))
-                }) as? ReleaseRadarPluginLifecycleXPC else {
-                    gate.resume(.init(wireVersion: 1, observedState: nil, error: .codexUnavailable))
-                    return
-                }
-                let reply: (Data) -> Void = { data in
-                    let decoded = (try? ReleaseRadarPluginLifecycleTransport.decode(data))
-                        ?? .init(wireVersion: 1, observedState: nil, error: .malformedResult)
-                    gate.resume(decoded)
-                }
-                switch operation {
-                case .status: proxy.status(withReply: reply)
-                case .install: proxy.install(withReply: reply)
-                case .remove: proxy.remove(withReply: reply)
-                case .reinstall: proxy.reinstall(withReply: reply)
-                }
-                DispatchQueue.global().asyncAfter(deadline: .now() + 16) {
-                    gate.resume(.init(wireVersion: 1, observedState: nil, error: .timeout))
-                }
-            }
+            let initialStatus = await invoke(.status)
+            let currentStatus = try await recoverRegistrationIfNeeded(after: initialStatus)
+            guard currentStatus.error == nil, operation != .status else { return currentStatus }
+            return await invoke(operation)
         } catch {
             return Self.failureReply(for: error)
         }
@@ -86,6 +84,72 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
             throw CodexPluginLifecycleError.unauthorizedPeer
         @unknown default:
             throw CodexPluginLifecycleError.codexUnavailable
+        }
+    }
+
+    private func recoverRegistrationIfNeeded(
+        after reply: CodexPluginHelperReply
+    ) async throws -> CodexPluginHelperReply {
+        guard reply.error == .codexUnavailable || reply.error == .marketplaceConflict else {
+            return reply
+        }
+        try rebindService()
+        return await invoke(.status)
+    }
+
+    private func rebindService() throws {
+        invalidateConnection()
+        switch service.status {
+        case .enabled:
+            try service.unregister()
+        case .notRegistered, .notFound:
+            break
+        case .requiresApproval:
+            throw CodexPluginLifecycleError.unauthorizedPeer
+        @unknown default:
+            throw CodexPluginLifecycleError.codexUnavailable
+        }
+        try service.register()
+    }
+
+    private func invoke(_ operation: Operation) async -> CodexPluginHelperReply {
+        if let invokeRemote {
+            return await invokeRemote(operation)
+        }
+        do {
+            let connection = try connected()
+            return await withCheckedContinuation { continuation in
+                let gate = PluginLifecycleReplyGate(continuation)
+                guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
+                    gate.resume(.init(wireVersion: 1, observedState: nil, error: .codexUnavailable))
+                }) as? ReleaseRadarPluginLifecycleXPC else {
+                    gate.resume(.init(wireVersion: 1, observedState: nil, error: .codexUnavailable))
+                    return
+                }
+                let reply: (Data) -> Void = { data in
+                    let decoded = (try? ReleaseRadarPluginLifecycleTransport.decode(data))
+                        ?? .init(wireVersion: 1, observedState: nil, error: .malformedResult)
+                    gate.resume(decoded)
+                }
+                switch operation {
+                case .status: proxy.status(withReply: reply)
+                case .install: proxy.install(withReply: reply)
+                case .remove: proxy.remove(withReply: reply)
+                case .reinstall: proxy.reinstall(withReply: reply)
+                }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 16) {
+                    gate.resume(.init(wireVersion: 1, observedState: nil, error: .timeout))
+                }
+            }
+        } catch {
+            return Self.failureReply(for: error)
+        }
+    }
+
+    private func invalidateConnection() {
+        lock.withLock {
+            connection?.invalidate()
+            connection = nil
         }
     }
 

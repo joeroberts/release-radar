@@ -183,3 +183,38 @@ binding/catalog acceptance, external publication and cleanup are not authorized.
 Return the exact candidate revision, changed files/behavior, direct test and runtime
 evidence, reproducible build or installation procedure if needed, remaining risks,
 and any concrete separate authorization required for installed acceptance.
+
+## Owner-authorized plugin registration recovery correction — 2026-09-07
+
+The owner authorized a bounded correction after installed 0.1.7 acceptance exposed
+a stale `SMAppService` registration: the main app ran from
+`/Applications/ReleaseRadar.app`, while the lifecycle helper still executed from an
+older review bundle and therefore rejected the current marketplace as foreign.
+
+The correction is limited to `CodexPluginLifecycleClient` and focused transport
+tests. Before any install, update, reinstall, or removal command, the client probes
+the helper. If the enabled helper is unavailable or reports a marketplace conflict,
+the client invalidates its connection, unregisters and re-registers only the
+packaged Release Radar lifecycle agent, probes once more, and proceeds only after a
+successful reply. It never replays a mutating plugin command after an uncertain
+result. A persistent genuine conflict remains a failure. Approval-required and
+unknown service states fail closed; no broad Login Items reset, unrelated service
+change, direct Codex configuration edit, or SQLite edit is permitted.
+
+Focused tests must first fail on the reproduced stale-enabled-service sequence,
+then prove one bounded rebind, a successful post-rebind probe before the requested
+mutation, no mutation for a persistent conflict, and no retry after an uncertain
+mutation result. Verification includes the focused XCTest target, the relevant
+plugin lifecycle suite, a signed Release build, installed helper executable
+readback from `/Applications/ReleaseRadar.app`, and an application-driven plugin
+install/update with Codex reporting the shipped version. The parent commissions
+one fresh independent reviewer covering code, service-registration security, and
+the installed recovery behavior; only Required findings block.
+
+For this correction, the owner explicitly authorized replacing the installed app
+with the new signed candidate, launching it against the existing owner state,
+resetting only the stale Release Radar lifecycle service registration, and retrying
+the app-owned plugin operation. The existing authorization for scoped commits,
+branch push, and PR update remains; merge, broad system-service changes, owner-data
+reset, direct plugin/configuration mutation outside the app operation, publication,
+and cleanup remain unauthorized.
