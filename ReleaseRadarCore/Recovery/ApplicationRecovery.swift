@@ -332,7 +332,11 @@ public actor ApplicationRecoveryManager {
             removeStoreFiles(at: stagingURL)
         case .replacementInstalled:
             if storeIsValid(at: databaseURL) {
-                removeStoreFiles(at: rollbackURL)
+                let preserveRollback = marker.preserveRollback
+                    ?? !storeIsValid(at: rollbackURL)
+                if !preserveRollback {
+                    removeStoreFiles(at: rollbackURL)
+                }
                 removeStoreFiles(at: stagingURL)
             } else {
                 removeStoreFiles(at: databaseURL)
@@ -360,7 +364,8 @@ public actor ApplicationRecoveryManager {
             operationID: operationID,
             phase: .prepared,
             rollbackPath: rollbackURL.path,
-            stagingPath: stagingURL.path
+            stagingPath: stagingURL.path,
+            preserveRollback: preserveRollback
         )
         try Self.writeMarker(prepared, to: markerURL)
         var rollbackReady = false
@@ -528,8 +533,7 @@ public actor ApplicationRecoveryManager {
                 (SELECT COUNT(*) FROM current_state.audit_events WHERE project_id = projects.id)
             FROM current_state.projects projects
             JOIN current_state.project_registrations registrations
-              ON registrations.project_id = projects.id
-            WHERE projects.id IN (SELECT id FROM projects);
+              ON registrations.project_id = projects.id;
 
             INSERT OR IGNORE INTO audit_events (
                 id, actor_id, thread_id, reason, created_at, thread_attribution,
@@ -541,8 +545,7 @@ public actor ApplicationRecoveryManager {
                 audit.project_id, registrations.registration_id
             FROM current_state.audit_events audit
             JOIN current_state.project_registrations registrations
-              ON registrations.project_id = audit.project_id
-            WHERE audit.project_id IN (SELECT id FROM projects);
+              ON registrations.project_id = audit.project_id;
 
             INSERT OR IGNORE INTO retained_project_activity_events (
                 removal_id, source, source_id, title, detail, observed_at, ticket_id,
@@ -835,8 +838,15 @@ private struct RecoveryMarker: Codable {
     let phase: Phase
     let rollbackPath: String
     let stagingPath: String
+    let preserveRollback: Bool?
 
     func withPhase(_ phase: Phase) -> Self {
-        .init(operationID: operationID, phase: phase, rollbackPath: rollbackPath, stagingPath: stagingPath)
+        .init(
+            operationID: operationID,
+            phase: phase,
+            rollbackPath: rollbackPath,
+            stagingPath: stagingPath,
+            preserveRollback: preserveRollback
+        )
     }
 }
