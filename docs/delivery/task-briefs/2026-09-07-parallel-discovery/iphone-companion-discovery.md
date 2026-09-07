@@ -173,17 +173,25 @@ Within a project zone, publish immutable versioned items and an `RRManifest`:
 - artifact revisions plus separate `CKAsset` content;
 - immutable event/history records with occurrence, recording and provenance facts;
 - an optional short-lived `RRRuntimeLease`; and
-- withdrawal/removal tombstones.
+- retained lifecycle/removal history.
+
+The account control zone also carries a small, backward-compatible withdrawal
+envelope whose identity and revocation semantics remain readable by every supported
+client. It is processed independently of content-generation activation and names
+the exact project, artifact or content revisions revoked. A named withdrawal
+immediately hides those routes, purges their cached bytes plus derived search/
+preview state, and prevents any older generation from restoring them. Only
+non-withdrawn content may use the prior-generation fallback.
 
 The manifest names the schema version, minimum reader version, publisher epoch,
 project registration, generation, expected item identities/byte counts and the
 Mac source/publication times. Upload all records/assets first and update the
 manifest pointer last. The iPhone activates a generation only after every expected
-item is present and valid; otherwise it continues showing the last complete
-generation with **Sync incomplete**. Retain the prior complete generation until
-the replacement is published, then garbage-collect older generations. CloudKit
-atomicity is zone-scoped and large requests must be split, so the manifest—not a
-false distributed transaction—provides mobile consistency.
+item is present and valid; otherwise it continues showing the non-withdrawn subset
+of the last complete generation with **Sync incomplete**. Retain that prior
+complete generation until the replacement is published, then garbage-collect older
+generations. CloudKit atomicity is zone-scoped and large requests must be split, so
+the manifest—not a false distributed transaction—provides mobile consistency.
 
 App-owned delivery changes should record a coalescible project publication intent
 with the local transaction. The publisher then reads one consistent projection
@@ -276,11 +284,15 @@ Lifecycle propagation is explicit:
 
 - **Archive:** publish archived lifecycle and keep the full browsable corpus.
 - **Restore:** publish a new generation under the same registration.
-- **Remove from tracking:** publish a terminal removal generation containing the
-  retained attributable history/removal record, then delete operational records
-  and assets. Re-add uses a new registration/zone and cannot receive old requests.
-- **Stop publishing:** a separate owner action deletes the project zone and purges
-  the phone cache without changing Mac delivery or repository data.
+- **Remove from tracking:** publish a control-envelope withdrawal for operational
+  records/assets before a terminal removal generation containing only the retained
+  attributable history/removal record, then delete the withdrawn material. Re-add
+  uses a new registration/zone and cannot receive old requests.
+- **Stop publishing:** a separate owner action publishes server-side withdrawal,
+  marks cleanup pending and deletes the project zone without changing Mac delivery
+  or repository data. A phone purges its cache at its next successful server check;
+  an offline phone may retain stale readable cache until then, so the Mac must show
+  cleanup as pending rather than claiming synchronous device erasure.
 - **User-deleted zone/encrypted-data reset:** purge phone data, suspend Mac
   publication and require explicit republish. Do not automatically recreate data
   the owner deleted in iCloud settings. Apple distinguishes deleted, purged and
@@ -299,9 +311,13 @@ companion consequences before production publication:
 - tracking-data reset withdraws cloud project zones, or durably records a visible
   cleanup-pending obligation that survives store replacement when iCloud is
   unavailable—reset must not silently leave readable copies;
-- full backup restore quiesces publisher/bridge work, restores the authoritative
-  graph, advances the publisher epoch, republishes the restored state and withdraws
-  zones absent from the backup; and
+- full backup restore quiesces publisher/bridge work and restores the authoritative
+  graph, but first reconciles the current iCloud account and current withdrawal/
+  publication-consent state outside the restored backup. Only then may it advance
+  the publisher epoch, publish still-enabled projects and withdraw zones absent
+  from the backup. If current consent or withdrawal state cannot be established,
+  restored publication stays disabled and explicit owner republish is required;
+  deleted or purged zones always require explicit republish; and
 - lost Mac authority requires C7 backup or C10/C11 package recovery. Phone/cloud
   bytes cannot be promoted into a project or replay notifications/commands.
 
@@ -311,13 +327,18 @@ with its recorded publication/receipt times and no live claim.
 
 Use additive CloudKit production-schema evolution, per-record payload versions and
 manifest `minimumReaderVersion`. An unsupported generation yields **Update
-required** while retaining the last compatible complete generation. Never partially
-decode an unknown authoritative type as an empty field. Apple requires development
-schema testing before deployment and says production record types/fields cannot be
-deleted; later additions merge into production
+required** while retaining only the non-withdrawn subset of the last compatible
+complete generation. The backward-compatible withdrawal envelope is applied before
+that fallback, so revoked data cannot reappear from an older generation. Never
+partially decode an unknown authoritative type as an empty field. Apple requires
+development schema testing before deployment and says production record types/
+fields cannot be deleted; later additions merge into production
 ([deploying a CloudKit schema](https://developer.apple.com/documentation/cloudkit/deploying-an-icloud-container-s-schema)).
 Loss of local engine state triggers a server bootstrap on the phone or a complete
-republish from the Mac; it does not alter Mac delivery data.
+republish from the Mac only after the same current-consent/withdrawal reconciliation.
+If that state is unavailable—including after a zone purge—publication remains
+disabled pending explicit owner republish. This C7/I6 proposal does not make cloud
+state authoritative for Mac delivery data.
 
 ### Dependencies, delivery shape and acceptance
 
@@ -347,12 +368,15 @@ Neither a schema-only foundation nor a status-only mobile prototype is completio
 Minimum direct acceptance is a fixture containing every supported record/artifact
 class; multi-batch incomplete-generation rejection; offline relaunch; account
 sign-out/switch; archive/restore/remove/re-add; stop-publishing and user-deleted
-zone behavior; quota/limit/partial/retry failures; backup-restore epoch change;
-old/new schema compatibility; encrypted-field classification; no mobile write path;
-and physical-device remote-change delivery. Architecture and Security/Privacy
-review are required for authority, schema, credentials/content and deletion/reset;
-independent QA covers the complete phone journey and truthful offline/freshness
-presentation. One qualified independent review may cover overlapping risks.
+zone behavior; withdrawal or exclusion arriving with an incomplete/incompatible
+generation; offline cached access followed by server-withdrawal purge; old-backup
+restore after withdrawal; engine-state loss after purge; quota/limit/partial/retry
+failures; backup-restore epoch change; old/new schema compatibility; encrypted-field
+classification; no mobile write path; and physical-device remote-change delivery.
+Architecture and Security/Privacy review are required for authority, schema,
+credentials/content and deletion/reset; independent QA covers the complete phone
+journey and truthful offline/freshness presentation. One qualified independent
+review may cover overlapping risks.
 
 ### Material risks and remaining owner choices
 
