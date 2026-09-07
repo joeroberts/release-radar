@@ -84,9 +84,28 @@ public struct CodexPluginHelperReply: Codable, Equatable, Sendable {
 
 public protocol CodexPluginLifecycleManaging: Sendable {
     func status() async -> CodexPluginHelperReply
+    func statusReadOnly() async -> CodexPluginHelperReply
     func install() async -> CodexPluginHelperReply
     func remove() async -> CodexPluginHelperReply
     func reinstall() async -> CodexPluginHelperReply
+}
+
+public extension CodexPluginLifecycleManaging {
+    func statusReadOnly() async -> CodexPluginHelperReply {
+        .init(wireVersion: 1, observedState: nil, error: .codexUnavailable)
+    }
+}
+
+public enum CodexPluginManagementEvidence: Equatable, Sendable {
+    case known(CodexPluginReceipt)
+    case unknown
+}
+
+public struct CodexPluginRecoverySnapshot: Equatable, Sendable {
+    public let management: CodexPluginManagementEvidence
+    public let observedState: CodexPluginObservedState?
+    public let error: CodexPluginLifecycleError?
+    public let checkedAt: Date
 }
 
 public struct CodexPluginLifecycleResult: Equatable, Sendable {
@@ -128,6 +147,27 @@ public actor CodexPluginLifecycleCoordinator {
             return .init(state: .notInstalled)
         }
         return await statusFrom(reply: await manager.status(), receipt: receipt)
+    }
+
+    public func recoveryStatus() async -> CodexPluginRecoverySnapshot {
+        let management = (try? await store.load()).map(CodexPluginManagementEvidence.known) ?? .unknown
+        let reply = await manager.statusReadOnly()
+        let observedState: CodexPluginObservedState?
+        let error: CodexPluginLifecycleError?
+        if reply.wireVersion == 1,
+           (reply.observedState != nil) != (reply.error != nil) {
+            observedState = reply.observedState
+            error = reply.error
+        } else {
+            observedState = nil
+            error = .malformedResult
+        }
+        return .init(
+            management: management,
+            observedState: observedState,
+            error: error,
+            checkedAt: now()
+        )
     }
 
     public func install() async -> CodexPluginLifecycleResult {

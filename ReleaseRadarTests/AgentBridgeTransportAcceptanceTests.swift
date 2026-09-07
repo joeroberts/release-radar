@@ -54,6 +54,14 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let release = AsyncSignal()
     }
 
+    private final class ThreadSafeFlag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stored = false
+
+        var value: Bool { lock.withLock { stored } }
+        func set() { lock.withLock { stored = true } }
+    }
+
     private final class ResultCapture: @unchecked Sendable {
         private let lock = NSLock()
         private var captured: AgentCommandResult?
@@ -706,6 +714,64 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let ownerReplay = await dispatcher.dispatch(ownerRequest, origin: .ownerApp); XCTAssertEqual(ownerReplay, ownerResult)
     }
 
+    func testCallbackStopRejectsNewAdmissionAndDrainsAfterReplyWork() async throws {
+        let fixture = try await makeTransportFixture(lane: .backlog)
+        let gate = CallbackInvalidationGate()
+        let dispatcher = AgentCommandDispatcher(
+            store: fixture.store,
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: fixture.store)
+        )
+        let callback = AgentBridgeAppCallback(
+            dispatcher: dispatcher,
+            queries: AgentQueryDispatcher(store: fixture.store),
+            beforeDispatch: { _ in },
+            afterDispatchBeforeReply: { _, _ in },
+            afterReply: { _, _ in
+                gate.entered.signal()
+                await gate.release.wait()
+            }
+        )
+        func send(_ request: AgentCommandEnvelope) async throws -> AgentCommandResult {
+            let response = await withCheckedContinuation { continuation in
+                callback.dispatch(
+                    ReleaseRadarBridgeTransport.wireVersion,
+                    envelope: try! JSONEncoder().encode(request),
+                    admissionDeadline: Date().addingTimeInterval(10).timeIntervalSince1970,
+                    withReply: { continuation.resume(returning: $0) }
+                )
+            }
+            return try JSONDecoder().decode(AgentCommandResult.self, from: response)
+        }
+        let first = AgentCommandEnvelope(
+            version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+            reason: "Drain committed callback", command: .upsertPhase(phaseID: "drain-phase", name: "Drain")
+        )
+        let firstReply = try await send(first)
+        XCTAssertNil(firstReply.error)
+        await gate.entered.wait()
+
+        let drained = ThreadSafeFlag()
+        let stop = Task {
+            await callback.stopAndDrain()
+            drained.set()
+        }
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertFalse(drained.value)
+        let rejected = try await send(.init(
+            version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+            reason: "Rejected during recovery", command: .upsertPhase(phaseID: "rejected", name: "Rejected")
+        ))
+        XCTAssertEqual(rejected.error, .appUnavailable)
+
+        gate.release.signal()
+        await stop.value
+        XCTAssertTrue(drained.value)
+        let rejectedCount = try await fixture.store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM phases WHERE id = 'rejected'")
+        }
+        XCTAssertEqual(rejectedCount, 0)
+    }
+
     func testDeliveryGoalToolMalformedInputsAndBoundsRejectBeforeTransport() throws {
         let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
         // The invalid reason is the last guard even if a field validator regresses:
@@ -730,6 +796,13 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             try check(["goalID": "g", "expectedPlanRevision": value, "lifecycle": "awaiting_acceptance"], expected: "expectedPlanRevision", tool: "transition_delivery_goal")
         }
         try check(["origin": "ownerApp"], expected: "Unsupported")
+        try check(["reason": "Validate registration tuple", "registrationProjectID": "project-1"], expected: "must be supplied together")
+        try check([
+            "reason": "Validate registration tuple", "registrationID": "registration-1", "requestGeneration": 1,
+        ], expected: "must be supplied together")
+        try check([
+            "registrationProjectID": "project-1", "registrationID": "registration-1", "requestGeneration": 1,
+        ], expected: "reason")
         try check(["goalUpserts": [draft.merging(["lifecycle": "accepted"]) { _, new in new }]], expected: "exact")
         try check(["assignments": [["goalID": "g", "ticketID": "t", "extra": true]]], expected: "exact")
         for lifecycle in ["accepted", "active", "planned", "draft", "superseded"] {
@@ -767,6 +840,10 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             guard let schema = tool?["inputSchema"] as? [String: Any], let fields = schema["properties"] as? [String: Any] else { continue }
             XCTAssertEqual(schema["additionalProperties"] as? Bool, false)
             XCTAssertNil(fields["origin"])
+            XCTAssertEqual(Set(fields.keys).intersection(["registrationProjectID", "registrationID", "requestGeneration"]),
+                           ["registrationProjectID", "registrationID", "requestGeneration"])
+            let dependencies = schema["dependentRequired"] as? [String: [String]]
+            XCTAssertEqual(Set(dependencies?["registrationProjectID"] ?? []), ["registrationID", "requestGeneration"])
             let required = Set(schema["required"] as? [String] ?? [])
             XCTAssertTrue(required.isSuperset(of: ["version", "requestID", "projectRoot", "reason", "projectID", "phaseID"]))
             if name == "transition_delivery_goal" {

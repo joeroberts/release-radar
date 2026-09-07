@@ -13,6 +13,8 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
     private var workInProgress = false
     private var launchRecoveryRequested = false
     private var dispatchRequested = false
+    private var acceptsWork = true
+    private var drainWaiters: [CheckedContinuation<Void, Never>] = []
 
     public init(
         store: DeliveryStore,
@@ -38,10 +40,12 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
     }
 
     public func enqueue(_ event: MeaningfulDeliveryEvent) async {
+        guard acceptsWork else { return }
         await dispatchPending()
     }
 
     public func prepareForLaunch() async {
+        guard acceptsWork else { return }
         guard !didPrepareForLaunch else { return }
         didPrepareForLaunch = true
         launchRecoveryRequested = true
@@ -49,6 +53,7 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
     }
 
     public func dispatchPending() async {
+        guard acceptsWork else { return }
         dispatchRequested = true
         await runRequestedWork()
     }
@@ -56,9 +61,14 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
     private func runRequestedWork() async {
         guard !workInProgress else { return }
         workInProgress = true
-        defer { workInProgress = false }
+        defer {
+            workInProgress = false
+            let waiters = drainWaiters
+            drainWaiters.removeAll()
+            for waiter in waiters { waiter.resume() }
+        }
 
-        while launchRecoveryRequested || dispatchRequested {
+        while acceptsWork && (launchRecoveryRequested || dispatchRequested) {
             if launchRecoveryRequested {
                 launchRecoveryRequested = false
                 try? await recoverAmbiguousAttempts()
@@ -70,12 +80,21 @@ public actor PushoverNotificationDispatcher: NotificationDispatcher {
         }
     }
 
+    public func stopAndDrain() async {
+        acceptsWork = false
+        launchRecoveryRequested = false
+        dispatchRequested = false
+        guard workInProgress else { return }
+        await withCheckedContinuation { drainWaiters.append($0) }
+    }
+
     private func dispatchPendingBatch() async {
         guard let ids = try? await pendingEventIDs() else {
             // Store unavailability is already surfaced by the app and must not block dashboard use.
             return
         }
         for id in ids {
+            guard acceptsWork else { return }
             await dispatch(id: id)
         }
     }

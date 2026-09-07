@@ -134,3 +134,44 @@ plugin lifecycle acceptance/transport tests for receipt-loss and zero-mutation s
 `AppRouteTests`, `OnboardingAcceptanceTests` and `ProjectDocumentationRenderingTests`
 for `AppModel.applicationHealth()`, Settings and bookmark recovery. Use synthetic
 transports rather than enabling the owner's disabled launch agent to make tests pass.
+
+## Writer source assessment and implementation refinement
+
+The C7 writer confirmed the consultation against baseline `872fb3e`. The existing
+`DeliveryStore` owns one `SQLiteConnection`, the application service graph owns a
+second store through `AgentBridgeApplicationHost`, callback tasks outlive XPC
+invalidation, and plugin `status()` can currently register or rebind its helper.
+Implementation therefore uses these bounded additions rather than a new service layer:
+
+- A versioned `.release-radar-backup` package contains a manifest and one app-created
+  `VACUUM INTO` snapshot of the complete supported store. Alert rules, lifecycle
+  receipts, audits and notification history remain in that store; Keychain,
+  repositories, credentials and device permission grants remain explicitly excluded.
+- One app-owned recovery coordinator uses adjacent no-follow staging, rollback and a
+  minimal durable marker/journal. It validates the exact package bytes and recognized
+  schema, closes every app-owned store, replaces the database and sidecars only after
+  staging succeeds, and resolves interrupted replacement before normal app services
+  start. A fresh graph is published after recovery; old stores and callbacks remain
+  closed.
+- Preference reset is a store transaction that restores the four existing alert-rule
+  defaults and clears only ephemeral `AppModel` view state. Tracking reset prepares a
+  replacement snapshot and applies `ProjectRemovalManager` semantics to every live
+  active or archived registration before the coordinated replacement. Neither path
+  deletes the database, credentials, plugin receipts or retained history.
+- Restore rotates every live local registration, records a fresh recovery incarnation,
+  rejects root-only legacy external requests after recovery, and requires the expected
+  project/registration identity on subsequent external mutations. Restored queued work
+  is suppressed and restored in-flight work becomes unknown; locally newer terminal
+  notification facts, occurrence counters, removal records and historical audits are
+  retained when the original is readable. An unreadable original can still be replaced
+  with the preview naming unavailable newer-history reconciliation.
+- Recovery plugin inspection uses a new read-only status entry point only when the
+  lifecycle helper is already enabled. It performs no registration, rebinding,
+  installation, removal, update or receipt mutation. Missing receipts produce unknown
+  management rather than a claim that Codex has no installation.
+
+Settings keeps the accepted tab and RDS structure: full backup/restore and preference
+reset are presented in General, tracking reset remains project-data management, and the
+existing application-health panel reports recovery target, check time, limitations and
+the exact supported next action. Native confirmation and file panels provide cancel and
+retry paths without adding another navigation or workflow subsystem.

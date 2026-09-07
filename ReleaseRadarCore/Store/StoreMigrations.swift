@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 17
+    static let currentVersion: Int64 = 18
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -78,6 +78,9 @@ enum StoreMigrations {
             }
             if version < 17 {
                 try connection.executeScript(schemaVersion17)
+            }
+            if version < 18 {
+                try connection.executeScript(schemaVersion18)
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -277,6 +280,23 @@ enum StoreMigrations {
                 "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'project_registrations'"
             ), normalizedSQL(registrationSQL) == normalizedSQL(projectRegistrationsTableSQL)
             else { return false }
+        }
+        if version >= 18 {
+            guard let recoverySQL = try connection.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'application_recovery_state'"
+            ), normalizedSQL(recoverySQL) == normalizedSQL(applicationRecoveryStateTableSQL),
+            try connection.scalarInt("SELECT COUNT(*) FROM application_recovery_state") == 1,
+            try connection.scalarInt(
+                """
+                SELECT COUNT(*) FROM application_recovery_state
+                WHERE singleton_id = 1
+                  AND typeof(incarnation_id) = 'text'
+                  AND length(incarnation_id) = 36
+                  AND requires_scoped_commands IN (0, 1)
+                  AND ((last_operation_kind IS NULL) = (last_operation_id IS NULL))
+                  AND ((last_operation_kind IS NULL) = (completed_at IS NULL))
+                """
+            ) == 1 else { return false }
         }
         return try connection.row("PRAGMA foreign_key_check") == nil
     }
@@ -533,6 +553,10 @@ enum StoreMigrations {
         ]),
         (17, "project_removal_authorizations", [
             "project_id", "registration_id", "removal_id",
+        ]),
+        (18, "application_recovery_state", [
+            "singleton_id", "incarnation_id", "requires_scoped_commands",
+            "last_operation_kind", "last_operation_id", "completed_at",
         ]),
     ]
 
@@ -1172,6 +1196,33 @@ enum StoreMigrations {
     \(ticketTasksRejectDeleteVersionSeventeenTrigger);
     \(ticketTaskPlansRejectTicketDeleteVersionSeventeenTrigger);
     \(ticketTaskPlansRejectProjectDeleteVersionSeventeenTrigger);
+    """
+
+    private static let applicationRecoveryStateTableSQL = """
+    CREATE TABLE application_recovery_state (
+        singleton_id INTEGER PRIMARY KEY NOT NULL CHECK (singleton_id = 1),
+        incarnation_id TEXT NOT NULL CHECK (length(incarnation_id) = 36),
+        requires_scoped_commands INTEGER NOT NULL DEFAULT 0
+            CHECK (requires_scoped_commands IN (0, 1)),
+        last_operation_kind TEXT CHECK (last_operation_kind IS NULL OR last_operation_kind IN ('restore', 'tracking_reset')),
+        last_operation_id TEXT,
+        completed_at TEXT,
+        CHECK ((last_operation_kind IS NULL) = (last_operation_id IS NULL)),
+        CHECK ((last_operation_kind IS NULL) = (completed_at IS NULL))
+    )
+    """
+
+    private static let schemaVersion18 = """
+    \(applicationRecoveryStateTableSQL);
+    INSERT INTO application_recovery_state (
+        singleton_id, incarnation_id, requires_scoped_commands
+    ) VALUES (
+        1,
+        lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' ||
+        lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' ||
+        lower(hex(randomblob(6))),
+        0
+    );
     """
 
     private static let schemaVersion1 = """
