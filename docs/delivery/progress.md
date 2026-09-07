@@ -37,8 +37,23 @@ It owns source/tests/brief; parent retains
 ledger and shared catalog/index integration. Ceiling Astra High, Ultra prohibited.
 The complete outcome preserves graph/registration/history and association, suspends
 operational activity, supports discoverable restore without a valid catalog, and
-prevents stale callbacks or notification replay. One fresh independent reviewer will
-cover persistence/admission/recovery and UI risks after direct verification.
+prevents stale callbacks or notification replay.
+
+[PR #29](https://github.com/joeroberts/release-radar/pull/29) contains author candidate
+`8c85e48`, integrated with catalogued [native UI evidence](evidence/2026-09-07-c5-archive-restore-ui.md)
+at `e81828d`. Author reports C5 10/10, Store/Notification 82/82, affected
+Onboarding/Bridge/Route/Dashboard 173/173 and native compact/wide 1/1. The dashboard
+batch excludes `testInactiveBoardPreservesAuthorizedEvidenceMetadataAndRecovery`;
+the author reports that fixture and existing root-management fixtures fail before
+relevant behavior on this host's `/var` symlink containment. No protection was weakened;
+this is not a full-suite pass or shipping folder-grant proof.
+
+Fresh independent task “Review C5 reversible archive and restore”
+(`01a07bf9-623b-71d2-9af1-ab70b5dc19e8`) confirmed clean candidate `e81828d` in `f419`.
+Explicit Astra High; runtime settings unexposed. It covers persistence, authorization,
+notification recovery and native UI/QA. Review and owner merge approval remain pending.
+Repository documentation and diff checks pass after the five evidence registrations;
+no application catalog acceptance is claimed.
 
 ## Delivered C4 and verification limits
 
