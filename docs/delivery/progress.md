@@ -86,6 +86,15 @@ mutations or cloud changes are authorized. The same independent reviewer will as
 remaining corrections at Astra High after the final candidate is pushed. PR #31 was
 freshly verified OPEN at `c8f282e`; PRs #28–#30 are MERGED. No C7 source is accepted yet.
 
+R7 verification checkpoint: two focused writer tests passed; the first native picker
+check skipped because its synthetic-folder environment value was not forwarded.
+CUA then launched the test-built app normally rather than attaching to its test panel.
+The writer stopped only the new PID 48085; the pre-existing installed app was untouched.
+Default-service initialization and any resulting owner-state effects are unverified.
+No owner-state inspection or repair is authorized. Further native verification must
+establish synthetic isolation before initialization and avoid a tool path that may
+launch the app normally; otherwise the signed runtime check remains blocked.
+
 Six failures were reproduced synthetically; destination/signing and recovery-mode issues
 are source-backed. Eighteen existing selected/native tests passed. Same reviewer stopped
 and archived for the candidate; only affected corrections will be reviewed on return.
