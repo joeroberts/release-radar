@@ -52,11 +52,13 @@ contract recommendations and PR #22 merge; lifecycle source delivery is now open
 Owner acceptance testing of PR #23 exposed incomplete RekonDesignSystem adoption
 across the shared shell and eight dashboard routes, duplicate plugin-conflict
 guidance and misleading phase-less route states. The same delivery task has pushed
-the bounded correction and reports 156 affected tests passing plus documentation
-checks. The same independent reviewer is checking the actual implementation and
-wide/compact renders. Prior source review clearance does not establish visual or
-end-to-end acceptance. A distinct signed candidate is being prepared for the
-owner-authorized running-app check; PR #23 remains unmerged. Existing Codex
+the bounded correction: 156 affected tests passed, followed by focused RDS,
+byte-stable native picker and Settings-window correction checks. The same reviewer
+cleared the corrections with no remaining Required findings. Parent opened the
+signed canonical `dist/PR-23-13568d0/ReleaseRadar.app` candidate and verified that
+Settings and repeated Cmd-, retain the existing main window. Only that candidate
+was running at readback. Review work is stopped and the reviewer is archived.
+End-to-end connection acceptance remains incomplete; PR #23 remains unmerged. Existing Codex
 plugin/MCP configuration remains untouched and the name conflict is unresolved.
 
 Chief architecture delivered `ce7ae0a`, integrated locally as `879f883`: the
