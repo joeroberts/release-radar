@@ -830,7 +830,7 @@ struct OnboardingView: View {
             return
         }
         let result = CodexPromptHandoff.copy(
-            for: projectGuidanceState,
+            for: preview?.documentationState ?? .legacy(projectGuidanceState),
             projectRoot: projectRoot,
             registration: preview?.registration,
             using: pasteboardWriter

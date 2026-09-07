@@ -158,9 +158,50 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             width: 620,
             expected: nil,
             expectedText: ["Reauthorize Saved Folder…", "Catalog remains invalid."],
-            pressIdentifier: "project-health-reauthorize"
+            pressIdentifiers: ["project-health-reauthorize"]
         )
         XCTAssertEqual(invocationCount, 1)
+    }
+
+    func testOnboardingNativeCopyUsesTheSameExistingDocumentationBootstrapShownInPreview() async throws {
+        let directory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".release-radar-copy-action-test-\(UUID().uuidString)", isDirectory: true)
+        let root = directory.appendingPathComponent("repository", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        try Data("# Existing owner documentation\n".utf8).write(to: root.appendingPathComponent("README.md"))
+        try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let preview = OnboardingPreview(
+            selectedFolder: root,
+            gitRoot: nil,
+            includedTaskDescriptors: [],
+            rejectedTaskDescriptors: [],
+            authorizedWorktreeURLs: [],
+            worktreesRequiringAuthorization: [],
+            documentationState: .legacy(.outdated(installed: 1, current: 2))
+        )
+        var copied = ""
+        let view = OnboardingView(
+            store: store,
+            navigationTitle: "lifecycle-native-copy",
+            onOpenExisting: { _ in XCTFail("Must remain in initialization") },
+            pasteboardWriter: { copied = $0; return true },
+            initialPreview: preview,
+            onFinished: { _ in XCTFail("Copy does not finish initialization") }
+        )
+
+        try await render(
+            view,
+            name: "lifecycle-native-copy",
+            width: 620,
+            expected: ProjectGuidancePresentation(documentationState: preview.documentationState),
+            pressIdentifiers: ["onboarding-initialize-confirm", "onboarding-copy-codex-prompt"]
+        )
+
+        XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
+        XCTAssertTrue(copied.localizedCaseInsensitiveContains("existing documentation"))
+        XCTAssertFalse(copied.contains("Require an existing catalogued"))
     }
 
     private var states: [(String, ProjectDocumentationState)] {
@@ -191,7 +232,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         width: Double,
         expected: ProjectGuidancePresentation?,
         expectedText: [String] = [],
-        pressIdentifier: String? = nil
+        pressIdentifiers: [String] = []
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: 850)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
@@ -255,10 +296,10 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertFalse(actual.contains("Copy repair prompt"))
         }
         if name.hasPrefix("m5-overview"), let action = expected?.actionTitle { XCTAssertTrue(actual.contains(action)) }
-        if let pressIdentifier {
+        for pressIdentifier in pressIdentifiers {
             let button = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: pressIdentifier))
             XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)
-            try await Task.sleep(for: .milliseconds(50))
+            try await Task.sleep(for: .milliseconds(300))
         }
         print("M5 isolated render PID \(ProcessInfo.processInfo.processIdentifier): actual AX status and recovery verified; capture \(name)")
         let bitmap = try XCTUnwrap(hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds))
