@@ -30,9 +30,9 @@ records exact reset contents, app/bridge close-and-drain, rollback/crash startup
 request-incarnation invalidation, historical retention, notification nonreplay and
 mutation-free plugin inspection. Fresh Sol High delivery creation was dispatched from exact `872fb3e`, requested branch
 `codex/c7-backup-reset-recovery`, with full coupled C7 ownership through backup/reopen,
-reset-retention and Settings/health checkpoints. Setup ID
-`client-new-thread:8d07b104-440a-44a2-8c9f-d7319c565436` awaits actual task/worktree
-confirmation; no duplicate dispatch. The full approved C7 outcome remains included;
+reset-retention and Settings/health checkpoints. Task `01a07d52-bff1-7042-9483-92e9e42e340a` confirmed clean exact `872fb3e` in
+fresh `89ef` worktree with published branch/upstream. Its session metadata exposes
+`gpt-5.6-sol` and `reasoning_effort: high`, matching dispatch; no Ultra or subagents. The full approved C7 outcome remains included;
 engineering sequencing does not omit backup, distinct resets, recovery or C12 readback.
 
 ## Delivered C6
