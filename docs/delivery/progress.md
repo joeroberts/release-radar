@@ -28,7 +28,18 @@ Delivery task `01a0826d-f440-7661-9ed2-24112a7eaa80` owns the single stream in
 worktree `8f27`, branch `codex/phase4-navigation`, from baseline `a2a4ac8`. It
 started Terra Medium and was escalated to Sol High for the remaining model/shell
 filter/selection/focus and stale-target integration after two premature turn exits.
-Source candidate `3363752` is committed and integrated; independent review is pending.
+Source candidate `3363752` was integrated as `de22c6e`. Independent Sol High review
+by `01a082ac-16da-7461-9f98-da78630aea64` found three Required restoration defects:
+record the displayed phase on ordinary first open; preserve unavailable ticket/phase
+identity on reload without first-item substitution; and keep global routes independent
+of project registration lifecycle. Native visual/responsive/task-row evidence,
+preview-isolation coverage and documentation checks passed review. No new review
+scope is required. The reviewer created no files/processes and is archived pending
+required-correction recheck. The same writer delivered bounded corrections at `0f226ed` from `de22c6e`.
+Direct result-bundle readback confirms 24 affected tests passed with no failures or
+skips; independent correction recheck is pending. Parent retains ledger/catalog
+ownership, and the writer reports no remaining isolated process.
+The interface does not expose effective model/effort for independent confirmation.
 
 The owner requested an actual native goal on 2026-09-08. It is **active** in
 orchestrator task `01a08261-fa9d-7dc1-854f-b2a3b739c3a8`, with no token budget.
@@ -39,8 +50,8 @@ Phase 5 preparation and private packaging/owner testing are outside the goal.
 Direct result-bundle readback confirms 35 focused tests passed, with no failures or
 skips, on arm64 macOS 26.5.2. The [verification record](evidence/2026-09-08-phase4-navigation.md)
 preserves native shortcut, restoration/focus, compact task traversal and rendering
-evidence, retained outputs and limitations. Next action: independent review of the
-integrated source and documentation candidate.
+evidence, retained outputs and limitations. Next action: targeted restoration
+correction recheck by the same independent reviewer.
 The goal stays active while any required work or merge approval remains.
 
 ## Current authorization and ownership

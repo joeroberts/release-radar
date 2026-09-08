@@ -44,6 +44,19 @@ cross-project transition intentionally clears. The expectation was aligned with
 that asserted contract, the external native check was completed, and the complete
 same selected set then passed in the final bundle above.
 
+## Required restoration corrections
+
+Independent review of `de22c6e` identified three restoration defects, corrected in
+`0f226ed`: record the phase actually displayed on first open; preserve unavailable
+phase/ticket context during reload without selecting another target; and keep global
+Settings/Projects routes independent of registration lifecycle. Regression tests
+first reproduced the defects. After the final corrections, direct readback of
+`/tmp/release-radar-phase4-corrections-verification.xcresult` confirms **24 affected
+tests passed, 0 failed and 0 skipped** on the same Mac. The original 35-test result
+and native captures describe the earlier candidate; the affected correction run
+provides the later evidence. Independent correction recheck is recorded in progress,
+not implied by these test results.
+
 ## Native accessibility, keyboard and visual checks
 
 The isolated XCTest host used synthetic stores and suppressed external services.
@@ -88,6 +101,15 @@ directories were removed with `rmdir` before the no-cleanup boundary was
 reiterated: `/tmp/release-radar-phase4-external-history-check`,
 `/tmp/release-radar-phase4-compact-task-check`, and
 `/tmp/release-radar-phase4-restored-focus-check`. No further cleanup occurred.
+
+Correction diagnostics are also retained: `/tmp/release-radar-phase4-corrections-derived`,
+`/tmp/release-radar-phase4-corrections-red.xcresult`,
+`/tmp/release-radar-phase4-missing-phase-red.xcresult`,
+`/tmp/release-radar-phase4-corrections-green.xcresult` (an intermediate failure),
+`/tmp/release-radar-phase4-corrections-final.xcresult`,
+`/tmp/release-radar-phase4-corrections-affected.xcresult`, and
+`/tmp/release-radar-phase4-corrections-verification.xcresult`.
+The writer reports no remaining isolated test process after the correction run.
 
 Physical VoiceOver speech, other Macs, installation, packaging, owner-data
 readback, full-scheme testing and catalog acceptance were not performed. The
