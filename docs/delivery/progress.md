@@ -4,9 +4,10 @@
 
 Phase 3 product delivery is merged: C8 documentation freshness and maintenance,
 C9 bounded evidence preview and identity/lifecycle handling, and their associated
-C12 health and same-folder recovery. Phase 3 documentation closeout is the active
-remaining task; its independent documentation review and owner-approved merge
-are pending. Phase 4 is not authorized.
+C12 health and same-folder recovery. Independent documentation closeout review is complete.
+[PR #35](https://github.com/joeroberts/release-radar/pull/35) carries this final
+record; Phase 3 delivery is complete when its separately owner-approved merge
+is recorded on that PR. Phase 4 is not authorized.
 
 The scope remains slice 3 of the
 [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md),
@@ -59,8 +60,12 @@ changes documentation only; it does not transfer test results to a new binary.
 
 The owner authorized Phase 3 source, tests, documentation, scoped commits, pushes,
 PR creation and separate delivery/review tasks. PR #33 and PR #34 have explicit
-merge approval and are merged. The documentation closeout merge needs its own
-owner approval. Orchestrator `01a07e75-b254-72a1-be2a-3e97ac23baeb` owns this
+merge approval and are merged. The documentation closeout merge requires its own
+owner approval. Independent Terra High reviewer
+`01a081f2-ba10-70d1-acd4-84870d4e3896` closed its sole stale collection-purpose
+finding on `0b42d2e124d690390d735b8b0fcd6b2a811594ed`. Documentation validation
+and diff checks passed; no Required findings remain. The review covered docs
+and catalog consistency, not another product/runtime verification. Orchestrator `01a07e75-b254-72a1-be2a-3e97ac23baeb` owns this
 ledger/catalog integration on `codex/phase3-documentation-evidence` in `f703`.
 Completed Phase 3 writers, independent reviewer tasks and architecture assessment
 are archived after results were preserved and completion read back. Requested
@@ -97,5 +102,6 @@ authorization. Canonical checkout and unrelated files remain preserved.
 
 [Historical Phase 3 record](archive/2026-09-08-phase3-delivery-history.md) and
 [Historical C7 record](archive/2026-09-07-c7-delivery-history.md) retain closed coordination,
-prior checks and temporary-output reports. Current next work is documentation
-closeout review and its owner-approved merge; no later product slice is opened.
+prior checks and temporary-output reports. The final Phase 3 endpoint is the
+owner-approved merge of PR #35. After that merge, no Phase 3 work remains and
+no later product slice is authorized.
