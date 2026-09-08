@@ -110,6 +110,15 @@ no new file grants or schema are required. Assessment task
 `01a07e76-a1c5-7e02-a534-d237eec8c309` completed read-only and is archived. The writer
 received this interpretation and continues complete preview acceptance coverage.
 
+Phase 3B candidate `e395d90c14762aa47c31ef1d0ab2712877e15150` is committed and
+pushed in [PR #34](https://github.com/joeroberts/release-radar/pull/34). Direct final
+result readback reports 66 passed, 2 unchanged native-picker skips and 0 failed.
+Canonical preview evidence and compact/wide component captures are registered in
+the candidate catalog. They do not establish a full consumer click journey.
+Fresh independent Sol High reviewer `01a08169-57df-7903-acfc-4e413d14d9a3` is active
+on this exact candidate, covering code/security/UX and complete-brief evidence.
+Review and any Required corrections remain outstanding; no merge is approved.
+
 ## Verification and material limitations
 
 Prior C7 independent Astra High review passed source candidate `7dd9763` with no Required
