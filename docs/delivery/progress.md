@@ -59,17 +59,19 @@ no Required or Optional correction findings. Its direct readback of the final
 correction result reported 7 passed, 1 intentional signed-picker skip and 0 failed,
 including both controlled interleaving regressions. Documentation and diff checks
 passed. Requested writer/reviewer profile is Sol High; runtime settings are unexposed.
-The writer prepared a focused, opt-in user-assisted acceptance test for keyboard
-activation and successful signed selection-to-bookmark renewal. It uses the real
-chooser and AppModel callback against synthetic state, checks focused Space input,
-one restore audit and preserved registration/root/binding/catalog. The final
-noninteractive readiness result reports 1 passed, 1 intentional interactive skip
-and 0 failed. The isolated interactive host has not been launched; the owner has
-been asked to confirm availability for the keyboard/folder-selection step.
-The current blocker is owner availability for that prepared native verification.
-The correction reviewer has completed its assignment and is archived; its result
-is preserved above. Phase 3A is not yet ready for merge
-approval. Phase 3B remains prepared and depends on reviewed, approved 3A.
+Final candidate `df75437c3d8d221eb3adbf1b4834ab0711c35973` is pushed in
+PR #33 and adds only the focused acceptance test and its canonical evidence after
+the reviewed production corrections. The owner supplied real Space input and
+selected the exact synthetic folder through the shared native chooser. Direct
+readback of `phase3a-native-user-assisted-rerun-4.xcresult` reports 1 passed,
+0 skipped and 0 failed: real renewal, stale bookmark 1→0, exactly one restore
+audit and preserved registration/root/binding/catalog. The test establishes and
+reads back button focus before observing Space; it does not claim a Tab-navigation
+journey. Restricted signed-host verification passed and the final host exited.
+The correction reviewer completed its assignment and is archived; its result is
+preserved above. Phase 3A verification is complete and PR #33 awaits owner merge
+approval. Phase 3B remains prepared and depends on that approved merge.
+
 Earlier raw result bundles disappeared after task archival/restoration; committed
 evidence and screenshots remain preserved. Current correction results remain in
 the writer worktree for readback; no cleanup was authorized.
@@ -77,8 +79,8 @@ the writer worktree for readback; no cleanup was authorized.
 The candidate's focused checks report 94 passed and 2 native-only skips; Debug
 build and repository documentation checks pass. Signed synthetic AX opening and
 cancellation of the real picker passed without a broad filesystem entitlement.
-Separate keyboard activation and successful signed selection-to-bookmark-renewal
-remain outstanding Phase 3 verification gaps. The candidate preserves a concise
+The later owner-assisted signed run closes keyboard activation and successful
+selection-to-bookmark-renewal verification; see its final evidence above. The candidate preserves a concise
 evidence record and four compact/wide screenshots under `docs/delivery/evidence/`.
 Broader runs exposed failures outside the focused suites; these do not constitute
 passing whole-suite evidence and unrelated repairs are not authorized.
@@ -132,7 +134,7 @@ review outcomes and reported temporary inventories. [Historical C6 history](arch
 remain non-authoritative. Temporary build outputs, synthetic backups and review files are
 retained; deletion requires exact owner authorization. No cleanup was performed.
 
-The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 has cleared independent correction review; the remaining
-native verification gaps must be resolved before owner merge approval. Phase 3B follows
+The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 has cleared independent correction review and native verification;
+owner merge approval is the remaining gate. Phase 3B follows
 its approved merge. Phase 4 is not authorized. Completed C4–C7 verification and historical
 records remain closed except where a concrete Phase 3 regression requires an affected check.
