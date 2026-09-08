@@ -130,9 +130,13 @@ rendering. The same reviewer is restored for the bounded R1–R4 correction pass
 R2 (recovery routing), R3 (error mapping), and R4 (interactive evidence) are
 closed. R1 remains Required: maintenance generation advances only on explicit
 load/selection, so successful previews can survive external edits/access or
-identity changes until manual Reload. The original writer is connecting live
-observation and testing withdrawal after external change without Reload. Only
-this required correction remains open; the same reviewer will assess it.
+identity changes until manual Reload. The original writer delivered and pushed
+`977656391fdd54ac02f278e0d71a39a023ad602f`, connecting the existing observer
+to selected-project monitoring and view lifetime. Direct readback of the final
+`/tmp/release-radar-phase3b-live-final` result confirms 75 passed, 2 unchanged
+native-picker skips and 0 failed, including external source-change and native
+rendered-text withdrawal tests without Reload. The same reviewer is restored
+for R1-only clearance on this candidate; review remains pending.
 Raw results remain available under
 `/tmp/release-radar-phase3b-corrections-final` and
 `/tmp/release-radar-phase3b-corrections-render` until review readback.
