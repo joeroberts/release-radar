@@ -44,13 +44,25 @@ and its completion verified through supported task readback. Earlier setup-block
 reports were incorrect; the assessment did run successfully.
 
 [Phase 3A controlling brief](task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
-records the source-backed gaps, acceptance, isolated verification boundary and Sol High
-writer assignment. Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` is active in fresh
-worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High, starting from
-committed brief baseline `a4d5e06`.
-Runtime model/effort are unexposed. No product implementation is complete yet. Phase 3B consumes its shared
-observation and preserves repository/artifact custody; supported content formats and
-bounded rendering will be explicit in that brief.
+records the source-backed gaps, acceptance and isolated verification boundary.
+Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` delivered source/evidence commit
+`74089746e255958b8810139457c5fc796aab838a` from brief baseline `a4d5e06` in
+worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High. Its candidate
+`b296fe9467187054267f5eed667ba8c731267d85` includes the required progress update and
+is pushed in [PR #33](https://github.com/joeroberts/release-radar/pull/33).
+Fresh independent combined code, authorization/security and UX/QA review
+`01a07ef7-9e05-7903-bc94-7e13c3322f95` is active against that candidate, requested
+Sol High. Runtime model/effort are unexposed. Phase 3A is not complete or ready for
+merge approval. Phase 3B remains prepared and depends on reviewed, approved 3A.
+
+The candidate's focused checks report 94 passed and 2 native-only skips; Debug
+build and repository documentation checks pass. Signed synthetic AX opening and
+cancellation of the real picker passed without a broad filesystem entitlement.
+Separate keyboard activation and successful signed selection-to-bookmark-renewal
+remain outstanding Phase 3 verification gaps. The candidate preserves a concise
+evidence record and four compact/wide screenshots under `docs/delivery/evidence/`.
+Broader runs exposed failures outside the focused suites; these do not constitute
+passing whole-suite evidence and unrelated repairs are not authorized.
 
 Before any app or test launch, inspection confirmed the existing XCTest host creates a
 PID-specific synthetic store and bypasses normal app startup/termination services. Native
@@ -96,7 +108,7 @@ review outcomes and reported temporary inventories. [Historical C6 history](arch
 remain non-authoritative. Temporary build outputs, synthetic backups and review files are
 retained; deletion requires exact owner authorization. No cleanup was performed.
 
-The active phase is slice 3, Current documentation and evidence. Phase 3A implementation
-is active; next is its direct verification and fresh independent review. Phase 3B follows
+The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 is under independent review; required corrections and the remaining
+native verification gaps must be resolved before owner merge approval. Phase 3B follows
 its approved merge. Phase 4 is not authorized. Completed C4–C7 verification and historical
 records remain closed except where a concrete Phase 3 regression requires an affected check.
