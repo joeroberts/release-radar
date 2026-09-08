@@ -7,6 +7,7 @@ struct ProjectOverviewView: View {
     let project: ProjectDashboardProjection
     let board: PhaseBoardProjection?
     let documentationState: ProjectDocumentationState
+    var documentationStatus: DocumentationObservationStatus? = nil
     let projectRoot: URL?
     let phaseSelectionStatus: ActivePhaseSelectionStatus
     let openBoard: () -> Void
@@ -19,7 +20,8 @@ struct ProjectOverviewView: View {
     var saveProjectSettings: ((ProjectRegistration, String, Set<String>) async throws -> ProjectSettingsSnapshot)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
-    var reauthorizeProjectHealth: ((URL) async throws -> ProjectHealthSnapshot)? = nil
+    var reauthorizeProjectHealth: ((URL, DocumentationObservationIdentity) async throws -> ProjectHealthSnapshot)? = nil
+    var documentationFolderChooser: @MainActor () -> URL? = { ProjectFolderAccessPanel.choose() }
     var previewDocumentationSetup: ((ProjectRegistration) async throws -> ProjectDocumentationSetupPreview)? = nil
     var performDocumentationSetup: ((ProjectDocumentationSetupPreview) async throws -> AuditEventID?)? = nil
     var previewArchive: (() async throws -> ProjectLifecyclePreview)? = nil
@@ -105,7 +107,13 @@ struct ProjectOverviewView: View {
                 if !project.evidence.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Project evidence").font(.headline)
-                        ForEach(project.evidence) { EvidenceDetailView(evidence: $0) }
+                        ForEach(project.evidence) {
+                            EvidenceDetailView(
+                                evidence: $0,
+                                documentationStatus: documentationStatus,
+                                restoreFolderAccess: healthReauthorizationAction
+                            )
+                        }
                     }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
                         .overlay {
@@ -290,12 +298,21 @@ struct ProjectOverviewView: View {
     }
 
     private var guidanceCard: some View {
-        let presentation = ProjectGuidancePresentation(documentationState: documentationState)
+        let presentation = if case .checking = documentationStatus {
+            ProjectGuidancePresentation.checking
+        } else {
+            ProjectGuidancePresentation(documentationState: documentationState)
+        }
         return VStack(alignment: .leading, spacing: 8) {
             Label(presentation.status, systemImage: presentation.systemImage)
                 .font(.headline)
             Text(presentation.detail)
                 .foregroundStyle(.secondary)
+            if canRestoreDocumentationFolder, let healthReauthorizationAction {
+                Button("Restore folder access", action: healthReauthorizationAction)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("project-guidance-restore-folder")
+            }
             if let actionTitle = presentation.actionTitle, let projectRoot {
                 Text(projectRoot.path)
                     .font(.caption.monospaced())
@@ -322,6 +339,7 @@ struct ProjectOverviewView: View {
                     .accessibilityIdentifier("project-guidance-copy-result")
             }
         }
+        .accessibilityElement(children: .contain)
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 14))
@@ -422,18 +440,18 @@ struct ProjectOverviewView: View {
     }
 
     private func chooseAndReauthorizeProjectHealthRoot() {
-        guard let reauthorizeProjectHealth else { return }
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.prompt = "Reauthorize"
-        panel.message = "Choose this project's exact saved folder."
-        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        guard let reauthorizeProjectHealth, let identity = documentationStatus?.identity else {
+            healthRecoveryMessage = "Reload this project before restoring its saved folder access."
+            return
+        }
+        guard let folder = documentationFolderChooser() else {
+            healthRecoveryMessage = "Folder access was not changed."
+            return
+        }
         healthRecoveryMessage = nil
         Task {
             do {
-                health = try await reauthorizeProjectHealth(folder)
+                health = try await reauthorizeProjectHealth(folder, identity)
             } catch {
                 healthRecoveryMessage = error.localizedDescription
             }
@@ -443,6 +461,15 @@ struct ProjectOverviewView: View {
     private var healthReauthorizationAction: (() -> Void)? {
         guard reauthorizeProjectHealth != nil else { return nil }
         return { chooseAndReauthorizeProjectHealthRoot() }
+    }
+
+    private var canRestoreDocumentationFolder: Bool {
+        if case .checking = documentationStatus { return false }
+        return switch documentationState {
+        case .managedUnavailable(_, .rootUnavailable, _), .managedUnavailable(_, .staleRoot, _): true
+        case .legacy(.unavailable): documentationStatus?.identity?.rootPath != nil
+        default: false
+        }
     }
 
     private func loadDocumentationPreview(_ registration: ProjectRegistration) {
@@ -484,6 +511,20 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
     let detail: String
     let systemImage: String
     let actionTitle: String?
+
+    static let checking = Self(
+        status: "Checking documentation…",
+        detail: "Validating the saved folder, accepted catalog, and evidence without changing repository or delivery state.",
+        systemImage: "arrow.triangle.2.circlepath",
+        actionTitle: nil
+    )
+
+    private init(status: String, detail: String, systemImage: String, actionTitle: String?) {
+        self.status = status
+        self.detail = detail
+        self.systemImage = systemImage
+        self.actionTitle = actionTitle
+    }
 
     init(documentationState: ProjectDocumentationState) {
         switch documentationState {

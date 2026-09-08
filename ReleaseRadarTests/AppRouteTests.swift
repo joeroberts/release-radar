@@ -2621,7 +2621,7 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
-    func testExternalCommittedRefreshReusesCachedGuidanceWithoutBookmarkOrAuditMutation() async throws {
+    func testExternalCommittedRefreshRechecksGuidanceWithoutBookmarkOrAuditMutation() async throws {
         let mismatchedRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RR9-ExternalRefreshMismatch-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: mismatchedRoot, withIntermediateDirectories: true)
@@ -2667,18 +2667,14 @@ final class AppRouteTests: XCTestCase {
                 statusBefore,
                 "Failure: \(failure)"
             )
-            XCTAssertEqual(
-                model.projectGuidanceState(for: fixture.projectID),
-                guidanceBefore,
-                "Failure: \(failure)"
-            )
+            XCTAssertEqual(model.projectGuidanceState(for: fixture.projectID), .unavailable, "Failure: \(failure)")
             XCTAssertEqual(model.projectRoot(for: fixture.projectID), rootBefore, "Failure: \(failure)")
             XCTAssertEqual(requestIDs.count, 0, "Failure: \(failure)")
         }
     }
 
     @MainActor
-    func testOwnerSavedRefreshReusesCachedGuidanceWithoutBookmarkAuditOrCommandRetry() async throws {
+    func testOwnerSavedRefreshRechecksGuidanceWithoutBookmarkAuditOrCommandRetry() async throws {
         let mismatchedRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RR9-SavedRefreshMismatch-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: mismatchedRoot, withIntermediateDirectories: true)
@@ -2744,11 +2740,7 @@ final class AppRouteTests: XCTestCase {
                 .idle,
                 "Failure: \(failure)"
             )
-            XCTAssertEqual(
-                model.projectGuidanceState(for: fixture.projectID),
-                guidanceBefore,
-                "Failure: \(failure)"
-            )
+            XCTAssertEqual(model.projectGuidanceState(for: fixture.projectID), .unavailable, "Failure: \(failure)")
             XCTAssertEqual(model.projectRoot(for: fixture.projectID), rootBefore, "Failure: \(failure)")
             XCTAssertEqual(requestIDs.count, 1, "Failure: \(failure)")
         }

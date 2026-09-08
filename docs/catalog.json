@@ -4783,6 +4783,81 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-phase3a-documentation-freshness-2026-09-07",
+      "path": "docs/delivery/evidence/2026-09-07-phase3a-documentation-freshness.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-checking-wide-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-checking-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-checking-compact-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-checking-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-folder-recovery-wide-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-folder-recovery-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-folder-recovery-compact-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-folder-recovery-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }

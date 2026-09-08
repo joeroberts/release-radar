@@ -55,7 +55,7 @@ public struct ManagedDocumentResolver: Sendable {
         } catch { return failed(.rootUnavailable) }
     }
 
-    private func resolveAuthorized(artifactIDs: Set<String>, binding: ProjectDocumentationBinding, root: URL) -> [String: ResolvedManagedDocument] {
+    func resolveAuthorized(artifactIDs: Set<String>, binding: ProjectDocumentationBinding, root: URL) -> [String: ResolvedManagedDocument] {
         var artifacts: [String: RepositoryDocumentArtifact] = [:]
         func failed(_ failure: ManagedDocumentResolutionFailure) -> [String: ResolvedManagedDocument] {
             Dictionary(uniqueKeysWithValues: artifactIDs.map { ($0, result($0, artifact: artifacts[$0], failure: failure)) })

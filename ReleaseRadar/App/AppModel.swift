@@ -85,7 +85,8 @@ final class AppModel {
     private var recoveryStartupError: String?
     private var recoveryResumedAtLaunch: Bool
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
-    private let dashboardLoader: @Sendable (DeliveryStore) async throws -> DashboardProjection
+    private let dashboardLoader: @Sendable (DeliveryStore, [ProjectID: [EvidenceReadback]]) async throws -> DashboardProjection
+    private var documentationObserver: DocumentationObservationCoordinator
     private let requestIDGenerator: () -> UUID
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
@@ -104,6 +105,8 @@ final class AppModel {
     private var didInitializeCodexPluginLifecycle = false
     private var codexPluginObservedAt: Date?
     private var projectionReloadGeneration: UInt64 = 0
+    private var documentationServiceGeneration: UInt64 = 0
+    @ObservationIgnored private var documentationMonitoringTask: Task<Void, Never>?
 #if DEBUG
     private var rr9ActivePhaseCaptureScenario: RR9ActivePhaseCaptureScenario?
     private var rr9ActivePhaseCaptureRootDirectory: URL?
@@ -122,9 +125,7 @@ final class AppModel {
         reviewInboxLoader: @escaping @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection = {
             try await ReviewInboxProjection.load(from: $0, projectID: $1)
         },
-        dashboardLoader: @escaping @Sendable (DeliveryStore) async throws -> DashboardProjection = {
-            try await DashboardProjection.load(from: $0)
-        },
+        dashboardLoader: (@Sendable (DeliveryStore) async throws -> DashboardProjection)? = nil,
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
         recoveryStartupError: String? = nil,
@@ -141,9 +142,17 @@ final class AppModel {
         self.codexPluginCoordinator = codexPluginCoordinator
         self.codexPluginShippedVersion = codexPluginShippedVersion
         self.pushoverKeychain = resolvedKeychain
-        self.projectOnboarding = projectOnboarding ?? FolderProjectOnboarding(store: store)
+        let resolvedOnboarding = projectOnboarding ?? FolderProjectOnboarding(store: store)
+        self.projectOnboarding = resolvedOnboarding
         self.reviewInboxLoader = reviewInboxLoader
-        self.dashboardLoader = dashboardLoader
+        self.dashboardLoader = if let dashboardLoader {
+            { store, _ in try await dashboardLoader(store) }
+        } else {
+            { store, evidence in
+                try await DashboardProjection.load(from: store, evidenceReadbacks: evidence)
+            }
+        }
+        self.documentationObserver = Self.makeDocumentationObserver(onboarding: resolvedOnboarding)
         self.requestIDGenerator = requestIDGenerator
         self.recoveryServices = recoveryServices
         self.recoveryStartupError = recoveryStartupError
@@ -168,9 +177,7 @@ final class AppModel {
         reviewInboxLoader: @escaping @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection = {
             try await ReviewInboxProjection.load(from: $0, projectID: $1)
         },
-        dashboardLoader: @escaping @Sendable (DeliveryStore) async throws -> DashboardProjection = {
-            try await DashboardProjection.load(from: $0)
-        },
+        dashboardLoader: (@Sendable (DeliveryStore) async throws -> DashboardProjection)? = nil,
         requestIDGenerator: @escaping () -> UUID = { UUID() },
         recoveryServices: ReleaseRadarAppServices? = nil,
         recoveryStartupError: String? = nil,
@@ -292,8 +299,12 @@ final class AppModel {
                 dashboardError = error.localizedDescription
                 return
             }
+            documentationObserver.invalidate(projectID: projectID)
         }
         selection = route
+        if let projectID = route.projectID {
+            _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
+        }
     }
 
     func previewProjectLifecycle(
@@ -522,6 +533,7 @@ final class AppModel {
     }
 
     private func adoptRecovery(_ result: ApplicationRecoveryResult) async throws {
+        documentationServiceGeneration &+= 1
         store = result.store
         recoveryStartupError = nil
         recoveryResumedAtLaunch = false
@@ -537,6 +549,7 @@ final class AppModel {
             codexPluginCoordinator = nil
         }
         projectOnboarding = FolderProjectOnboarding(store: result.store)
+        documentationObserver = Self.makeDocumentationObserver(onboarding: projectOnboarding)
         clearEphemeralViewState()
         selection = .projects
         selectedProjectID = nil
@@ -643,8 +656,37 @@ final class AppModel {
         projectDocumentationStates[projectID] ?? .legacy(.unavailable)
     }
 
+    func documentationObservationStatus(for projectID: ProjectID) -> DocumentationObservationStatus? {
+        documentationObserver.status(for: projectID)
+    }
+
     func projectRoot(for projectID: ProjectID) -> URL? {
         projectRoots[projectID]
+    }
+
+    func startDocumentationMonitoring() {
+        guard documentationMonitoringTask == nil else { return }
+        documentationMonitoringTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(1)) }
+                catch { return }
+                guard let self else { return }
+                await self.refreshActiveDocumentationObservations(withdrawCurrent: false)
+            }
+        }
+    }
+
+    func stopDocumentationMonitoring() {
+        documentationMonitoringTask?.cancel()
+        documentationMonitoringTask = nil
+    }
+
+    func recheckDocumentationAfterActivation() async {
+        guard let dashboard else { return }
+        for project in dashboard.projects {
+            documentationObserver.invalidate(projectID: project.id)
+        }
+        await refreshActiveDocumentationObservations(withdrawCurrent: true)
     }
 
     func projectSettings(for projectID: ProjectID) async throws -> ProjectSettingsSnapshot {
@@ -709,20 +751,24 @@ final class AppModel {
             )
         }
 
-        let settings = try? await projectOnboarding.projectSettings(projectID: projectID)
+        let documentation = await refreshDocumentationObservation(
+            projectID: projectID,
+            withdrawCurrent: true
+        )
         var checks: [ProjectHealthSnapshot.Check] = [
             .init(id: "storage", title: "Local storage ready", detail: "The current Release Radar schema is available.", state: .ready),
         ]
-        let documentation = await projectOnboarding.inspectProjectGuidanceContext(projectID: projectID)
-        if let root = documentation.projectRoot {
-            checks.append(.init(id: "folder", title: "Folder access ready", detail: root.path, state: .ready))
+        if let rootPath = documentation?.identity.rootPath,
+           !Self.documentationRootIsUnavailable(documentation?.documentationState) {
+            checks.append(.init(id: "folder", title: "Folder access ready", detail: rootPath, state: .ready))
         } else {
             checks.append(.init(id: "folder", title: "Folder access needs attention", detail: "The saved authorization could not be resolved. Reauthorize the same project folder, then check again.", state: .attention))
         }
 
-        let documentationPresentation = ProjectGuidancePresentation(documentationState: documentation.documentationState)
+        let documentationState = documentation?.documentationState ?? .legacy(.unavailable)
+        let documentationPresentation = ProjectGuidancePresentation(documentationState: documentationState)
         let documentationReady: Bool
-        switch documentation.documentationState {
+        switch documentationState {
         case .managed(hasAuditedHandoff: true, _, _), .legacy(.current): documentationReady = true
         default: documentationReady = false
         }
@@ -760,17 +806,17 @@ final class AppModel {
         ))
         if let roots {
             let current = (try? await projectOnboarding.rootSnapshotIsCurrent(roots)) == true
-            if !current || roots.registration != settings?.registration ||
-                (documentation.projectRoot != nil && roots.roots.first(where: { $0.role == .primary })?.path != documentation.projectRoot?.path) {
+            if !current || roots.registration != documentation?.identity.registration ||
+                (documentation?.identity.rootPath != nil && roots.roots.first(where: { $0.role == .primary })?.path != documentation?.identity.rootPath) {
                 return .init(projectID: projectID, registration: nil, rootPath: nil, checkedAt: checkedAt,
                     checks: [.init(id: "roots", title: "Project roots changed during checking", detail: "Check health again for the current saved registration and roots. Earlier results are no longer current.", state: .unavailable)])
             }
         }
         return .init(
             projectID: projectID,
-            registration: settings?.registration,
-            rootPath: documentation.projectRoot?.path ?? projectRoots[projectID]?.path,
-            checkedAt: checkedAt,
+            registration: documentation?.identity.registration,
+            rootPath: documentation?.identity.rootPath ?? projectRoots[projectID]?.path,
+            checkedAt: documentation?.checkedAt ?? checkedAt,
             checks: checks
         )
     }
@@ -1111,8 +1157,35 @@ final class AppModel {
 
     func reauthorizeProjectHealthRoot(at folder: URL, projectID: ProjectID) async throws -> ProjectHealthSnapshot {
         try await projectOnboarding.reauthorizeProjectRoot(folder, for: projectID)
+        documentationObserver.invalidate(projectID: projectID)
         _ = await reloadProjectProjections()
         return await projectHealth(for: projectID)
+    }
+
+    func restoreDocumentationFolderAccess(
+        at folder: URL,
+        identity: DocumentationObservationIdentity
+    ) async throws -> ProjectHealthSnapshot {
+        guard let registration = identity.registration,
+              let rootID = identity.rootID,
+              let rootPath = identity.rootPath else {
+            throw ProjectRootManagementError.stale
+        }
+        try await projectOnboarding.reauthorizeProjectRoot(
+            folder,
+            target: .init(
+                registration: registration,
+                rootID: rootID,
+                rootPath: rootPath,
+                binding: identity.binding
+            )
+        )
+        documentationObserver.invalidate(projectID: identity.projectID)
+        _ = await refreshDocumentationObservation(
+            projectID: identity.projectID,
+            withdrawCurrent: true
+        )
+        return await projectHealth(for: identity.projectID)
     }
 
     func reloadDashboardAfterCommittedAgentCommand() async {
@@ -1122,6 +1195,11 @@ final class AppModel {
     func reloadAfterRepositoryRelocation() async {
         // Root relocation must re-observe authorization and guidance instead of
         // reusing the pre-relocation cache. This does not rerun app startup.
+        if let dashboard {
+            for project in dashboard.projects {
+                documentationObserver.invalidate(projectID: project.id)
+            }
+        }
         _ = await reloadProjectProjections()
     }
 
@@ -1288,7 +1366,32 @@ final class AppModel {
     private func prepareProjectProjections(
         context: ProjectionReloadContext
     ) async throws -> PreparedProjectProjections {
-        let dashboard = try await dashboardLoader(store)
+        let documentationServiceGeneration = self.documentationServiceGeneration
+        let documentationObserver = self.documentationObserver
+        let activeProjectIDs = try await store.read { connection in
+            var ids: [ProjectID] = []
+            var offset: Int64 = 0
+            while let id = try connection.scalarText(
+                "SELECT id FROM projects WHERE lifecycle = 'active' ORDER BY id LIMIT 1 OFFSET ?",
+                bindings: [.integer(offset)]
+            ) {
+                ids.append(.init(rawValue: id))
+                offset += 1
+            }
+            return ids
+        }
+        var observations: [ProjectID: ProjectDocumentationObservation] = [:]
+        for projectID in activeProjectIDs {
+            if let observation = await documentationObserver.refresh(projectID: projectID) {
+                guard documentationServiceGeneration == self.documentationServiceGeneration,
+                      documentationObserver === self.documentationObserver else {
+                    throw CancellationError()
+                }
+                observations[projectID] = observation
+            }
+        }
+        let evidence = observations.mapValues(\.evidence)
+        let dashboard = try await dashboardLoader(store, evidence)
         var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
         var dependencyGraphs: [ProjectID: DependencyGraphProjection] = [:]
         var projectActivities: [ProjectID: ProjectActivityProjection] = [:]
@@ -1304,15 +1407,9 @@ final class AppModel {
         for project in dashboard.projects {
             reviewInboxes[project.id] = try await reviewInboxLoader(store, project.id)
             projectActivities[project.id] = try await ProjectActivityProjection.load(from: store, projectID: project.id)
-            switch context {
-            case .ordinary:
-                let guidance = await projectOnboarding.observeProjectGuidanceContext(projectID: project.id)
-                projectDocumentationStates[project.id] = guidance.documentationState
-                projectRoots[project.id] = guidance.projectRoot
-            case .ownerActivePhaseCommitted, .ownerDeliveryGoalCommitted, .agentCommandCommitted:
-                projectDocumentationStates[project.id] = self.projectDocumentationStates[project.id] ?? .legacy(.unavailable)
-                projectRoots[project.id] = self.projectRoots[project.id]
-            }
+            let observation = observations[project.id]
+            projectDocumentationStates[project.id] = observation?.documentationState ?? .legacy(.unavailable)
+            projectRoots[project.id] = observation?.identity.rootPath.map(URL.init(fileURLWithPath:))
             guard let board = dashboard.board(for: project.id) else { continue }
             let preferredID = board.detail(for: self.selectedTicketID) == nil
                 ? board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
@@ -1361,6 +1458,8 @@ final class AppModel {
         selectedTicketID = prepared.selectedTicketID
         selectedReviewItemID = prepared.selectedReviewItemID
         dashboardError = nil
+        let activeProjectIDs = Set(prepared.dashboard.projects.map(\.id))
+        documentationObserver.retain(projectIDs: activeProjectIDs)
         for projectID in prepared.reviewInboxes.keys where deliveryGoalAcceptanceNeedsReload(for: projectID) {
             deliveryGoalReloadRequired.remove(Data(projectID.rawValue.utf8))
             reviewActionStates[projectID] = nil
@@ -1418,6 +1517,78 @@ final class AppModel {
             guard generation == projectionReloadGeneration else { return .superseded }
             publishFailure(error, context: context)
             return .failed
+        }
+    }
+
+    @discardableResult
+    private func refreshDocumentationObservation(
+        projectID: ProjectID,
+        withdrawCurrent: Bool
+    ) async -> ProjectDocumentationObservation? {
+        let documentationServiceGeneration = self.documentationServiceGeneration
+        let documentationObserver = self.documentationObserver
+        guard let observation = await documentationObserver.refresh(
+            projectID: projectID,
+            withdrawCurrent: withdrawCurrent
+        ), documentationServiceGeneration == self.documentationServiceGeneration,
+           documentationObserver === self.documentationObserver else { return nil }
+        projectDocumentationStates[projectID] = observation.documentationState
+        projectRoots[projectID] = observation.identity.rootPath.map(URL.init(fileURLWithPath:))
+        if dashboard?.projects.contains(where: { $0.id == projectID }) == true {
+            dashboard = dashboard?.replacingDocumentation(for: projectID, with: observation.evidence)
+        }
+        return observation
+    }
+
+    private func refreshActiveDocumentationObservations(withdrawCurrent: Bool) async {
+        guard let dashboard else { return }
+        for project in dashboard.projects {
+            _ = await refreshDocumentationObservation(
+                projectID: project.id,
+                withdrawCurrent: withdrawCurrent
+            )
+        }
+    }
+
+    private static func makeDocumentationObserver(
+        onboarding: FolderProjectOnboarding
+    ) -> DocumentationObservationCoordinator {
+        DocumentationObservationCoordinator { projectID in
+            for _ in 0..<2 {
+                do {
+                    return DocumentationObservationPayload(
+                        try await onboarding.inspectProjectDocumentation(projectID: projectID)
+                    )
+                } catch ProjectDocumentationObservationError.staleContext {
+                    continue
+                } catch {
+                    break
+                }
+            }
+            return .init(
+                identity: .init(
+                    projectID: projectID,
+                    registration: nil,
+                    rootID: nil,
+                    rootPath: nil,
+                    binding: nil
+                ),
+                checkedAt: Date(),
+                documentationState: .legacy(.unavailable),
+                evidence: []
+            )
+        }
+    }
+
+    private static func documentationRootIsUnavailable(
+        _ state: ProjectDocumentationState?
+    ) -> Bool {
+        switch state {
+        case .legacy(.unavailable), .managedUnavailable(_, .rootUnavailable, _),
+             .managedUnavailable(_, .staleRoot, _), .managedUnavailable(_, .rootMismatch, _), nil:
+            true
+        default:
+            false
         }
     }
 

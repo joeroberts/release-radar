@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import ReleaseRadarCore
 import RekonDesignSystem
 
 struct SidebarView: View {
@@ -27,7 +29,12 @@ struct SidebarView: View {
         .foregroundStyle(RekonTheme.primaryText)
         .task {
             await model.initializeForLaunch()
+            model.startDocumentationMonitoring()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await model.recheckDocumentationAfterActivation() }
+        }
+        .onDisappear { model.stopDocumentationMonitoring() }
     }
 
     private var sidebar: some View {
@@ -246,6 +253,7 @@ struct SidebarView: View {
                         project: project,
                         board: dashboard.board(for: projectID),
                         documentationState: model.projectDocumentationState(for: projectID),
+                        documentationStatus: model.documentationObservationStatus(for: projectID),
                         projectRoot: model.projectRoot(for: projectID),
                         phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
                         openBoard: {
@@ -272,8 +280,11 @@ struct SidebarView: View {
                         },
                         availableCodexTasks: model.codexTasks(for: projectID),
                         loadProjectHealth: { await model.projectHealth(for: projectID) },
-                        reauthorizeProjectHealth: {
-                            try await model.reauthorizeProjectHealthRoot(at: $0, projectID: projectID)
+                        reauthorizeProjectHealth: { folder, identity in
+                            try await model.restoreDocumentationFolderAccess(
+                                at: folder,
+                                identity: identity
+                            )
                         },
                         previewDocumentationSetup: { try await model.previewDocumentationSetup(registration: $0) },
                         performDocumentationSetup: { try await model.performDocumentationSetup($0) },
@@ -319,6 +330,13 @@ struct SidebarView: View {
                         },
                         reauthorizeActivePhase: { folder in
                             await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
+                        },
+                        documentationStatus: model.documentationObservationStatus(for: projectID),
+                        restoreDocumentationFolderAccess: { folder, identity in
+                            _ = try await model.restoreDocumentationFolderAccess(
+                                at: folder,
+                                identity: identity
+                            )
                         },
                         viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) }
                     )
@@ -373,6 +391,7 @@ struct SidebarView: View {
                 .controlSize(.large)
         }
     }
+
 }
 
 private struct DetailUnavailableView: View {
