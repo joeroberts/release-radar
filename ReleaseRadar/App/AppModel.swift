@@ -52,6 +52,7 @@ final class AppModel {
     var isSidebarCompact = false
     var dashboard: DashboardProjection?
     var selectedTicketID = TicketID(rawValue: "VD2-08")
+    private(set) var navigationHistory = NavigationHistory(initial: .projects)
     var dashboardError: String?
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
     var codexPluginState: CodexPluginPresentationState = .checking
@@ -224,6 +225,9 @@ final class AppModel {
             ?? DashboardSampleData.projectID
     }
 
+    var canNavigateBack: Bool { navigationHistory.canGoBack }
+    var canNavigateForward: Bool { navigationHistory.canGoForward }
+
     var currentProject: ProjectDashboardProjection? {
         dashboard?.projects.first { $0.id == currentProjectID }
     }
@@ -311,6 +315,32 @@ final class AppModel {
         selection = route
         if let projectID = route.projectID {
             _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
+        }
+        navigationHistory.navigate(
+            to: route,
+            phaseID: (route.projectID ?? selectedProjectID).flatMap { viewedPhaseIDs[Data($0.rawValue.utf8)] },
+            selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
+        )
+    }
+
+    func goBack() async { await restoreNavigation(step: .back) }
+    func goForward() async { await restoreNavigation(step: .forward) }
+
+    private enum NavigationStep { case back, forward }
+
+    private func restoreNavigation(step: NavigationStep) async {
+        let moved = switch step {
+        case .back: navigationHistory.goBack()
+        case .forward: navigationHistory.goForward()
+        }
+        guard moved else { return }
+        let entry = navigationHistory.current
+        selection = entry.route
+        if let projectID = entry.route.projectID, let phaseID = entry.phaseID {
+            viewedPhaseIDs[Data(projectID.rawValue.utf8)] = phaseID
+        }
+        if let ticketID = entry.selectedTicketID {
+            selectedTicketID = ticketID
         }
     }
 
@@ -974,6 +1004,18 @@ final class AppModel {
             selectedTicketID = board.lanes.flatMap(\.cards).map(\.id)
                 .min { $0.rawValue < $1.rawValue } ?? TicketID(rawValue: "")
         }
+        navigationHistory.updateCurrent(
+            phaseID: phaseID,
+            selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
+        )
+    }
+
+    func selectTicket(_ ticketID: TicketID) {
+        selectedTicketID = ticketID
+        navigationHistory.updateCurrent(
+            phaseID: viewedPhaseIDs[Data(currentProjectID.rawValue.utf8)],
+            selectedTicketID: ticketID.rawValue.isEmpty ? nil : ticketID
+        )
     }
 
     func deliveryGoalAcceptanceNeedsReload(for projectID: ProjectID) -> Bool {
@@ -1468,7 +1510,7 @@ final class AppModel {
             projectDocumentationStates[project.id] = observation?.documentationState ?? .legacy(.unavailable)
             projectRoots[project.id] = observation?.identity.rootPath.map(URL.init(fileURLWithPath:))
             guard let board = dashboard.board(for: project.id) else { continue }
-            let preferredID = board.detail(for: self.selectedTicketID) == nil
+            let preferredID = self.selectedTicketID.rawValue.isEmpty
                 ? board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
                 : self.selectedTicketID
             if project.id == visibleProjectID {
@@ -1479,12 +1521,21 @@ final class AppModel {
                         ?? TicketID(rawValue: "")
             }
             guard let preferredID else { continue }
-            dependencyGraphs[project.id] = try await DependencyGraphProjection.load(
+            if let graph = try? await DependencyGraphProjection.load(
                 from: store,
                 projectID: project.id,
                 phaseID: board.phaseID,
                 selectedTicketID: preferredID
-            )
+            ) {
+                dependencyGraphs[project.id] = graph
+            } else if let fallback = board.lanes.flatMap(\.cards).map(\.id).min(by: { $0.rawValue < $1.rawValue }) {
+                dependencyGraphs[project.id] = try await DependencyGraphProjection.load(
+                    from: store,
+                    projectID: project.id,
+                    phaseID: board.phaseID,
+                    selectedTicketID: fallback
+                )
+            }
         }
         for removed in dashboard.removedProjects {
             removedActivities[removed.id] = try await ProjectActivityProjection.loadRemoved(

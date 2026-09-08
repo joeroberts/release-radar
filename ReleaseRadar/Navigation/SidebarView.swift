@@ -82,6 +82,31 @@ struct SidebarView: View {
                 }
             }
 
+            HStack(spacing: 8) {
+                Button {
+                    Task { await model.goBack() }
+                } label: {
+                    Image(systemName: "chevron.backward")
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(!model.canNavigateBack)
+                .accessibilityLabel("Back")
+                .accessibilityIdentifier("navigation-back")
+
+                Button {
+                    Task { await model.goForward() }
+                } label: {
+                    Image(systemName: "chevron.forward")
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(!model.canNavigateForward)
+                .accessibilityLabel("Forward")
+                .accessibilityIdentifier("navigation-forward")
+            }
+            .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Navigation history")
+
             if let currentProject = model.currentProject {
                 RekonSeparator()
                     .padding(.horizontal, 12)
@@ -323,7 +348,10 @@ struct SidebarView: View {
                 if let board = model.viewedBoard(for: projectID) {
                     PhaseBoardView(
                         board: board,
-                        selectedTicketID: $model.selectedTicketID,
+                        selectedTicketID: Binding(
+                            get: { model.selectedTicketID },
+                            set: { model.selectTicket($0) }
+                        ),
                         phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
                         selectActivePhase: { phaseID in
                             await model.setActivePhase(projectID: projectID, phaseID: phaseID)
@@ -371,7 +399,10 @@ struct SidebarView: View {
                 if let graph = model.dependencyGraph(for: projectID) {
                     DependencyGraphView(
                         graph: graph,
-                        selectedTicketID: $model.selectedTicketID,
+                        selectedTicketID: Binding(
+                            get: { model.selectedTicketID },
+                            set: { model.selectTicket($0) }
+                        ),
                         freshness: model.codexSnapshot.freshness
                     )
                 } else {

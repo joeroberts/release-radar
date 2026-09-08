@@ -568,7 +568,7 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertEqual(first, second)
     }
 
-    func testDependencyGraphExcludesCrossPhaseEdgesFromRelationshipsAndConnectors() async throws {
+    func testDependencyGraphIncludesCrossPhaseRelationshipsWithPhaseIdentity() async throws {
         let store = try await seededStore()
         try await store.transact(
             actor: DeliveryActor(id: "rr07-test"),
@@ -627,10 +627,11 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertTrue(graph.edges.allSatisfy {
             nodeIDs.contains($0.sourceID) && nodeIDs.contains($0.targetID)
         })
-        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-06", "VD2-07"])
-        XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["VD2-03", "VD2-04", "VD2-05"])
+        XCTAssertEqual(graph.node(id: .init(rawValue: "CROSS-BRIDGE"))?.phaseName, "Later phase")
+        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-07"])
+        XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["CROSS-BRIDGE", "VD2-03", "VD2-04", "VD2-05", "VD2-06"])
         XCTAssertEqual(graph.selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
-        XCTAssertEqual(layout.connectors.count, 11)
+        XCTAssertEqual(layout.connectors.count, 13)
         XCTAssertTrue(layout.connectors.allSatisfy {
             layout.frames[$0.sourceID] != nil && layout.frames[$0.targetID] != nil
         })

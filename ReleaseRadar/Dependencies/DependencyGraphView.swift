@@ -45,10 +45,10 @@ struct DependencyGraphView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Phase dependency map")
+            Text("Project dependency map")
                 .font(RekonTypography.screenTitle)
                 .foregroundStyle(RekonTheme.primaryText)
-            Text("Selected path for \(selectedGraph.selected.ticket.id.rawValue) · direct and indirect relationships across the phase")
+            Text("Selected path for \(selectedGraph.selected.ticket.id.rawValue) · direct and indirect relationships across this project")
                 .foregroundStyle(RekonTheme.secondaryText)
         }
         .padding(24)
@@ -64,7 +64,7 @@ struct DependencyGraphView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("\(layout.frames.count) of \(selectedGraph.nodes.count) phase tickets shown")
+                    Text("\(layout.frames.count) of \(selectedGraph.nodes.count) project tickets shown")
                         .font(.subheadline.weight(.medium))
                         .monospacedDigit()
                     laneLegend
@@ -90,7 +90,7 @@ struct DependencyGraphView: View {
                     .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
             }
             .accessibilityElement(children: .contain)
-            .accessibilityLabel("Selected dependency path; \(layout.frames.count) of \(selectedGraph.nodes.count) phase tickets shown")
+            .accessibilityLabel("Selected dependency path; \(layout.frames.count) of \(selectedGraph.nodes.count) project tickets shown")
         }
         .accessibilityIdentifier("dependency-graph")
     }
@@ -208,6 +208,10 @@ struct DependencyGraphView: View {
                     Text(node.id.rawValue)
                         .font(.system(.subheadline, design: .monospaced, weight: .semibold))
                         .lineLimit(1)
+                    Text(node.phaseName)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                     if node.lane == .blocked {
                         Label("Blocked", systemImage: "exclamationmark.octagon.fill")
                             .font(.caption2.weight(.medium))
@@ -234,7 +238,7 @@ struct DependencyGraphView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(node.id.rawValue), \(node.lane.dashboardTitle), \(node.blockerCount) "
+            "\(node.id.rawValue), \(node.phaseName), \(node.lane.dashboardTitle), \(node.blockerCount) "
                 + "blocker\(node.blockerCount == 1 ? "" : "s"), \(role.title)"
                 + (isSelected ? ", selected" : "")
         )
