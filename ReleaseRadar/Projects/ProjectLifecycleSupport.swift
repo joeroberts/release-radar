@@ -61,7 +61,7 @@ struct ProjectHealthView: View {
                 }
                 if snapshot.checks.contains(where: { $0.id == "folder" && $0.state != .ready }),
                    let reauthorize {
-                    Button("Reauthorize Saved Folder…", action: reauthorize)
+                    Button("Restore folder access", action: reauthorize)
                         .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("project-health-reauthorize")
                 }

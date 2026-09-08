@@ -185,8 +185,9 @@ Current consumers are the shared Core validator; documentation-tool check and
 index generation; app catalog preview, binding and acceptance; and managed
 evidence inventory, resolution, creation/adoption, import and root rebind.
 They consume one rule through Core, with no independent app/checker whitelist.
-Future C8 freshness and C12 health/recovery observations must distinguish this
-reader capability from valid/current/accepted/bound state. C10/C11 portability
+The Phase 3A C8 freshness candidate and its contextual C12 health/recovery
+presentation distinguish this reader capability from
+valid/current/accepted/bound state. C10/C11 portability
 and P17 code-revision evidence retain repository/artifact identity and explicit
 provenance: the catalog digest is not a reader-version, code-revision or installed
 binary attestation. These consumers are compatibility constraints, not new C8
@@ -667,6 +668,37 @@ transition. Only an actual frozen-contract defect reopens M2/M3/M5 and replaces
 `MDCP-COMPAT-1`. Release live use
 only through an explicit owner decision after post-cutover readback succeeds.
 Record the terminal current state and next eligible work.
+
+## Phase 3A runtime observation contract
+
+The Phase 3A source candidate adds one shared, in-memory documentation observation
+for Overview, evidence, and documentation health. Its identity is the exact project
+registration and request generation, root row and canonical path, and optional
+accepted binding. Its result carries a local observation generation and check time.
+Starting a refresh withdraws prior success; concurrent requests coalesce, and a
+result from an invalidated identity, service graph, lifecycle, or older generation
+cannot publish.
+
+The active-project observer rechecks after dashboard load/reopening, app activation,
+authorized recovery, and relevant nested filesystem changes. Archive, removal, and
+service replacement terminate monitoring and withdraw the observation. Observation
+uses the existing bookmark and bounded no-follow readers but does not persist
+availability, mark bookmark state, audit, accept catalogs, or infer delivery state.
+
+Same-folder recovery is deliberately narrower than relocation. The native picker
+accepts one existing folder. Commit requires an exact canonical-path match and
+rechecks the captured registration, root row, persisted path, binding, lifecycle,
+and store graph before replacing only the bookmark in an audited transaction.
+Catalog validation follows renewal, so invalid or pending catalogs remain visibly
+invalid or pending. Repository relocation retains its separate accepted-catalog
+workflow.
+
+The source verification record is
+[Phase 3A documentation freshness evidence](../delivery/evidence/2026-09-07-phase3a-documentation-freshness.md).
+It includes signed native proof that the accessibility action opens the shared
+picker and that cancellation is non-mutating. Successful signed selection through
+real sandbox authorization to bookmark renewal remains an outstanding Phase 3
+verification gap; synthetic integration tests cover the renewal contract itself.
 
 ## Program-wide execution rules
 

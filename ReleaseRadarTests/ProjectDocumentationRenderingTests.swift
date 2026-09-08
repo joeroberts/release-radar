@@ -593,7 +593,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             name: "lifecycle-folder-recovery",
             width: 620,
             expected: nil,
-            expectedText: ["Reauthorize Saved Folder…", "Catalog remains invalid."],
+            expectedText: ["Restore folder access", "Catalog remains invalid."],
             pressIdentifiers: ["project-health-reauthorize", "project-health-manage-roots"]
         )
         XCTAssertEqual(invocationCount, 1)
@@ -639,6 +639,108 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         XCTAssertTrue(copied.localizedCaseInsensitiveContains("lifecycle bootstrap"))
         XCTAssertTrue(copied.localizedCaseInsensitiveContains("existing documentation"))
         XCTAssertFalse(copied.contains("Require an existing catalogued"))
+    }
+
+    func testPhase3ADocumentationCheckingAndFolderRecoveryAtWideAndCompactWidths() async throws {
+        let projectID = ProjectID(rawValue: "phase3a-rendering")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "phase3a-rendering-registration",
+            requestGeneration: 3
+        )
+        let identity = DocumentationObservationIdentity(
+            projectID: projectID,
+            registration: registration,
+            rootID: .init(rawValue: "phase3a-rendering-root"),
+            rootPath: "/Synthetic/Phase3A",
+            binding: nil
+        )
+        let unavailableState = ProjectDocumentationState.managedUnavailable(
+            hasAuditedHandoff: true,
+            reason: .rootUnavailable,
+            validationError: nil
+        )
+        let unavailableEvidence = EvidenceProjection(
+            EvidenceReadback(
+                evidence: .init(
+                    id: .init(rawValue: "phase3a-evidence"),
+                    projectID: projectID,
+                    ticketID: nil,
+                    locator: .managedDocument(artifactID: "current-plan"),
+                    isAvailable: false
+                ),
+                managedDocument: .init(
+                    artifactID: "current-plan",
+                    resolvedPath: nil,
+                    label: "Current plan",
+                    lifecycle: nil,
+                    authority: nil,
+                    authorityRole: nil,
+                    failure: .rootUnavailable
+                )
+            )
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Documentation Freshness",
+            registration: registration,
+            activePhaseName: "Current delivery",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 2,
+            attentionCount: 1,
+            evidence: [unavailableEvidence]
+        )
+        let checkingStatus = DocumentationObservationStatus.checking(identity: identity, generation: 7)
+        let unavailableStatus = DocumentationObservationStatus.observed(
+            .init(
+                identity: identity,
+                generation: 8,
+                checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+                documentationState: unavailableState,
+                evidence: []
+            )
+        )
+        for width in [1100.0, 620.0] {
+            try await render(
+                ProjectOverviewView(
+                    project: project,
+                    board: nil,
+                    documentationState: .managed(hasAuditedHandoff: true, catalogVersion: 1, catalogDigest: "synthetic"),
+                    documentationStatus: checkingStatus,
+                    projectRoot: URL(fileURLWithPath: "/Synthetic/Phase3A"),
+                    phaseSelectionStatus: .idle,
+                    openBoard: {},
+                    selectActivePhase: { _ in },
+                    reloadActivePhase: {},
+                    reauthorizeActivePhase: { _ in }
+                ),
+                name: "phase3a-checking-\(Int(width))",
+                width: width,
+                expected: .checking,
+                expectedText: ["Checking"]
+            )
+            try await render(
+                ProjectOverviewView(
+                    project: project,
+                    board: nil,
+                    documentationState: unavailableState,
+                    documentationStatus: unavailableStatus,
+                    projectRoot: URL(fileURLWithPath: "/Synthetic/Phase3A"),
+                    phaseSelectionStatus: .idle,
+                    openBoard: {},
+                    selectActivePhase: { _ in },
+                    reloadActivePhase: {},
+                    reauthorizeActivePhase: { _ in },
+                    reauthorizeProjectHealth: { _, _ in
+                        throw ProjectRootManagementError.stale
+                    }
+                ),
+                name: "phase3a-folder-recovery-\(Int(width))",
+                width: width,
+                expected: ProjectGuidancePresentation(documentationState: unavailableState),
+                expectedText: ["Restore folder access", "Repository folder is unavailable"]
+            )
+        }
     }
 
     private var states: [(String, ProjectDocumentationState)] {
@@ -797,7 +899,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                role as? String == kAXButtonRole {
                 for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
                     if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-                       (value as? String)?.contains(identifier == "project-health-reauthorize" ? "Reauthorize Saved Folder" : "Manage Repository Roots") == true {
+                       (value as? String)?.contains(identifier == "project-health-reauthorize" ? "Restore folder access" : "Manage Repository Roots") == true {
                         return element
                     }
                 }

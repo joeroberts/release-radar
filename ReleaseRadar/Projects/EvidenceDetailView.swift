@@ -1,5 +1,6 @@
 import SwiftUI
 import ReleaseRadarCore
+import RekonDesignSystem
 
 struct EvidenceStatusPresentation: Equatable {
     let label: String
@@ -10,14 +11,19 @@ struct EvidenceStatusPresentation: Equatable {
     let availability: String
     let recovery: String?
 
-    init(_ evidence: EvidenceProjection) {
+    init(_ evidence: EvidenceProjection, documentationStatus: DocumentationObservationStatus? = nil) {
         label = evidence.label
         path = evidence.path.isEmpty ? nil : evidence.path
-        availability = evidence.isAvailable ? "Available" : "Unavailable"
+        if case .checking = documentationStatus {
+            availability = "Checking"
+        } else {
+            availability = evidence.isAvailable ? "Available" : "Unavailable"
+        }
         switch evidence.locator {
         case .filePath:
             locator = "Legacy file path"; lifecycle = nil; authority = nil
-            recovery = evidence.isAvailable ? nil : "Locate the original file or use exact legacy evidence relocation."
+            recovery = if case .checking = documentationStatus { nil }
+                else { evidence.isAvailable ? nil : "Locate the original file or use exact legacy evidence relocation." }
         case let .managedDocument(id):
             locator = "Managed document · Artifact ID: \(id)"
             switch evidence.managedDocument?.lifecycle {
@@ -32,7 +38,9 @@ struct EvidenceStatusPresentation: Equatable {
                 if document.isControlling { authority = "Controlling" + (document.authorityRole.map { " · \($0)" } ?? "") }
                 else { authority = "Non-controlling · " + (level == .nonAuthoritative ? "Non-authoritative" : "Supporting") }
             } else { authority = "Authority unavailable" }
-            switch evidence.managedDocument?.failure {
+            if case .checking = documentationStatus {
+                recovery = nil
+            } else { switch evidence.managedDocument?.failure {
             case .guidanceUnavailable: recovery = "Managed v2 guidance is missing or invalid. Restore the repository guidance declaration, then reload."
             case .bindingMissing: recovery = "Repository is unaccepted. Activate its documentation binding before using managed evidence."
             case .bindingMismatch: recovery = "Repository binding does not match. Restore the accepted repository or select its relocated folder."
@@ -46,7 +54,7 @@ struct EvidenceStatusPresentation: Equatable {
             case .unsafeResolution: recovery = "Document path is unsafe. Restore regular files within the authorized repository, then reload."
             case let .catalogInvalid(code): recovery = "Catalog is invalid (\(code.rawValue)). Repair the catalog and documents, then reload."
             case nil: recovery = evidence.isAvailable ? nil : "Managed resolution is unavailable. Reload this project's evidence."
-            }
+            } }
         }
     }
 
@@ -57,22 +65,38 @@ struct EvidenceStatusPresentation: Equatable {
 
 struct EvidenceDetailView: View {
     let evidence: EvidenceProjection
+    var documentationStatus: DocumentationObservationStatus? = nil
+    var restoreFolderAccess: (() -> Void)? = nil
     var body: some View {
-        let presentation = EvidenceStatusPresentation(evidence)
+        let presentation = EvidenceStatusPresentation(evidence, documentationStatus: documentationStatus)
         VStack(alignment: .leading, spacing: 5) {
             Text(presentation.label).font(.subheadline.weight(.medium))
             Text(presentation.locator).font(.caption).foregroundStyle(.secondary)
             if let path = presentation.path { Text(path).font(.caption.monospaced()).foregroundStyle(.secondary) }
             if let lifecycle = presentation.lifecycle { Text(lifecycle).font(.caption) }
             if let authority = presentation.authority { Text(authority).font(.caption).foregroundStyle(.secondary) }
-            Label(presentation.availability, systemImage: evidence.isAvailable ? "checkmark.circle" : "exclamationmark.triangle")
-                .font(.caption).foregroundStyle(evidence.isAvailable ? Color.green : Color.orange)
+            Label(presentation.availability, systemImage: presentation.availability == "Checking" ? "arrow.triangle.2.circlepath" : evidence.isAvailable ? "checkmark.circle" : "exclamationmark.triangle")
+                .font(.caption)
+                .foregroundStyle(presentation.availability == "Checking" ? Color.secondary : evidence.isAvailable ? Color.green : Color.orange)
             if let recovery = presentation.recovery { Text(recovery).font(.caption).foregroundStyle(.secondary) }
+            if canRestoreFolderAccess, let restoreFolderAccess {
+                Button("Restore folder access", action: restoreFolderAccess)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("evidence-restore-folder-\(evidence.id.rawValue)")
+            }
         }
         .fixedSize(horizontal: false, vertical: true)
         .textSelection(.enabled)
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: restoreFolderAccess == nil ? .ignore : .contain)
         .accessibilityLabel(presentation.accessibilityLabel)
         .accessibilityIdentifier("evidence-\(evidence.id.rawValue)")
+    }
+
+    private var canRestoreFolderAccess: Bool {
+        if case .checking = documentationStatus { return false }
+        return switch evidence.managedDocument?.failure {
+        case .rootUnavailable, .staleRoot: true
+        default: false
+        }
     }
 }

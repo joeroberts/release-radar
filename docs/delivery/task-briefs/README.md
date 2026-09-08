@@ -49,6 +49,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-07-c6-remove-tracking](2026-09-07-c6-remove-tracking) — leaf; C6 removal with retained history task scope; progress determines authorization
 - [delivery.task-briefs.2026-09-07-c7-backup-reset-recovery](2026-09-07-c7-backup-reset-recovery) — leaf; C7 coordinated backup/reset/recovery scope; progress controls authorization
 - [delivery.task-briefs.2026-09-07-parallel-discovery](2026-09-07-parallel-discovery) — leaf; Bounded parallel decision and discovery briefs and findings; proposals are not implementation authority
+- [delivery.task-briefs.2026-09-07-phase3a-freshness](2026-09-07-phase3a-freshness) — leaf; Phase 3A documentation freshness and same-folder recovery; progress controls authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -391,6 +392,26 @@ Leaf: no child collections.
 | rr-live-observation-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/live-observation-discovery.md](2026-09-07-parallel-discovery/live-observation-discovery.md) | document | supporting | active | none | none |
 | rr-rules-hooks-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md](2026-09-07-parallel-discovery/rules-hooks-discovery.md) | document | supporting | active | none | none |
 | rr-run-ownership-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md](2026-09-07-parallel-discovery/run-ownership-discovery.md) | document | supporting | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-07-phase3a-freshness
+
+- Path: [docs/delivery/task-briefs/2026-09-07-phase3a-freshness](2026-09-07-phase3a-freshness)
+- Purpose: Phase 3A documentation freshness and same-folder recovery; progress controls authorization
+- Allowed contents: Reviewed task briefs
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-phase3a-freshness-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md](2026-09-07-phase3a-freshness/phase3a-freshness-brief.md) | document | supporting | active | none | none |
 
 ### Children
 

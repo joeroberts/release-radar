@@ -537,6 +537,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-07-phase3a-freshness",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3a-freshness",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 3A documentation freshness and same-folder recovery; progress controls authorization",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4749,6 +4764,96 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-freshness-brief-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-phase3a-freshness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-documentation-freshness-2026-09-07",
+      "path": "docs/delivery/evidence/2026-09-07-phase3a-documentation-freshness.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-checking-wide-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-checking-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-checking-compact-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-checking-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-folder-recovery-wide-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-folder-recovery-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-folder-recovery-compact-2026-09-07",
+      "path": "docs/delivery/evidence/phase3a-folder-recovery-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
       ],
       "checksum": {
         "policy": "notApplicable"

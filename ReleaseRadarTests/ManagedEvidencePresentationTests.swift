@@ -36,6 +36,25 @@ final class ManagedEvidencePresentationTests: XCTestCase {
         XCTAssertTrue(presentation.accessibilityLabel.contains("Owner evidence"))
         XCTAssertTrue(presentation.accessibilityLabel.contains("/arbitrary/file"))
     }
+    func testCheckingWithdrawsPriorEvidenceSuccessAndRecoveryCopy() {
+        let resolved = ResolvedManagedDocument(
+            artifactID: "stable-id",
+            resolvedPath: "docs/item.md",
+            label: "item.md",
+            lifecycle: .active,
+            authority: .controlling,
+            authorityRole: "plan",
+            failure: nil
+        )
+        let presentation = EvidenceStatusPresentation(
+            evidence(resolved),
+            documentationStatus: .checking(identity: nil, generation: 9)
+        )
+        XCTAssertEqual(presentation.availability, "Checking")
+        XCTAssertNil(presentation.recovery)
+        XCTAssertTrue(presentation.accessibilityLabel.contains("Checking"))
+        XCTAssertEqual(ProjectGuidancePresentation.checking.status, "Checking documentation…")
+    }
     private func evidence(_ document: ResolvedManagedDocument) -> EvidenceProjection {
         .init(EvidenceReadback(evidence: .init(id: .init(rawValue: "e"), projectID: .init(rawValue: "p"), ticketID: nil,
             locator: .managedDocument(artifactID: document.artifactID), isAvailable: true), managedDocument: document))

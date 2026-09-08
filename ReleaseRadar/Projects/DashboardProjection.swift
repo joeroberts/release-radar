@@ -46,14 +46,17 @@ struct DashboardProjection: Equatable, Sendable {
     static func load(
         from store: DeliveryStore,
         bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(),
-        taskRows: TicketTaskPlanProjection.RowQuery = TicketTaskPlanProjection.queryRows
+        taskRows: TicketTaskPlanProjection.RowQuery = TicketTaskPlanProjection.queryRows,
+        evidenceReadbacks suppliedReadbacks: [ProjectID: [EvidenceReadback]]? = nil
     ) async throws -> DashboardProjection {
         let projectIDs = try await store.read { c in
             try c.dashboardRows("SELECT id FROM projects WHERE lifecycle = 'active' ORDER BY id").map { ProjectID(rawValue: try $0.text("id")) }
         }
-        var readbacks: [ProjectID: [EvidenceReadback]] = [:]
-        for projectID in projectIDs {
-            readbacks[projectID] = try await store.evidenceReadback(projectID: projectID, bookmarkStore: bookmarkStore)
+        var readbacks = suppliedReadbacks ?? [:]
+        if suppliedReadbacks == nil {
+            for projectID in projectIDs {
+                readbacks[projectID] = try await store.evidenceReadback(projectID: projectID, bookmarkStore: bookmarkStore)
+            }
         }
         let evidenceByProject = readbacks
         return try await store.read { connection in
@@ -262,6 +265,63 @@ struct DashboardProjection: Equatable, Sendable {
                 removedProjects: removedProjects, boards: boards
             )
         }
+    }
+
+    func replacingDocumentation(
+        for projectID: ProjectID,
+        with readbacks: [EvidenceReadback]
+    ) -> DashboardProjection {
+        let projectEvidence = readbacks.filter { $0.evidence.ticketID == nil }.map(EvidenceProjection.init)
+        let projects = projects.map { project in
+            guard project.id == projectID else { return project }
+            return ProjectDashboardProjection(
+                id: project.id,
+                name: project.name,
+                registration: project.registration,
+                activePhaseID: project.activePhaseID,
+                activePhaseName: project.activePhaseName,
+                phases: project.phases,
+                goalContext: project.goalContext,
+                currentWorkCount: project.currentWorkCount,
+                attentionCount: project.attentionCount,
+                evidence: projectEvidence
+            )
+        }
+        let project = projects.first { $0.id == projectID }
+        let boards = boards.mapValues { board in
+            guard board.project.id == projectID, let project else { return board }
+            let details = board.details.mapValues { detail in
+                TicketDetailProjection(
+                    id: detail.id,
+                    outcome: detail.outcome,
+                    goalContext: detail.goalContext,
+                    requires: detail.requires,
+                    unlocks: detail.unlocks,
+                    ownerAttention: detail.ownerAttention,
+                    evidence: readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init),
+                    auditHistory: detail.auditHistory,
+                    notificationHistory: detail.notificationHistory,
+                    taskPlan: detail.taskPlan,
+                    deliveryGoal: detail.deliveryGoal,
+                    isLegacyContinuation: detail.isLegacyContinuation
+                )
+            }
+            return PhaseBoardProjection(
+                project: project,
+                phaseID: board.phaseID,
+                phaseName: board.phaseName,
+                phasePlan: board.phasePlan,
+                deliveryGoals: board.deliveryGoals,
+                lanes: board.lanes,
+                details: details
+            )
+        }
+        return .init(
+            projects: projects,
+            archivedProjects: archivedProjects,
+            removedProjects: removedProjects,
+            boards: boards
+        )
     }
 }
 

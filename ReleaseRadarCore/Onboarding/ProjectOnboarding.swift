@@ -221,12 +221,59 @@ public protocol ProjectOnboarding: Sendable {
     func finish(_ decision: OnboardingDecision) async throws -> ProjectID
 }
 
+private final class DocumentationAuthorizationLifetime: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isRetired = false
+    private var activeOperations = 0
+    private var drainWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func begin() throws {
+        try lock.withLock {
+            guard !isRetired else { throw ProjectRootManagementError.stale }
+            activeOperations += 1
+        }
+    }
+
+    func requireCurrent() throws {
+        try lock.withLock {
+            guard !isRetired else { throw ProjectRootManagementError.stale }
+        }
+    }
+
+    func finish() {
+        let waiters = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
+            activeOperations -= 1
+            guard activeOperations == 0 else { return [] }
+            let waiters = drainWaiters
+            drainWaiters.removeAll()
+            return waiters
+        }
+        waiters.forEach { $0.resume() }
+    }
+
+    func retire() {
+        lock.withLock { isRetired = true }
+    }
+
+    func waitUntilDrained() async {
+        await withCheckedContinuation { continuation in
+            let shouldResume = lock.withLock { () -> Bool in
+                guard activeOperations > 0 else { return true }
+                drainWaiters.append(continuation)
+                return false
+            }
+            if shouldResume { continuation.resume() }
+        }
+    }
+}
+
 public actor FolderProjectOnboarding: ProjectOnboarding {
     private let store: DeliveryStore
     private let bookmarkStore: any ProjectBookmarkStoring
     private let worktreeDiscovery: any GitWorktreeDiscovering
     private let codexTasks: [CodexTaskDescriptor]
     private var separatelyAuthorizedWorktreePaths: Set<String> = []
+    private nonisolated let documentationAuthorizationLifetime = DocumentationAuthorizationLifetime()
 
     public init(
         store: DeliveryStore,
@@ -1228,5 +1275,377 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let rootComponents = root.pathComponents
         return candidateComponents.count >= rootComponents.count
             && Array(candidateComponents.prefix(rootComponents.count)) == rootComponents
+    }
+}
+
+public struct ProjectDocumentationSnapshot: Equatable, Sendable {
+    public let projectID: ProjectID
+    public let registration: ProjectRegistration?
+    public let rootID: ProjectRootID?
+    public let rootPath: String?
+    public let binding: ProjectDocumentationBinding?
+    public let checkedAt: Date
+    public let documentationState: ProjectDocumentationState
+    public let evidence: [EvidenceReadback]
+}
+
+public struct ProjectRootAuthorizationTarget: Equatable, Sendable {
+    public let registration: ProjectRegistration
+    public let rootID: ProjectRootID
+    public let rootPath: String
+    public let binding: ProjectDocumentationBinding?
+
+    public init(
+        registration: ProjectRegistration,
+        rootID: ProjectRootID,
+        rootPath: String,
+        binding: ProjectDocumentationBinding?
+    ) {
+        self.registration = registration
+        self.rootID = rootID
+        self.rootPath = rootPath
+        self.binding = binding
+    }
+}
+
+public enum ProjectDocumentationObservationError: Error, LocalizedError, Equatable, Sendable {
+    case staleContext
+
+    public var errorDescription: String? {
+        "The project, folder, registration, or documentation binding changed while it was being checked. Check the current project again."
+    }
+}
+
+private struct ProjectDocumentationObservationSource: Equatable, Sendable {
+    let projectID: ProjectID
+    let projectName: String?
+    let lifecycle: String?
+    let registration: ProjectRegistration?
+    let rootID: ProjectRootID?
+    let rootPath: String?
+    let bookmark: Data?
+    let bookmarkIsStale: Bool
+    let binding: ProjectDocumentationBinding?
+    let bindingIsInvalid: Bool
+    let hasAuditedHandoff: Bool
+    let evidence: [LocatedEvidenceRecord]
+}
+
+extension FolderProjectOnboarding {
+    /// Prevents a recovery-replaced service graph from committing a folder
+    /// renewal after it has been retired.
+    public nonisolated func retireDocumentationAuthorizations() {
+        documentationAuthorizationLifetime.retire()
+    }
+
+    /// Keeps the replacement graph from being installed while an authorization
+    /// commit that started before retirement is still finishing.
+    public nonisolated func waitForDocumentationAuthorizationsToDrain() async {
+        await documentationAuthorizationLifetime.waitUntilDrained()
+    }
+
+    /// Renews only the captured same-folder capability. Registration, root and
+    /// accepted binding are rechecked in the audited commit transaction.
+    public func reauthorizeProjectRoot(
+        _ folder: URL,
+        target: ProjectRootAuthorizationTarget
+    ) async throws {
+        let candidate = Self.canonical(folder)
+        let persistedRoot = Self.canonical(URL(fileURLWithPath: target.rootPath))
+        guard candidate.path == persistedRoot.path else { throw ProjectAuthorizationError.projectRootMismatch }
+        try documentationAuthorizationLifetime.begin()
+        defer { documentationAuthorizationLifetime.finish() }
+        let bookmark = try await validatedBookmark(for: candidate)
+        try documentationAuthorizationLifetime.requireCurrent()
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"),
+            reason: "Restore project folder access",
+            auditScope: .init(
+                projectID: target.registration.projectID,
+                entityType: .project,
+                entityID: target.registration.projectID.rawValue
+            )
+        ) { connection in
+            try ProjectLifecycleManager.requireActive(
+                projectID: target.registration.projectID,
+                connection: connection
+            )
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ?",
+                bindings: [
+                    .text(target.registration.projectID.rawValue),
+                    .text(target.registration.registrationID),
+                    .integer(target.registration.requestGeneration),
+                ]
+            ) == 1,
+            try connection.scalarInt(
+                "SELECT COUNT(*) FROM project_roots WHERE id = ? AND project_id = ? AND path = ?",
+                bindings: [
+                    .text(target.rootID.rawValue),
+                    .text(target.registration.projectID.rawValue),
+                    .text(target.rootPath),
+                ]
+            ) == 1 else { throw ProjectRootManagementError.stale }
+            let currentBinding = try DocumentationRootContext.binding(
+                connection,
+                projectID: target.registration.projectID.rawValue,
+                version: store.schemaVersionForDocumentation
+            )
+            guard currentBinding == target.binding,
+                  currentBinding?.rootID == target.rootID || currentBinding == nil else {
+                throw ProjectRootManagementError.stale
+            }
+            if currentBinding == nil {
+                guard try connection.scalarText(
+                    "SELECT id FROM project_roots WHERE project_id = ? ORDER BY rowid LIMIT 1",
+                    bindings: [.text(target.registration.projectID.rawValue)]
+                ) == target.rootID.rawValue else { throw ProjectRootManagementError.stale }
+            }
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0) ON CONFLICT(project_id, path) DO UPDATE SET bookmark_data = excluded.bookmark_data, is_stale = 0",
+                bindings: [
+                    .text(target.registration.projectID.rawValue),
+                    .text(target.rootPath),
+                    .blob(bookmark),
+                ]
+            )
+        }
+        try documentationAuthorizationLifetime.requireCurrent()
+    }
+
+    /// Captures guidance and managed evidence through one exact, read-only root
+    /// authorization. The source is checked again before publication so a result
+    /// from an older registration, root, binding, lifecycle, or evidence set is
+    /// never presented as current.
+    public func inspectProjectDocumentation(projectID: ProjectID) async throws -> ProjectDocumentationSnapshot {
+        let source = try await projectDocumentationObservationSource(projectID: projectID)
+        guard source.projectName != nil else { throw ProjectAuthorizationError.projectNotFound }
+        let checkedAt = Date()
+
+        guard let rootID = source.rootID,
+              let rootPath = source.rootPath,
+              let bookmark = source.bookmark,
+              !source.bookmarkIsStale,
+              !source.bindingIsInvalid else {
+            try await requireCurrentDocumentationObservationSource(source)
+            let reason: DocumentationOperationError = source.bookmarkIsStale ? .staleRoot
+                : source.bindingIsInvalid ? .bindingMismatch : .rootUnavailable
+            return unavailableProjectDocumentationSnapshot(source, checkedAt: checkedAt, reason: reason)
+        }
+
+        let persistedRoot = Self.canonical(URL(fileURLWithPath: rootPath))
+        do {
+            let resolved = try bookmarkStore.resolve(bookmark)
+            guard !resolved.isStale else {
+                try await requireCurrentDocumentationObservationSource(source)
+                return unavailableProjectDocumentationSnapshot(source, checkedAt: checkedAt, reason: .staleRoot)
+            }
+            guard resolved.url.isFileURL, Self.canonical(resolved.url).path == persistedRoot.path else {
+                try await requireCurrentDocumentationObservationSource(source)
+                return unavailableProjectDocumentationSnapshot(source, checkedAt: checkedAt, reason: .rootMismatch)
+            }
+            let result = try await bookmarkStore.withSecurityScopedAccess(bookmark: bookmark) { [self] activeBookmark in
+                guard !activeBookmark.isStale else { throw DocumentationOperationError.staleRoot }
+                let activeRoot = Self.canonical(activeBookmark.url)
+                guard activeRoot.path == persistedRoot.path else { throw DocumentationOperationError.rootMismatch }
+                let context = DocumentationRootContext(
+                    projectID: projectID.rawValue,
+                    projectName: source.projectName ?? "",
+                    rootID: rootID.rawValue,
+                    root: activeRoot,
+                    bookmark: bookmark,
+                    binding: source.binding,
+                    schemaVersion: store.schemaVersionForDocumentation
+                )
+                let documentationState = ProjectGuidanceInspection.inspectDocumentation(
+                    rootURL: activeRoot,
+                    hasAuditedHandoff: source.hasAuditedHandoff,
+                    context: context
+                )
+                let managedIDs = Set(source.evidence.compactMap { record -> String? in
+                    if case let .managedDocument(artifactID) = record.locator { return artifactID }
+                    return nil
+                })
+                let resolvedDocuments: [String: ResolvedManagedDocument]
+                if let binding = source.binding {
+                    resolvedDocuments = ManagedDocumentResolver().resolveAuthorized(
+                        artifactIDs: managedIDs,
+                        binding: binding,
+                        root: activeRoot
+                    )
+                } else {
+                    resolvedDocuments = [:]
+                }
+                let evidence = source.evidence.map { record -> EvidenceReadback in
+                    guard case let .managedDocument(artifactID) = record.locator else {
+                        return .init(evidence: record, managedDocument: nil)
+                    }
+                    let document = resolvedDocuments[artifactID] ?? ResolvedManagedDocument(
+                        artifactID: artifactID,
+                        resolvedPath: nil,
+                        label: nil,
+                        lifecycle: nil,
+                        authority: nil,
+                        authorityRole: nil,
+                        failure: .bindingMissing
+                    )
+                    return .init(evidence: record, managedDocument: document)
+                }
+                return (documentationState, evidence)
+            }
+            try await requireCurrentDocumentationObservationSource(source)
+            return .init(
+                projectID: projectID,
+                registration: source.registration,
+                rootID: rootID,
+                rootPath: rootPath,
+                binding: source.binding,
+                checkedAt: checkedAt,
+                documentationState: result.0,
+                evidence: result.1
+            )
+        } catch let error as ProjectDocumentationObservationError {
+            throw error
+        } catch {
+            try await requireCurrentDocumentationObservationSource(source)
+            return unavailableProjectDocumentationSnapshot(
+                source,
+                checkedAt: checkedAt,
+                reason: DocumentationCatalogContext.map(error)
+            )
+        }
+    }
+
+    private func projectDocumentationObservationSource(
+        projectID: ProjectID
+    ) async throws -> ProjectDocumentationObservationSource {
+        try await store.documentationRead { connection in
+            let projectRow = try connection.row(
+                "SELECT name, lifecycle FROM projects WHERE id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+            let projectName: String? = if let projectRow, case let .text(value)? = projectRow["name"] { value } else { nil }
+            let lifecycle: String? = if let projectRow, case let .text(value)? = projectRow["lifecycle"] { value } else { nil }
+            let registrationRow = try connection.row(
+                "SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+            let registration: ProjectRegistration? = if let registrationRow,
+                case let .text(registrationID)? = registrationRow["registration_id"],
+                case let .integer(generation)? = registrationRow["request_generation"] {
+                .init(projectID: projectID, registrationID: registrationID, requestGeneration: generation)
+            } else { nil }
+            var binding: ProjectDocumentationBinding?
+            var bindingIsInvalid = false
+            do { binding = try DocumentationRootContext.binding(connection, projectID: projectID.rawValue, version: store.schemaVersionForDocumentation) }
+            catch { bindingIsInvalid = true }
+            let rootRow = try connection.row(
+                "SELECT r.id, r.path, b.bookmark_data, b.is_stale FROM project_roots r LEFT JOIN project_bookmarks b ON b.project_id = r.project_id AND b.path = r.path WHERE r.project_id = ? AND (NOT EXISTS (SELECT 1 FROM project_documentation_bindings WHERE project_id = r.project_id) OR r.id = (SELECT root_id FROM project_documentation_bindings WHERE project_id = r.project_id)) ORDER BY r.rowid LIMIT 1",
+                bindings: [.text(projectID.rawValue)]
+            )
+            let rootID: ProjectRootID? = if let rootRow, case let .text(value)? = rootRow["id"] { .init(rawValue: value) } else { nil }
+            let rootPath: String? = if let rootRow, case let .text(value)? = rootRow["path"] { value } else { nil }
+            let bookmark: Data? = if let rootRow, case let .blob(value)? = rootRow["bookmark_data"] { value } else { nil }
+            let bookmarkIsStale = rootRow?["is_stale"] == .integer(1)
+            let guidancePath = rootPath.map {
+                Self.canonical(URL(fileURLWithPath: $0))
+                    .appendingPathComponent(RepositoryDocumentContract.guidancePath, isDirectory: false).path
+            }
+            let hasAuditedHandoff: Bool
+            if let guidancePath {
+                hasAuditedHandoff = try connection.scalarInt(
+                    "SELECT COUNT(*) FROM evidence WHERE project_id = ? AND ticket_id IS NULL AND path = ? AND is_available = 1 AND id LIKE ?",
+                    bindings: [.text(projectID.rawValue), .text(guidancePath), .text(ProjectGuidanceInspection.handoffEvidenceIDPrefix + "%")]
+                ) == 1
+            } else { hasAuditedHandoff = false }
+            var evidence: [LocatedEvidenceRecord] = []
+            var offset: Int64 = 0
+            let artifactColumn = store.schemaVersionForDocumentation >= 13 ? "artifact_id" : "NULL AS artifact_id"
+            while let row = try connection.row(
+                "SELECT id, ticket_id, path, \(artifactColumn), is_available FROM evidence WHERE project_id = ? ORDER BY rowid LIMIT 1 OFFSET ?",
+                bindings: [.text(projectID.rawValue), .integer(offset)]
+            ) {
+                guard case let .text(id)? = row["id"], case let .integer(available)? = row["is_available"] else {
+                    throw StoreError.unavailable("Invalid evidence record")
+                }
+                let locator: EvidenceLocator
+                switch (row["path"], row["artifact_id"]) {
+                case let (.text(path)?, .null?): locator = .filePath(path)
+                case let (.null?, .text(artifact)?): locator = .managedDocument(artifactID: artifact)
+                default: throw StoreError.unavailable("Evidence does not have exactly one supported locator")
+                }
+                let ticketID: TicketID? = if case let .text(value)? = row["ticket_id"] { .init(rawValue: value) } else { nil }
+                evidence.append(.init(id: .init(rawValue: id), projectID: projectID, ticketID: ticketID, locator: locator, isAvailable: available == 1))
+                offset += 1
+            }
+            return .init(
+                projectID: projectID,
+                projectName: projectName,
+                lifecycle: lifecycle,
+                registration: registration,
+                rootID: rootID,
+                rootPath: rootPath,
+                bookmark: bookmark,
+                bookmarkIsStale: bookmarkIsStale,
+                binding: binding,
+                bindingIsInvalid: bindingIsInvalid,
+                hasAuditedHandoff: hasAuditedHandoff,
+                evidence: evidence
+            )
+        }
+    }
+
+    private func requireCurrentDocumentationObservationSource(
+        _ source: ProjectDocumentationObservationSource
+    ) async throws {
+        guard try await projectDocumentationObservationSource(projectID: source.projectID) == source else {
+            throw ProjectDocumentationObservationError.staleContext
+        }
+    }
+
+    private func unavailableProjectDocumentationSnapshot(
+        _ source: ProjectDocumentationObservationSource,
+        checkedAt: Date,
+        reason: DocumentationOperationError
+    ) -> ProjectDocumentationSnapshot {
+        let state: ProjectDocumentationState = if source.binding != nil || source.bindingIsInvalid {
+            .managedUnavailable(
+                hasAuditedHandoff: source.hasAuditedHandoff,
+                reason: reason,
+                validationError: nil
+            )
+        } else {
+            .legacy(.unavailable)
+        }
+        let failure: ManagedDocumentResolutionFailure = reason == .staleRoot ? .staleRoot
+            : reason == .rootMismatch ? .rootNotBound
+            : source.bindingIsInvalid ? .bindingMismatch : .rootUnavailable
+        let evidence = source.evidence.map { record -> EvidenceReadback in
+            guard case let .managedDocument(artifactID) = record.locator else {
+                return .init(evidence: record, managedDocument: nil)
+            }
+            return .init(
+                evidence: record,
+                managedDocument: .init(
+                    artifactID: artifactID,
+                    resolvedPath: nil,
+                    label: nil,
+                    lifecycle: nil,
+                    authority: nil,
+                    authorityRole: nil,
+                    failure: failure
+                )
+            )
+        }
+        return .init(
+            projectID: source.projectID,
+            registration: source.registration,
+            rootID: source.rootID,
+            rootPath: source.rootPath,
+            binding: source.binding,
+            checkedAt: checkedAt,
+            documentationState: state,
+            evidence: evidence
+        )
     }
 }

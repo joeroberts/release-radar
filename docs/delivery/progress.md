@@ -2,41 +2,65 @@
 
 ## Current outcome
 
-Management and recovery (slice 2), C4–C7 and associated C12 actions, is implemented,
-verified and independently reviewed. All product source is merged into
-`codex/release-radar-mvp`; owner-approved [PR #31](https://github.com/joeroberts/release-radar/pull/31)
-merged as `50998de75f78a501315ce1434c4bd2175113f2e3` on 2026-09-08 UTC.
-[PR #32](https://github.com/joeroberts/release-radar/pull/32) carries this documentation closeout.
+Phase 3 — Current documentation and evidence (C8/C9 and associated C12 recovery)
+is authorized and in Phase 3A delivery. Management and recovery C4–C7 remains
+complete in source through owner-approved PRs #28–#31 and documentation closeout
+[PR #32](https://github.com/joeroberts/release-radar/pull/32), merged at
+`cd16df1b0226aa8a08bd167364779103ebe86278`. The narrow C8 regular-`.DS_Store`
+validator repair is complete and is not reopened.
 
-| Capability | Current result | Evidence |
-| --- | --- | --- |
-| C4 repository/worktree management | Merged PR #28 (`32bb2ce`): exact-root authorization, relocation, reconnect/revoke and per-root health. | [C4 brief and evidence](task-briefs/2026-09-07-c4-root-management/c4-root-management-brief.md) |
-| C5 archive/restore | Merged PR #29 (`c8cba4b`): reversible archive, discoverable read-only detail, stale-request rejection and no notification replay. | [C5 evidence](evidence/2026-09-07-c5-archive-restore-ui.md) |
-| C6 removal with retained history | Merged PR #30 (`df7157b`): operational removal with historical identity and repository files preserved. | [C6 evidence](evidence/2026-09-07-c6-remove-tracking-ui.md) |
-| C7 backup/reset/recovery and C12 | Merged PR #31 (`50998de`): distinct resets, coordinated drain/replacement/reopen/crash recovery, history preservation, stale-action rejection, notification nonreplay and read-only plugin reconciliation. | [C7 brief](task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md), [verification](evidence/2026-09-07-c7-backup-reset-recovery.md) |
+The controlling outcome is slice 3 of the
+[full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+and the owner's explicit Phase 3 execution instruction: shared authorized documentation
+freshness across Overview, evidence and health; bounded identity-based evidence preview;
+and direct audited same-folder access recovery with truthful remaining catalog state.
+Issues [#18](https://github.com/joeroberts/release-radar/issues/18) and
+[#19](https://github.com/joeroberts/release-radar/issues/19) supply reported failures and
+acceptance criteria. No Phase 4 work is opened.
 
 ## Current authorization
 
-The owner authorizes this entire phase through scoped source/tests/documentation, commits,
-pushes and PRs. Each PR merge requires explicit owner approval. The owner approved PR #31,
-and that approval was exercised only for its merge. PR #32 requires separate approval before
-merge. No installation, real project-data operation, credential
-change, real notification, plugin/cloud mutation, application catalog acceptance or cleanup
-is authorized. SQLite remains exclusively app-owned. The next roadmap phase is not opened.
+The owner authorizes Phase 3 source, tests, documentation, scoped commits, pushes and PR
+creation. Each PR merge requires separate owner approval. No installation, real project-data
+operation, application binding/catalog acceptance, plugin/cloud mutation, real notification,
+additional entitlement change, credential or owner-state repair, or cleanup is authorized.
+SQLite remains exclusively app-owned. Later planning, history, portability and companion
+features are compatibility consumers only; RDS appearance and light/dark feature work are
+excluded.
 
-Orchestrator `01a07e22-3d02-7cb1-a6e3-b4f274dea577` owns this ledger and integration in
-worktree `44e0`; dispatch requested Astra Medium, runtime settings unexposed. Product and
-review results reached the target branch through PR #31. Documentation closeout is on
-`codex/management-recovery-closeout-20260907`. The C7 writer and reviewer are stopped and
-archived. Fresh documentation reviewer `01a07e55-8e87-7880-9926-2a9011834a2a` (requested
-Terra High) passed closeout candidate `5f0cd71` with no Required findings and is stopped/
-archived, with no new files or temporary outputs. The subsequent closeout update records
-the actual approved merge and completes C7 catalog metadata; native documentation/diff
-checks pass. It adds no product behavior, new architecture or next-phase authorization.
+Orchestrator `01a07e75-b254-72a1-be2a-3e97ac23baeb` owns this ledger and integration in
+fresh worktree `f703`, branch `codex/phase3-documentation-evidence`. A fresh origin fetch
+confirmed baseline `cd16df1b0226aa8a08bd167364779103ebe86278`. Creation requested Astra
+Medium; actual runtime settings are not exposed for independent confirmation. The exact
+unbudgeted Phase 3 execution goal is active and remains unfinished.
+
+Fresh Astra High chief-architect assessment `01a07e76-a1c5-7e02-a534-d237eec8c309`
+completed at the baseline with no files, tests, app launches or temporary artifacts and
+is archived after supported completion readback.
+It confirmed existing custody contracts and two sequential slices: shared freshness and
+same-folder recovery (3A), then bounded evidence content preview (3B). Native task listing
+omitted this completed task; its actual ID was recovered from narrowly filtered app logs
+and its completion verified through supported task readback. Earlier setup-blocked
+reports were incorrect; the assessment did run successfully.
+
+[Phase 3A controlling brief](task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
+records the source-backed gaps, acceptance, isolated verification boundary and Sol High
+writer assignment. Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` is active in fresh
+worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High, starting from
+committed brief baseline `a4d5e06`.
+Runtime model/effort are unexposed. No product implementation is complete yet. Phase 3B consumes its shared
+observation and preserves repository/artifact custody; supported content formats and
+bounded rendering will be explicit in that brief.
+
+Before any app or test launch, inspection confirmed the existing XCTest host creates a
+PID-specific synthetic store and bypasses normal app startup/termination services. Native
+sandbox verification still requires actual signed-host entitlement checks with no broad
+filesystem exception, synthetic dependencies and numeric-PID UI targeting. No app or test
+runner has been launched by this orchestrator.
 
 ## Verification and material limitations
 
-Final independent Astra High review passed source candidate `7dd9763` with no Required
+Prior C7 independent Astra High review passed source candidate `7dd9763` with no Required
 findings. Four focused regressions passed independently; the reviewer read the 20/20 recovery
 result and inspected the existing signed native picker evidence. The picker test used a
 synthetic host with production filesystem entitlements, no broad filesystem exception,
@@ -72,10 +96,7 @@ review outcomes and reported temporary inventories. [Historical C6 history](arch
 remain non-authoritative. Temporary build outputs, synthetic backups and review files are
 retained; deletion requires exact owner authorization. No cleanup was performed.
 
-The next eligible roadmap phase is slice 3,
-Current documentation and evidence (C8/C9 and associated C12 freshness/recovery), as defined
-in the [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md).
-C8's bounded validator repair is already delivered; broader freshness remains future work.
-Later planning, portable continuity, companion and execution proposals retain their existing
-accepted/proposed distinctions. No next-phase implementation, companion/cloud work, live
-observer, hooks pilot, or RDS appearance change is authorized by this closeout.
+The active phase is slice 3, Current documentation and evidence. Phase 3A implementation
+is active; next is its direct verification and fresh independent review. Phase 3B follows
+its approved merge. Phase 4 is not authorized. Completed C4–C7 verification and historical
+records remain closed except where a concrete Phase 3 regression requires an affected check.
