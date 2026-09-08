@@ -93,6 +93,13 @@ sandbox verification still requires actual signed-host entitlement checks with n
 filesystem exception, synthetic dependencies and numeric-PID UI targeting. No app or test
 runner has been launched by this orchestrator.
 
+Phase 3B writer `01a08140-0c86-75f3-a124-a3a3232b2da6` confirmed fresh worktree
+`6dd9`, branch `codex/phase3b-evidence`, and exact integrated baseline
+`c3e19fa39b26a79b7d0d74592b4e4f9323f53edc`. Requested Terra Medium; actual runtime
+settings are not exposed. Its complete bounded-preview assignment follows the
+active Phase 3B brief; parent retains ledger/catalog/index ownership. Phase 3A's
+completed writer is archived after its evidence was committed and merge verified.
+
 ## Verification and material limitations
 
 Prior C7 independent Astra High review passed source candidate `7dd9763` with no Required
