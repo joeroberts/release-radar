@@ -6,6 +6,15 @@ struct DependencyGraphNode: Equatable, Identifiable, Sendable {
     let outcome: String
     let lane: TicketLane
     let blockerCount: Int
+    let phaseName: String
+
+    init(id: TicketID, outcome: String, lane: TicketLane, blockerCount: Int, phaseName: String = "") {
+        self.id = id
+        self.outcome = outcome
+        self.lane = lane
+        self.blockerCount = blockerCount
+        self.phaseName = phaseName
+    }
 }
 
 struct DependencyGraphEdge: Equatable, Identifiable, Sendable {
@@ -55,8 +64,8 @@ struct DependencyGraphProjection: Equatable, Sendable {
     ) async throws -> DependencyGraphProjection {
         try await store.read { connection in
             let nodeRows = try connection.graphRows(
-                "SELECT id, outcome, lane FROM tickets WHERE project_id = ? AND phase_id = ? ORDER BY rowid",
-                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+                "SELECT tickets.id, tickets.outcome, tickets.lane, phases.name AS phase_name FROM tickets JOIN phases ON phases.id = tickets.phase_id AND phases.project_id = tickets.project_id WHERE tickets.project_id = ? ORDER BY tickets.rowid",
+                bindings: [.text(projectID.rawValue)]
             )
             let nodes = try nodeRows.map { row in
                 let id = TicketID(rawValue: try row.graphText("id"))
@@ -70,7 +79,8 @@ struct DependencyGraphProjection: Equatable, Sendable {
                     blockerCount: Int(try connection.scalarInt(
                         "SELECT COUNT(*) FROM blockers WHERE project_id = ? AND ticket_id = ? AND resolved_at IS NULL",
                         bindings: [.text(projectID.rawValue), .text(id.rawValue)]
-                    ) ?? 0)
+                    ) ?? 0),
+                    phaseName: try row.graphText("phase_name")
                 )
             }
             let edgeRows = try connection.graphRows(
