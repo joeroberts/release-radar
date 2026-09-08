@@ -75,8 +75,9 @@ Independent Sol High reviewer `01a082ac-16da-7461-9f98-da78630aea64` passed
 `4a9e13c` with no remaining Required findings. The original visual/responsive and
 preview-isolation review remained valid; bounded rechecks closed the three
 restoration findings and their route-context corrections. The reviewer created
-no files or processes. Source delivery still requires the separately authorized
-PR merge recorded in progress.
+no files or processes. The owner-approved [PR #36](https://github.com/joeroberts/release-radar/pull/36)
+merged at `356e13400043f25724d79c95be381e8582c68980` on 2026-09-08. Delivery task
+`01a0826d-f440-7661-9ed2-24112a7eaa80` and the reviewer are stopped and archived.
 
 ## Native accessibility, keyboard and visual checks
 
@@ -142,6 +143,10 @@ The first-open follow-up retained
 `/tmp/release-radar-phase4-scoped-primary-first-open-red.xcresult`,
 `/tmp/release-radar-phase4-scoped-primary-first-open-green.xcresult`, and
 `/tmp/release-radar-phase4-scoped-primary-first-open-affected.xcresult`.
+
+Orchestrator documentation-build scratch outputs also remain:
+`/tmp/release-radar-phase4-docs-build`, `/tmp/release-radar-phase4-docs-obj`, and
+`/tmp/release-radar-phase4-docs-build.log`. No cleanup is authorized.
 
 Physical VoiceOver speech, other Macs, installation, packaging, owner-data
 readback, full-scheme testing and catalog acceptance were not performed. The

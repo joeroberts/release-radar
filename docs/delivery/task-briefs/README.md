@@ -453,7 +453,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase4-navigation-brief-2026-09-08 | [docs/delivery/task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md](2026-09-08-phase4-navigation/phase4-navigation-brief.md) | document | supporting | active | none | none |
+| rr-phase4-navigation-brief-2026-09-08 | [docs/delivery/task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md](2026-09-08-phase4-navigation/phase4-navigation-brief.md) | document | supporting | completed | none | none |
 
 ### Children
 

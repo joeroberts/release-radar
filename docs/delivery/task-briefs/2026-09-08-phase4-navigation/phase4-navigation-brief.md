@@ -1,5 +1,10 @@
 # Phase 4 — Coherent navigation and usable Ticket Details
 
+Completed in source through owner-approved [PR #36](https://github.com/joeroberts/release-radar/pull/36),
+merged 2026-09-08 at `356e134`. Retained as the delivered scope;
+[current status](../../progress.md) and
+[verification](../../evidence/2026-09-08-phase4-navigation.md) record the outcome.
+
 ## Objective and outcome
 
 Deliver RM2, P7/P8 and issue #9 as one complete existing-surface journey: browse a

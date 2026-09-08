@@ -2,52 +2,30 @@
 
 ## Current outcome and active task
 
-Phase 3 is complete in source: PRs #33, #34 and #35 are merged. PR #35 merged
-on 2026-09-08 at `6f528c551b2c8de1597ad29a108a749712d26a6c`.
-The owner authorized **Phase 4 navigation and inspector delivery**, followed by
-**Phase 5 decision preparation only**. Phase 5 product implementation is unopened.
+**Phase 4 source delivery is complete.** The owner approved
+[PR #36](https://github.com/joeroberts/release-radar/pull/36), merged on 2026-09-08
+at `356e13400043f25724d79c95be381e8582c68980`.
 
-Phase 4 covers RM2, P7/P8 and issue
-[#9](https://github.com/joeroberts/release-radar/issues/9): browse a nonactive phase,
-open its ticket and dependencies, and return through one typed Back/Forward
-history restoring project, viewed scope, filters, selection and appropriate focus.
-Branching history, stale/archived/removed targets and relaunch policy are in scope.
-Active phase remains the separate owner-selected working context. Compact Ticket
-Details must use available space and make overflow and every task row reachable,
-without changing counts, completion or acceptance semantics. RDS is used as supplied;
-appearance and light/dark changes remain excluded.
+RM2/P7/P8 and issue #9 now provide one session Back/Forward history, exact viewed
+phase/filter/selection/focus and registration recovery, project-wide Dependencies
+focused on the ticket with phase labels, and accessible compact Ticket Details.
+Relaunch starts at Projects with empty history. Persisted active phase, task counts,
+completion and acceptance semantics remain separate and unchanged. RDS is consumed
+as supplied; no appearance or shared-library work was included.
 
-The controlling sequence is the
-[full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md).
-The owner selected project-wide Dependencies focused on the ticket with phase
-labels, and Projects with empty history on relaunch. ADR-003 and the dashboard
-design record this bounded amendment. Other planning proposals remain proposed.
-The [Phase 4 brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md)
-controls the delivery assignment; no Phase 5 domain choice blocks it.
-Source candidate `4a9e13c` completes implementation and required corrections.
-Delivery task `01a0826d-f440-7661-9ed2-24112a7eaa80` used Terra Medium, then Sol
-High for model/shell integration and corrections. It is stopped and archived.
-Independent Sol High reviewer `01a082ac-16da-7461-9f98-da78630aea64` passed the
-final candidate with no remaining Required findings; navigation restoration,
-registration/global-route identity, native visual/responsive behavior and preview
-isolation are covered. The reviewer created no files or processes and is archived.
-The interface does not expose effective model/effort for independent confirmation.
+The [completed brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md)
+records the delivered scope. The [verification record](evidence/2026-09-08-phase4-navigation.md)
+contains candidate-specific 35-test/native interaction evidence, the 24-test
+correction run and final 17-test navigation run, all passing without failures/skips
+on arm64 macOS 26.5.2. Independent review closed all Required findings. Delivery and
+review tasks are stopped and archived; no isolated test/build processes remain.
 
-The owner requested an actual native goal on 2026-09-08. It is **active** in
-orchestrator task `01a08261-fa9d-7dc1-854f-b2a3b739c3a8`, with no token budget.
-It covers complete Phase 4 implementation/corrections, docs/catalog integration,
-direct model/native interaction checks, independent review, scoped commits and
-pushed PRs, separately approved merges, concise closeout and worker/reviewer archival.
-Phase 5 preparation and private packaging/owner testing are outside the goal.
-Direct readback confirmed the original 35-test suite, the 24-test affected
-correction run, and the final 17-test NavigationHistoryTests run passed with no
-failures/skips on arm64 macOS 26.5.2. These are candidate-specific results, not
-additive test counts. The [verification record](evidence/2026-09-08-phase4-navigation.md)
-preserves native interaction evidence, correction results, retained outputs and
-limitations. [PR #36](https://github.com/joeroberts/release-radar/pull/36) carries
-the reviewed source and documentation. Next action: obtain owner merge approval;
-source delivery is not yet merged.
-The goal stays active while any required work or merge approval remains.
+The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+contains the already-authorized Phase 5 decision preparation and handoff.
+**Phase 5 implementation remains unopened.** Its proposed decisions and the shared
+execution assessment are not new implementation authorization or a prerequisite.
+No further Phase 4 product work is active; this closeout reconciles repository
+status and artifact lifecycle with the approved merge.
 
 ## Current authorization and ownership
 
@@ -93,9 +71,8 @@ Macs is unavailable until at least Friday, September 11, 2026. Perform independe
 source and native checks now; report any specifically owner-dependent acceptance
 as pending without making it a prerequisite for source delivery.
 
-The revised sequence is Phase 4 now, then Phase 5 readiness decisions as time
-allows. During actual owner-approval waits, independent decision preparation may
-proceed without disturbing the Phase 4 writer. Phase 5 preparation covers
+The next eligible work is owner selection of unresolved Phase 5 readiness
+decisions, followed by a separately authorized bounded assignment. Preparation covers
 P1–P4/P15/P16/P18 and D4/D5/D6/D12, preserving current phase-owned Delivery Goals
 and separate execution-goal semantics unless the owner selects a documented change.
 Present only unresolved consequential decisions in small phone-friendly batches.
