@@ -339,9 +339,7 @@ final class AppModel {
         if let projectID = entry.route.projectID, let phaseID = entry.phaseID {
             viewedPhaseIDs[Data(projectID.rawValue.utf8)] = phaseID
         }
-        if let ticketID = entry.selectedTicketID {
-            selectedTicketID = ticketID
-        }
+        selectedTicketID = entry.selectedTicketID ?? TicketID(rawValue: "")
     }
 
     func previewProjectLifecycle(
