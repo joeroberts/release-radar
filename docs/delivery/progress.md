@@ -100,6 +100,15 @@ settings are not exposed. Its complete bounded-preview assignment follows the
 active Phase 3B brief; parent retains ledger/catalog/index ownership. Phase 3A's
 completed writer is archived after its evidence was committed and merge verified.
 
+The standing architect resolved Phase 3B legacy authorization from existing contracts:
+use fresh grants for this project's primary root or separately authorized worktrees;
+preserve external locators as inaccessible without reading outside saved roots. Legacy
+readability is independent of managed catalog acceptance, and worktree results must be
+fenced by their actual granting root. Existing exact-root/worktree recovery applies;
+no new file grants or schema are required. Assessment task
+`01a07e76-a1c5-7e02-a534-d237eec8c309` completed read-only and is archived. The writer
+received this interpretation and continues complete preview acceptance coverage.
+
 ## Verification and material limitations
 
 Prior C7 independent Astra High review passed source candidate `7dd9763` with no Required
