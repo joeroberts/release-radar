@@ -2,80 +2,184 @@
 
 ## Current phase — 2026-09-07
 
-Slice 2 recovery continues: C4 root management and C5 archive/restore are merged.
-C6 remove tracking with retained history is next, followed by C7 backup/reset and
-associated C12 recovery actions. The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+Slice 2 recovery continues: C4 root management, C5 archive/restore and C6 removal
+with retained history are merged. C7 backup/reset recovery and associated C12 actions
+have passed final independent corrective review and await owner-approved PR #31 merge. The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
 retains all 40 capabilities; later roadmap outcomes and accepted/proposed distinctions
 remain intact.
 
-Orchestrator `01a07b81-ce26-7e70-8696-fc4427eb83a1` owns this ledger/catalog integration
-in `f1ab`, branch `codex/recovery-orchestration`. Astra Medium; runtime unexposed.
+Fresh orchestrator `01a07e22-3d02-7cb1-a6e3-b4f274dea577` owns ledger/catalog integration
+in `44e0`, branch `codex/management-recovery-20260907-44e0`, from fetched merged
+`df7157b`. Dispatch specifies Astra Medium; runtime settings are unexposed. The execution
+goal covers all C4–C7 and associated C12 through owner-approved merges, without a token
+budget. The retired orchestration handoff at `def4ebd` is preserved in Git.
 Canonical checkout, retained recovery stash/exclusions/C8 app and prior dist artifacts
 remain untouched. Pursuit migration is stopped; RDS appearance is unchanged.
 
-## Authorization and C6 assignment
+## Current authorization
 
 Existing authority covers scoped implementation, synthetic checks, commits, pushes and
-PR creation. Each new PR merge requires explicit approval. C5's approval was consumed
-by its merge; it does not cover C6. Installation, real owner-data lifecycle actions,
-notifications, cloud/plugin changes and application catalog acceptance are not authorized.
-SQLite remains exclusively app-owned; repository-only work grants no application state.
+PR creation. Each new PR merge requires separate owner approval. C6 approval was used
+for PR #30 only. No installation, owner backup/reset/restore/removal, real notifications,
+cloud/plugin mutation or application catalog acceptance is authorized. SQLite remains
+exclusively app-owned. Canonical checkout/application state is preserved.
 
-The [C6 brief](task-briefs/2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md)
-is persisted/catalogued against merged C5 `c8cba4b`. Fresh task creation was dispatched
-from exact committed baseline `db0b3d4`, explicit Sol High, ceiling Astra High; no Ultra.
-Task `01a07cd4-149e-7a63-a3d4-fdfb81783a9d` confirmed clean baseline `db0b3d4` in
-fresh worktree `d36f`, with published `codex/c6-remove-tracking` and matching upstream.
-Runtime model/effort is unexposed; explicit dispatch was Sol High. The writer
-owns source/tests/brief; parent owns ledger/shared metadata. One fresh independent
-combined reviewer covers retention, migration, stale authority and native UI/QA.
+The [C7 brief](task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md)
+starts from merged C6 `df7157b`. Fresh read-only consultation “Resolve C7 coordinated
+recovery boundaries” (`01a07d4b-28f0-7bf0-aa64-810d1e389e2f`) confirmed clean isolated
+`f1e8` at `3503793`, explicit Astra High/ceiling High, runtime unexposed. It completed the current-source handoff with no policy ambiguity, changes, tests,
+temporary artifacts or running processes, and is archived. The existing brief now
+records exact reset contents, app/bridge close-and-drain, rollback/crash startup,
+request-incarnation invalidation, historical retention, notification nonreplay and
+mutation-free plugin inspection. Fresh Sol High delivery creation was dispatched from exact `872fb3e`, requested branch
+`codex/c7-backup-reset-recovery`, with full coupled C7 ownership through backup/reopen,
+reset-retention and Settings/health checkpoints. Task `01a07d52-bff1-7042-9483-92e9e42e340a` confirmed clean exact `872fb3e` in
+fresh `89ef` worktree with published branch/upstream. Its session metadata exposes
+`gpt-5.6-sol` and `reasoning_effort: high`, matching dispatch; no Ultra or subagents.
 
-C6 author candidate `79be22e` is integrated with five catalogued UI evidence artifacts
-at `c06d34ea57262360e889eccb4aeff1bcb6f4e552`. Native documentation/diff checks pass.
-Author reports removal 7/7 and the serial affected-suite selection passing. Full serial
-scheme had the then-pending evidence registration and one environment-gated registered
-broker transport case; no whole-suite pass is claimed. A parallel shared-temp read
-transient passed on isolated retry and serial selection. No transport configuration
-change is authorized.
+[PR #31](https://github.com/joeroberts/release-radar/pull/31) is open at integrated
+`48903b6166ef3468272f400e5ea6786425e7e0d9`; actual original product commit is
+`9df32a66b2a3f1d4ce2f4e04a6e41dc21bc4fc95` (an initial handoff full-SHA typo was
+corrected by branch/PR readback). Evidence-only `c075ba6` flattened seven PNGs into
+existing delivery.evidence; parent registered eight artifacts/generated index. Native
+catalog/docs and diff checks pass. Author reports 76/76 bounded tests and integrated
+Debug build plus wide/compact visual checks; no whole-suite or owner-state claim.
 
-Fresh reviewer “Review C6 removal and retained history”
-(`01a07d25-5a7a-7d01-b30f-f8345a9e3b56`) confirmed clean exact `c06d34e` in isolated
-`e58c`, explicit Astra High/runtime unexposed. Review covers removal authority,
-historical identity, stale commands/receipts, notification outcomes, migration and
-native UI/QA. [PR #30](https://github.com/joeroberts/release-radar/pull/30) is open at exact `c06d34e`;
-review requests changes; separate owner merge approval remains pending. Initial writer
-handoff was clean/stopped and archived; the same task is restored at Sol High for three
-Required corrections:
-- P1 stale `FolderProjectOnboarding.prepare` decision recreates the removed registration
-  and bookmark; reject old decisions while permitting fresh explicit re-add.
-- P2 removal copies current ticket phase/lane into historical events; retain unknown
-  event-time context or distinctly label any current-at-removal snapshot.
-- P2 removal rewrites prior archive-suppressed notification reason and loses failure/timing
-  provenance; preserve terminal facts and terminalize only eligible pending work.
+Fresh combined reviewer “Review C7 backup reset and recovery”
+(`01a07da3-6b87-7623-ae69-9b59a9398a4d`) confirmed isolated `3c78` clean at exact
+`48903b6`, explicit Astra High/ceiling High, runtime unexposed. It covers complete
+backup/reset/recovery, stale authority, retained facts/nonreplay, rollback/containment,
+mutation-free plugin inspection and native UI/QA. Review and C7 merge approval pending.
+Initial writer handoff was clean/stopped and archived. Review now requests eight Required
+corrections; the same writer is restored at explicit Sol High:
+1. Crash between original rename and marker update can create an empty store; preserve
+   originals through every cutpoint, including unreadable rollback material.
+2. Restore accepts stale displaced-registration previews; revalidate after quiesce and
+   identify restored/displaced targets in confirmation.
+3. Restored occurrence/observation state can resend a previously sent blocked alert.
+4. OwnerApp bypasses recovery identity; capture/enforce prepared owner-action identity.
+5. Newer live-project audit/activity/assignment facts are lost during reconciliation.
+6. Ordinary unavailable-store health lacks exact target and Restore action.
+7. Signed user-selected read-only authority plus sibling staging cannot support backup
+   save; writer prepares a narrow destination/entitlement proposal before any sandbox
+   boundary change, while independent fixes proceed. Concrete owner approval requested:
+   replace only app `user-selected.read-only` with `user-selected.read-write`, keeping
+   other entitlements unchanged; select one existing folder and confine backup/staging
+   inside its temporary scope. No broad/persistent grants. Signed synthetic picker
+   verification outside the app container is proposed; no owner data or installation.
+   Owner explicitly authorized this exact R7 change on 2026-09-07; it is now assigned
+   to the same C7 writer at actual requested Sol High. This is not merge approval.
+8. Successful crash-marker recovery falls into automatic plugin update instead of
+   read-only recovery initialization.
 
-Reviewer independently passed 74 focused/native checks, then reproduced these defects
-with bounded synthetic tests. Same reviewer handles corrected candidate only. Latent
-projectID-only goal observation callback has no shipping source caller and is Optional,
-not a blocker or authorization for observer work. Reviewer stopped; temporary outputs
-retained: `/tmp/c6-review-e58c-derived`, `/tmp/c6-review-e58c-tests.log`,
-`/tmp/c6-review-e58c/` (repro source/bundle/logs and synthetic stores). No cleanup.
+Writer checkpoint `c8f282ed4ed6b8932c28005fe3ae562810be7569` is pushed and clean.
+R1/R2/R3/R4/R5/R6/R8 report green: 18/18 recovery plus 24/24 affected integration cases;
+independent correction review remains outstanding. Owner explicitly resumed the same C7
+writer at Sol High for R7: replace only the shipping user-selected read-only entitlement
+with read-write=true, keep every other entitlement unchanged, select one existing folder
+with a single-selection directories-only picker, confine generated backup and staging
+inside it, and balance temporary security scope without persistent grants. Verify the
+signed app's real entitlements and picker with an isolated synthetic store and a fresh
+folder outside its container. The R7 candidate is now available for corrective review.
+No installation, owner-data operations, credential changes, real notifications, plugin
+mutations or cloud changes are authorized. The same independent reviewer will assess
+remaining corrections at Astra High after the final candidate is pushed. PR #31 was
+freshly verified OPEN at `c8f282e`; PRs #28–#30 are MERGED. No C7 source is accepted yet.
 
+R7 is pushed at `587701b1e91c8e4fd51888349eaaa9321542d6be`. The writer reports 19/19
+focused tests passed, a native single-folder picker test generated and validated a backup
+inside a fresh external synthetic folder without leftover staging, and a Release build with
+strict deep signing verification. Actual Release entitlements have the authorized read-write
+selection, unchanged sandbox/app-group/network scope, generated get-task-allow and no broad
+filesystem exception. The XCTest host has injected read-only `/` and test-manager exceptions;
+its picker/write evidence does not by itself settle the exact shipping-boundary requirement.
+Independent correction review must assess that remaining verification limitation.
 
-Author final counts: removal 7/7; broad selected serial 309/309. Before registration,
-full scheme 606/609 (two pending-catalog cases plus disabled-broker transport case).
-After registration, documentation selection 55/56: actual catalog/index/real-repository
-checks pass. The remaining disposable-copy conformance test copies docs without linked
-source/entitlement files and fails before its stale-index assertion. Its three links
-already exist identically in merged baseline `c8cba4b`; real-repository native check
-passes. No discovery document, fixture or transport configuration was altered to mask
-these unrelated limits.
+The same writer's scope is now complete through candidate handoff; its worktree is clean,
+branch pushed, and it reports all owned C7-R7 app processes stopped. Independent corrective review of `ab53f1ba748351785f126309cc2281adaefa8ff1` completed:
+12 committed focused correction tests passed; two negative cases reproduced Required P1
+defects. R1 crash-resume `replacementInstalled` cleanup loses unreadable original rollback;
+R5 reconciliation drops displaced registration/history when that project was absent from
+the selected backup. R2/R3/R4/R6/R8 selected checks pass. R7 source conforms, but exact
+shipping-permission picker proof remains Required. Evidence must distinguish known synthetic
+results from unknown normal-launch effects and accurately state selected test counts.
+The reviewer is stopped/archived; its old untracked reproducer was already absent before
+checkout recovery. New temporary `3c78/ReleaseRadarTests/C7CorrectiveReviewTests.swift`
+and `/tmp/c7-corrective-review-01a07da3/` are retained, with old `/tmp` evidence.
+The same writer is restored at explicit Sol High from `ab53f1b` for only these corrections,
+evidence accuracy and bounded R7 verification. Native launches require a source-proven
+synthetic initialization/termination route without broad filesystem exceptions; no new
+normal-app launch, harness, owner-state inspection or credential use is authorized.
+Final corrective candidate `19a428488a6ad73cffd09bec2dbd36be084f31e5` is pushed.
+Both R1/R5 regressions failed before correction and pass afterward; the complete directly
+affected RecoveryAcceptanceTests passed 20/20. New markers retain explicit unreadable-original
+policy; legacy crash markers preserve invalid rollback material. Displaced registration/history
+is preserved even when that project was absent from the selected backup. Evidence wording
+and run-selection counts are corrected.
+The existing synthetic host was re-signed from production filesystem entitlements with only
+required XCTest runtime exceptions. Strict signature verification and actual entitlement
+readback before and after launch show no broad filesystem exception. Its single native picker
+check selected `/Users/Shared/ReleaseRadar-C7-SignedPicker-Corrective.Po4gPJ`, created and
+validated one backup there, left no staging, and exited. The XCTest termination guard returns
+before shared-service initialization. No retry or normal launch was used for this check.
+The writer and final reviewer are terminal/stopped and archived. Final independent Astra High
+review passed at `7dd9763811876fa33535e33ff3375cba2add21a1` with no remaining Required findings.
+Four focused regressions passed independently (zero skipped); the reviewer directly read the
+20/20 recovery result, verified the retained signed host and its actual no-broad-filesystem
+entitlements, and inspected the existing native picker command/actions/package readback.
+R1/R5/R7 and the minimal termination guard are closed; prior unrelated successful checks stand.
+Native documentation/diff checks pass. Product merge approval remains outstanding.
+Final reviewer temporary outputs: `/tmp/c7-final-review-01a07da3/` and synthetic XCTest host
+directories `ReleaseRadar-XCTestHost-51125`/`-56288` beneath app-container Data/tmp, alongside
+the earlier retained reviewer source/output inventory. No cleanup is authorized.
 
-Author temporary paths retained: `/tmp/release-radar-c6-baseline`,
-`/tmp/release-radar-c6-red`, `/tmp/release-radar-c6-evidence.5yEcMu`,
-`/tmp/release-radar-c6-evidence-final.qQrH4d`, `/tmp/release-radar-c6-export.log`.
-No cleanup is authorized. All durable UI evidence is committed under
-`docs/delivery/evidence/`.
+No merge approval has been requested or given. Final phase acceptance remains outstanding.
 
+Verification incidents remain disclosed in the [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
+A CUA attempt launched the test-built app normally; only that new PID 48085 was stopped.
+Default-service initialization and resulting owner-state effects are unverified. A later
+`xcrun xctest -h` printed inherited credentials in the writer transcript. The owner was told
+Jira and Pushover credentials should be rotated. No values are retained in repository docs;
+no credential use/change or owner-state inspection/repair is authorized. No further
+exploratory runtime launches were authorized for that writer.
+
+Retained R7 temporary artifacts: writer `build/c7-r7`, `build/c7-r7-final-tests`,
+`build/c7-r7-native`, `build/c7-r7-native-host`, `build/c7-r7-release`, and external synthetic
+`/Users/Shared/ReleaseRadar-C7-SignedPicker.QVvAJK` with generated package. No cleanup authorized.
+
+Six failures were reproduced synthetically; destination/signing and recovery-mode issues
+are source-backed. Eighteen existing selected/native tests passed. Same reviewer stopped
+and archived for the candidate; only affected corrections will be reviewed on return.
+No additional reviewer, owner-state action or silent sandbox modification is authorized.
+Temporary reviewer source remains in `3c78/release_radar/ReleaseRadarTests/`
+`C7IndependentReviewTests.swift`; `/tmp/c7-independent-review-01a07da3/` retains build
+output, three result bundles and logs. All review processes exited; no cleanup authorized.
+
+All durable [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md) is committed.
+Temporary ignored build directories under writer worktree `89ef/release_radar/build/`
+remain: `c7-build-final`, `c7-contracts`, `c7-recovery-final`, `c7-recovery-final2`,
+`c7-red-1`, `c7-red-2`, `c7-services`, `c7-services-2`, `c7-store`, `c7-ui`,
+`c7-ui-final`, `c7-verification`. No cleanup authorized.
+ The full approved C7 outcome remains included;
+engineering sequencing does not omit backup, distinct resets, recovery or C12 readback.
+
+## Delivered C6
+
+[PR #30](https://github.com/joeroberts/release-radar/pull/30) merged with explicit owner
+approval as `df7157bb377985f085903647c709c8c818d7efe9` from final reviewed `68a8282`.
+It removes operational graph/capabilities atomically while retaining read-only history,
+registration attribution and notification outcomes, leaving repository files untouched.
+Fresh re-add cannot revive old prepared identities or requests. Historical unknown
+phase/lane remains unknown. Three independent findings were corrected.
+
+Direct evidence: author 309/309 selected serial tests initially, 44/44 correction and
+45/45 catalog/index; independent 74 focused/native checks and 2/2 correction regressions,
+final Astra High approval with no Required findings. Native docs/diff and CodeRabbit pass.
+No whole-suite or shipping folder-grant claim: disabled-broker transport and an existing
+disposable-copy docs fixture remain explicit unrelated limits. Both bounded tasks are
+stopped/archived. [C6 UI evidence](evidence/2026-09-07-c6-remove-tracking-ui.md) is committed
+and catalogued; [Historical handoff/temp inventory](archive/2026-09-07-c6-delivery-history.md)
+preserves detailed results and retained paths. No cleanup is authorized.
 
 ## Delivered C5
 

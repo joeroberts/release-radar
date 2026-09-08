@@ -1181,6 +1181,48 @@ final class NotificationAcceptanceTests: XCTestCase {
         XCTAssertEqual(acceptedAfterCommit, true)
     }
 
+    func testNotificationStopDrainsInFlightSendAndRejectsFurtherDispatch() async throws {
+        let fixture = try await makeFixture(firstDashboardOpened: true)
+        try await transition(
+            .needsReview,
+            requestID: "90909090-9090-4090-8090-909090909099",
+            fixture: fixture
+        )
+        let firstOutcome = FirstDispatchOutcomeGate()
+        let transport = SignalingBlockingTransport(firstOutcome: firstOutcome)
+        let dispatcher = PushoverNotificationDispatcher(
+            store: fixture.store,
+            credentials: StaticPushoverCredentialsProvider(
+                credentials: .init(appToken: "synthetic-token", userKey: "synthetic-user")
+            ),
+            transport: transport
+        )
+        let dispatch = Task {
+            await dispatcher.dispatchPending()
+            await firstOutcome.signal(.dispatchReturned)
+        }
+        let firstDispatchOutcome = await firstOutcome.wait()
+        XCTAssertEqual(firstDispatchOutcome, .transportEntered)
+
+        let drained = LockedBoolean()
+        let stop = Task {
+            await dispatcher.stopAndDrain()
+            drained.setTrue()
+        }
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertFalse(drained.value)
+        await dispatcher.dispatchPending()
+        let stateWhileDraining = try await notificationState(for: "RR-09", store: fixture.store)
+        XCTAssertEqual(stateWhileDraining, .attemptStarted)
+
+        await transport.release()
+        await dispatch.value
+        await stop.value
+        XCTAssertTrue(drained.value)
+        let terminalState = try await notificationState(for: "RR-09", store: fixture.store)
+        XCTAssertEqual(terminalState, .sent)
+    }
+
     private func transition(
         _ lane: TicketLane,
         requestID: String,
@@ -1398,6 +1440,14 @@ private actor AsyncTestGate {
         releaseContinuation?.resume()
         releaseContinuation = nil
     }
+}
+
+private final class LockedBoolean: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored = false
+
+    var value: Bool { lock.withLock { stored } }
+    func setTrue() { lock.withLock { stored = true } }
 }
 
 private enum FirstDispatchOutcome: Equatable, Sendable {

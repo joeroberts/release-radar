@@ -55,9 +55,13 @@ public final class SQLiteConnection: @unchecked Sendable {
     }
 
     deinit {
-        if root == nil {
-            sqlite3_close(database)
-        }
+        if root == nil { close() }
+    }
+
+    func close() {
+        guard root == nil, let database else { return }
+        sqlite3_close_v2(database)
+        self.database = nil
     }
 
     public func execute(_ sql: String, bindings: [SQLiteValue] = []) throws {
@@ -271,6 +275,9 @@ public final class SQLiteConnection: @unchecked Sendable {
 
     private func validateLease() throws {
         try lease?.validate()
+        guard databaseHandle != nil else {
+            throw SQLiteError(code: SQLITE_MISUSE, message: "Database is closed")
+        }
     }
 }
 

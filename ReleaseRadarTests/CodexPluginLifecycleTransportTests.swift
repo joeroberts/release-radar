@@ -214,6 +214,32 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
         XCTAssertEqual(remote.operations, [.status, .status])
     }
 
+    func testRecoveryStatusIsReadOnlyAndNeverRegistersOrRebindsHelper() async {
+        let disabledService = PluginLifecycleServiceStub(status: .notRegistered)
+        let disabledRemote = PluginLifecycleRemoteStub(replies: [])
+        let disabledClient = CodexPluginLifecycleClient(service: disabledService, invokeRemote: disabledRemote.invoke)
+
+        let unavailable = await disabledClient.statusReadOnly()
+
+        XCTAssertEqual(unavailable.error, .codexUnavailable)
+        XCTAssertEqual(disabledService.registerCallCount, 0)
+        XCTAssertEqual(disabledService.unregisterCallCount, 0)
+        XCTAssertTrue(disabledRemote.operations.isEmpty)
+
+        let enabledService = PluginLifecycleServiceStub(status: .enabled)
+        let enabledRemote = PluginLifecycleRemoteStub(replies: [
+            .init(wireVersion: 1, observedState: nil, error: .marketplaceConflict),
+        ])
+        let enabledClient = CodexPluginLifecycleClient(service: enabledService, invokeRemote: enabledRemote.invoke)
+
+        let observed = await enabledClient.statusReadOnly()
+
+        XCTAssertEqual(observed.error, .marketplaceConflict)
+        XCTAssertEqual(enabledService.registerCallCount, 0)
+        XCTAssertEqual(enabledService.unregisterCallCount, 0)
+        XCTAssertEqual(enabledRemote.operations, [.status])
+    }
+
     func testClientNeverRetriesAnInstallAfterAnUncertainMutationReply() async {
         let service = PluginLifecycleServiceStub(status: .enabled)
         let remote = PluginLifecycleRemoteStub(replies: [

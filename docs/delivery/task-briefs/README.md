@@ -47,6 +47,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-07-c4-root-management](2026-09-07-c4-root-management) — leaf; C4 managed roots and C12 recovery; progress determines authorization
 - [delivery.task-briefs.2026-09-07-c5-archive-restore](2026-09-07-c5-archive-restore) — leaf; C5 reversible archive and restore delivery; progress controls current authorization
 - [delivery.task-briefs.2026-09-07-c6-remove-tracking](2026-09-07-c6-remove-tracking) — leaf; C6 removal with retained history task scope; progress determines authorization
+- [delivery.task-briefs.2026-09-07-c7-backup-reset-recovery](2026-09-07-c7-backup-reset-recovery) — leaf; C7 coordinated backup/reset/recovery scope; progress controls authorization
 - [delivery.task-briefs.2026-09-07-parallel-discovery](2026-09-07-parallel-discovery) — leaf; Bounded parallel decision and discovery briefs and findings; proposals are not implementation authority
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
@@ -347,6 +348,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-c6-remove-tracking-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md](2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md) | document | supporting | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-07-c7-backup-reset-recovery
+
+- Path: [docs/delivery/task-briefs/2026-09-07-c7-backup-reset-recovery](2026-09-07-c7-backup-reset-recovery)
+- Purpose: C7 coordinated backup/reset/recovery scope; progress controls authorization
+- Allowed contents: Reviewed task briefs
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-c7-backup-reset-recovery-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md](2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md) | document | supporting | active | none | none |
 
 ### Children
 

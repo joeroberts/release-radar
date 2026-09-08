@@ -119,6 +119,17 @@ the package's file placement, failure recovery and database transaction must be
 designed together before implementation. A self-contained project package is
 distinct from a full application backup and from reversible project archiving.
 
+**Full application backup and recovery:** The versioned app-backup package is an
+app-created, integrity-checked snapshot of the supported local store, including configuration,
+audits, retained history, plugin receipts and notification history. It excludes Keychain
+credentials, repositories, portable project files and device permission grants. Restoration
+uses adjacent no-follow staging, an explicit rollback marker, drained app-owned services and
+a fresh store/service graph. It preserves readable newer historical and terminal notification
+facts, disables backed-up pending sends, marks bookmarks stale and rotates live registration
+authority so pre-recovery or root-only external commands cannot silently target restored work.
+Interrupted replacement resolves before normal launch services start. Plugin inspection after
+recovery is read-only and cannot register, rebind, install, remove or update the external plugin.
+
 **Read-only companion authority:** The Mac app remains authoritative for delivery
 state; repository documents retain their authoritative location and catalogued
 identity. Cloud storage carries published copies for the read-only iPhone client,

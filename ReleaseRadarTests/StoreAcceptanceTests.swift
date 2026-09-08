@@ -421,7 +421,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "0db65aa49d5e32419a617e70946c0549faa3c3a52c5bd15368fde7d2c7bf0fc8")
+                       "42fcf3c17a67141958b1bf6ea5bbaf362443bc4de49d5271a9d4ee2faf429079")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
@@ -3300,6 +3300,7 @@ final class StoreAcceptanceTests: XCTestCase {
         restoreTaskDeleteProtection: Bool
     ) throws {
         try connection.executeScript("""
+        DROP TABLE IF EXISTS application_recovery_state;
         DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
         DROP TRIGGER IF EXISTS ticket_task_plans_reject_ticket_delete;
         DROP TRIGGER IF EXISTS ticket_tasks_reject_delete;

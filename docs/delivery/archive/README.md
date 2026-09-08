@@ -78,6 +78,7 @@ The live progress artifact retains its original ID and path.
 | 614cd400-b180-4ace-b1de-38381fc66992 | [docs/delivery/archive/2026-09-02-rr-r10-task-7a-closeout.md](2026-09-02-rr-r10-task-7a-closeout.md) | document | nonAuthoritative | archived | none | none |
 | rr-c8-and-baseline-closeout-2026-09-06 | [docs/delivery/archive/2026-09-06-c8-and-baseline-closeout.md](2026-09-06-c8-and-baseline-closeout.md) | document | nonAuthoritative | archived | none | none |
 | rr-operating-baseline-closeout-2026-09-06 | [docs/delivery/archive/2026-09-06-operating-baseline-closeout.md](2026-09-06-operating-baseline-closeout.md) | document | nonAuthoritative | archived | none | none |
+| rr-c6-delivery-history-2026-09-07 | [docs/delivery/archive/2026-09-07-c6-delivery-history.md](2026-09-07-c6-delivery-history.md) | document | nonAuthoritative | archived | none | none |
 | rr-recovery-through-c4-discoveries-2026-09-07 | [docs/delivery/archive/2026-09-07-recovery-through-c4-and-parallel-discoveries.md](2026-09-07-recovery-through-c4-and-parallel-discoveries.md) | document | nonAuthoritative | archived | none | none |
 | rr-recovery-through-c5-2026-09-07 | [docs/delivery/archive/2026-09-07-recovery-through-c5.md](2026-09-07-recovery-through-c5.md) | document | nonAuthoritative | archived | none | none |
 | 9f08525c-3dbb-487d-9a70-24ebff25443c | [docs/delivery/archive/README.md](README.md) | collectionIndex | nonAuthoritative | active | none | none |

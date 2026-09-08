@@ -456,7 +456,8 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     isRefreshing: false,
                     refresh: {},
                     openProject: {},
-                    reviewConnections: {}
+                    reviewConnections: {},
+                    restoreBackup: {}
                 ),
                 name: "application-health-\(Int(width))",
                 width: width,
@@ -468,6 +469,75 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     "Review Connection",
                     "Technical details",
                     "Check Again",
+                ]
+            )
+        }
+
+        var restoreCalls = 0
+        let recovery = ApplicationHealthSnapshot(
+            projectTarget: nil,
+            rootPath: nil,
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            checks: [
+                .init(
+                    id: "recovery",
+                    title: "Recovery requires attention",
+                    detail: "Target: /Synthetic/release-radar.sqlite. Choose Restore Backup; plugin, permission and notification state remains unchanged during inspection.",
+                    state: .unavailable
+                ),
+            ]
+        )
+        try await render(
+            ApplicationHealthPanel(
+                snapshot: recovery,
+                isRefreshing: false,
+                refresh: {},
+                openProject: {},
+                reviewConnections: {},
+                restoreBackup: { restoreCalls += 1 }
+            ),
+            name: "application-health-recovery-action",
+            width: 620,
+            expected: nil,
+            expectedText: ["Recovery requires attention", "Restore Backup", "/Synthetic/release-radar.sqlite"],
+            pressTitles: ["Restore Backup"]
+        )
+        XCTAssertEqual(restoreCalls, 1)
+    }
+
+    func testRecoverySettingsKeepRDSStructureAtWideAndCompactWidths() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-C7-Settings-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("release-radar.sqlite")
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: databaseURL),
+            databaseURL: databaseURL,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+
+        for width in [1100.0, 620.0] {
+            try await render(
+                SettingsView(model: model, selectedTab: .general),
+                name: "c7-recovery-general-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Backup and recovery", "Create Backup", "Restore Backup",
+                    "Credentials", "device permission", "Reset application preferences",
+                    "Reset Preferences",
+                ]
+            )
+            try await render(
+                SettingsView(model: model, selectedTab: .projects),
+                name: "c7-recovery-projects-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Application health", "Reset tracking data", "Reset Tracking Data",
+                    "active and archived", "retained-history",
                 ]
             )
         }

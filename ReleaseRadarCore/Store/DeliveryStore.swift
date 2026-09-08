@@ -60,16 +60,31 @@ public struct AuditScope: Equatable, Sendable {
 }
 
 public actor DeliveryStore {
-    private let connection: SQLiteConnection?
+    private var connection: SQLiteConnection?
     private var readOnlyFiles: ExistingDocumentationStoreFiles?
-    public let availability: DeliveryStoreAvailability
+    public nonisolated let databaseURL: URL
+    private var acceptsOperations = true
+    public private(set) var availability: DeliveryStoreAvailability
     public let schemaVersionForDocumentation: Int
 
     public init(databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL()) {
         self.init(databaseURL: databaseURL, createIfMissing: true)
     }
 
+    public init(unavailableDatabaseURL: URL, message: String) {
+        databaseURL = unavailableDatabaseURL
+        schemaVersionForDocumentation = Int(StoreMigrations.currentVersion)
+        connection = nil
+        availability = .unavailable(.init(
+            kind: .corruption,
+            originalDatabaseURL: unavailableDatabaseURL,
+            preMigrationSnapshotURL: nil,
+            message: message
+        ))
+    }
+
     private init(databaseURL: URL, createIfMissing: Bool) {
+        self.databaseURL = databaseURL
         schemaVersionForDocumentation = Int(StoreMigrations.currentVersion)
         let databaseExisted = FileManager.default.fileExists(atPath: databaseURL.path)
         let snapshotURL = Self.preMigrationSnapshotURL(for: databaseURL)
@@ -120,6 +135,7 @@ public actor DeliveryStore {
 
     /// Existing, quiesced v10...v13 storage only. Does not create, repair or migrate.
     public init(existingReadOnlyDatabaseURL: URL) throws {
+        databaseURL = existingReadOnlyDatabaseURL
         let files = try ExistingDocumentationStoreFiles(url: existingReadOnlyDatabaseURL)
         let opened = try SQLiteConnection(url: existingReadOnlyDatabaseURL, immutableReadOnly: true)
         let version = try opened.scalarInt("PRAGMA user_version") ?? 0
@@ -302,6 +318,35 @@ public actor DeliveryStore {
         }
     }
 
+    public func createSnapshot(at destinationURL: URL) throws {
+        try availableConnection().createSnapshot(at: destinationURL)
+    }
+
+    public func createRecoverySnapshot(at destinationURL: URL) throws {
+        let connection = try availableConnection()
+        try connection.createSnapshot(at: destinationURL)
+        acceptsOperations = false
+    }
+
+    public func sealForRecovery() {
+        acceptsOperations = false
+    }
+
+    public func resumeAfterRecoveryFailure() {
+        if connection != nil { acceptsOperations = true }
+    }
+
+    public func close() {
+        connection?.close()
+        connection = nil
+        availability = .unavailable(.init(
+            kind: .corruption,
+            originalDatabaseURL: databaseURL,
+            preMigrationSnapshotURL: nil,
+            message: "Delivery store is closed"
+        ))
+    }
+
     public static func applicationSupportDatabaseURL(
         fileManager: FileManager = .default
     ) -> URL {
@@ -316,6 +361,9 @@ public actor DeliveryStore {
     }
 
     private func availableConnection() throws -> SQLiteConnection {
+        guard acceptsOperations else {
+            throw StoreError.unavailable("Delivery store is quiesced for recovery")
+        }
         guard let connection else {
             if case let .unavailable(recovery) = availability {
                 throw StoreError.unavailable(recovery.message)

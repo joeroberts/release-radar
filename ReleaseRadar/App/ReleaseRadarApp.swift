@@ -136,16 +136,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { [weak self] in
             do {
                 let services = ReleaseRadarAppServices.shared
+                guard services.recoveryStartupError == nil else {
+                    self?.logger.error("Application services remain quiesced until local storage recovery succeeds")
+                    return
+                }
                 await services.notificationCoordinator.initializeForLaunch()
-                _ = try await self?.startAgentBridge(
-                    databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
-                    afterReply: { envelope, result in
-                        await services.notificationCoordinator.dispatchAfterCommittedCommand(
-                            envelope,
-                            result: result
-                        )
-                    }
-                )
+                try await services.startSharedAgentBridge()
             } catch {
                 self?.logger.error("Agent bridge startup failed: \(error.localizedDescription)")
             }
@@ -156,6 +152,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         maintenanceSession?.disconnect()
         agentBridgeHost?.disconnectCallback()
         agentBridgeHost = nil
+        guard !AppLaunchConfiguration.isXCTestHost(environment: ProcessInfo.processInfo.environment) else {
+            return
+        }
+        Task { await ReleaseRadarAppServices.shared.stopSharedServices() }
     }
 
     func startAgentBridge(
@@ -249,6 +249,9 @@ struct ReleaseRadarApp: App {
             codexPluginShippedVersion: services.codexPluginShippedVersion,
             pushoverKeychain: services.keychain,
             notificationCoordinator: services.notificationCoordinator,
+            recoveryServices: services,
+            recoveryStartupError: services.recoveryStartupError,
+            recoveryResumedAtLaunch: services.recoveryResumedAtLaunch,
             externalServicesSuppressed: externalServicesSuppressed,
             seedSampleData: seedSampleData,
             rr9ActivePhaseCaptureScenario: AppLaunchConfiguration.rr9ActivePhaseCaptureScenario(
@@ -263,6 +266,9 @@ struct ReleaseRadarApp: App {
             codexPluginShippedVersion: services.codexPluginShippedVersion,
             pushoverKeychain: services.keychain,
             notificationCoordinator: services.notificationCoordinator,
+            recoveryServices: services,
+            recoveryStartupError: services.recoveryStartupError,
+            recoveryResumedAtLaunch: services.recoveryResumedAtLaunch,
             externalServicesSuppressed: externalServicesSuppressed,
             seedSampleData: seedSampleData
         )
