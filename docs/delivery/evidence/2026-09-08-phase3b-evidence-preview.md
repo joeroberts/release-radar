@@ -17,34 +17,51 @@ credentials, external service or persisted delivery state was used.
   catalog before each descriptor-relative no-follow read.
 - Legacy paths resolve only within an existing authorized primary or worktree
   root for the same project. Paths outside those saved grants are inaccessible.
+- Legacy read failures use the same typed mapping as managed reads: missing,
+  oversized, inaccessible or rejected. Recovery retains the authorizing root
+  identity: primary access routes to Restore, saved worktrees route to exact
+  reconnect, and paths outside every saved root require explicit legacy
+  evidence relocation rather than ineffective folder recovery.
 - Preview content is transient. Observation, selection, root, registration or
-  service invalidation withdraws content and rejects late results.
+  service invalidation withdraws content and rejects late results. This fence
+  applies to AppModel and documentation-maintenance reloads as well as the
+  shared preview coordinator.
 
 ## Direct checks
 
 Focused XCTest covered managed text, checksum rejection, byte and decoded-image
 limits, malformed and unsupported formats, primary/worktree legacy reads,
-external denial, missing files, stale grants, symlink rejection, zero preview
+external denial, missing files, stale grants, bookmark-access failure, the
+repository reader's greater-than-32-MiB cap, symlink rejection, zero preview
 side effects, an in-flight bookmark replacement, strict UTF-8, labelled text
-truncation and late-result withdrawal. Existing shared-observation and managed
-presentation suites were run with the new preview tests; native-only owner-picker
-tests remained intentionally skipped and their unchanged Phase 3A evidence is
-reused.
+truncation and late-result withdrawal. AppModel and documentation-maintenance
+tests exercise success plus during/after-read observation withdrawal. Native
+host tests activate the real Preview control in the evidence component and in
+the Project Overview, ticket detail and documentation-maintenance consumers;
+they also exercise inaccessible worktree guidance, its recovery action, refresh
+and successful retry.
 
 Final focused result bundle:
-`/tmp/release-radar-phase3b-race-green/Logs/Test/Test-ReleaseRadar-2026.09.08_10-22-58--0400.xcresult`.
-Direct `xcresulttool` readback reports 66 passed, 2 skipped and 0 failed across
+`/tmp/release-radar-phase3b-corrections-final/Logs/Test/Test-ReleaseRadar-2026.09.08_10-54-12--0400.xcresult`.
+Direct `xcresulttool` readback reports 73 passed, 2 skipped and 0 failed across
 the preview, shared-observation, managed-presentation, rendering, managed
-resolution, root-management, relocation and documentation-rendering suites.
+resolution, root-management, relocation, maintenance and
+documentation-rendering suites. The two skips remain the unchanged signed,
+owner-assisted native folder-picker scenarios.
 
-The focused native-host rendering check passed at 620- and 1,100-point widths.
-Accessibility readback contained locator identity, availability and the readable
-preview content at both sizes. These screenshots establish component rendering
-and accessibility state. They do not claim an end-to-end consumer click journey;
-the request coordinator and real consumer wiring are covered by focused XCTest.
+After the combined run exposed a screenshot-host sizing issue, the bounded
+rendering suite was rerun and passed 6 tests at
+`/tmp/release-radar-phase3b-corrections-render/Logs/Test/Test-ReleaseRadar-2026.09.08_10-56-45--0400.xcresult`.
+The focused native host used accessibility to press the actual Preview button
+before reading UI state and capturing both 620- and 1,100-point layouts.
+Accessibility readback contained locator identity, availability and readable
+preview content at both sizes. The canonical screenshots below were exported
+from that post-interaction run and visually inspected at 1,240×1,040 and
+2,200×1,040 pixels respectively. Their exported bytes match the existing
+canonical files, so no binary diff is expected.
 
 - [Compact preview](phase3b-preview-compact.png)
 - [Wide preview](phase3b-preview-wide.png)
 
-Temporary XCTest result bundles and the exported attachment directory remain in
-their generated locations. No cleanup was performed.
+Temporary XCTest result bundles and exported attachment directories remain
+under `/tmp/release-radar-phase3b-*`. No cleanup was performed.

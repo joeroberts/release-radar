@@ -16,17 +16,25 @@ public enum EvidencePreviewContent: Equatable, Sendable {
     case raster(Data, format: String, width: Int, height: Int)
 }
 
+public enum EvidencePreviewRecovery: Equatable, Sendable {
+    case restorePrimary(rootID: ProjectRootID, path: String)
+    case reconnectWorktree(rootID: ProjectRootID, path: String)
+    case relocateLegacyEvidence
+}
+
 public struct EvidencePreview: Equatable, Sendable {
     public let identity: EvidenceLocator
     public let path: String?
     public let status: EvidencePreviewStatus
     public let content: EvidencePreviewContent?
+    public let recovery: EvidencePreviewRecovery?
 
-    public init(identity: EvidenceLocator, path: String?, status: EvidencePreviewStatus, content: EvidencePreviewContent?) {
+    public init(identity: EvidenceLocator, path: String?, status: EvidencePreviewStatus, content: EvidencePreviewContent?, recovery: EvidencePreviewRecovery? = nil) {
         self.identity = identity
         self.path = path
         self.status = status
         self.content = content
+        self.recovery = recovery
     }
 }
 
@@ -67,12 +75,7 @@ struct EvidencePreviewReader: Sendable {
             try reader.verifyStable()
             return decode(identity: identity, path: artifact.path, bytes: bytes)
         } catch let error as RepositoryDocumentError {
-            let status: EvidencePreviewStatus = switch error.code {
-            case .missingFile: .missing
-            case .limitExceeded: .oversized
-            case .readFailed: .inaccessible
-            default: .rejected
-            }
+            let status = Self.status(for: error)
             return .init(identity: identity, path: error.artifactPath, status: status, content: nil)
         } catch {
             return .init(identity: identity, path: nil, status: .rejected, content: nil)
@@ -118,8 +121,8 @@ struct EvidencePreviewReader: Sendable {
                     let bytes = try reader.read(relativePath)
                     try reader.verifyStable()
                     return decode(identity: identity, path: path, bytes: bytes)
-                } catch let error as RepositoryDocumentError where error.code == .missingFile {
-                    return .init(identity: identity, path: path, status: .missing, content: nil)
+                } catch let error as RepositoryDocumentError {
+                    return .init(identity: identity, path: path, status: Self.status(for: error), content: nil)
                 } catch {
                     return .init(identity: identity, path: path, status: .rejected, content: nil)
                 }
@@ -159,6 +162,15 @@ struct EvidencePreviewReader: Sendable {
                          content: .raster(bytes, format: ext, width: width, height: height))
         }
         return .init(identity: identity, path: path, status: .unsupported, content: nil)
+    }
+
+    private static func status(for error: RepositoryDocumentError) -> EvidencePreviewStatus {
+        switch error.code {
+        case .missingFile: .missing
+        case .limitExceeded: .oversized
+        case .readFailed: .inaccessible
+        default: .rejected
+        }
     }
 }
 
@@ -240,17 +252,21 @@ extension DeliveryStore {
         do {
             let context = try legacyPreviewContext(projectID: projectID, evidenceID: evidenceID, path: path)
             guard context.registration != nil, let selected = context.selectedRoot, let relative = context.relativePath else {
-                return .init(identity: record.locator, path: path, status: .inaccessible, content: nil)
+                return .init(identity: record.locator, path: path, status: .inaccessible, content: nil, recovery: .relocateLegacyEvidence)
             }
+            let recovery = Self.previewRecovery(for: selected, primaryRootID: context.primaryRootID)
             guard !selected.stale else {
-                return .init(identity: record.locator, path: path, status: .stale, content: nil)
+                return .init(identity: record.locator, path: path, status: .stale, content: nil, recovery: recovery)
             }
             guard let bookmark = selected.bookmark else {
-                return .init(identity: record.locator, path: path, status: .inaccessible, content: nil)
+                return .init(identity: record.locator, path: path, status: .inaccessible, content: nil, recovery: recovery)
             }
             let result = await EvidencePreviewReader().previewLegacy(path: path, root: URL(fileURLWithPath: selected.path), relativePath: relative, bookmark: bookmark, bookmarkStore: bookmarkStore)
             guard try legacyPreviewContext(projectID: projectID, evidenceID: evidenceID, path: path) == context else {
                 return .init(identity: record.locator, path: path, status: .rejected, content: nil)
+            }
+            if result.status == .inaccessible {
+                return .init(identity: result.identity, path: result.path, status: result.status, content: nil, recovery: recovery)
             }
             return result
         } catch {
@@ -316,6 +332,12 @@ extension DeliveryStore {
         guard let row = try c.row("SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?", bindings: [.text(projectID.rawValue)]),
               case let .text(id) = row["registration_id"], case let .integer(generation) = row["request_generation"] else { return nil }
         return .init(projectID: projectID, registrationID: id, requestGeneration: generation)
+    }
+
+    private static func previewRecovery(for root: EvidencePreviewAuthorizedRoot, primaryRootID: ProjectRootID?) -> EvidencePreviewRecovery {
+        root.id == primaryRootID
+            ? .restorePrimary(rootID: root.id, path: root.path)
+            : .reconnectWorktree(rootID: root.id, path: root.path)
     }
 
     private static func contains(_ candidate: String, within root: String) -> Bool {

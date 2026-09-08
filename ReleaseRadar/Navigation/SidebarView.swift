@@ -341,6 +341,9 @@ struct SidebarView: View {
                                 identity: identity
                             )
                         },
+                        openWorktreeRecovery: {
+                            Task { await model.navigate(to: .projectOverview(projectID)) }
+                        },
                         loadEvidencePreview: { evidenceID in
                             await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
                         },

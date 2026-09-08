@@ -113,6 +113,7 @@ struct ProjectOverviewView: View {
                                 evidence: evidence,
                                 documentationStatus: documentationStatus,
                                 restoreFolderAccess: healthReauthorizationAction,
+                                openWorktreeRecovery: repositoryRecovery == nil ? nil : { showsRootManagement = true },
                                 loadPreview: loadEvidencePreview.map { loader in
                                     { await loader(evidence.id) }
                                 }

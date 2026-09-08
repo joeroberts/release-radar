@@ -12,11 +12,110 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         let preview = EvidencePreview(identity: evidence.locator, path: evidence.path, status: .available,
                                       content: .text("# Verified preview\nReadable bounded evidence content.", isTruncated: false))
         for width in [1100.0, 620.0] {
+            let recorder = ManagedEvidencePreviewRecorder(results: [preview])
             try await render(
-                ScrollView { EvidenceDetailView(evidence: evidence, loadPreview: { preview }, initialPreview: preview).padding(28) },
-                name: "phase3b-preview-\(Int(width))", width: width, height: 520
+                ScrollView { EvidenceDetailView(evidence: evidence, loadPreview: { await recorder.load() }).padding(28) },
+                name: "phase3b-preview-\(Int(width))", width: width, height: 520,
+                pressIdentifiers: ["evidence-preview-phase3b-text"]
             )
+            let callCount = await recorder.callCount
+            XCTAssertEqual(callCount, 1)
         }
+    }
+
+    func testPhase3BErrorRecoveryAndRetryUseNativeControls() async throws {
+        let evidence = EvidenceProjection(id: .init(rawValue: "phase3b-retry"), label: "Retry evidence", path: "/saved/worktree/result.md", isAvailable: true)
+        let recorder = ManagedEvidencePreviewRecorder(results: [
+            .init(identity: evidence.locator, path: evidence.path, status: .inaccessible, content: nil,
+                  recovery: .reconnectWorktree(rootID: .init(rawValue: "worktree"), path: "/saved/worktree")),
+            .init(identity: evidence.locator, path: evidence.path, status: .available,
+                  content: .text("Recovered preview", isTruncated: false))
+        ])
+        var recoveryCount = 0
+        try await render(
+            EvidenceDetailView(
+                evidence: evidence,
+                openWorktreeRecovery: { recoveryCount += 1 },
+                loadPreview: { await recorder.load() }
+            ).padding(28),
+            name: "phase3b-retry-recovery", width: 700, height: 520,
+            pressIdentifiers: [
+                "evidence-preview-phase3b-retry",
+                "evidence-preview-reconnect-worktree-phase3b-retry",
+                "evidence-preview-refresh-phase3b-retry",
+                "evidence-preview-phase3b-retry"
+            ]
+        )
+        let callCount = await recorder.callCount
+        XCTAssertEqual(callCount, 2)
+        XCTAssertEqual(recoveryCount, 1)
+    }
+
+    func testPhase3BOverviewTicketAndMaintenanceConsumersUseNativePreviewAction() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-PreviewConsumers-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let projectID = ProjectID(rawValue: "preview-consumers")
+        let evidence = EvidenceProjection(id: .init(rawValue: "consumer-evidence"), label: "Consumer evidence", path: "notes.md", isAvailable: true)
+        let preview = EvidencePreview(identity: evidence.locator, path: evidence.path, status: .available,
+                                      content: .text("Consumer preview", isTruncated: false))
+        let recorder = ManagedEvidencePreviewRecorder(results: [preview, preview, preview])
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Preview consumers",
+            activePhaseName: "Delivery",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 1,
+            attentionCount: 0,
+            evidence: [evidence]
+        )
+        try await render(
+            ProjectOverviewView(
+                project: project,
+                board: nil,
+                documentationState: .legacy(.unavailable),
+                projectRoot: nil,
+                phaseSelectionStatus: .idle,
+                openBoard: {},
+                selectActivePhase: { _ in },
+                reloadActivePhase: {},
+                reauthorizeActivePhase: { _ in },
+                loadEvidencePreview: { _ in await recorder.load() }
+            ),
+            name: "phase3b-consumer-overview", width: 900, height: 900,
+            pressIdentifiers: ["evidence-preview-consumer-evidence"]
+        )
+        let detail = TicketDetailProjection(
+            id: .init(rawValue: "RR-PREVIEW"),
+            outcome: "Preview ticket evidence",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            requires: [], unlocks: [], ownerAttention: [], evidence: [evidence],
+            auditHistory: [], notificationHistory: []
+        )
+        try await render(
+            TicketDetailView(detail: detail, loadEvidencePreview: { _ in await recorder.load() }),
+            name: "phase3b-consumer-ticket", width: 700, height: 900,
+            pressIdentifiers: ["evidence-preview-consumer-evidence"]
+        )
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("maintenance.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Preview consumer fixture") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES (?, 'Preview consumers')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id) VALUES (?, 'registration')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO evidence (id, project_id, path) VALUES (?, ?, 'notes.md')", bindings: [.text(evidence.id.rawValue), .text(projectID.rawValue)])
+        }
+        let session = try DocumentationMaintenanceSession(
+            databaseURL: store.databaseURL,
+            mode: .readOnly,
+            previewLoader: { _, _ in await recorder.load() }
+        )
+        await session.load()
+        try await render(
+            DocumentationMaintenanceView(session: session),
+            name: "phase3b-consumer-maintenance", width: 800, height: 850,
+            pressIdentifiers: ["evidence-preview-consumer-evidence"]
+        )
+        let callCount = await recorder.callCount
+        XCTAssertEqual(callCount, 3)
     }
 
     func testEvidenceStatesAtWideAndCompactWidths() async throws {
@@ -170,7 +269,14 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         return text.joined(separator: "\n")
     }
 
-    private func render<V: View>(_ view: V, name: String, width: Double, height: Double, pressEscape: Bool = false) async throws {
+    private func render<V: View>(
+        _ view: V,
+        name: String,
+        width: Double,
+        height: Double,
+        pressEscape: Bool = false,
+        pressIdentifiers: [String] = []
+    ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: height)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
         hosting.appearance = NSAppearance(named: .darkAqua)
@@ -222,9 +328,19 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
                 }
             }
         }
-        let axText = ownWindow.map { accessibilityText($0) } ?? ""
         XCTAssertEqual(status, .success, "Isolated host accessibility API unavailable")
         XCTAssertNotNil(ownWindow, "Own titled test window not found in AX")
+        for identifier in pressIdentifiers {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing native control \(identifier)"
+            )
+            XCTAssertEqual(AXUIElementPerformAction(element, kAXPressAction as CFString), .success)
+            try await Task.sleep(for: .milliseconds(300))
+            hosting.frame = NSRect(origin: .zero, size: frame.size)
+            hosting.layoutSubtreeIfNeeded()
+        }
+        let axText = ownWindow.map { accessibilityText($0) } ?? ""
         if name.hasPrefix("m3c-evidence") {
             for label in ["Proposed", "Current", "Completed", "Superseded", "Archived", "Non-controlling", "Available", "pending acceptance", "not bound", "checksum"] {
                 XCTAssertTrue(axText.contains(label), "Missing actual AX state: \(label)")
@@ -233,6 +349,10 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
             for label in ["Preview evidence", "Legacy file path", "Available", "Verified preview", "Readable bounded evidence content"] {
                 XCTAssertTrue(axText.contains(label), "Missing actual AX preview state: \(label)")
             }
+        } else if name == "phase3b-retry-recovery" {
+            XCTAssertTrue(axText.contains("Recovered preview"), "Retry did not publish the recovered preview")
+        } else if name.hasPrefix("phase3b-consumer") {
+            XCTAssertTrue(axText.contains("Consumer preview"), "Consumer did not publish the native preview result")
         } else if name == "m3c-maintenance-read-only" {
             XCTAssertTrue(axText.contains("Accepted repository"))
             XCTAssertTrue(axText.contains("Artifact ID: draft"))
@@ -267,5 +387,35 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
             XCTAssertTrue(window.performKeyEquivalent(with: event), "Native Escape key did not reach Cancel")
             await Task.yield()
         }
+    }
+
+    private func accessibilityElement(_ root: AXUIElement, identifier: String) -> AXUIElement? {
+        var pending = [root], count = 0
+        while let element = pending.popLast(), count < 1000 {
+            count += 1
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &value) == .success,
+               value as? String == identifier {
+                return element
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return nil
+    }
+}
+
+private actor ManagedEvidencePreviewRecorder {
+    private var results: [EvidencePreview]
+    private(set) var callCount = 0
+
+    init(results: [EvidencePreview]) { self.results = results }
+
+    func load() -> EvidencePreview {
+        callCount += 1
+        return results.removeFirst()
     }
 }

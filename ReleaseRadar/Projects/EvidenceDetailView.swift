@@ -98,9 +98,10 @@ final class EvidencePreviewCoordinator {
 struct EvidenceDetailView: View {
     let evidence: EvidenceProjection
     var documentationStatus: DocumentationObservationStatus? = nil
+    var freshnessGeneration: UInt64? = nil
     var restoreFolderAccess: (() -> Void)? = nil
+    var openWorktreeRecovery: (() -> Void)? = nil
     var loadPreview: (() async -> EvidencePreview)? = nil
-    var initialPreview: EvidencePreview? = nil
     @State private var previewCoordinator = EvidencePreviewCoordinator()
     var body: some View {
         let presentation = EvidenceStatusPresentation(evidence, documentationStatus: documentationStatus)
@@ -132,6 +133,9 @@ struct EvidenceDetailView: View {
         .onChange(of: evidence) { _, _ in
             previewCoordinator.invalidate()
         }
+        .onChange(of: freshnessGeneration) { _, _ in
+            previewCoordinator.invalidate()
+        }
     }
 
     private var canRestoreFolderAccess: Bool {
@@ -144,12 +148,12 @@ struct EvidenceDetailView: View {
 
     @ViewBuilder private var previewSection: some View {
         if let loadPreview {
-        if previewCoordinator.result == nil && initialPreview == nil {
+        if previewCoordinator.result == nil {
             Button("Preview") {
                 Task {
                     await previewCoordinator.load(
                         key: .init(evidenceID: evidence.id, locator: evidence.locator,
-                                   observationGeneration: documentationStatus?.generation),
+                                   observationGeneration: freshnessGeneration ?? documentationStatus?.generation),
                         loader: loadPreview
                     )
                 }
@@ -157,7 +161,7 @@ struct EvidenceDetailView: View {
             .buttonStyle(RekonSecondaryButtonStyle())
             .accessibilityIdentifier("evidence-preview-\(evidence.id.rawValue)")
             .disabled(isChecking)
-        } else if let loadedPreview = previewCoordinator.result ?? initialPreview {
+        } else if let loadedPreview = previewCoordinator.result {
             switch loadedPreview.status {
             case .available:
                 if case let .text(text, isTruncated) = loadedPreview.content {
@@ -174,14 +178,40 @@ struct EvidenceDetailView: View {
                         .accessibilityIdentifier("evidence-preview-image-\(evidence.id.rawValue)")
                 }
             case .unsupported: Text("This file format cannot be previewed safely.").font(.caption).foregroundStyle(.secondary)
-            case .oversized: Text("This file exceeds the 1 MiB preview limit.").font(.caption).foregroundStyle(.secondary)
+            case .oversized: Text("This file exceeds a safe preview or repository-read limit.").font(.caption).foregroundStyle(.secondary)
             case .rejected: Text("Preview unavailable because the current authorized content could not be verified.").font(.caption).foregroundStyle(.secondary)
-            case .inaccessible: Text("Preview unavailable outside authorized project folders. Restore primary folder access or reconnect the exact saved worktree, then retry.").font(.caption).foregroundStyle(.secondary)
+            case .inaccessible: Text("Preview unavailable because the saved folder authorization could not be used.").font(.caption).foregroundStyle(.secondary)
             case .missing: Text("The evidence file is missing from its saved location.").font(.caption).foregroundStyle(.secondary)
             case .stale: Text("The saved folder authorization is stale. Restore or reconnect that exact folder, then retry.").font(.caption).foregroundStyle(.secondary)
             }
+            previewRecovery(loadedPreview.recovery)
             Button("Refresh preview") { previewCoordinator.invalidate() }.buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("evidence-preview-refresh-\(evidence.id.rawValue)")
         }
+        }
+    }
+
+    @ViewBuilder private func previewRecovery(_ recovery: EvidencePreviewRecovery?) -> some View {
+        switch recovery {
+        case let .restorePrimary(_, path):
+            Text("Restore access to the exact saved primary folder: \(path)").font(.caption).foregroundStyle(.secondary)
+            if let restoreFolderAccess {
+                Button("Restore primary folder access", action: restoreFolderAccess)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("evidence-preview-restore-primary-\(evidence.id.rawValue)")
+            }
+        case let .reconnectWorktree(_, path):
+            Text("Reconnect the exact saved worktree: \(path)").font(.caption).foregroundStyle(.secondary)
+            if let openWorktreeRecovery {
+                Button("Open saved worktree recovery", action: openWorktreeRecovery)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("evidence-preview-reconnect-worktree-\(evidence.id.rawValue)")
+            }
+        case .relocateLegacyEvidence:
+            Text("This legacy path is outside every saved project root. Use the exact legacy evidence relocation operation; folder recovery cannot authorize it.")
+                .font(.caption).foregroundStyle(.secondary)
+        case nil:
+            EmptyView()
         }
     }
 

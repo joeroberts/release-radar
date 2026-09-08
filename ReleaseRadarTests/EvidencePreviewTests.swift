@@ -6,6 +6,52 @@ import XCTest
 
 final class EvidencePreviewTests: XCTestCase {
     @MainActor
+    func testAppModelPublishesCurrentPreviewAndRejectsResultAfterObservationWithdrawal() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-AppPreview-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let projectID = ProjectID(rawValue: "app-preview")
+        let evidenceID = EvidenceID(rawValue: "e")
+        let readback = EvidenceReadback(
+            evidence: .init(id: evidenceID, projectID: projectID, ticketID: nil, locator: .filePath("notes.md"), isAvailable: true),
+            managedDocument: nil
+        )
+        let payload = DocumentationObservationPayload(
+            identity: .init(projectID: projectID, registration: nil, rootID: nil, rootPath: nil, binding: nil),
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .legacy(.unavailable),
+            evidence: [readback]
+        )
+        let observer = DocumentationObservationCoordinator { _ in payload }
+        await observer.refresh(projectID: projectID)
+        let available = EvidencePreview(identity: readback.evidence.locator, path: "notes.md", status: .available,
+                                        content: .text("current", isTruncated: false))
+        let currentModel = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("current.sqlite")),
+            externalServicesSuppressed: true,
+            documentationObserver: observer,
+            evidencePreviewLoader: { _, _, _ in available }
+        )
+        let current = await currentModel.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+        XCTAssertEqual(current, available)
+
+        let loader = ControlledEvidencePreviewLoader()
+        let staleModel = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("stale.sqlite")),
+            externalServicesSuppressed: true,
+            documentationObserver: observer,
+            evidencePreviewLoader: { _, _, _ in await loader.load() }
+        )
+        let task = Task { await staleModel.previewEvidence(projectID: projectID, evidenceID: evidenceID) }
+        await loader.waitUntilEntered()
+        observer.invalidate(projectID: projectID)
+        await loader.finish(available)
+        let stale = await task.value
+        XCTAssertEqual(stale.status, .rejected)
+        XCTAssertNil(stale.content)
+    }
+
+    @MainActor
     func testPreviewCoordinatorWithdrawsContentAndRejectsLateResultAfterObservationChange() async {
         let coordinator = EvidencePreviewCoordinator()
         let loader = ControlledEvidencePreviewLoader()
@@ -26,10 +72,15 @@ final class EvidencePreviewTests: XCTestCase {
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let primaryFile = primary.appendingPathComponent("notes.md")
         let worktreeFile = worktree.appendingPathComponent("result.txt")
+        let oversizedFile = primary.appendingPathComponent("oversized.txt")
         let externalFile = external.appendingPathComponent("secret.txt")
         try Data("primary".utf8).write(to: primaryFile)
         try Data("worktree".utf8).write(to: worktreeFile)
         try Data("external".utf8).write(to: externalFile)
+        XCTAssertTrue(FileManager.default.createFile(atPath: oversizedFile.path, contents: nil))
+        let oversizedHandle = try FileHandle(forWritingTo: oversizedFile)
+        try oversizedHandle.truncate(atOffset: UInt64(RepositoryDocumentContract.Limits().maximumFileBytes + 1))
+        try oversizedHandle.close()
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         let projectID = ProjectID(rawValue: "legacy-preview")
         try await store.transact(actor: .init(id: "fixture"), reason: "Legacy preview fixture") { c in
@@ -39,7 +90,7 @@ final class EvidencePreviewTests: XCTestCase {
                 try c.execute("INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?)", bindings: [.text(id), .text(projectID.rawValue), .text(root.path)])
                 try c.execute("INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 0)", bindings: [.text(projectID.rawValue), .text(root.path), .blob(Data(root.path.utf8))])
             }
-            for (id, path) in [("primary-evidence", primaryFile.path), ("worktree-evidence", worktreeFile.path), ("external-evidence", externalFile.path)] {
+            for (id, path) in [("primary-evidence", primaryFile.path), ("worktree-evidence", worktreeFile.path), ("oversized-evidence", oversizedFile.path), ("external-evidence", externalFile.path)] {
                 try c.execute("INSERT INTO evidence (id, project_id, path, is_available) VALUES (?, ?, ?, 1)", bindings: [.text(id), .text(projectID.rawValue), .text(path)])
             }
         }
@@ -47,11 +98,21 @@ final class EvidencePreviewTests: XCTestCase {
         let auditBefore = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
         let primaryResult = await store.previewEvidence(projectID: projectID, evidenceID: .init(rawValue: "primary-evidence"), bookmarkStore: bookmarks)
         let worktreeResult = await store.previewEvidence(projectID: projectID, evidenceID: .init(rawValue: "worktree-evidence"), bookmarkStore: bookmarks)
+        let oversizedResult = await store.previewEvidence(projectID: projectID, evidenceID: .init(rawValue: "oversized-evidence"), bookmarkStore: bookmarks)
         let externalResult = await store.previewEvidence(projectID: projectID, evidenceID: .init(rawValue: "external-evidence"), bookmarkStore: bookmarks)
         XCTAssertEqual(primaryResult.content, .text("primary", isTruncated: false))
         XCTAssertEqual(worktreeResult.content, .text("worktree", isTruncated: false))
+        XCTAssertEqual(oversizedResult.status, .oversized)
         XCTAssertEqual(externalResult.status, .inaccessible)
+        XCTAssertEqual(externalResult.recovery, .relocateLegacyEvidence)
         XCTAssertNil(externalResult.content)
+        let inaccessiblePrimary = await store.previewEvidence(
+            projectID: projectID,
+            evidenceID: .init(rawValue: "primary-evidence"),
+            bookmarkStore: FailingEvidencePreviewBookmarkStore()
+        )
+        XCTAssertEqual(inaccessiblePrimary.status, .inaccessible)
+        XCTAssertEqual(inaccessiblePrimary.recovery, .restorePrimary(rootID: .init(rawValue: "primary"), path: primary.path))
         let auditAfterPreviews = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
         XCTAssertEqual(auditAfterPreviews, auditBefore)
 
@@ -83,6 +144,7 @@ final class EvidencePreviewTests: XCTestCase {
         }
         let staleResult = await store.previewEvidence(projectID: projectID, evidenceID: .init(rawValue: "worktree-evidence"), bookmarkStore: bookmarks)
         XCTAssertEqual(staleResult.status, .stale)
+        XCTAssertEqual(staleResult.recovery, .reconnectWorktree(rootID: .init(rawValue: "worktree"), path: worktree.path))
         let auditAfter = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events") }
         XCTAssertEqual(auditAfter, auditBefore.map { $0 + 3 })
 
@@ -194,6 +256,14 @@ private struct EvidencePreviewBookmarkStore: ProjectBookmarkStoring {
     }
     func withSecurityScopedAccess<T: Sendable>(bookmark: Data, _ body: @Sendable (ResolvedProjectBookmark) async throws -> T) async throws -> T {
         try await body(resolve(bookmark))
+    }
+}
+
+private struct FailingEvidencePreviewBookmarkStore: ProjectBookmarkStoring {
+    func makeBookmark(for url: URL) throws -> Data { Data() }
+    func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark { throw CocoaError(.fileReadNoPermission) }
+    func withSecurityScopedAccess<T: Sendable>(bookmark: Data, _ body: @Sendable (ResolvedProjectBookmark) async throws -> T) async throws -> T {
+        throw CocoaError(.fileReadNoPermission)
     }
 }
 

@@ -5,6 +5,35 @@ import XCTest
 
 final class DocumentationMaintenanceTests: XCTestCase {
     @MainActor
+    func testReloadWithdrawsEqualEvidenceAndRejectsLatePreviewCompletion() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("M3C-preview-freshness-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Maintenance preview fixture") { c in
+            try c.execute("INSERT INTO projects (id, name) VALUES ('p', 'Project')")
+            try c.execute("INSERT INTO project_registrations (project_id, registration_id) VALUES ('p', 'registration')")
+            try c.execute("INSERT INTO evidence (id, project_id, path) VALUES ('e', 'p', 'notes.md')")
+        }
+        let loader = ControlledMaintenancePreviewLoader()
+        let session = try DocumentationMaintenanceSession(
+            databaseURL: store.databaseURL,
+            mode: .readOnly,
+            previewLoader: { _, _ in await loader.load() }
+        )
+        await session.load()
+        let initialGeneration = session.evidenceObservationGeneration
+        let task = Task { await session.previewEvidence(.init(rawValue: "e"), projectID: .init(rawValue: "p")) }
+        await loader.waitUntilEntered()
+        await session.load()
+        XCTAssertGreaterThan(session.evidenceObservationGeneration, initialGeneration)
+        await loader.finish(.init(identity: .filePath("notes.md"), path: "notes.md", status: .available, content: .text("late", isTruncated: false)))
+        let result = await task.value
+        XCTAssertEqual(result.status, .rejected)
+        XCTAssertNil(result.content)
+    }
+
+    @MainActor
     func testReadOnlyRecoveryCannotPrepareOrConfirmMutation() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("M3C-Maintenance-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -58,4 +87,21 @@ final class DocumentationMaintenanceTests: XCTestCase {
         }
         XCTAssertEqual(DocumentationMaintenanceLaunch.parse(arguments: ["app", "--documentation-maintenance=no"], environment: ["XCTestConfigurationFilePath": "test"]), .application)
     }
+}
+
+private actor ControlledMaintenancePreviewLoader {
+    private var entered = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var resultContinuation: CheckedContinuation<EvidencePreview, Never>?
+    func load() async -> EvidencePreview {
+        entered = true
+        enteredContinuations.forEach { $0.resume() }
+        enteredContinuations.removeAll()
+        return await withCheckedContinuation { resultContinuation = $0 }
+    }
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+    func finish(_ result: EvidencePreview) { resultContinuation?.resume(returning: result); resultContinuation = nil }
 }

@@ -15,16 +15,26 @@ final class DocumentationMaintenanceSession {
     private(set) var recovery: RepositoryRecoveryModel?
     private(set) var message: String?
     private var bridge: AgentBridgeApplicationHost?
+    private let previewLoader: @Sendable (ProjectID, EvidenceID) async -> EvidencePreview
     var selectedProjectID: ProjectID?
+    private(set) var evidenceObservationGeneration: UInt64 = 0
 
-    init(databaseURL: URL, mode: DocumentationMaintenanceMode) throws {
+    init(databaseURL: URL, mode: DocumentationMaintenanceMode,
+         previewLoader: (@Sendable (ProjectID, EvidenceID) async -> EvidencePreview)? = nil) throws {
         self.mode = mode
-        store = try mode == .readOnly ? DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
+        let openedStore = try mode == .readOnly ? DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
             : DeliveryStore.documentationMaintenance(databaseURL: databaseURL)
+        store = openedStore
+        self.previewLoader = previewLoader ?? { projectID, evidenceID in
+            await openedStore.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+        }
     }
     func load() async {
+        evidenceObservationGeneration &+= 1
+        let generation = evidenceObservationGeneration
+        recovery = nil
         do {
-            projects = try await store.read { c in
+            let nextProjects = try await store.read { c in
                 var rows: [Project] = [], offset: Int64 = 0
                 while let row = try c.row("SELECT id, name FROM projects ORDER BY name, id LIMIT 1 OFFSET ?", bindings: [.integer(offset)]) {
                     guard case let .text(id) = row["id"], case let .text(name) = row["name"] else { throw StoreError.unavailable("Invalid project metadata") }
@@ -32,15 +42,24 @@ final class DocumentationMaintenanceSession {
                 }
                 return rows
             }
+            guard generation == evidenceObservationGeneration else { return }
+            projects = nextProjects
             if selectedProjectID == nil { selectedProjectID = projects.first?.id }
-            await selectProject()
+            await loadSelectedProject(generation: generation)
         } catch { message = "Documentation maintenance could not read the selected store." }
     }
     func selectProject() async {
-        guard let selectedProjectID else { recovery = nil; return }
+        evidenceObservationGeneration &+= 1
+        let generation = evidenceObservationGeneration
+        recovery = nil
+        await loadSelectedProject(generation: generation)
+    }
+    private func loadSelectedProject(generation: UInt64) async {
+        guard let selectedProjectID else { return }
         let model = RepositoryRecoveryModel(store: store, projectID: selectedProjectID, allowsRelocation: mode == .commands)
-        recovery = model
         await model.load()
+        guard generation == evidenceObservationGeneration, selectedProjectID == self.selectedProjectID else { return }
+        recovery = model
     }
     func connectExistingBridge() async {
         do { bridge = try await AgentBridgeApplicationHost.startDocumentationMaintenance(store: store, mode: mode) }
@@ -48,11 +67,13 @@ final class DocumentationMaintenanceSession {
     }
     func disconnect() { bridge?.disconnectCallback(); bridge = nil }
     func previewEvidence(_ evidenceID: EvidenceID, projectID: ProjectID) async -> EvidencePreview {
-        guard projectID == selectedProjectID else {
+        let generation = evidenceObservationGeneration
+        guard projectID == selectedProjectID, recovery?.evidence.contains(where: { $0.id == evidenceID }) == true else {
             return .init(identity: .filePath(""), path: nil, status: .rejected, content: nil)
         }
-        let preview = await store.previewEvidence(projectID: projectID, evidenceID: evidenceID)
-        guard projectID == selectedProjectID else {
+        let preview = await previewLoader(projectID, evidenceID)
+        guard generation == evidenceObservationGeneration, projectID == selectedProjectID,
+              recovery?.evidence.contains(where: { $0.id == evidenceID }) == true else {
             return .init(identity: preview.identity, path: nil, status: .rejected, content: nil)
         }
         return preview
@@ -62,36 +83,50 @@ final class DocumentationMaintenanceSession {
 struct DocumentationMaintenanceView: View {
     @Bindable var session: DocumentationMaintenanceSession
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Documentation maintenance").font(.largeTitle.weight(.semibold))
-                Text(session.mode == .readOnly ? "Read-only evidence inspection" : "Owner-confirmed repository recovery")
-                    .foregroundStyle(.secondary)
-                Picker("Project", selection: $session.selectedProjectID) {
-                    ForEach(session.projects) { project in Text(project.name).tag(Optional(project.id)) }
-                }.frame(maxWidth: 420).accessibilityIdentifier("maintenance-project")
-                if let recovery = session.recovery {
-                    RepositoryRecoveryView(model: recovery)
-                    Text("Evidence").font(.title2.weight(.semibold))
-                    if recovery.evidence.isEmpty { Text("No evidence recorded").foregroundStyle(.secondary) }
-                    ForEach(recovery.evidence) { row in
-                        EvidenceDetailView(
-                            evidence: row,
-                            loadPreview: {
-                                guard let projectID = session.selectedProjectID else {
-                                    return .init(identity: row.locator, path: nil, status: .rejected, content: nil)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Documentation maintenance").font(.largeTitle.weight(.semibold))
+                    Text(session.mode == .readOnly ? "Read-only evidence inspection" : "Owner-confirmed repository recovery")
+                        .foregroundStyle(.secondary)
+                    Picker("Project", selection: $session.selectedProjectID) {
+                        ForEach(session.projects) { project in Text(project.name).tag(Optional(project.id)) }
+                    }.frame(maxWidth: 420).accessibilityIdentifier("maintenance-project")
+                    if let recovery = session.recovery {
+                        RepositoryRecoveryView(model: recovery)
+                            .id("maintenance-repository-recovery")
+                        Text("Evidence").font(.title2.weight(.semibold))
+                        if recovery.evidence.isEmpty { Text("No evidence recorded").foregroundStyle(.secondary) }
+                        ForEach(recovery.evidence) { row in
+                            EvidenceDetailView(
+                                evidence: row,
+                                freshnessGeneration: session.evidenceObservationGeneration,
+                                restoreFolderAccess: {
+                                    withAnimation {
+                                        proxy.scrollTo("maintenance-repository-recovery", anchor: .top)
+                                    }
+                                },
+                                openWorktreeRecovery: {
+                                    withAnimation {
+                                        proxy.scrollTo("maintenance-repository-recovery", anchor: .top)
+                                    }
+                                },
+                                loadPreview: {
+                                    guard let projectID = session.selectedProjectID else {
+                                        return .init(identity: row.locator, path: nil, status: .rejected, content: nil)
+                                    }
+                                    return await session.previewEvidence(row.id, projectID: projectID)
                                 }
-                                return await session.previewEvidence(row.id, projectID: projectID)
-                            }
-                        )
-                        .id("\(session.selectedProjectID?.rawValue ?? "none")-\(row.id.rawValue)")
-                        .padding(.vertical, 6)
-                        RekonSeparator()
+                            )
+                            .id("\(session.selectedProjectID?.rawValue ?? "none")-\(row.id.rawValue)")
+                            .padding(.vertical, 6)
+                            RekonSeparator()
+                        }
                     }
-                }
-                if let message = session.message { Text(message).font(.caption).foregroundStyle(.secondary) }
-                Button("Reload readback") { Task { await session.load() } }.accessibilityIdentifier("maintenance-reload")
-            }.padding(28).frame(maxWidth: .infinity, alignment: .leading)
+                    if let message = session.message { Text(message).font(.caption).foregroundStyle(.secondary) }
+                    Button("Reload readback") { Task { await session.load() } }.accessibilityIdentifier("maintenance-reload")
+                }.padding(28).frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .task { await session.load() }
         .task(id: session.selectedProjectID) { await session.selectProject() }
