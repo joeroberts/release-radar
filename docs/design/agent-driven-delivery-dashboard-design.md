@@ -294,6 +294,32 @@ update, evidence, audit history, and notification delivery history. Opening a
 linked Codex task is available only after a separate supported handoff is
 proven; the detail contains no manual delivery editing controls.
 
+## Phase 4 navigation and inspector — owner-approved 2026-09-08
+
+Across existing surfaces, one Back/Forward history restores project, explicitly
+viewed phase/scope, filters, selected ticket and appropriate keyboard/accessibility
+focus. Sidebar, in-app links and navigation controls share it. Branching after Back
+clears Forward; changing a local filter updates the current entry. Browsing never
+changes the owner-selected active working phase. Relaunch starts at Projects with
+empty history. Missing targets explain their unavailable selection in a valid
+parent scope; archive/removal use the existing read-only identity-preserving views.
+
+Dependencies shows project-wide relationships focused on the selected ticket,
+including cross-phase prerequisites/dependents labelled with their phases.
+Opening it from a nonactive board and returning preserves that board's context.
+The phase-only heading/scope in `mockups/dependencies.png` is superseded by this
+explicit scope choice; its relationship direction, selected-path presentation and
+inspector remain visual references. Dense paths must remain readable and reachable.
+
+At compact widths, Ticket Details uses the available vertical space and makes
+remaining overflow visibly and accessibly discoverable. Ordinary scrolling and
+keyboard navigation must reach the first and last rows, including long task plans,
+while preserving the wider side inspector, wrapping, counts and completion state.
+No task count, acceptance, five-lane or dependency-mutation policy changes. Use the
+supplied RDS controls/appearance and compare native compact/wide rendering with the
+existing board and dependency references. New planning/Goals/History screens and
+appearance/light-dark changes are outside Phase 4.
+
 ## Notification policy
 
 The app sends Pushover only for meaningful events:

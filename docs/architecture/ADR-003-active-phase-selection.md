@@ -66,11 +66,36 @@ project projection exposes phase choices while its board remains absent until
 one phase is selected. A zero-phase project retains the existing tracking-state
 recovery.
 
-RR-R9 does not change ticket-dependency semantics. Ticket dependencies remain
-valid across phases within the same project. Board cards and dependency-graph
-nodes remain scoped to the selected phase, while the selected ticket's detail
-may continue to truthfully reference its existing cross-phase dependencies.
-Changing the active pointer never rewrites or hides that history.
+Ticket dependencies remain valid across phases within the same project.
+Board cards remain scoped to the explicitly viewed phase. The owner-approved
+Phase 4 amendment below supersedes RR-R9's phase-scoped dependency graph;
+changing the active pointer never rewrites or hides dependency history.
+
+## Phase 4 navigation and dependency scope — 2026-09-08
+
+The owner selected project-wide dependency relationships focused on the selected
+ticket, with phase labels. A ticket opened from a nonactive phase retains its
+identity and displays its cross-phase prerequisites and dependents within that
+project. The graph never substitutes an active-phase ticket. Stored dependency
+validation, five lanes, task completion and acceptance semantics are unchanged.
+
+One typed navigation history captures project identity, explicit viewed scope,
+filters, selection and focus/restoration context across existing surfaces.
+Back/Forward restores context without creating entries; a new navigation after
+Back clears Forward history. Local filter adjustments update the current entry.
+Browsing never dispatches active-phase selection or other delivery mutations.
+Missing targets retain a valid parent scope with an explanation; restoration never
+silently substitutes a ticket/phase, broadens a filter or resolves a removed
+registration to a re-added project by path/name. Existing archive/removal views
+remain read-only and use their exact identities. Focus returns to the originating
+valid control/entity, or to an informative heading/recovery message.
+
+The owner selected Projects with empty Back/Forward history on application
+relaunch, preserving existing startup behavior. Phase 4 navigation is session-only;
+it adds no navigation persistence, saved-view storage, external URL registration,
+store migration or portable navigation state. Future planning/search/saved-view
+surfaces consume this navigation boundary only when separately implemented. This
+amendment does not approve the other proposed D4–D6 planning contracts.
 
 ## Consequences
 

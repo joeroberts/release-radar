@@ -1,82 +1,86 @@
 # Release Radar delivery state
 
-## Current outcome
+## Current outcome and active task
 
-Phase 3 product delivery is merged: C8 documentation freshness and maintenance,
-C9 bounded evidence preview and identity/lifecycle handling, and their associated
-C12 health and same-folder recovery. Independent documentation closeout review is complete.
-[PR #35](https://github.com/joeroberts/release-radar/pull/35) carries this final
-record; Phase 3 delivery is complete when its separately owner-approved merge
-is recorded on that PR. Phase 4 is not authorized.
+Phase 3 is complete in source: PRs #33, #34 and #35 are merged. PR #35 merged
+on 2026-09-08 at `6f528c551b2c8de1597ad29a108a749712d26a6c`.
+The owner authorized **Phase 4 navigation and inspector delivery**, followed by
+**Phase 5 decision preparation only**. Phase 5 product implementation is unopened.
 
-The scope remains slice 3 of the
-[full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md),
-including reported failures [#18](https://github.com/joeroberts/release-radar/issues/18)
-and [#19](https://github.com/joeroberts/release-radar/issues/19).
-Management and recovery C4–C7 remains complete through PRs #28–#32. The narrow
-C8 regular-`.DS_Store` validator repair remains complete and is not reopened.
+Phase 4 covers RM2, P7/P8 and issue
+[#9](https://github.com/joeroberts/release-radar/issues/9): browse a nonactive phase,
+open its ticket and dependencies, and return through one typed Back/Forward
+history restoring project, viewed scope, filters, selection and appropriate focus.
+Branching history, stale/archived/removed targets and relaunch policy are in scope.
+Active phase remains the separate owner-selected working context. Compact Ticket
+Details must use available space and make overflow and every task row reachable,
+without changing counts, completion or acceptance semantics. RDS is used as supplied;
+appearance and light/dark changes remain excluded.
 
-## Delivered behavior and verification
+The controlling sequence is the
+[full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md).
+The owner selected project-wide Dependencies focused on the ticket with phase
+labels, and Projects with empty history on relaunch. ADR-003 and the dashboard
+design record this bounded amendment. Other planning proposals remain proposed.
+The [Phase 4 brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md)
+controls the delivery assignment; no Phase 5 domain choice blocks it.
 
-- **Phase 3A:** shared registration/root/binding-scoped observation supplies
-  Overview, evidence and documentation health. External monitoring and activation
-  invalidate stale success; watching never repairs, accepts a catalog or mutates
-  delivery state. Direct exact-folder recovery preserves identities and the
-  accepted catalog while exposing remaining validation problems.
-  [PR #33](https://github.com/joeroberts/release-radar/pull/33) merged at
-  `7c4511dbab2762111d1b287efbceb148843dcccd` after owner approval.
-  [Verification](evidence/2026-09-07-phase3a-documentation-freshness.md) records
-  94 focused passes and 2 intentional native-only skips, then 7 affected
-  race-correction passes and 1 intentional skip. Independent review closed the
-  retired-store renewal and stale-projection races. The final owner-assisted
-  signed native run passed with real Space input and exact synthetic folder
-  selection: stale bookmark 1→0, exactly one restore audit, identities and
-  catalog preserved. Focus was established by the test; this is not proof of
-  Tab navigation. No broad filesystem exception was used.
-- **Phase 3B:** transient bounded UTF-8 text and raster previews retain managed
-  repository/artifact identity, lifecycle and authority. Legacy paths remain
-  distinct and readable only within existing same-project primary/worktree
-  grants. Limits and failure states are explicit; reads are bounded and
-  no-follow. Preview success is withdrawn on observation/selection/identity
-  changes, including live maintenance updates without Reload. Recovery routes
-  distinguish primary access, saved worktrees and outside-root legacy paths.
-  [PR #34](https://github.com/joeroberts/release-radar/pull/34) merged at
-  `92027e1a129c4ae0ce9fa99caa0e58783ab7f88b` after owner approval of reviewed
-  candidate `977656391fdd54ac02f278e0d71a39a023ad602f`.
-  [Verification](evidence/2026-09-08-phase3b-evidence-preview.md) records
-  75 passed, 2 unchanged native-picker skips and 0 failed. Direct result readback
-  confirmed native Preview activation in Overview, ticket detail and maintenance,
-  recovery/refresh/retry, and automatic withdrawal of rendered stale bytes.
-  Independent Sol High review closed all four Required findings on the final
-  candidate; no Required findings remain. Compact/wide captures are retained.
+## Current authorization and ownership
 
-The completed [3A brief](task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
-and [3B brief](task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md)
-retain the delivered acceptance scope. Test results establish their named scopes,
-not a passing whole suite or an installed-owner-app acceptance run. This closeout
-changes documentation only; it does not transfer test results to a new binary.
+Orchestrator `01a08261-fa9d-7dc1-854f-b2a3b739c3a8` owns this ledger and catalog
+integration in fresh worktree `bfc2`, branch `codex/phase4-orchestrator`, established
+from the current merged default at `6f528c5`. The canonical checkout and retained
+builds remain untouched. Requested orchestrator profile is Astra Medium.
+Chief architect
+`01a08262-ffdf-7120-896b-0252ce2f8a30` completed its read-only assessment; findings
+are preserved in the plan and no processes remain. The bounded task is archived.
 
-## Authorization and ownership
+The owner authorizes affected source/tests/docs, scoped commits, pushes, PRs and
+fresh bounded delivery and independent-review peer tasks. Each merge requires
+separate owner approval. Use one implementation stream. Chief architecture is
+requested at Astra High; ordinary implementation starts Terra Medium; independent
+review covers the actual navigation, UX and boundary risks. Default escalation
+ceiling is Astra High; no unapproved xhigh/max and never Ultra. Actual runtime
+settings are not exposed for independent confirmation.
 
-The owner authorized Phase 3 source, tests, documentation, scoped commits, pushes,
-PR creation and separate delivery/review tasks. PR #33 and PR #34 have explicit
-merge approval and are merged. The documentation closeout merge requires its own
-owner approval. Independent Terra High reviewer
-`01a081f2-ba10-70d1-acd4-84870d4e3896` closed its sole stale collection-purpose
-finding on `0b42d2e124d690390d735b8b0fcd6b2a811594ed`. Documentation validation
-and diff checks passed; no Required findings remain. The review covered docs
-and catalog consistency, not another product/runtime verification. Orchestrator `01a07e75-b254-72a1-be2a-3e97ac23baeb` owns this
-ledger/catalog integration on `codex/phase3-documentation-evidence` in `f703`.
-Completed Phase 3 writers, independent reviewer tasks and architecture assessment
-are archived after results were preserved and completion read back. Requested
-models/efforts and correction history are in the
-[Historical record](archive/2026-09-08-phase3-delivery-history.md); actual runtime
-settings were not exposed for independent confirmation.
+No installation, real owner-data operation, SQLite edit, application binding or
+catalog acceptance, credential change, notification, plugin/cloud mutation,
+entitlement change, publication or cleanup is authorized. Repository documentation
+work does not imply application synchronization. Inspect side-effecting scripts
+before use; use proven isolated synthetic execution and never normal app launch
+or owner credentials merely to arrange testing.
 
-No installation, owner-project data operation, application binding/catalog
-acceptance, external service/notification or plugin mutation, credential repair,
-entitlement change or cleanup is authorized. SQLite remains exclusively app-owned.
-Phase 4, RDS appearance changes and light/dark feature work remain excluded.
+Independent Phase 5 decision-preparation peer `01a08269-0c66-7d61-bd3d-f9963383471e`
+(requested Astra High) is read-only in a separate worktree. It cannot implement or
+select product choices. Owner questions and merge approvals are relayed through the
+visible parent task while this task is omitted from the owner's task list.
+
+## Verification and sequencing
+
+The Mac is available for builds, automated tests and isolated native UI/keyboard/
+accessibility inspection. Only the owner's hands-on acceptance testing on other
+Macs is unavailable until at least Friday, September 11, 2026. Perform independent
+source and native checks now; report any specifically owner-dependent acceptance
+as pending without making it a prerequisite for source delivery.
+
+The revised sequence is Phase 4 now, then Phase 5 readiness decisions as time
+allows. During actual owner-approval waits, independent decision preparation may
+proceed without disturbing the Phase 4 writer. Phase 5 preparation covers
+P1–P4/P15/P16/P18 and D4/D5/D6/D12, preserving current phase-owned Delivery Goals
+and separate execution-goal semantics unless the owner selects a documented change.
+Present only unresolved consequential decisions in small phone-friendly batches.
+
+The private versioned test DMG and other-Mac testing wait until Friday or later.
+Packaging remains unstarted; target architectures and macOS versions are unknown.
+Private testing is the requested packaging scope, with no packaging, notarization
+or distribution work authorized by this continuation.
+
+Completed source-delivery evidence remains in the
+[Historical Phase 3 record](archive/2026-09-08-phase3-delivery-history.md),
+[3A verification](evidence/2026-09-07-phase3a-documentation-freshness.md) and
+[3B verification](evidence/2026-09-08-phase3b-evidence-preview.md).
+Those results cover their stated candidates and scenarios, not a whole-suite
+pass or installed-owner acceptance of a future Phase 4 binary.
 
 ## Material limitations and retained history
 
@@ -102,6 +106,4 @@ authorization. Canonical checkout and unrelated files remain preserved.
 
 [Historical Phase 3 record](archive/2026-09-08-phase3-delivery-history.md) and
 [Historical C7 record](archive/2026-09-07-c7-delivery-history.md) retain closed coordination,
-prior checks and temporary-output reports. The final Phase 3 endpoint is the
-owner-approved merge of PR #35. After that merge, no Phase 3 work remains and
-no later product slice is authorized.
+prior checks and temporary-output reports.
