@@ -3,7 +3,7 @@
 ## Current outcome
 
 Phase 3 — Current documentation and evidence (C8/C9 and associated C12 recovery)
-is authorized and in acceptance-gap assessment. Management and recovery C4–C7 remains
+is authorized and in Phase 3A delivery. Management and recovery C4–C7 remains
 complete in source through owner-approved PRs #28–#31 and documentation closeout
 [PR #32](https://github.com/joeroberts/release-radar/pull/32), merged at
 `cd16df1b0226aa8a08bd167364779103ebe86278`. The narrow C8 regular-`.DS_Store`
@@ -35,7 +35,8 @@ Medium; actual runtime settings are not exposed for independent confirmation. Th
 unbudgeted Phase 3 execution goal is active and remains unfinished.
 
 Fresh Astra High chief-architect assessment `01a07e76-a1c5-7e02-a534-d237eec8c309`
-completed at the baseline with no files, tests, app launches or temporary artifacts.
+completed at the baseline with no files, tests, app launches or temporary artifacts and
+is archived after supported completion readback.
 It confirmed existing custody contracts and two sequential slices: shared freshness and
 same-folder recovery (3A), then bounded evidence content preview (3B). Native task listing
 omitted this completed task; its actual ID was recovered from narrowly filtered app logs
@@ -44,7 +45,10 @@ reports were incorrect; the assessment did run successfully.
 
 [Phase 3A controlling brief](task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
 records the source-backed gaps, acceptance, isolated verification boundary and Sol High
-writer assignment. No product implementation is complete yet. Phase 3B consumes its shared
+writer assignment. Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` is active in fresh
+worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High, starting from
+committed brief baseline `a4d5e06`.
+Runtime model/effort are unexposed. No product implementation is complete yet. Phase 3B consumes its shared
 observation and preserves repository/artifact custody; supported content formats and
 bounded rendering will be explicit in that brief.
 
@@ -92,6 +96,7 @@ review outcomes and reported temporary inventories. [Historical C6 history](arch
 remain non-authoritative. Temporary build outputs, synthetic backups and review files are
 retained; deletion requires exact owner authorization. No cleanup was performed.
 
-The active phase is slice 3, Current documentation and evidence. Next is the bounded
-3A implementation assignment from the committed controlling brief. Phase 4 is not authorized. Completed C4–C7 verification and historical records remain
-closed except where a concrete Phase 3 regression requires an affected check.
+The active phase is slice 3, Current documentation and evidence. Phase 3A implementation
+is active; next is its direct verification and fresh independent review. Phase 3B follows
+its approved merge. Phase 4 is not authorized. Completed C4–C7 verification and historical
+records remain closed except where a concrete Phase 3 regression requires an affected check.
