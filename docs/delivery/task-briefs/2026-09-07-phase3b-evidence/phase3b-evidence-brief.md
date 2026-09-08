@@ -1,5 +1,8 @@
 # Phase 3B — Bounded evidence preview
 
+Delivery completed and owner-approved PR #34 merged. This brief retains the
+completed scope; current status and authorization are in [the progress ledger](../../progress.md).
+
 ## Objective and outcome
 
 Complete C9 with usable authorized evidence previews, preserving managed identity,

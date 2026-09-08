@@ -1,5 +1,8 @@
 # Phase 3A — Current documentation and same-folder recovery
 
+Delivery completed and owner-approved PR #33 merged. This brief retains the
+completed scope; current status and authorization are in [the progress ledger](../../progress.md).
+
 ## Objective and outcome
 
 Deliver C8/#18 and contextual #19/C12 recovery: one truthful documentation

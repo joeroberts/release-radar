@@ -50,7 +50,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-07-c7-backup-reset-recovery](2026-09-07-c7-backup-reset-recovery) — leaf; C7 coordinated backup/reset/recovery scope; progress controls authorization
 - [delivery.task-briefs.2026-09-07-parallel-discovery](2026-09-07-parallel-discovery) — leaf; Bounded parallel decision and discovery briefs and findings; proposals are not implementation authority
 - [delivery.task-briefs.2026-09-07-phase3a-freshness](2026-09-07-phase3a-freshness) — leaf; Phase 3A documentation freshness and same-folder recovery; progress controls authorization
-- [delivery.task-briefs.2026-09-07-phase3b-evidence](2026-09-07-phase3b-evidence) — leaf; Phase 3B bounded evidence preview scope; awaits Phase 3A
+- [delivery.task-briefs.2026-09-07-phase3b-evidence](2026-09-07-phase3b-evidence) — leaf; Completed Phase 3B bounded evidence preview delivery scope
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -412,7 +412,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase3a-freshness-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md](2026-09-07-phase3a-freshness/phase3a-freshness-brief.md) | document | supporting | active | none | none |
+| rr-phase3a-freshness-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md](2026-09-07-phase3a-freshness/phase3a-freshness-brief.md) | document | supporting | completed | none | none |
 
 ### Children
 
@@ -421,7 +421,7 @@ Leaf: no child collections.
 ## Leaf collection: delivery.task-briefs.2026-09-07-phase3b-evidence
 
 - Path: [docs/delivery/task-briefs/2026-09-07-phase3b-evidence](2026-09-07-phase3b-evidence)
-- Purpose: Phase 3B bounded evidence preview scope; awaits Phase 3A
+- Purpose: Completed Phase 3B bounded evidence preview delivery scope
 - Allowed contents: Reviewed task briefs
 - Prohibited contents: Owner data and credentials; Temporary build output
 - First read: none
@@ -432,7 +432,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase3b-evidence-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md](2026-09-07-phase3b-evidence/phase3b-evidence-brief.md) | document | supporting | active | none | none |
+| rr-phase3b-evidence-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md](2026-09-07-phase3b-evidence/phase3b-evidence-brief.md) | document | supporting | completed | none | none |
 
 ### Children
 

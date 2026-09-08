@@ -82,6 +82,7 @@ The live progress artifact retains its original ID and path.
 | rr-c7-delivery-history-2026-09-07 | [docs/delivery/archive/2026-09-07-c7-delivery-history.md](2026-09-07-c7-delivery-history.md) | document | nonAuthoritative | archived | none | none |
 | rr-recovery-through-c4-discoveries-2026-09-07 | [docs/delivery/archive/2026-09-07-recovery-through-c4-and-parallel-discoveries.md](2026-09-07-recovery-through-c4-and-parallel-discoveries.md) | document | nonAuthoritative | archived | none | none |
 | rr-recovery-through-c5-2026-09-07 | [docs/delivery/archive/2026-09-07-recovery-through-c5.md](2026-09-07-recovery-through-c5.md) | document | nonAuthoritative | archived | none | none |
+| rr-phase3-delivery-history-2026-09-08 | [docs/delivery/archive/2026-09-08-phase3-delivery-history.md](2026-09-08-phase3-delivery-history.md) | document | nonAuthoritative | archived | none | none |
 | 9f08525c-3dbb-487d-9a70-24ebff25443c | [docs/delivery/archive/README.md](README.md) | collectionIndex | nonAuthoritative | active | none | none |
 | 31277e5a-3a64-4c1f-bc15-26d6f4a935d4 | [docs/delivery/archive/SHA256SUMS](SHA256SUMS) | checksumManifest | nonAuthoritative | archived | none | none |
 
