@@ -165,6 +165,61 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectScopedPrimaryRoutesRestoreTheirNonFirstProjectContext() async throws {
+        for route in [AppRoute.needsReview, .notifications] {
+            let fixture = try await makeProjectScopedPrimaryRouteFixture(route: route)
+            XCTAssertEqual(fixture.model.currentProjectID, fixture.firstProjectID)
+
+            await fixture.model.navigate(to: .projectOverview(DashboardSampleData.projectID))
+            await fixture.model.navigate(to: route)
+            await fixture.model.navigate(to: .projectOverview(fixture.firstProjectID))
+            await fixture.model.goBack()
+
+            XCTAssertEqual(fixture.model.selection, route)
+            XCTAssertEqual(fixture.model.currentProjectID, DashboardSampleData.projectID)
+            XCTAssertEqual(fixture.model.navigationHistory.current.registration?.projectID, DashboardSampleData.projectID)
+            XCTAssertNil(fixture.model.navigationRecoveryMessage)
+        }
+    }
+
+    @MainActor
+    func testProjectScopedPrimaryRoutesFollowArchivedRegistrationIdentity() async throws {
+        for route in [AppRoute.needsReview, .notifications] {
+            let fixture = try await makeProjectScopedPrimaryRouteFixture(route: route)
+            await fixture.model.navigate(to: .projectOverview(DashboardSampleData.projectID))
+            await fixture.model.navigate(to: route)
+            let preview = try await fixture.model.previewProjectLifecycle(
+                projectID: DashboardSampleData.projectID,
+                transition: .archive
+            )
+            try await fixture.model.applyProjectLifecycle(preview)
+
+            await fixture.model.goBack()
+            await fixture.model.goForward()
+
+            XCTAssertEqual(fixture.model.selection, .archivedProject(DashboardSampleData.projectID))
+            XCTAssertTrue(fixture.model.navigationRecoveryMessage?.contains("project was archived") == true)
+        }
+    }
+
+    @MainActor
+    func testProjectScopedPrimaryRoutesFollowRemovedRegistrationIdentity() async throws {
+        for route in [AppRoute.needsReview, .notifications] {
+            let fixture = try await makeProjectScopedPrimaryRouteFixture(route: route)
+            await fixture.model.navigate(to: .projectOverview(DashboardSampleData.projectID))
+            await fixture.model.navigate(to: route)
+            let preview = try await fixture.model.previewProjectRemoval(projectID: DashboardSampleData.projectID)
+            let removed = try await fixture.model.applyProjectRemoval(preview)
+
+            await fixture.model.goBack()
+            await fixture.model.goForward()
+
+            XCTAssertEqual(fixture.model.selection, .removedProject(removed.id))
+            XCTAssertTrue(fixture.model.navigationRecoveryMessage?.contains("project was removed") == true)
+        }
+    }
+
+    @MainActor
     func testRemovedHistoryEntryDoesNotRedirectToReaddedProjectWithSameProjectID() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-NavigationReadd-\(UUID().uuidString)", isDirectory: true)
@@ -366,6 +421,39 @@ final class NavigationHistoryTests: XCTestCase {
         XCTAssertEqual(history.entries.count, 2)
         XCTAssertTrue(history.goBack())
         XCTAssertEqual(history.current.route, .projects)
+    }
+
+    @MainActor
+    private func makeProjectScopedPrimaryRouteFixture(
+        route: AppRoute
+    ) async throws -> (model: AppModel, firstProjectID: ProjectID) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "ReleaseRadar-NavigationScopedPrimary-\(route.title)-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let firstProjectID = ProjectID(rawValue: "first-project")
+        try await store.transact(actor: .init(id: "navigation-history-test"), reason: "Seed scoped primary route fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'navigation-scoped-primary', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, 'AAA First Project', 0)",
+                bindings: [.text(firstProjectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'navigation-first-project', 1, 'complete')",
+                bindings: [.text(firstProjectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        return (model, firstProjectID)
     }
 }
 

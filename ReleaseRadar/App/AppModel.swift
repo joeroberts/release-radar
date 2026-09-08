@@ -370,7 +370,13 @@ final class AppModel {
         if case let .removedProject(removalID) = route {
             return dashboard?.removedProjects.first(where: { $0.id == removalID })?.registration
         }
-        guard let projectID = route.projectID else { return nil }
+        let projectID = switch route {
+        case .needsReview, .notifications:
+            selectedProjectID
+        default:
+            route.projectID
+        }
+        guard let projectID else { return nil }
         return dashboard?.projects.first(where: { $0.id == projectID })?.registration
             ?? dashboard?.archivedProjects.first(where: { $0.id == projectID })?.registration
             ?? dashboard?.removedProjects.first(where: { $0.projectID == projectID })?.registration
