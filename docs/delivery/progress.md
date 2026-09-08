@@ -50,10 +50,15 @@ Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` delivered source/evidence commit
 worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High. Its candidate
 `b296fe9467187054267f5eed667ba8c731267d85` includes the required progress update and
 is pushed in [PR #33](https://github.com/joeroberts/release-radar/pull/33).
-The writer has stopped and is archived; restore the same assignment only for Required
-corrections. Temporary outputs are retained as listed in its candidate evidence.
+The original writer is restored for two Required P1 corrections from independent
+review: reject a folder-renewal operation across service/store replacement before
+any retired-store commit, and abort projection preparation when its observation is
+superseded so it cannot overwrite newer documentation/evidence. Focused controlled
+interleaving regressions and correction review are required. The prior raw result
+bundles are now absent from the writer build path; their readback is unavailable.
+Committed evidence and screenshots remain preserved; no cleanup was authorized.
 Fresh independent combined code, authorization/security and UX/QA review
-`01a07ef7-9e05-7903-bc94-7e13c3322f95` is active against that candidate, requested
+`01a07ef7-9e05-7903-bc94-7e13c3322f95` has reported those Required findings against that candidate, requested
 Sol High. Runtime model/effort are unexposed. Phase 3A is not complete or ready for
 merge approval. Phase 3B remains prepared and depends on reviewed, approved 3A.
 
