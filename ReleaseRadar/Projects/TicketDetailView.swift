@@ -1,10 +1,13 @@
 import SwiftUI
+import ReleaseRadarCore
 import RekonDesignSystem
 
 struct TicketDetailView: View {
     let detail: TicketDetailProjection
     var documentationStatus: DocumentationObservationStatus? = nil
     var restoreDocumentationFolderAccess: (() -> Void)? = nil
+    var openWorktreeRecovery: (() -> Void)? = nil
+    var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var reload: () async -> Void = {}
     @State private var isReloadingTasks = false
     @ScaledMetric(relativeTo: .subheadline) private var taskFontSize = 12
@@ -84,7 +87,11 @@ struct TicketDetailView: View {
                             EvidenceDetailView(
                                 evidence: evidence,
                                 documentationStatus: documentationStatus,
-                                restoreFolderAccess: restoreDocumentationFolderAccess
+                                restoreFolderAccess: restoreDocumentationFolderAccess,
+                                openWorktreeRecovery: openWorktreeRecovery,
+                                loadPreview: loadEvidencePreview.map { loader in
+                                    { await loader(evidence.id) }
+                                }
                             )
                         }
                     }

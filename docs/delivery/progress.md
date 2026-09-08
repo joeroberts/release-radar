@@ -3,7 +3,7 @@
 ## Current outcome
 
 Phase 3 — Current documentation and evidence (C8/C9 and associated C12 recovery)
-is authorized and in Phase 3A delivery. Management and recovery C4–C7 remains
+is authorized; Phase 3A is merged and Phase 3B is entering delivery. Management and recovery C4–C7 remains
 complete in source through owner-approved PRs #28–#31 and documentation closeout
 [PR #32](https://github.com/joeroberts/release-radar/pull/32), merged at
 `cd16df1b0226aa8a08bd167364779103ebe86278`. The narrow C8 regular-`.DS_Store`
@@ -44,13 +44,48 @@ and its completion verified through supported task readback. Earlier setup-block
 reports were incorrect; the assessment did run successfully.
 
 [Phase 3A controlling brief](task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
-records the source-backed gaps, acceptance, isolated verification boundary and Sol High
-writer assignment. Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` is active in fresh
-worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High, starting from
-committed brief baseline `a4d5e06`.
-Runtime model/effort are unexposed. No product implementation is complete yet. Phase 3B consumes its shared
-observation and preserves repository/artifact custody; supported content formats and
-bounded rendering will be explicit in that brief.
+records the source-backed gaps, acceptance and isolated verification boundary.
+Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` delivered source/evidence commit
+`74089746e255958b8810139457c5fc796aab838a` from brief baseline `a4d5e06` in
+worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High. Its candidate
+`b296fe9467187054267f5eed667ba8c731267d85` includes the required progress update and
+is pushed in [PR #33](https://github.com/joeroberts/release-radar/pull/33).
+The writer corrected both Required P1 race findings in pushed candidate
+`3a8d77bb317f760e379967ba2f91a7090a711aa8`: retired folder-renewal authorization is
+fenced before service/store replacement, and superseded projection preparation
+cannot overwrite newer documentation/evidence. Independent reviewer
+`01a07ef7-9e05-7903-bc94-7e13c3322f95` closed both findings on that candidate with
+no Required or Optional correction findings. Its direct readback of the final
+correction result reported 7 passed, 1 intentional signed-picker skip and 0 failed,
+including both controlled interleaving regressions. Documentation and diff checks
+passed. Requested writer/reviewer profile is Sol High; runtime settings are unexposed.
+Final candidate `df75437c3d8d221eb3adbf1b4834ab0711c35973` is pushed in
+PR #33 and adds only the focused acceptance test and its canonical evidence after
+the reviewed production corrections. The owner supplied real Space input and
+selected the exact synthetic folder through the shared native chooser. Direct
+readback of `phase3a-native-user-assisted-rerun-4.xcresult` reports 1 passed,
+0 skipped and 0 failed: real renewal, stale bookmark 1→0, exactly one restore
+audit and preserved registration/root/binding/catalog. The test establishes and
+reads back button focus before observing Space; it does not claim a Tab-navigation
+journey. Restricted signed-host verification passed and the final host exited.
+The correction reviewer completed its assignment and is archived; its result is
+preserved above. The owner approved PR #33, merged at
+`7c4511dbab2762111d1b287efbceb148843dcccd`. Phase 3B now proceeds from the
+integrated committed baseline with its active
+[brief](task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md).
+
+Earlier raw result bundles disappeared after task archival/restoration; committed
+evidence and screenshots remain preserved. Current correction results remain in
+the writer worktree for readback; no cleanup was authorized.
+
+The candidate's focused checks report 94 passed and 2 native-only skips; Debug
+build and repository documentation checks pass. Signed synthetic AX opening and
+cancellation of the real picker passed without a broad filesystem entitlement.
+The later owner-assisted signed run closes keyboard activation and successful
+selection-to-bookmark-renewal verification; see its final evidence above. The candidate preserves a concise
+evidence record and four compact/wide screenshots under `docs/delivery/evidence/`.
+Broader runs exposed failures outside the focused suites; these do not constitute
+passing whole-suite evidence and unrelated repairs are not authorized.
 
 Before any app or test launch, inspection confirmed the existing XCTest host creates a
 PID-specific synthetic store and bypasses normal app startup/termination services. Native
@@ -82,6 +117,11 @@ that rotation is needed. No values are stored here; no owner-state inspection/re
 credential change was performed to resolve that uncertainty. See the exact scope in
 [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
 
+During the initial Phase 3A review, the reviewer initiated an unauthorized prompt-only
+external security scan and preflight update. It stopped external calls after correction
+of scope; no cancellation or further external mutation was authorized or performed.
+The correction review remained local.
+
 The last supported canonical application inventory reported `bindingMissing`,
 `isComplete:false` for `project-fffdc0e0b15b9b86`. No application readback or catalog acceptance
 is authorized in this phase, so repository validation does not claim managed-current
@@ -96,7 +136,6 @@ review outcomes and reported temporary inventories. [Historical C6 history](arch
 remain non-authoritative. Temporary build outputs, synthetic backups and review files are
 retained; deletion requires exact owner authorization. No cleanup was performed.
 
-The active phase is slice 3, Current documentation and evidence. Phase 3A implementation
-is active; next is its direct verification and fresh independent review. Phase 3B follows
-its approved merge. Phase 4 is not authorized. Completed C4–C7 verification and historical
+The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 is owner-approved and merged. Phase 3B bounded evidence preview
+is the next authorized delivery slice. Phase 4 is not authorized. Completed C4–C7 verification and historical
 records remain closed except where a concrete Phase 3 regression requires an affected check.

@@ -22,6 +22,7 @@ struct ProjectOverviewView: View {
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
     var reauthorizeProjectHealth: ((URL, DocumentationObservationIdentity) async throws -> ProjectHealthSnapshot)? = nil
     var documentationFolderChooser: @MainActor () -> URL? = { ProjectFolderAccessPanel.choose() }
+    var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var previewDocumentationSetup: ((ProjectRegistration) async throws -> ProjectDocumentationSetupPreview)? = nil
     var performDocumentationSetup: ((ProjectDocumentationSetupPreview) async throws -> AuditEventID?)? = nil
     var previewArchive: (() async throws -> ProjectLifecyclePreview)? = nil
@@ -107,11 +108,15 @@ struct ProjectOverviewView: View {
                 if !project.evidence.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Project evidence").font(.headline)
-                        ForEach(project.evidence) {
+                        ForEach(project.evidence) { evidence in
                             EvidenceDetailView(
-                                evidence: $0,
+                                evidence: evidence,
                                 documentationStatus: documentationStatus,
-                                restoreFolderAccess: healthReauthorizationAction
+                                restoreFolderAccess: healthReauthorizationAction,
+                                openWorktreeRecovery: repositoryRecovery == nil ? nil : { showsRootManagement = true },
+                                loadPreview: loadEvidencePreview.map { loader in
+                                    { await loader(evidence.id) }
+                                }
                             )
                         }
                     }.padding(18).frame(maxWidth: .infinity, alignment: .leading)

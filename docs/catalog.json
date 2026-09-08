@@ -552,6 +552,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-07-phase3b-evidence",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3b-evidence",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 3B bounded evidence preview scope; awaits Phase 3A",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4785,6 +4800,21 @@
       }
     },
     {
+      "artifactID": "rr-phase3b-evidence-brief-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-phase3b-evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-phase3a-documentation-freshness-2026-09-07",
       "path": "docs/delivery/evidence/2026-09-07-phase3a-documentation-freshness.md",
       "kind": "verificationEvidence",
@@ -4847,6 +4877,51 @@
     {
       "artifactID": "rr-phase3a-folder-recovery-compact-2026-09-07",
       "path": "docs/delivery/evidence/phase3a-folder-recovery-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3b-preview-evidence-2026-09-08",
+      "path": "docs/delivery/evidence/2026-09-08-phase3b-evidence-preview.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3b-preview-compact-2026-09-08",
+      "path": "docs/delivery/evidence/phase3b-preview-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3b-preview-wide-2026-09-08",
+      "path": "docs/delivery/evidence/phase3b-preview-wide.png",
       "kind": "verificationEvidence",
       "lifecycle": "active",
       "authorityLevel": "nonAuthoritative",
