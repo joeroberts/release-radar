@@ -96,3 +96,15 @@ Complete direct verification, scoped commit, pushed branch and PR to
 limits, checks, remaining risks, canonical artifacts and temporary files/processes.
 Preserve outputs; cleanup remains separately authorized. Completion of 3B still requires
 Phase 3 documentation closeout and the approved Git endpoint.
+
+## Delivered preview boundary clarification
+
+The implementation uses a 1 MiB preview-byte limit, 131,072 displayed text
+characters, 4,096 pixels per raster dimension and 16,000,000 decoded raster
+pixels. Text truncation is explicitly labelled. Legacy paths resolve only within
+an existing saved primary or worktree authorization for the same project; a
+relative locator uses the established primary root, while an absolute locator
+must be contained by one exact saved root. No filename search or new file grant
+is introduced. Outside-root paths remain preserved but inaccessible. Lost
+primary access uses Phase 3A same-folder recovery; lost worktree access uses the
+existing exact-worktree reconnect journey.

@@ -87,6 +87,7 @@ final class AppModel {
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
     private let dashboardLoader: @Sendable (DeliveryStore, [ProjectID: [EvidenceReadback]]) async throws -> DashboardProjection
     private var documentationObserver: DocumentationObservationCoordinator
+    private let evidencePreviewLoader: @Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview
     private let requestIDGenerator: () -> UUID
     private(set) var selectedProjectID: ProjectID?
     private var reviewInboxes: [ProjectID: ReviewInboxProjection] = [:]
@@ -132,7 +133,8 @@ final class AppModel {
         recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
         seedSampleData: Bool = false,
-        documentationObserver: DocumentationObservationCoordinator? = nil
+        documentationObserver: DocumentationObservationCoordinator? = nil,
+        evidencePreviewLoader: (@Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview)? = nil
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
@@ -155,6 +157,9 @@ final class AppModel {
         }
         self.documentationObserver = documentationObserver
             ?? Self.makeDocumentationObserver(onboarding: resolvedOnboarding)
+        self.evidencePreviewLoader = evidencePreviewLoader ?? { store, projectID, evidenceID in
+            await store.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+        }
         self.requestIDGenerator = requestIDGenerator
         self.recoveryServices = recoveryServices
         self.recoveryStartupError = recoveryStartupError
@@ -669,6 +674,24 @@ final class AppModel {
 
     func documentationObservationStatus(for projectID: ProjectID) -> DocumentationObservationStatus? {
         documentationObserver.status(for: projectID)
+    }
+
+    func previewEvidence(projectID: ProjectID, evidenceID: EvidenceID) async -> EvidencePreview {
+        let serviceGeneration = documentationServiceGeneration
+        let currentStore = store
+        let currentObserver = documentationObserver
+        guard case let .observed(observation) = documentationObserver.status(for: projectID),
+              observation.evidence.contains(where: { $0.evidence.id == evidenceID }) else {
+            return .init(identity: .filePath(""), path: nil, status: .rejected, content: nil)
+        }
+        let preview = await evidencePreviewLoader(currentStore, projectID, evidenceID)
+        guard serviceGeneration == documentationServiceGeneration,
+              currentStore === store,
+              currentObserver === documentationObserver,
+              currentObserver.status(for: projectID) == .observed(observation) else {
+            return .init(identity: preview.identity, path: nil, status: .rejected, content: nil)
+        }
+        return preview
     }
 
     func projectRoot(for projectID: ProjectID) -> URL? {

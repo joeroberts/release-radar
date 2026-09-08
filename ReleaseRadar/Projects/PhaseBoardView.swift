@@ -57,6 +57,8 @@ struct PhaseBoardView: View {
     let reauthorizeActivePhase: (URL) async -> Void
     var documentationStatus: DocumentationObservationStatus? = nil
     var restoreDocumentationFolderAccess: ((URL, DocumentationObservationIdentity) async throws -> Void)? = nil
+    var openWorktreeRecovery: (() -> Void)? = nil
+    var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var viewPhase: (PhaseID) -> Void = { _ in }
     @State private var density: BoardDensity = .fullOutcomes
     @State var filter: DeliveryGoalFilter = .all
@@ -332,6 +334,8 @@ struct PhaseBoardView: View {
                 detail: selected,
                 documentationStatus: documentationStatus,
                 restoreDocumentationFolderAccess: documentationRestorationAction,
+                openWorktreeRecovery: openWorktreeRecovery,
+                loadEvidencePreview: loadEvidencePreview,
                 reload: reloadActivePhase
             )
         } else {
