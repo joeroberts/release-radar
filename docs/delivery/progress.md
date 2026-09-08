@@ -27,6 +27,11 @@ worktree `44e0`; dispatch requested Astra Medium, runtime settings unexposed. Pr
 review results are pushed on `codex/c7-backup-reset-recovery`. Documentation closeout is
 prepared separately on `codex/management-recovery-closeout-20260907`, preserving the PR #31
 candidate during its approval wait. The C7 writer and reviewer are stopped and archived.
+Fresh documentation reviewer `01a07e55-8e87-7880-9926-2a9011834a2a` (requested Terra High)
+passed closeout candidate `5f0cd71` with no Required findings; native documentation/diff
+checks passed. It is stopped/archived, with no new files or temporary outputs. Draft
+[PR #32](https://github.com/joeroberts/release-radar/pull/32) awaits the actual PR #31 merge
+facts before its separate owner merge decision. No source merge approval has arrived.
 
 ## Verification and material limitations
 
