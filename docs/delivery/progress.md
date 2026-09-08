@@ -117,7 +117,13 @@ Canonical preview evidence and compact/wide component captures are registered in
 the candidate catalog. They do not establish a full consumer click journey.
 Fresh independent Sol High reviewer `01a08169-57df-7903-acfc-4e413d14d9a3` is active
 on this exact candidate, covering code/security/UX and complete-brief evidence.
-Review and any Required corrections remain outstanding; no merge is approved.
+Independent review completed with four Required findings: maintenance retains stale
+preview content; legacy recovery does not distinguish outside-root, primary and
+worktree authorization failures; legacy limit/access errors are misclassified; and
+actual consumer activation/retry/recovery/withdrawal evidence is missing. No Optional
+findings were reported. The original Sol High writer is correcting these on the same
+branch; the same reviewer will assess the new candidate and affected checks.
+No merge is approved.
 
 ## Verification and material limitations
 
