@@ -596,6 +596,134 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testFirstOpenedBoardRestoresTheActuallyRenderedPhaseAfterActivePhaseChanges() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.currentPhaseID)
+        await model.navigate(to: .dependencies(fixture.projectID))
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+        await model.goBack()
+
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.currentPhaseID)
+        XCTAssertNil(model.navigationRecoveryMessage)
+    }
+
+    @MainActor
+    func testReloadRecoversToProjectOverviewWhenTheViewedPhaseDisappears() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let disappearingPhaseID = PhaseID(rawValue: "phase-disappearing")
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Add removable viewed phase") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES (?, ?, 'Disappearing')",
+                bindings: [.text(disappearingPhaseID.rawValue), .text(fixture.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: disappearingPhaseID)
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, disappearingPhaseID)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Remove the viewed phase") { connection in
+            try connection.execute(
+                "DELETE FROM phases WHERE project_id = ? AND id = ?",
+                bindings: [.text(fixture.projectID.rawValue), .text(disappearingPhaseID.rawValue)]
+            )
+        }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        XCTAssertEqual(model.selection, .projectOverview(fixture.projectID))
+        XCTAssertNil(model.viewedBoard(for: fixture.projectID))
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains("previously viewed phase is unavailable") == true)
+    }
+
+    @MainActor
+    func testBoardReloadPreservesUnavailableTicketIdentityWithoutSelectingAnotherTicket() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let ticketID = TicketID(rawValue: "STALE-BOARD")
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Add stale board selection fixture") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, 'Moves out of the viewed board.', 'backlog')",
+                bindings: [.text(ticketID.rawValue), .text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.selectTicket(ticketID)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Move selected ticket out of viewed phase") { connection in
+            try connection.execute(
+                "UPDATE tickets SET phase_id = ? WHERE project_id = ? AND id = ?",
+                bindings: [.text(fixture.currentPhaseID.rawValue), .text(fixture.projectID.rawValue), .text(ticketID.rawValue)]
+            )
+        }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        XCTAssertNil(model.viewedBoard(for: fixture.projectID)?.detail(for: ticketID))
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains(ticketID.rawValue) == true)
+    }
+
+    @MainActor
+    func testDependenciesReloadPreservesUnavailableTicketIdentityWithoutUnrelatedGraph() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let ticketID = TicketID(rawValue: "STALE-DEPENDENCIES")
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Add stale dependency selection fixture") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, 'Disappears while dependencies are open.', 'backlog')",
+                bindings: [.text(ticketID.rawValue), .text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.selectTicket(ticketID)
+        await model.navigate(to: .dependencies(fixture.projectID))
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Remove selected dependency ticket") { connection in
+            try connection.execute(
+                "DELETE FROM tickets WHERE project_id = ? AND id = ?",
+                bindings: [.text(fixture.projectID.rawValue), .text(ticketID.rawValue)]
+            )
+        }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        XCTAssertEqual(model.selection, .dependencies(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        XCTAssertNil(model.dependencyGraph(for: fixture.projectID))
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains(ticketID.rawValue) == true)
+    }
+
+    @MainActor
+    func testInitialEmptySelectionStillChoosesTheExistingDefaultTicketAndGraph() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        model.selectedTicketID = TicketID(rawValue: "")
+
+        await model.loadDashboard()
+
+        XCTAssertEqual(model.selectedTicketID.rawValue, "CURRENT-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected.ticket.id.rawValue, "CURRENT-1")
+    }
+
+    @MainActor
     func testTask10PhaseSwitchResetsFilterWithoutClearingNewSelection() async throws {
         let fixture = try await makeTask10PlanningFixture()
         let model = AppModel(store: fixture.store, externalServicesSuppressed: true)

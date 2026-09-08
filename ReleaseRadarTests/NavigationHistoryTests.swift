@@ -102,6 +102,69 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsHistoryRemainsGlobalWhenProjectBecomesArchived() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-NavigationGlobalArchive-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "navigation-history-test"), reason: "Register archive fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'navigation-global-archive', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(DashboardSampleData.projectID))
+        _ = model.viewedBoard(for: DashboardSampleData.projectID)
+        await model.navigate(to: .settings)
+        let preview = try await model.previewProjectLifecycle(
+            projectID: DashboardSampleData.projectID,
+            transition: .archive
+        )
+        try await model.applyProjectLifecycle(preview)
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .archivedProject(DashboardSampleData.projectID))
+
+        await model.goForward()
+        XCTAssertEqual(model.selection, .settings)
+        XCTAssertNil(model.navigationRecoveryMessage)
+    }
+
+    @MainActor
+    func testProjectsHistoryRemainsGlobalWhenProjectIsRemoved() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-NavigationGlobalRemoval-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "navigation-history-test"), reason: "Register removal fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'navigation-global-removal', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(DashboardSampleData.projectID))
+        _ = model.viewedBoard(for: DashboardSampleData.projectID)
+        await model.navigate(to: .projects)
+        let preview = try await model.previewProjectRemoval(projectID: DashboardSampleData.projectID)
+        let removed = try await model.applyProjectRemoval(preview)
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .removedProject(removed.id))
+
+        await model.goForward()
+        XCTAssertEqual(model.selection, .projects)
+        XCTAssertNil(model.navigationRecoveryMessage)
+    }
+
+    @MainActor
     func testRemovedHistoryEntryDoesNotRedirectToReaddedProjectWithSameProjectID() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-NavigationReadd-\(UUID().uuidString)", isDirectory: true)

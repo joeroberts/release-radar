@@ -36,6 +36,7 @@ private struct PreparedProjectProjections: Sendable {
     let projectDocumentationStates: [ProjectID: ProjectDocumentationState]
     let projectRoots: [ProjectID: URL]
     let selectedTicketID: TicketID
+    let unavailableSelectedTicketID: TicketID?
     let selectedReviewItemID: ReviewItemID?
 }
 
@@ -334,42 +335,42 @@ final class AppModel {
     }
 
     private func captureCurrentNavigationContext() {
-        let projectID = selection.projectID ?? selectedProjectID
+        let route = navigationHistory.current.route
+        let projectID = route.projectID
         let phaseID = projectID.flatMap { viewedPhaseIDs[Data($0.rawValue.utf8)] }
         let filter = projectID.flatMap { projectID in
             phaseID.map { boardFilters[PhaseBoardKey(projectID: projectID, phaseID: $0)] ?? .all }
         }
         navigationHistory.updateCurrent(
-            registration: registration(for: selection, fallbackProjectID: projectID),
+            registration: registration(for: route),
             phaseID: phaseID,
             filter: filter,
-            selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            selectedTicketID: projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
             focus: navigationFocus
         )
     }
 
     private func historyEntry(for route: AppRoute, focus: NavigationFocus?) -> NavigationHistoryEntry {
-        let projectID = route.projectID ?? selectedProjectID
+        let projectID = route.projectID
         let phaseID = projectID.flatMap { viewedPhaseIDs[Data($0.rawValue.utf8)] }
         let filter = projectID.flatMap { projectID in
             phaseID.map { boardFilters[PhaseBoardKey(projectID: projectID, phaseID: $0)] ?? .all }
         }
         return .init(
             route: route,
-            registration: registration(for: route, fallbackProjectID: projectID),
+            registration: registration(for: route),
             phaseID: phaseID,
             filter: filter,
-            selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            selectedTicketID: projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
             focus: focus
         )
     }
 
-    private func registration(for route: AppRoute, fallbackProjectID: ProjectID?) -> ProjectRegistration? {
+    private func registration(for route: AppRoute) -> ProjectRegistration? {
         if case let .removedProject(removalID) = route {
             return dashboard?.removedProjects.first(where: { $0.id == removalID })?.registration
         }
-        let projectID = route.projectID ?? fallbackProjectID
-        guard let projectID else { return nil }
+        guard let projectID = route.projectID else { return nil }
         return dashboard?.projects.first(where: { $0.id == projectID })?.registration
             ?? dashboard?.archivedProjects.first(where: { $0.id == projectID })?.registration
             ?? dashboard?.removedProjects.first(where: { $0.projectID == projectID })?.registration
@@ -431,7 +432,7 @@ final class AppModel {
            dashboard?.board(for: projectID, phaseID: phaseID) != nil {
             viewedPhaseIDs[Data(projectID.rawValue.utf8)] = phaseID
             boardFilters[PhaseBoardKey(projectID: projectID, phaseID: phaseID)] = entry.filter ?? .all
-        } else if entry.phaseID != nil, let projectID = route.projectID {
+        } else if entry.phaseID != nil, case let .phaseBoard(projectID) = route {
             route = .projectOverview(projectID)
             recovery.append("The previously viewed phase is unavailable; the project overview is retained.")
         }
@@ -1099,7 +1100,22 @@ final class AppModel {
 
     func viewedBoard(for projectID: ProjectID) -> PhaseBoardProjection? {
         guard let dashboard else { return nil }
-        return viewedBoard(in: dashboard, for: projectID)
+        let key = Data(projectID.rawValue.utf8)
+        if let phaseID = viewedPhaseIDs[key] {
+            return dashboard.board(for: projectID, phaseID: phaseID)
+        }
+        guard let board = defaultBoard(in: dashboard, for: projectID) else { return nil }
+        viewedPhaseIDs[key] = board.phaseID
+        if selection == .phaseBoard(projectID) {
+            navigationHistory.updateCurrent(
+                registration: registration(for: selection),
+                phaseID: board.phaseID,
+                filter: boardFilter(projectID: projectID, phaseID: board.phaseID),
+                selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+                focus: navigationFocus
+            )
+        }
+        return board
     }
 
     func boardFilter(projectID: ProjectID, phaseID: PhaseID) -> DeliveryGoalFilter {
@@ -1110,7 +1126,7 @@ final class AppModel {
         boardFilters[PhaseBoardKey(projectID: projectID, phaseID: phaseID)] = filter
         navigationFocus = .filterSummary
         navigationHistory.updateCurrent(
-            registration: registration(for: selection, fallbackProjectID: projectID),
+            registration: registration(for: selection),
             phaseID: phaseID,
             filter: filter,
             selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
@@ -1124,10 +1140,13 @@ final class AppModel {
     }
 
     private func viewedBoard(in dashboard: DashboardProjection, for projectID: ProjectID) -> PhaseBoardProjection? {
-        if let phaseID = viewedPhaseIDs[Data(projectID.rawValue.utf8)],
-           let board = dashboard.board(for: projectID, phaseID: phaseID) {
-            return board
+        if let phaseID = viewedPhaseIDs[Data(projectID.rawValue.utf8)] {
+            return dashboard.board(for: projectID, phaseID: phaseID)
         }
+        return defaultBoard(in: dashboard, for: projectID)
+    }
+
+    private func defaultBoard(in dashboard: DashboardProjection, for projectID: ProjectID) -> PhaseBoardProjection? {
         if let active = dashboard.board(for: projectID) { return active }
         guard let phase = dashboard.projects.first(where: {
             $0.id.rawValue.utf8.elementsEqual(projectID.rawValue.utf8)
@@ -1144,7 +1163,7 @@ final class AppModel {
                 .min { $0.rawValue < $1.rawValue } ?? TicketID(rawValue: "")
         }
         navigationHistory.updateCurrent(
-            registration: registration(for: selection, fallbackProjectID: projectID),
+            registration: registration(for: selection),
             phaseID: phaseID,
             filter: boardFilter(projectID: projectID, phaseID: phaseID),
             selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
@@ -1157,7 +1176,7 @@ final class AppModel {
         navigationFocus = ticketID.rawValue.isEmpty ? .filterSummary : .ticket(ticketID)
         let phaseID = viewedPhaseIDs[Data(currentProjectID.rawValue.utf8)]
         navigationHistory.updateCurrent(
-            registration: registration(for: selection, fallbackProjectID: currentProjectID),
+            registration: registration(for: selection),
             phaseID: phaseID,
             filter: phaseID.map { boardFilter(projectID: currentProjectID, phaseID: $0) },
             selectedTicketID: ticketID.rawValue.isEmpty ? nil : ticketID,
@@ -1645,6 +1664,7 @@ final class AppModel {
         var projectDocumentationStates: [ProjectID: ProjectDocumentationState] = [:]
         var projectRoots: [ProjectID: URL] = [:]
         var selectedTicketID = self.selectedTicketID
+        var unavailableSelectedTicketID: TicketID?
         let visibleProjectID = selection.projectID
             ?? selectedProjectID
             ?? dashboard.projects.first?.id
@@ -1657,15 +1677,39 @@ final class AppModel {
             projectDocumentationStates[project.id] = observation?.documentationState ?? .legacy(.unavailable)
             projectRoots[project.id] = observation?.identity.rootPath.map(URL.init(fileURLWithPath:))
             guard let board = dashboard.board(for: project.id) else { continue }
-            let preferredID = self.selectedTicketID.rawValue.isEmpty
-                ? board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
-                : self.selectedTicketID
+            var preferredID = board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
             if project.id == visibleProjectID {
                 let visibleBoard = viewedBoard(in: dashboard, for: project.id)
-                selectedTicketID = visibleBoard?.detail(for: self.selectedTicketID) != nil
-                    ? self.selectedTicketID
-                    : visibleBoard?.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
-                        ?? TicketID(rawValue: "")
+                let selectedTicketExists: Bool
+                if selection == .dependencies(project.id) {
+                    selectedTicketExists = dashboard.boards.contains {
+                        $0.key.projectID == project.id && $0.value.detail(for: self.selectedTicketID) != nil
+                    }
+                } else {
+                    selectedTicketExists = visibleBoard?.detail(for: self.selectedTicketID) != nil
+                }
+                let canChooseDefault: Bool
+                if self.dashboard == nil {
+                    canChooseDefault = true
+                } else if case let .ownerActivePhaseCommitted(projectID, _, _) = context {
+                    canChooseDefault = projectID == project.id
+                } else {
+                    canChooseDefault = false
+                }
+                if selectedTicketExists {
+                    selectedTicketID = self.selectedTicketID
+                    preferredID = self.selectedTicketID
+                } else if canChooseDefault {
+                    selectedTicketID = visibleBoard?.lanes.flatMap(\.cards).map(\.id)
+                        .min { $0.rawValue < $1.rawValue } ?? TicketID(rawValue: "")
+                    preferredID = selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
+                } else if selection == .phaseBoard(project.id) || selection == .dependencies(project.id) {
+                    selectedTicketID = self.selectedTicketID
+                    preferredID = nil
+                    if !self.selectedTicketID.rawValue.isEmpty {
+                        unavailableSelectedTicketID = self.selectedTicketID
+                    }
+                }
             }
             guard let preferredID else { continue }
             if let graph = try? await DependencyGraphProjection.load(
@@ -1675,13 +1719,6 @@ final class AppModel {
                 selectedTicketID: preferredID
             ) {
                 dependencyGraphs[project.id] = graph
-            } else if let fallback = board.lanes.flatMap(\.cards).map(\.id).min(by: { $0.rawValue < $1.rawValue }) {
-                dependencyGraphs[project.id] = try await DependencyGraphProjection.load(
-                    from: store,
-                    projectID: project.id,
-                    phaseID: board.phaseID,
-                    selectedTicketID: fallback
-                )
             }
         }
         for removed in dashboard.removedProjects {
@@ -1701,6 +1738,7 @@ final class AppModel {
             projectDocumentationStates: projectDocumentationStates,
             projectRoots: projectRoots,
             selectedTicketID: selectedTicketID,
+            unavailableSelectedTicketID: unavailableSelectedTicketID,
             selectedReviewItemID: reviewInboxes[visibleProjectID]?.openItems.first?.id
         )
     }
@@ -1716,6 +1754,20 @@ final class AppModel {
         selectedTicketID = prepared.selectedTicketID
         selectedReviewItemID = prepared.selectedReviewItemID
         dashboardError = nil
+        var navigationRecovery: [String] = []
+        if case let .phaseBoard(projectID) = selection,
+           let phaseID = viewedPhaseIDs[Data(projectID.rawValue.utf8)],
+           prepared.dashboard.board(for: projectID, phaseID: phaseID) == nil {
+            selection = .projectOverview(projectID)
+            navigationRecovery.append("The previously viewed phase is unavailable; the project overview is retained.")
+        }
+        if let ticketID = prepared.unavailableSelectedTicketID {
+            navigationRecovery.append("The previously selected ticket \(ticketID.rawValue) is unavailable; no other ticket was selected.")
+        }
+        if !navigationRecovery.isEmpty {
+            navigationRecoveryMessage = navigationRecovery.joined(separator: " ")
+            navigationFocus = .recovery
+        }
         let activeProjectIDs = Set(prepared.dashboard.projects.map(\.id))
         documentationObserver.retain(projectIDs: activeProjectIDs)
         for projectID in prepared.reviewInboxes.keys where deliveryGoalAcceptanceNeedsReload(for: projectID) {
