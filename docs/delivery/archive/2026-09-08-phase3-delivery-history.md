@@ -6,6 +6,19 @@ use [current progress](../progress.md). Phase 3A PR #33 and Phase 3B PR #34 are
 now owner-approved and merged. Original temporary-output statements are historical
 reports, not a new filesystem inventory. No cleanup was performed.
 
+## Terminal source closeout
+
+Phase 3B PR #34 merged after owner approval at
+`92027e1a129c4ae0ce9fa99caa0e58783ab7f88b`. Documentation closeout reviewer
+`01a081f2-ba10-70d1-acd4-84870d4e3896` (requested Terra High) closed the sole stale
+collection-purpose finding on `0b42d2e124d690390d735b8b0fcd6b2a811594ed`;
+documentation/diff checks passed with no Required findings. PR #35 subsequently
+merged with owner approval on 2026-09-08 at
+`6f528c551b2c8de1597ad29a108a749712d26a6c`. This records the verified closeout
+previously held in progress; it adds no product/runtime verification or installed
+acceptance claim. The later Phase 4 continuation is recorded only in current
+progress, not inferred from this historical record.
+
 # Release Radar delivery state
 
 ## Current outcome
