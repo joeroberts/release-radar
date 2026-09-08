@@ -336,10 +336,8 @@ struct ReleaseRadarNavigationCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .toolbar) {
             Button("Back") { Task { await model?.goBack() } }
-                .keyboardShortcut("[", modifiers: .command)
                 .disabled(model?.canNavigateBack != true)
             Button("Forward") { Task { await model?.goForward() } }
-                .keyboardShortcut("]", modifiers: .command)
                 .disabled(model?.canNavigateForward != true)
         }
     }

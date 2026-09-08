@@ -58,7 +58,10 @@ struct DependencyGraphView: View {
         GeometryReader { proxy in
             let canvasSize = CGSize(
                 width: max(proxy.size.width, 820),
-                height: max(proxy.size.height - 136, 400)
+                height: DependencyGraphLayout.requiredCanvasHeight(
+                    for: selectedGraph,
+                    minimum: max(proxy.size.height - 136, 400)
+                )
             )
             let layout = DependencyGraphLayout.makeLayout(graph: selectedGraph, size: canvasSize)
 

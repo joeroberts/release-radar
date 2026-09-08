@@ -1,9 +1,42 @@
 import ReleaseRadarCore
 
+extension ProjectRegistration {
+    func hasSameNavigationIdentity(as other: ProjectRegistration) -> Bool {
+        projectID == other.projectID
+            && registrationID.utf8.elementsEqual(other.registrationID.utf8)
+    }
+}
+
+enum NavigationFocus: Hashable, Sendable {
+    case route(AppRoute)
+    case ticket(TicketID)
+    case filterSummary
+    case recovery
+}
+
 struct NavigationHistoryEntry: Equatable, Sendable {
     var route: AppRoute
+    var registration: ProjectRegistration?
     var phaseID: PhaseID?
+    var filter: DeliveryGoalFilter?
     var selectedTicketID: TicketID?
+    var focus: NavigationFocus?
+
+    init(
+        route: AppRoute,
+        registration: ProjectRegistration? = nil,
+        phaseID: PhaseID? = nil,
+        filter: DeliveryGoalFilter? = nil,
+        selectedTicketID: TicketID? = nil,
+        focus: NavigationFocus? = nil
+    ) {
+        self.route = route
+        self.registration = registration
+        self.phaseID = phaseID
+        self.filter = filter
+        self.selectedTicketID = selectedTicketID
+        self.focus = focus
+    }
 }
 
 struct NavigationHistory: Equatable, Sendable {
@@ -11,7 +44,7 @@ struct NavigationHistory: Equatable, Sendable {
     private(set) var index: Int
 
     init(initial route: AppRoute) {
-        entries = [.init(route: route, phaseID: nil, selectedTicketID: nil)]
+        entries = [.init(route: route)]
         index = 0
     }
 
@@ -19,17 +52,48 @@ struct NavigationHistory: Equatable, Sendable {
     var canGoBack: Bool { index > 0 }
     var canGoForward: Bool { index + 1 < entries.count }
 
-    mutating func navigate(to route: AppRoute, phaseID: PhaseID? = nil, selectedTicketID: TicketID? = nil) {
+    mutating func navigate(to entry: NavigationHistoryEntry) {
         if canGoForward {
             entries.removeSubrange((index + 1)..<entries.count)
         }
-        entries.append(.init(route: route, phaseID: phaseID, selectedTicketID: selectedTicketID))
+        entries.append(entry)
         index = entries.count - 1
     }
 
-    mutating func updateCurrent(phaseID: PhaseID?, selectedTicketID: TicketID?) {
+    mutating func navigate(
+        to route: AppRoute,
+        registration: ProjectRegistration? = nil,
+        phaseID: PhaseID? = nil,
+        filter: DeliveryGoalFilter? = nil,
+        selectedTicketID: TicketID? = nil,
+        focus: NavigationFocus? = nil
+    ) {
+        navigate(to: .init(
+            route: route,
+            registration: registration,
+            phaseID: phaseID,
+            filter: filter,
+            selectedTicketID: selectedTicketID,
+            focus: focus
+        ))
+    }
+
+    mutating func updateCurrent(
+        registration: ProjectRegistration? = nil,
+        phaseID: PhaseID?,
+        filter: DeliveryGoalFilter? = nil,
+        selectedTicketID: TicketID?,
+        focus: NavigationFocus? = nil
+    ) {
+        entries[index].registration = registration ?? entries[index].registration
         entries[index].phaseID = phaseID
+        entries[index].filter = filter
         entries[index].selectedTicketID = selectedTicketID
+        entries[index].focus = focus
+    }
+
+    mutating func reset(to route: AppRoute = .projects) {
+        self = .init(initial: route)
     }
 
     mutating func goBack() -> Bool {

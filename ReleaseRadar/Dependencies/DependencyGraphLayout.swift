@@ -48,10 +48,29 @@ struct DependencyGraphLayoutResult: Equatable, Sendable {
 }
 
 enum DependencyGraphLayout {
+    private static let nodeHeight: CGFloat = 52
+    private static let verticalSpacing: CGFloat = 16
+    private static let verticalPadding: CGFloat = 28
+
+    static func requiredCanvasHeight(
+        for graph: DependencyGraphProjection,
+        minimum: CGFloat
+    ) -> CGFloat {
+        let largestColumn = [
+            graph.selected.indirectRequires.count,
+            graph.selected.directRequires.count,
+            1,
+            graph.selected.unlocks.count,
+        ].max() ?? 1
+        let required = verticalPadding * 2
+            + CGFloat(largestColumn) * nodeHeight
+            + CGFloat(max(largestColumn - 1, 0)) * verticalSpacing
+        return max(minimum, required)
+    }
+
     static func makeLayout(graph: DependencyGraphProjection, size: CGSize) -> DependencyGraphLayoutResult {
-        let nodeSize = CGSize(width: 112, height: 52)
+        let nodeSize = CGSize(width: 112, height: nodeHeight)
         let horizontalPadding: CGFloat = 24
-        let verticalPadding: CGFloat = 28
         let columnWidth = max(
             nodeSize.width + 24,
             (size.width - horizontalPadding * 2) / CGFloat(DependencyGraphColumnRole.allCases.count)
@@ -77,10 +96,9 @@ enum DependencyGraphLayout {
                 height: size.height
             )
             let nodes = membership.1
-            let availableHeight = max(size.height - verticalPadding * 2, nodeSize.height)
-            let verticalStep = availableHeight / CGFloat(max(nodes.count, 1))
+            let verticalStep = nodeSize.height + verticalSpacing
             for (nodeIndex, node) in nodes.enumerated() {
-                let centerY = verticalPadding + verticalStep * (CGFloat(nodeIndex) + 0.5)
+                let centerY = verticalPadding + nodeSize.height / 2 + verticalStep * CGFloat(nodeIndex)
                 frames[node.id] = CGRect(
                     x: columnFrame.midX - nodeSize.width / 2,
                     y: centerY - nodeSize.height / 2,

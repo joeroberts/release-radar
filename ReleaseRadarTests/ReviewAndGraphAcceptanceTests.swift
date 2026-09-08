@@ -568,6 +568,40 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertEqual(first, second)
     }
 
+    func testDenseDependencyPathExpandsScrollableCanvasWithoutOverlappingNodes() throws {
+        let selected = DependencyGraphNode(
+            id: .init(rawValue: "SELECTED"), outcome: "Selected", lane: .inProgress, blockerCount: 0
+        )
+        let foundations = (1...18).map {
+            DependencyGraphNode(
+                id: .init(rawValue: "FOUND-\($0)"), outcome: "Foundation \($0)",
+                lane: .accepted, blockerCount: 0
+            )
+        }
+        let graph = DependencyGraphProjection(
+            projectID: .init(rawValue: "dense-project"),
+            phaseID: .init(rawValue: "dense-phase"),
+            nodes: foundations + [selected],
+            edges: [],
+            selected: .init(
+                ticket: selected,
+                directRequires: [],
+                indirectRequires: foundations,
+                unlocks: []
+            )
+        )
+
+        let height = DependencyGraphLayout.requiredCanvasHeight(for: graph, minimum: 400)
+        let layout = DependencyGraphLayout.makeLayout(
+            graph: graph,
+            size: CGSize(width: 820, height: height)
+        )
+        let frames = try XCTUnwrap(layout.columns.first?.ticketIDs.map { try XCTUnwrap(layout.frames[$0]) })
+
+        XCTAssertGreaterThan(height, 400)
+        XCTAssertTrue(zip(frames, frames.dropFirst()).allSatisfy { $0.maxY < $1.minY })
+    }
+
     func testDependencyGraphIncludesCrossPhaseRelationshipsWithPhaseIdentity() async throws {
         let store = try await seededStore()
         try await store.transact(

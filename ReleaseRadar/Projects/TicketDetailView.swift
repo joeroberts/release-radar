@@ -103,6 +103,8 @@ struct TicketDetailView: View {
             .padding(.trailing, 6)
             .textSelection(.enabled)
         }
+        .scrollIndicators(.visible)
+        .accessibilityHint("Scroll to reach all ticket details and task rows. Task rows are keyboard focusable.")
         .accessibilityIdentifier("ticket-inspector")
     }
 
@@ -126,6 +128,7 @@ struct TicketDetailView: View {
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(task.accessibilityLabel(position: index + 1, total: plan.tasks.count))
                     .accessibilityIdentifier("task-row-\(task.id.rawValue)")
+                    .focusable()
                 }
             case let .unavailable(recovery):
                 FailureStateView(

@@ -5,6 +5,8 @@ import RekonDesignSystem
 
 struct SidebarView: View {
     @Bindable var model: AppModel
+    @FocusState private var navigationControlFocus: NavigationFocus?
+    @AccessibilityFocusState private var accessibilityNavigationControlFocus: NavigationFocus?
     var body: some View {
         GeometryReader { geometry in
             HStack(alignment: .top, spacing: 0) {
@@ -35,6 +37,7 @@ struct SidebarView: View {
             Task { await model.recheckDocumentationAfterActivation() }
         }
         .onDisappear { model.stopDocumentationMonitoring() }
+        .onChange(of: model.navigationFocus) { _, focus in applyNavigationFocus(focus) }
     }
 
     private var sidebar: some View {
@@ -82,30 +85,8 @@ struct SidebarView: View {
                 }
             }
 
-            HStack(spacing: 8) {
-                Button {
-                    Task { await model.goBack() }
-                } label: {
-                    Image(systemName: "chevron.backward")
-                }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .disabled(!model.canNavigateBack)
-                .accessibilityLabel("Back")
-                .accessibilityIdentifier("navigation-back")
-
-                Button {
-                    Task { await model.goForward() }
-                } label: {
-                    Image(systemName: "chevron.forward")
-                }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .disabled(!model.canNavigateForward)
-                .accessibilityLabel("Forward")
-                .accessibilityIdentifier("navigation-forward")
-            }
+            NavigationHistoryControls(model: model)
             .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("Navigation history")
 
             if let message = model.navigationRecoveryMessage {
                 Text(message)
@@ -113,6 +94,9 @@ struct SidebarView: View {
                     .foregroundStyle(RekonTheme.warning)
                     .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
                     .accessibilityIdentifier("navigation-recovery")
+                    .focusable()
+                    .focused($navigationControlFocus, equals: .recovery)
+                    .accessibilityFocused($accessibilityNavigationControlFocus, equals: .recovery)
             }
 
             if let currentProject = model.currentProject {
@@ -202,6 +186,18 @@ struct SidebarView: View {
         .padding(.horizontal, 8)
         .accessibilityLabel(route.title)
         .accessibilityIdentifier("sidebar-\(route.accessibilityID)")
+        .focused($navigationControlFocus, equals: .route(route))
+        .accessibilityFocused($accessibilityNavigationControlFocus, equals: .route(route))
+    }
+
+    private func applyNavigationFocus(_ focus: NavigationFocus?) {
+        switch focus {
+        case .route, .recovery:
+            navigationControlFocus = focus
+            accessibilityNavigationControlFocus = focus
+        default:
+            break
+        }
     }
 
     private func primaryCount(for route: AppRoute) -> Int? {
@@ -360,6 +356,10 @@ struct SidebarView: View {
                             get: { model.selectedTicketID },
                             set: { model.selectTicket($0) }
                         ),
+                        filter: Binding(
+                            get: { model.boardFilter(projectID: projectID, phaseID: board.phaseID) },
+                            set: { model.setBoardFilter($0, projectID: projectID, phaseID: board.phaseID) }
+                        ),
                         phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
                         selectActivePhase: { phaseID in
                             await model.setActivePhase(projectID: projectID, phaseID: phaseID)
@@ -383,7 +383,9 @@ struct SidebarView: View {
                         loadEvidencePreview: { evidenceID in
                             await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
                         },
-                        viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) }
+                        viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
+                        requestedFocus: model.navigationFocus,
+                        focusChanged: { model.setNavigationFocus($0) }
                     )
                 } else if let project = dashboard.projects.first(where: { $0.id == projectID }),
                           !project.phases.isEmpty {
@@ -440,6 +442,38 @@ struct SidebarView: View {
         }
     }
 
+}
+
+struct NavigationHistoryControls: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button {
+                Task { await model.goBack() }
+            } label: {
+                Image(systemName: "chevron.backward")
+            }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .keyboardShortcut("[", modifiers: .command)
+            .disabled(!model.canNavigateBack)
+            .accessibilityLabel("Back")
+            .accessibilityIdentifier("navigation-back")
+
+            Button {
+                Task { await model.goForward() }
+            } label: {
+                Image(systemName: "chevron.forward")
+            }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .keyboardShortcut("]", modifiers: .command)
+            .disabled(!model.canNavigateForward)
+            .accessibilityLabel("Forward")
+            .accessibilityIdentifier("navigation-forward")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Navigation history")
+    }
 }
 
 private struct DetailUnavailableView: View {
