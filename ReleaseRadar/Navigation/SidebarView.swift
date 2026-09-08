@@ -286,6 +286,9 @@ struct SidebarView: View {
                                 identity: identity
                             )
                         },
+                        loadEvidencePreview: { evidenceID in
+                            await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+                        },
                         previewDocumentationSetup: { try await model.previewDocumentationSetup(registration: $0) },
                         performDocumentationSetup: { try await model.performDocumentationSetup($0) },
                         previewArchive: { try await model.previewProjectLifecycle(projectID: projectID, transition: .archive) },
@@ -337,6 +340,9 @@ struct SidebarView: View {
                                 at: folder,
                                 identity: identity
                             )
+                        },
+                        loadEvidencePreview: { evidenceID in
+                            await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
                         },
                         viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) }
                     )

@@ -7,6 +7,18 @@ import XCTest
 
 @MainActor
 final class ManagedEvidenceRenderingTests: XCTestCase {
+    func testPhase3BReadablePreviewAtWideAndCompactWidths() async throws {
+        let evidence = EvidenceProjection(id: .init(rawValue: "phase3b-text"), label: "Preview evidence", path: "/synthetic/preview.md", isAvailable: true)
+        let preview = EvidencePreview(identity: evidence.locator, path: evidence.path, status: .available,
+                                      content: .text("# Verified preview\nReadable bounded evidence content.", isTruncated: false))
+        for width in [1100.0, 620.0] {
+            try await render(
+                ScrollView { EvidenceDetailView(evidence: evidence, loadPreview: { preview }, initialPreview: preview).padding(28) },
+                name: "phase3b-preview-\(Int(width))", width: width, height: 520
+            )
+        }
+    }
+
     func testEvidenceStatesAtWideAndCompactWidths() async throws {
         let cases: [(String, RepositoryDocumentArtifact.Lifecycle?, RepositoryDocumentArtifact.Authority?, ManagedDocumentResolutionFailure?)] = [
             ("proposed", .proposed, .supporting, nil), ("current", .active, .controlling, nil),
@@ -216,6 +228,10 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         if name.hasPrefix("m3c-evidence") {
             for label in ["Proposed", "Current", "Completed", "Superseded", "Archived", "Non-controlling", "Available", "pending acceptance", "not bound", "checksum"] {
                 XCTAssertTrue(axText.contains(label), "Missing actual AX state: \(label)")
+            }
+        } else if name.hasPrefix("phase3b-preview") {
+            for label in ["Preview evidence", "Legacy file path", "Available", "Verified preview", "Readable bounded evidence content"] {
+                XCTAssertTrue(axText.contains(label), "Missing actual AX preview state: \(label)")
             }
         } else if name == "m3c-maintenance-read-only" {
             XCTAssertTrue(axText.contains("Accepted repository"))

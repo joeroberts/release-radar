@@ -1,3 +1,5 @@
+import AppKit
+import Observation
 import SwiftUI
 import ReleaseRadarCore
 import RekonDesignSystem
@@ -63,10 +65,43 @@ struct EvidenceStatusPresentation: Equatable {
     }
 }
 
+struct EvidencePreviewRequestKey: Equatable, Sendable {
+    let evidenceID: EvidenceID
+    let locator: EvidenceLocator
+    let observationGeneration: UInt64?
+}
+
+@MainActor
+@Observable
+final class EvidencePreviewCoordinator {
+    private(set) var result: EvidencePreview?
+    private var generation: UInt64 = 0
+    private var key: EvidencePreviewRequestKey?
+
+    func load(key: EvidencePreviewRequestKey, loader: @escaping () async -> EvidencePreview) async {
+        generation &+= 1
+        let requestGeneration = generation
+        self.key = key
+        result = nil
+        let loaded = await loader()
+        guard generation == requestGeneration, self.key == key else { return }
+        result = loaded
+    }
+
+    func invalidate() {
+        generation &+= 1
+        key = nil
+        result = nil
+    }
+}
+
 struct EvidenceDetailView: View {
     let evidence: EvidenceProjection
     var documentationStatus: DocumentationObservationStatus? = nil
     var restoreFolderAccess: (() -> Void)? = nil
+    var loadPreview: (() async -> EvidencePreview)? = nil
+    var initialPreview: EvidencePreview? = nil
+    @State private var previewCoordinator = EvidencePreviewCoordinator()
     var body: some View {
         let presentation = EvidenceStatusPresentation(evidence, documentationStatus: documentationStatus)
         VStack(alignment: .leading, spacing: 5) {
@@ -79,6 +114,7 @@ struct EvidenceDetailView: View {
                 .font(.caption)
                 .foregroundStyle(presentation.availability == "Checking" ? Color.secondary : evidence.isAvailable ? Color.green : Color.orange)
             if let recovery = presentation.recovery { Text(recovery).font(.caption).foregroundStyle(.secondary) }
+            previewSection
             if canRestoreFolderAccess, let restoreFolderAccess {
                 Button("Restore folder access", action: restoreFolderAccess)
                     .buttonStyle(RekonSecondaryButtonStyle())
@@ -87,9 +123,15 @@ struct EvidenceDetailView: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .textSelection(.enabled)
-        .accessibilityElement(children: restoreFolderAccess == nil ? .ignore : .contain)
+        .accessibilityElement(children: restoreFolderAccess == nil && loadPreview == nil ? .ignore : .contain)
         .accessibilityLabel(presentation.accessibilityLabel)
         .accessibilityIdentifier("evidence-\(evidence.id.rawValue)")
+        .onChange(of: documentationStatus) { _, _ in
+            previewCoordinator.invalidate()
+        }
+        .onChange(of: evidence) { _, _ in
+            previewCoordinator.invalidate()
+        }
     }
 
     private var canRestoreFolderAccess: Bool {
@@ -97,6 +139,63 @@ struct EvidenceDetailView: View {
         return switch evidence.managedDocument?.failure {
         case .rootUnavailable, .staleRoot: true
         default: false
+        }
+    }
+
+    @ViewBuilder private var previewSection: some View {
+        if let loadPreview {
+        if previewCoordinator.result == nil && initialPreview == nil {
+            Button("Preview") {
+                Task {
+                    await previewCoordinator.load(
+                        key: .init(evidenceID: evidence.id, locator: evidence.locator,
+                                   observationGeneration: documentationStatus?.generation),
+                        loader: loadPreview
+                    )
+                }
+            }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .accessibilityIdentifier("evidence-preview-\(evidence.id.rawValue)")
+            .disabled(isChecking)
+        } else if let loadedPreview = previewCoordinator.result ?? initialPreview {
+            switch loadedPreview.status {
+            case .available:
+                if case let .text(text, isTruncated) = loadedPreview.content {
+                    ScrollView(.vertical) {
+                        Text(text).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                        .frame(maxWidth: .infinity, minHeight: 80, maxHeight: 260, alignment: .topLeading)
+                        .accessibilityIdentifier("evidence-preview-text-\(evidence.id.rawValue)")
+                    if isTruncated { Text("Preview truncated at 131,072 characters.").font(.caption).foregroundStyle(.secondary) }
+                } else if case let .raster(bytes, _, width, height) = loadedPreview.content, let image = NSImage(data: bytes) {
+                    Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 300)
+                        .accessibilityLabel("Evidence image preview, \(width) by \(height) pixels")
+                        .accessibilityIdentifier("evidence-preview-image-\(evidence.id.rawValue)")
+                }
+            case .unsupported: Text("This file format cannot be previewed safely.").font(.caption).foregroundStyle(.secondary)
+            case .oversized: Text("This file exceeds the 1 MiB preview limit.").font(.caption).foregroundStyle(.secondary)
+            case .rejected: Text("Preview unavailable because the current authorized content could not be verified.").font(.caption).foregroundStyle(.secondary)
+            case .inaccessible: Text("Preview unavailable outside authorized project folders. Restore primary folder access or reconnect the exact saved worktree, then retry.").font(.caption).foregroundStyle(.secondary)
+            case .missing: Text("The evidence file is missing from its saved location.").font(.caption).foregroundStyle(.secondary)
+            case .stale: Text("The saved folder authorization is stale. Restore or reconnect that exact folder, then retry.").font(.caption).foregroundStyle(.secondary)
+            }
+            Button("Refresh preview") { previewCoordinator.invalidate() }.buttonStyle(RekonSecondaryButtonStyle())
+        }
+        }
+    }
+
+    private var isChecking: Bool {
+        if case .checking = documentationStatus { return true }
+        return false
+    }
+}
+
+private extension DocumentationObservationStatus {
+    var generation: UInt64 {
+        switch self {
+        case let .checking(_, generation): generation
+        case let .observed(observation): observation.generation
         }
     }
 }

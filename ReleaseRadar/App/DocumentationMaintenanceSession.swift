@@ -47,6 +47,16 @@ final class DocumentationMaintenanceSession {
         catch { message = "Agent bridge unavailable. Owner evidence readback and folder recovery remain available in this window." }
     }
     func disconnect() { bridge?.disconnectCallback(); bridge = nil }
+    func previewEvidence(_ evidenceID: EvidenceID, projectID: ProjectID) async -> EvidencePreview {
+        guard projectID == selectedProjectID else {
+            return .init(identity: .filePath(""), path: nil, status: .rejected, content: nil)
+        }
+        let preview = await store.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+        guard projectID == selectedProjectID else {
+            return .init(identity: preview.identity, path: nil, status: .rejected, content: nil)
+        }
+        return preview
+    }
 }
 
 struct DocumentationMaintenanceView: View {
@@ -65,7 +75,17 @@ struct DocumentationMaintenanceView: View {
                     Text("Evidence").font(.title2.weight(.semibold))
                     if recovery.evidence.isEmpty { Text("No evidence recorded").foregroundStyle(.secondary) }
                     ForEach(recovery.evidence) { row in
-                        EvidenceDetailView(evidence: row).padding(.vertical, 6)
+                        EvidenceDetailView(
+                            evidence: row,
+                            loadPreview: {
+                                guard let projectID = session.selectedProjectID else {
+                                    return .init(identity: row.locator, path: nil, status: .rejected, content: nil)
+                                }
+                                return await session.previewEvidence(row.id, projectID: projectID)
+                            }
+                        )
+                        .id("\(session.selectedProjectID?.rawValue ?? "none")-\(row.id.rawValue)")
+                        .padding(.vertical, 6)
                         RekonSeparator()
                     }
                 }

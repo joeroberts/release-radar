@@ -671,6 +671,24 @@ final class AppModel {
         documentationObserver.status(for: projectID)
     }
 
+    func previewEvidence(projectID: ProjectID, evidenceID: EvidenceID) async -> EvidencePreview {
+        let serviceGeneration = documentationServiceGeneration
+        let currentStore = store
+        let currentObserver = documentationObserver
+        guard case let .observed(observation) = documentationObserver.status(for: projectID),
+              observation.evidence.contains(where: { $0.evidence.id == evidenceID }) else {
+            return .init(identity: .filePath(""), path: nil, status: .rejected, content: nil)
+        }
+        let preview = await currentStore.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+        guard serviceGeneration == documentationServiceGeneration,
+              currentStore === store,
+              currentObserver === documentationObserver,
+              currentObserver.status(for: projectID) == .observed(observation) else {
+            return .init(identity: preview.identity, path: nil, status: .rejected, content: nil)
+        }
+        return preview
+    }
+
     func projectRoot(for projectID: ProjectID) -> URL? {
         projectRoots[projectID]
     }
