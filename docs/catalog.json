@@ -4608,12 +4608,12 @@
       "artifactID": "rr-c7-backup-reset-recovery-brief-2026-09-07",
       "path": "docs/delivery/task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-07-c7-backup-reset-recovery",
       "supersedes": [],
       "applicationSensitivity": [
-        "prompt"
+        "none"
       ],
       "checksum": {
         "policy": "notApplicable"

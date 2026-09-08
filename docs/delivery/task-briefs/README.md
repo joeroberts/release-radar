@@ -367,7 +367,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-c7-backup-reset-recovery-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md](2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md) | document | supporting | active | none | none |
+| rr-c7-backup-reset-recovery-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md](2026-09-07-c7-backup-reset-recovery/c7-backup-reset-recovery-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

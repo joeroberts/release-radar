@@ -269,3 +269,28 @@ prior lifecycle acceptance and temporary-path inventories. Retained temporary C4
 builds/fixtures/logs/attachments/test-host outputs and rules-discovery `pilot.rules`/
 `pr-body.md` remain as inventoried there and in the C4 brief. No cleanup is authorized
 or performed. Prior broad-suite574/576 is historical, not a current whole-suite pass.
+
+## Final source merge and retained correction outputs
+
+Owner approval was received for PR #31 and exercised against exact `b4c33a4`; GitHub
+confirmed merge `50998de75f78a501315ce1434c4bd2175113f2e3` on 2026-09-08 UTC. Product
+review passed `7dd9763`; the final source branch change only recorded its result. The
+separate closeout review passed `5f0cd71` with no Required findings and no new files or
+temporary outputs. Current delivery status remains exclusively in [progress](../progress.md).
+
+Final writer report retains these temporary directories under worktree `89ef/release_radar/`:
+`build/c7-corrections`, `build/c7-corrective-red`, `build/c7-corrective-green`,
+`build/c7-corrective-recovery`, `build/c7-corrective-signed-host`,
+`build/c7-corrective-isolation`, `build/c7-corrective-release`, `build/c7-r7`,
+`build/c7-r7-final-tests`, `build/c7-r7-native`, `build/c7-r7-native-host`,
+`build/c7-r7-release`. Earlier reported build inventories above remain historical reports.
+The external synthetic folders are `/Users/Shared/ReleaseRadar-C7-SignedPicker.QVvAJK`
+and `/Users/Shared/ReleaseRadar-C7-SignedPicker-Corrective.Po4gPJ`; the latter contains
+backup package `3B5D4333-6401-4B1E-8CD7-3ABB1247142D`.
+Final reviewer reports retain `3c78/release_radar/ReleaseRadarTests/C7CorrectiveReviewTests.swift`,
+`/tmp/c7-final-review-01a07da3/`, `/tmp/c7-corrective-review-01a07da3/`,
+`/tmp/c7-independent-review-01a07da3/`, and test-host directories
+`ReleaseRadar-XCTestHost-51125`/`-56288` beneath app-container Data/tmp.
+No cleanup or fresh owner-container inventory was authorized or performed. These are
+temporary verification outputs, not controlling deliverables. All worker-owned processes
+were reported stopped and all bounded tasks archived.
