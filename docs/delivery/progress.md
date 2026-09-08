@@ -3,7 +3,7 @@
 ## Current outcome
 
 Phase 3 — Current documentation and evidence (C8/C9 and associated C12 recovery)
-is authorized; Phase 3A is merged and Phase 3B is entering delivery. Management and recovery C4–C7 remains
+is authorized; Phase 3A is merged and Phase 3B is undergoing correction review. Management and recovery C4–C7 remains
 complete in source through owner-approved PRs #28–#31 and documentation closeout
 [PR #32](https://github.com/joeroberts/release-radar/pull/32), merged at
 `cd16df1b0226aa8a08bd167364779103ebe86278`. The narrow C8 regular-`.DS_Store`
@@ -115,14 +115,21 @@ pushed in [PR #34](https://github.com/joeroberts/release-radar/pull/34). Direct 
 result readback reports 66 passed, 2 unchanged native-picker skips and 0 failed.
 Canonical preview evidence and compact/wide component captures are registered in
 the candidate catalog. They do not establish a full consumer click journey.
-Fresh independent Sol High reviewer `01a08169-57df-7903-acfc-4e413d14d9a3` is active
-on this exact candidate, covering code/security/UX and complete-brief evidence.
+Independent Sol High reviewer `01a08169-57df-7903-acfc-4e413d14d9a3` assessed
+this candidate, covering code/security/UX and complete-brief evidence.
 Independent review completed with four Required findings: maintenance retains stale
 preview content; legacy recovery does not distinguish outside-root, primary and
 worktree authorization failures; legacy limit/access errors are misclassified; and
 actual consumer activation/retry/recovery/withdrawal evidence is missing. No Optional
-findings were reported. The original Sol High writer is correcting these on the same
-branch; the same reviewer will assess the new candidate and affected checks.
+findings were reported. The original Sol High writer delivered correction candidate
+`7b34e7c9c68ab06b17e2a030fa66f331845c5164`, pushed to PR #34. Direct result
+readback confirms 73 passed, 2 unchanged native-picker skips and 0 failed; the
+subsequent corrected rendering run confirms 6 passed with no skips or failures.
+Canonical evidence records actual consumer Preview activation and refreshed
+rendering. The same reviewer is restored for the bounded R1–R4 correction pass;
+clearance remains pending. Raw results remain available under
+`/tmp/release-radar-phase3b-corrections-final` and
+`/tmp/release-radar-phase3b-corrections-render` until review readback.
 No merge is approved.
 
 ## Verification and material limitations
