@@ -144,7 +144,7 @@ struct PhaseBoardView: View {
                             RekonSeparator()
 
                             detail
-                                .frame(height: 260)
+                                .frame(minHeight: 420, alignment: .top)
                         }
                     }
                     .scrollIndicators(.automatic)
