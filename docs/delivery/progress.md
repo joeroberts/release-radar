@@ -2,192 +2,100 @@
 
 ## Current outcome
 
-Phase 3 — Current documentation and evidence (C8/C9 and associated C12 recovery)
-is authorized; Phase 3A is merged and Phase 3B is undergoing correction review. Management and recovery C4–C7 remains
-complete in source through owner-approved PRs #28–#31 and documentation closeout
-[PR #32](https://github.com/joeroberts/release-radar/pull/32), merged at
-`cd16df1b0226aa8a08bd167364779103ebe86278`. The narrow C8 regular-`.DS_Store`
-validator repair is complete and is not reopened.
+Phase 3 product delivery is merged: C8 documentation freshness and maintenance,
+C9 bounded evidence preview and identity/lifecycle handling, and their associated
+C12 health and same-folder recovery. Phase 3 documentation closeout is the active
+remaining task; its independent documentation review and owner-approved merge
+are pending. Phase 4 is not authorized.
 
-The controlling outcome is slice 3 of the
-[full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
-and the owner's explicit Phase 3 execution instruction: shared authorized documentation
-freshness across Overview, evidence and health; bounded identity-based evidence preview;
-and direct audited same-folder access recovery with truthful remaining catalog state.
-Issues [#18](https://github.com/joeroberts/release-radar/issues/18) and
-[#19](https://github.com/joeroberts/release-radar/issues/19) supply reported failures and
-acceptance criteria. No Phase 4 work is opened.
+The scope remains slice 3 of the
+[full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md),
+including reported failures [#18](https://github.com/joeroberts/release-radar/issues/18)
+and [#19](https://github.com/joeroberts/release-radar/issues/19).
+Management and recovery C4–C7 remains complete through PRs #28–#32. The narrow
+C8 regular-`.DS_Store` validator repair remains complete and is not reopened.
 
-## Current authorization
+## Delivered behavior and verification
 
-The owner authorizes Phase 3 source, tests, documentation, scoped commits, pushes and PR
-creation. Each PR merge requires separate owner approval. No installation, real project-data
-operation, application binding/catalog acceptance, plugin/cloud mutation, real notification,
-additional entitlement change, credential or owner-state repair, or cleanup is authorized.
-SQLite remains exclusively app-owned. Later planning, history, portability and companion
-features are compatibility consumers only; RDS appearance and light/dark feature work are
-excluded.
+- **Phase 3A:** shared registration/root/binding-scoped observation supplies
+  Overview, evidence and documentation health. External monitoring and activation
+  invalidate stale success; watching never repairs, accepts a catalog or mutates
+  delivery state. Direct exact-folder recovery preserves identities and the
+  accepted catalog while exposing remaining validation problems.
+  [PR #33](https://github.com/joeroberts/release-radar/pull/33) merged at
+  `7c4511dbab2762111d1b287efbceb148843dcccd` after owner approval.
+  [Verification](evidence/2026-09-07-phase3a-documentation-freshness.md) records
+  94 focused passes and 2 intentional native-only skips, then 7 affected
+  race-correction passes and 1 intentional skip. Independent review closed the
+  retired-store renewal and stale-projection races. The final owner-assisted
+  signed native run passed with real Space input and exact synthetic folder
+  selection: stale bookmark 1→0, exactly one restore audit, identities and
+  catalog preserved. Focus was established by the test; this is not proof of
+  Tab navigation. No broad filesystem exception was used.
+- **Phase 3B:** transient bounded UTF-8 text and raster previews retain managed
+  repository/artifact identity, lifecycle and authority. Legacy paths remain
+  distinct and readable only within existing same-project primary/worktree
+  grants. Limits and failure states are explicit; reads are bounded and
+  no-follow. Preview success is withdrawn on observation/selection/identity
+  changes, including live maintenance updates without Reload. Recovery routes
+  distinguish primary access, saved worktrees and outside-root legacy paths.
+  [PR #34](https://github.com/joeroberts/release-radar/pull/34) merged at
+  `92027e1a129c4ae0ce9fa99caa0e58783ab7f88b` after owner approval of reviewed
+  candidate `977656391fdd54ac02f278e0d71a39a023ad602f`.
+  [Verification](evidence/2026-09-08-phase3b-evidence-preview.md) records
+  75 passed, 2 unchanged native-picker skips and 0 failed. Direct result readback
+  confirmed native Preview activation in Overview, ticket detail and maintenance,
+  recovery/refresh/retry, and automatic withdrawal of rendered stale bytes.
+  Independent Sol High review closed all four Required findings on the final
+  candidate; no Required findings remain. Compact/wide captures are retained.
 
-Orchestrator `01a07e75-b254-72a1-be2a-3e97ac23baeb` owns this ledger and integration in
-fresh worktree `f703`, branch `codex/phase3-documentation-evidence`. A fresh origin fetch
-confirmed baseline `cd16df1b0226aa8a08bd167364779103ebe86278`. Creation requested Astra
-Medium; actual runtime settings are not exposed for independent confirmation. The exact
-unbudgeted Phase 3 execution goal is active and remains unfinished.
+The completed [3A brief](task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
+and [3B brief](task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md)
+retain the delivered acceptance scope. Test results establish their named scopes,
+not a passing whole suite or an installed-owner-app acceptance run. This closeout
+changes documentation only; it does not transfer test results to a new binary.
 
-Fresh Astra High chief-architect assessment `01a07e76-a1c5-7e02-a534-d237eec8c309`
-completed at the baseline with no files, tests, app launches or temporary artifacts and
-is archived after supported completion readback.
-It confirmed existing custody contracts and two sequential slices: shared freshness and
-same-folder recovery (3A), then bounded evidence content preview (3B). Native task listing
-omitted this completed task; its actual ID was recovered from narrowly filtered app logs
-and its completion verified through supported task readback. Earlier setup-blocked
-reports were incorrect; the assessment did run successfully.
+## Authorization and ownership
 
-[Phase 3A controlling brief](task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
-records the source-backed gaps, acceptance and isolated verification boundary.
-Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` delivered source/evidence commit
-`74089746e255958b8810139457c5fc796aab838a` from brief baseline `a4d5e06` in
-worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High. Its candidate
-`b296fe9467187054267f5eed667ba8c731267d85` includes the required progress update and
-is pushed in [PR #33](https://github.com/joeroberts/release-radar/pull/33).
-The writer corrected both Required P1 race findings in pushed candidate
-`3a8d77bb317f760e379967ba2f91a7090a711aa8`: retired folder-renewal authorization is
-fenced before service/store replacement, and superseded projection preparation
-cannot overwrite newer documentation/evidence. Independent reviewer
-`01a07ef7-9e05-7903-bc94-7e13c3322f95` closed both findings on that candidate with
-no Required or Optional correction findings. Its direct readback of the final
-correction result reported 7 passed, 1 intentional signed-picker skip and 0 failed,
-including both controlled interleaving regressions. Documentation and diff checks
-passed. Requested writer/reviewer profile is Sol High; runtime settings are unexposed.
-Final candidate `df75437c3d8d221eb3adbf1b4834ab0711c35973` is pushed in
-PR #33 and adds only the focused acceptance test and its canonical evidence after
-the reviewed production corrections. The owner supplied real Space input and
-selected the exact synthetic folder through the shared native chooser. Direct
-readback of `phase3a-native-user-assisted-rerun-4.xcresult` reports 1 passed,
-0 skipped and 0 failed: real renewal, stale bookmark 1→0, exactly one restore
-audit and preserved registration/root/binding/catalog. The test establishes and
-reads back button focus before observing Space; it does not claim a Tab-navigation
-journey. Restricted signed-host verification passed and the final host exited.
-The correction reviewer completed its assignment and is archived; its result is
-preserved above. The owner approved PR #33, merged at
-`7c4511dbab2762111d1b287efbceb148843dcccd`. Phase 3B now proceeds from the
-integrated committed baseline with its active
-[brief](task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md).
+The owner authorized Phase 3 source, tests, documentation, scoped commits, pushes,
+PR creation and separate delivery/review tasks. PR #33 and PR #34 have explicit
+merge approval and are merged. The documentation closeout merge needs its own
+owner approval. Orchestrator `01a07e75-b254-72a1-be2a-3e97ac23baeb` owns this
+ledger/catalog integration on `codex/phase3-documentation-evidence` in `f703`.
+Completed Phase 3 writers, independent reviewer tasks and architecture assessment
+are archived after results were preserved and completion read back. Requested
+models/efforts and correction history are in the
+[Historical record](archive/2026-09-08-phase3-delivery-history.md); actual runtime
+settings were not exposed for independent confirmation.
 
-Earlier raw result bundles disappeared after task archival/restoration; committed
-evidence and screenshots remain preserved. Current correction results remain in
-the writer worktree for readback; no cleanup was authorized.
+No installation, owner-project data operation, application binding/catalog
+acceptance, external service/notification or plugin mutation, credential repair,
+entitlement change or cleanup is authorized. SQLite remains exclusively app-owned.
+Phase 4, RDS appearance changes and light/dark feature work remain excluded.
 
-The candidate's focused checks report 94 passed and 2 native-only skips; Debug
-build and repository documentation checks pass. Signed synthetic AX opening and
-cancellation of the real picker passed without a broad filesystem entitlement.
-The later owner-assisted signed run closes keyboard activation and successful
-selection-to-bookmark-renewal verification; see its final evidence above. The candidate preserves a concise
-evidence record and four compact/wide screenshots under `docs/delivery/evidence/`.
-Broader runs exposed failures outside the focused suites; these do not constitute
-passing whole-suite evidence and unrelated repairs are not authorized.
+## Material limitations and retained history
 
-Before any app or test launch, inspection confirmed the existing XCTest host creates a
-PID-specific synthetic store and bypasses normal app startup/termination services. Native
-sandbox verification still requires actual signed-host entitlement checks with no broad
-filesystem exception, synthetic dependencies and numeric-PID UI targeting. No app or test
-runner has been launched by this orchestrator.
+The last authorized canonical application inventory reported `bindingMissing`
+and `isComplete:false` for `project-fffdc0e0b15b9b86`. No new application readback
+or catalog acceptance is authorized. Repository documentation validation does not
+claim application synchronization or repair that binding.
 
-Phase 3B writer `01a08140-0c86-75f3-a124-a3a3232b2da6` confirmed fresh worktree
-`6dd9`, branch `codex/phase3b-evidence`, and exact integrated baseline
-`c3e19fa39b26a79b7d0d74592b4e4f9323f53edc`. Initially requested Terra Medium, escalated to Sol High within the brief ceiling
-for multi-root authorization and stale-result integration after repeated incomplete
-checkpoints. Actual runtime settings are not exposed. Its complete bounded-preview assignment follows the
-active Phase 3B brief; parent retains ledger/catalog/index ownership. Phase 3A's
-completed writer is archived after its evidence was committed and merge verified.
+Earlier C7 launch/credential incidents remain unresolved as to owner-state effects:
+a normal app launch may have initialized default services, and a test-runner help
+command exposed Jira/Pushover credentials in a writer transcript. The owner was
+informed; no secret values are recorded here and no repair or rotation was performed.
+See [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
+During the initial Phase 3A review, a reviewer initiated an unauthorized prompt-only
+external security scan/preflight; external calls stopped, with no further mutation
+or cancellation performed. Subsequent correction reviews remained local.
 
-The standing architect resolved Phase 3B legacy authorization from existing contracts:
-use fresh grants for this project's primary root or separately authorized worktrees;
-preserve external locators as inaccessible without reading outside saved roots. Legacy
-readability is independent of managed catalog acceptance, and worktree results must be
-fenced by their actual granting root. Existing exact-root/worktree recovery applies;
-no new file grants or schema are required. Assessment task
-`01a07e76-a1c5-7e02-a534-d237eec8c309` completed read-only and is archived. The writer
-received this interpretation and continues complete preview acceptance coverage.
+Some historical Phase 3A raw bundles disappeared with earlier worktree archival;
+committed evidence and screenshots remain. Final Phase 3B raw results are cited
+under `/tmp/release-radar-phase3b-*`; temporary builds, exports and synthetic
+fixtures were retained, with no cleanup. Their deletion requires exact owner
+authorization. Canonical checkout and unrelated files remain preserved.
 
-Phase 3B candidate `e395d90c14762aa47c31ef1d0ab2712877e15150` is committed and
-pushed in [PR #34](https://github.com/joeroberts/release-radar/pull/34). Direct final
-result readback reports 66 passed, 2 unchanged native-picker skips and 0 failed.
-Canonical preview evidence and compact/wide component captures are registered in
-the candidate catalog. They do not establish a full consumer click journey.
-Independent Sol High reviewer `01a08169-57df-7903-acfc-4e413d14d9a3` assessed
-this candidate, covering code/security/UX and complete-brief evidence.
-Independent review completed with four Required findings: maintenance retains stale
-preview content; legacy recovery does not distinguish outside-root, primary and
-worktree authorization failures; legacy limit/access errors are misclassified; and
-actual consumer activation/retry/recovery/withdrawal evidence is missing. No Optional
-findings were reported. The original Sol High writer delivered correction candidate
-`7b34e7c9c68ab06b17e2a030fa66f331845c5164`, pushed to PR #34. Direct result
-readback confirms 73 passed, 2 unchanged native-picker skips and 0 failed; the
-subsequent corrected rendering run confirms 6 passed with no skips or failures.
-Canonical evidence records actual consumer Preview activation and refreshed
-rendering. The same reviewer is restored for the bounded R1–R4 correction pass;
-R2 (recovery routing), R3 (error mapping), and R4 (interactive evidence) are
-closed. R1 remains Required: maintenance generation advances only on explicit
-load/selection, so successful previews can survive external edits/access or
-identity changes until manual Reload. The original writer delivered and pushed
-`977656391fdd54ac02f278e0d71a39a023ad602f`, connecting the existing observer
-to selected-project monitoring and view lifetime. Direct readback of the final
-`/tmp/release-radar-phase3b-live-final` result confirms 75 passed, 2 unchanged
-native-picker skips and 0 failed, including external source-change and native
-rendered-text withdrawal tests without Reload. The same independent reviewer closed R1 on this exact candidate after source
-and direct result readback; R2–R4 remain closed. No Required findings remain.
-PR #34 is ready for the separately required owner merge approval.
-The writer and reviewer completed their assignments and are archived after
-result readback; their durable source, evidence and review outcome are preserved.
-Raw results remain available under
-`/tmp/release-radar-phase3b-corrections-final` and
-`/tmp/release-radar-phase3b-corrections-render` until review readback.
-No merge is approved.
-
-## Verification and material limitations
-
-Prior C7 independent Astra High review passed source candidate `7dd9763` with no Required
-findings. Four focused regressions passed independently; the reviewer read the 20/20 recovery
-result and inspected the existing signed native picker evidence. The picker test used a
-synthetic host with production filesystem entitlements, no broad filesystem exception,
-verified before/after launch. One selected external folder received a validated backup with
-no staging left. Source entitlements changed only user-selected read-only to read-write;
-App Sandbox and other source entitlements remain unchanged. Compact/wide RDS, accessibility,
-recovery/migration and prior passing integration checks remain as documented; no whole-suite
-or installed-owner-app acceptance is claimed. Native documentation and diff checks passed.
-
-C4's earlier shipping folder-grant limitation was disclosed and accepted with its source
-merge; C7's no-broad-filesystem picker evidence does not retroactively claim that C4 runtime
-journey was exercised. The existing disabled-broker and unrelated disposable-copy fixture
-limits remain outside this phase's changes.
-
-Two earlier C7 verification incidents remain unresolved as to owner-state effects: an
-accidental normal launch may have initialized default services, and a test-runner help
-command exposed Jira/Pushover credentials in the writer transcript. The owner was informed
-that rotation is needed. No values are stored here; no owner-state inspection/repair or
-credential change was performed to resolve that uncertainty. See the exact scope in
-[C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
-
-During the initial Phase 3A review, the reviewer initiated an unauthorized prompt-only
-external security scan and preflight update. It stopped external calls after correction
-of scope; no cancellation or further external mutation was authorized or performed.
-The correction review remained local.
-
-The last supported canonical application inventory reported `bindingMissing`,
-`isComplete:false` for `project-fffdc0e0b15b9b86`. No application readback or catalog acceptance
-is authorized in this phase, so repository validation does not claim managed-current
-synchronization. Canonical checkout, retained builds and unrelated files are preserved.
-
-## Retained history and next eligible work
-
-[Historical C7 coordination history](archive/2026-09-07-c7-delivery-history.md) retains closed detail,
-review outcomes and reported temporary inventories. [Historical C6 history](archive/2026-09-07-c6-delivery-history.md),
-[Historical C5 history](archive/2026-09-07-recovery-through-c5.md), and
-[Historical C4/discovery history](archive/2026-09-07-recovery-through-c4-and-parallel-discoveries.md)
-remain non-authoritative. Temporary build outputs, synthetic backups and review files are
-retained; deletion requires exact owner authorization. No cleanup was performed.
-
-The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 is owner-approved and merged. Phase 3B bounded evidence preview
-is the next authorized delivery slice. Phase 4 is not authorized. Completed C4–C7 verification and historical
-records remain closed except where a concrete Phase 3 regression requires an affected check.
+[Historical Phase 3 record](archive/2026-09-08-phase3-delivery-history.md) and
+[Historical C7 record](archive/2026-09-07-c7-delivery-history.md) retain closed coordination,
+prior checks and temporary-output reports. Current next work is documentation
+closeout review and its owner-approved merge; no later product slice is opened.

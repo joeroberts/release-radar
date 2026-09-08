@@ -412,7 +412,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase3a-freshness-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md](2026-09-07-phase3a-freshness/phase3a-freshness-brief.md) | document | supporting | active | none | none |
+| rr-phase3a-freshness-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md](2026-09-07-phase3a-freshness/phase3a-freshness-brief.md) | document | supporting | completed | none | none |
 
 ### Children
 
@@ -432,7 +432,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase3b-evidence-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md](2026-09-07-phase3b-evidence/phase3b-evidence-brief.md) | document | supporting | active | none | none |
+| rr-phase3b-evidence-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md](2026-09-07-phase3b-evidence/phase3b-evidence-brief.md) | document | supporting | completed | none | none |
 
 ### Children
 
