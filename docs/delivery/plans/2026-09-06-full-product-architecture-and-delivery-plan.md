@@ -186,6 +186,36 @@ mechanics are implementation decisions within accepted semantics. They do not ne
 additional owner questionnaires. Risk-triggered independent review covers changed
 architecture, security/privacy and UX/QA without duplicate approval layers.
 
+### Shared execution integration assessment — proposed, non-gating — 2026-09-08
+
+The owner authorized recording the completed chief-architect assessment from task
+`01a0829a-0f61-7bf3-9435-d64faf9afccd`; this is not design approval, a priority
+change, a new assignment or implementation authorization. The recommendation is
+compatible shared-standard, bounded context, existing-check, version and explicit
+adoption work alongside Phase 5, with shared-source integration after Phase 4
+source closeout. It is not a default prerequisite or release gate for either phase.
+Phase 5 retains ownership of placement, lifecycle, proposal baselines, successors
+and goal coverage; integration must consume those decisions when accepted.
+
+Reuse the existing documentation checker and report actual checker/version, scope,
+source revision and dirty or unknown applicability, distinguishing passed, failed,
+skipped and unavailable results. Source inspection at `6f528c5` found current
+command transaction receipts already bound to registration and request generation.
+The older run-discovery missing-registration statement remains historical evidence,
+not a current implementation requirement. Those receipts are not test, reviewer or
+run attestations. A catalog digest identifies metadata, not approval of mutable
+content or the identity of tested code. New authoritative completion/check gates,
+verified reviewer identity and run attestations remain separately proposed
+P10/P17/D13 or runtime scope; ADR-006 guidance v3 remains reserved for Issue #1/P10.
+
+Run Guard remains conditional and I9 remains no-go. Exact consumer instruction
+supersession and adoption need later explicit authorization, preserving product
+completeness, security/privacy, recovery, independent review, owner acceptance and
+ledger authority. Perspective's canonical root also needs clarification. The
+assessment inspected source and test definitions, without runtime verification or
+application readback. Recording it authorizes no hooks, installation, consumer
+changes or app-state mutation, and does not accept or synchronize a catalog.
+
 ## Owner-approved roadmap additions — 2026-09-06
 
 The owner approved including all six recommendations below. Their inclusion is
