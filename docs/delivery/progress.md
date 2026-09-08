@@ -50,6 +50,8 @@ Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` delivered source/evidence commit
 worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High. Its candidate
 `b296fe9467187054267f5eed667ba8c731267d85` includes the required progress update and
 is pushed in [PR #33](https://github.com/joeroberts/release-radar/pull/33).
+The writer has stopped and is archived; restore the same assignment only for Required
+corrections. Temporary outputs are retained as listed in its candidate evidence.
 Fresh independent combined code, authorization/security and UX/QA review
 `01a07ef7-9e05-7903-bc94-7e13c3322f95` is active against that candidate, requested
 Sol High. Runtime model/effort are unexposed. Phase 3A is not complete or ready for
