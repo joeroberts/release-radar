@@ -59,8 +59,16 @@ no Required or Optional correction findings. Its direct readback of the final
 correction result reported 7 passed, 1 intentional signed-picker skip and 0 failed,
 including both controlled interleaving regressions. Documentation and diff checks
 passed. Requested writer/reviewer profile is Sol High; runtime settings are unexposed.
-The writer remains active for separate keyboard activation and successful signed
-selection-to-bookmark-renewal verification. Phase 3A is not yet ready for merge
+The writer prepared a focused, opt-in user-assisted acceptance test for keyboard
+activation and successful signed selection-to-bookmark renewal. It uses the real
+chooser and AppModel callback against synthetic state, checks focused Space input,
+one restore audit and preserved registration/root/binding/catalog. The final
+noninteractive readiness result reports 1 passed, 1 intentional interactive skip
+and 0 failed. The isolated interactive host has not been launched; the owner has
+been asked to confirm availability for the keyboard/folder-selection step.
+The current blocker is owner availability for that prepared native verification.
+The correction reviewer has completed its assignment and is archived; its result
+is preserved above. Phase 3A is not yet ready for merge
 approval. Phase 3B remains prepared and depends on reviewed, approved 3A.
 Earlier raw result bundles disappeared after task archival/restoration; committed
 evidence and screenshots remain preserved. Current correction results remain in
