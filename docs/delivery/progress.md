@@ -127,7 +127,13 @@ readback confirms 73 passed, 2 unchanged native-picker skips and 0 failed; the
 subsequent corrected rendering run confirms 6 passed with no skips or failures.
 Canonical evidence records actual consumer Preview activation and refreshed
 rendering. The same reviewer is restored for the bounded R1–R4 correction pass;
-clearance remains pending. Raw results remain available under
+R2 (recovery routing), R3 (error mapping), and R4 (interactive evidence) are
+closed. R1 remains Required: maintenance generation advances only on explicit
+load/selection, so successful previews can survive external edits/access or
+identity changes until manual Reload. The original writer is connecting live
+observation and testing withdrawal after external change without Reload. Only
+this required correction remains open; the same reviewer will assess it.
+Raw results remain available under
 `/tmp/release-radar-phase3b-corrections-final` and
 `/tmp/release-radar-phase3b-corrections-render` until review readback.
 No merge is approved.
