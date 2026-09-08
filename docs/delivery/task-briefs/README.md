@@ -307,7 +307,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-c4-root-management-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c4-root-management/c4-root-management-brief.md](2026-09-07-c4-root-management/c4-root-management-brief.md) | document | supporting | active | none | none |
+| rr-c4-root-management-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c4-root-management/c4-root-management-brief.md](2026-09-07-c4-root-management/c4-root-management-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -327,7 +327,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-c5-archive-restore-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c5-archive-restore/c5-archive-restore-brief.md](2026-09-07-c5-archive-restore/c5-archive-restore-brief.md) | document | supporting | active | none | none |
+| rr-c5-archive-restore-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c5-archive-restore/c5-archive-restore-brief.md](2026-09-07-c5-archive-restore/c5-archive-restore-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -347,7 +347,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-c6-remove-tracking-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md](2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md) | document | supporting | active | none | none |
+| rr-c6-remove-tracking-brief-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md](2026-09-07-c6-remove-tracking/c6-remove-tracking-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
