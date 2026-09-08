@@ -53,6 +53,7 @@ final class AppModel {
     var dashboard: DashboardProjection?
     var selectedTicketID = TicketID(rawValue: "VD2-08")
     private(set) var navigationHistory = NavigationHistory(initial: .projects)
+    private(set) var navigationRecoveryMessage: String?
     var dashboardError: String?
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
     var codexPluginState: CodexPluginPresentationState = .checking
@@ -335,9 +336,22 @@ final class AppModel {
         }
         guard moved else { return }
         let entry = navigationHistory.current
+        navigationRecoveryMessage = nil
+        if let projectID = entry.route.projectID,
+           dashboard?.projects.contains(where: { $0.id == projectID }) != true {
+            selectedProjectID = nil
+            selection = .projects
+            selectedTicketID = TicketID(rawValue: "")
+            navigationRecoveryMessage = "The project previously shown here is no longer available. Projects remains selected."
+            return
+        }
         selection = entry.route
         if let projectID = entry.route.projectID, let phaseID = entry.phaseID {
-            viewedPhaseIDs[Data(projectID.rawValue.utf8)] = phaseID
+            if dashboard?.board(for: projectID, phaseID: phaseID) != nil {
+                viewedPhaseIDs[Data(projectID.rawValue.utf8)] = phaseID
+            } else {
+                navigationRecoveryMessage = "The previously viewed phase is unavailable. The current project view is retained."
+            }
         }
         selectedTicketID = entry.selectedTicketID ?? TicketID(rawValue: "")
     }

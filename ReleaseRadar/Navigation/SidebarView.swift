@@ -107,6 +107,14 @@ struct SidebarView: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Navigation history")
 
+            if let message = model.navigationRecoveryMessage {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(RekonTheme.warning)
+                    .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
+                    .accessibilityIdentifier("navigation-recovery")
+            }
+
             if let currentProject = model.currentProject {
                 RekonSeparator()
                     .padding(.horizontal, 12)
