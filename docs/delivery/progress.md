@@ -138,6 +138,8 @@ native-picker skips and 0 failed, including external source-change and native
 rendered-text withdrawal tests without Reload. The same independent reviewer closed R1 on this exact candidate after source
 and direct result readback; R2–R4 remain closed. No Required findings remain.
 PR #34 is ready for the separately required owner merge approval.
+The writer and reviewer completed their assignments and are archived after
+result readback; their durable source, evidence and review outcome are preserved.
 Raw results remain available under
 `/tmp/release-radar-phase3b-corrections-final` and
 `/tmp/release-radar-phase3b-corrections-render` until review readback.
