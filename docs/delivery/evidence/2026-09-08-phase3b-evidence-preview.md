@@ -24,8 +24,8 @@ credentials, external service or persisted delivery state was used.
   evidence relocation rather than ineffective folder recovery.
 - Preview content is transient. Observation, selection, root, registration or
   service invalidation withdraws content and rejects late results. This fence
-  applies to AppModel and documentation-maintenance reloads as well as the
-  shared preview coordinator.
+  applies to AppModel, documentation-maintenance live observation and reloads,
+  and the shared preview coordinator.
 
 ## Direct checks
 
@@ -35,28 +35,28 @@ external denial, missing files, stale grants, bookmark-access failure, the
 repository reader's greater-than-32-MiB cap, symlink rejection, zero preview
 side effects, an in-flight bookmark replacement, strict UTF-8, labelled text
 truncation and late-result withdrawal. AppModel and documentation-maintenance
-tests exercise success plus during/after-read observation withdrawal. Native
-host tests activate the real Preview control in the evidence component and in
-the Project Overview, ticket detail and documentation-maintenance consumers;
-they also exercise inaccessible worktree guidance, its recovery action, refresh
-and successful retry.
+tests exercise success plus during/after-read observation withdrawal. The
+maintenance regression also changes the observed source after a successful
+preview and proves that the next live observation withdraws access without a
+manual load or reload. Native host tests activate the real Preview control in
+the evidence component and in the Project Overview, ticket detail and
+documentation-maintenance consumers; they also prove that this live source
+change removes already-rendered preview bytes, and exercise inaccessible
+worktree guidance, its recovery action, refresh and successful retry.
 
 Final focused result bundle:
-`/tmp/release-radar-phase3b-corrections-final/Logs/Test/Test-ReleaseRadar-2026.09.08_10-54-12--0400.xcresult`.
-Direct `xcresulttool` readback reports 73 passed, 2 skipped and 0 failed across
+`/tmp/release-radar-phase3b-live-final/Logs/Test/Test-ReleaseRadar-2026.09.08_11-21-42--0400.xcresult`.
+Direct `xcresulttool` readback reports 75 passed, 2 skipped and 0 failed across
 the preview, shared-observation, managed-presentation, rendering, managed
 resolution, root-management, relocation, maintenance and
 documentation-rendering suites. The two skips remain the unchanged signed,
 owner-assisted native folder-picker scenarios.
 
-After the combined run exposed a screenshot-host sizing issue, the bounded
-rendering suite was rerun and passed 6 tests at
-`/tmp/release-radar-phase3b-corrections-render/Logs/Test/Test-ReleaseRadar-2026.09.08_10-56-45--0400.xcresult`.
 The focused native host used accessibility to press the actual Preview button
 before reading UI state and capturing both 620- and 1,100-point layouts.
 Accessibility readback contained locator identity, availability and readable
 preview content at both sizes. The canonical screenshots below were exported
-from that post-interaction run and visually inspected at 1,240×1,040 and
+from the prior post-interaction rendering run and visually inspected at 1,240×1,040 and
 2,200×1,040 pixels respectively. Their exported bytes match the existing
 canonical files, so no binary diff is expected.
 

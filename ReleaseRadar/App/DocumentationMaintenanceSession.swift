@@ -16,11 +16,17 @@ final class DocumentationMaintenanceSession {
     private(set) var message: String?
     private var bridge: AgentBridgeApplicationHost?
     private let previewLoader: @Sendable (ProjectID, EvidenceID) async -> EvidencePreview
+    private let documentationObserver: DocumentationObservationCoordinator
+    private let monitoringInterval: Duration
+    @ObservationIgnored private var documentationMonitoringTask: Task<Void, Never>?
     var selectedProjectID: ProjectID?
     private(set) var evidenceObservationGeneration: UInt64 = 0
+    private(set) var documentationObservationStatus: ProjectDocumentationObservation?
 
     init(databaseURL: URL, mode: DocumentationMaintenanceMode,
-         previewLoader: (@Sendable (ProjectID, EvidenceID) async -> EvidencePreview)? = nil) throws {
+         previewLoader: (@Sendable (ProjectID, EvidenceID) async -> EvidencePreview)? = nil,
+         documentationObserver: DocumentationObservationCoordinator? = nil,
+         monitoringInterval: Duration = .seconds(1)) throws {
         self.mode = mode
         let openedStore = try mode == .readOnly ? DeliveryStore(existingReadOnlyDatabaseURL: databaseURL)
             : DeliveryStore.documentationMaintenance(databaseURL: databaseURL)
@@ -28,11 +34,33 @@ final class DocumentationMaintenanceSession {
         self.previewLoader = previewLoader ?? { projectID, evidenceID in
             await openedStore.previewEvidence(projectID: projectID, evidenceID: evidenceID)
         }
+        let onboarding = FolderProjectOnboarding(store: openedStore)
+        self.documentationObserver = documentationObserver ?? DocumentationObservationCoordinator { projectID in
+            for _ in 0..<2 {
+                do {
+                    return DocumentationObservationPayload(
+                        try await onboarding.inspectProjectDocumentation(projectID: projectID)
+                    )
+                } catch ProjectDocumentationObservationError.staleContext {
+                    continue
+                } catch {
+                    break
+                }
+            }
+            return .init(
+                identity: .init(projectID: projectID, registration: nil, rootID: nil, rootPath: nil, binding: nil),
+                checkedAt: Date(),
+                documentationState: .legacy(.unavailable),
+                evidence: []
+            )
+        }
+        self.monitoringInterval = monitoringInterval
     }
     func load() async {
         evidenceObservationGeneration &+= 1
         let generation = evidenceObservationGeneration
         recovery = nil
+        documentationObservationStatus = nil
         do {
             let nextProjects = try await store.read { c in
                 var rows: [Project] = [], offset: Int64 = 0
@@ -52,14 +80,49 @@ final class DocumentationMaintenanceSession {
         evidenceObservationGeneration &+= 1
         let generation = evidenceObservationGeneration
         recovery = nil
+        documentationObservationStatus = nil
         await loadSelectedProject(generation: generation)
     }
     private func loadSelectedProject(generation: UInt64) async {
-        guard let selectedProjectID else { return }
+        guard let selectedProjectID else {
+            documentationObserver.retain(projectIDs: [])
+            documentationObservationStatus = nil
+            return
+        }
+        documentationObserver.retain(projectIDs: [selectedProjectID])
+        guard let observation = await documentationObserver.refresh(
+            projectID: selectedProjectID,
+            withdrawCurrent: true
+        ) else { return }
         let model = RepositoryRecoveryModel(store: store, projectID: selectedProjectID, allowsRelocation: mode == .commands)
         await model.load()
-        guard generation == evidenceObservationGeneration, selectedProjectID == self.selectedProjectID else { return }
+        guard generation == evidenceObservationGeneration,
+              selectedProjectID == self.selectedProjectID,
+              documentationObserver.status(for: selectedProjectID) == .observed(observation) else { return }
+        documentationObservationStatus = observation
         recovery = model
+    }
+    func startDocumentationMonitoring() {
+        guard documentationMonitoringTask == nil else { return }
+        documentationMonitoringTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                do { try await Task.sleep(for: self.monitoringInterval) }
+                catch { return }
+                await self.refreshSelectedProjectObservation()
+            }
+        }
+    }
+    func stopDocumentationMonitoring() {
+        documentationMonitoringTask?.cancel()
+        documentationMonitoringTask = nil
+    }
+    private func refreshSelectedProjectObservation() async {
+        guard selectedProjectID != nil else { return }
+        evidenceObservationGeneration &+= 1
+        let generation = evidenceObservationGeneration
+        documentationObservationStatus = nil
+        await loadSelectedProject(generation: generation)
     }
     func connectExistingBridge() async {
         do { bridge = try await AgentBridgeApplicationHost.startDocumentationMaintenance(store: store, mode: mode) }
@@ -68,12 +131,16 @@ final class DocumentationMaintenanceSession {
     func disconnect() { bridge?.disconnectCallback(); bridge = nil }
     func previewEvidence(_ evidenceID: EvidenceID, projectID: ProjectID) async -> EvidencePreview {
         let generation = evidenceObservationGeneration
-        guard projectID == selectedProjectID, recovery?.evidence.contains(where: { $0.id == evidenceID }) == true else {
+        guard projectID == selectedProjectID,
+              recovery?.evidence.contains(where: { $0.id == evidenceID }) == true,
+              case let .observed(observation) = documentationObserver.status(for: projectID),
+              observation.evidence.contains(where: { $0.evidence.id == evidenceID }) else {
             return .init(identity: .filePath(""), path: nil, status: .rejected, content: nil)
         }
         let preview = await previewLoader(projectID, evidenceID)
         guard generation == evidenceObservationGeneration, projectID == selectedProjectID,
-              recovery?.evidence.contains(where: { $0.id == evidenceID }) == true else {
+              recovery?.evidence.contains(where: { $0.id == evidenceID }) == true,
+              documentationObserver.status(for: projectID) == .observed(observation) else {
             return .init(identity: preview.identity, path: nil, status: .rejected, content: nil)
         }
         return preview
@@ -100,6 +167,9 @@ struct DocumentationMaintenanceView: View {
                         ForEach(recovery.evidence) { row in
                             EvidenceDetailView(
                                 evidence: row,
+                                documentationStatus: session.documentationObservationStatus.map(
+                                    DocumentationObservationStatus.observed
+                                ),
                                 freshnessGeneration: session.evidenceObservationGeneration,
                                 restoreFolderAccess: {
                                     withAnimation {
@@ -128,7 +198,11 @@ struct DocumentationMaintenanceView: View {
                 }.padding(28).frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .task { await session.load() }
+        .task {
+            await session.load()
+            session.startDocumentationMonitoring()
+        }
         .task(id: session.selectedProjectID) { await session.selectProject() }
+        .onDisappear { session.stopDocumentationMonitoring() }
     }
 }

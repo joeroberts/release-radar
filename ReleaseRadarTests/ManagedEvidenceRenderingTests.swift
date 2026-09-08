@@ -118,6 +118,62 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         XCTAssertEqual(callCount, 3)
     }
 
+    func testPhase3BLiveMaintenanceObservationWithdrawsRenderedPreviewWithoutReload() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-LiveMaintenancePreview-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appendingPathComponent("notes.md")
+        try Data("before".utf8).write(to: source)
+        let projectID = ProjectID(rawValue: "live-maintenance")
+        let evidenceID = EvidenceID(rawValue: "live-evidence")
+        let readback = EvidenceReadback(
+            evidence: .init(id: evidenceID, projectID: projectID, ticketID: nil,
+                            locator: .filePath(source.path), isAvailable: true),
+            managedDocument: nil
+        )
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Live maintenance render fixture") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES (?, 'Live maintenance')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id) VALUES (?, 'registration')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO evidence (id, project_id, path) VALUES (?, ?, ?)", bindings: [.text(evidenceID.rawValue), .text(projectID.rawValue), .text(source.path)])
+        }
+        let observer = DocumentationObservationCoordinator { requestedProjectID in
+            let current = (try? Data(contentsOf: source)) == Data("before".utf8)
+            return .init(
+                identity: .init(projectID: requestedProjectID, registration: nil, rootID: nil,
+                                rootPath: directory.path, binding: nil),
+                checkedAt: Date(), documentationState: .legacy(.unavailable),
+                evidence: current ? [readback] : []
+            )
+        }
+        let session = try DocumentationMaintenanceSession(
+            databaseURL: store.databaseURL,
+            mode: .readOnly,
+            previewLoader: { _, _ in
+                .init(identity: readback.evidence.locator, path: source.path, status: .available,
+                      content: .text("Live maintenance preview bytes", isTruncated: false))
+            },
+            documentationObserver: observer,
+            monitoringInterval: .seconds(1)
+        )
+        await session.load()
+
+        try await render(
+            DocumentationMaintenanceView(session: session),
+            name: "phase3b-live-maintenance-withdrawal", width: 800, height: 850,
+            pressIdentifiers: ["evidence-preview-live-evidence"],
+            afterPress: {
+                try Data("after".utf8).write(to: source)
+                for _ in 0..<150 {
+                    if session.documentationObservationStatus?.evidence.isEmpty == true { break }
+                    try await Task.sleep(for: .milliseconds(20))
+                }
+                XCTAssertEqual(session.documentationObservationStatus?.evidence, [])
+            },
+            absentLabels: ["Live maintenance preview bytes"]
+        )
+    }
+
     func testEvidenceStatesAtWideAndCompactWidths() async throws {
         let cases: [(String, RepositoryDocumentArtifact.Lifecycle?, RepositoryDocumentArtifact.Authority?, ManagedDocumentResolutionFailure?)] = [
             ("proposed", .proposed, .supporting, nil), ("current", .active, .controlling, nil),
@@ -275,7 +331,9 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
         width: Double,
         height: Double,
         pressEscape: Bool = false,
-        pressIdentifiers: [String] = []
+        pressIdentifiers: [String] = [],
+        afterPress: (() async throws -> Void)? = nil,
+        absentLabels: [String] = []
     ) async throws {
         let frame = NSRect(x: 30, y: 30, width: width, height: height)
         let hosting = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)).environment(\.colorScheme, .dark))
@@ -340,7 +398,15 @@ final class ManagedEvidenceRenderingTests: XCTestCase {
             hosting.frame = NSRect(origin: .zero, size: frame.size)
             hosting.layoutSubtreeIfNeeded()
         }
+        if let afterPress {
+            try await afterPress()
+            try await Task.sleep(for: .milliseconds(100))
+            hosting.layoutSubtreeIfNeeded()
+        }
         let axText = ownWindow.map { accessibilityText($0) } ?? ""
+        for label in absentLabels {
+            XCTAssertFalse(axText.contains(label), "Stale AX content remained visible: \(label)")
+        }
         if name.hasPrefix("m3c-evidence") {
             for label in ["Proposed", "Current", "Completed", "Superseded", "Archived", "Non-controlling", "Available", "pending acceptance", "not bound", "checksum"] {
                 XCTAssertTrue(axText.contains(label), "Missing actual AX state: \(label)")

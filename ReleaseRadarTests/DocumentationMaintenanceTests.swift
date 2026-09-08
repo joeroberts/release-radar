@@ -5,6 +5,62 @@ import XCTest
 
 final class DocumentationMaintenanceTests: XCTestCase {
     @MainActor
+    func testLiveObservationWithdrawsPreviewAfterExternalSourceChangeWithoutManualReload() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("M3C-live-preview-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appendingPathComponent("notes.md")
+        try Data("before".utf8).write(to: source)
+        let projectID = ProjectID(rawValue: "p")
+        let evidenceID = EvidenceID(rawValue: "e")
+        let readback = EvidenceReadback(
+            evidence: .init(id: evidenceID, projectID: projectID, ticketID: nil, locator: .filePath(source.path), isAvailable: true),
+            managedDocument: nil
+        )
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Live preview fixture") { c in
+            try c.execute("INSERT INTO projects (id, name) VALUES ('p', 'Project')")
+            try c.execute("INSERT INTO project_registrations (project_id, registration_id) VALUES ('p', 'registration')")
+            try c.execute("INSERT INTO evidence (id, project_id, path) VALUES ('e', 'p', ?)", bindings: [.text(source.path)])
+        }
+        let observer = DocumentationObservationCoordinator { requestedProjectID in
+            let current = (try? Data(contentsOf: source)) == Data("before".utf8)
+            return .init(
+                identity: .init(projectID: requestedProjectID, registration: nil, rootID: nil, rootPath: directory.path, binding: nil),
+                checkedAt: Date(),
+                documentationState: .legacy(.unavailable),
+                evidence: current ? [readback] : []
+            )
+        }
+        let session = try DocumentationMaintenanceSession(
+            databaseURL: store.databaseURL,
+            mode: .readOnly,
+            previewLoader: { _, _ in
+                .init(identity: readback.evidence.locator, path: source.path, status: .available,
+                      content: .text("before", isTruncated: false))
+            },
+            documentationObserver: observer,
+            monitoringInterval: .milliseconds(10)
+        )
+        await session.load()
+        let preview = await session.previewEvidence(evidenceID, projectID: projectID)
+        XCTAssertEqual(preview.content, .text("before", isTruncated: false))
+
+        session.startDocumentationMonitoring()
+        defer { session.stopDocumentationMonitoring() }
+        try Data("after".utf8).write(to: source)
+        for _ in 0..<100 {
+            if session.documentationObservationStatus?.evidence.isEmpty == true { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+
+        XCTAssertEqual(session.documentationObservationStatus?.evidence, [])
+        let withdrawn = await session.previewEvidence(evidenceID, projectID: projectID)
+        XCTAssertEqual(withdrawn.status, .rejected)
+        XCTAssertNil(withdrawn.content)
+    }
+
+    @MainActor
     func testReloadWithdrawsEqualEvidenceAndRejectsLatePreviewCompletion() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("M3C-preview-freshness-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
