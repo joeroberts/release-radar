@@ -108,3 +108,14 @@ before merge. Report changed behavior, commit/PR, direct results, remaining limi
 and exact temporary files/processes. Persist durable evidence in the repository before
 completion; do not delete retained outputs. Phase 3B begins from committed 3A after its
 required review and approved merge, and does not implement future portability features.
+
+## Delivery record
+
+The Phase 3A source candidate and its durable verification record are complete on
+the assigned branch. See
+[Phase 3A documentation freshness evidence](../../evidence/2026-09-07-phase3a-documentation-freshness.md)
+for the focused test result, signed native picker proof, responsive screenshots,
+retained temporary artifacts, and the explicit remaining successful signed
+selection-to-renewal verification gap. The orchestrator owns catalog/index and
+progress-ledger integration; independent review, push/PR, and any required bounded
+correction remain delivery gates until recorded there.

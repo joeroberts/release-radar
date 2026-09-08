@@ -3,6 +3,8 @@ import RekonDesignSystem
 
 struct TicketDetailView: View {
     let detail: TicketDetailProjection
+    var documentationStatus: DocumentationObservationStatus? = nil
+    var restoreDocumentationFolderAccess: (() -> Void)? = nil
     var reload: () async -> Void = {}
     @State private var isReloadingTasks = false
     @ScaledMetric(relativeTo: .subheadline) private var taskFontSize = 12
@@ -79,7 +81,11 @@ struct TicketDetailView: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(detail.evidence) { evidence in
-                            EvidenceDetailView(evidence: evidence)
+                            EvidenceDetailView(
+                                evidence: evidence,
+                                documentationStatus: documentationStatus,
+                                restoreFolderAccess: restoreDocumentationFolderAccess
+                            )
                         }
                     }
                 }

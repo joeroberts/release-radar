@@ -1,3 +1,4 @@
+import AppKit
 import ReleaseRadarCore
 import RekonDesignSystem
 import SwiftUI
@@ -54,12 +55,15 @@ struct PhaseBoardView: View {
     let selectActivePhase: (PhaseID) async -> Void
     let reloadActivePhase: () async -> Void
     let reauthorizeActivePhase: (URL) async -> Void
+    var documentationStatus: DocumentationObservationStatus? = nil
+    var restoreDocumentationFolderAccess: ((URL, DocumentationObservationIdentity) async throws -> Void)? = nil
     var viewPhase: (PhaseID) -> Void = { _ in }
     @State private var density: BoardDensity = .fullOutcomes
     @State var filter: DeliveryGoalFilter = .all
     @State private var selectionOutsideFilter = false
     @FocusState private var filterSummaryFocused: Bool
     @AccessibilityFocusState private var filterSummaryAccessibilityFocused: Bool
+    @State private var documentationRecoveryMessage: String?
 
     private var filteredBoard: PhaseBoardProjection { board.filtered(by: filter) }
 
@@ -94,6 +98,12 @@ struct PhaseBoardView: View {
                 PhaseBoardPlanningControls(board: board, filter: $filter,
                     phaseSelectionStatus: phaseSelectionStatus, viewPhase: viewPhase,
                     makeActive: selectActivePhase, reload: reloadActivePhase, reauthorize: reauthorizeActivePhase)
+                if let documentationRecoveryMessage {
+                    Text(documentationRecoveryMessage)
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.warning)
+                        .accessibilityIdentifier("board-documentation-recovery-result")
+                }
                 HStack {
                     Text(filterSummary)
                         .font(.caption)
@@ -318,9 +328,41 @@ struct PhaseBoardView: View {
     private var detail: some View {
         if let selected = filteredBoard.detail(for: selectedTicketID)
             ?? (selectionOutsideFilter ? nil : filteredBoard.details.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first) {
-            TicketDetailView(detail: selected, reload: reloadActivePhase)
+            TicketDetailView(
+                detail: selected,
+                documentationStatus: documentationStatus,
+                restoreDocumentationFolderAccess: documentationRestorationAction,
+                reload: reloadActivePhase
+            )
         } else {
             ContentUnavailableView("Select a ticket", systemImage: "rectangle.on.rectangle")
+        }
+    }
+
+    private var documentationRestorationAction: (() -> Void)? {
+        guard restoreDocumentationFolderAccess != nil,
+              documentationStatus?.identity != nil else { return nil }
+        return { chooseAndRestoreDocumentationFolder() }
+    }
+
+    private func chooseAndRestoreDocumentationFolder() {
+        guard let restoreDocumentationFolderAccess,
+              let identity = documentationStatus?.identity else {
+            documentationRecoveryMessage = "Reload this project before restoring its saved folder access."
+            return
+        }
+        guard let folder = ProjectFolderAccessPanel.choose() else {
+            documentationRecoveryMessage = "Folder access was not changed."
+            return
+        }
+        documentationRecoveryMessage = nil
+        Task {
+            do {
+                try await restoreDocumentationFolderAccess(folder, identity)
+                documentationRecoveryMessage = "Folder access restored. Documentation was checked again."
+            } catch {
+                documentationRecoveryMessage = error.localizedDescription
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 import XCTest
-import ReleaseRadarCore
+@testable import ReleaseRadarCore
 @testable import ReleaseRadar
 
 private enum SyntheticBackupScopeError: Error {
@@ -1534,6 +1534,124 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testRecoverySupersedesPendingDocumentationFolderRenewalBeforeReplacingServices() async throws {
+        let fixture = try await makeRR9OwnerFixture(blockAuthorization: true)
+        let registration = ProjectRegistration(
+            projectID: fixture.projectID,
+            registrationID: "documentation-recovery-registration",
+            requestGeneration: 7
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed folder recovery identity") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, ?, 'complete')",
+                bindings: [
+                    .text(registration.projectID.rawValue),
+                    .text(registration.registrationID),
+                    .integer(registration.requestGeneration),
+                ]
+            )
+            try connection.execute(
+                "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ? AND path = ?",
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.projectRoot.path)]
+            )
+        }
+        let replacementURL = fixture.databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("replacement.sqlite")
+        try await fixture.store.createSnapshot(at: replacementURL)
+        let replacementStore = DeliveryStore(databaseURL: replacementURL)
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await fixture.bookmarks.armAccessGate()
+        let identity = DocumentationObservationIdentity(
+            projectID: fixture.projectID,
+            registration: registration,
+            rootID: .init(rawValue: "rr9-owner-root"),
+            rootPath: fixture.projectRoot.path,
+            binding: nil
+        )
+
+        let renewal = Task { () -> Result<ProjectHealthSnapshot, Error> in
+            do {
+                return .success(try await model.restoreDocumentationFolderAccess(
+                    at: fixture.projectRoot,
+                    identity: identity
+                ))
+            } catch {
+                return .failure(error)
+            }
+        }
+        await fixture.bookmarks.waitUntilAccessEntered()
+        let adoption = Task {
+            try await model.adoptRecovery(.init(
+                store: replacementStore,
+                operationID: UUID(),
+                requiresFreshServiceGraph: true,
+                newerHistoryWasReconciled: false
+            ))
+        }
+        while model.documentationServiceGeneration == 0 {
+            await Task.yield()
+        }
+        try await adoption.value
+        await fixture.bookmarks.releaseAccess()
+
+        switch await renewal.value {
+        case .success:
+            XCTFail("The retired folder renewal must not report success")
+        case let .failure(error):
+            XCTAssertEqual(error as? ProjectRootManagementError, .stale)
+        }
+        let retiredState = try await documentationRecoveryMutationState(
+            store: DeliveryStore(databaseURL: fixture.databaseURL)
+        )
+        let activeState = try await documentationRecoveryMutationState(store: replacementStore)
+        XCTAssertEqual(retiredState, .init(isStale: 1, restorationAudits: 0))
+        XCTAssertEqual(activeState, .init(isStale: 1, restorationAudits: 0))
+        XCTAssertNil(model.applicationRecoveryMessage)
+    }
+
+    @MainActor
+    func testActivationRefreshSupersedesInvalidatedProjectionPreparation() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let loader = RouteDocumentationObservationLoader(projectID: fixture.projectID)
+        let observer = DocumentationObservationCoordinator { projectID in
+            await loader.load(projectID: projectID)
+        }
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            documentationObserver: observer
+        )
+        await model.loadDashboard()
+        let olderReload = Task { await model.loadDashboard() }
+        await loader.waitUntilOlderObservationEntered()
+
+        await model.recheckDocumentationAfterActivation()
+        let currentState = model.projectDocumentationState(for: fixture.projectID)
+        let currentEvidence = model.dashboard?.projects.first?.evidence
+        guard case .managed = currentState else {
+            return XCTFail("Activation must publish the newer documentation observation")
+        }
+        XCTAssertEqual(currentEvidence?.map(\.id.rawValue), ["new-documentation-evidence"])
+
+        await loader.releaseOlderObservation()
+        await olderReload.value
+
+        XCTAssertEqual(model.projectDocumentationState(for: fixture.projectID), currentState)
+        XCTAssertEqual(model.dashboard?.projects.first?.evidence, currentEvidence)
+        XCTAssertNil(model.dashboardError)
+        guard case let .observed(observation) = model.documentationObservationStatus(for: fixture.projectID) else {
+            return XCTFail("The newer documentation observation must remain current")
+        }
+        XCTAssertEqual(observation.checkedAt, Date(timeIntervalSince1970: 2))
+    }
+
+    @MainActor
     func testCodexPromptCopyFailureReplacesPriorSuccessWithoutReportingCopied() {
         let firstResult = CodexPromptHandoff.copy(prompt: "first") { _ in true }
         let secondResult = CodexPromptHandoff.copy(prompt: "second") { _ in false }
@@ -2621,7 +2739,7 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
-    func testExternalCommittedRefreshReusesCachedGuidanceWithoutBookmarkOrAuditMutation() async throws {
+    func testExternalCommittedRefreshRechecksGuidanceWithoutBookmarkOrAuditMutation() async throws {
         let mismatchedRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RR9-ExternalRefreshMismatch-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: mismatchedRoot, withIntermediateDirectories: true)
@@ -2667,18 +2785,14 @@ final class AppRouteTests: XCTestCase {
                 statusBefore,
                 "Failure: \(failure)"
             )
-            XCTAssertEqual(
-                model.projectGuidanceState(for: fixture.projectID),
-                guidanceBefore,
-                "Failure: \(failure)"
-            )
+            XCTAssertEqual(model.projectGuidanceState(for: fixture.projectID), .unavailable, "Failure: \(failure)")
             XCTAssertEqual(model.projectRoot(for: fixture.projectID), rootBefore, "Failure: \(failure)")
             XCTAssertEqual(requestIDs.count, 0, "Failure: \(failure)")
         }
     }
 
     @MainActor
-    func testOwnerSavedRefreshReusesCachedGuidanceWithoutBookmarkAuditOrCommandRetry() async throws {
+    func testOwnerSavedRefreshRechecksGuidanceWithoutBookmarkAuditOrCommandRetry() async throws {
         let mismatchedRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RR9-SavedRefreshMismatch-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: mismatchedRoot, withIntermediateDirectories: true)
@@ -2744,11 +2858,7 @@ final class AppRouteTests: XCTestCase {
                 .idle,
                 "Failure: \(failure)"
             )
-            XCTAssertEqual(
-                model.projectGuidanceState(for: fixture.projectID),
-                guidanceBefore,
-                "Failure: \(failure)"
-            )
+            XCTAssertEqual(model.projectGuidanceState(for: fixture.projectID), .unavailable, "Failure: \(failure)")
             XCTAssertEqual(model.projectRoot(for: fixture.projectID), rootBefore, "Failure: \(failure)")
             XCTAssertEqual(requestIDs.count, 1, "Failure: \(failure)")
         }
@@ -3902,6 +4012,115 @@ private actor RR9RouteAccessGate {
         released = true
         releaseContinuations.forEach { $0.resume() }
         releaseContinuations.removeAll()
+    }
+}
+
+private struct DocumentationRecoveryMutationState: Equatable {
+    let isStale: Int64?
+    let restorationAudits: Int64
+}
+
+private func documentationRecoveryMutationState(
+    store: DeliveryStore
+) async throws -> DocumentationRecoveryMutationState {
+    try await store.read { connection in
+        DocumentationRecoveryMutationState(
+            isStale: try connection.scalarInt(
+                "SELECT is_stale FROM project_bookmarks WHERE project_id = 'rr9-owner-project'"
+            ),
+            restorationAudits: try connection.scalarInt(
+                "SELECT COUNT(*) FROM audit_events WHERE reason = 'Restore project folder access'"
+            ) ?? -1
+        )
+    }
+}
+
+private actor RouteDocumentationObservationLoader {
+    private let projectID: ProjectID
+    private var callCount = 0
+    private var olderObservationEntered = false
+    private var olderObservationReleased = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    init(projectID: ProjectID) {
+        self.projectID = projectID
+    }
+
+    func load(projectID: ProjectID) async -> DocumentationObservationPayload {
+        precondition(projectID == self.projectID)
+        callCount += 1
+        if callCount == 2 {
+            olderObservationEntered = true
+            enteredContinuations.forEach { $0.resume() }
+            enteredContinuations.removeAll()
+            if !olderObservationReleased {
+                await withCheckedContinuation { releaseContinuations.append($0) }
+            }
+            return payload(checkedAt: 1, current: false)
+        }
+        return payload(checkedAt: callCount == 1 ? 0 : 2, current: callCount > 1)
+    }
+
+    func waitUntilOlderObservationEntered() async {
+        guard !olderObservationEntered else { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+
+    func releaseOlderObservation() {
+        olderObservationReleased = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
+
+    private func payload(
+        checkedAt: TimeInterval,
+        current: Bool
+    ) -> DocumentationObservationPayload {
+        let identity = DocumentationObservationIdentity(
+            projectID: projectID,
+            registration: nil,
+            rootID: nil,
+            rootPath: nil,
+            binding: nil
+        )
+        guard current else {
+            return .init(
+                identity: identity,
+                checkedAt: Date(timeIntervalSince1970: checkedAt),
+                documentationState: .legacy(.unavailable),
+                evidence: []
+            )
+        }
+        return .init(
+            identity: identity,
+            checkedAt: Date(timeIntervalSince1970: checkedAt),
+            documentationState: .managed(
+                hasAuditedHandoff: true,
+                catalogVersion: 1,
+                catalogDigest: String(repeating: "a", count: 64)
+            ),
+            evidence: [
+                EvidenceReadback(
+                    evidence: LocatedEvidenceRecord(
+                        id: EvidenceID(rawValue: "new-documentation-evidence"),
+                        projectID: projectID,
+                        ticketID: nil,
+                        locator: EvidenceLocator.managedDocument(artifactID: "current-plan"),
+                        isAvailable: true
+                    ),
+                    managedDocument: ResolvedManagedDocument(
+                        artifactID: "current-plan",
+                        resolvedPath: "docs/plans/current.md",
+                        label: "Current plan",
+                        lifecycle: RepositoryDocumentArtifact.Lifecycle.active,
+                        authority: RepositoryDocumentArtifact.Authority.controlling,
+                        authorityRole: "delivery-plan",
+                        failure: nil
+                    )
+                ),
+            ]
+        )
     }
 }
 

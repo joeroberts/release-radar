@@ -3,7 +3,7 @@
 ## Current outcome
 
 Phase 3 — Current documentation and evidence (C8/C9 and associated C12 recovery)
-is authorized and in Phase 3A delivery. Management and recovery C4–C7 remains
+is authorized; Phase 3A is merged and Phase 3B is entering delivery. Management and recovery C4–C7 remains
 complete in source through owner-approved PRs #28–#31 and documentation closeout
 [PR #32](https://github.com/joeroberts/release-radar/pull/32), merged at
 `cd16df1b0226aa8a08bd167364779103ebe86278`. The narrow C8 regular-`.DS_Store`
@@ -69,8 +69,10 @@ audit and preserved registration/root/binding/catalog. The test establishes and
 reads back button focus before observing Space; it does not claim a Tab-navigation
 journey. Restricted signed-host verification passed and the final host exited.
 The correction reviewer completed its assignment and is archived; its result is
-preserved above. Phase 3A verification is complete and PR #33 awaits owner merge
-approval. Phase 3B remains prepared and depends on that approved merge.
+preserved above. The owner approved PR #33, merged at
+`7c4511dbab2762111d1b287efbceb148843dcccd`. Phase 3B now proceeds from the
+integrated committed baseline with its active
+[brief](task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md).
 
 Earlier raw result bundles disappeared after task archival/restoration; committed
 evidence and screenshots remain preserved. Current correction results remain in
@@ -134,7 +136,6 @@ review outcomes and reported temporary inventories. [Historical C6 history](arch
 remain non-authoritative. Temporary build outputs, synthetic backups and review files are
 retained; deletion requires exact owner authorization. No cleanup was performed.
 
-The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 has cleared independent correction review and native verification;
-owner merge approval is the remaining gate. Phase 3B follows
-its approved merge. Phase 4 is not authorized. Completed C4–C7 verification and historical
+The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 is owner-approved and merged. Phase 3B bounded evidence preview
+is the next authorized delivery slice. Phase 4 is not authorized. Completed C4–C7 verification and historical
 records remain closed except where a concrete Phase 3 regression requires an affected check.
