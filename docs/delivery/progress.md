@@ -24,6 +24,9 @@ labels, and Projects with empty history on relaunch. ADR-003 and the dashboard
 design record this bounded amendment. Other planning proposals remain proposed.
 The [Phase 4 brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md)
 controls the delivery assignment; no Phase 5 domain choice blocks it.
+Delivery task `01a0826d-f440-7661-9ed2-24112a7eaa80` is assigned the single stream
+in fresh worktree `8f27` from committed contract/brief baseline `a2a4ac8`, requested
+Terra Medium with Astra High ceiling. Product work is in progress.
 
 ## Current authorization and ownership
 
@@ -51,9 +54,15 @@ before use; use proven isolated synthetic execution and never normal app launch
 or owner credentials merely to arrange testing.
 
 Independent Phase 5 decision-preparation peer `01a08269-0c66-7d61-bd3d-f9963383471e`
-(requested Astra High) is read-only in a separate worktree. It cannot implement or
-select product choices. Owner questions and merge approvals are relayed through the
+(requested Astra High) completed read-only preparation; its proposed decisions and
+bounded handoff are preserved in the roadmap. No processes remain; the bounded task is archived.
+It did not implement or select product choices. Owner questions and merge approvals are relayed through the
 visible parent task while this task is omitted from the owner's task list.
+
+Repository documentation check passed after the accepted contract, brief and
+proposed Phase 5 handoff updates. New catalog metadata remains unaccepted in the
+application; no application readback/acceptance is authorized. Independent combined
+Phase 4 review is pending the implementation candidate.
 
 ## Verification and sequencing
 

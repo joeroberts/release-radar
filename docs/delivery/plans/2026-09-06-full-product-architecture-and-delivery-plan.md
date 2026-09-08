@@ -93,6 +93,99 @@ The two product choices above are accepted; the remaining Phase 5 proposals are
 unchanged. This record is not implementation proof. The architect performed no
 runtime checks or file writes, reported no remaining processes, and is archived.
 
+### Phase 5 decision preparation and handoff — 2026-09-08
+
+This preparation was authorized during the Phase 4 owner-decision wait. It is
+proposed, not Phase 5 implementation authorization. Fresh chief architect
+`01a08269-0c66-7d61-bd3d-f9963383471e` (requested Astra High) checked the accepted
+contracts, implemented planning policy, approval record and relevant mockups.
+No runtime checks, owner-data operations or file writes were performed by that
+peer; it reported no remaining processes. Runtime settings were not independently
+exposed. The following preserves its useful findings; current execution stays in
+[progress](../progress.md).
+
+**Already settled:** P15/P16/P18 inclusion; phase-owned Delivery Goals and separate
+observed execution goals under current cardinality; five lanes; active context
+separate from readiness; immutable Accepted history; identity/retention/package
+contents/Mac-repository authority and supplied RDS appearance. Earlier owner
+direction retained Overview as default project landing with a sibling Project Plan;
+the complete historical v5 planning/redesign package was never accepted wholesale.
+The current Phase 4 dependency/relaunch decisions above are accepted, not reopened.
+
+Present the remaining choices in small batches during an actual owner-approval wait
+or after Phase 4 source delivery, using recommendations and concrete consequences:
+
+1. **Planning surfaces and scope:** retain Overview as directed; recommend a sibling
+   Project Plan for all recorded phases, phase-owned goals/readiness, unplaced work
+   and explicit relationships, plus one shared board with phase/all-phase scopes.
+   Phase links retain their explicit scope. The all-phase option is still a choice;
+   it adds broader comparison while every card must name its phase and appear once.
+   Unresolved intake is a separate incompleteness signpost, never recorded-work count.
+2. **Unplaced work:** recommend the same permanent ticket identity with outcome,
+   dependencies, evidence and task definitions, but no lane or execution/completion/
+   review actions until placement. Placement enters Backlog atomically. Preserve
+   Backlog-only move rules and reconcile affected plan revisions/assignments for
+   move/unplace. This requires domain/storage changes but avoids a fake phase or
+   sixth lane. It cannot erase task history or bypass readiness.
+3. **Phase lifecycle/order:** recommend Upcoming / In delivery / Completed /
+   Unassessed, zero or one In-delivery phase, and explicit optional order. Active
+   phase remains independent. This requires deliberate lifecycle maintenance;
+   migration infers neither lifecycle nor order. Completed requires an explicit
+   transition with resolved delivery obligations, not an empty-board inference.
+   The one-In-delivery limit and labels are proposed product choices, not defaults
+   silently imposed by this assessment. Unordered legacy records display neutrally.
+4. **Requirement/decision references:** recommend managed artifact identity plus a
+   stable source-local identifier where supplied and exact source revision. A
+   heading-only reference remains a locator, not invented requirement identity.
+   Typed explicit links support impacts; sources may be changed, missing,
+   inaccessible or superseded without silent relinking. Deliberate linking costs
+   effort and cannot prove semantic completeness. Keep authoritative prose in its
+   repository documents; no copied requirements authority or automatic adoption.
+5. **Plan proposals/apply:** recommend a persisted bounded proposal with exact
+   baseline, diff, rationale and disposition. Approval binds that proposal and
+   baseline; a separately authorized typed operation atomically applies the app
+   graph. Relevant phase/task revisions and ticket/dependency/lifecycle facts must
+   be covered because phase revision alone does not track all changes. Stale apply
+   changes nothing and needs refreshed review. Document changes retain separately
+   reported repository/catalog outcomes; no distributed atomicity or inferred
+   execution/delivery-acceptance authorization.
+6. **Withdrawal/successors and goal coverage:** recommend separate ticket lifecycle,
+   retained original/reason/last lane/tasks/evidence, and explicit replacement/split
+   links. Successors receive new IDs and start uncompleted; inherited evidence is
+   provenance, not completion proof. Explicitly reconcile dependencies and remaining
+   goal obligations; cancellation without replacement leaves uncovered outcomes
+   visible and blocks false goal acceptance. Started-work withdrawal cannot imply
+   its external run stopped. Accepted history is immutable. This needs a narrow
+   successor/coverage amendment: current policy forbids removing/transferring started
+   assignments and requires assigned tickets Accepted for goal acceptance. Merely
+   excluding withdrawn tickets from counts is incorrect; preserve historical
+   assignments separately from current obligations. Do not infer Active-goal
+   supersession or rewrite dependency targets.
+
+**Actionable handoff after selections:** amend only affected accepted contracts,
+persist the next bounded brief, and start each writer from the merged Phase 4
+navigation contract. Coherent checkpoints are (a) recorded planning and its complete
+readback/Overview/Plan/shared-board journey, (b) references, impacts and proposal
+comparison/atomic apply, and (c) withdrawal/replacement/splitting with coverage and
+acceptance protection. These checkpoints bound delivery; they do not omit any
+selected Phase 5 behavior. Use existing typed mutations, navigation and documents,
+not a second execution, requirements or change-control system.
+
+Migration preserves existing identities, lanes, active context, goals, task
+completions and history; new unknown fields stay unknown. Verify complete new
+records through archive/restore, retained-history and full-backup recovery. Record
+complete future portable representation, without implementing Phase 7 exporter/
+importer early or changing v1 silently. Relevant acceptance covers exact stale/
+replayed/racing apply and rollback, cross-project rejection, count agreement,
+placement identity, moved/withdrawn coverage, immutable Accepted history, recovery,
+and native compact/keyboard/accessibility journeys. The existing proposed Plan
+mockups do not constitute an approved complete visual specification.
+
+SQL layout, bounded payload limits, component composition and deterministic ordering
+mechanics are implementation decisions within accepted semantics. They do not need
+additional owner questionnaires. Risk-triggered independent review covers changed
+architecture, security/privacy and UX/QA without duplicate approval layers.
+
 ## Owner-approved roadmap additions — 2026-09-06
 
 The owner approved including all six recommendations below. Their inclusion is
