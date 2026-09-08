@@ -1,13 +1,15 @@
 # Phase 3A documentation freshness evidence
 
 - Date: 2026-09-07
+- Updated: 2026-09-08
 - Branch: `codex/phase3a-freshness`
 - Baseline: `a4d5e06`
 - Controlling brief:
   [`phase3a-freshness-brief.md`](../task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md)
-- Scope: source candidate and synthetic verification only; no installation,
-  owner-project access, catalog acceptance, plugin/cloud mutation, or live
-  application-state mutation occurred.
+- Scope: source candidate, synthetic verification, and owner-assisted signed
+  native-folder acceptance only; no installation, owner-project access,
+  catalog acceptance, plugin/cloud mutation, or live application-state mutation
+  occurred.
 
 ## Delivered behavior
 
@@ -128,29 +130,88 @@ the earlier worktree and were not moved by this correction pass. This section
 records the completed historical check; its bundle is not present in the current
 checkout.
 
-This proves accessibility activation reaches and opens the shared native picker
-and that cancellation is non-mutating. A successful external folder
-selection granting sandbox access and completing real bookmark renewal was not
-performed in this synthetic signed-host route. Successful exact-root renewal,
-wrong-root rejection, invalid-catalog preservation, audit count, and identity
-preservation are covered by the synthetic Core/AppModel integration tests, but
-the full signed selection-to-renewal journey remains an outstanding Phase 3
-verification gap. Separate keyboard activation was not exercised by this proof.
+That historical check proves accessibility activation reaches the shared native
+picker and cancellation is non-mutating. Its successful selection-to-renewal and
+keyboard-input gaps were closed on 2026-09-08 with a fresh retained host at
+`build/phase3a-native-journey/`.
 
-The simplest supported continuation would reuse the earlier stripped-entitlement
-signed XCTest host and drive the already-rendered recovery button and native
-panel. That host vanished with the deleted worktree. The current ordinary Debug
-XCTest host carries the repository's broad test-only absolute-path read
-exception, so it is not acceptable substitute proof for an isolated successful
-selection-to-bookmark journey. Recreating the specialized host or adding new
-panel/keyboard automation would be bespoke harness work outside this correction
-scope. Both gaps therefore remain explicit rather than being inferred from the
-synthetic renewal tests.
+The current host was built from the correction candidate and then signed with
+the same restricted test-runtime entitlement shape: production sandbox,
+application group, user-selected read/write, network client, `get-task-allow`,
+and only the three XCTest Mach lookup names. Fresh entitlement readback again
+showed no absolute-path or home-relative filesystem exception, and strict deep
+signature verification passed.
+
+### Owner-assisted signed selection and renewal
+
+The owner launched `xcodebuild test-without-building` from Terminal using the
+prepared `.xctestrun` and absolute paths supplied by this delivery task. The
+test host printed its exact numeric PID, window title, expected folder, and
+instructions. The owner—not automation, `osascript`, or a synthetic event—then
+supplied the keyboard Space input in the ReleaseRadar test window and selected
+`/Users/Shared/ReleaseRadar-Phase3A-SignedPicker.QxfqrP` through the real shared
+`ProjectFolderAccessPanel.choose()` `NSOpenPanel`.
+
+The gated test used only the current XCTest host PID to locate the exact
+**Restore folder access** accessibility button. Before printing readiness, the
+final harness focused that button through its accessibility element and read
+back `kAXFocusedAttribute == true`. A local `NSEvent` monitor observed the
+owner's real Space key while that same button remained focused. The resulting
+folder URL was passed through the real `AppModel.restoreDocumentationFolderAccess`
+path.
+
+```text
+xcodebuild test-without-building \
+  -xctestrun build/phase3a-native-journey/Build/Products/ReleaseRadar-Phase3A-user-assisted-no-broad-filesystem.xctestrun \
+  -destination platform=macOS,arch=arm64 \
+  -parallel-testing-enabled NO \
+  -only-testing:ReleaseRadarTests/DocumentationObservationTests/testUserAssistedSignedNativeFolderPickerKeyboardSelectionRenewsBookmarkWithoutChangingIdentityOrCatalog \
+  -resultBundlePath build/phase3a-native-user-assisted-rerun-4.xcresult
+
+Result: Passed — 1 passed, 0 skipped, 0 failed
+Result bundle: build/phase3a-native-user-assisted-rerun-4.xcresult
+```
+
+The passing test verifies that the stale bookmark changes from `1` to `0`,
+exactly one `Restore project folder access` audit is added, and the sole captured
+registration, request generation, root ID/path, repository identity, accepted
+catalog bytes, digest, and version remain unchanged. The separately retained
+cancel test continues to prove that cancellation is non-mutating.
+
+The coordinated reruns exposed only acceptance-harness and instruction defects:
+
+- The first command used a different checkout's relative build path and failed
+  before any test host launched. Subsequent commands used absolute prepared
+  paths.
+- The first launched journey selected a folder other than the captured root.
+  Product validation rejected it before bookmark or audit mutation. The test
+  was corrected to report both the raw and canonical picker paths on failure.
+- The next run selected and renewed the correct folder and produced no
+  registration, root, binding, catalog, or audit assertion failures, but the
+  keyboard observer compared dynamic accessibility wrappers too strictly.
+- The following run again completed the renewal, but semantic element matching
+  still depended on the owner's macOS keyboard navigation having established
+  button focus.
+- The final bounded correction focused and read back the exact button before
+  readiness and checked its focused attribute when Space arrived. A one-second
+  no-input preflight reached readiness and then intentionally timed out; the
+  subsequent owner-assisted run passed in full.
+
+No production entitlement, target, framework, owner project, application
+database, catalog acceptance, `CGEvent`, broad test-host filesystem access, or
+installation was added or used for this journey. No script drove the picker or
+keyboard. One read-only `osascript` diagnostic was mistakenly invoked while
+checking whether the retained folder was an alias; it returned no useful output
+and was not used as acceptance evidence. Because the final proof requires
+deliberate owner input, it remains gated by
+`PHASE3A_SIGNED_PICKER_SUCCESS_FOLDER` and is skipped during ordinary automated
+test runs.
 
 Two earlier blocking-modal harness attempts were stopped after hanging; their
 exact synthetic host PIDs `76348` and `76804` and the associated Xcode runner were
-confirmed absent before the final run. The final test uses the real panel's
-nonblocking API and exits normally.
+confirmed absent before the historical cancel proof. The current user-assisted
+test uses the real panel's modal API on the main actor and exits normally after
+the owner responds. Final host PID `27429` was absent after result readback.
 
 ## Visual evidence
 
@@ -181,8 +242,16 @@ Current non-authoritative outputs retained in this checkout are:
 
 - `build/phase3a-corrections-red/`, including the intentional failing red runs
 - `build/phase3a-corrections-verify/`, including the passing scoped result bundle
+- `build/phase3a-native-journey/`, including the signed host, stripped
+  test-runtime entitlements, focused `.xctestrun` files, and focus-preflight
+  copy
+- `build/phase3a-native-*.xcresult`, including readiness, expected diagnostic
+  failures, the intentional no-input focus-preflight timeout, and the final
+  passing `phase3a-native-user-assisted-rerun-4.xcresult`
 - `/Users/Shared/ReleaseRadar-Phase3A-SignedPicker.QxfqrP`, retained from the
   earlier signed-picker work
 
 The repository evidence document and four screenshots above are the durable
-artifacts. Catalog/index integration remains the orchestrator's owned follow-up.
+artifacts. Its existing catalog entry uses `checksum.policy: notApplicable`,
+and no path, lifecycle, authority, or navigation metadata changed; catalog and
+generated-index edits are therefore unnecessary for this update.

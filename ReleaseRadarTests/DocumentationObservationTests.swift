@@ -3,7 +3,7 @@ import ApplicationServices
 import SwiftUI
 import XCTest
 @testable import ReleaseRadar
-import ReleaseRadarCore
+@testable import ReleaseRadarCore
 
 @MainActor
 private func XCTAssertThrowsErrorAsync<T>(
@@ -168,6 +168,274 @@ final class DocumentationObservationTests: XCTestCase {
         XCTAssertEqual(result.0, 1)
         XCTAssertEqual(result.1, beforeAuditCount)
         XCTAssertEqual(result.2, "Native picker fixture")
+    }
+
+    @MainActor
+    func testUserAssistedSignedNativeFolderPickerKeyboardSelectionRenewsBookmarkWithoutChangingIdentityOrCatalog() async throws {
+        guard let expectedPath = ProcessInfo.processInfo.environment["PHASE3A_SIGNED_PICKER_SUCCESS_FOLDER"] else {
+            throw XCTSkip("Run only for the coordinated user-assisted signed native picker verification.")
+        }
+        let expectedRoot = URL(fileURLWithPath: expectedPath, isDirectory: true)
+            .standardizedFileURL.resolvingSymlinksInPath()
+
+        let database = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-Phase3A-SignedPicker-Success-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: database) }
+        let store = DeliveryStore(databaseURL: database)
+        let projectID = ProjectID(rawValue: "phase3a-native-picker-success")
+        let registration = ProjectRegistration(
+            projectID: projectID,
+            registrationID: "phase3a-native-picker-success-registration",
+            requestGeneration: 7
+        )
+        let rootID = ProjectRootID(rawValue: "phase3a-native-picker-success-root")
+        let acceptedSnapshot = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: acceptedSnapshot
+        )
+        try await store.transact(actor: .init(id: "fixture"), reason: "Native picker success fixture") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Native Picker Success')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation) VALUES (?, ?, ?)",
+                bindings: [
+                    .text(projectID.rawValue),
+                    .text(registration.registrationID),
+                    .integer(registration.requestGeneration),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO project_roots (id, project_id, path) VALUES (?, ?, ?)",
+                bindings: [.text(rootID.rawValue), .text(projectID.rawValue), .text(expectedRoot.path)]
+            )
+            try connection.execute(
+                "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES (?, ?, ?, 1)",
+                bindings: [.text(projectID.rawValue), .text(expectedRoot.path), .blob(Data([0]))]
+            )
+            try connection.execute(
+                "INSERT INTO project_documentation_bindings VALUES (?, ?, ?, ?, ?, ?)",
+                bindings: [
+                    .text(projectID.rawValue),
+                    .text(rootID.rawValue),
+                    .text(binding.repositoryID),
+                    .integer(Int64(binding.acceptedCatalogVersion)),
+                    .text(binding.acceptedCatalogDigest),
+                    .blob(binding.acceptedCatalog),
+                ]
+            )
+        }
+        let before = try await store.read { connection in
+            (
+                try connection.scalarInt(
+                    "SELECT is_stale FROM project_bookmarks WHERE project_id = ? AND path = ?",
+                    bindings: [.text(projectID.rawValue), .text(expectedRoot.path)]
+                ),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try DocumentationRootContext.binding(connection, projectID: projectID.rawValue)
+            )
+        }
+        XCTAssertEqual(before.0, 1)
+        XCTAssertEqual(before.2, binding)
+
+        let identity = DocumentationObservationIdentity(
+            projectID: projectID,
+            registration: registration,
+            rootID: rootID,
+            rootPath: expectedRoot.path,
+            binding: binding
+        )
+        let unavailable = ProjectDocumentationState.managedUnavailable(
+            hasAuditedHandoff: true,
+            reason: .rootUnavailable,
+            validationError: nil
+        )
+        let project = ProjectDashboardProjection(
+            id: projectID,
+            name: "Native Folder Recovery",
+            registration: registration,
+            activePhaseName: "Current delivery",
+            goalContext: .init(linkQuality: .unavailable, text: nil, status: nil, lastObservedAt: nil),
+            currentWorkCount: 1,
+            attentionCount: 1
+        )
+        let model = AppModel(store: store, databaseURL: database, externalServicesSuppressed: true)
+        let recoveryResult = NativeFolderAccessResult()
+        let view = ProjectOverviewView(
+            project: project,
+            board: nil,
+            documentationState: unavailable,
+            documentationStatus: .observed(
+                .init(
+                    identity: identity,
+                    generation: 1,
+                    checkedAt: Date(),
+                    documentationState: unavailable,
+                    evidence: []
+                )
+            ),
+            projectRoot: expectedRoot,
+            phaseSelectionStatus: .idle,
+            openBoard: {},
+            selectActivePhase: { _ in },
+            reloadActivePhase: {},
+            reauthorizeActivePhase: { _ in },
+            reauthorizeProjectHealth: { folder, identity in
+                recoveryResult.selectedFolderPath = folder.path
+                recoveryResult.selectedFolderCanonicalPath = folder.standardizedFileURL
+                    .resolvingSymlinksInPath()
+                    .path
+                do {
+                    let health = try await model.restoreDocumentationFolderAccess(at: folder, identity: identity)
+                    recoveryResult.health = health
+                    return health
+                } catch {
+                    recoveryResult.renewalError = error.localizedDescription
+                    throw error
+                }
+            },
+            documentationFolderChooser: {
+                let folder = ProjectFolderAccessPanel.choose()
+                recoveryResult.pickerCancelled = folder == nil
+                return folder
+            }
+        )
+        let frame = NSRect(x: 40, y: 40, width: 720, height: 820)
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = NSRect(origin: .zero, size: frame.size)
+        let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.title = "Phase 3A Signed Folder Recovery — User Assisted"
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        let priorActivationPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(priorActivationPolicy)
+        }
+        hosting.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(300))
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let ownWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let button = try XCTUnwrap(
+            accessibilityButton(ownWindow, title: "Restore folder access"),
+            "The documentation recovery action must be exposed as an accessibility button."
+        )
+        guard AXUIElementSetAttributeValue(
+            button,
+            kAXFocusedAttribute as CFString,
+            kCFBooleanTrue
+        ) == .success else {
+            return XCTFail("The harness could not focus Restore folder access before requesting keyboard activation.")
+        }
+        var buttonFocusedValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            button,
+            kAXFocusedAttribute as CFString,
+            &buttonFocusedValue
+        ) == .success,
+        buttonFocusedValue as? Bool == true else {
+            return XCTFail("Restore folder access did not retain keyboard focus.")
+        }
+        let keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard event.charactersIgnoringModifiers == " " else { return event }
+            var focusedValue: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                button,
+                kAXFocusedAttribute as CFString,
+                &focusedValue
+            ) == .success,
+            focusedValue as? Bool == true else { return event }
+            recoveryResult.keyboardActivationObserved = true
+            return event
+        }
+        defer {
+            if let keyboardMonitor { NSEvent.removeMonitor(keyboardMonitor) }
+        }
+
+        FileHandle.standardOutput.write(
+            Data(
+                """
+                Phase3A user-assisted picker ready, PID \(ProcessInfo.processInfo.processIdentifier)
+                Window: \(window.title)
+                Folder: \(expectedRoot.path)
+                Keyboard (in the ReleaseRadar app, not this terminal): Restore folder access is already focused; press Space without clicking it. In the picker, use Command-Shift-G, paste the folder path, press Return, verify that exact folder is selected, then activate Restore Access.
+
+                """.utf8
+            )
+        )
+        let timeout = ProcessInfo.processInfo.environment["PHASE3A_SIGNED_PICKER_SUCCESS_TIMEOUT"]
+            .flatMap(Double.init) ?? 180
+        let deadline = ContinuousClock.now.advanced(by: .seconds(timeout))
+        while recoveryResult.health == nil,
+              recoveryResult.renewalError == nil,
+              !recoveryResult.pickerCancelled,
+              ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        if recoveryResult.pickerCancelled {
+            return XCTFail("Folder selection was cancelled; the user-assisted acceptance journey must be rerun.")
+        }
+        guard recoveryResult.health != nil else {
+            return XCTFail(
+                recoveryResult.renewalError.map {
+                    "Folder renewal failed: \($0) Expected path: \(expectedRoot.path). Picker returned: \(recoveryResult.selectedFolderPath ?? "<none>"). Canonical picker path: \(recoveryResult.selectedFolderCanonicalPath ?? "<none>")."
+                }
+                    ?? "Timed out waiting for the coordinated keyboard selection."
+            )
+        }
+        XCTAssertTrue(
+            recoveryResult.keyboardActivationObserved,
+            "The acceptance journey must observe Space while Restore folder access has keyboard focus."
+        )
+
+        let after = try await store.read { connection in
+            (
+                try connection.scalarInt(
+                    "SELECT is_stale FROM project_bookmarks WHERE project_id = ? AND path = ?",
+                    bindings: [.text(projectID.rawValue), .text(expectedRoot.path)]
+                ),
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+                try connection.scalarText("SELECT reason FROM audit_events ORDER BY rowid DESC LIMIT 1"),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_registrations WHERE project_id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ?",
+                    bindings: [
+                        .text(projectID.rawValue),
+                        .text(registration.registrationID),
+                        .integer(registration.requestGeneration),
+                    ]
+                ),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_roots WHERE project_id = ?",
+                    bindings: [.text(projectID.rawValue)]
+                ),
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM project_roots WHERE id = ? AND project_id = ? AND path = ?",
+                    bindings: [.text(rootID.rawValue), .text(projectID.rawValue), .text(expectedRoot.path)]
+                ),
+                try DocumentationRootContext.binding(connection, projectID: projectID.rawValue)
+            )
+        }
+        XCTAssertEqual(after.0, 0)
+        XCTAssertEqual(after.1, before.1.map { $0 + 1 })
+        XCTAssertEqual(after.2, "Restore project folder access")
+        XCTAssertEqual(after.3, 1)
+        XCTAssertEqual(after.4, 1)
+        XCTAssertEqual(after.5, 1)
+        XCTAssertEqual(after.6, 1)
+        XCTAssertEqual(after.7, binding)
     }
 
     @MainActor
@@ -418,6 +686,39 @@ private actor ObservationBookmarkStore: ProjectBookmarkStoring {
 }
 
 private extension DocumentationObservationTests {
+    static let nativePickerAcceptedCatalog = #"""
+    {
+      "version": 1,
+      "repositoryID": "397453da-415a-42c8-b712-46ef90f2afd8",
+      "retiredArtifactIDs": [],
+      "collections": [
+        {
+          "collectionID": "docs",
+          "path": "docs",
+          "purpose": "Synthetic accepted documentation",
+          "allowedContents": ["documents"],
+          "prohibitedContents": ["temporary files"],
+          "firstRead": "root-index",
+          "indexArtifactID": "root-index",
+          "isLeaf": false
+        }
+      ],
+      "artifacts": [
+        {
+          "artifactID": "root-index",
+          "path": "docs/README.md",
+          "kind": "collectionIndex",
+          "lifecycle": "active",
+          "authorityLevel": "supporting",
+          "parentCollection": "docs",
+          "supersedes": [],
+          "applicationSensitivity": ["none"],
+          "checksum": {"policy": "notApplicable"}
+        }
+      ]
+    }
+    """#
+
     func managedFixture() throws -> URL {
         let source = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -439,6 +740,12 @@ private extension DocumentationObservationTests {
 private final class NativeFolderAccessResult {
     var panel: NSOpenPanel?
     var panelResponse: NSApplication.ModalResponse?
+    var keyboardActivationObserved = false
+    var pickerCancelled = false
+    var selectedFolderPath: String?
+    var selectedFolderCanonicalPath: String?
+    var health: ProjectHealthSnapshot?
+    var renewalError: String?
 }
 
 private func accessibilityWindow(_ application: AXUIElement, title: String) -> AXUIElement? {
