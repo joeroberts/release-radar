@@ -32,6 +32,14 @@ store identity before replacing the bookmark in one audited transaction. It does
 not accept or repair an invalid or pending catalog; the refreshed observation
 continues to show that remaining state.
 
+Recovery now synchronously retires the prior documentation-authorization graph
+and fences its store before installing a distinct replacement graph. Same-store
+recovery drains any already-started renewal before rebuilding that graph.
+An invalidated observation is treated as superseded work rather than missing
+documentation, and every projection preparation remains pinned to its captured
+store and observer. Consequently, an older reload cannot overwrite a newer
+activation refresh or publish a failure for intentional invalidation.
+
 ## Direct verification
 
 The focused test run used the repository's synthetic XCTest host and passed 94
@@ -49,11 +57,41 @@ Result: Passed — 94 passed, 2 skipped, 0 failed
 Result bundle: build/phase3a-verify/Logs/Test/Test-ReleaseRadar-2026.09.07_22-48-05--0400.xcresult
 ```
 
-This covers external invalidation and repair, invalid-catalog renewal,
+This historical run covers external invalidation and repair, invalid-catalog renewal,
 observation side-effect absence, shared Overview/evidence/health state,
 activation and monitor refresh, coalescing, stale-result rejection, lifecycle
 invalidation, service replacement, action presentation, and wide/compact
 rendering.
+
+The result bundle above vanished when the earlier worktree was deleted; it was
+not moved by this correction pass. The current checkout therefore retains the
+recorded outcome but not that historical bundle.
+
+### Required race-correction verification
+
+The directly affected checks were rerun after adding controlled interleavings
+for recovery versus folder renewal and activation versus an older projection
+reload:
+
+```text
+xcodebuild test -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination platform=macOS \
+  -derivedDataPath build/phase3a-corrections-verify \
+  -only-testing:ReleaseRadarTests/DocumentationObservationTests \
+  -only-testing:ReleaseRadarTests/AppRouteTests/testProjectHealthReauthorizesOnlyTheExactSavedFolderAndRetainsCatalogFailure \
+  -only-testing:ReleaseRadarTests/AppRouteTests/testRecoverySupersedesPendingDocumentationFolderRenewalBeforeReplacingServices \
+  -only-testing:ReleaseRadarTests/AppRouteTests/testActivationRefreshSupersedesInvalidatedProjectionPreparation
+
+Result: Passed — 7 passed, 1 intentional signed-picker skip, 0 failed
+Result bundle: build/phase3a-corrections-verify/Logs/Test/Test-ReleaseRadar-2026.09.07_23-53-14--0400.xcresult
+```
+
+The recovery race gates the old onboarding bookmark validation, completes service
+replacement with the same project identity, then releases the old operation. It
+verifies a stale error, no success result, no bookmark or audit mutation in the
+retired store, and no mutation in the active replacement store. The activation
+race completes generation G+1 before releasing G and verifies that G is
+superseded without replacing G+1 documentation, evidence, or error state.
 
 One earlier rerun of the freshness integration test failed while copying its
 synthetic fixture into the repository `build/` directory because the ordinary
@@ -85,6 +123,11 @@ xcodebuild test-without-building \
 Result: Passed — 1 passed, 0 skipped, 0 failed (1.050 seconds)
 ```
 
+The signed-picker result bundle and its synthetic host directory vanished with
+the earlier worktree and were not moved by this correction pass. This section
+records the completed historical check; its bundle is not present in the current
+checkout.
+
 This proves accessibility activation reaches and opens the shared native picker
 and that cancellation is non-mutating. A successful external folder
 selection granting sandbox access and completing real bookmark renewal was not
@@ -93,6 +136,16 @@ wrong-root rejection, invalid-catalog preservation, audit count, and identity
 preservation are covered by the synthetic Core/AppModel integration tests, but
 the full signed selection-to-renewal journey remains an outstanding Phase 3
 verification gap. Separate keyboard activation was not exercised by this proof.
+
+The simplest supported continuation would reuse the earlier stripped-entitlement
+signed XCTest host and drive the already-rendered recovery button and native
+panel. That host vanished with the deleted worktree. The current ordinary Debug
+XCTest host carries the repository's broad test-only absolute-path read
+exception, so it is not acceptable substitute proof for an isolated successful
+selection-to-bookmark journey. Recreating the specialized host or adding new
+panel/keyboard automation would be bespoke harness work outside this correction
+scope. Both gaps therefore remain explicit rather than being inferred from the
+synthetic renewal tests.
 
 Two earlier blocking-modal harness attempts were stopped after hanging; their
 exact synthetic host PIDs `76348` and `76804` and the associated Xcode runner were
@@ -111,9 +164,11 @@ layout:
 - [Folder recovery — wide](phase3a-folder-recovery-wide.png)
 - [Folder recovery — compact](phase3a-folder-recovery-compact.png)
 
-## Retained temporary outputs
+## Temporary-output status
 
-No temporary output was deleted. The retained non-authoritative artifacts are:
+No temporary output was deleted by this correction pass. These earlier
+worktree-scoped paths are absent because the earlier worktree was deleted; they
+were not moved:
 
 - `build/phase3a-verify/`
 - `build/phase3a-signed-host/`, including the synthetic test-only entitlements
@@ -121,7 +176,13 @@ No temporary output was deleted. The retained non-authoritative artifacts are:
 - `build/phase3a-signed-picker-final.xcresult`
 - `build/phase3a-evidence-export/`
 - `build/phase3a-test-fixtures/` from the superseded fixture location
-- `/Users/Shared/ReleaseRadar-Phase3A-SignedPicker.QxfqrP`
+
+Current non-authoritative outputs retained in this checkout are:
+
+- `build/phase3a-corrections-red/`, including the intentional failing red runs
+- `build/phase3a-corrections-verify/`, including the passing scoped result bundle
+- `/Users/Shared/ReleaseRadar-Phase3A-SignedPicker.QxfqrP`, retained from the
+  earlier signed-picker work
 
 The repository evidence document and four screenshots above are the durable
 artifacts. Catalog/index integration remains the orchestrator's owned follow-up.

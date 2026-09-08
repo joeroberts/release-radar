@@ -221,12 +221,59 @@ public protocol ProjectOnboarding: Sendable {
     func finish(_ decision: OnboardingDecision) async throws -> ProjectID
 }
 
+private final class DocumentationAuthorizationLifetime: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isRetired = false
+    private var activeOperations = 0
+    private var drainWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func begin() throws {
+        try lock.withLock {
+            guard !isRetired else { throw ProjectRootManagementError.stale }
+            activeOperations += 1
+        }
+    }
+
+    func requireCurrent() throws {
+        try lock.withLock {
+            guard !isRetired else { throw ProjectRootManagementError.stale }
+        }
+    }
+
+    func finish() {
+        let waiters = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
+            activeOperations -= 1
+            guard activeOperations == 0 else { return [] }
+            let waiters = drainWaiters
+            drainWaiters.removeAll()
+            return waiters
+        }
+        waiters.forEach { $0.resume() }
+    }
+
+    func retire() {
+        lock.withLock { isRetired = true }
+    }
+
+    func waitUntilDrained() async {
+        await withCheckedContinuation { continuation in
+            let shouldResume = lock.withLock { () -> Bool in
+                guard activeOperations > 0 else { return true }
+                drainWaiters.append(continuation)
+                return false
+            }
+            if shouldResume { continuation.resume() }
+        }
+    }
+}
+
 public actor FolderProjectOnboarding: ProjectOnboarding {
     private let store: DeliveryStore
     private let bookmarkStore: any ProjectBookmarkStoring
     private let worktreeDiscovery: any GitWorktreeDiscovering
     private let codexTasks: [CodexTaskDescriptor]
     private var separatelyAuthorizedWorktreePaths: Set<String> = []
+    private nonisolated let documentationAuthorizationLifetime = DocumentationAuthorizationLifetime()
 
     public init(
         store: DeliveryStore,
@@ -1285,6 +1332,18 @@ private struct ProjectDocumentationObservationSource: Equatable, Sendable {
 }
 
 extension FolderProjectOnboarding {
+    /// Prevents a recovery-replaced service graph from committing a folder
+    /// renewal after it has been retired.
+    public nonisolated func retireDocumentationAuthorizations() {
+        documentationAuthorizationLifetime.retire()
+    }
+
+    /// Keeps the replacement graph from being installed while an authorization
+    /// commit that started before retirement is still finishing.
+    public nonisolated func waitForDocumentationAuthorizationsToDrain() async {
+        await documentationAuthorizationLifetime.waitUntilDrained()
+    }
+
     /// Renews only the captured same-folder capability. Registration, root and
     /// accepted binding are rechecked in the audited commit transaction.
     public func reauthorizeProjectRoot(
@@ -1294,7 +1353,10 @@ extension FolderProjectOnboarding {
         let candidate = Self.canonical(folder)
         let persistedRoot = Self.canonical(URL(fileURLWithPath: target.rootPath))
         guard candidate.path == persistedRoot.path else { throw ProjectAuthorizationError.projectRootMismatch }
+        try documentationAuthorizationLifetime.begin()
+        defer { documentationAuthorizationLifetime.finish() }
         let bookmark = try await validatedBookmark(for: candidate)
+        try documentationAuthorizationLifetime.requireCurrent()
         try await store.transact(
             actor: .init(id: "release-radar-owner"),
             reason: "Restore project folder access",
@@ -1348,6 +1410,7 @@ extension FolderProjectOnboarding {
                 ]
             )
         }
+        try documentationAuthorizationLifetime.requireCurrent()
     }
 
     /// Captures guidance and managed evidence through one exact, read-only root

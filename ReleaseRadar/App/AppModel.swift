@@ -105,7 +105,7 @@ final class AppModel {
     private var didInitializeCodexPluginLifecycle = false
     private var codexPluginObservedAt: Date?
     private var projectionReloadGeneration: UInt64 = 0
-    private var documentationServiceGeneration: UInt64 = 0
+    private(set) var documentationServiceGeneration: UInt64 = 0
     @ObservationIgnored private var documentationMonitoringTask: Task<Void, Never>?
 #if DEBUG
     private var rr9ActivePhaseCaptureScenario: RR9ActivePhaseCaptureScenario?
@@ -131,7 +131,8 @@ final class AppModel {
         recoveryStartupError: String? = nil,
         recoveryResumedAtLaunch: Bool = false,
         externalServicesSuppressed: Bool = false,
-        seedSampleData: Bool = false
+        seedSampleData: Bool = false,
+        documentationObserver: DocumentationObservationCoordinator? = nil
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
         self.store = store
@@ -152,7 +153,8 @@ final class AppModel {
                 try await DashboardProjection.load(from: store, evidenceReadbacks: evidence)
             }
         }
-        self.documentationObserver = Self.makeDocumentationObserver(onboarding: resolvedOnboarding)
+        self.documentationObserver = documentationObserver
+            ?? Self.makeDocumentationObserver(onboarding: resolvedOnboarding)
         self.requestIDGenerator = requestIDGenerator
         self.recoveryServices = recoveryServices
         self.recoveryStartupError = recoveryStartupError
@@ -532,8 +534,17 @@ final class AppModel {
         }
     }
 
-    private func adoptRecovery(_ result: ApplicationRecoveryResult) async throws {
+    func adoptRecovery(_ result: ApplicationRecoveryResult) async throws {
         documentationServiceGeneration &+= 1
+        projectionReloadGeneration &+= 1
+        let retiredStore = store
+        let retiredOnboarding = projectOnboarding
+        retiredOnboarding.retireDocumentationAuthorizations()
+        if retiredStore === result.store {
+            await retiredOnboarding.waitForDocumentationAuthorizationsToDrain()
+        } else {
+            await retiredStore.sealForRecovery()
+        }
         store = result.store
         recoveryStartupError = nil
         recoveryResumedAtLaunch = false
@@ -683,6 +694,7 @@ final class AppModel {
 
     func recheckDocumentationAfterActivation() async {
         guard let dashboard else { return }
+        projectionReloadGeneration &+= 1
         for project in dashboard.projects {
             documentationObserver.invalidate(projectID: project.id)
         }
@@ -1171,6 +1183,9 @@ final class AppModel {
               let rootPath = identity.rootPath else {
             throw ProjectRootManagementError.stale
         }
+        let documentationServiceGeneration = self.documentationServiceGeneration
+        let projectOnboarding = self.projectOnboarding
+        let documentationObserver = self.documentationObserver
         try await projectOnboarding.reauthorizeProjectRoot(
             folder,
             target: .init(
@@ -1180,12 +1195,29 @@ final class AppModel {
                 binding: identity.binding
             )
         )
+        guard documentationServiceGeneration == self.documentationServiceGeneration,
+              projectOnboarding === self.projectOnboarding,
+              documentationObserver === self.documentationObserver else {
+            throw ProjectRootManagementError.stale
+        }
+        projectionReloadGeneration &+= 1
         documentationObserver.invalidate(projectID: identity.projectID)
-        _ = await refreshDocumentationObservation(
+        guard await refreshDocumentationObservation(
             projectID: identity.projectID,
             withdrawCurrent: true
-        )
-        return await projectHealth(for: identity.projectID)
+        ) != nil,
+        documentationServiceGeneration == self.documentationServiceGeneration,
+        projectOnboarding === self.projectOnboarding,
+        documentationObserver === self.documentationObserver else {
+            throw ProjectRootManagementError.stale
+        }
+        let health = await projectHealth(for: identity.projectID)
+        guard documentationServiceGeneration == self.documentationServiceGeneration,
+              projectOnboarding === self.projectOnboarding,
+              documentationObserver === self.documentationObserver else {
+            throw ProjectRootManagementError.stale
+        }
+        return health
     }
 
     func reloadDashboardAfterCommittedAgentCommand() async {
@@ -1368,6 +1400,7 @@ final class AppModel {
     ) async throws -> PreparedProjectProjections {
         let documentationServiceGeneration = self.documentationServiceGeneration
         let documentationObserver = self.documentationObserver
+        let store = self.store
         let activeProjectIDs = try await store.read { connection in
             var ids: [ProjectID] = []
             var offset: Int64 = 0
@@ -1380,15 +1413,16 @@ final class AppModel {
             }
             return ids
         }
+        guard documentationServiceGeneration == self.documentationServiceGeneration,
+              documentationObserver === self.documentationObserver,
+              store === self.store else { throw CancellationError() }
         var observations: [ProjectID: ProjectDocumentationObservation] = [:]
         for projectID in activeProjectIDs {
-            if let observation = await documentationObserver.refresh(projectID: projectID) {
-                guard documentationServiceGeneration == self.documentationServiceGeneration,
-                      documentationObserver === self.documentationObserver else {
-                    throw CancellationError()
-                }
-                observations[projectID] = observation
-            }
+            guard let observation = await documentationObserver.refresh(projectID: projectID),
+                  documentationServiceGeneration == self.documentationServiceGeneration,
+                  documentationObserver === self.documentationObserver,
+                  store === self.store else { throw CancellationError() }
+            observations[projectID] = observation
         }
         let evidence = observations.mapValues(\.evidence)
         let dashboard = try await dashboardLoader(store, evidence)
@@ -1434,6 +1468,9 @@ final class AppModel {
                 from: store, removalID: removed.id
             )
         }
+        guard documentationServiceGeneration == self.documentationServiceGeneration,
+              documentationObserver === self.documentationObserver,
+              store === self.store else { throw CancellationError() }
         return PreparedProjectProjections(
             dashboard: dashboard,
             reviewInboxes: reviewInboxes,
@@ -1513,6 +1550,8 @@ final class AppModel {
             guard generation == projectionReloadGeneration else { return .superseded }
             publish(prepared)
             return .published
+        } catch is CancellationError {
+            return .superseded
         } catch {
             guard generation == projectionReloadGeneration else { return .superseded }
             publishFailure(error, context: context)
