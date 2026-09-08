@@ -568,7 +568,41 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertEqual(first, second)
     }
 
-    func testDependencyGraphExcludesCrossPhaseEdgesFromRelationshipsAndConnectors() async throws {
+    func testDenseDependencyPathExpandsScrollableCanvasWithoutOverlappingNodes() throws {
+        let selected = DependencyGraphNode(
+            id: .init(rawValue: "SELECTED"), outcome: "Selected", lane: .inProgress, blockerCount: 0
+        )
+        let foundations = (1...18).map {
+            DependencyGraphNode(
+                id: .init(rawValue: "FOUND-\($0)"), outcome: "Foundation \($0)",
+                lane: .accepted, blockerCount: 0
+            )
+        }
+        let graph = DependencyGraphProjection(
+            projectID: .init(rawValue: "dense-project"),
+            phaseID: .init(rawValue: "dense-phase"),
+            nodes: foundations + [selected],
+            edges: [],
+            selected: .init(
+                ticket: selected,
+                directRequires: [],
+                indirectRequires: foundations,
+                unlocks: []
+            )
+        )
+
+        let height = DependencyGraphLayout.requiredCanvasHeight(for: graph, minimum: 400)
+        let layout = DependencyGraphLayout.makeLayout(
+            graph: graph,
+            size: CGSize(width: 820, height: height)
+        )
+        let frames = try XCTUnwrap(layout.columns.first?.ticketIDs.map { try XCTUnwrap(layout.frames[$0]) })
+
+        XCTAssertGreaterThan(height, 400)
+        XCTAssertTrue(zip(frames, frames.dropFirst()).allSatisfy { $0.maxY < $1.minY })
+    }
+
+    func testDependencyGraphIncludesCrossPhaseRelationshipsWithPhaseIdentity() async throws {
         let store = try await seededStore()
         try await store.transact(
             actor: DeliveryActor(id: "rr07-test"),
@@ -627,10 +661,11 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         XCTAssertTrue(graph.edges.allSatisfy {
             nodeIDs.contains($0.sourceID) && nodeIDs.contains($0.targetID)
         })
-        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-06", "VD2-07"])
-        XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["VD2-03", "VD2-04", "VD2-05"])
+        XCTAssertEqual(graph.node(id: .init(rawValue: "CROSS-BRIDGE"))?.phaseName, "Later phase")
+        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-07"])
+        XCTAssertEqual(graph.selected.indirectRequires.map(\.id.rawValue), ["CROSS-BRIDGE", "VD2-03", "VD2-04", "VD2-05", "VD2-06"])
         XCTAssertEqual(graph.selected.unlocks.map(\.id.rawValue), ["DESIGN-V2", "P2A-1", "UX-D12"])
-        XCTAssertEqual(layout.connectors.count, 11)
+        XCTAssertEqual(layout.connectors.count, 13)
         XCTAssertTrue(layout.connectors.allSatisfy {
             layout.frames[$0.sourceID] != nil && layout.frames[$0.targetID] != nil
         })

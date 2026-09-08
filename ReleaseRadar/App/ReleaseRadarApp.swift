@@ -298,6 +298,7 @@ struct ReleaseRadarApp: App {
         .defaultSize(width: 1600, height: 820)
         .commands {
             ReleaseRadarSettingsCommands(model: model)
+            ReleaseRadarNavigationCommands(model: model)
             CommandGroup(replacing: .appInfo) {
                 Button("About Release Radar By Rekon Labs") {
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
@@ -326,6 +327,19 @@ struct ReleaseRadarApp: App {
             }
         }
 
+    }
+}
+
+struct ReleaseRadarNavigationCommands: Commands {
+    let model: AppModel?
+
+    var body: some Commands {
+        CommandGroup(after: .toolbar) {
+            Button("Back") { Task { await model?.goBack() } }
+                .disabled(model?.canNavigateBack != true)
+            Button("Forward") { Task { await model?.goForward() } }
+                .disabled(model?.canNavigateForward != true)
+        }
     }
 }
 

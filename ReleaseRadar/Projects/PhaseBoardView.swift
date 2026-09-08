@@ -51,6 +51,7 @@ enum PhaseBoardLayout {
 struct PhaseBoardView: View {
     let board: PhaseBoardProjection
     @Binding var selectedTicketID: TicketID
+    @Binding var filter: DeliveryGoalFilter
     let phaseSelectionStatus: ActivePhaseSelectionStatus
     let selectActivePhase: (PhaseID) async -> Void
     let reloadActivePhase: () async -> Void
@@ -60,11 +61,14 @@ struct PhaseBoardView: View {
     var openWorktreeRecovery: (() -> Void)? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var viewPhase: (PhaseID) -> Void = { _ in }
+    var requestedFocus: NavigationFocus? = nil
+    var focusChanged: (NavigationFocus?) -> Void = { _ in }
     @State private var density: BoardDensity = .fullOutcomes
-    @State var filter: DeliveryGoalFilter = .all
     @State private var selectionOutsideFilter = false
     @FocusState private var filterSummaryFocused: Bool
     @AccessibilityFocusState private var filterSummaryAccessibilityFocused: Bool
+    @FocusState private var focusedTicketID: TicketID?
+    @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
     @State private var documentationRecoveryMessage: String?
 
     private var filteredBoard: PhaseBoardProjection { board.filtered(by: filter) }
@@ -144,7 +148,7 @@ struct PhaseBoardView: View {
                             RekonSeparator()
 
                             detail
-                                .frame(height: 260)
+                                .frame(minHeight: 420, alignment: .top)
                         }
                     }
                     .scrollIndicators(.automatic)
@@ -157,19 +161,24 @@ struct PhaseBoardView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("phase-board")
         .background(RekonTheme.background)
-        .onChange(of: filter) { _, _ in reconcileFilteredSelection() }
+        .onChange(of: filter) { _, _ in
+            reconcileFilteredSelection()
+            focusChanged(.filterSummary)
+        }
         .onChange(of: board) { previous, current in
             guard PhaseBoardKey(projectID: previous.project.id, phaseID: previous.phaseID)
                 == PhaseBoardKey(projectID: current.project.id, phaseID: current.phaseID) else { return }
             reconcileFilteredSelection()
         }
         .onChange(of: PhaseBoardKey(projectID: board.project.id, phaseID: board.phaseID)) { _, _ in
-            filter = .all
             selectionOutsideFilter = false
+            applyRequestedFocus()
         }
         .onChange(of: selectedTicketID) { _, _ in
             if filteredBoard.detail(for: selectedTicketID) != nil { selectionOutsideFilter = false }
         }
+        .onChange(of: requestedFocus) { _, _ in applyRequestedFocus() }
+        .task { applyRequestedFocus() }
     }
 
     private func boardHeader(laneWidth: CGFloat) -> some View {
@@ -313,6 +322,23 @@ struct PhaseBoardView: View {
             isSelected: selectedTicketID == card.id
         ) {
             selectedTicketID = card.id
+            focusChanged(.ticket(card.id))
+        }
+        .focusable()
+        .focused($focusedTicketID, equals: card.id)
+        .accessibilityFocused($accessibilityFocusedTicketID, equals: card.id)
+    }
+
+    private func applyRequestedFocus() {
+        switch requestedFocus {
+        case let .ticket(ticketID) where filteredBoard.detail(for: ticketID) != nil:
+            focusedTicketID = ticketID
+            accessibilityFocusedTicketID = ticketID
+        case .filterSummary, .recovery:
+            filterSummaryFocused = true
+            filterSummaryAccessibilityFocused = true
+        default:
+            break
         }
     }
 

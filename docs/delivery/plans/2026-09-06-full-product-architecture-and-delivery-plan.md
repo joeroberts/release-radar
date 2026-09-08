@@ -31,6 +31,191 @@ delivery state, or supersede accepted designs. [Progress](../progress.md) remain
 the delivery ledger. Feature references below identify assessment rows, not new
 application tickets or a second delivery ledger.
 
+## Owner-authorized sequence — 2026-09-08
+
+Phase 3 source delivery is merged through PR #35 (`6f528c5`). The owner authorized
+Phase 4 RM2/P7/P8 and issue #9 through scoped source/tests/docs, commits, pushes and
+PRs, with separate approval before every merge. Resolve only its necessary D6/IA
+and coupled product decisions before dependent implementation; the rest of the
+proposed planning contracts do not become approved merely through continuation.
+
+After Phase 4, prepare and reconcile the unresolved Phase 5 decisions for
+P1–P4/P15/P16/P18 and D4/D5/D6/D12. Phase 5 implementation is not authorized.
+Independent preparation may proceed during an actual owner-approval wait. Preserve
+phase-owned Delivery Goals and separate execution-goal semantics unless explicitly
+changed by the owner; do not reopen settled identity, retention, package-content,
+authority or RDS choices.
+
+The Mac remains available for builds and isolated synthetic native UI checks.
+Owner hands-on testing on other Macs and the private versioned DMG wait until at
+least Friday, September 11. Neither is a prerequisite for independent source
+delivery. Packaging is unstarted, target architectures/macOS versions are unknown,
+and this continuation authorizes no packaging, installation, notarization,
+publication, owner-data or application-catalog operation.
+
+### Phase 4 prerequisite assessment — 2026-09-08
+
+Fresh chief-architect task `01a08262-ffdf-7120-896b-0252ce2f8a30` (requested Astra
+High, runtime settings not independently exposed) inspected current source,
+accepted ADRs/designs, both board/dependency mockups and prior approval history.
+The owner approved both recommendations, relayed from the visible parent task:
+
+- **Dependency scope:** project-wide relationships focused on the selected ticket,
+  with phase labels. Cross-phase prerequisites are directly visible; dense paths
+  need readable scrolling space.
+- **Relaunch:** Projects with empty Back/Forward history, preserving startup
+  behavior. Restoring the last location is not selected for Phase 4. Phase 6 saved
+  views remain a separate outcome.
+
+The bounded implementation contract is: one typed navigation
+owner captures destination, project identity, explicit viewed scope, selected
+entity, filter domain and focus/restoration context. Sidebar, in-app links,
+phase/ticket selection and Back/Forward share that history. Back/Forward restores
+without pushing entries; branching clears Forward; filter adjustments update the
+current entry. Missing selection retains a valid parent and an explanation rather
+than substituting a ticket/phase or broadening a filter. Archive/removal uses the
+existing read-only surfaces and exact historical identity; re-add cannot inherit
+old navigation by matching a path or name. Restore focus to the originating valid
+control/entity, otherwise an informative heading/recovery message.
+
+Browsing never changes the persisted active phase. The selected project-wide graph
+is recorded in ADR-003 and the dashboard design,
+without changing stored dependencies, five lanes or task/acceptance semantics.
+No Phase 5 planning-domain decision blocks this journey; no new future screens,
+external URL registration, general routing framework or portable navigation state
+is required. One writer owns navigation, board bindings, dependency projection and
+the inspector repair. One independent review covers architecture, UX/QA and the
+actual lifecycle/preview-isolation risks. Direct tests include nonactive-phase
+navigation, branching/filter/focus, stale targets/publication, archive/removal/re-add,
+dense dependency paths and first/last task access at compact and wide sizes.
+
+The two product choices above are accepted; the remaining Phase 5 proposals are
+unchanged. This record is not implementation proof. The architect performed no
+runtime checks or file writes, reported no remaining processes, and is archived.
+
+### Phase 5 decision preparation and handoff — 2026-09-08
+
+This preparation was authorized during the Phase 4 owner-decision wait. It is
+proposed, not Phase 5 implementation authorization. Fresh chief architect
+`01a08269-0c66-7d61-bd3d-f9963383471e` (requested Astra High) checked the accepted
+contracts, implemented planning policy, approval record and relevant mockups.
+No runtime checks, owner-data operations or file writes were performed by that
+peer; it reported no remaining processes. Runtime settings were not independently
+exposed. The following preserves its useful findings; current execution stays in
+[progress](../progress.md).
+
+**Already settled:** P15/P16/P18 inclusion; phase-owned Delivery Goals and separate
+observed execution goals under current cardinality; five lanes; active context
+separate from readiness; immutable Accepted history; identity/retention/package
+contents/Mac-repository authority and supplied RDS appearance. Earlier owner
+direction retained Overview as default project landing with a sibling Project Plan;
+the complete historical v5 planning/redesign package was never accepted wholesale.
+The current Phase 4 dependency/relaunch decisions above are accepted, not reopened.
+
+Present the remaining choices in small batches during an actual owner-approval wait
+or after Phase 4 source delivery, using recommendations and concrete consequences:
+
+1. **Planning surfaces and scope:** retain Overview as directed; recommend a sibling
+   Project Plan for all recorded phases, phase-owned goals/readiness, unplaced work
+   and explicit relationships, plus one shared board with phase/all-phase scopes.
+   Phase links retain their explicit scope. The all-phase option is still a choice;
+   it adds broader comparison while every card must name its phase and appear once.
+   Unresolved intake is a separate incompleteness signpost, never recorded-work count.
+2. **Unplaced work:** recommend the same permanent ticket identity with outcome,
+   dependencies, evidence and task definitions, but no lane or execution/completion/
+   review actions until placement. Placement enters Backlog atomically. Preserve
+   Backlog-only move rules and reconcile affected plan revisions/assignments for
+   move/unplace. This requires domain/storage changes but avoids a fake phase or
+   sixth lane. It cannot erase task history or bypass readiness.
+3. **Phase lifecycle/order:** recommend Upcoming / In delivery / Completed /
+   Unassessed, zero or one In-delivery phase, and explicit optional order. Active
+   phase remains independent. This requires deliberate lifecycle maintenance;
+   migration infers neither lifecycle nor order. Completed requires an explicit
+   transition with resolved delivery obligations, not an empty-board inference.
+   The one-In-delivery limit and labels are proposed product choices, not defaults
+   silently imposed by this assessment. Unordered legacy records display neutrally.
+4. **Requirement/decision references:** recommend managed artifact identity plus a
+   stable source-local identifier where supplied and exact source revision. A
+   heading-only reference remains a locator, not invented requirement identity.
+   Typed explicit links support impacts; sources may be changed, missing,
+   inaccessible or superseded without silent relinking. Deliberate linking costs
+   effort and cannot prove semantic completeness. Keep authoritative prose in its
+   repository documents; no copied requirements authority or automatic adoption.
+5. **Plan proposals/apply:** recommend a persisted bounded proposal with exact
+   baseline, diff, rationale and disposition. Approval binds that proposal and
+   baseline; a separately authorized typed operation atomically applies the app
+   graph. Relevant phase/task revisions and ticket/dependency/lifecycle facts must
+   be covered because phase revision alone does not track all changes. Stale apply
+   changes nothing and needs refreshed review. Document changes retain separately
+   reported repository/catalog outcomes; no distributed atomicity or inferred
+   execution/delivery-acceptance authorization.
+6. **Withdrawal/successors and goal coverage:** recommend separate ticket lifecycle,
+   retained original/reason/last lane/tasks/evidence, and explicit replacement/split
+   links. Successors receive new IDs and start uncompleted; inherited evidence is
+   provenance, not completion proof. Explicitly reconcile dependencies and remaining
+   goal obligations; cancellation without replacement leaves uncovered outcomes
+   visible and blocks false goal acceptance. Started-work withdrawal cannot imply
+   its external run stopped. Accepted history is immutable. This needs a narrow
+   successor/coverage amendment: current policy forbids removing/transferring started
+   assignments and requires assigned tickets Accepted for goal acceptance. Merely
+   excluding withdrawn tickets from counts is incorrect; preserve historical
+   assignments separately from current obligations. Do not infer Active-goal
+   supersession or rewrite dependency targets.
+
+**Actionable handoff after selections:** amend only affected accepted contracts,
+persist the next bounded brief, and start each writer from the merged Phase 4
+navigation contract. Coherent checkpoints are (a) recorded planning and its complete
+readback/Overview/Plan/shared-board journey, (b) references, impacts and proposal
+comparison/atomic apply, and (c) withdrawal/replacement/splitting with coverage and
+acceptance protection. These checkpoints bound delivery; they do not omit any
+selected Phase 5 behavior. Use existing typed mutations, navigation and documents,
+not a second execution, requirements or change-control system.
+
+Migration preserves existing identities, lanes, active context, goals, task
+completions and history; new unknown fields stay unknown. Verify complete new
+records through archive/restore, retained-history and full-backup recovery. Record
+complete future portable representation, without implementing Phase 7 exporter/
+importer early or changing v1 silently. Relevant acceptance covers exact stale/
+replayed/racing apply and rollback, cross-project rejection, count agreement,
+placement identity, moved/withdrawn coverage, immutable Accepted history, recovery,
+and native compact/keyboard/accessibility journeys. The existing proposed Plan
+mockups do not constitute an approved complete visual specification.
+
+SQL layout, bounded payload limits, component composition and deterministic ordering
+mechanics are implementation decisions within accepted semantics. They do not need
+additional owner questionnaires. Risk-triggered independent review covers changed
+architecture, security/privacy and UX/QA without duplicate approval layers.
+
+### Shared execution integration assessment — proposed, non-gating — 2026-09-08
+
+The owner authorized recording the completed chief-architect assessment from task
+`01a0829a-0f61-7bf3-9435-d64faf9afccd`; this is not design approval, a priority
+change, a new assignment or implementation authorization. The recommendation is
+compatible shared-standard, bounded context, existing-check, version and explicit
+adoption work alongside Phase 5, with shared-source integration after Phase 4
+source closeout. It is not a default prerequisite or release gate for either phase.
+Phase 5 retains ownership of placement, lifecycle, proposal baselines, successors
+and goal coverage; integration must consume those decisions when accepted.
+
+Reuse the existing documentation checker and report actual checker/version, scope,
+source revision and dirty or unknown applicability, distinguishing passed, failed,
+skipped and unavailable results. Source inspection at `6f528c5` found current
+command transaction receipts already bound to registration and request generation.
+The older run-discovery missing-registration statement remains historical evidence,
+not a current implementation requirement. Those receipts are not test, reviewer or
+run attestations. A catalog digest identifies metadata, not approval of mutable
+content or the identity of tested code. New authoritative completion/check gates,
+verified reviewer identity and run attestations remain separately proposed
+P10/P17/D13 or runtime scope; ADR-006 guidance v3 remains reserved for Issue #1/P10.
+
+Run Guard remains conditional and I9 remains no-go. Exact consumer instruction
+supersession and adoption need later explicit authorization, preserving product
+completeness, security/privacy, recovery, independent review, owner acceptance and
+ledger authority. Perspective's canonical root also needs clarification. The
+assessment inspected source and test definitions, without runtime verification or
+application readback. Recording it authorizes no hooks, installation, consumer
+changes or app-state mutation, and does not accept or synchronize a catalog.
+
 ## Owner-approved roadmap additions — 2026-09-06
 
 The owner approved including all six recommendations below. Their inclusion is
@@ -256,7 +441,7 @@ automatic-refresh work in slice 3. Do not repeat it as a lifecycle prerequisite.
 | P5 Delivery Goals and readiness — delivered; wider scope proposed | Phase-owned goals with 1:N ticket membership, criteria, readiness and acceptance are useful working contracts. | Preserve explicit plan revision/readiness and owner acceptance. Recommend workspace Delivery Goals as aggregation of phase-owned outcomes first. Whether one outcome must span phases is a separate product decision requiring assignment/readiness/archive changes, not an incidental screen refactor. Completed and unassigned outcomes remain discoverable. |
 | P6 Codex execution-goal links and semantic suggestions — proposed | Exact ticket/thread/observed-goal link is 1:1. This is not the Delivery Goal relationship. | If pursued, separately define 1:N link cardinality, provenance, owner-confirmed suggestions and collision/rejection handling. Suggestions never count as exact links or cause acceptance/notifications. Define the proposed unlinked-goal Needs Review rule with stable source identity and deduplication so refresh cannot create repeated attention items. Refresh preserves confirmed identity; unlinked, stale and unavailable remain distinct. Depends on real source identities for live behavior. |
 | P7 Navigation, Back/Forward and deep links — approved RM2 | Current route contains destination/project only; viewed phase, filters and selected ticket have separate ownership. | One typed entry carries project, phase scope, goal filter, selected entity and restoration/focus context. Sidebar, controls, keyboard and in-app links share history. Goal→board→dependencies→Back/Forward restores exact context; branching clears forward history; deleted/archived targets recover honestly. Define relaunch policy; do not add external URL registration unless actually required. |
-| P8 Dependencies — existing, scope defect | Stored edges can cross phases; displayed graph remains phase scoped and currently prepared from active phase. | Recommended project-wide graph with selected-ticket/phase focus, or explicitly named external stubs in a scoped view. Choose one in RM1. A nonactive-phase ticket opens its own dependencies and returns to the same board context. Wrong-project edges and cycles reject; dependencies never move lanes automatically. |
+| P8 Dependencies — existing, scope defect | Stored edges can cross phases; displayed graph remains phase scoped and currently prepared from active phase. | Owner-selected project-wide graph with selected-ticket focus and phase labels. A nonactive-phase ticket opens its own dependencies and returns to the same board context. Wrong-project edges and cycles reject; dependencies never move lanes automatically. |
 | P9 Ticket details and Ticket Tasks — delivered + #9 | Task-plan revisions, supersession, completion and read-only presentation exist. Stacked scroll regions obscure content. | Preserve task semantics while making the complete inspector discoverable and accessible at compact sizes. Task completion never implies ticket/goal acceptance. Placement/import preserve history; no-plan differs from load failure. Verify last-row access and focus, not only card rendering. |
 | P10 Generic task-plan adoption — #1 | Existing revisioned commands suffice for writes; public query currently exposes only evidence inventory. | Add complete, scoped delivery readback, then owner-reviewable/resumable adoption for non-Accepted tickets. Atomic work may remain unplanned. Use exact revisions and replay receipts, separate evidence-backed past completion, and read back results. No external SQLite, accepted-history backfill or second reconciliation database. |
 | P11 Activity / complete History — existing + proposed | Existing projection combines audit, review, execution and notification events. Reuse it. | Preserve immutable event-time facts and provenance; distinguish imported history from local actions. Later lane changes must not rewrite old event meaning. One filterable History surface, with empty/filter-zero/error distinctions, useful event detail and navigation into retained entities. |
@@ -288,7 +473,8 @@ automatic-refresh work in slice 3. Do not repeat it as a lifecycle prerequisite.
 These contracts have named consequences, not an additional framework. D3's removal
 policy and D9's authority boundary are owner-selected; the presentation scope in
 D11 is also settled. Other details remain proposed unless explicitly accepted in
-the controlling ADRs. Approve or amend unresolved contracts before their owning
+the controlling ADRs. The 2026-09-08 ADR-003 amendment accepts the Phase 4
+navigation/dependency/relaunch subset of D6; future surface contracts remain open. Approve or amend unresolved contracts before their owning
 feature. No schema-only foundation is a completed owner feature.
 
 | Decision | Recommended contract | Features affected / decision timing |
@@ -298,7 +484,7 @@ feature. No schema-only foundation is a completed owner feature.
 | D3 Removal and history retention — owner-selected policy | Archive retains the complete project reversibly. Remove from tracking removes the operational graph/capabilities and retains read-only audit/activity history and a removal record. Confirmation explains retained content. Full erasure is not selected. | C5–C7, C10/C11, P11/P12, I6. Design independent historical identity, stale-request rejection and retention across backup/import/publication before implementation. |
 | D4 Planning identity and placement | One work identity; explicit optional phase/lane placement; phase lifecycle/order and ticket withdrawal/replacement lifecycle separate from active context, readiness and execution lanes. Same-project moves and successor relationships preserve history and explicitly reconcile dependencies, goal coverage and task/evidence references; accepted work remains immutable under current policy. Cross-project transfer/clone is not implicit. | P1–P5/P8/P9/P18, portability and companion. Decide logical contract with RM1; implement together with useful planning behavior. |
 | D5 Outcome scope and execution identity | Workspace Delivery Goals initially aggregate existing phase-owned outcomes. Keep observed execution goals separate. Retain the separate workspace execution-goal browser (P14), including unlinked/completed observations; recommend clearly separated Delivery and Execution views in the workspace Goals destination. Cross-phase outcomes and 1:N execution links remain explicit choices, with schema/acceptance consequences described in P5/P6. | P4–P6/P14, I1, P11/P12, C10/C11, I6. Decide before final Goals UX; no speculative cardinality migration. |
-| D6 Navigation and query scope | One typed context across Overview, Plan, Board, Goals, Dependencies, History, health and search. One Back/Forward stack; authorized scoped read APIs reuse domain policy without external SQL. Search, impact links and saved views navigate by stable identity and preserve scope. | C12, P1/P4/P7/P8/P10/P11/P13/P15/P19. Decide with RM1 and deliver first through the existing nonactive-phase journey. |
+| D6 Navigation and query scope — Phase 4 subset accepted 2026-09-08 | One typed context across Overview, Plan, Board, Goals, Dependencies, History, health and search. One Back/Forward stack; authorized scoped read APIs reuse domain policy without external SQL. Search, impact links and saved views navigate by stable identity and preserve scope. | C12, P1/P4/P7/P8/P10/P11/P13/P15/P19. Phase 4 navigation/dependency/relaunch subset accepted 2026-09-08; deliver through the existing nonactive-phase journey. Future surface choices remain with their owning slices. |
 | D7 Event facts and provenance | Stable event identity and event-time facts; separate local audit, imported history, external observation and notification delivery. Historical unknown fields stay unknown. | C6/C7/C10/C11, P6/P11/P12, I1/I6/I7. Define before archive/history changes. |
 | D8 Artifact custody and freshness | Repository catalog owns document identity/authority; app accepts snapshots explicitly. One scoped validation observation; pending content never becomes accepted through watching, reconnect or import. | C3/C4/C8–C11, I6. Preserve accepted boundaries unless explicitly revised. |
 | D9 Companion authority — owner-selected boundary | Mac-authoritative delivery and repository-authoritative documents, with read-only cloud publication to the phone. Cloud-source-of-truth and authoritative document relocation are not selected. | I6, C7/C10/C11, artifact custody/distribution. RM8 must settle remaining publication, account, deletion and recovery design; the authority decision does not authorize CloudKit resources or implementation. |
@@ -346,9 +532,8 @@ Concrete contradictions requiring reconciliation in the owning slice:
   recorded planning context, without counting goals as additional tickets;
   exclude observed execution goals and unresolved intake from work totals. The
   proposed Goals mockup is execution-oriented and cannot be relabelled as the
-  Delivery Goals screen. ADR-003's phase-scoped graph remains current behavior
-  until the explicit D6 graph-scope amendment; nonactive-phase navigation must
-  never silently use the active-phase graph.
+  Delivery Goals screen. The 2026-09-08 D6 amendment selects a project-wide graph focused on the selected
+  ticket; Phase 4 must deliver it without silently using the active-phase graph.
 - **Archive lane conflict (D4/D7/D8):** ADR-001 v1 preserves lanes; ADR-004 and
   RR-R10 require importer tickets in Backlog and prohibit imported migration
   continuation. Recommend preserving formal state in the new complete package,
@@ -373,7 +558,7 @@ compatibility recommendation and the D2/D8 setup completion/bootstrap handoff
 recommendation below, together with PR #22 merge. Those two recommendations now
 control lifecycle delivery, including their legacy-preservation and explicit
 authority boundaries. Other recommendations in this reconciliation remain
-proposed. The lifecycle slice may reconcile its affected product design and
+proposed except the bounded Phase 4 D6 choices accepted on 2026-09-08 above. The lifecycle slice may reconcile its affected product design and
 shipped guidance to these approved contracts; runtime governing configuration
 and owner/application-state mutations remain separately authorized.
 
@@ -386,7 +571,7 @@ and unchanged RDS appearance are not questions again.
 | --- | --- | --- |
 | D1 registration compatibility | Accept opaque IDs for new projects plus a separate local registration/request generation, preserving legacy IDs. Reject legacy requests when they cannot distinguish a replaced/restored registration. Alternative: retain path-derived domain IDs and rely on registration identity for all continuity, accepting a more complicated historical identity model. | Before lifecycle persistence/command work. The recommended choice avoids path identity reuse; either choice needs stale-request rejection and explicit compatibility behavior. Wire fields and schema layout belong to the slice. |
 | D2/D8 setup completion and bootstrap handoff | Allow entry to the saved project with zero phases and with separately visible outstanding documentation tasks. Finish means saved setup choices, not “managed current.” Recommend a previewed copied bootstrap request containing exact root/project identity and only required setup metadata, followed by explicit validation, binding/acceptance and audited handoff. Alternative: retain a visible project but keep setup marked unfinished until documentation is current; require the owner to supply the exact root manually if it cannot be copied. | Before the lifecycle brief is released. Recommend the first route to avoid a new documentation-availability deadlock. Showing the exact root before Copy makes its disclosure deliberate; no source content, task content or credentials are copied. Bootstrap must preserve existing files/instructions and cannot use guidance installation as permission to overwrite them. |
-| D4–D6 recorded planning and IA | Recommend Overview plus sibling Project Plan, one board with phase/all-phase scopes, project-wide dependency focus, unplaced work without lanes, explicit phase lifecycle/order, and separate Delivery/Execution goal views. Alternative: retain only the selected-phase board and narrower goal browser, which would require revising the corresponding proposed outcomes explicitly. | RM1, before slices 4/5 and final Goals UI, not slice 1. Preserve existing phase-owned Delivery Goals and 1:1 execution links by default; cross-phase outcomes and 1:N links need a separate demonstrated requirement and owner selection. |
+| D4–D6 recorded planning and IA | Project-wide dependency focus and session-only navigation/relaunch are accepted for Phase 4. Remaining proposed planning choice: Overview plus sibling Project Plan, one board with phase/all-phase scopes, unplaced work without lanes, explicit phase lifecycle/order, and separate Delivery/Execution goal views. Alternative: retain only the selected-phase board and narrower goal browser, which would require revising the corresponding proposed outcomes explicitly. | RM1, before slices 4/5 and final Goals UI, not slice 1. Preserve existing phase-owned Delivery Goals and 1:1 execution links by default; cross-phase outcomes and 1:N links need a separate demonstrated requirement and owner selection. |
 | D4/D7/D8 complete-package formal state | Recommend the new version preserve supported lanes, readiness/revisions and accepted history, with destination access/evidence checks before new execution. Alternative: convert imported work to Backlog, explicitly abandoning lossless formal-state restoration. | Before RM5's format/fixture, not lifecycle. Resolve the ADR-001/004 conflict explicitly and design file/store recovery together; no new continuation exception is inferred. |
 
 Remaining I1/I5–I9 pursue/no-go, audience, publication and run-ownership decisions

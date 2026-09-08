@@ -10,6 +10,66 @@ private enum SyntheticBackupScopeError: Error {
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testNativeNavigationHistoryControlsExposeBoundariesAndPerformBackForward() async throws {
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-NativeHistory-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: databaseURL),
+            externalServicesSuppressed: true
+        )
+        await model.navigate(to: .settings)
+        let hosting = NSHostingView(rootView: NavigationHistoryControls(model: model))
+        hosting.frame = NSRect(x: 0, y: 0, width: 180, height: 60)
+        let window = NSWindow(
+            contentRect: hosting.frame,
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        window.isReleasedWhenClosed = false
+        window.title = "Phase 4 Navigation History — isolated native acceptance"
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(100))
+        hosting.layoutSubtreeIfNeeded()
+
+        XCTAssertTrue(window.isVisible)
+        try taskCapture(hosting, name: "phase4-navigation-history-controls")
+        let externalCheckMarker = URL(
+            fileURLWithPath: "/tmp/release-radar-phase4-external-history-check",
+            isDirectory: true
+        )
+        if FileManager.default.fileExists(atPath: externalCheckMarker.path) {
+            try? FileManager.default.removeItem(at: externalCheckMarker)
+            print("PHASE4 HISTORY READY: activate Back")
+            for _ in 0..<300 where model.selection != .projects {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            XCTAssertEqual(model.selection, .projects)
+            print("PHASE4 HISTORY BACK COMPLETE: activate Forward")
+            for _ in 0..<300 where model.selection != .settings {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            XCTAssertEqual(model.selection, .settings)
+        } else {
+            await model.goBack()
+            XCTAssertEqual(model.selection, .projects)
+            XCTAssertFalse(model.canNavigateBack)
+            XCTAssertTrue(model.canNavigateForward)
+            await model.goForward()
+            XCTAssertEqual(model.selection, .settings)
+        }
+    }
+
+    @MainActor
     func testBackupDestinationPanelSelectsOneExistingFolderAndGeneratesItsPackageInside() throws {
         let panel = ApplicationRecoveryFilePanels.makeBackupDestinationPanel()
 
@@ -480,6 +540,190 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testNonactivePhaseTicketDependenciesBackRestoresContextAndNativeFocus() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let ticketID = TicketID(rawValue: "ROAD-1")
+        let filter = DeliveryGoalFilter.goal(.init(rawValue: "road-goal-1"))
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.setBoardFilter(filter, projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.selectTicket(ticketID)
+        await model.navigate(to: .dependencies(fixture.projectID))
+
+        await model.goBack()
+
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.roadmapPhaseID)
+        XCTAssertEqual(model.boardFilter(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID), filter)
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        XCTAssertEqual(model.navigationFocus, .ticket(ticketID))
+
+        let hosting = NSHostingView(rootView: Task10BoardTestView(
+            model: model,
+            projectID: fixture.projectID,
+            initialFilter: filter
+        ))
+        hosting.frame = NSRect(x: 0, y: 0, width: 1_420, height: 860)
+        let window = NSWindow(
+            contentRect: hosting.frame,
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        window.isReleasedWhenClosed = false
+        window.title = "Phase 4 Restored Focus — isolated native acceptance"
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(200))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(window.isVisible)
+        try taskCapture(hosting, name: "phase4-restored-nonactive-board-focus")
+        let marker = URL(fileURLWithPath: "/tmp/release-radar-phase4-restored-focus-check", isDirectory: true)
+        if FileManager.default.fileExists(atPath: marker.path) {
+            try? FileManager.default.removeItem(at: marker)
+            print("PHASE4 RESTORED FOCUS READY: verify ROAD-1 focus")
+            try await Task.sleep(for: .seconds(30))
+        }
+    }
+
+    @MainActor
+    func testFirstOpenedBoardRestoresTheActuallyRenderedPhaseAfterActivePhaseChanges() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.currentPhaseID)
+        await model.navigate(to: .dependencies(fixture.projectID))
+        await model.setActivePhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+
+        await model.goBack()
+
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, fixture.currentPhaseID)
+        XCTAssertNil(model.navigationRecoveryMessage)
+    }
+
+    @MainActor
+    func testReloadRecoversToProjectOverviewWhenTheViewedPhaseDisappears() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let disappearingPhaseID = PhaseID(rawValue: "phase-disappearing")
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Add removable viewed phase") { connection in
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES (?, ?, 'Disappearing')",
+                bindings: [.text(disappearingPhaseID.rawValue), .text(fixture.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: disappearingPhaseID)
+        XCTAssertEqual(model.viewedBoard(for: fixture.projectID)?.phaseID, disappearingPhaseID)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Remove the viewed phase") { connection in
+            try connection.execute(
+                "DELETE FROM phases WHERE project_id = ? AND id = ?",
+                bindings: [.text(fixture.projectID.rawValue), .text(disappearingPhaseID.rawValue)]
+            )
+        }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        XCTAssertEqual(model.selection, .projectOverview(fixture.projectID))
+        XCTAssertNil(model.viewedBoard(for: fixture.projectID))
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains("previously viewed phase is unavailable") == true)
+    }
+
+    @MainActor
+    func testBoardReloadPreservesUnavailableTicketIdentityWithoutSelectingAnotherTicket() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let ticketID = TicketID(rawValue: "STALE-BOARD")
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Add stale board selection fixture") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, 'Moves out of the viewed board.', 'backlog')",
+                bindings: [.text(ticketID.rawValue), .text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.selectTicket(ticketID)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Move selected ticket out of viewed phase") { connection in
+            try connection.execute(
+                "UPDATE tickets SET phase_id = ? WHERE project_id = ? AND id = ?",
+                bindings: [.text(fixture.currentPhaseID.rawValue), .text(fixture.projectID.rawValue), .text(ticketID.rawValue)]
+            )
+        }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        XCTAssertNil(model.viewedBoard(for: fixture.projectID)?.detail(for: ticketID))
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains(ticketID.rawValue) == true)
+    }
+
+    @MainActor
+    func testDependenciesReloadPreservesUnavailableTicketIdentityWithoutUnrelatedGraph() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let ticketID = TicketID(rawValue: "STALE-DEPENDENCIES")
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Add stale dependency selection fixture") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, 'Disappears while dependencies are open.', 'backlog')",
+                bindings: [.text(ticketID.rawValue), .text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.selectTicket(ticketID)
+        await model.navigate(to: .dependencies(fixture.projectID))
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Remove selected dependency ticket") { connection in
+            try connection.execute(
+                "DELETE FROM tickets WHERE project_id = ? AND id = ?",
+                bindings: [.text(fixture.projectID.rawValue), .text(ticketID.rawValue)]
+            )
+        }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        XCTAssertEqual(model.selection, .dependencies(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        XCTAssertNil(model.dependencyGraph(for: fixture.projectID))
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains(ticketID.rawValue) == true)
+    }
+
+    @MainActor
+    func testInitialEmptySelectionStillChoosesTheExistingDefaultTicketAndGraph() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        model.selectedTicketID = TicketID(rawValue: "")
+
+        await model.loadDashboard()
+
+        XCTAssertEqual(model.selectedTicketID.rawValue, "CURRENT-1")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected.ticket.id.rawValue, "CURRENT-1")
+    }
+
+    @MainActor
     func testTask10PhaseSwitchResetsFilterWithoutClearingNewSelection() async throws {
         let fixture = try await makeTask10PlanningFixture()
         let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
@@ -714,6 +958,120 @@ final class AppRouteTests: XCTestCase {
                 await model.reloadAfterActivePhaseSelection(projectID: projectID)
             }
             XCTAssertEqual(model.dashboard?.board(for: projectID)?.lane(.blocked)?.cards.first?.activeTaskCount, 16)
+        }
+    }
+
+    @MainActor
+    func testCompactTicketInspectorExposesFirstAndLastTaskRowsForKeyboardTraversal() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-Phase4CompactTasks-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let ticketID = TicketID(rawValue: "VD2-07c")
+        try await store.transact(actor: .init(id: "phase4-fixture"), reason: "Create compact task traversal fixture") { connection in
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: DashboardSampleData.projectID,
+                ticketID: ticketID,
+                expectedRevision: nil,
+                additions: (1...16).map { index in
+                    .init(
+                        id: .init(rawValue: "task-\(index)"),
+                        label: "Task \(index)",
+                        title: "Verify compact delivery checkpoint \(index)",
+                        sortOrder: index
+                    )
+                },
+                definitionRevisions: [],
+                supersededTaskIDs: [],
+                connection: connection
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        let detail = try XCTUnwrap(model.dashboard?.board(for: DashboardSampleData.projectID)?.detail(for: ticketID))
+        guard case let .loaded(plan) = detail.taskPlan else { return XCTFail("Expected loaded task plan") }
+        XCTAssertEqual(plan.tasks.first?.label, "Task 1")
+        XCTAssertEqual(plan.tasks.last?.label, "Task 16")
+
+        let hosting = NSHostingView(rootView: TicketDetailView(detail: detail))
+        hosting.frame = NSRect(x: 0, y: 0, width: 720, height: 780)
+        let window = NSWindow(
+            contentRect: hosting.frame,
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        window.isReleasedWhenClosed = false
+        window.title = "Phase 4 Compact Tasks — isolated native acceptance"
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(window.isVisible)
+        try taskCapture(hosting, name: "phase4-compact-ticket-tasks")
+
+        let marker = URL(fileURLWithPath: "/tmp/release-radar-phase4-compact-task-check", isDirectory: true)
+        if FileManager.default.fileExists(atPath: marker.path) {
+            try? FileManager.default.removeItem(at: marker)
+            print("PHASE4 COMPACT TASKS READY: verify first-to-last keyboard traversal")
+            try await Task.sleep(for: .seconds(45))
+        }
+    }
+
+    @MainActor
+    func testProjectDependencyMapRendersWideAndCompactInNativeHost() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-Phase4Dependencies-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            externalServicesSuppressed: true,
+            seedSampleData: true
+        )
+        await model.loadDashboard()
+        let graph = try XCTUnwrap(model.dependencyGraph(for: DashboardSampleData.projectID))
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_420, height: 860),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.title = "Phase 4 Project Dependencies — isolated native acceptance"
+        window.appearance = NSAppearance(named: .darkAqua)
+        defer { window.close() }
+
+        for width in [1_420.0, 760.0] {
+            let hosting = NSHostingView(rootView: DependencyGraphView(
+                graph: graph,
+                selectedTicketID: Binding(
+                    get: { model.selectedTicketID },
+                    set: { model.selectTicket($0) }
+                ),
+                freshness: model.codexSnapshot.freshness
+            ).environment(\.colorScheme, .dark))
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: 860)
+            hosting.appearance = window.appearance
+            window.contentView = hosting
+            window.setContentSize(NSSize(width: width, height: 860))
+            window.orderFront(nil)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            XCTAssertTrue(window.isVisible)
+            XCTAssertEqual(graph.selected.ticket.id, TicketID(rawValue: "VD2-08"))
+            XCTAssertTrue(graph.nodes.allSatisfy { !$0.phaseName.isEmpty })
+            try taskCapture(hosting, name: "phase4-project-dependencies-\(Int(width))")
         }
     }
 
@@ -4418,15 +4776,29 @@ private struct Task10BoardTestView: View {
     @Bindable var model: AppModel
     let projectID: ProjectID
     var initialFilter: DeliveryGoalFilter = .all
+    @State private var didApplyInitialFilter = false
 
     var body: some View {
         if let board = model.viewedBoard(for: projectID) {
-            PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID,
+            PhaseBoardView(
+                board: board,
+                selectedTicketID: $model.selectedTicketID,
+                filter: Binding(
+                    get: { model.boardFilter(projectID: projectID, phaseID: board.phaseID) },
+                    set: { model.setBoardFilter($0, projectID: projectID, phaseID: board.phaseID) }
+                ),
                 phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
                 selectActivePhase: { await model.setActivePhase(projectID: projectID, phaseID: $0) },
                 reloadActivePhase: { await model.reloadAfterActivePhaseSelection(projectID: projectID) },
                 reauthorizeActivePhase: { _ in XCTFail("No authorization change in render check") },
-                viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) }, filter: initialFilter)
+                viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
+                requestedFocus: model.navigationFocus,
+                focusChanged: { model.setNavigationFocus($0) })
+                .onAppear {
+                    guard !didApplyInitialFilter else { return }
+                    didApplyInitialFilter = true
+                    model.setBoardFilter(initialFilter, projectID: projectID, phaseID: board.phaseID)
+                }
         }
     }
 }
@@ -4439,7 +4811,7 @@ private struct TaskPlanBoardTestView: View {
     let projectID: ProjectID
     var body: some View {
         if let board = model.dashboard?.board(for: projectID) {
-            PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID,
+            PhaseBoardView(board: board, selectedTicketID: $model.selectedTicketID, filter: .constant(.all),
                 phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
                 selectActivePhase: { _ in XCTFail("Task UI must not select an active phase") },
                 reloadActivePhase: { await model.reloadAfterActivePhaseSelection(projectID: projectID) },

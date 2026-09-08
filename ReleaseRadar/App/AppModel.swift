@@ -36,6 +36,7 @@ private struct PreparedProjectProjections: Sendable {
     let projectDocumentationStates: [ProjectID: ProjectDocumentationState]
     let projectRoots: [ProjectID: URL]
     let selectedTicketID: TicketID
+    let unavailableSelectedTicketID: TicketID?
     let selectedReviewItemID: ReviewItemID?
 }
 
@@ -52,6 +53,9 @@ final class AppModel {
     var isSidebarCompact = false
     var dashboard: DashboardProjection?
     var selectedTicketID = TicketID(rawValue: "VD2-08")
+    private(set) var navigationHistory = NavigationHistory(initial: .projects)
+    private(set) var navigationRecoveryMessage: String?
+    private(set) var navigationFocus: NavigationFocus? = .route(.projects)
     var dashboardError: String?
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
     var codexPluginState: CodexPluginPresentationState = .checking
@@ -100,12 +104,14 @@ final class AppModel {
     private var activePhaseSelectionStatuses: [ProjectID: ActivePhaseSelectionStatus] = [:]
     // View preferences are ephemeral, byte-exact identities, never another active pointer.
     private var viewedPhaseIDs: [Data: PhaseID] = [:]
+    private var boardFilters: [PhaseBoardKey: DeliveryGoalFilter] = [:]
     private var deliveryGoalReloadRequired: Set<Data> = []
     private var performingReviewActionProjectIDs: Set<ProjectID> = []
     private var alertRulesFailureState: AlertRulesFailureState?
     private var didInitializeCodexPluginLifecycle = false
     private var codexPluginObservedAt: Date?
     private var projectionReloadGeneration: UInt64 = 0
+    private var navigationGeneration: UInt64 = 0
     private(set) var documentationServiceGeneration: UInt64 = 0
     @ObservationIgnored private var documentationMonitoringTask: Task<Void, Never>?
 #if DEBUG
@@ -224,6 +230,9 @@ final class AppModel {
             ?? DashboardSampleData.projectID
     }
 
+    var canNavigateBack: Bool { navigationHistory.canGoBack }
+    var canNavigateForward: Bool { navigationHistory.canGoForward }
+
     var currentProject: ProjectDashboardProjection? {
         dashboard?.projects.first { $0.id == currentProjectID }
     }
@@ -275,43 +284,184 @@ final class AppModel {
     }
 
     func navigate(to route: AppRoute) async {
-        if case let .removedProject(removalID) = route {
-            selectedProjectID = nil
-            selection = dashboard?.removedProjects.contains(where: { $0.id == removalID }) == true
-                ? route : .projects
-            return
-        }
-        if case let .archivedProject(projectID) = route,
+        captureCurrentNavigationContext()
+        let previousProjectID = selection.projectID ?? selectedProjectID
+        navigationGeneration &+= 1
+        let generation = navigationGeneration
+        let resolvedRoute = resolvedRouteForNavigation(route)
+        navigationRecoveryMessage = resolvedRoute == route ? nil : "The requested destination changed with the project lifecycle. Its current location is shown."
+
+        if let projectID = resolvedRoute.projectID,
            dashboard?.projects.contains(where: { $0.id == projectID }) == true {
-            await navigate(to: .projectOverview(projectID))
-            return
-        }
-        if let projectID = route.projectID {
-            if dashboard?.archivedProjects.contains(where: { $0.id == projectID }) == true {
-                selection = .archivedProject(projectID)
-                return
-            }
-            guard dashboard?.projects.contains(where: { $0.id == projectID }) == true else {
-                if let removed = dashboard?.removedProjects.first(where: { $0.projectID == projectID }) {
-                    selectedProjectID = nil
-                    selection = .removedProject(removed.id)
-                } else {
-                    selection = .projects
-                }
-                return
-            }
             do {
                 try await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
             } catch {
+                guard generation == navigationGeneration else { return }
                 dashboardError = error.localizedDescription
                 return
             }
+            guard generation == navigationGeneration else { return }
             documentationObserver.invalidate(projectID: projectID)
         }
-        selection = route
-        if let projectID = route.projectID {
+        selection = resolvedRoute
+        if let destinationProjectID = resolvedRoute.projectID,
+           destinationProjectID != previousProjectID {
+            selectedTicketID = TicketID(rawValue: "")
+        }
+        if let projectID = resolvedRoute.projectID {
             _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
         }
+        guard generation == navigationGeneration else { return }
+        navigationFocus = .route(resolvedRoute)
+        navigationHistory.navigate(to: historyEntry(for: resolvedRoute, focus: navigationFocus))
+    }
+
+    func goBack() async { await restoreNavigation(step: .back) }
+    func goForward() async { await restoreNavigation(step: .forward) }
+
+    private enum NavigationStep { case back, forward }
+
+    private func restoreNavigation(step: NavigationStep) async {
+        captureCurrentNavigationContext()
+        navigationGeneration &+= 1
+        let moved = switch step {
+        case .back: navigationHistory.goBack()
+        case .forward: navigationHistory.goForward()
+        }
+        guard moved else { return }
+        let entry = navigationHistory.current
+        navigationRecoveryMessage = nil
+        restore(entry)
+    }
+
+    private func captureCurrentNavigationContext() {
+        let route = navigationHistory.current.route
+        let projectID = route.projectID
+        let phaseID = projectID.flatMap { viewedPhaseIDs[Data($0.rawValue.utf8)] }
+        let filter = projectID.flatMap { projectID in
+            phaseID.map { boardFilters[PhaseBoardKey(projectID: projectID, phaseID: $0)] ?? .all }
+        }
+        navigationHistory.updateCurrent(
+            registration: registration(for: route),
+            phaseID: phaseID,
+            filter: filter,
+            selectedTicketID: projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            focus: navigationFocus
+        )
+    }
+
+    private func historyEntry(for route: AppRoute, focus: NavigationFocus?) -> NavigationHistoryEntry {
+        let projectID = route.projectID
+        let phaseID = projectID.flatMap { viewedPhaseIDs[Data($0.rawValue.utf8)] }
+        let filter = projectID.flatMap { projectID in
+            phaseID.map { boardFilters[PhaseBoardKey(projectID: projectID, phaseID: $0)] ?? .all }
+        }
+        return .init(
+            route: route,
+            registration: registration(for: route),
+            phaseID: phaseID,
+            filter: filter,
+            selectedTicketID: projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            focus: focus
+        )
+    }
+
+    private func registration(for route: AppRoute) -> ProjectRegistration? {
+        if case let .removedProject(removalID) = route {
+            return dashboard?.removedProjects.first(where: { $0.id == removalID })?.registration
+        }
+        let projectID = switch route {
+        case .needsReview, .notifications:
+            selectedProjectID ?? (selection == route ? dashboard?.projects.first?.id : nil)
+        default:
+            route.projectID
+        }
+        guard let projectID else { return nil }
+        return dashboard?.projects.first(where: { $0.id == projectID })?.registration
+            ?? dashboard?.archivedProjects.first(where: { $0.id == projectID })?.registration
+            ?? dashboard?.removedProjects.first(where: { $0.projectID == projectID })?.registration
+    }
+
+    private func resolvedRouteForNavigation(_ route: AppRoute) -> AppRoute {
+        if case let .removedProject(removalID) = route {
+            return dashboard?.removedProjects.contains(where: { $0.id == removalID }) == true ? route : .projects
+        }
+        guard let projectID = route.projectID else { return route }
+        if dashboard?.projects.contains(where: { $0.id == projectID }) == true {
+            return if case .archivedProject = route { .projectOverview(projectID) } else { route }
+        }
+        if dashboard?.archivedProjects.contains(where: { $0.id == projectID }) == true {
+            return .archivedProject(projectID)
+        }
+        if let removed = dashboard?.removedProjects.first(where: { $0.projectID == projectID }) {
+            return .removedProject(removed.id)
+        }
+        return .projects
+    }
+
+    private func restore(_ entry: NavigationHistoryEntry) {
+        var route = entry.route
+        var recovery: [String] = []
+        var restoredProjectID = route.projectID
+
+        if let registration = entry.registration {
+            if dashboard?.projects.first(where: {
+                $0.registration?.hasSameNavigationIdentity(as: registration) == true
+            }) != nil {
+                restoredProjectID = registration.projectID
+                if case .archivedProject = route { route = .projectOverview(registration.projectID) }
+                if case .removedProject = route { route = .projectOverview(registration.projectID) }
+            } else if dashboard?.archivedProjects.contains(where: {
+                $0.registration.hasSameNavigationIdentity(as: registration)
+            }) == true {
+                restoredProjectID = registration.projectID
+                route = .archivedProject(registration.projectID)
+                recovery.append("The project was archived after this history entry was recorded.")
+            } else if let removed = dashboard?.removedProjects.first(where: {
+                $0.registration.hasSameNavigationIdentity(as: registration)
+            }) {
+                restoredProjectID = nil
+                route = .removedProject(removed.id)
+                recovery.append("The project was removed after this history entry was recorded.")
+            } else {
+                restoredProjectID = nil
+                route = .projects
+                recovery.append("The exact project registration in this history entry is unavailable; a different registration was not substituted.")
+            }
+        } else {
+            route = resolvedRouteForNavigation(route)
+            restoredProjectID = route.projectID
+        }
+
+        if let projectID = restoredProjectID,
+           let phaseID = entry.phaseID,
+           dashboard?.board(for: projectID, phaseID: phaseID) != nil {
+            viewedPhaseIDs[Data(projectID.rawValue.utf8)] = phaseID
+            boardFilters[PhaseBoardKey(projectID: projectID, phaseID: phaseID)] = entry.filter ?? .all
+        } else if entry.phaseID != nil, case let .phaseBoard(projectID) = route {
+            route = .projectOverview(projectID)
+            recovery.append("The previously viewed phase is unavailable; the project overview is retained.")
+        }
+
+        selectedProjectID = restoredProjectID
+        selection = route
+        let ticketIsAvailable = entry.selectedTicketID.map { ticketID in
+            guard let projectID = restoredProjectID else { return false }
+            if case .phaseBoard = route, let phaseID = entry.phaseID {
+                return dashboard?.board(for: projectID, phaseID: phaseID)?
+                    .filtered(by: entry.filter ?? .all)
+                    .detail(for: ticketID) != nil
+            }
+            return dashboard?.boards.contains(where: {
+                $0.key.projectID == projectID && $0.value.detail(for: ticketID) != nil
+            }) == true
+        } ?? false
+        selectedTicketID = ticketIsAvailable ? entry.selectedTicketID! : TicketID(rawValue: "")
+        if entry.selectedTicketID != nil, !ticketIsAvailable {
+            recovery.append("The previously selected ticket is unavailable; no other ticket was selected.")
+        }
+        navigationFocus = ticketIsAvailable ? entry.focus : (recovery.isEmpty ? entry.focus : .recovery)
+        navigationRecoveryMessage = recovery.isEmpty ? nil : recovery.joined(separator: " ")
     }
 
     func previewProjectLifecycle(
@@ -585,6 +735,11 @@ final class AppModel {
 
     private func clearEphemeralViewState() {
         viewedPhaseIDs.removeAll()
+        boardFilters.removeAll()
+        navigationHistory.reset()
+        navigationRecoveryMessage = nil
+        navigationFocus = .route(.projects)
+        selectedTicketID = TicketID(rawValue: "")
         deliveryGoalReloadRequired.removeAll()
         repositoryRecoveries.removeAll()
         reviewInboxes.removeAll()
@@ -951,14 +1106,53 @@ final class AppModel {
 
     func viewedBoard(for projectID: ProjectID) -> PhaseBoardProjection? {
         guard let dashboard else { return nil }
-        return viewedBoard(in: dashboard, for: projectID)
+        let key = Data(projectID.rawValue.utf8)
+        if let phaseID = viewedPhaseIDs[key] {
+            return dashboard.board(for: projectID, phaseID: phaseID)
+        }
+        guard let board = defaultBoard(in: dashboard, for: projectID) else { return nil }
+        viewedPhaseIDs[key] = board.phaseID
+        if selection == .phaseBoard(projectID) {
+            navigationHistory.updateCurrent(
+                registration: registration(for: selection),
+                phaseID: board.phaseID,
+                filter: boardFilter(projectID: projectID, phaseID: board.phaseID),
+                selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+                focus: navigationFocus
+            )
+        }
+        return board
+    }
+
+    func boardFilter(projectID: ProjectID, phaseID: PhaseID) -> DeliveryGoalFilter {
+        boardFilters[PhaseBoardKey(projectID: projectID, phaseID: phaseID)] ?? .all
+    }
+
+    func setBoardFilter(_ filter: DeliveryGoalFilter, projectID: ProjectID, phaseID: PhaseID) {
+        boardFilters[PhaseBoardKey(projectID: projectID, phaseID: phaseID)] = filter
+        navigationFocus = .filterSummary
+        navigationHistory.updateCurrent(
+            registration: registration(for: selection),
+            phaseID: phaseID,
+            filter: filter,
+            selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            focus: navigationFocus
+        )
+    }
+
+    func setNavigationFocus(_ focus: NavigationFocus?) {
+        navigationFocus = focus
+        captureCurrentNavigationContext()
     }
 
     private func viewedBoard(in dashboard: DashboardProjection, for projectID: ProjectID) -> PhaseBoardProjection? {
-        if let phaseID = viewedPhaseIDs[Data(projectID.rawValue.utf8)],
-           let board = dashboard.board(for: projectID, phaseID: phaseID) {
-            return board
+        if let phaseID = viewedPhaseIDs[Data(projectID.rawValue.utf8)] {
+            return dashboard.board(for: projectID, phaseID: phaseID)
         }
+        return defaultBoard(in: dashboard, for: projectID)
+    }
+
+    private func defaultBoard(in dashboard: DashboardProjection, for projectID: ProjectID) -> PhaseBoardProjection? {
         if let active = dashboard.board(for: projectID) { return active }
         guard let phase = dashboard.projects.first(where: {
             $0.id.rawValue.utf8.elementsEqual(projectID.rawValue.utf8)
@@ -974,6 +1168,26 @@ final class AppModel {
             selectedTicketID = board.lanes.flatMap(\.cards).map(\.id)
                 .min { $0.rawValue < $1.rawValue } ?? TicketID(rawValue: "")
         }
+        navigationHistory.updateCurrent(
+            registration: registration(for: selection),
+            phaseID: phaseID,
+            filter: boardFilter(projectID: projectID, phaseID: phaseID),
+            selectedTicketID: selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            focus: selectedTicketID.rawValue.isEmpty ? .filterSummary : .ticket(selectedTicketID)
+        )
+    }
+
+    func selectTicket(_ ticketID: TicketID) {
+        selectedTicketID = ticketID
+        navigationFocus = ticketID.rawValue.isEmpty ? .filterSummary : .ticket(ticketID)
+        let phaseID = viewedPhaseIDs[Data(currentProjectID.rawValue.utf8)]
+        navigationHistory.updateCurrent(
+            registration: registration(for: selection),
+            phaseID: phaseID,
+            filter: phaseID.map { boardFilter(projectID: currentProjectID, phaseID: $0) },
+            selectedTicketID: ticketID.rawValue.isEmpty ? nil : ticketID,
+            focus: navigationFocus
+        )
     }
 
     func deliveryGoalAcceptanceNeedsReload(for projectID: ProjectID) -> Bool {
@@ -1456,6 +1670,7 @@ final class AppModel {
         var projectDocumentationStates: [ProjectID: ProjectDocumentationState] = [:]
         var projectRoots: [ProjectID: URL] = [:]
         var selectedTicketID = self.selectedTicketID
+        var unavailableSelectedTicketID: TicketID?
         let visibleProjectID = selection.projectID
             ?? selectedProjectID
             ?? dashboard.projects.first?.id
@@ -1468,23 +1683,49 @@ final class AppModel {
             projectDocumentationStates[project.id] = observation?.documentationState ?? .legacy(.unavailable)
             projectRoots[project.id] = observation?.identity.rootPath.map(URL.init(fileURLWithPath:))
             guard let board = dashboard.board(for: project.id) else { continue }
-            let preferredID = board.detail(for: self.selectedTicketID) == nil
-                ? board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
-                : self.selectedTicketID
+            var preferredID = board.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
             if project.id == visibleProjectID {
                 let visibleBoard = viewedBoard(in: dashboard, for: project.id)
-                selectedTicketID = visibleBoard?.detail(for: self.selectedTicketID) != nil
-                    ? self.selectedTicketID
-                    : visibleBoard?.lanes.flatMap(\.cards).map(\.id).min { $0.rawValue < $1.rawValue }
-                        ?? TicketID(rawValue: "")
+                let selectedTicketExists: Bool
+                if selection == .dependencies(project.id) {
+                    selectedTicketExists = dashboard.boards.contains {
+                        $0.key.projectID == project.id && $0.value.detail(for: self.selectedTicketID) != nil
+                    }
+                } else {
+                    selectedTicketExists = visibleBoard?.detail(for: self.selectedTicketID) != nil
+                }
+                let canChooseDefault: Bool
+                if self.dashboard == nil {
+                    canChooseDefault = true
+                } else if case let .ownerActivePhaseCommitted(projectID, _, _) = context {
+                    canChooseDefault = projectID == project.id
+                } else {
+                    canChooseDefault = false
+                }
+                if selectedTicketExists {
+                    selectedTicketID = self.selectedTicketID
+                    preferredID = self.selectedTicketID
+                } else if canChooseDefault {
+                    selectedTicketID = visibleBoard?.lanes.flatMap(\.cards).map(\.id)
+                        .min { $0.rawValue < $1.rawValue } ?? TicketID(rawValue: "")
+                    preferredID = selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
+                } else if selection == .phaseBoard(project.id) || selection == .dependencies(project.id) {
+                    selectedTicketID = self.selectedTicketID
+                    preferredID = nil
+                    if !self.selectedTicketID.rawValue.isEmpty {
+                        unavailableSelectedTicketID = self.selectedTicketID
+                    }
+                }
             }
             guard let preferredID else { continue }
-            dependencyGraphs[project.id] = try await DependencyGraphProjection.load(
+            if let graph = try? await DependencyGraphProjection.load(
                 from: store,
                 projectID: project.id,
                 phaseID: board.phaseID,
                 selectedTicketID: preferredID
-            )
+            ) {
+                dependencyGraphs[project.id] = graph
+            }
         }
         for removed in dashboard.removedProjects {
             removedActivities[removed.id] = try await ProjectActivityProjection.loadRemoved(
@@ -1503,6 +1744,7 @@ final class AppModel {
             projectDocumentationStates: projectDocumentationStates,
             projectRoots: projectRoots,
             selectedTicketID: selectedTicketID,
+            unavailableSelectedTicketID: unavailableSelectedTicketID,
             selectedReviewItemID: reviewInboxes[visibleProjectID]?.openItems.first?.id
         )
     }
@@ -1518,6 +1760,20 @@ final class AppModel {
         selectedTicketID = prepared.selectedTicketID
         selectedReviewItemID = prepared.selectedReviewItemID
         dashboardError = nil
+        var navigationRecovery: [String] = []
+        if case let .phaseBoard(projectID) = selection,
+           let phaseID = viewedPhaseIDs[Data(projectID.rawValue.utf8)],
+           prepared.dashboard.board(for: projectID, phaseID: phaseID) == nil {
+            selection = .projectOverview(projectID)
+            navigationRecovery.append("The previously viewed phase is unavailable; the project overview is retained.")
+        }
+        if let ticketID = prepared.unavailableSelectedTicketID {
+            navigationRecovery.append("The previously selected ticket \(ticketID.rawValue) is unavailable; no other ticket was selected.")
+        }
+        if !navigationRecovery.isEmpty {
+            navigationRecoveryMessage = navigationRecovery.joined(separator: " ")
+            navigationFocus = .recovery
+        }
         let activeProjectIDs = Set(prepared.dashboard.projects.map(\.id))
         documentationObserver.retain(projectIDs: activeProjectIDs)
         for projectID in prepared.reviewInboxes.keys where deliveryGoalAcceptanceNeedsReload(for: projectID) {

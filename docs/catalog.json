@@ -567,6 +567,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-08-phase4-navigation",
+      "path": "docs/delivery/task-briefs/2026-09-08-phase4-navigation",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 4 coherent navigation and inspector delivery scope",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4944,6 +4959,111 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase4-navigation-brief-2026-09-08",
+      "path": "docs/delivery/task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-08-phase4-navigation",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase4-navigation-evidence-2026-09-08",
+      "path": "docs/delivery/evidence/2026-09-08-phase4-navigation.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase4-navigation-history-controls-2026-09-08",
+      "path": "docs/delivery/evidence/phase4-navigation-history-controls.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase4-project-dependencies-compact-2026-09-08",
+      "path": "docs/delivery/evidence/phase4-project-dependencies-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase4-project-dependencies-wide-2026-09-08",
+      "path": "docs/delivery/evidence/phase4-project-dependencies-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase4-restored-nonactive-board-focus-2026-09-08",
+      "path": "docs/delivery/evidence/phase4-restored-nonactive-board-focus.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase4-ticket-details-compact-2026-09-08",
+      "path": "docs/delivery/evidence/phase4-ticket-details-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
       ],
       "checksum": {
         "policy": "notApplicable"
