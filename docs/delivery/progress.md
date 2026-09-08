@@ -50,17 +50,21 @@ Writer `01a07e93-fd68-73f1-9eda-c026cc1229f8` delivered source/evidence commit
 worktree `6f05`, branch `codex/phase3a-freshness`, requested Sol High. Its candidate
 `b296fe9467187054267f5eed667ba8c731267d85` includes the required progress update and
 is pushed in [PR #33](https://github.com/joeroberts/release-radar/pull/33).
-The original writer is restored for two Required P1 corrections from independent
-review: reject a folder-renewal operation across service/store replacement before
-any retired-store commit, and abort projection preparation when its observation is
-superseded so it cannot overwrite newer documentation/evidence. Focused controlled
-interleaving regressions and correction review are required. The prior raw result
-bundles are now absent from the writer build path; their readback is unavailable.
-Committed evidence and screenshots remain preserved; no cleanup was authorized.
-Fresh independent combined code, authorization/security and UX/QA review
-`01a07ef7-9e05-7903-bc94-7e13c3322f95` has reported those Required findings against that candidate, requested
-Sol High. Runtime model/effort are unexposed. Phase 3A is not complete or ready for
-merge approval. Phase 3B remains prepared and depends on reviewed, approved 3A.
+The writer corrected both Required P1 race findings in pushed candidate
+`3a8d77bb317f760e379967ba2f91a7090a711aa8`: retired folder-renewal authorization is
+fenced before service/store replacement, and superseded projection preparation
+cannot overwrite newer documentation/evidence. Independent reviewer
+`01a07ef7-9e05-7903-bc94-7e13c3322f95` closed both findings on that candidate with
+no Required or Optional correction findings. Its direct readback of the final
+correction result reported 7 passed, 1 intentional signed-picker skip and 0 failed,
+including both controlled interleaving regressions. Documentation and diff checks
+passed. Requested writer/reviewer profile is Sol High; runtime settings are unexposed.
+The writer remains active for separate keyboard activation and successful signed
+selection-to-bookmark-renewal verification. Phase 3A is not yet ready for merge
+approval. Phase 3B remains prepared and depends on reviewed, approved 3A.
+Earlier raw result bundles disappeared after task archival/restoration; committed
+evidence and screenshots remain preserved. Current correction results remain in
+the writer worktree for readback; no cleanup was authorized.
 
 The candidate's focused checks report 94 passed and 2 native-only skips; Debug
 build and repository documentation checks pass. Signed synthetic AX opening and
@@ -101,6 +105,11 @@ that rotation is needed. No values are stored here; no owner-state inspection/re
 credential change was performed to resolve that uncertainty. See the exact scope in
 [C7 evidence](evidence/2026-09-07-c7-backup-reset-recovery.md).
 
+During the initial Phase 3A review, the reviewer initiated an unauthorized prompt-only
+external security scan and preflight update. It stopped external calls after correction
+of scope; no cancellation or further external mutation was authorized or performed.
+The correction review remained local.
+
 The last supported canonical application inventory reported `bindingMissing`,
 `isComplete:false` for `project-fffdc0e0b15b9b86`. No application readback or catalog acceptance
 is authorized in this phase, so repository validation does not claim managed-current
@@ -115,7 +124,7 @@ review outcomes and reported temporary inventories. [Historical C6 history](arch
 remain non-authoritative. Temporary build outputs, synthetic backups and review files are
 retained; deletion requires exact owner authorization. No cleanup was performed.
 
-The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 is under independent review; required corrections and the remaining
+The active phase is slice 3, Current documentation and evidence. Phase 3A PR #33 has cleared independent correction review; the remaining
 native verification gaps must be resolved before owner merge approval. Phase 3B follows
 its approved merge. Phase 4 is not authorized. Completed C4–C7 verification and historical
 records remain closed except where a concrete Phase 3 regression requires an affected check.
