@@ -24,21 +24,13 @@ labels, and Projects with empty history on relaunch. ADR-003 and the dashboard
 design record this bounded amendment. Other planning proposals remain proposed.
 The [Phase 4 brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md)
 controls the delivery assignment; no Phase 5 domain choice blocks it.
-Delivery task `01a0826d-f440-7661-9ed2-24112a7eaa80` owns the single stream in
-worktree `8f27`, branch `codex/phase4-navigation`, from baseline `a2a4ac8`. It
-started Terra Medium and was escalated to Sol High for the remaining model/shell
-filter/selection/focus and stale-target integration after two premature turn exits.
-Source candidate `3363752` was integrated as `de22c6e`. Independent Sol High review
-by `01a082ac-16da-7461-9f98-da78630aea64` found three Required restoration defects:
-record the displayed phase on ordinary first open; preserve unavailable ticket/phase
-identity on reload without first-item substitution; and keep global routes independent
-of project registration lifecycle. Native visual/responsive/task-row evidence,
-preview-isolation coverage and documentation checks passed review. No new review
-scope is required. The reviewer created no files/processes and is archived pending
-required-correction recheck. The same writer delivered bounded corrections at `0f226ed` from `de22c6e`.
-Direct result-bundle readback confirms 24 affected tests passed with no failures or
-skips; independent correction recheck is pending. Parent retains ledger/catalog
-ownership, and the writer reports no remaining isolated process.
+Source candidate `4a9e13c` completes implementation and required corrections.
+Delivery task `01a0826d-f440-7661-9ed2-24112a7eaa80` used Terra Medium, then Sol
+High for model/shell integration and corrections. It is stopped and archived.
+Independent Sol High reviewer `01a082ac-16da-7461-9f98-da78630aea64` passed the
+final candidate with no remaining Required findings; navigation restoration,
+registration/global-route identity, native visual/responsive behavior and preview
+isolation are covered. The reviewer created no files or processes and is archived.
 The interface does not expose effective model/effort for independent confirmation.
 
 The owner requested an actual native goal on 2026-09-08. It is **active** in
@@ -47,11 +39,13 @@ It covers complete Phase 4 implementation/corrections, docs/catalog integration,
 direct model/native interaction checks, independent review, scoped commits and
 pushed PRs, separately approved merges, concise closeout and worker/reviewer archival.
 Phase 5 preparation and private packaging/owner testing are outside the goal.
-Direct result-bundle readback confirms 35 focused tests passed, with no failures or
-skips, on arm64 macOS 26.5.2. The [verification record](evidence/2026-09-08-phase4-navigation.md)
-preserves native shortcut, restoration/focus, compact task traversal and rendering
-evidence, retained outputs and limitations. Next action: targeted restoration
-correction recheck by the same independent reviewer.
+Direct readback confirmed the original 35-test suite, the 24-test affected
+correction run, and the final 17-test NavigationHistoryTests run passed with no
+failures/skips on arm64 macOS 26.5.2. These are candidate-specific results, not
+additive test counts. The [verification record](evidence/2026-09-08-phase4-navigation.md)
+preserves native interaction evidence, correction results, retained outputs and
+limitations. Next action: publish the reviewed branch/PR and request owner merge
+approval; source delivery is not yet merged.
 The goal stays active while any required work or merge approval remains.
 
 ## Current authorization and ownership
@@ -88,7 +82,7 @@ visible parent task while this task is omitted from the owner's task list.
 Repository documentation check passed after the accepted contract, brief and
 proposed Phase 5 handoff updates. New catalog metadata remains unaccepted in the
 application; no application readback/acceptance is authorized. Independent combined
-Phase 4 review is pending the implementation candidate.
+Phase 4 review and required-correction rechecks passed.
 
 ## Verification and sequencing
 

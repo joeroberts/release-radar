@@ -57,6 +57,27 @@ and native captures describe the earlier candidate; the affected correction run
 provides the later evidence. Independent correction recheck is recorded in progress,
 not implied by these test results.
 
+The remaining route-context correction in `3234139` retains project registration
+for Needs Review and Notifications while keeping Settings/Projects global. Three
+new regressions first failed and then passed. Direct readback of
+`/tmp/release-radar-phase4-scoped-primary-affected.xcresult` confirms all **16
+NavigationHistoryTests passed, 0 failed and 0 skipped**, including project switches,
+archive/removal, global-route isolation and existing history behavior.
+
+The first-open variant was corrected in `4a9e13c`: entering either scoped primary
+route before explicit project selection now records the actual displayed project's
+registration and preserves it after removal. Its new regression failed before the
+fix. Direct readback of
+`/tmp/release-radar-phase4-scoped-primary-first-open-affected.xcresult` confirms
+the final **17 NavigationHistoryTests passed, 0 failed and 0 skipped**.
+
+Independent Sol High reviewer `01a082ac-16da-7461-9f98-da78630aea64` passed
+`4a9e13c` with no remaining Required findings. The original visual/responsive and
+preview-isolation review remained valid; bounded rechecks closed the three
+restoration findings and their route-context corrections. The reviewer created
+no files or processes. Source delivery still requires the separately authorized
+PR merge recorded in progress.
+
 ## Native accessibility, keyboard and visual checks
 
 The isolated XCTest host used synthetic stores and suppressed external services.
@@ -111,7 +132,18 @@ Correction diagnostics are also retained: `/tmp/release-radar-phase4-corrections
 `/tmp/release-radar-phase4-corrections-verification.xcresult`.
 The writer reports no remaining isolated test process after the correction run.
 
+The residual correction also retained `/tmp/release-radar-phase4-scoped-primary-derived`,
+`/tmp/release-radar-phase4-scoped-primary-red.xcresult`,
+`/tmp/release-radar-phase4-scoped-primary-green.xcresult`, and
+`/tmp/release-radar-phase4-scoped-primary-affected.xcresult`; no test/build process
+remains from that run.
+
+The first-open follow-up retained
+`/tmp/release-radar-phase4-scoped-primary-first-open-red.xcresult`,
+`/tmp/release-radar-phase4-scoped-primary-first-open-green.xcresult`, and
+`/tmp/release-radar-phase4-scoped-primary-first-open-affected.xcresult`.
+
 Physical VoiceOver speech, other Macs, installation, packaging, owner-data
 readback, full-scheme testing and catalog acceptance were not performed. The
-orchestrator owns catalog/index integration and the required fresh independent
-Sol High review before delivery completion.
+orchestrator integrated the catalog/indexes and recorded the independent review;
+repository validation does not imply application acceptance.
