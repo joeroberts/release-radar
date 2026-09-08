@@ -44,8 +44,9 @@ correction run, and the final 17-test NavigationHistoryTests run passed with no
 failures/skips on arm64 macOS 26.5.2. These are candidate-specific results, not
 additive test counts. The [verification record](evidence/2026-09-08-phase4-navigation.md)
 preserves native interaction evidence, correction results, retained outputs and
-limitations. Next action: publish the reviewed branch/PR and request owner merge
-approval; source delivery is not yet merged.
+limitations. [PR #36](https://github.com/joeroberts/release-radar/pull/36) carries
+the reviewed source and documentation. Next action: obtain owner merge approval;
+source delivery is not yet merged.
 The goal stays active while any required work or merge approval remains.
 
 ## Current authorization and ownership
