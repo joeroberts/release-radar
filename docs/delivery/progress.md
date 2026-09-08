@@ -135,8 +135,9 @@ identity changes until manual Reload. The original writer delivered and pushed
 to selected-project monitoring and view lifetime. Direct readback of the final
 `/tmp/release-radar-phase3b-live-final` result confirms 75 passed, 2 unchanged
 native-picker skips and 0 failed, including external source-change and native
-rendered-text withdrawal tests without Reload. The same reviewer is restored
-for R1-only clearance on this candidate; review remains pending.
+rendered-text withdrawal tests without Reload. The same independent reviewer closed R1 on this exact candidate after source
+and direct result readback; R2–R4 remain closed. No Required findings remain.
+PR #34 is ready for the separately required owner merge approval.
 Raw results remain available under
 `/tmp/release-radar-phase3b-corrections-final` and
 `/tmp/release-radar-phase3b-corrections-render` until review readback.
