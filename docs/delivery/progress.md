@@ -3,8 +3,8 @@
 ## Current phase — 2026-09-07
 
 Slice 2 recovery continues: C4 root management, C5 archive/restore and C6 removal
-with retained history are merged. C7 backup/reset recovery is next, with
-associated C12 recovery actions. The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
+with retained history are merged. C7 backup/reset recovery and associated C12 actions
+have passed final independent corrective review and await owner-approved PR #31 merge. The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
 retains all 40 capabilities; later roadmap outcomes and accepted/proposed distinctions
 remain intact.
 
@@ -122,7 +122,16 @@ readback before and after launch show no broad filesystem exception. Its single 
 check selected `/Users/Shared/ReleaseRadar-C7-SignedPicker-Corrective.Po4gPJ`, created and
 validated one backup there, left no staging, and exited. The XCTest termination guard returns
 before shared-service initialization. No retry or normal launch was used for this check.
-Independent final correction review remains required; prior unrelated successful checks stand.
+The writer and final reviewer are terminal/stopped and archived. Final independent Astra High
+review passed at `7dd9763811876fa33535e33ff3375cba2add21a1` with no remaining Required findings.
+Four focused regressions passed independently (zero skipped); the reviewer directly read the
+20/20 recovery result, verified the retained signed host and its actual no-broad-filesystem
+entitlements, and inspected the existing native picker command/actions/package readback.
+R1/R5/R7 and the minimal termination guard are closed; prior unrelated successful checks stand.
+Native documentation/diff checks pass. Product merge approval remains outstanding.
+Final reviewer temporary outputs: `/tmp/c7-final-review-01a07da3/` and synthetic XCTest host
+directories `ReleaseRadar-XCTestHost-51125`/`-56288` beneath app-container Data/tmp, alongside
+the earlier retained reviewer source/output inventory. No cleanup is authorized.
 
 No merge approval has been requested or given. Final phase acceptance remains outstanding.
 

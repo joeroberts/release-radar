@@ -111,3 +111,18 @@ This is full local application continuity, not portable project export/import. R
 Keychain credentials and device permissions remain outside the backup and require their
 existing authorization paths. When the prior store is unreadable, the UI truthfully reports
 that newer local history cannot be reconciled.
+
+## Final independent corrective review
+
+Independent Astra High review passed integrated `7dd9763811876fa33535e33ff3375cba2add21a1`
+(author source `19a428488a6ad73cffd09bec2dbd36be084f31e5`) with no remaining Required findings.
+Both retained reviewer negatives and both new repository regressions passed: 4/4, no skipped
+or failed cases. The reviewer directly read the writer recovery result: 20/20, no skipped
+or failed cases. Native documentation and diff checks passed.
+
+The reviewer verified the retained signed host with strict deep codesign and actual entitlement
+readback, inspected the before/after outputs, single gated command success, numeric-PID picker
+actions and generated package/no-staging readback. No broad filesystem exception was present.
+The successful native run was not repeated. The earlier execution incidents and owner-state
+uncertainty remain as disclosed above; this review does not certify that the accidental normal
+launch left owner state untouched. Writer and reviewer processes are stopped and tasks archived.
