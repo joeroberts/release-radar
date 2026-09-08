@@ -28,7 +28,7 @@ Delivery task `01a0826d-f440-7661-9ed2-24112a7eaa80` owns the single stream in
 worktree `8f27`, branch `codex/phase4-navigation`, from baseline `a2a4ac8`. It
 started Terra Medium and was escalated to Sol High for the remaining model/shell
 filter/selection/focus and stale-target integration after two premature turn exits.
-Scope remains unchanged; candidate completion and independent review are pending.
+Source candidate `3363752` is committed and integrated; independent review is pending.
 
 The owner requested an actual native goal on 2026-09-08. It is **active** in
 orchestrator task `01a08261-fa9d-7dc1-854f-b2a3b739c3a8`, with no token budget.
@@ -36,9 +36,11 @@ It covers complete Phase 4 implementation/corrections, docs/catalog integration,
 direct model/native interaction checks, independent review, scoped commits and
 pushed PRs, separately approved merges, concise closeout and worker/reviewer archival.
 Phase 5 preparation and private packaging/owner testing are outside the goal.
-The writer reports passing model-level context restoration and lifecycle recovery.
-Next action: finish native interaction evidence and submit the integrated candidate
-for independent review.
+Direct result-bundle readback confirms 35 focused tests passed, with no failures or
+skips, on arm64 macOS 26.5.2. The [verification record](evidence/2026-09-08-phase4-navigation.md)
+preserves native shortcut, restoration/focus, compact task traversal and rendering
+evidence, retained outputs and limitations. Next action: independent review of the
+integrated source and documentation candidate.
 The goal stays active while any required work or merge approval remains.
 
 ## Current authorization and ownership
