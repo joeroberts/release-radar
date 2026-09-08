@@ -537,6 +537,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-07-phase3a-freshness",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3a-freshness",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 3A documentation freshness and same-folder recovery; progress controls authorization",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4749,6 +4764,21 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3a-freshness-brief-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3a-freshness/phase3a-freshness-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-phase3a-freshness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"
