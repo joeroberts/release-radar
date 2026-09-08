@@ -552,6 +552,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-07-phase3b-evidence",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3b-evidence",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 3B bounded evidence preview scope; awaits Phase 3A",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -4776,6 +4791,21 @@
       "lifecycle": "active",
       "authorityLevel": "supporting",
       "parentCollection": "delivery.task-briefs.2026-09-07-phase3a-freshness",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase3b-evidence-brief-2026-09-07",
+      "path": "docs/delivery/task-briefs/2026-09-07-phase3b-evidence/phase3b-evidence-brief.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-07-phase3b-evidence",
       "supersedes": [],
       "applicationSensitivity": [
         "prompt"
