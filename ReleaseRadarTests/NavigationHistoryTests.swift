@@ -183,6 +183,28 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectScopedPrimaryRoutesRecordFirstDisplayedProjectBeforeExplicitSelection() async throws {
+        for route in [AppRoute.needsReview, .notifications] {
+            let fixture = try await makeProjectScopedPrimaryRouteFixture(route: route)
+            XCTAssertNil(fixture.model.selectedProjectID)
+            XCTAssertEqual(fixture.model.currentProjectID, fixture.firstProjectID)
+
+            await fixture.model.navigate(to: route)
+
+            XCTAssertEqual(fixture.model.selection, route)
+            XCTAssertEqual(fixture.model.navigationHistory.current.registration?.projectID, fixture.firstProjectID)
+
+            let preview = try await fixture.model.previewProjectRemoval(projectID: fixture.firstProjectID)
+            let removed = try await fixture.model.applyProjectRemoval(preview)
+            await fixture.model.goBack()
+            await fixture.model.goForward()
+
+            XCTAssertEqual(fixture.model.selection, .removedProject(removed.id))
+            XCTAssertTrue(fixture.model.navigationRecoveryMessage?.contains("project was removed") == true)
+        }
+    }
+
+    @MainActor
     func testProjectScopedPrimaryRoutesFollowArchivedRegistrationIdentity() async throws {
         for route in [AppRoute.needsReview, .notifications] {
             let fixture = try await makeProjectScopedPrimaryRouteFixture(route: route)

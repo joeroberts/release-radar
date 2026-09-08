@@ -372,7 +372,7 @@ final class AppModel {
         }
         let projectID = switch route {
         case .needsReview, .notifications:
-            selectedProjectID
+            selectedProjectID ?? (selection == route ? dashboard?.projects.first?.id : nil)
         default:
             route.projectID
         }
