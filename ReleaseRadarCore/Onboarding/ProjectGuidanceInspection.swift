@@ -50,6 +50,10 @@ public struct ProjectGuidanceObservation: Equatable, Sendable {
 }
 
 public enum ProjectGuidanceInspection {
+    public static func inspectSharedExecution(rootURL: URL) -> SharedExecutionDeclarationObservation {
+        SharedExecutionDeclarationInspector.inspect(rootURL: rootURL)
+    }
+
     public static func inspectDocumentation(rootURL: URL, hasAuditedHandoff: Bool = false) -> ProjectDocumentationState {
         inspectDocumentation(rootURL: rootURL, hasAuditedHandoff: hasAuditedHandoff, context: nil)
     }

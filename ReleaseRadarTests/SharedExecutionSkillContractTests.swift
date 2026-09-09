@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+@testable import ReleaseRadarCore
 
 final class SharedExecutionSkillContractTests: XCTestCase {
     func testBundledSkillCarriesTheReviewedV1ContractAndExactAdoptionBlock() throws {
@@ -31,6 +32,7 @@ final class SharedExecutionSkillContractTests: XCTestCase {
         for applicability in ["exactRevision", "workingTree", "unknown"] {
             XCTAssertTrue(skill.contains("`\(applicability)`"), "Missing applicability \(applicability)")
         }
+        XCTAssertTrue(skill.contains(SharedExecutionDeclarationInspector.managedBlock))
         XCTAssertTrue(skill.contains(adoptionBlock))
     }
 
