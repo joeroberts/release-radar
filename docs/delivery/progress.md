@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B candidate awaits independent review.** The owner selected
+**Phase 5A is merged; Phase 5B required corrections are active.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -33,11 +33,16 @@ components, with Astra High ceiling. One independent Astra High reviewer covers
 those material risks and native UX/QA after direct verification. The writer committed
 and pushed `a0295a8db079f09e872497f530461e39a36bf26e`; its source and
 [evidence](evidence/2026-09-09-phase5b-reference-impacts.md) are integrated here.
-The writer is stopped and retained only for required corrections. Direct result
+The same writer is active for the six required review corrections. Direct result
 readback confirms 13 focused, 5 correction, 3 targeted and 3 final native/navigation
 tests passed. The broad run remains non-green: 700 passed, 13 failed, 3 skipped;
 the evidence distinguishes baseline categories and two relocation failures that
-passed isolated reruns. Independent review and the PR endpoint remain pending.
+passed isolated reruns. Independent Astra High reviewer `01a0881b-58cd-7e41-8f3b-3e240fa3bba2`
+requested six bounded corrections at `49e4e64`: caller source-digest precondition,
+exact inspector context, query authority revalidation, historical-version facts,
+exact impact-row Back focus and reverse source digests. It confirmed the recorded
+test attribution and inspected all nine screenshots; no host or files were created.
+The same reviewer will recheck corrections. Review closure and PR remain pending.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -130,7 +135,8 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is fresh independent review of the integrated Phase 5B candidate.
+Next eligible action is direct regression verification and the same independent
+reviewer’s recheck of the Phase 5B corrections.
 Approved proposal, successor/carry-forward and lifecycle slices follow in the
 recorded sequence. Later merges still require separate owner approval.
 
