@@ -907,22 +907,27 @@ final class AppModel {
         let status = documentationObserver.status(for: projectID)
         let generation: UInt64
         let identity: DocumentationObservationIdentity?
+        let readiness: String
         switch status {
         case let .checking(value, valueGeneration):
             identity = value
             generation = valueGeneration
+            readiness = "checking"
         case let .observed(observation):
             identity = observation.identity
             generation = observation.generation
+            readiness = "observed"
         case nil:
             identity = nil
             generation = 0
+            readiness = "unavailable"
         }
         let registration = identity?.registration
         let binding = identity?.binding
         return [
             projectID.rawValue,
             String(documentationServiceGeneration),
+            readiness,
             String(generation),
             registration?.registrationID ?? "no-registration",
             registration.map { String($0.requestGeneration) } ?? "no-request-generation",

@@ -385,7 +385,7 @@ struct TicketReferenceSourceRouteView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(RekonTheme.background)
-        .task(id: "\(identity):\(linkID):\(version)") { await reload() }
+        .task(id: "\(identity):\(ticketID.rawValue):\(linkID):\(version)") { await reload() }
     }
 
     @MainActor
