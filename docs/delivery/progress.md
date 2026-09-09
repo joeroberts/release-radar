@@ -33,7 +33,10 @@ protections hold. The owner also confirmed Unassessed / Upcoming / In delivery /
 Completed, existing phases Unassessed, multiple In delivery, explicit completion
 after obligations resolve and explicit reopening or new phase for further work.
 No product-choice approval from this batch remains outstanding.
-Shared execution integration remains proposed, non-gating and undispatched.
+Shared execution integration is separately owner-authorized for design only in
+parent-owned task `01a0871b-fc68-7741-8d11-da6b66a17826` (Sol High). Its sole new
+file is `docs/design/shared-execution-integration-v1-design.md`; no shared metadata
+writes are delegated. It remains non-gating and authorizes no implementation.
 
 ## Current authorization and ownership
 
@@ -49,9 +52,12 @@ or processes were created; the completed peer is archived. Actual runtime
 settings are not independently exposed. No orchestrator subagents are used.
 
 Read-only Astra High architecture peer `01a0871b-9a73-7061-b2c2-05bdfe3b69e9`
-is preparing the next approved lifecycle/reference/proposal/coverage slice
-sequencing against the candidate. It is not a second Phase 5A review and releases
-no writer or merge. All selected Phase 5 outcomes remain required.
+completed next-slice sequencing against `2543cd6`: references/recorded impacts,
+then safe proposals, complete successor/carry-forward coverage, then full phase
+lifecycle. The [plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#remaining-phase-5-delivery-sequence--2026-09-09)
+records why coverage must precede phase completion. No files or processes were
+created; the completed peer is archived. No additional writer or merge is released. All
+selected Phase 5 outcomes remain required.
 
 Owner authorization covers source/tests/affected docs, scoped local commits,
 pushes, PRs and necessary fresh bounded delivery/review peers. One product writer;

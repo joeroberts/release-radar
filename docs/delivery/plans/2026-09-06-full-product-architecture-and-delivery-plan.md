@@ -239,6 +239,53 @@ scoped commits, pushes, PRs and necessary fresh peer tasks are authorized; each
 merge still requires separate owner approval. Current ownership and evidence stay
 in [progress](../progress.md).
 
+### Remaining Phase 5 delivery sequence — 2026-09-09
+
+Read-only chief architecture assessment of candidate `2543cd6` confirmed the
+following bounded sequence under the already-approved owner choices:
+
+1. **5B: Revision-specific requirement/decision links and recorded impacts.**
+   Explicit links bind ticket identity (placed or unassigned), repository/artifact
+   identity, a supplied source-local identifier where available, and exact source
+   revision. Current resolution exposes changes, moves, removal, supersession and
+   unavailable access. Catalog digest alone is not mutable document content
+   revision. Preserve repository prose authority; reverse links describe recorded
+   impacts, not inferred semantic completeness.
+2. **5C: Saved proposals, baseline-bound approval and atomic apply.** Start with
+   bounded safe operations that preserve existing started/Accepted and obligation
+   protections. Include all relevant phase/task revisions and ticket/dependency/
+   lifecycle/reference facts, not phase revision alone. Persist approval separately
+   from application; stale apply changes nothing and requires refreshed approval.
+3. **5D: Complete successor and carry-forward coverage through the same proposal
+   path.** Add withdrawal/replacement/split plus reconciliation of every applicable
+   move/unassignment loss path. Retain original identities/history/last lanes;
+   successors get new IDs and incomplete work. Keep phase-owned goals, one current
+   goal per ticket and explicit obligation lineage. Historical assignment events
+   alone are not outstanding obligations or proof of their resolution.
+4. **5E: Complete phase lifecycle.** Unassessed / Upcoming / In delivery /
+   Completed, legacy Unassessed, multiple In delivery, explicit guarded completion
+   and explicit reopening or new phase for further work. Recheck resolved
+   obligations and accepted required goals/work atomically; never auto-accept.
+   Completed phases reject new/revised delivery work through every writer until
+   explicit reopening. Preserve Accepted history and active/readiness independence.
+
+The coverage-before-completion dependency is concrete: existing Backlog moves and
+unstarted plan edits can remove assignments, while current acceptance checks
+consider current membership. A phase must not appear complete because an
+obligation disappeared. Implementing full lifecycle earlier would require that
+same coverage enforcement, rather than a temporary current-count guard. Nonterminal
+lifecycle alone would be a partial journey and is not the preferred next slice.
+These checkpoints preserve the complete approved Phase 5 outcome; Phase 5 is not
+complete until all selected behavior ships. Phase 5A independent review and owner
+merge approval remain separate gates.
+
+Each actual new record participates in additive migration, archive/restore,
+retained removal history, full backup and stale-request invalidation. No inferred
+links/proposals/successors or historical acceptance; unresolved historical coverage
+requires reconciliation. Define complete future portable representation without
+implementing export/import or changing v1 silently. One appropriate independent
+review per material candidate covers its actual risks; no additional review layers.
+
 ### Shared execution integration assessment — proposed, non-gating — 2026-09-08
 
 The owner authorized recording the completed chief-architect assessment from task
