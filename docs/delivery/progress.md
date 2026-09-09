@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A implementation is active.** The owner selected
+**Phase 5A candidate is ready for independent review.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -19,7 +19,10 @@ Delivery writer `01a086c4-8938-7a01-aa24-825586eca413` is active from committed
 handoff `d58f3d8` on `codex/phase5a-recorded-planning`. Started Terra Medium;
 escalated the same assignment to Sol High after two premature partial turn endings
 left migration/projection/native integration unfinished without a blocker. The
-initial placement/guard test is reported passing; full candidate remains unverified. Revision-specific document references
+source candidate `53d05943ed99b5689fd3e519b7041ef625c6ad38` is committed and pushed,
+integrated into the orchestrator branch with its catalogued evidence. Product
+implementation and direct checks are complete; independent review remains pending.
+The writer reports no running task processes and remains available for corrections. Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
 coverage were subsequently approved and remain follow-on slices; current acceptance
 protections hold. The owner also confirmed Unassessed / Upcoming / In delivery /
@@ -59,8 +62,13 @@ paths; cleanup requires exact authorization.
 ## Verification, risks and sequencing
 
 Repository documentation validation passed for the selected-scope brief/catalog
-handoff and affected contract amendments. `git diff --check` also passed. No Phase 5 runtime or
-product correctness is claimed. Catalog metadata remains pending application
+handoff and affected contract amendments. `git diff --check` also passed. Direct xcresult readback confirms **248 core tests passed, one separate signed
+backup-picker test intentionally skipped, 20 recovery tests passed, one registered-
+broker test passed and one native interaction/render test passed**, all with zero
+failures in their final bundles on arm64 macOS 26.5.2. See the
+[Phase 5A evidence](evidence/2026-09-09-phase5a-recorded-planning.md) for scenarios,
+limitations and retained outputs. This is candidate evidence, not installed-owner
+acceptance or completion of all Phase 5 work. Catalog metadata remains pending application
 acceptance; application readback and acceptance are not authorized.
 
 The first slice changes ticket placement persistence and shared projections;
@@ -72,9 +80,13 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is the delivery writer's direct verification, then fresh
-independent review and a source PR. Approved
+Next eligible action is fresh independent code/UX/storage review of the combined
+candidate, then a source PR for separate owner merge approval. Approved
 proposal/successor slices follow without gating independent first-slice work.
+
+Phase 5A raw results are preserved outside Xcode's rolling logs in
+`/tmp/release-radar-phase5a-review.Tbu6kw/`; the older cited transport bundle was
+pruned by Xcode and its exact test was rerun successfully. No cleanup was performed.
 
 ## Material limitations and retained history
 
