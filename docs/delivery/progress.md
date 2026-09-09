@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A independent review is active.** The owner selected
+**Phase 5A required corrections are active.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -20,11 +20,13 @@ handoff `d58f3d8` on `codex/phase5a-recorded-planning`. Started Terra Medium;
 escalated the same assignment to Sol High after two premature partial turn endings
 left migration/projection/native integration unfinished without a blocker. The
 source candidate `53d05943ed99b5689fd3e519b7041ef625c6ad38` is committed and pushed,
-integrated into the orchestrator branch with its catalogued evidence. Product
-implementation and direct checks are complete. Fresh Sol High reviewer
-`01a08719-d238-7e61-add1-9a4e263ef959` is reviewing combined candidate `2543cd6`
-for code, public-command, storage/recovery/authority and native UX risks.
-The writer reports no running task processes and remains available for corrections.
+integrated into the orchestrator branch with its catalogued evidence. Fresh Sol High reviewer
+`01a08719-d238-7e61-add1-9a4e263ef959` returned four Required findings on `2543cd6`:
+phase/lane pairing is not enforced in storage; the native test fails independently;
+Project Plan lacks actual ticket-focus restoration; and all-phase filter-summary
+focus is not applied. The same Sol High writer is correcting these within the
+original scope; the same reviewer will recheck affected behavior. Reviewer test
+processes stopped before correction work was released.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -82,8 +84,11 @@ backup-picker test intentionally skipped, 20 recovery tests passed, one register
 broker test passed and one native interaction/render test passed**, all with zero
 failures in their final bundles on arm64 macOS 26.5.2. See the
 [Phase 5A evidence](evidence/2026-09-09-phase5a-recorded-planning.md) for scenarios,
-limitations and retained outputs. This is candidate evidence, not installed-owner
-acceptance or completion of all Phase 5 work. Catalog metadata remains pending application
+limitations and retained outputs. Those original results remain scoped to their scenarios. Fresh independent native
+readback on the exact candidate failed twice with `InvalidTransition` during
+render/hosting teardown, superseding the earlier native confidence. Correction
+checks and re-review remain required; no installed-owner acceptance or completion
+of all Phase 5 work is claimed. Catalog metadata remains pending application
 acceptance; application readback and acceptance are not authorized.
 
 The first slice changes ticket placement persistence and shared projections;
@@ -95,8 +100,8 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is fresh independent code/UX/storage review of the combined
-candidate, then a source PR for separate owner merge approval. Approved
+Next eligible action is bounded corrections and affected direct/native checks,
+then the existing reviewer's recheck and a source PR for separate owner merge approval. Approved
 proposal/successor slices follow without gating independent first-slice work.
 
 Phase 5A raw results are preserved outside Xcode's rolling logs in
