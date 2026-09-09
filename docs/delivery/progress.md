@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B contract preparation is active.** The owner selected
+**Phase 5A is merged; Phase 5B delivery is active.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -25,8 +25,9 @@ impacts. Fresh read-only chief-architecture task `01a08799-b7e0-7ab2-ae44-74849d
 assessment from merged `a8877aa`, with no unresolved owner choice. Its findings
 are preserved in the [Phase 5B brief](task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
 and affected ADR/design amendments. No files or processes were created; the peer
-is archived. The orchestrator owns brief/catalog integration; one Sol High delivery
-writer will start from the committed handoff. This profile addresses safe content
+is archived. The orchestrator owns brief/catalog integration. Fresh Sol High delivery
+writer `01a087a0-96ae-7dc3-9c7d-ff86450a0aed` starts from committed handoff
+`6c03d5bba17f2e52c3fcfc9c3c3c72f88844d7e2`. This profile addresses safe content
 resolution, authority, retained history/recovery and native navigation across
 components, with Astra High ceiling. One independent Astra High reviewer covers
 those material risks and native UX/QA after direct verification.
@@ -106,7 +107,7 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is the Phase 5B contract handoff and complete bounded delivery.
+Next eligible action is complete bounded Phase 5B delivery and direct verification.
 Approved proposal, successor/carry-forward and lifecycle slices follow in the
 recorded sequence. Later merges still require separate owner approval.
 
