@@ -53,6 +53,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-07-phase3b-evidence](2026-09-07-phase3b-evidence) — leaf; Completed Phase 3B bounded evidence preview delivery scope
 - [delivery.task-briefs.2026-09-08-phase4-navigation](2026-09-08-phase4-navigation) — leaf; Phase 4 coherent navigation and inspector delivery scope
 - [delivery.task-briefs.2026-09-09-phase5a-recorded-planning](2026-09-09-phase5a-recorded-planning) — leaf; Phase 5A recorded planning and placement delivery scope
+- [delivery.task-briefs.2026-09-09-shared-integration](2026-09-09-shared-integration) — leaf; Proposed shared integration implementation plan; source delivery requires separate authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -475,6 +476,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-phase5a-recorded-planning-brief-2026-09-09 | [docs/delivery/task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md](2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md) | document | controlling &#40;delivery.phase5a-recorded-planning&#41; | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-09-shared-integration
+
+- Path: [docs/delivery/task-briefs/2026-09-09-shared-integration](2026-09-09-shared-integration)
+- Purpose: Proposed shared integration implementation plan; source delivery requires separate authorization
+- Allowed contents: Proposed implementation plan
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-shared-integration-implementation-plan-2026-09-09 | [docs/delivery/task-briefs/2026-09-09-shared-integration/implementation-plan.md](2026-09-09-shared-integration/implementation-plan.md) | document | supporting | proposed | none | none |
 
 ### Children
 

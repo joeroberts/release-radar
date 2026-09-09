@@ -29,6 +29,7 @@
 | 8d761556-f57d-4271-90a7-17c59348660b | [docs/design/release-radar-ticket-tasks-design.md](release-radar-ticket-tasks-design.md) | document | controlling &#40;product.ticket-task-presentation&#41; | active | none | none |
 | a1208906-0e77-4e17-8b0f-74d51231a2cd | [docs/design/release-radar-ux-redesign-study.md](release-radar-ux-redesign-study.md) | document | supporting | proposed | none | none |
 | 3619538f-28d6-4114-b132-9e6ee3f8aa6d | [docs/design/release-radar-ux-redesign.html](release-radar-ux-redesign.html) | designAsset | supporting | proposed | none | none |
+| rr-shared-execution-integration-v1-design-2026-09-09 | [docs/design/shared-execution-integration-v1-design.md](shared-execution-integration-v1-design.md) | document | supporting | proposed | none | none |
 
 ### Children
 

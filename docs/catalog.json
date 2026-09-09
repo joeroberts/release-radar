@@ -597,6 +597,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-09-shared-integration",
+      "path": "docs/delivery/task-briefs/2026-09-09-shared-integration",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Proposed shared integration implementation plan; source delivery requires separate authorization",
+      "allowedContents": [
+        "Proposed implementation plan"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5170,6 +5185,37 @@
       "supersedes": [],
       "applicationSensitivity": [
         "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-integration-v1-design-2026-09-09",
+      "path": "docs/design/shared-execution-integration-v1-design.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance",
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-integration-implementation-plan-2026-09-09",
+      "path": "docs/delivery/task-briefs/2026-09-09-shared-integration/implementation-plan.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-09-shared-integration",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"
