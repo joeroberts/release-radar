@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B source and independent review are complete; PR delivery is pending.** The owner selected
+**Phase 5A is merged; Phase 5B source and independent review are complete; PR #39 awaits owner merge approval.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -44,7 +44,8 @@ the non-first historical row and Forward to its ticket. The broad run remains
 non-green: 700 passed, 13 failed, 3 skipped; baseline attribution and isolated
 relocation passes remain documented in the evidence. Both bounded writer/reviewer
 tasks are complete and archived, with results preserved and no running hosts.
-The PR endpoint and separate owner-approved merge remain pending.
+[PR #39](https://github.com/joeroberts/release-radar/pull/39) is open against
+`codex/release-radar-mvp`; its merge awaits separate owner approval.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -140,7 +141,9 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is the Phase 5B PR and separate owner merge decision.
+Next eligible action is the separate owner merge decision for Phase 5B PR #39.
+Phase 5C source dispatch must also respect shared ownership of AppModel and
+observation/UI paths until a coordinated handback; no overlapping writer is released.
 Approved proposal, successor/carry-forward and lifecycle slices follow in the
 recorded sequence. Later merges still require separate owner approval.
 
