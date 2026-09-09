@@ -46,6 +46,7 @@ struct PhaseBoardPlanningControls: View {
     @Binding var filter: DeliveryGoalFilter
     let phaseSelectionStatus: ActivePhaseSelectionStatus
     let viewPhase: (PhaseID) -> Void
+    var viewAllPhases: () -> Void = {}
     let makeActive: (PhaseID) async -> Void
     let reload: () async -> Void
     let reauthorize: (URL) async -> Void
@@ -116,6 +117,8 @@ struct PhaseBoardPlanningControls: View {
             )
             .frame(minWidth: 280, idealWidth: 520, maxWidth: 620)
             .frame(height: 42)
+            Button("All phases", action: viewAllPhases)
+                .accessibilityIdentifier("view-all-phases")
         }
         .accessibilityValue("\(board.phaseName), \(board.isActivePhase ? "active phase" : "not the active phase")")
         .accessibilityHint("Browse without changing the persisted active phase or delivery state.")

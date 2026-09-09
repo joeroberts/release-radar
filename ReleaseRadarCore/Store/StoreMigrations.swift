@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 18
+    static let currentVersion: Int64 = 19
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -16,6 +16,15 @@ enum StoreMigrations {
         }
         if version == currentVersion, try hasExpectedCurrentSchema(connection) { return }
 
+        let rebuildsTicketPlacement = version > 0 && version < 19
+        if rebuildsTicketPlacement {
+            try connection.execute("PRAGMA foreign_keys = OFF")
+        }
+        defer {
+            if rebuildsTicketPlacement {
+                try? connection.execute("PRAGMA foreign_keys = ON")
+            }
+        }
         try connection.execute("BEGIN EXCLUSIVE TRANSACTION")
         do {
             try repairKnownSchemaDrift(connection, version: version)
@@ -81,6 +90,14 @@ enum StoreMigrations {
             }
             if version < 18 {
                 try connection.executeScript(schemaVersion18)
+            }
+            if version > 0, version < 19 {
+                try connection.executeScript(schemaVersion19)
+            }
+            guard try connection.row("PRAGMA foreign_key_check") == nil else {
+                throw StoreError.unavailable(
+                    "Database schema version \(version) has invalid references after the placement migration"
+                )
             }
             guard try hasExpectedCurrentSchema(connection) else {
                 throw StoreError.unavailable(
@@ -247,7 +264,7 @@ enum StoreMigrations {
             else { return false }
         }
         if version >= 11 {
-            guard try hasExpectedLegacyContinuationColumn(connection) else { return false }
+            guard try hasExpectedLegacyContinuationColumn(connection, throughVersion: version) else { return false }
             for table in planningTableSQL {
                 let expectedSQL = version >= 14 && table.name == "delivery_goal_assignment_events"
                     ? deliveryGoalAssignmentEventsVersionFourteenTableSQL : table.sql
@@ -422,7 +439,8 @@ enum StoreMigrations {
     }
 
     private static func hasExpectedLegacyContinuationColumn(
-        _ connection: SQLiteConnection
+        _ connection: SQLiteConnection,
+        throughVersion version: Int64
     ) throws -> Bool {
         guard try connection.scalarText(
             "SELECT type FROM pragma_table_info('tickets') WHERE name = 'plan_legacy_continuation'"
@@ -436,7 +454,9 @@ enum StoreMigrations {
         let ticketsSQL = try connection.scalarText(
             "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'tickets'"
         ),
-        normalizedSQL(ticketsSQL) == normalizedSQL(ticketsVersionElevenTableSQL)
+        normalizedSQL(ticketsSQL) == normalizedSQL(
+            version >= 19 ? ticketsVersionNineteenTableSQL : ticketsVersionElevenTableSQL
+        )
         else { return false }
         return true
     }
@@ -1244,9 +1264,9 @@ enum StoreMigrations {
     CREATE TABLE tickets (
         id TEXT PRIMARY KEY NOT NULL,
         project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-        phase_id TEXT NOT NULL,
+        phase_id TEXT,
         outcome TEXT NOT NULL,
-        lane TEXT NOT NULL CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+        lane TEXT CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
         UNIQUE(project_id, id),
         FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
     );
@@ -1723,6 +1743,20 @@ enum StoreMigrations {
     )
     """
 
+    private static let ticketsVersionNineteenTableSQL = """
+    CREATE TABLE tickets (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        phase_id TEXT,
+        outcome TEXT NOT NULL,
+        lane TEXT CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+        plan_legacy_continuation INTEGER NOT NULL DEFAULT 0
+            CHECK (plan_legacy_continuation IN (0, 1)),
+        UNIQUE(project_id, id),
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
+    )
+    """
+
     private static let schemaVersion11 = """
     ALTER TABLE tickets ADD COLUMN plan_legacy_continuation INTEGER NOT NULL DEFAULT 0
         CHECK (plan_legacy_continuation IN (0, 1));
@@ -1781,5 +1815,22 @@ enum StoreMigrations {
     \(ticketTasksRejectDeleteTrigger);
     \(ticketTaskPlansRejectTicketDeleteTrigger);
     \(ticketTaskPlansRejectProjectDeleteTrigger);
+    """
+
+    // Preserve every existing ticket identity and its dependent records while
+    // making placement explicit: an unassigned ticket has neither phase nor lane.
+    private static let schemaVersion19 = """
+    PRAGMA legacy_alter_table = ON;
+    ALTER TABLE tickets RENAME TO tickets_v18;
+    \(ticketsVersionNineteenTableSQL);
+    INSERT INTO tickets (id, project_id, phase_id, outcome, lane, plan_legacy_continuation)
+    SELECT id, project_id, phase_id, outcome, lane, plan_legacy_continuation FROM tickets_v18;
+    DROP TABLE tickets_v18;
+    CREATE UNIQUE INDEX tickets_project_phase_identity_unique
+        ON tickets(project_id, phase_id, id);
+    \(rejectLegacyContinuationInsertTrigger);
+    \(rejectLegacyContinuationRegrantTrigger);
+    \(ticketTaskPlansRejectTicketDeleteVersionSeventeenTrigger);
+    PRAGMA legacy_alter_table = OFF;
     """
 }

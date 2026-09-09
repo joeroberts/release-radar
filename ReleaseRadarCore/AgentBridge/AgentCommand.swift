@@ -38,6 +38,8 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case adoptManagedEvidence(target: DocumentationTarget, adoptions: [DocumentationAdoption])
     case relocateLegacyEvidence(projectID: String, rootID: String, evidenceID: String, expectedPath: String, newPath: String)
     case upsertPhase(phaseID: String, name: String)
+    case upsertUnassignedTicket(ticketID: String, outcome: String)
+    case placeUnassignedTicket(ticketID: String, phaseID: String, expectedPlanRevision: Int64)
     case upsertTicket(ticketID: String, phaseID: String, outcome: String, lane: TicketLane)
     case transitionTicket(ticketID: String, lane: TicketLane, ticketTaskPlanRevision: Int64? = nil)
     case reviseTicketTaskPlan(ticketID: String, expectedRevision: Int64? = nil, additions: [TicketTaskDraft]? = nil, definitionRevisions: [TicketTaskDefinitionRevision]? = nil, supersededTaskIDs: [TicketTaskID]? = nil)

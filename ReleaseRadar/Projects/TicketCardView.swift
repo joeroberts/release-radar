@@ -15,6 +15,14 @@ struct TicketCardView: View {
                     .font(.system(.caption, design: .monospaced, weight: .semibold))
                     .lineLimit(1)
 
+                if let phaseName = card.phaseName {
+                    Label(phaseName, systemImage: "square.stack.3d.up")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .lineLimit(1)
+                        .accessibilityIdentifier("ticket-phase-\(card.id.rawValue)")
+                }
+
                 if presentation == .fullOutcome {
                     Text(card.outcome)
                         .font(.caption)
@@ -51,7 +59,7 @@ struct TicketCardView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(card.id.rawValue), \(card.outcome), "
+            "\(card.id.rawValue), \(card.phaseName.map { $0 + ", " } ?? "")\(card.outcome), "
                 + (card.taskCountAnnouncement.map { $0 + ", " } ?? "")
                 + "\(card.dependencyCount) dependencies, \(card.blockerCount) blockers\(isSelected ? ", selected" : "")"
         )

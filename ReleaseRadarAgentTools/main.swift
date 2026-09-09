@@ -340,6 +340,21 @@ private struct MCPServer {
             return ("relocateLegacyEvidence", value)
         case "release_radar_upsert_phase":
             return ("upsertPhase", ["phaseID": try string("phaseID", in: arguments), "name": try string("name", in: arguments)])
+        case "release_radar_upsert_unassigned_ticket":
+            return ("upsertUnassignedTicket", [
+                "ticketID": try string("ticketID", in: arguments),
+                "outcome": try string("outcome", in: arguments),
+            ])
+        case "release_radar_place_unassigned_ticket":
+            let revision = try integer("expectedPlanRevision", in: arguments)
+            guard revision >= 0, let exactRevision = Int64(exactly: revision) else {
+                throw ToolFailure.invalidRequest("expectedPlanRevision must be a nonnegative integer")
+            }
+            return ("placeUnassignedTicket", [
+                "ticketID": try string("ticketID", in: arguments),
+                "phaseID": try string("phaseID", in: arguments),
+                "expectedPlanRevision": exactRevision,
+            ])
         case "release_radar_upsert_ticket":
             return ("upsertTicket", [
                 "ticketID": try string("ticketID", in: arguments),
@@ -542,6 +557,18 @@ private struct MCPServer {
             definition("release_radar_adopt_managed_evidence", required: ["target", "adoptions"], fields: ["target": target, "adoptions": adoption]),
             definition("release_radar_relocate_legacy_evidence", required: ["projectID", "rootID", "evidenceID", "expectedPath", "newPath"], fields: ["projectID": string, "rootID": string, "evidenceID": string, "expectedPath": string, "newPath": string]),
             definition("release_radar_upsert_phase", required: ["phaseID", "name"], fields: ["phaseID": string, "name": string]),
+            definition(
+                "release_radar_upsert_unassigned_ticket",
+                required: ["ticketID", "outcome"],
+                fields: ["ticketID": taskID, "outcome": taskTitle],
+                description: "Record planning work without assigning a phase or execution lane."
+            ),
+            definition(
+                "release_radar_place_unassigned_ticket",
+                required: ["ticketID", "phaseID", "expectedPlanRevision"],
+                fields: ["ticketID": taskID, "phaseID": taskID, "expectedPlanRevision": phaseRevision],
+                description: "Place one unassigned ticket into a same-project phase Backlog using the exact current plan revision."
+            ),
             definition(
                 "release_radar_upsert_ticket",
                 required: ["ticketID", "phaseID", "outcome", "lane"],

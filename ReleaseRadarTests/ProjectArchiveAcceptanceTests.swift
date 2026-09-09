@@ -5,6 +5,36 @@ import XCTest
 
 @MainActor
 final class ProjectArchiveAcceptanceTests: XCTestCase {
+    func testArchiveRestoreAndRelaunchPreserveUnassignedTicketIdentityAndPlanningContent() async throws {
+        let url = try databaseURL()
+        let store = DeliveryStore(databaseURL: url)
+        try await seedProject(in: store)
+        let projectID = self.projectID
+        try await store.transact(actor: .init(id: "phase5a-fixture"), reason: "Record unassigned planning") { connection in
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('plan-only',?,NULL,'Retained planning',NULL)", bindings: [.text(projectID.rawValue)])
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: projectID, ticketID: .init(rawValue: "plan-only"), expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "planned-task"), label: "Task 1", title: "Retain definition", sortOrder: 0)],
+                definitionRevisions: [], supersededTaskIDs: [], connection: connection
+            )
+        }
+        let manager = ProjectLifecycleManager(store: store)
+        let archivePreview = try await manager.preview(projectID: projectID, transition: .archive)
+        XCTAssertEqual(archivePreview.counts.tickets, 2)
+        _ = try await manager.apply(archivePreview)
+        _ = try await manager.apply(try await manager.preview(projectID: projectID, transition: .restore))
+
+        let relaunched = DeliveryStore(databaseURL: url)
+        let retained = try await relaunched.read { connection in
+            (try connection.row("SELECT phase_id,lane,outcome FROM tickets WHERE project_id=? AND id='plan-only'", bindings: [.text(projectID.rawValue)]),
+             try connection.scalarText("SELECT title FROM ticket_tasks WHERE project_id=? AND ticket_id='plan-only'", bindings: [.text(projectID.rawValue)]))
+        }
+        XCTAssertEqual(retained.0?["phase_id"], .null)
+        XCTAssertEqual(retained.0?["lane"], .null)
+        XCTAssertEqual(retained.0?["outcome"], .text("Retained planning"))
+        XCTAssertEqual(retained.1, "Retain definition")
+    }
+
     func testVersionFifteenProjectsMigrateActiveWithoutChangingIdentity() async throws {
         let url = try databaseURL()
         do {
@@ -12,6 +42,8 @@ final class ProjectArchiveAcceptanceTests: XCTestCase {
             try await seedProject(in: store)
         }
         let legacy = try SQLiteConnection(url: url)
+        try restorePreVersionNineteenTicketSchema(legacy)
+        try legacy.execute("DROP TABLE application_recovery_state")
         for trigger in [
             "ticket_task_plans_reject_delete",
             "ticket_tasks_reject_delete",
@@ -53,7 +85,7 @@ final class ProjectArchiveAcceptanceTests: XCTestCase {
 
         let reopened = DeliveryStore(databaseURL: url)
         guard case .available = await reopened.availability else {
-            return XCTFail("Expected the v15 store to migrate")
+            return XCTFail("Expected the v15 store to migrate: \(await reopened.availability)")
         }
         let state = try await ProjectLifecycleManager(store: reopened).snapshot(projectID: projectID)
         XCTAssertEqual(state.lifecycle, .active)

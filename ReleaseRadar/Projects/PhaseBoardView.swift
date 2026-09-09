@@ -61,6 +61,7 @@ struct PhaseBoardView: View {
     var openWorktreeRecovery: (() -> Void)? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var viewPhase: (PhaseID) -> Void = { _ in }
+    var viewAllPhases: () -> Void = {}
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
     @State private var density: BoardDensity = .fullOutcomes
@@ -103,6 +104,7 @@ struct PhaseBoardView: View {
                 boardHeader(laneWidth: laneWidth)
                 PhaseBoardPlanningControls(board: board, filter: $filter,
                     phaseSelectionStatus: phaseSelectionStatus, viewPhase: viewPhase,
+                    viewAllPhases: viewAllPhases,
                     makeActive: selectActivePhase, reload: reloadActivePhase, reauthorize: reauthorizeActivePhase)
                 if let documentationRecoveryMessage {
                     Text(documentationRecoveryMessage)

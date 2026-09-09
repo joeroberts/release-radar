@@ -833,7 +833,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let session = try Self.runToolSession(helper, tool: "release_radar_finalize_phase_plan", arguments: ["version": true])
         let result = try XCTUnwrap(session.list["result"] as? [String: Any])
         let tools = try XCTUnwrap(result["tools"] as? [[String: Any]])
-        XCTAssertEqual(tools.count, 24)
+        XCTAssertEqual(tools.count, 26)
         for name in ["apply_phase_plan_revision", "finalize_phase_plan", "transition_delivery_goal"] {
             let tool = tools.first { $0["name"] as? String == "release_radar_" + name }
             XCTAssertNotNil(tool, name)
@@ -1163,6 +1163,65 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         XCTAssertEqual(finalState, [.integer(4), .integer(4), .integer(4), .text("backlog"), .text("task-a:completed:active;task-b:pending:superseded;task-c:completed:active;task-d:pending:active")])
     }
 
+    func testUnassignedTicketToolsUseRegisteredBrokerWithExactReplayAndPlacementRevision() async throws {
+        let bridgeService = SMAppService.agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
+        guard bridgeService.status == .enabled else {
+            throw TransportTestError.invalidResponse("Controlled unassigned transport requires the already enabled bridge")
+        }
+        let otherApps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.rekonlabs.ReleaseRadar")
+            .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        guard otherApps.isEmpty else {
+            throw TransportTestError.invalidResponse("Quiesce other Release Radar app hosts before controlled unassigned transport")
+        }
+        let fixture = try await makeTransportFixture()
+        let host = try await AppDelegate().startAgentBridge(databaseURL: fixture.databaseURL)
+        defer { host.disconnectCallback() }
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        func common(_ requestID: UUID, reason: String) -> [String: Any] {
+            ["version": 1, "requestID": requestID.uuidString, "projectRoot": fixture.projectRoot.path,
+             "reason": reason, "ticketID": "RR-PLANNED"]
+        }
+
+        let createID = UUID(uuidString: "99999999-9999-4999-8999-999999999971")!
+        let createArguments = common(createID, reason: "Record retained planning")
+            .merging(["outcome": "Retain planning identity"]) { _, new in new }
+        let created = try decodeCommandResult(Self.runTool(
+            helper, tool: "release_radar_upsert_unassigned_ticket", arguments: createArguments
+        ))
+        XCTAssertNil(created.error)
+        XCTAssertEqual(try decodeCommandResult(Self.runTool(
+            helper, tool: "release_radar_upsert_unassigned_ticket", arguments: createArguments
+        )), created)
+        let beforePlacement = try await fixture.store.read {
+            try $0.row("SELECT phase_id,lane,outcome FROM tickets WHERE project_id='project-1' AND id='RR-PLANNED'")
+        }
+        XCTAssertEqual(beforePlacement?["phase_id"], .null)
+        XCTAssertEqual(beforePlacement?["lane"], .null)
+        XCTAssertEqual(beforePlacement?["outcome"], .text("Retain planning identity"))
+
+        let placementID = UUID(uuidString: "99999999-9999-4999-8999-999999999972")!
+        let placementArguments = common(placementID, reason: "Place retained planning")
+            .merging(["phaseID": "phase-2", "expectedPlanRevision": 0]) { _, new in new }
+        let placed = try decodeCommandResult(Self.runTool(
+            helper, tool: "release_radar_place_unassigned_ticket", arguments: placementArguments
+        ))
+        XCTAssertNil(placed.error)
+        XCTAssertEqual(placed.phasePlanRevision, 1)
+        XCTAssertEqual(try decodeCommandResult(Self.runTool(
+            helper, tool: "release_radar_place_unassigned_ticket", arguments: placementArguments
+        )), placed)
+        let state = try await fixture.store.read { connection in
+            (try connection.row("SELECT phase_id,lane,outcome FROM tickets WHERE project_id='project-1' AND id='RR-PLANNED'"),
+             try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests WHERE request_id IN (?,?)", bindings: [.text(createID.uuidString), .text(placementID.uuidString)]),
+             try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE entity_id='RR-PLANNED'"))
+        }
+        XCTAssertEqual(state.0?["phase_id"], .text("phase-2"))
+        XCTAssertEqual(state.0?["lane"], .text("backlog"))
+        XCTAssertEqual(state.0?["outcome"], .text("Retain planning identity"))
+        XCTAssertEqual(state.1, 2)
+        XCTAssertEqual(state.2, 2)
+    }
+
     private struct TransportFixture {
         let databaseURL: URL
         let projectRoot: URL
@@ -1334,7 +1393,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 24,
+              tools.count == 26,
               hasTicketTaskToolSchemas(tools),
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
               let transitionSchema = transition["inputSchema"] as? [String: Any],
@@ -1343,6 +1402,13 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
               let upsert = tools.first(where: { $0["name"] as? String == "release_radar_upsert_ticket" }),
               let upsertSchema = upsert["inputSchema"] as? [String: Any],
               let upsertProperties = upsertSchema["properties"] as? [String: Any],
+              let unassigned = tools.first(where: { $0["name"] as? String == "release_radar_upsert_unassigned_ticket" }),
+              let unassignedSchema = unassigned["inputSchema"] as? [String: Any],
+              let unassignedProperties = unassignedSchema["properties"] as? [String: Any],
+              let placement = tools.first(where: { $0["name"] as? String == "release_radar_place_unassigned_ticket" }),
+              let placementSchema = placement["inputSchema"] as? [String: Any],
+              let placementProperties = placementSchema["properties"] as? [String: Any],
+              let placementRequired = placementSchema["required"] as? [String],
               let activePhase = tools.first(where: { $0["name"] as? String == "release_radar_set_active_phase" }),
               let activePhaseSchema = activePhase["inputSchema"] as? [String: Any]
         else { return false }
@@ -1354,18 +1420,33 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
                 "projectRoot": ["type": "string", "minLength": 1],
                 "assertedThreadID": ["type": "string", "minLength": 1],
                 "reason": ["type": "string", "minLength": 1],
+                "registrationProjectID": ["type": "string", "minLength": 1, "maxLength": 256],
+                "registrationID": ["type": "string", "minLength": 1, "maxLength": 128],
+                "requestGeneration": ["type": "integer", "minimum": 1, "maximum": Int64.max],
                 "phaseID": ["type": "string", "minLength": 1],
             ],
             "required": ["version", "requestID", "projectRoot", "reason", "phaseID"],
+            "dependentRequired": [
+                "registrationProjectID": ["registrationID", "requestGeneration"],
+                "registrationID": ["registrationProjectID", "requestGeneration"],
+                "requestGeneration": ["registrationProjectID", "registrationID"],
+            ],
             "additionalProperties": false,
         ]
         let revisionSchema: [String: Any] = ["type": "integer", "minimum": 1]
-        return Set(transitionProperties.keys) == ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "ticketID", "lane", "ticketTaskPlanRevision"]
+        return Set(transitionProperties.keys) == ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "registrationProjectID", "registrationID", "requestGeneration", "ticketID", "lane", "ticketTaskPlanRevision"]
             && Set(transitionRequired) == ["version", "requestID", "projectRoot", "reason", "ticketID", "lane"]
             && NSDictionary(dictionary: transitionProperties["ticketTaskPlanRevision"] as? [String: Any] ?? [:]).isEqual(to: revisionSchema)
             && transitionSchema["additionalProperties"] as? Bool == false
             && upsertProperties["ticketTaskPlanRevision"] == nil
             && upsertSchema["additionalProperties"] as? Bool == false
+            && Set(unassignedProperties.keys).isSuperset(of: ["ticketID", "outcome"])
+            && unassignedProperties["phaseID"] == nil && unassignedProperties["lane"] == nil
+            && unassignedSchema["additionalProperties"] as? Bool == false
+            && Set(placementProperties.keys).isSuperset(of: ["ticketID", "phaseID", "expectedPlanRevision"])
+            && Set(placementRequired).isSuperset(of: ["ticketID", "phaseID", "expectedPlanRevision"])
+            && (placementProperties["expectedPlanRevision"] as? [String: Any])?["minimum"] as? Int == 0
+            && placementSchema["additionalProperties"] as? Bool == false
             && NSDictionary(dictionary: activePhaseSchema).isEqual(to: expectedActivePhaseSchema)
     }
 
@@ -1382,7 +1463,10 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
               let revisionProperties = revision["properties"] as? [String: Any],
               let superseded = reviseProperties["supersededTaskIDs"] as? [String: Any]
         else { return false }
-        let common: Set<String> = ["version", "requestID", "projectRoot", "assertedThreadID", "reason", "ticketID"]
+        let common: Set<String> = [
+            "version", "requestID", "projectRoot", "assertedThreadID", "reason",
+            "registrationProjectID", "registrationID", "requestGeneration", "ticketID",
+        ]
         let required: Set<String> = ["version", "requestID", "projectRoot", "reason", "ticketID"]
         let positiveRevision: [String: Any] = ["type": "integer", "minimum": 1, "maximum": Int64.max]
         return Set(reviseProperties.keys) == common.union(["expectedRevision", "additions", "definitionRevisions", "supersededTaskIDs"])
