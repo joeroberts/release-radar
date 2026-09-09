@@ -403,3 +403,20 @@ current classification and decision gates are recorded exclusively in
    by default.
 7. The dashboard remains useful when Codex, Pushover, or linked evidence is
    unavailable, with clear stale/error state rather than hidden failure.
+
+## Phase 5A selected planning surfaces — 2026-09-09
+
+The owner selected Overview as landing, a sibling Project Plan for all recorded
+phases/phase-owned Delivery Goals/unassigned tickets, and one shared phase/all-phase
+board with each ticket's phase labelled. Preserve supplied RDS, the five lanes,
+existing Details/Dependencies and Phase 4 session navigation/focus. Unassigned
+tickets appear in Plan with read-only details, tasks, evidence and dependencies;
+they are not cards in a fake phase or sixth lane. Distinguish No phase from No
+Delivery Goal, the latter being the current board assignment filter.
+
+Use the approved Phase Board screenshot for lane/layout language. Proposed
+work_board.png and the historical planning/redesign studies provide partial visual
+reference only; their Goals/History routes and other unselected behaviors do not
+become requirements. New Project Plan composition uses existing components and
+accessible compact/wide behavior, verified in the isolated native app. Browsing
+remains read-only; typed agent operations perform formal planning changes.

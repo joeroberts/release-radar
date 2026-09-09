@@ -207,3 +207,14 @@ last-known snapshot is always downgraded to `stale`. Neither state may be
 presented as live or mutate a formal delivery lane. This is the approved
 degraded dependency outcome for continuing to RR-07 after independent RR-05
 review.
+
+## Phase 5A placement amendment — 2026-09-09
+
+The owner authorized unassigned tickets with permanent ticket identities, details,
+task definitions, dependencies and evidence. Unassigned is placement state, not a
+sixth lane or fake phase. Such tickets have neither phase nor execution lane and
+cannot execute, complete tasks, request review or be accepted. First placement
+into a same-project phase atomically enters Backlog while preserving identity and
+all planning content/history. Existing signed typed app-owned operations, receipt
+replay, actor/reason, project scope and sole-store-writer authority apply. New
+planning views do not authorize owner-facing manual delivery mutations.

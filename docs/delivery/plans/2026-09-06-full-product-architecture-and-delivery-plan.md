@@ -192,6 +192,50 @@ mechanics are implementation decisions within accepted semantics. They do not ne
 additional owner questionnaires. Risk-triggered independent review covers changed
 architecture, security/privacy and UX/QA without duplicate approval layers.
 
+### Phase 5 owner selections and implementation authorization — 2026-09-09
+
+The owner explicitly authorized bounded Phase 5 implementation after selecting:
+
+- Overview remains the landing page. Project Plan shows all phases, phase-owned
+  Delivery Goals and unassigned tickets. One shared board switches between one
+  phase and all phases; every ticket identifies its phase.
+- Unassigned tickets retain their permanent identity, details, task definitions,
+  dependencies and evidence. They cannot execute until placement into a phase,
+  which enters Backlog without replacing their identity.
+- Multiple phases may be In delivery concurrently. This overrides the proposed
+  zero-or-one limit above. Lifecycle remains separate from active/view context.
+- Ticket requirement/decision links point to authoritative repository documents
+  and exact revisions, exposing changes, moves and removal. Copied prose does not
+  become competing authority.
+- Goal obligations carry forward when plans change; they never clear silently.
+
+These selections do not approve the historical v5 package or all Phase 5
+preparation. The owner subsequently approved saved version-specific plan-change proposals,
+baseline-bound explicit approval and atomic application of the approved change set;
+stale state requires refreshed preview/approval. The owner also approved retaining
+original tickets/history on withdrawal/replacement/splitting, explicit successor
+links, reconciliation of carried-forward obligations, incomplete successors and no
+automatic goal completion/acceptance. Preserve current acceptance and started-
+assignment protections until the bounded coverage amendment is implemented.
+These choices do not authorize silently dropping obligations or stopping external runs.
+
+The first bounded slice is recorded planning, unassigned placement and the complete
+Overview/Project Plan/shared-board journey, including first placement,
+existing history/inspector integration and preservation through recovery. Exact
+revision-specific document links remain authorized follow-on scope. Proposal/apply
+and successors are now approved follow-on slices, not dependencies of the first slice.
+Concurrent In delivery remains approved follow-on scope; its full lifecycle
+set/default, entry/exit and Completed policy need selection before that slice.
+First placement avoids transferring existing phase-owned obligations. Current
+Backlog moves remove assignments and are not an implementation of carry-forward.
+The read-only chief architect confirmed these boundaries against current source.
+Shared execution integration remains proposed and non-gating; no dispatch or
+implementation is authorized here. No Phase 6+, runtime/hooks, installation or
+owner/application-state mutation is included. Source, tests, affected documents,
+scoped commits, pushes, PRs and necessary fresh peer tasks are authorized; each
+merge still requires separate owner approval. Current ownership and evidence stay
+in [progress](../progress.md).
+
 ### Shared execution integration assessment — proposed, non-gating — 2026-09-08
 
 The owner authorized recording the completed chief-architect assessment from task

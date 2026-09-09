@@ -2,92 +2,72 @@
 
 ## Current outcome and active task
 
-**Phase 4 source delivery is complete.** The owner approved
-[PR #36](https://github.com/joeroberts/release-radar/pull/36), merged on 2026-09-08
-at `356e13400043f25724d79c95be381e8582c68980`.
+Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
+[brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
+[verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-RM2/P7/P8 and issue #9 now provide one session Back/Forward history, exact viewed
-phase/filter/selection/focus and registration recovery, project-wide Dependencies
-focused on the ticket with phase labels, and accessible compact Ticket Details.
-Relaunch starts at Projects with empty history. Persisted active phase, task counts,
-completion and acceptance semantics remain separate and unchanged. RDS is consumed
-as supplied; no appearance or shared-library work was included.
+**Phase 5 is authorized and in bounded handoff preparation.** The owner selected
+Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
+unassigned placement, multiple In-delivery phases, revision-specific authoritative
+document links and carrying goal obligations forward. The exact
+[selection record](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#phase-5-owner-selections-and-implementation-authorization--2026-09-09)
+distinguishes these from unselected proposals.
 
-The [completed brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md)
-records the delivered scope. The [verification record](evidence/2026-09-08-phase4-navigation.md)
-contains candidate-specific 35-test/native interaction evidence, the 24-test
-correction run and final 17-test navigation run, all passing without failures/skips
-on arm64 macOS 26.5.2. Independent review closed all Required findings. Delivery and
-review tasks are stopped and archived; no isolated test/build processes remain.
-
-The [full-product plan](plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
-contains the already-authorized Phase 5 decision preparation and handoff.
-**Phase 5 implementation remains unopened.** Its proposed decisions and the shared
-execution assessment are not new implementation authorization or a prerequisite.
-No further Phase 4 product work is active; this closeout reconciles repository
-status and artifact lifecycle with the approved merge.
+First slice: [Phase 5A recorded planning and placement](task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md),
+including the complete Overview/Plan/shared-board journey and recovery preservation.
+No product writer has been released yet. Revision-specific document references
+remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
+coverage were subsequently approved and remain follow-on slices; current acceptance
+protections hold. Full phase lifecycle transitions remain the owner clarification.
+Shared execution integration remains proposed, non-gating and undispatched.
 
 ## Current authorization and ownership
 
-Orchestrator `01a08261-fa9d-7dc1-854f-b2a3b739c3a8` owns this ledger and catalog
-integration in fresh worktree `bfc2`, branch `codex/phase4-orchestrator`, established
-from the current merged default at `6f528c5`. The canonical checkout and retained
-builds remain untouched. Requested orchestrator profile is Astra Medium.
-Chief architect
-`01a08262-ffdf-7120-896b-0252ce2f8a30` completed its read-only assessment; findings
-are preserved in the plan and no processes remain. The bounded task is archived.
+Phase 5 orchestrator `01a086bd-7970-70f0-80e8-8c044ee8ef4a` owns ledger/catalog
+integration in worktree `165b`, branch `codex/phase5-orchestrator`, from clean
+`8930f9643ca1f46e7681ce9b838ce9b0f5b024fc`. Requested profile Astra Medium.
+Chief architecture/initial sequencing peer `01a086be-577c-7990-90bb-2e736fbba30f`
+completed read-only first-slice contract/sequencing assessment, requested Astra High.
+It confirmed first placement as the initial boundary, independent project-ticket
+readback, no-phase versus no-goal distinction, explicit board scope and recovery
+coverage. These findings are incorporated in the brief and affected ADRs. No files
+or processes were created; archival is pending. Actual runtime
+settings are not independently exposed. No orchestrator subagents are used.
 
-The owner authorizes affected source/tests/docs, scoped commits, pushes, PRs and
-fresh bounded delivery and independent-review peer tasks. Each merge requires
-separate owner approval. Use one implementation stream. Chief architecture is
-requested at Astra High; ordinary implementation starts Terra Medium; independent
-review covers the actual navigation, UX and boundary risks. Default escalation
-ceiling is Astra High; no unapproved xhigh/max and never Ultra. Actual runtime
-settings are not exposed for independent confirmation.
+Owner authorization covers source/tests/affected docs, scoped local commits,
+pushes, PRs and necessary fresh bounded delivery/review peers. One product writer;
+ordinary implementation Terra Medium, appropriate independent review Sol High,
+escalation ceiling Astra High, no unapproved xhigh/max and never Ultra. Each merge
+requires separate owner approval. Parent `01a07e75-b254-72a1-be2a-3e97ac23baeb`
+receives consequential unresolved choices and merge requests.
 
-No installation, real owner-data operation, SQLite edit, application binding or
-catalog acceptance, credential change, notification, plugin/cloud mutation,
-entitlement change, publication or cleanup is authorized. Repository documentation
-work does not imply application synchronization. Inspect side-effecting scripts
-before use; use proven isolated synthetic execution and never normal app launch
-or owner credentials merely to arrange testing.
+No installation, owner-project/app-state mutation, direct SQLite edits, binding,
+catalog acceptance, credential inspection, notifications, external scans,
+entitlements, consumer repository changes, runtime/hooks, packaging or cleanup.
+Before any app/test launch verify isolated synthetic host and sanitized `env -i`
+with only known required local signing/package variables. No normal owner-app
+launch. Keep raw output until evidence is consumed and report retained temporary
+paths; cleanup requires exact authorization.
 
-Independent Phase 5 decision-preparation peer `01a08269-0c66-7d61-bd3d-f9963383471e`
-(requested Astra High) completed read-only preparation; its proposed decisions and
-bounded handoff are preserved in the roadmap. No processes remain; the bounded task is archived.
-It did not implement or select product choices. Owner questions and merge approvals are relayed through the
-visible parent task while this task is omitted from the owner's task list.
+## Verification, risks and sequencing
 
-Repository documentation check passed after the accepted contract, brief and
-proposed Phase 5 handoff updates. New catalog metadata remains unaccepted in the
-application; no application readback/acceptance is authorized. Independent combined
-Phase 4 review and required-correction rechecks passed.
+Repository documentation validation passed for the selected-scope brief/catalog
+handoff; final contract amendment readback is in progress. No Phase 5 runtime or
+product correctness is claimed. Catalog metadata remains pending application
+acceptance; application readback and acceptance are not authorized.
 
-## Verification and sequencing
+The first slice changes ticket placement persistence and shared projections;
+required review covers migration/recovery, authority and native UX/QA. Existing
+phase-owned goals, five lanes, immutable Accepted history, started assignments,
+active/view separation and supplied RDS remain constraints. Multiple In delivery
+is approved; full phase completion semantics must not be invented.
 
-The Mac is available for builds, automated tests and isolated native UI/keyboard/
-accessibility inspection. Only the owner's hands-on acceptance testing on other
-Macs is unavailable until at least Friday, September 11, 2026. Perform independent
-source and native checks now; report any specifically owner-dependent acceptance
-as pending without making it a prerequisite for source delivery.
-
-The next eligible work is owner selection of unresolved Phase 5 readiness
-decisions, followed by a separately authorized bounded assignment. Preparation covers
-P1–P4/P15/P16/P18 and D4/D5/D6/D12, preserving current phase-owned Delivery Goals
-and separate execution-goal semantics unless the owner selects a documented change.
-Present only unresolved consequential decisions in small phone-friendly batches.
-
-The private versioned test DMG and other-Mac testing wait until Friday or later.
-Packaging remains unstarted; target architectures and macOS versions are unknown.
-Private testing is the requested packaging scope, with no packaging, notarization
-or distribution work authorized by this continuation.
-
-Completed source-delivery evidence remains in the
-[Historical Phase 3 record](archive/2026-09-08-phase3-delivery-history.md),
-[3A verification](evidence/2026-09-07-phase3a-documentation-freshness.md) and
-[3B verification](evidence/2026-09-08-phase3b-evidence-preview.md).
-Those results cover their stated candidates and scenarios, not a whole-suite
-pass or installed-owner acceptance of a future Phase 4 binary.
+The Mac is available for isolated native verification. Other-Mac hands-on owner
+testing and private versioned DMG preparation wait until September 11 or later;
+packaging and target architectures/macOS versions remain unselected and unstarted.
+Next eligible action is committing the reconciled first-slice handoff and releasing
+one fresh delivery writer, then independent review and a source PR. Approved
+proposal/successor slices follow without gating independent first-slice work.
 
 ## Material limitations and retained history
 

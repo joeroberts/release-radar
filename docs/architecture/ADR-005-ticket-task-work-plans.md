@@ -281,3 +281,15 @@ separate because no live row exists yet.
   exists.
 - Allowing future RM5 output or RM6 import to omit task plans silently or
   adding archive v2 without separate approval.
+
+## Phase 5A unassigned definitions amendment — 2026-09-09
+
+Unassigned tickets may hold a task plan and pending task definitions under the
+existing revision, identity, retention and audit rules. They cannot complete tasks
+or perform execution/review/acceptance transitions until placed in a phase.
+Definition mutability and execution eligibility therefore require distinct central
+checks; a nullable lane alone is insufficient. First placement preserves all task
+IDs/revisions/history and enters Backlog without completing tasks. Existing placed
+and Accepted ticket semantics remain unchanged. Migration and actual archive,
+removed-history and full-backup recovery must preserve new placement records;
+future portable representation must include them without an early exporter/importer.
