@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A candidate is ready for independent review.** The owner selected
+**Phase 5A independent review is active.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -15,14 +15,18 @@ distinguishes these from unselected proposals.
 
 First slice: [Phase 5A recorded planning and placement](task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md),
 including the complete Overview/Plan/shared-board journey and recovery preservation.
-Delivery writer `01a086c4-8938-7a01-aa24-825586eca413` is active from committed
+Delivery writer `01a086c4-8938-7a01-aa24-825586eca413` delivered from committed
 handoff `d58f3d8` on `codex/phase5a-recorded-planning`. Started Terra Medium;
 escalated the same assignment to Sol High after two premature partial turn endings
 left migration/projection/native integration unfinished without a blocker. The
 source candidate `53d05943ed99b5689fd3e519b7041ef625c6ad38` is committed and pushed,
 integrated into the orchestrator branch with its catalogued evidence. Product
-implementation and direct checks are complete; independent review remains pending.
-The writer reports no running task processes and remains available for corrections. Revision-specific document references
+implementation and direct checks are complete. Fresh Sol High reviewer
+`01a08719-d238-7e61-add1-9a4e263ef959` is reviewing combined candidate `2543cd6`
+for code, public-command, storage/recovery/authority and native UX risks.
+The writer reports no running task processes and remains available for corrections.
+
+Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
 coverage were subsequently approved and remain follow-on slices; current acceptance
 protections hold. The owner also confirmed Unassessed / Upcoming / In delivery /
@@ -43,6 +47,11 @@ readback, no-phase versus no-goal distinction, explicit board scope and recovery
 coverage. These findings are incorporated in the brief and affected ADRs. No files
 or processes were created; the completed peer is archived. Actual runtime
 settings are not independently exposed. No orchestrator subagents are used.
+
+Read-only Astra High architecture peer `01a0871b-9a73-7061-b2c2-05bdfe3b69e9`
+is preparing the next approved lifecycle/reference/proposal/coverage slice
+sequencing against the candidate. It is not a second Phase 5A review and releases
+no writer or merge. All selected Phase 5 outcomes remain required.
 
 Owner authorization covers source/tests/affected docs, scoped local commits,
 pushes, PRs and necessary fresh bounded delivery/review peers. One product writer;
