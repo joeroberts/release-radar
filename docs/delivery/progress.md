@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B required corrections are active.** The owner selected
+**Phase 5A is merged; Phase 5B source and independent review are complete; PR delivery is pending.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -33,16 +33,18 @@ components, with Astra High ceiling. One independent Astra High reviewer covers
 those material risks and native UX/QA after direct verification. The writer committed
 and pushed `a0295a8db079f09e872497f530461e39a36bf26e`; its source and
 [evidence](evidence/2026-09-09-phase5b-reference-impacts.md) are integrated here.
-The same writer is active for the six required review corrections. Direct result
-readback confirms 13 focused, 5 correction, 3 targeted and 3 final native/navigation
-tests passed. The broad run remains non-green: 700 passed, 13 failed, 3 skipped;
-the evidence distinguishes baseline categories and two relocation failures that
-passed isolated reruns. Independent Astra High reviewer `01a0881b-58cd-7e41-8f3b-3e240fa3bba2`
-requested six bounded corrections at `49e4e64`: caller source-digest precondition,
-exact inspector context, query authority revalidation, historical-version facts,
-exact impact-row Back focus and reverse source digests. It confirmed the recorded
-test attribution and inspected all nine screenshots; no host or files were created.
-The same reviewer will recheck corrections. Review closure and PR remain pending.
+The writer completed corrections at `08a870a566d0d8c1c27fb0d9a01a96dd639346e7`.
+Independent Astra High reviewer `01a0881b-58cd-7e41-8f3b-3e240fa3bba2` passed
+integrated candidate `e8ab4a5842d0caa8526ac83f917e7fc472c10337`, closing all six
+Required findings: caller digest precondition, exact mounted context/readiness,
+query authority revalidation, historical-version facts, exact impact-row Back
+focus and reverse source digests. Direct readback confirms 22 correction tests
+and 2 readiness tests passed. External accessibility inspection verified Back to
+the non-first historical row and Forward to its ticket. The broad run remains
+non-green: 700 passed, 13 failed, 3 skipped; baseline attribution and isolated
+relocation passes remain documented in the evidence. Both bounded writer/reviewer
+tasks are complete and archived, with results preserved and no running hosts.
+The PR endpoint and separate owner-approved merge remain pending.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -63,13 +65,16 @@ No shared remote, merge, installation or app-state authority is inferred.
 Parent-owned shared writer `01a087e0-4e89-72b3-8f34-2e998315047b`
 (Sol High) works separately from sequencing amendment `22b82305` on branch
 `codex/shared-execution-integration-v1-ae3f`. Diagnose checkpoint `64025a6`
-passed 31 focused tests; package/capability work continues. Phase 5B retains
+passed 31 focused tests; package/capability checkpoint `6a90c74` is clean and
+passed its skill/capability and 20 lifecycle tests. The one managed-guidance
+docs-only fixture broken-link baseline limitation is retained, without repair. Phase 5B retains
 AppModel, ProjectDocumentationRenderingTests, DocumentationCallbackTests, the
 agent-tool main and B UI/contract/metadata paths. After confirming no B changes,
 the existing packaged release-radar skill and CodexPluginLifecycleAcceptanceTests
 were released to the shared writer along with its disjoint diagnostic/package
-paths. Final combined package verification and overlapping source/UI/adoption
-wait the reviewed B descendant and explicit file release. Build/test/native hosts
+paths. Reviewed B descendant `e8ab4a5` was handed to the parent/shared writer with B
+source overlap ownership released for the parent-owned shared assignment. Final
+combined package verification and shared source review remain outstanding. Build/test/native hosts
 remain serialized by reservation. No shared integration becomes a B dependency.
 
 ## Current authorization and ownership
@@ -135,8 +140,7 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is direct regression verification and the same independent
-reviewer’s recheck of the Phase 5B corrections.
+Next eligible action is the Phase 5B PR and separate owner merge decision.
 Approved proposal, successor/carry-forward and lifecycle slices follow in the
 recorded sequence. Later merges still require separate owner approval.
 
