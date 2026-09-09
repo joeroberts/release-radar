@@ -224,8 +224,11 @@ Overview/Project Plan/shared-board journey, including first placement,
 existing history/inspector integration and preservation through recovery. Exact
 revision-specific document links remain authorized follow-on scope. Proposal/apply
 and successors are now approved follow-on slices, not dependencies of the first slice.
-Concurrent In delivery remains approved follow-on scope; its full lifecycle
-set/default, entry/exit and Completed policy need selection before that slice.
+The owner subsequently confirmed the lifecycle policy: Unassessed / Upcoming /
+In delivery / Completed; existing phases begin Unassessed; multiple In delivery;
+explicit completion only after obligations resolve; explicit reopening or a new
+phase for further work. This is approved follow-on scope. No product-choice
+approval from this Phase 5 batch remains outstanding.
 First placement avoids transferring existing phase-owned obligations. Current
 Backlog moves remove assignments and are not an implementation of carry-forward.
 The read-only chief architect confirmed these boundaries against current source.

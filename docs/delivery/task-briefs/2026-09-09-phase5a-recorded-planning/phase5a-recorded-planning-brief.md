@@ -30,8 +30,8 @@ controls scope. This brief does not approve the entire historical UX proposal.
 - First placement only: do not add move/unplace of existing assigned work. Existing
   goal-coverage behavior is not evidence that carry-forward is implemented.
 - Show existing phases/readiness without new lifecycle transitions. Concurrent
-  In delivery remains approved subsequent scope; lifecycle set, entry/exit and
-  Completed semantics remain owner choices. No lifecycle/order inference.
+  In delivery and the full lifecycle policy are approved subsequent scope in the
+  selection record. No lifecycle/order inference in this slice.
 
 Revision-specific repository requirement/decision links remain authorized Phase 5
 follow-on work. Proposal/approval/atomic apply and withdrawal/replacement/split
@@ -45,8 +45,8 @@ runtime/hooks/configuration, new RDS changes or unrelated refactoring.
 Start from merged Phase 4 `8930f9643ca1f46e7681ce9b838ce9b0f5b024fc` plus the
 committed first-slice scope/contract amendments named in the dispatch. The read-only chief
 architecture assessment confirmed first placement as the safe initial boundary;
-full lifecycle remains a consequential choice, and approved obligation-transfer
-implementation belongs to the later coverage slice. Read
+the subsequently approved lifecycle and obligation-transfer implementation belong
+to later slices. Read
 [ADR-001](../../../architecture/ADR-001-release-radar-boundaries.md),
 [ADR-003](../../../architecture/ADR-003-active-phase-selection.md),
 [ADR-004](../../../architecture/ADR-004-delivery-goals-and-phase-plan-readiness.md),

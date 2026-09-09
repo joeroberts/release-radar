@@ -22,7 +22,10 @@ left migration/projection/native integration unfinished without a blocker. The
 initial placement/guard test is reported passing; full candidate remains unverified. Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
 coverage were subsequently approved and remain follow-on slices; current acceptance
-protections hold. Full phase lifecycle transitions remain the owner clarification.
+protections hold. The owner also confirmed Unassessed / Upcoming / In delivery /
+Completed, existing phases Unassessed, multiple In delivery, explicit completion
+after obligations resolve and explicit reopening or new phase for further work.
+No product-choice approval from this batch remains outstanding.
 Shared execution integration remains proposed, non-gating and undispatched.
 
 ## Current authorization and ownership
@@ -64,7 +67,7 @@ The first slice changes ticket placement persistence and shared projections;
 required review covers migration/recovery, authority and native UX/QA. Existing
 phase-owned goals, five lanes, immutable Accepted history, started assignments,
 active/view separation and supplied RDS remain constraints. Multiple In delivery
-is approved; full phase completion semantics must not be invented.
+and the full lifecycle policy are approved for the later lifecycle slice.
 
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
