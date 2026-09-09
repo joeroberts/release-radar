@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5 is authorized and in bounded handoff preparation.** The owner selected
+**Phase 5A implementation is active.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -15,7 +15,8 @@ distinguishes these from unselected proposals.
 
 First slice: [Phase 5A recorded planning and placement](task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md),
 including the complete Overview/Plan/shared-board journey and recovery preservation.
-No product writer has been released yet. Revision-specific document references
+Delivery writer `01a086c4-8938-7a01-aa24-825586eca413` is active from committed
+handoff `d58f3d8` on `codex/phase5a-recorded-planning`, requested Terra Medium. Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
 coverage were subsequently approved and remain follow-on slices; current acceptance
 protections hold. Full phase lifecycle transitions remain the owner clarification.
@@ -52,7 +53,7 @@ paths; cleanup requires exact authorization.
 ## Verification, risks and sequencing
 
 Repository documentation validation passed for the selected-scope brief/catalog
-handoff; final contract amendment readback is in progress. No Phase 5 runtime or
+handoff and affected contract amendments. `git diff --check` also passed. No Phase 5 runtime or
 product correctness is claimed. Catalog metadata remains pending application
 acceptance; application readback and acceptance are not authorized.
 
@@ -65,8 +66,8 @@ is approved; full phase completion semantics must not be invented.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is committing the reconciled first-slice handoff and releasing
-one fresh delivery writer, then independent review and a source PR. Approved
+Next eligible action is the delivery writer's direct verification, then fresh
+independent review and a source PR. Approved
 proposal/successor slices follow without gating independent first-slice work.
 
 ## Material limitations and retained history
