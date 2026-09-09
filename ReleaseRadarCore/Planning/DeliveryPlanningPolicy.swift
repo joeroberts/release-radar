@@ -56,9 +56,13 @@ public enum DeliveryPlanningPolicy {
         guard try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id=?", bindings: [.text(projectID.rawValue)]) == 1 else {
             throw invalid("The project does not exist. Refresh the project.")
         }
-        if let owner = try connection.scalarText("SELECT project_id FROM tickets WHERE id=?", bindings: [.text(ticketID.rawValue)]) {
+        if let ticket = try connection.row(
+            "SELECT project_id,phase_id,lane FROM tickets WHERE id=?",
+            bindings: [.text(ticketID.rawValue)]
+        ) {
+            let owner = try requiredText(ticket, "project_id")
             guard identityKey(owner) == identityKey(projectID.rawValue) else { throw invalid("The ticket belongs to another project.") }
-            guard try connection.scalarText("SELECT phase_id FROM tickets WHERE id=?", bindings: [.text(ticketID.rawValue)]) == nil else {
+            guard ticket["phase_id"] == .null, ticket["lane"] == .null else {
                 throw invalid("Placed tickets retain their phase. First placement cannot be reversed.")
             }
             try connection.execute("UPDATE tickets SET outcome=? WHERE project_id=? AND id=?", bindings: [.text(outcome), .text(projectID.rawValue), .text(ticketID.rawValue)])

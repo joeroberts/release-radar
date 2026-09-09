@@ -16,7 +16,10 @@ struct AllPhaseBoardView: View {
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
     @State private var density: BoardDensity = .fullOutcomes
+    @FocusState private var filterSummaryFocused: Bool
+    @AccessibilityFocusState private var filterSummaryAccessibilityFocused: Bool
     @FocusState private var focusedTicketID: TicketID?
+    @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
 
     private var filtered: AllPhaseBoardProjection { board.filtered(by: filter) }
     private let laneSpacing: CGFloat = 8
@@ -36,6 +39,9 @@ struct AllPhaseBoardView: View {
                 HStack {
                     Text(filterSummary).font(.caption).foregroundStyle(RekonTheme.secondaryText)
                         .accessibilityIdentifier("all-phase-board-filter-summary")
+                        .focusable()
+                        .focused($filterSummaryFocused)
+                        .accessibilityFocused($filterSummaryAccessibilityFocused)
                     Spacer()
                     densityPicker(laneWidth: laneWidth)
                 }
@@ -64,7 +70,11 @@ struct AllPhaseBoardView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("all-phase-board")
         .onChange(of: filter) { _, _ in
-            if filtered.detail(for: selectedTicketID) == nil { selectedTicketID = TicketID(rawValue: "") }
+            if filtered.detail(for: selectedTicketID) == nil {
+                selectedTicketID = TicketID(rawValue: "")
+            }
+            filterSummaryFocused = true
+            filterSummaryAccessibilityFocused = true
             focusChanged(.filterSummary)
         }
         .onChange(of: requestedFocus) { _, _ in applyRequestedFocus() }
@@ -177,7 +187,14 @@ struct AllPhaseBoardView: View {
                                     selectedTicketID = card.id
                                     focusChanged(.ticket(card.id))
                                 }
-                                .focusable().focused($focusedTicketID, equals: card.id)
+                                .focusable()
+                                .focused($focusedTicketID, equals: card.id)
+                                .accessibilityFocused($accessibilityFocusedTicketID, equals: card.id)
+                                .onAppear {
+                                    guard requestedFocus == .ticket(card.id) else { return }
+                                    focusedTicketID = card.id
+                                    accessibilityFocusedTicketID = card.id
+                                }
                             }
                         }
                     }
@@ -205,16 +222,30 @@ struct AllPhaseBoardView: View {
     }
 
     @ViewBuilder private var detail: some View {
-        if let selected = filtered.detail(for: selectedTicketID) ?? filtered.details.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first {
+        if let selected = Self.inspectorDetail(in: filtered, selectedTicketID: selectedTicketID) {
             TicketDetailView(detail: selected, documentationStatus: documentationStatus, loadEvidencePreview: loadEvidencePreview)
         } else {
             ContentUnavailableView("Select a ticket", systemImage: "rectangle.on.rectangle")
         }
     }
 
+    static func inspectorDetail(
+        in board: AllPhaseBoardProjection,
+        selectedTicketID: TicketID
+    ) -> TicketDetailProjection? {
+        board.detail(for: selectedTicketID)
+    }
+
     private func applyRequestedFocus() {
-        if case let .ticket(ticketID) = requestedFocus, filtered.detail(for: ticketID) != nil {
+        switch requestedFocus {
+        case let .ticket(ticketID) where filtered.detail(for: ticketID) != nil:
             focusedTicketID = ticketID
+            accessibilityFocusedTicketID = ticketID
+        case .filterSummary, .recovery:
+            filterSummaryFocused = true
+            filterSummaryAccessibilityFocused = true
+        default:
+            break
         }
     }
 }

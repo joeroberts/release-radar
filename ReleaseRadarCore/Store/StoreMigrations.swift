@@ -1267,6 +1267,7 @@ enum StoreMigrations {
         phase_id TEXT,
         outcome TEXT NOT NULL,
         lane TEXT CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+        CHECK ((phase_id IS NULL) = (lane IS NULL)),
         UNIQUE(project_id, id),
         FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
     );
@@ -1752,6 +1753,7 @@ enum StoreMigrations {
         lane TEXT CHECK (lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
         plan_legacy_continuation INTEGER NOT NULL DEFAULT 0
             CHECK (plan_legacy_continuation IN (0, 1)),
+        CHECK ((phase_id IS NULL) = (lane IS NULL)),
         UNIQUE(project_id, id),
         FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id)
     )

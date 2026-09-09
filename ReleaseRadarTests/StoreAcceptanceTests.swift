@@ -343,6 +343,40 @@ final class StoreAcceptanceTests: XCTestCase {
         )
         XCTAssertNil(try migrated.scalarText("SELECT phase_id FROM tickets WHERE id='unassigned-v19'"))
         XCTAssertNil(try migrated.scalarText("SELECT lane FROM tickets WHERE id='unassigned-v19'"))
+        XCTAssertThrowsError(try migrated.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('phase-without-lane-v19','project-main','phase-1','Invalid placement',NULL)"
+        ))
+        XCTAssertThrowsError(try migrated.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('lane-without-phase-v19','project-main',NULL,'Invalid placement','backlog')"
+        ))
+    }
+
+    func testFreshVersionNineteenRejectsPartialTicketPlacement() async throws {
+        let url = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: url)
+        guard case .available = await store.availability else {
+            return XCTFail("Expected a fresh current store")
+        }
+        try await store.transact(actor: .init(id: "placement-invariant"), reason: "Seed placement owners") { connection in
+            try connection.execute("INSERT INTO projects (id,name) VALUES ('placement-project','Placement')")
+            try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('placement-phase','placement-project','Phase')")
+        }
+        let db = try SQLiteConnection(url: url)
+
+        XCTAssertNoThrow(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('unassigned','placement-project',NULL,'Planning',NULL)"
+        ))
+        XCTAssertNoThrow(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('placed','placement-project','placement-phase','Execution','backlog')"
+        ))
+        XCTAssertThrowsError(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('phase-only','placement-project','placement-phase','Invalid',NULL)"
+        ))
+        XCTAssertThrowsError(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('lane-only','placement-project',NULL,'Invalid','backlog')"
+        ))
+        XCTAssertThrowsError(try db.execute("UPDATE tickets SET lane=NULL WHERE id='placed'"))
+        XCTAssertThrowsError(try db.execute("UPDATE tickets SET phase_id=NULL WHERE id='placed'"))
     }
 
     func testVersionNineteenUpgradePreservesPopulatedVersionEighteenEraRecords() async throws {
@@ -501,7 +535,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "569388c9981490c508d8eeb0f73bdd2bf95c3eb7b23bd21a117a06d11d337f7c")
+                       "9f744d8532ec84f05e7b53c3f440e93bc33e755f0c973e943a301c2842fa245b")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)

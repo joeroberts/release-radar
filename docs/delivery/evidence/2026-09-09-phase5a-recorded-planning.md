@@ -9,6 +9,11 @@ dependencies, evidence and audit history. Unassigned tickets remain outside all
 five execution lanes and cannot execute, complete tasks, request review or record
 completion before placement.
 
+Schema v19 enforces one placement shape: `phase_id` and `lane` are either both
+null for retained Project Plan work or both non-null for placed execution work.
+The policy boundary independently checks both columns before updating an existing
+unassigned ticket.
+
 The packaged agent helper exposes separate `release_radar_upsert_unassigned_ticket`
 and `release_radar_place_unassigned_ticket` tools. Placement requires the exact
 destination plan revision. Existing placed-ticket tool fields remain required, so
@@ -21,14 +26,19 @@ external services suppressed by the existing test launch configuration.
 
 - Store migration: frozen v12 graph/history and a populated v18-era graph migrate
   to schema v19 with nullable placement, clean foreign keys and no record loss.
+  Fresh and migrated v19 stores accept only the two valid placement shapes and
+  reject phase-only or lane-only inserts and updates.
 - Policy and command boundary: pre-placement execution/task completion/review/
   completion and legacy-upsert bypass fail without effects; stale and cross-project
-  placement fail; exact replay retains one request receipt and audit.
+  placement fail; exact replay retains one request receipt and audit. Existing-ticket
+  unassigned upsert rejects both possible partial-placement shapes.
 - Projections and navigation: all phases, readiness, phase-owned goals and Not
   placed details agree; all-phase board has exactly five lanes and one phase label
   per card; the No Delivery Goal filter is distinct from No phase; Back restores
   Project Plan/all-phase scope, selection and focus; Dependencies selects an
-  unassigned node labelled Unassigned.
+  unassigned node labelled Unassigned. Removing a selected card with a Delivery
+  Goal filter clears the selection, focuses the filter summary for keyboard and
+  accessibility navigation, and shows the explicit `Select a ticket` empty detail.
 - Persistence: archive/restore/relaunch, full backup, and removal retained-history
   checks preserve or truthfully retain the new record identity as applicable.
 - Public transport: the real registered broker completed unassigned creation and
@@ -46,8 +56,28 @@ Green result bundles retained for delivery review include:
 - isolated native rendering plus the externally exercised interaction journey:
   `Test-ReleaseRadar-2026.09.09_12-50-43--0400.xcresult`.
 
-The bundles remain under `/tmp/release-radar-phase5a-derived/Logs/Test/`; they
-are temporary diagnostic output rather than durable evidence artifacts.
+Reviewer corrections were directly rechecked in these additional bundles:
+
+- invariant, policy, navigation and native regression tests:
+  `/tmp/release-radar-phase5a-correction-targeted.xcresult` (5 passed);
+- affected store, policy, projection, route, archive and removal suites:
+  `/tmp/release-radar-phase5a-correction-affected-suites-final.xcresult`
+  (230 passed, 1 unchanged signed-native backup-picker scenario skipped);
+- a fully externally exercised native focus/filter journey:
+  `/tmp/release-radar-phase5a-native-focus-filter-final.xcresult`; and
+- two immediate no-rebuild native repeats:
+  `/tmp/release-radar-phase5a-native-corrected-repeat1-final.xcresult` and
+  `/tmp/release-radar-phase5a-native-corrected-repeat2-final.xcresult`.
+
+The original timestamped bundles remain under
+`/tmp/release-radar-phase5a-derived/Logs/Test/`; the correction bundles remain
+at the explicit `/tmp` paths above. They are temporary diagnostic output rather
+than durable evidence artifacts.
+
+The repository documentation checker currently reports this evidence document
+as `uncataloguedFile`. Catalog and generated-index integration is intentionally
+left to the coordinator; this correction does not modify `docs/catalog.json`,
+generated indexes, or `docs/delivery/progress.md`.
 
 ## Native comparison
 
@@ -57,13 +87,23 @@ inspector below readable, scrollable primary content. The all-phase board preser
 five lanes and excludes the Not placed ticket.
 
 External accessibility control also exercised the native test host from Project
-Plan through the unassigned `PLAN-ONLY` item, Open all-phase board, accessible
-selection of `ROAD-1`, project-wide Dependencies, Back and Forward. Readback after
-Back showed `ROAD-1` selected and focused inside the restored board scroll area;
-Forward restored the `ROAD-1` dependency path and correctly moved navigation focus
-to Dependencies. macOS accessibility exposes the focused visible element and the
-scroll container, but not a stable numeric SwiftUI scroll offset, so the check does
-not claim byte- or coordinate-exact offset restoration.
+Plan through the unassigned `PLAN-ONLY` item and project-wide Dependencies. Back
+readback showed the actual `PLAN-ONLY` card as the focused macOS accessibility
+element, not only a matching model identifier. On the all-phase board, accessibility
+control selected `ROAD-1` and then filtered to `road-goal-2`; readback showed the
+filter summary as the focused accessibility element, `ROAD-1` absent, no selected
+ticket, and only the `Select a ticket` empty detail rather than a fallback ticket.
+The journey then restored All goals, selected `ROAD-1`, and finished on its
+Dependencies path.
+
+The reviewer's first rebuilt native run completed every capture and then reported
+an `idle` to `failed(deinit)` transition. A controlled lifecycle reduction exposed
+the underlying sandbox denial (Cocoa error 513): the XCTest app host was trying to
+delete the externally owned `/tmp` interaction markers. The test now treats those
+markers as read-only synchronization input; the external controller creates and
+retires them. A fresh build, the full interaction journey and two immediate repeats
+all completed without the lifecycle failure. No RDS change or error suppression was
+used.
 
 - [Project Plan — wide](phase5a-project-plan-wide.png)
 - [Project Plan — compact](phase5a-project-plan-compact.png)
