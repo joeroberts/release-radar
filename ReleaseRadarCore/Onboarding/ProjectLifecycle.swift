@@ -480,6 +480,46 @@ public actor ProjectRemovalManager {
             try connection.execute("DELETE FROM delivery_goal_ticket_assignments WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM delivery_goal_done_criteria WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM delivery_goals WHERE project_id = ?", bindings: [project])
+            try connection.execute(
+                """
+                INSERT INTO retained_ticket_reference_links (
+                    removal_id, historical_project_id, ticket_id, link_id, kind,
+                    repository_id, artifact_id, current_version, relationship,
+                    retired_version, retired_at, retirement_reason, link_set_revision,
+                    created_at, updated_at
+                )
+                SELECT ?, links.project_id, links.ticket_id, links.id, links.kind,
+                       links.repository_id, links.artifact_id, links.current_version,
+                       links.relationship, links.retired_version, links.retired_at,
+                       links.retirement_reason, sets.revision, links.created_at, links.updated_at
+                FROM ticket_reference_links links
+                JOIN ticket_reference_link_sets sets
+                  ON sets.project_id = links.project_id AND sets.ticket_id = links.ticket_id
+                WHERE links.project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                """
+                INSERT INTO retained_ticket_reference_versions (
+                    removal_id, historical_project_id, ticket_id, link_id, version,
+                    content_digest, source_local_id, locator, catalog_version,
+                    catalog_digest, observed_path, observed_lifecycle,
+                    observed_authority, created_at
+                )
+                SELECT ?, versions.project_id, versions.ticket_id, versions.link_id,
+                       versions.version, versions.content_digest, versions.source_local_id,
+                       versions.locator, versions.catalog_version, versions.catalog_digest,
+                       versions.observed_path, versions.observed_lifecycle,
+                       versions.observed_authority, versions.created_at
+                FROM ticket_reference_versions versions
+                WHERE versions.project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute("DELETE FROM ticket_reference_versions WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM ticket_reference_links WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM ticket_reference_link_sets WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM ticket_tasks WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM ticket_task_plans WHERE project_id = ?", bindings: [project])
         }

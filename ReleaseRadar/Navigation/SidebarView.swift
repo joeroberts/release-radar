@@ -351,6 +351,19 @@ struct SidebarView: View {
                         loadEvidencePreview: { evidenceID in
                             await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
                         },
+                        loadTicketReferences: { ticketID in
+                            await model.loadTicketReferences(projectID: projectID, ticketID: ticketID)
+                        },
+                        openReferenceSource: { ticketID, linkID, version in
+                            Task {
+                                await model.openReferenceSource(
+                                    projectID: projectID,
+                                    ticketID: ticketID,
+                                    linkID: linkID,
+                                    version: version
+                                )
+                            }
+                        },
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
                     )
@@ -394,6 +407,19 @@ struct SidebarView: View {
                         loadEvidencePreview: { evidenceID in
                             await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
                         },
+                        loadTicketReferences: { ticketID in
+                            await model.loadTicketReferences(projectID: projectID, ticketID: ticketID)
+                        },
+                        openReferenceSource: { ticketID, linkID, version in
+                            Task {
+                                await model.openReferenceSource(
+                                    projectID: projectID,
+                                    ticketID: ticketID,
+                                    linkID: linkID,
+                                    version: version
+                                )
+                            }
+                        },
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
                     )
@@ -430,6 +456,19 @@ struct SidebarView: View {
                         },
                         loadEvidencePreview: { evidenceID in
                             await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+                        },
+                        loadTicketReferences: { ticketID in
+                            await model.loadTicketReferences(projectID: projectID, ticketID: ticketID)
+                        },
+                        openReferenceSource: { ticketID, linkID, version in
+                            Task {
+                                await model.openReferenceSource(
+                                    projectID: projectID,
+                                    ticketID: ticketID,
+                                    linkID: linkID,
+                                    version: version
+                                )
+                            }
                         },
                         viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
                         viewAllPhases: { model.viewAllPhases(projectID: projectID) },
@@ -482,6 +521,42 @@ struct SidebarView: View {
                 } else {
                     DetailUnavailableView(title: "Activity", image: "clock.arrow.circlepath")
                 }
+            case let .referenceSource(projectID, ticketID, linkID, version):
+                TicketReferenceSourceRouteView(
+                    ticketID: ticketID,
+                    linkID: linkID,
+                    version: version,
+                    requestedFocus: model.navigationFocus,
+                    focusChanged: { model.setNavigationFocus($0) },
+                    load: {
+                        await model.loadTicketReferences(projectID: projectID, ticketID: ticketID)
+                    },
+                    openRecordedImpacts: { repositoryID, artifactID in
+                        Task {
+                            await model.openRecordedImpacts(
+                                projectID: projectID,
+                                repositoryID: repositoryID,
+                                artifactID: artifactID
+                            )
+                        }
+                    }
+                )
+            case let .recordedImpacts(projectID, repositoryID, artifactID):
+                RecordedImpactsRouteView(
+                    identity: "\(projectID.rawValue):\(repositoryID):\(artifactID)",
+                    requestedFocus: model.navigationFocus,
+                    focusChanged: { model.setNavigationFocus($0) },
+                    load: {
+                        await model.loadRecordedImpacts(
+                            projectID: projectID,
+                            repositoryID: repositoryID,
+                            artifactID: artifactID
+                        )
+                    },
+                    openTicket: { ticketID in
+                        Task { await model.openRecordedImpactTicket(projectID: projectID, ticketID: ticketID) }
+                    }
+                )
             case .settings:
                 EmptyView()
             }
@@ -554,6 +629,8 @@ private extension AppRoute {
         case .phaseBoard: "phase-board"
         case .dependencies: "dependencies"
         case .activity: "activity"
+        case .referenceSource: "reference-source"
+        case .recordedImpacts: "recorded-impacts"
         }
     }
 }

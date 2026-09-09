@@ -10,6 +10,8 @@ extension ProjectRegistration {
 enum NavigationFocus: Hashable, Sendable {
     case route(AppRoute)
     case ticket(TicketID)
+    case referenceSource(linkID: String, version: Int64)
+    case recordedImpacts
     case filterSummary
     case recovery
 }
