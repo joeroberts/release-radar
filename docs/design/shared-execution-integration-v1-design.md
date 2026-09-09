@@ -2,17 +2,19 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Design candidate; unapproved; non-gating |
+| Status | Source implementation authorized; design remains non-gating |
 | Date | 2026-09-09 |
 | Baseline inspected | `8930f9643ca1f46e7681ce9b838ce9b0f5b024fc` |
 | Intended consumers | Release Radar, Rekon Pursuit, and separately adopted future repositories |
-| Delivery effect | None until separately authorized source and consumer-adoption work |
+| Delivery effect | Local source candidate only; no installation, app-state, or consumer-adoption effect |
 
-This candidate defines a small shared execution contract for repeatable Codex
+The owner authorized source implementation under this reviewed design. The local
+source candidate still creates no installed behavior, application-state mutation,
+runtime proof, or consumer adoption. This design defines a small shared execution
+contract for repeatable Codex
 delivery without turning Release Radar into an execution engine or copying another
-large instruction manual into every repository. It is design input, not accepted
-architecture, installed behavior, a completion gate, or permission to change any
-consumer.
+large instruction manual into every repository. It remains non-gating design input,
+not a completion gate or permission to change any consumer.
 
 The design consumes the non-gating assessment in the
 [full-product plan](../delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md#shared-execution-integration-assessment--proposed-non-gating--2026-09-08),

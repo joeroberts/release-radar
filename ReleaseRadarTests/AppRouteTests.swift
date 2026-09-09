@@ -2638,6 +2638,69 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testPluginStatusRefreshesActiveProjectCompatibilityObservation() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PluginCompatibilityRefresh-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let loader = PluginCompatibilityObservationLoader(projectID: DashboardSampleData.projectID)
+        let observer = DocumentationObservationCoordinator { projectID in
+            await loader.load(projectID: projectID)
+        }
+        let currentDigest = "ecc221b2ca91ac8913e73555b6ed310bce63d7f1ac9462d05b025478173d5a40"
+        let lifecycleStore = CodexPluginLifecycleStore(store: store)
+        try await lifecycleStore.recordVerified(
+            .init(
+                intent: .managedInstalled,
+                managedVersion: "0.1.8",
+                managedDigest: currentDigest,
+                verifiedAt: Date(timeIntervalSince1970: 1)
+            ),
+            reason: "Plugin compatibility refresh fixture"
+        )
+        let manager = AppLifecycleManager(replies: [
+            .init(wireVersion: 1, observedState: .absent, error: nil),
+        ])
+        let coordinator = CodexPluginLifecycleCoordinator(
+            manager: manager,
+            store: lifecycleStore,
+            shippedVersion: "0.1.8",
+            shippedDigest: currentDigest
+        )
+        let capability = try XCTUnwrap(RecognizedPluginCapability.recognize(
+            manifestVersion: "0.1.8",
+            normalizedPackageDigest: currentDigest
+        ))
+        let model = AppModel(
+            store: store,
+            codexPluginCoordinator: coordinator,
+            codexPluginShippedVersion: "0.1.8",
+            codexPluginShippedCapability: capability,
+            externalServicesSuppressed: true,
+            documentationObserver: observer
+        )
+
+        await model.loadDashboard()
+        let initialObservationCount = await loader.count()
+        XCTAssertEqual(initialObservationCount, 1)
+
+        await model.loadCodexPluginStatus()
+
+        let pluginOperations = await manager.operations()
+        let refreshedObservationCount = await loader.count()
+        XCTAssertEqual(pluginOperations, [.status])
+        XCTAssertEqual(refreshedObservationCount, 2)
+        guard case let .observed(observation) = model.documentationObservationStatus(
+            for: DashboardSampleData.projectID
+        ) else {
+            return XCTFail("Plugin status must republish the active project's compatibility observation")
+        }
+        XCTAssertEqual(observation.generation, 2)
+    }
+
+    @MainActor
     func testRecoveryResumedLaunchUsesReadOnlyPluginStatus() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RecoveryPluginLaunch-\(UUID().uuidString)", isDirectory: true)
@@ -4821,6 +4884,35 @@ private actor AppLifecycleManager: CodexPluginLifecycleManaging {
             ? .init(wireVersion: 1, observedState: nil, error: .malformedResult)
             : replies.removeFirst()
     }
+}
+
+private actor PluginCompatibilityObservationLoader {
+    private let projectID: ProjectID
+    private var calls = 0
+
+    init(projectID: ProjectID) {
+        self.projectID = projectID
+    }
+
+    func load(projectID: ProjectID) -> DocumentationObservationPayload {
+        precondition(projectID == self.projectID)
+        calls += 1
+        return .init(
+            identity: .init(
+                projectID: projectID,
+                registration: nil,
+                rootID: nil,
+                rootPath: "/synthetic/plugin-refresh",
+                binding: nil
+            ),
+            checkedAt: Date(timeIntervalSince1970: TimeInterval(calls)),
+            documentationState: .legacy(.unavailable),
+            evidence: [],
+            sharedExecutionCompatibility: .init(state: .unknown, directResults: [])
+        )
+    }
+
+    func count() -> Int { calls }
 }
 
 private final class RouteBookmarkStore: @unchecked Sendable, ProjectBookmarkStoring {

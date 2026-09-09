@@ -82,6 +82,7 @@ final class AppModel {
     private let codexObserver: any CodexObserver
     private var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
     let codexPluginShippedVersion: String
+    private let codexPluginShippedCapability: RecognizedPluginCapability?
     private let pushoverKeychain: PushoverKeychainStore
     private var notificationCoordinator: AppNotificationCoordinator
     private var projectOnboarding: FolderProjectOnboarding
@@ -128,6 +129,7 @@ final class AppModel {
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
         codexPluginCoordinator: CodexPluginLifecycleCoordinator? = nil,
         codexPluginShippedVersion: String = "0.1.0",
+        codexPluginShippedCapability: RecognizedPluginCapability? = nil,
         pushoverKeychain: PushoverKeychainStore? = nil,
         notificationCoordinator: AppNotificationCoordinator? = nil,
         projectOnboarding: FolderProjectOnboarding? = nil,
@@ -152,6 +154,7 @@ final class AppModel {
         self.codexObserver = codexObserver
         self.codexPluginCoordinator = codexPluginCoordinator
         self.codexPluginShippedVersion = codexPluginShippedVersion
+        self.codexPluginShippedCapability = codexPluginShippedCapability
         self.pushoverKeychain = resolvedKeychain
         let resolvedOnboarding = projectOnboarding ?? FolderProjectOnboarding(store: store)
         self.projectOnboarding = resolvedOnboarding
@@ -164,7 +167,11 @@ final class AppModel {
             }
         }
         self.documentationObserver = documentationObserver
-            ?? Self.makeDocumentationObserver(onboarding: resolvedOnboarding)
+            ?? Self.makeDocumentationObserver(
+                onboarding: resolvedOnboarding,
+                pluginCoordinator: codexPluginCoordinator,
+                shippedCapability: codexPluginShippedCapability
+            )
         self.evidencePreviewLoader = evidencePreviewLoader ?? { store, projectID, evidenceID in
             await store.previewEvidence(projectID: projectID, evidenceID: evidenceID)
         }
@@ -186,6 +193,7 @@ final class AppModel {
         codexObserver: any CodexObserver = UnavailableCodexObserver(),
         codexPluginCoordinator: CodexPluginLifecycleCoordinator? = nil,
         codexPluginShippedVersion: String = "0.1.0",
+        codexPluginShippedCapability: RecognizedPluginCapability? = nil,
         pushoverKeychain: PushoverKeychainStore? = nil,
         notificationCoordinator: AppNotificationCoordinator? = nil,
         projectOnboarding: FolderProjectOnboarding? = nil,
@@ -208,6 +216,7 @@ final class AppModel {
             codexObserver: codexObserver,
             codexPluginCoordinator: codexPluginCoordinator,
             codexPluginShippedVersion: codexPluginShippedVersion,
+            codexPluginShippedCapability: codexPluginShippedCapability,
             pushoverKeychain: pushoverKeychain,
             notificationCoordinator: notificationCoordinator,
             projectOnboarding: projectOnboarding,
@@ -749,7 +758,11 @@ final class AppModel {
             codexPluginCoordinator = nil
         }
         projectOnboarding = FolderProjectOnboarding(store: result.store)
-        documentationObserver = Self.makeDocumentationObserver(onboarding: projectOnboarding)
+        documentationObserver = Self.makeDocumentationObserver(
+            onboarding: projectOnboarding,
+            pluginCoordinator: codexPluginCoordinator,
+            shippedCapability: codexPluginShippedCapability
+        )
         clearEphemeralViewState()
         selection = .projects
         selectedProjectID = nil
@@ -1083,6 +1096,15 @@ final class AppModel {
             documentationObserver.invalidate(projectID: project.id)
         }
         await refreshActiveDocumentationObservations(withdrawCurrent: true)
+    }
+
+    func refreshProjectDocumentation(_ projectID: ProjectID) async {
+        guard dashboard?.projects.contains(where: { $0.id == projectID }) == true else { return }
+        documentationObserver.invalidate(projectID: projectID)
+        _ = await refreshDocumentationObservation(
+            projectID: projectID,
+            withdrawCurrent: true
+        )
     }
 
     func projectSettings(for projectID: ProjectID) async throws -> ProjectSettingsSnapshot {
@@ -2133,13 +2155,22 @@ final class AppModel {
     }
 
     private static func makeDocumentationObserver(
-        onboarding: FolderProjectOnboarding
+        onboarding: FolderProjectOnboarding,
+        pluginCoordinator: CodexPluginLifecycleCoordinator?,
+        shippedCapability: RecognizedPluginCapability?
     ) -> DocumentationObservationCoordinator {
         DocumentationObservationCoordinator { projectID in
             for _ in 0..<2 {
                 do {
+                    let snapshot = try await onboarding.inspectProjectDocumentation(
+                        projectID: projectID
+                    )
                     return DocumentationObservationPayload(
-                        try await onboarding.inspectProjectDocumentation(projectID: projectID)
+                        snapshot,
+                        pluginObservation: await sharedExecutionPluginObservation(
+                            coordinator: pluginCoordinator,
+                            shippedCapability: shippedCapability
+                        )
                     )
                 } catch ProjectDocumentationObservationError.staleContext {
                     continue
@@ -2157,8 +2188,47 @@ final class AppModel {
                 ),
                 checkedAt: Date(),
                 documentationState: .legacy(.unavailable),
-                evidence: []
+                evidence: [],
+                sharedExecutionCompatibility: .init(state: .rootUnknown, directResults: [])
             )
+        }
+    }
+
+    private static func sharedExecutionPluginObservation(
+        coordinator: CodexPluginLifecycleCoordinator?,
+        shippedCapability: RecognizedPluginCapability?
+    ) async -> SharedExecutionPluginObservation {
+        guard let shippedCapability else {
+            return .unavailable("The bundled plugin capability is unavailable.")
+        }
+        guard let coordinator else {
+            return .unavailable("The plugin lifecycle service is unavailable.")
+        }
+        let snapshot = await coordinator.recoveryStatus()
+        if let error = snapshot.error {
+            return .unavailable(error.rawValue)
+        }
+        guard let observed = snapshot.observedState else {
+            return .unknown("The plugin observation did not return a state.")
+        }
+        switch observed {
+        case .absent:
+            return .absent
+        case let .clean(version, digest):
+            guard let installed = RecognizedPluginCapability.recognize(
+                manifestVersion: version,
+                normalizedPackageDigest: digest
+            ) else {
+                return .unrecognized(
+                    manifestVersion: version,
+                    normalizedPackageDigest: digest
+                )
+            }
+            return .clean(installed: installed, shipped: shippedCapability)
+        case .modified:
+            return .modified
+        case let .needsRepair(error):
+            return .unavailable(error.rawValue)
         }
     }
 
@@ -2298,7 +2368,7 @@ final class AppModel {
             return
         }
         let result = await codexPluginCoordinator.performAutomaticUpdateIfEligible()
-        applyCodexPluginResult(result, operation: .checking)
+        await applyCodexPluginResult(result, operation: .checking)
     }
 
     func loadCodexPluginStatus(retrying: Bool = false) async {
@@ -2311,31 +2381,31 @@ final class AppModel {
         let operation: CodexPluginOperation = retrying ? .tryAgain : .checking
         beginCodexPluginOperation(operation)
         let result = await codexPluginCoordinator.status()
-        applyCodexPluginResult(result, operation: operation)
+        await applyCodexPluginResult(result, operation: operation)
     }
 
     func installCodexPlugin() async {
         guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
         beginCodexPluginOperation(.install)
-        applyCodexPluginResult(await codexPluginCoordinator.install(), operation: .install)
+        await applyCodexPluginResult(await codexPluginCoordinator.install(), operation: .install)
     }
 
     func updateCodexPlugin() async {
         guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
         beginCodexPluginOperation(.update)
-        applyCodexPluginResult(await codexPluginCoordinator.update(), operation: .update)
+        await applyCodexPluginResult(await codexPluginCoordinator.update(), operation: .update)
     }
 
     func removeCodexPlugin() async {
         guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
         beginCodexPluginOperation(.remove)
-        applyCodexPluginResult(await codexPluginCoordinator.remove(), operation: .remove)
+        await applyCodexPluginResult(await codexPluginCoordinator.remove(), operation: .remove)
     }
 
     func reinstallCodexPlugin() async {
         guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
         beginCodexPluginOperation(.reinstall)
-        applyCodexPluginResult(await codexPluginCoordinator.reinstall(), operation: .reinstall)
+        await applyCodexPluginResult(await codexPluginCoordinator.reinstall(), operation: .reinstall)
     }
 
     private func beginCodexPluginOperation(_ operation: CodexPluginOperation) {
@@ -2347,10 +2417,9 @@ final class AppModel {
     private func applyCodexPluginResult(
         _ result: CodexPluginLifecycleResult,
         operation: CodexPluginOperation
-    ) {
+    ) async {
         codexPluginState = result.state
         codexPluginObservedAt = Date()
-        codexPluginOperation = nil
         codexPluginAnnouncement = CodexPluginSettingsPresentation(state: result.state).status
         if result.changedInstallation {
             codexPluginSettingsMessage = "Start a new Codex task to load the plugin change."
@@ -2359,6 +2428,8 @@ final class AppModel {
         } else if operation == .tryAgain {
             codexPluginSettingsMessage = nil
         }
+        await refreshActiveDocumentationObservations(withdrawCurrent: true)
+        codexPluginOperation = nil
     }
 }
 

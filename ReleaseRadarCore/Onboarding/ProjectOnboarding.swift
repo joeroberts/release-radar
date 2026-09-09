@@ -1287,6 +1287,8 @@ public struct ProjectDocumentationSnapshot: Equatable, Sendable {
     public let checkedAt: Date
     public let documentationState: ProjectDocumentationState
     public let evidence: [EvidenceReadback]
+    public let repositoryDiagnostic: RepositoryDocumentDiagnostic?
+    public let sharedExecutionDeclaration: SharedExecutionDeclarationObservation
 }
 
 public struct ProjectRootAuthorizationTarget: Equatable, Sendable {
@@ -1463,6 +1465,12 @@ extension FolderProjectOnboarding {
                     hasAuditedHandoff: source.hasAuditedHandoff,
                     context: context
                 )
+                let repositoryDiagnostic = RepositoryDocumentIndexTool().diagnose(
+                    authorizedRoot: activeRoot
+                )
+                let sharedExecutionDeclaration = ProjectGuidanceInspection.inspectSharedExecution(
+                    rootURL: activeRoot
+                )
                 let managedIDs = Set(source.evidence.compactMap { record -> String? in
                     if case let .managedDocument(artifactID) = record.locator { return artifactID }
                     return nil
@@ -1492,7 +1500,12 @@ extension FolderProjectOnboarding {
                     )
                     return .init(evidence: record, managedDocument: document)
                 }
-                return (documentationState, evidence)
+                return (
+                    documentationState,
+                    evidence,
+                    repositoryDiagnostic,
+                    sharedExecutionDeclaration
+                )
             }
             try await requireCurrentDocumentationObservationSource(source)
             return .init(
@@ -1503,7 +1516,9 @@ extension FolderProjectOnboarding {
                 binding: source.binding,
                 checkedAt: checkedAt,
                 documentationState: result.0,
-                evidence: result.1
+                evidence: result.1,
+                repositoryDiagnostic: result.2,
+                sharedExecutionDeclaration: result.3
             )
         } catch let error as ProjectDocumentationObservationError {
             throw error
@@ -1646,7 +1661,9 @@ extension FolderProjectOnboarding {
             binding: source.binding,
             checkedAt: checkedAt,
             documentationState: state,
-            evidence: evidence
+            evidence: evidence,
+            repositoryDiagnostic: nil,
+            sharedExecutionDeclaration: .unavailable(.readFailed)
         )
     }
 }

@@ -181,6 +181,11 @@ public struct SharedExecutionCompatibilityInput: Equatable, Sendable {
 public struct SharedExecutionCompatibilityResult: Equatable, Sendable {
     public let state: SharedExecutionCompatibilityState
     public let directResults: [SharedExecutionDirectResult]
+
+    public init(state: SharedExecutionCompatibilityState, directResults: [SharedExecutionDirectResult]) {
+        self.state = state
+        self.directResults = directResults
+    }
 }
 
 public enum SharedExecutionCompatibilityReducer {

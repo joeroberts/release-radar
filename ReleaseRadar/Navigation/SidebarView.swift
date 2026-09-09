@@ -300,6 +300,9 @@ struct SidebarView: View {
                         reauthorizeActivePhase: { folder in
                             await model.reauthorizeActivePhaseProject(at: folder, projectID: projectID)
                         },
+                        refreshDocumentation: {
+                            await model.refreshProjectDocumentation(projectID)
+                        },
                         repositoryRecovery: model.repositoryRecovery(for: projectID),
                         onRepositoryRelocated: { await model.reloadAfterRepositoryRelocation() },
                         loadProjectSettings: { try await model.projectSettings(for: projectID) },

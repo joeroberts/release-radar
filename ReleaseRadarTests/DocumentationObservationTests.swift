@@ -441,6 +441,20 @@ final class DocumentationObservationTests: XCTestCase {
     @MainActor
     func testSharedObservationRefreshesManagedGuidanceAndEvidenceWithoutPersistenceWrites() async throws {
         let root = try managedFixture()
+        let agentsURL = root.appendingPathComponent("AGENTS.md")
+        let existingAgents = try String(contentsOf: agentsURL, encoding: .utf8)
+        try Data((existingAgents + "\n\n" + SharedExecutionDeclarationInspector.managedBlock + "\n").utf8)
+            .write(to: agentsURL)
+        for (path, title) in [("docs/README.md", "# Documentation"), ("docs/plans/README.md", "# Plans")] {
+            let markedIndex = """
+            \(title)
+            \(RepositoryDocumentContract.managedIndexStart)
+            \(RepositoryDocumentContract.managedIndexEnd)
+
+            """
+            try Data(markedIndex.utf8).write(to: root.appendingPathComponent(path))
+        }
+        try RepositoryDocumentIndexTool().write(authorizedRoot: root)
         let database = root.deletingLastPathComponent()
             .appendingPathComponent("ReleaseRadar-ObservationDB-\(UUID().uuidString).sqlite")
         addTeardownBlock { try? FileManager.default.removeItem(at: database) }
@@ -489,8 +503,24 @@ final class DocumentationObservationTests: XCTestCase {
         XCTAssertEqual(current.rootID, rootID)
         XCTAssertEqual(current.rootPath, root.path)
         XCTAssertEqual(current.binding, binding)
+        XCTAssertEqual(current.sharedExecutionDeclaration, .exact(version: 1))
+        XCTAssertEqual(current.repositoryDiagnostic?.status, .passed)
+        XCTAssertEqual(current.repositoryDiagnostic?.target.repositoryID, binding.repositoryID)
         XCTAssertEqual(current.documentationState, .managed(hasAuditedHandoff: false, catalogVersion: 1, catalogDigest: binding.acceptedCatalogDigest))
         XCTAssertTrue(try XCTUnwrap(current.evidence.first?.managedDocument).isAvailable)
+        let capability = try XCTUnwrap(RecognizedPluginCapability.recognize(
+            manifestVersion: "0.1.8",
+            normalizedPackageDigest: "ecc221b2ca91ac8913e73555b6ed310bce63d7f1ac9462d05b025478173d5a40"
+        ))
+        let compatibility = DocumentationObservationPayload(
+            current,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+        XCTAssertEqual(compatibility.state, .compatibleV1)
+        XCTAssertEqual(compatibility.directResults.count, 2)
+        XCTAssertEqual(compatibility.directResults[0].runner, "Release Radar repository checker contract v1")
+        XCTAssertEqual(compatibility.directResults[0].scope, root.path)
+        XCTAssertEqual(compatibility.directResults[1].directResult, "recognized capability installed")
 
         let evidenceFile = root.appendingPathComponent("docs/plans/evidence.md")
         let original = try Data(contentsOf: evidenceFile)
@@ -640,6 +670,53 @@ final class DocumentationObservationTests: XCTestCase {
         XCTAssertEqual(current?.generation, 2)
         XCTAssertEqual(current?.checkedAt, Date(timeIntervalSince1970: 2))
         XCTAssertEqual(coordinator.status(for: projectID), current.map(DocumentationObservationStatus.observed))
+
+        coordinator.remove(projectID: projectID)
+        XCTAssertNil(coordinator.status(for: projectID))
+    }
+
+    @MainActor
+    func testCompatibilityObservationRefreshesForPluginChangeAndRootReplacement() async throws {
+        let projectID = ProjectID(rawValue: "shared-execution-project")
+        let gate = SequencedDocumentationObservationGate()
+        let coordinator = DocumentationObservationCoordinator { requestedProjectID in
+            await gate.load(projectID: requestedProjectID)
+        }
+
+        let first = Task { await coordinator.refresh(projectID: projectID) }
+        await gate.waitUntilCallCount(1)
+        await gate.release(call: 1, with: .fixture(
+            projectID: projectID,
+            compatibilityState: .compatibleV1
+        ))
+        let firstObservation = await first.value
+        XCTAssertEqual(firstObservation?.sharedExecutionCompatibility.state, .compatibleV1)
+
+        let pluginChanged = Task {
+            await coordinator.refresh(projectID: projectID, withdrawCurrent: false)
+        }
+        await gate.waitUntilCallCount(2)
+        await gate.release(call: 2, with: .fixture(
+            projectID: projectID,
+            compatibilityState: .incompatible
+        ))
+        let changed = await pluginChanged.value
+        XCTAssertEqual(changed?.generation, 2)
+        XCTAssertEqual(changed?.sharedExecutionCompatibility.state, .incompatible)
+
+        coordinator.invalidate(projectID: projectID)
+        let replacedRoot = Task { await coordinator.refresh(projectID: projectID) }
+        await gate.waitUntilCallCount(3)
+        await gate.release(call: 3, with: .fixture(
+            projectID: projectID,
+            checkedAt: 3,
+            rootPath: "/synthetic/replacement",
+            compatibilityState: .rootUnknown
+        ))
+        let replacement = await replacedRoot.value
+        XCTAssertEqual(replacement?.generation, 3)
+        XCTAssertEqual(replacement?.identity.rootPath, "/synthetic/replacement")
+        XCTAssertEqual(replacement?.sharedExecutionCompatibility.state, .rootUnknown)
 
         coordinator.remove(projectID: projectID)
         XCTAssertNil(coordinator.status(for: projectID))
@@ -844,13 +921,18 @@ private actor SequencedDocumentationObservationGate {
 }
 
 private extension DocumentationObservationPayload {
-    static func fixture(projectID: ProjectID, checkedAt: TimeInterval = 1_700_000_000) -> Self {
+    static func fixture(
+        projectID: ProjectID,
+        checkedAt: TimeInterval = 1_700_000_000,
+        rootPath: String = "/synthetic/freshness",
+        compatibilityState: SharedExecutionCompatibilityState = .unknown
+    ) -> Self {
         .init(
             identity: .init(
                 projectID: projectID,
                 registration: .init(projectID: projectID, registrationID: "registration", requestGeneration: 3),
                 rootID: .init(rawValue: "root"),
-                rootPath: "/synthetic/freshness",
+                rootPath: rootPath,
                 binding: nil
             ),
             checkedAt: Date(timeIntervalSince1970: checkedAt),
@@ -859,7 +941,11 @@ private extension DocumentationObservationPayload {
                 catalogVersion: 1,
                 catalogDigest: String(repeating: "a", count: 64)
             ),
-            evidence: []
+            evidence: [],
+            sharedExecutionCompatibility: .init(
+                state: compatibilityState,
+                directResults: []
+            )
         )
     }
 }
