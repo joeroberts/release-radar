@@ -39,10 +39,23 @@ protections hold. The owner also confirmed Unassessed / Upcoming / In delivery /
 Completed, existing phases Unassessed, multiple In delivery, explicit completion
 after obligations resolve and explicit reopening or new phase for further work.
 No product-choice approval from this batch remains outstanding.
-Shared execution integration is separately owner-authorized for design only in
-parent-owned task `01a0871b-fc68-7741-8d11-da6b66a17826` (Sol High). Its sole new
-file is `docs/design/shared-execution-integration-v1-design.md`; no shared metadata
-writes are delegated. It remains non-gating and authorizes no implementation.
+Shared execution design and implementation planning completed separate review at
+local candidate `3a49fb278dfbbbc80d9322e1f3ea757f4eceafda`, branch
+`codex/shared-integration-implementation-plan` in preserved worktree `6684`.
+The parent-owned design/plan remain separate from this branch; the completed plan
+reviewer is archived. The owner subsequently authorized parallel implementation
+of disjoint shared package/capability and documentation-diagnose work, superseding
+only the plan's all-source-after-B sequence. The parent owns that fresh assignment.
+No shared remote, merge, installation or app-state authority is inferred.
+
+Phase 5B retains AppModel, ProjectDocumentationRenderingTests, the existing packaged
+release-radar skill, CodexPluginLifecycleAcceptanceTests, DocumentationCallbackTests,
+the agent-tool main and all B UI/contract/metadata paths. Disjoint diagnostic
+Core/helper and separate new tests may proceed in the shared worktree. Shared
+package capability digest freeze requires the final combined B-descendant skill
+bytes, and overlapping source/UI/adoption work waits the B handoff. Native/test
+hosts remain serialized by reservation; B currently owns that slot. No shared
+integration becomes a dependency of Phase 5B.
 
 ## Current authorization and ownership
 
