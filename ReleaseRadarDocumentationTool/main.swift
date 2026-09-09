@@ -16,6 +16,34 @@ if arguments == ["--help"] || arguments == ["-h"] {
     """)
     exit(0)
 }
+
+if arguments.count == 5, arguments[0] == "diagnose", arguments[1] == "--root",
+   arguments[2].hasPrefix("/"), !arguments[2].utf8.contains(0),
+   arguments[3] == "--format", arguments[4] == "json" {
+    let executable = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+    let applicationBundle = Bundle(url: executable
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent())
+    let toolVersion = applicationBundle?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+    let toolBuild = applicationBundle?.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+    let result = RepositoryDocumentIndexTool().diagnose(
+        authorizedRoot: URL(fileURLWithPath: arguments[2], isDirectory: true),
+        toolVersion: toolVersion,
+        toolBuild: toolBuild
+    )
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+    do {
+        FileHandle.standardOutput.write(try encoder.encode(result))
+        FileHandle.standardOutput.write(Data("\n".utf8))
+        exit(result.status == .passed ? 0 : 1)
+    } catch {
+        FileHandle.standardError.write(Data("Repository documentation failed. Check repository access and retry.\n".utf8))
+        exit(1)
+    }
+}
+
 guard arguments.count == 3, ["check", "write"].contains(arguments[0]),
       arguments[1] == "--root", arguments[2].hasPrefix("/"),
       !arguments[2].utf8.contains(0) else {
