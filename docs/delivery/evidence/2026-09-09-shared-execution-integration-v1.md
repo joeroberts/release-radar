@@ -74,18 +74,22 @@ runtime consumer pilot.
 A separate `ManagedGuidanceCompatibilityTests` run produced `9 passed` and
 `2 failed`:
 
-1. The actual-repository conformance case currently reports the new canonical
-   screenshot as uncatalogued. This is expected until the parent-owned
-   `docs/catalog.json` and generated indexes are updated in the serialized
-   metadata handoff.
+1. At the source-only checkpoint, the actual-repository conformance case reported
+   a new canonical screenshot as uncatalogued. The serialized metadata integration
+   registered all four new evidence artifacts and regenerated the index; the
+   repository documentation check now passes. The earlier test result is retained
+   as evidence of that pre-integration state, not a current catalog defect.
 2. The disposable-real-repository case still expects `staleIndex`, but its
    copied documentation tree now reaches a different historical fixture
    condition. This failure was reported before the final source candidate and
    is not caused by Shared Execution source behavior.
 
-Repository documentation validation must be rerun after the parent-owned
-catalog/index update. One fresh independent review of the immutable combined
-candidate also remains required. Neither condition authorizes a source runtime
+Repository documentation validation and `git diff --check` passed after the
+serialized catalog/index and contract updates. The existing shared-design artifact
+retains its stable identity, proposed/supporting metadata and no-checksum policy;
+source authorization does not silently promote it to a controlling adoption record.
+One fresh independent review of the immutable combined candidate remains required.
+This verification does not authorize a source runtime
 pilot, plugin installation, consumer adoption, push, PR, or merge.
 
 ## Retained temporary evidence

@@ -5400,6 +5400,66 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-2026-09-09-shared-execution-integration-v1",
+      "path": "docs/delivery/evidence/2026-09-09-shared-execution-integration-v1.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-v1-compatibility-compact",
+      "path": "docs/delivery/evidence/shared-execution-v1-compatibility-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-v1-overview-compact",
+      "path": "docs/delivery/evidence/shared-execution-v1-overview-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-v1-overview-wide",
+      "path": "docs/delivery/evidence/shared-execution-v1-overview-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
