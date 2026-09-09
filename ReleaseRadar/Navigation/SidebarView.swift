@@ -285,6 +285,9 @@ struct SidebarView: View {
                         documentationStatus: model.documentationObservationStatus(for: projectID),
                         projectRoot: model.projectRoot(for: projectID),
                         phaseSelectionStatus: model.activePhaseSelectionStatus(for: projectID),
+                        openPlan: {
+                            Task { await model.navigate(to: .projectPlan(projectID)) }
+                        },
                         openBoard: {
                             Task { await model.navigate(to: .phaseBoard(projectID)) }
                         },
@@ -328,6 +331,32 @@ struct SidebarView: View {
                 } else {
                     ProjectEmptyStateView(presentation: .phaseBoard)
                 }
+            case let .projectPlan(projectID):
+                if let plan = dashboard.plan(for: projectID) {
+                    ProjectPlanView(
+                        plan: plan,
+                        selectedTicketID: Binding(
+                            get: { model.selectedTicketID },
+                            set: { model.selectTicket($0) }
+                        ),
+                        openAllPhases: {
+                            model.viewAllPhases(projectID: projectID)
+                            Task { await model.navigate(to: .phaseBoard(projectID)) }
+                        },
+                        openPhase: { phaseID in
+                            model.viewPhase(projectID: projectID, phaseID: phaseID)
+                            Task { await model.navigate(to: .phaseBoard(projectID)) }
+                        },
+                        documentationStatus: model.documentationObservationStatus(for: projectID),
+                        loadEvidencePreview: { evidenceID in
+                            await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+                        },
+                        requestedFocus: model.navigationFocus,
+                        focusChanged: { model.setNavigationFocus($0) }
+                    )
+                } else {
+                    ProjectEmptyStateView(presentation: .phaseBoard)
+                }
             case let .archivedProject(projectID):
                 if let project = dashboard.archivedProjects.first(where: { $0.id == projectID }) {
                     ArchivedProjectView(
@@ -349,7 +378,26 @@ struct SidebarView: View {
                     DetailUnavailableView(title: "Removed Project", image: "clock.badge.xmark")
                 }
             case let .phaseBoard(projectID):
-                if let board = model.viewedBoard(for: projectID) {
+                if let board = model.viewedAllPhaseBoard(for: projectID) {
+                    AllPhaseBoardView(
+                        board: board,
+                        selectedTicketID: Binding(
+                            get: { model.selectedTicketID },
+                            set: { model.selectTicket($0) }
+                        ),
+                        filter: Binding(
+                            get: { model.allPhaseBoardFilter(projectID: projectID) },
+                            set: { model.setAllPhaseBoardFilter($0, projectID: projectID) }
+                        ),
+                        viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
+                        documentationStatus: model.documentationObservationStatus(for: projectID),
+                        loadEvidencePreview: { evidenceID in
+                            await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
+                        },
+                        requestedFocus: model.navigationFocus,
+                        focusChanged: { model.setNavigationFocus($0) }
+                    )
+                } else if let board = model.viewedBoard(for: projectID) {
                     PhaseBoardView(
                         board: board,
                         selectedTicketID: Binding(
@@ -384,6 +432,7 @@ struct SidebarView: View {
                             await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
                         },
                         viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
+                        viewAllPhases: { model.viewAllPhases(projectID: projectID) },
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
                     )
@@ -499,6 +548,7 @@ private extension AppRoute {
         case .notifications: "notifications"
         case .settings: "settings"
         case .projectOverview: "project-overview"
+        case .projectPlan: "project-plan"
         case .archivedProject: "archived-project"
         case .removedProject: "removed-project"
         case .phaseBoard: "phase-board"

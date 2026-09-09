@@ -5,6 +5,38 @@ import XCTest
 
 @MainActor
 final class ProjectRemovalAcceptanceTests: XCTestCase {
+    func testRemovalCountsUnassignedTicketsAndRetainsTheirAuditIdentity() async throws {
+        let fixture = try Fixture(testCase: self)
+        try await fixture.seedCompleteProject()
+        let projectID = fixture.projectID
+        try await fixture.store.transact(
+            actor: .init(id: "phase5a-fixture"), reason: "Record unassigned ticket",
+            auditEventID: .init(rawValue: "unassigned-audit"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "plan-only")
+        ) { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('plan-only',?,NULL,'Retain removal history',NULL)",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        let manager = ProjectRemovalManager(store: fixture.store)
+        let preview = try await manager.preview(projectID: projectID)
+        XCTAssertEqual(preview.counts.tickets, 2)
+        let removed = try await manager.apply(preview)
+        XCTAssertEqual(removed.counts.tickets, 2)
+
+        let retained = try await fixture.store.read { connection in
+            (try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE id='plan-only'"),
+             try connection.row("SELECT project_id,historical_project_id,historical_registration_id,entity_id,reason FROM audit_events WHERE id='unassigned-audit'"))
+        }
+        XCTAssertEqual(retained.0, 0)
+        XCTAssertEqual(retained.1?["project_id"], .null)
+        XCTAssertEqual(retained.1?["historical_project_id"], .text(projectID.rawValue))
+        XCTAssertEqual(retained.1?["historical_registration_id"], .text("registration-one"))
+        XCTAssertEqual(retained.1?["entity_id"], .text("plan-only"))
+        XCTAssertEqual(retained.1?["reason"], .text("Record unassigned ticket"))
+    }
+
     func testRemovalDeletesOperationalGraphAndCapabilitiesWhileRetainingHistoryAcrossRestart() async throws {
         let fixture = try Fixture(testCase: self)
         try await fixture.seedCompleteProject()
@@ -429,10 +461,10 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
         try downgradeToVersionSixteen(databaseURL: fixture.databaseURL)
         let migrated = DeliveryStore(databaseURL: fixture.databaseURL)
         guard case .available = await migrated.availability else {
-            return XCTFail("Expected the v16 store to migrate")
+            return XCTFail("Expected the v16 store to migrate: \(await migrated.availability)")
         }
         let migratedVersion = await migrated.schemaVersionForDocumentation
-        XCTAssertEqual(migratedVersion, 17)
+        XCTAssertEqual(migratedVersion, Int(StoreMigrations.currentVersion))
         try await migrated.read { connection in
             XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM removed_projects"), 0)
             XCTAssertEqual(
@@ -477,6 +509,8 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
 
     private func downgradeToVersionSixteen(databaseURL: URL) throws {
         let legacy = try SQLiteConnection(url: databaseURL)
+        try restorePreVersionNineteenTicketSchema(legacy)
+        try legacy.execute("DROP TABLE application_recovery_state")
         for trigger in [
             "ticket_task_plans_reject_delete",
             "ticket_tasks_reject_delete",

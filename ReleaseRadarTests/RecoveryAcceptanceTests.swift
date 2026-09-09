@@ -77,6 +77,9 @@ final class RecoveryAcceptanceTests: XCTestCase {
             try connection.execute(
                 "INSERT INTO completion_records (id, project_id, ticket_id, summary, created_at) VALUES ('completion-one', 'project-one', 'ticket-one', 'Done', '2026-09-07T12:01:00Z')"
             )
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('plan-only','project-one',NULL,'Backed up planning',NULL)"
+            )
         }
         let packageURL = databaseURL.deletingLastPathComponent()
             .appendingPathComponent("complete.release-radar-backup", isDirectory: true)
@@ -102,6 +105,12 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(backupCounts, sourceCounts)
         let backedUpPlugin = try await CodexPluginLifecycleStore(store: backupStore).load()
         XCTAssertEqual(backedUpPlugin.intent, .managedInstalled)
+        let backedUpUnassigned = try await backupStore.read {
+            try $0.row("SELECT phase_id,lane,outcome FROM tickets WHERE project_id='project-one' AND id='plan-only'")
+        }
+        XCTAssertEqual(backedUpUnassigned?["phase_id"], .null)
+        XCTAssertEqual(backedUpUnassigned?["lane"], .null)
+        XCTAssertEqual(backedUpUnassigned?["outcome"], .text("Backed up planning"))
 
         let realParent = databaseURL.deletingLastPathComponent().appendingPathComponent("real-parent", isDirectory: true)
         let linkedParent = databaseURL.deletingLastPathComponent().appendingPathComponent("linked-parent", isDirectory: true)
@@ -719,7 +728,11 @@ final class RecoveryAcceptanceTests: XCTestCase {
     }
 
     private func makeDatabaseURL() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory
+        let testRoot = try XCTUnwrap(
+            FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+        ).appendingPathComponent("ReleaseRadarRecoveryTests", isDirectory: true)
+        try FileManager.default.createDirectory(at: testRoot, withIntermediateDirectories: true)
+        let directory = testRoot
             .appendingPathComponent("ReleaseRadar-C7-RecoveryTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }

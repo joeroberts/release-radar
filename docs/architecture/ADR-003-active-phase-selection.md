@@ -122,3 +122,20 @@ amendment does not approve the other proposed D4–D6 planning contracts.
   a replacement request ID
 - Removing or suppressing valid cross-phase dependency references as a side
   effect of active-phase selection
+
+## Phase 5A Project Plan and shared board amendment — 2026-09-09
+
+Overview remains the project landing page. Project Plan exposes all recorded
+phases, their phase-owned Delivery Goals/readiness and unassigned tickets. One
+shared five-lane board supports explicit single-phase and all-phase scope with
+phase identity on every card. Unassigned tickets have no lane and remain visible
+in Project Plan and their Details/dependency journey. Unresolved intake stays
+separate from recorded-work counts. There is no aggregate all-phase Ready state.
+
+Extend the existing session navigation boundary with explicit scope and unassigned
+ticket identity. Do not overload missing phase as all phases, substitute active
+phase content or silently broaden stale filters. Preserve exact registration,
+selection/focus, Back/Forward and removed/re-added recovery. Browsing never mutates
+active context or delivery state. Multiple phases In delivery is owner-approved
+Phase 5 scope and does not alter the zero-or-one active pointer; full lifecycle
+transition policy is outside this first slice.

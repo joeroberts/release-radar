@@ -479,6 +479,32 @@ final class ReviewAndGraphAcceptanceTests: XCTestCase {
         }
     }
 
+    func testDependencyGraphKeepsUnassignedTicketsIdentifiableAndSelectable() async throws {
+        let store = try await seededStore()
+        try await store.transact(actor: .init(id: "phase5a-fixture"), reason: "Unassigned dependency") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('UNASSIGNED',?,NULL,'Plan dependency',NULL)",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_dependencies (id,project_id,ticket_id,depends_on_ticket_id) VALUES ('unassigned-edge',?,'UNASSIGNED','VD2-06')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+
+        let graph = try await DependencyGraphProjection.load(
+            from: store,
+            projectID: DashboardSampleData.projectID,
+            phaseID: DashboardSampleData.phaseID,
+            selectedTicketID: .init(rawValue: "UNASSIGNED")
+        )
+
+        XCTAssertEqual(graph.selected.ticket.phaseName, "Unassigned")
+        XCTAssertNil(graph.selected.ticket.lane)
+        XCTAssertEqual(graph.selected.directRequires.map(\.id.rawValue), ["VD2-06"])
+        XCTAssertEqual(graph.node(id: .init(rawValue: "UNASSIGNED"))?.outcome, "Plan dependency")
+    }
+
     func testDependencyGraphLayoutShowsOnlyTheSelectedPathInStableSemanticColumns() throws {
         func node(_ id: String, lane: TicketLane, blockers: Int = 0) -> DependencyGraphNode {
             DependencyGraphNode(

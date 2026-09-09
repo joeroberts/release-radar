@@ -62,7 +62,7 @@ public struct ProjectRecord: Codable, Equatable, Sendable {
 }
 public struct ProjectRootRecord: Codable, Equatable, Sendable { public let id: ProjectRootID; public let projectID: ProjectID; public let path: String }
 public struct PhaseRecord: Codable, Equatable, Sendable { public let id: PhaseID; public let projectID: ProjectID; public let name: String }
-public struct TicketRecord: Codable, Equatable, Sendable { public let id: TicketID; public let projectID: ProjectID; public let phaseID: PhaseID; public let outcome: String; public let lane: TicketLane }
+public struct TicketRecord: Codable, Equatable, Sendable { public let id: TicketID; public let projectID: ProjectID; public let phaseID: PhaseID?; public let outcome: String; public let lane: TicketLane? }
 public struct PhaseDependencyRecord: Codable, Equatable, Sendable { public let id: PhaseDependencyID; public let projectID: ProjectID; public let phaseID: PhaseID; public let dependsOnPhaseID: PhaseID }
 public struct TicketDependencyRecord: Codable, Equatable, Sendable { public let id: TicketDependencyID; public let projectID: ProjectID; public let ticketID: TicketID; public let dependsOnTicketID: TicketID }
 public struct BlockerRecord: Codable, Equatable, Sendable { public let id: BlockerID; public let projectID: ProjectID; public let ticketID: TicketID; public let summary: String }

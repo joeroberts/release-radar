@@ -21,17 +21,23 @@ struct DashboardProjection: Equatable, Sendable {
     let archivedProjects: [ArchivedProjectProjection]
     let removedProjects: [RemovedProjectRecord]
     let boards: [PhaseBoardKey: PhaseBoardProjection]
+    let projectPlans: [ProjectID: ProjectPlanProjection]
+    let allPhaseBoards: [ProjectID: AllPhaseBoardProjection]
 
     init(
         projects: [ProjectDashboardProjection],
         archivedProjects: [ArchivedProjectProjection] = [],
         removedProjects: [RemovedProjectRecord] = [],
-        boards: [PhaseBoardKey: PhaseBoardProjection]
+        boards: [PhaseBoardKey: PhaseBoardProjection],
+        projectPlans: [ProjectID: ProjectPlanProjection] = [:],
+        allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:]
     ) {
         self.projects = projects
         self.archivedProjects = archivedProjects
         self.removedProjects = removedProjects
         self.boards = boards
+        self.projectPlans = projectPlans
+        self.allPhaseBoards = allPhaseBoards
     }
 
     func board(for projectID: ProjectID) -> PhaseBoardProjection? {
@@ -42,6 +48,9 @@ struct DashboardProjection: Equatable, Sendable {
     func board(for projectID: ProjectID, phaseID: PhaseID) -> PhaseBoardProjection? {
         boards[PhaseBoardKey(projectID: projectID, phaseID: phaseID)]
     }
+
+    func plan(for projectID: ProjectID) -> ProjectPlanProjection? { projectPlans[projectID] }
+    func allPhaseBoard(for projectID: ProjectID) -> AllPhaseBoardProjection? { allPhaseBoards[projectID] }
 
     static func load(
         from store: DeliveryStore,
@@ -82,6 +91,8 @@ struct DashboardProjection: Equatable, Sendable {
             )
             var projects: [ProjectDashboardProjection] = []
             var boards: [PhaseBoardKey: PhaseBoardProjection] = [:]
+            var projectPlans: [ProjectID: ProjectPlanProjection] = [:]
+            var allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:]
             let archivedProjects = try connection.dashboardRows(
                 """
                 SELECT projects.id, projects.name, project_registrations.registration_id,
@@ -231,7 +242,9 @@ struct DashboardProjection: Equatable, Sendable {
                             dependencyCount: dependencyCount,
                             blockerCount: blockerCount,
                             taskPlan: taskPlans[ticketID] ?? .unavailable(recovery: .init()),
-                            deliveryGoal: goalsByTicket[ticketID]
+                            deliveryGoal: goalsByTicket[ticketID],
+                            phaseID: phaseID,
+                            phaseName: phase.name
                         )
                         cardsByLane[lane, default: []].append(card)
                         details[ticketID] = try connection.ticketDetail(
@@ -258,11 +271,69 @@ struct DashboardProjection: Equatable, Sendable {
                         details: details
                     )
                 }
+
+                let phasePlans = phases.compactMap { phase -> ProjectPlanPhaseProjection? in
+                    guard let board = boards[PhaseBoardKey(projectID: projectID, phaseID: phase.id)] else { return nil }
+                    return ProjectPlanPhaseProjection(
+                        id: phase.id, name: phase.name, readiness: board.phasePlan,
+                        deliveryGoals: board.deliveryGoals,
+                        ticketCount: board.lanes.reduce(0) { $0 + $1.count }
+                    )
+                }
+                let unassignedRows = try connection.dashboardRows(
+                    "SELECT id, outcome FROM tickets WHERE project_id = ? AND phase_id IS NULL AND lane IS NULL ORDER BY id COLLATE BINARY",
+                    bindings: [.text(projectID.rawValue)]
+                )
+                let unassignedIDs = try unassignedRows.map { TicketID(rawValue: try $0.text("id")) }
+                let unassignedTaskPlans = TicketTaskPlanProjection.loadUnassigned(
+                    connection, projectID: projectID, ticketIDs: unassignedIDs
+                )
+                var unassignedCards: [TicketCardProjection] = []
+                var unassignedDetails: [TicketID: TicketDetailProjection] = [:]
+                for row in unassignedRows {
+                    let ticketID = TicketID(rawValue: try row.text("id"))
+                    let outcome = try row.text("outcome")
+                    let dependencyCount = Int(try connection.scalarInt(
+                        "SELECT COUNT(*) FROM ticket_dependencies WHERE project_id=? AND ticket_id=?",
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                    ) ?? 0)
+                    let blockerCount = Int(try connection.scalarInt(
+                        "SELECT COUNT(*) FROM blockers WHERE project_id=? AND ticket_id=? AND resolved_at IS NULL",
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                    ) ?? 0)
+                    let taskPlan = unassignedTaskPlans[ticketID] ?? .unavailable(recovery: .init())
+                    unassignedCards.append(.init(
+                        id: ticketID, outcome: outcome, dependencyCount: dependencyCount,
+                        blockerCount: blockerCount, taskPlan: taskPlan
+                    ))
+                    unassignedDetails[ticketID] = try connection.ticketDetail(
+                        projectID: projectID, ticketID: ticketID, outcome: outcome,
+                        taskPlan: taskPlan, deliveryGoal: nil, isLegacyContinuation: false,
+                        evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == ticketID }.map(EvidenceProjection.init)
+                    )
+                }
+                projectPlans[projectID] = ProjectPlanProjection(
+                    project: project, phases: phasePlans, unassignedTickets: unassignedCards,
+                    unassignedDetails: unassignedDetails
+                )
+                let projectBoards = phases.compactMap { boards[PhaseBoardKey(projectID: projectID, phaseID: $0.id)] }
+                let allLanes = TicketLane.allCases.map { lane in
+                    DashboardLaneProjection(lane: lane, cards: projectBoards.flatMap { $0.lane(lane)?.cards ?? [] })
+                }
+                allPhaseBoards[projectID] = AllPhaseBoardProjection(
+                    project: project,
+                    deliveryGoals: projectBoards.flatMap(\.deliveryGoals),
+                    lanes: allLanes,
+                    details: projectBoards.reduce(into: [:]) { result, board in
+                        result.merge(board.details) { first, _ in first }
+                    }
+                )
             }
 
             return DashboardProjection(
                 projects: projects, archivedProjects: archivedProjects,
-                removedProjects: removedProjects, boards: boards
+                removedProjects: removedProjects, boards: boards,
+                projectPlans: projectPlans, allPhaseBoards: allPhaseBoards
             )
         }
     }
@@ -316,11 +387,27 @@ struct DashboardProjection: Equatable, Sendable {
                 details: details
             )
         }
+        let projectPlans = projectPlans.mapValues { plan in
+            guard plan.project.id == projectID, let project else { return plan }
+            let details = plan.unassignedDetails.mapValues { detail in
+                detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
+            }
+            return ProjectPlanProjection(project: project, phases: plan.phases,
+                                         unassignedTickets: plan.unassignedTickets, unassignedDetails: details)
+        }
+        let allPhaseBoards = allPhaseBoards.mapValues { board in
+            guard board.project.id == projectID, let project else { return board }
+            let details = board.details.mapValues { detail in
+                detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
+            }
+            return AllPhaseBoardProjection(project: project, deliveryGoals: board.deliveryGoals,
+                                           lanes: board.lanes, details: details)
+        }
         return .init(
             projects: projects,
             archivedProjects: archivedProjects,
             removedProjects: removedProjects,
-            boards: boards
+            boards: boards, projectPlans: projectPlans, allPhaseBoards: allPhaseBoards
         )
     }
 }
@@ -372,6 +459,24 @@ struct ProjectDashboardProjection: Equatable, Sendable, Identifiable {
         self.attentionCount = attentionCount
         self.evidence = evidence
     }
+}
+
+struct ProjectPlanPhaseProjection: Equatable, Sendable, Identifiable {
+    let id: PhaseID
+    let name: String
+    let readiness: PhasePlanProjection
+    let deliveryGoals: [DeliveryGoalSummaryProjection]
+    let ticketCount: Int
+}
+
+struct ProjectPlanProjection: Equatable, Sendable {
+    let project: ProjectDashboardProjection
+    let phases: [ProjectPlanPhaseProjection]
+    let unassignedTickets: [TicketCardProjection]
+    let unassignedDetails: [TicketID: TicketDetailProjection]
+
+    var recordedTicketCount: Int { phases.reduce(0) { $0 + $1.ticketCount } + unassignedTickets.count }
+    func detail(for ticketID: TicketID) -> TicketDetailProjection? { unassignedDetails[ticketID] }
 }
 
 struct PhaseBoardKey: Hashable, Sendable {
@@ -511,6 +616,34 @@ struct DashboardLaneProjection: Equatable, Sendable, Identifiable {
     var count: Int { cards.count }
 }
 
+struct AllPhaseBoardProjection: Equatable, Sendable {
+    let project: ProjectDashboardProjection
+    let deliveryGoals: [DeliveryGoalSummaryProjection]
+    let lanes: [DashboardLaneProjection]
+    let details: [TicketID: TicketDetailProjection]
+
+    func lane(_ lane: TicketLane) -> DashboardLaneProjection? { lanes.first { $0.lane == lane } }
+    func detail(for ticketID: TicketID) -> TicketDetailProjection? { details[ticketID] }
+    var filterableDeliveryGoals: [DeliveryGoalSummaryProjection] {
+        deliveryGoals.filter { $0.lifecycle != .superseded }
+    }
+
+    func filtered(by filter: DeliveryGoalFilter) -> AllPhaseBoardProjection {
+        let filteredLanes = lanes.map { lane in
+            DashboardLaneProjection(lane: lane.lane, cards: lane.cards.filter { card in
+                switch filter {
+                case .all: true
+                case let .goal(id): card.deliveryGoal?.id == Data(id.rawValue.utf8)
+                case .unassigned: card.deliveryGoal == nil
+                }
+            })
+        }
+        let visibleIDs = Set(filteredLanes.flatMap { $0.cards.map(\.id) })
+        return .init(project: project, deliveryGoals: deliveryGoals, lanes: filteredLanes,
+                     details: details.filter { visibleIDs.contains($0.key) })
+    }
+}
+
 struct TicketCardProjection: Equatable, Sendable, Identifiable {
     let id: TicketID
     let outcome: String
@@ -518,6 +651,8 @@ struct TicketCardProjection: Equatable, Sendable, Identifiable {
     let blockerCount: Int
     var taskPlan: TicketTaskPlanProjection = .noPlan
     var deliveryGoal: TicketDeliveryGoalProjection? = nil
+    var phaseID: PhaseID? = nil
+    var phaseName: String? = nil
 
     var activeTaskCount: Int? {
         guard case let .loaded(plan) = taskPlan else { return nil }
@@ -544,6 +679,13 @@ struct TicketDetailProjection: Equatable, Sendable {
     var isLegacyContinuation = false
 
     var codexExecutionGoal: GoalContextProjection { goalContext }
+
+    func replacingEvidence(_ evidence: [EvidenceProjection]) -> TicketDetailProjection {
+        .init(id: id, outcome: outcome, goalContext: goalContext, requires: requires, unlocks: unlocks,
+              ownerAttention: ownerAttention, evidence: evidence, auditHistory: auditHistory,
+              notificationHistory: notificationHistory, taskPlan: taskPlan,
+              deliveryGoal: deliveryGoal, isLegacyContinuation: isLegacyContinuation)
+    }
 }
 
 enum GoalLinkQuality: String, Equatable, Sendable {
@@ -877,6 +1019,37 @@ enum TicketTaskPlanProjection: Equatable, Sendable {
                 return (ticketID, unavailableProjection())
             }
         })
+    }
+
+    static func loadUnassigned(
+        _ connection: SQLiteConnection,
+        projectID: ProjectID,
+        ticketIDs: [TicketID]
+    ) -> [TicketID: TicketTaskPlanProjection] {
+        do {
+            let rows = try connection.rows(
+                """
+                SELECT tickets.id AS ticket_id, plans.revision,
+                       tasks.id, tasks.label, tasks.title, tasks.completion
+                FROM tickets
+                LEFT JOIN ticket_task_plans AS plans
+                  ON plans.project_id=tickets.project_id AND plans.ticket_id=tickets.id
+                LEFT JOIN ticket_tasks AS tasks
+                  ON tasks.project_id=plans.project_id AND tasks.ticket_id=plans.ticket_id
+                 AND tasks.lifecycle='active'
+                WHERE tickets.project_id=? AND tickets.phase_id IS NULL AND tickets.lane IS NULL
+                ORDER BY tickets.id, tasks.sort_order, tasks.label COLLATE BINARY, tasks.id COLLATE BINARY
+                """,
+                bindings: [.text(projectID.rawValue)]
+            )
+            let batches = try Dictionary(grouping: rows) { try $0.text("ticket_id") }
+            return Dictionary(uniqueKeysWithValues: ticketIDs.map { ticketID in
+                do { return (ticketID, try decode(batches[ticketID.rawValue] ?? [])) }
+                catch { return (ticketID, unavailableProjection()) }
+            })
+        } catch {
+            return Dictionary(uniqueKeysWithValues: ticketIDs.map { ($0, unavailableProjection()) })
+        }
     }
 
     private static func decode(_ rows: [[String: SQLiteValue]]) throws -> TicketTaskPlanProjection {

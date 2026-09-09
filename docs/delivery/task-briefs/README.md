@@ -52,6 +52,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-07-phase3a-freshness](2026-09-07-phase3a-freshness) — leaf; Phase 3A documentation freshness and same-folder recovery; progress controls authorization
 - [delivery.task-briefs.2026-09-07-phase3b-evidence](2026-09-07-phase3b-evidence) — leaf; Completed Phase 3B bounded evidence preview delivery scope
 - [delivery.task-briefs.2026-09-08-phase4-navigation](2026-09-08-phase4-navigation) — leaf; Phase 4 coherent navigation and inspector delivery scope
+- [delivery.task-briefs.2026-09-09-phase5a-recorded-planning](2026-09-09-phase5a-recorded-planning) — leaf; Phase 5A recorded planning and placement delivery scope
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -454,6 +455,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-phase4-navigation-brief-2026-09-08 | [docs/delivery/task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md](2026-09-08-phase4-navigation/phase4-navigation-brief.md) | document | supporting | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-09-phase5a-recorded-planning
+
+- Path: [docs/delivery/task-briefs/2026-09-09-phase5a-recorded-planning](2026-09-09-phase5a-recorded-planning)
+- Purpose: Phase 5A recorded planning and placement delivery scope
+- Allowed contents: Reviewed task briefs
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-phase5a-recorded-planning-brief-2026-09-09 | [docs/delivery/task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md](2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md) | document | controlling &#40;delivery.phase5a-recorded-planning&#41; | active | none | none |
 
 ### Children
 

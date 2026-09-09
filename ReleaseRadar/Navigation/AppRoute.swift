@@ -6,6 +6,7 @@ enum AppRoute: Hashable, Sendable {
     case notifications
     case settings
     case projectOverview(ProjectID)
+    case projectPlan(ProjectID)
     case archivedProject(ProjectID)
     case removedProject(ProjectRemovalID)
     case phaseBoard(ProjectID)
@@ -22,6 +23,7 @@ enum AppRoute: Hashable, Sendable {
     static func projectRoutes(for projectID: ProjectID) -> [AppRoute] {
         [
             .projectOverview(projectID),
+            .projectPlan(projectID),
             .phaseBoard(projectID),
             .dependencies(projectID),
             .activity(projectID),
@@ -35,6 +37,7 @@ enum AppRoute: Hashable, Sendable {
         case .notifications: "Notifications"
         case .settings: "Settings"
         case .projectOverview: "Overview"
+        case .projectPlan: "Project Plan"
         case .archivedProject: "Archived Project"
         case .removedProject: "Removed Project"
         case .phaseBoard: "Phase Board"
@@ -50,6 +53,7 @@ enum AppRoute: Hashable, Sendable {
         case .notifications: "bell"
         case .settings: "gearshape"
         case .projectOverview: "rectangle.grid.1x2"
+        case .projectPlan: "list.bullet.rectangle.portrait"
         case .archivedProject: "archivebox"
         case .removedProject: "clock.badge.xmark"
         case .phaseBoard: "rectangle.split.3x1"
@@ -61,6 +65,7 @@ enum AppRoute: Hashable, Sendable {
     var projectID: ProjectID? {
         switch self {
         case let .projectOverview(projectID),
+             let .projectPlan(projectID),
              let .archivedProject(projectID),
              let .phaseBoard(projectID),
              let .dependencies(projectID),

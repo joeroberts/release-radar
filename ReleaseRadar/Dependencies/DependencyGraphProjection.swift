@@ -4,11 +4,11 @@ import ReleaseRadarCore
 struct DependencyGraphNode: Equatable, Identifiable, Sendable {
     let id: TicketID
     let outcome: String
-    let lane: TicketLane
+    let lane: TicketLane?
     let blockerCount: Int
     let phaseName: String
 
-    init(id: TicketID, outcome: String, lane: TicketLane, blockerCount: Int, phaseName: String = "") {
+    init(id: TicketID, outcome: String, lane: TicketLane?, blockerCount: Int, phaseName: String = "") {
         self.id = id
         self.outcome = outcome
         self.lane = lane
@@ -64,23 +64,24 @@ struct DependencyGraphProjection: Equatable, Sendable {
     ) async throws -> DependencyGraphProjection {
         try await store.read { connection in
             let nodeRows = try connection.graphRows(
-                "SELECT tickets.id, tickets.outcome, tickets.lane, phases.name AS phase_name FROM tickets JOIN phases ON phases.id = tickets.phase_id AND phases.project_id = tickets.project_id WHERE tickets.project_id = ? ORDER BY tickets.rowid",
+                "SELECT tickets.id, tickets.outcome, tickets.lane, phases.name AS phase_name FROM tickets LEFT JOIN phases ON phases.id = tickets.phase_id AND phases.project_id = tickets.project_id WHERE tickets.project_id = ? ORDER BY tickets.rowid",
                 bindings: [.text(projectID.rawValue)]
             )
             let nodes = try nodeRows.map { row in
                 let id = TicketID(rawValue: try row.graphText("id"))
-                guard let lane = TicketLane(rawValue: try row.graphText("lane")) else {
-                    throw DependencyGraphProjectionError.invalidLane(try row.graphText("lane"))
+                let laneText = try row.graphOptionalText("lane")
+                guard laneText == nil || TicketLane(rawValue: laneText!) != nil else {
+                    throw DependencyGraphProjectionError.invalidLane(laneText!)
                 }
                 return DependencyGraphNode(
                     id: id,
                     outcome: try row.graphText("outcome"),
-                    lane: lane,
+                    lane: laneText.flatMap(TicketLane.init(rawValue:)),
                     blockerCount: Int(try connection.scalarInt(
                         "SELECT COUNT(*) FROM blockers WHERE project_id = ? AND ticket_id = ? AND resolved_at IS NULL",
                         bindings: [.text(projectID.rawValue), .text(id.rawValue)]
                     ) ?? 0),
-                    phaseName: try row.graphText("phase_name")
+                    phaseName: try row.graphOptionalText("phase_name") ?? "Unassigned"
                 )
             }
             let edgeRows = try connection.graphRows(
@@ -189,6 +190,13 @@ private extension SQLiteConnection {
 private extension Dictionary where Key == String, Value == SQLiteValue {
     func graphText(_ column: String) throws -> String {
         guard let value = self[column] else { throw DependencyGraphProjectionError.missingColumn(column) }
+        guard case let .text(text) = value else { throw DependencyGraphProjectionError.invalidColumn(column) }
+        return text
+    }
+
+    func graphOptionalText(_ column: String) throws -> String? {
+        guard let value = self[column] else { throw DependencyGraphProjectionError.missingColumn(column) }
+        if value == .null { return nil }
         guard case let .text(text) = value else { throw DependencyGraphProjectionError.invalidColumn(column) }
         return text
     }

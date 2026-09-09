@@ -47,6 +47,57 @@ public enum DeliveryPlanningPolicy {
     public static let maximumGoalOperationsPerRevision = 64
     public static let maximumAssignmentOperationsPerRevision = 512
 
+    public static func upsertUnassignedTicket(
+        projectID: ProjectID, ticketID: TicketID, outcome: String, connection: SQLiteConnection
+    ) throws {
+        try validateID(projectID.rawValue)
+        try validateID(ticketID.rawValue)
+        try validateText(outcome)
+        guard try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id=?", bindings: [.text(projectID.rawValue)]) == 1 else {
+            throw invalid("The project does not exist. Refresh the project.")
+        }
+        if let ticket = try connection.row(
+            "SELECT project_id,phase_id,lane FROM tickets WHERE id=?",
+            bindings: [.text(ticketID.rawValue)]
+        ) {
+            let owner = try requiredText(ticket, "project_id")
+            guard identityKey(owner) == identityKey(projectID.rawValue) else { throw invalid("The ticket belongs to another project.") }
+            guard ticket["phase_id"] == .null, ticket["lane"] == .null else {
+                throw invalid("Placed tickets retain their phase. First placement cannot be reversed.")
+            }
+            try connection.execute("UPDATE tickets SET outcome=? WHERE project_id=? AND id=?", bindings: [.text(outcome), .text(projectID.rawValue), .text(ticketID.rawValue)])
+            return
+        }
+        try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES (?,?,NULL,?,NULL)",
+                               bindings: [.text(ticketID.rawValue), .text(projectID.rawValue), .text(outcome)])
+    }
+
+    public static func placeUnassignedTicket(
+        projectID: ProjectID, ticketID: TicketID, phaseID: PhaseID,
+        expectedPlanRevision: Int64, connection: SQLiteConnection
+    ) throws -> PhasePlanRecord {
+        try validateID(projectID.rawValue)
+        try validateID(ticketID.rawValue)
+        try validateID(phaseID.rawValue)
+        guard try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id=? AND id=?", bindings: identity(projectID, phaseID)) == 1 else {
+            throw invalid("The destination phase does not belong to this project.")
+        }
+        let plan = try currentPlan(projectID, phaseID, connection)
+        guard plan.revision == expectedPlanRevision else {
+            throw DeliveryPlanningPolicyError.planRevisionConflict(expected: expectedPlanRevision, current: plan.revision)
+        }
+        guard plan.revision < Int64.max else { throw invalid("The phase plan revision cannot advance further.") }
+        guard let ticket = try connection.row("SELECT phase_id,lane FROM tickets WHERE project_id=? AND id=?", bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]) else {
+            throw invalid("The ticket does not belong to this project. Refresh the ticket.")
+        }
+        guard ticket["phase_id"] == .null, ticket["lane"] == .null else {
+            throw invalid("Only unassigned tickets may receive their first placement.")
+        }
+        try connection.execute("UPDATE tickets SET phase_id=?, lane='backlog' WHERE project_id=? AND id=?", bindings: [.text(phaseID.rawValue), .text(projectID.rawValue), .text(ticketID.rawValue)])
+        try advanceTicketPlan(projectID, phaseID, connection)
+        return try currentPlan(projectID, phaseID, connection)
+    }
+
     public static func upsertPhase(
         projectID: ProjectID, phaseID: PhaseID, name: String,
         mode: PhaseCreationMode, connection: SQLiteConnection
@@ -103,6 +154,9 @@ public enum DeliveryPlanningPolicy {
         guard identityKey(try requiredText(current, "project_id")) == identityKey(projectID.rawValue) else {
             throw invalid("The ticket belongs to another project.")
         }
+        guard current["phase_id"] != .null, current["lane"] != .null else {
+            throw invalid("Place unassigned tickets with the first-placement operation.")
+        }
         let oldPhase = PhaseID(rawValue: try requiredText(current, "phase_id"))
         let oldLane = try requiredText(current, "lane")
         guard oldLane != TicketLane.accepted.rawValue else { throw invalid("Accepted tickets are immutable. Create new Backlog work.") }
@@ -132,6 +186,9 @@ public enum DeliveryPlanningPolicy {
         ticketTaskPlanRevision: Int64? = nil, connection: SQLiteConnection
     ) throws {
         let ticket = try requireTicket(projectID, ticketID, connection)
+        guard ticket["phase_id"] != .null, ticket["lane"] != .null else {
+            throw invalid("Place this ticket into a phase Backlog before executing delivery work.")
+        }
         let from = try requiredText(ticket, "lane")
         guard from != TicketLane.accepted.rawValue else { throw invalid("Accepted tickets are terminal. Create new Backlog work.") }
         guard ticketTaskPlanRevision == nil || lane == .accepted else {
@@ -169,6 +226,9 @@ public enum DeliveryPlanningPolicy {
         projectID: ProjectID, ticketID: TicketID, connection: SQLiteConnection
     ) throws {
         let ticket = try requireTicket(projectID, ticketID, connection)
+        guard ticket["phase_id"] != .null, ticket["lane"] != .null else {
+            throw invalid("Place this ticket into a phase Backlog before recording review or completion.")
+        }
         let lane = try requiredText(ticket, "lane")
         guard lane != TicketLane.backlog.rawValue else { throw invalid("Start the Backlog ticket before recording completion or requesting review.") }
         // Accepted legacy records remain usable as historical evidence; this

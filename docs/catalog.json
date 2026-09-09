@@ -582,6 +582,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-09-phase5a-recorded-planning",
+      "path": "docs/delivery/task-briefs/2026-09-09-phase5a-recorded-planning",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 5A recorded planning and placement delivery scope",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5057,6 +5072,97 @@
     {
       "artifactID": "rr-phase4-ticket-details-compact-2026-09-08",
       "path": "docs/delivery/evidence/phase4-ticket-details-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5a-recorded-planning-brief-2026-09-09",
+      "path": "docs/delivery/task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "parentCollection": "delivery.task-briefs.2026-09-09-phase5a-recorded-planning",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      },
+      "authorityRole": "delivery.phase5a-recorded-planning"
+    },
+    {
+      "artifactID": "rr-2026-09-09-phase5a-recorded-planning",
+      "path": "docs/delivery/evidence/2026-09-09-phase5a-recorded-planning.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5a-project-plan-wide",
+      "path": "docs/delivery/evidence/phase5a-project-plan-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5a-project-plan-compact",
+      "path": "docs/delivery/evidence/phase5a-project-plan-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5a-all-phase-board-wide",
+      "path": "docs/delivery/evidence/phase5a-all-phase-board-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5a-all-phase-board-compact",
+      "path": "docs/delivery/evidence/phase5a-all-phase-board-compact.png",
       "kind": "verificationEvidence",
       "lifecycle": "completed",
       "authorityLevel": "nonAuthoritative",

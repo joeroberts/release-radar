@@ -2,6 +2,7 @@ import Foundation
 
 public enum InvalidTicketTaskMutationReason: Equatable, Sendable {
     case ticketNotFound
+    case unassignedTicket
     case acceptedTicket
     case emptyOperationSet
     case invalidCreationOperations
@@ -233,7 +234,7 @@ public enum TicketTaskPlanningPolicy {
         connection: SQLiteConnection
     ) throws -> TicketTaskPlanRecord {
         try validateOwnerIdentities(projectID: projectID, ticketID: ticketID)
-        try requireMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
+        try requirePlacedMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
         guard let currentPlan = try loadPlan(projectID: projectID, ticketID: ticketID, connection: connection) else {
             throw TicketTaskPlanningPolicyError.ticketTaskPlanNotFound
         }
@@ -288,7 +289,7 @@ public enum TicketTaskPlanningPolicy {
         connection: SQLiteConnection
     ) throws {
         try validateOwnerIdentities(projectID: projectID, ticketID: ticketID)
-        try requireMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
+        try requirePlacedMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
         guard let plan = try loadPlan(projectID: projectID, ticketID: ticketID, connection: connection) else {
             guard expectedRevision == nil else {
                 throw TicketTaskPlanningPolicyError.ticketTaskPlanNotFound
@@ -347,11 +348,26 @@ public enum TicketTaskPlanningPolicy {
         guard let row = try connection.row(
             "SELECT lane FROM tickets WHERE project_id = ? AND id = ?",
             bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
-        ), case let .text(lane)? = row["lane"] else {
+        ) else {
             throw invalid(.ticketNotFound)
         }
+        guard case let .text(lane)? = row["lane"] else { return }
         guard lane != TicketLane.accepted.rawValue else {
             throw invalid(.acceptedTicket)
+        }
+    }
+
+    private static func requirePlacedMutableTicket(
+        projectID: ProjectID,
+        ticketID: TicketID,
+        connection: SQLiteConnection
+    ) throws {
+        try requireMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
+        guard let row = try connection.row(
+            "SELECT lane FROM tickets WHERE project_id = ? AND id = ?",
+            bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+        ), case .text? = row["lane"] else {
+            throw invalid(.unassignedTicket)
         }
     }
 

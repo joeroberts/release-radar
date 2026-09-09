@@ -316,6 +316,120 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertNil(try db.row("PRAGMA foreign_key_check"))
     }
 
+    func testVersionNineteenMakesPlacementNullableWithoutLosingFrozenGraphHistory() async throws {
+        let url = try copyVerifiedVersionTwelveFixture()
+        let legacy = try SQLiteConnection(url: url)
+        let recordsBefore = try semanticVersionElevenSnapshot(legacy)
+        let tasksBefore = try taskTableSnapshot(legacy)
+
+        let store = DeliveryStore(databaseURL: url)
+        guard case .available = await store.availability else {
+            if case let .unavailable(recovery) = await store.availability {
+                return XCTFail("Expected the frozen pre-placement store to migrate: \(recovery.message)")
+            }
+            return XCTFail("Expected the frozen pre-placement store to migrate")
+        }
+        let migrated = try SQLiteConnection(url: url)
+
+        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), 19)
+        XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), recordsBefore)
+        XCTAssertEqual(try taskTableSnapshot(migrated), tasksBefore)
+        XCTAssertEqual(try migrated.scalarInt("SELECT [notnull] FROM pragma_table_info('tickets') WHERE name='phase_id'"), 0)
+        XCTAssertEqual(try migrated.scalarInt("SELECT [notnull] FROM pragma_table_info('tickets') WHERE name='lane'"), 0)
+        XCTAssertNil(try migrated.row("PRAGMA foreign_key_check"))
+
+        try migrated.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('unassigned-v19','project-main',NULL,'Retained planning work',NULL)"
+        )
+        XCTAssertNil(try migrated.scalarText("SELECT phase_id FROM tickets WHERE id='unassigned-v19'"))
+        XCTAssertNil(try migrated.scalarText("SELECT lane FROM tickets WHERE id='unassigned-v19'"))
+        XCTAssertThrowsError(try migrated.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('phase-without-lane-v19','project-main','phase-1','Invalid placement',NULL)"
+        ))
+        XCTAssertThrowsError(try migrated.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('lane-without-phase-v19','project-main',NULL,'Invalid placement','backlog')"
+        ))
+    }
+
+    func testFreshVersionNineteenRejectsPartialTicketPlacement() async throws {
+        let url = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: url)
+        guard case .available = await store.availability else {
+            return XCTFail("Expected a fresh current store")
+        }
+        try await store.transact(actor: .init(id: "placement-invariant"), reason: "Seed placement owners") { connection in
+            try connection.execute("INSERT INTO projects (id,name) VALUES ('placement-project','Placement')")
+            try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('placement-phase','placement-project','Phase')")
+        }
+        let db = try SQLiteConnection(url: url)
+
+        XCTAssertNoThrow(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('unassigned','placement-project',NULL,'Planning',NULL)"
+        ))
+        XCTAssertNoThrow(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('placed','placement-project','placement-phase','Execution','backlog')"
+        ))
+        XCTAssertThrowsError(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('phase-only','placement-project','placement-phase','Invalid',NULL)"
+        ))
+        XCTAssertThrowsError(try db.execute(
+            "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('lane-only','placement-project',NULL,'Invalid','backlog')"
+        ))
+        XCTAssertThrowsError(try db.execute("UPDATE tickets SET lane=NULL WHERE id='placed'"))
+        XCTAssertThrowsError(try db.execute("UPDATE tickets SET phase_id=NULL WHERE id='placed'"))
+    }
+
+    func testVersionNineteenUpgradePreservesPopulatedVersionEighteenEraRecords() async throws {
+        let url = try makeDatabaseURL()
+        do {
+            let seed = DeliveryStore(databaseURL: url)
+            try await seed.transact(
+                actor: .init(id: "v18-fixture"), reason: "Seed current pre-placement graph",
+                auditEventID: .init(rawValue: "v18-audit"),
+                auditScope: .init(projectID: .init(rawValue: "v18-project"), entityType: .ticket, entityID: "v18-ticket")
+            ) { connection in
+                try connection.execute("INSERT INTO projects (id,name) VALUES ('v18-project','Version Eighteen')")
+                try connection.execute("INSERT INTO project_registrations (project_id,registration_id,request_generation,setup_state) VALUES ('v18-project','v18-registration',3,'complete')")
+                try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('v18-phase','v18-project','Recorded')")
+                try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('v18-ticket','v18-project','v18-phase','Preserve placement','backlog')")
+                try connection.execute("INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('v18-evidence','v18-project','v18-ticket','/synthetic/evidence',0)")
+                try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('v18-project','v18-phase','v18-goal','Goal','Outcome','draft',0,'2026-09-09T12:00:00Z','2026-09-09T12:00:00Z')")
+                try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('v18-project','v18-phase','v18-goal','v18-ticket')")
+                try connection.execute("INSERT INTO delivery_goal_assignment_events (audit_event_id,project_id,phase_id,ticket_id,previous_goal_id,current_goal_id,revision,action) VALUES ('v18-audit','v18-project','v18-phase','v18-ticket',NULL,'v18-goal',1,'assigned')")
+                _ = try TicketTaskPlanningPolicy.revisePlan(
+                    projectID: .init(rawValue: "v18-project"), ticketID: .init(rawValue: "v18-ticket"), expectedRevision: nil,
+                    additions: [.init(id: .init(rawValue: "v18-task"), label: "Task 1", title: "Preserve task history", sortOrder: 0)],
+                    definitionRevisions: [], supersededTaskIDs: [], connection: connection
+                )
+                try connection.execute("UPDATE codex_plugin_lifecycle SET intent='managedInstalled',managed_version='1.0.0',managed_digest='v18-digest',verified_at='2026-09-09T12:00:00Z' WHERE plugin_id='release-radar'")
+            }
+        }
+        let legacy = try SQLiteConnection(url: url)
+        let tables = [
+            "projects", "project_registrations", "phases", "tickets", "evidence", "delivery_goals",
+            "delivery_goal_ticket_assignments", "delivery_goal_assignment_events", "ticket_task_plans",
+            "ticket_tasks", "audit_events", "codex_plugin_lifecycle",
+        ]
+        let before = try Dictionary(uniqueKeysWithValues: tables.map { table in
+            (table, try legacy.rows("SELECT * FROM \(table) ORDER BY rowid"))
+        })
+        try legacy.execute("PRAGMA user_version = 18")
+
+        let migratedStore = DeliveryStore(databaseURL: url)
+        guard case .available = await migratedStore.availability else {
+            return XCTFail("Expected the populated v18-era graph to migrate")
+        }
+        let migrated = try SQLiteConnection(url: url)
+        let after = try Dictionary(uniqueKeysWithValues: tables.map { table in
+            (table, try migrated.rows("SELECT * FROM \(table) ORDER BY rowid"))
+        })
+        XCTAssertEqual(after, before)
+        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), 19)
+        XCTAssertEqual(try migrated.scalarInt("SELECT [notnull] FROM pragma_table_info('tickets') WHERE name='phase_id'"), 0)
+        XCTAssertEqual(try migrated.scalarInt("SELECT [notnull] FROM pragma_table_info('tickets') WHERE name='lane'"), 0)
+        XCTAssertNil(try migrated.row("PRAGMA foreign_key_check"))
+    }
+
     func testVersionFifteenMigrationPreservesOnlyRecognizedOpenOnboardingAsPending() async throws {
         let url = try makeDatabaseURL()
         let seed = DeliveryStore(databaseURL: url)
@@ -421,7 +535,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "42fcf3c17a67141958b1bf6ea5bbaf362443bc4de49d5271a9d4ee2faf429079")
+                       "9f744d8532ec84f05e7b53c3f440e93bc33e755f0c973e943a301c2842fa245b")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
@@ -3299,6 +3413,7 @@ final class StoreAcceptanceTests: XCTestCase {
         _ connection: SQLiteConnection,
         restoreTaskDeleteProtection: Bool
     ) throws {
+        try restoreVersionEighteenTicketSchema(connection)
         try connection.executeScript("""
         DROP TABLE IF EXISTS application_recovery_state;
         DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
@@ -3330,6 +3445,38 @@ final class StoreAcceptanceTests: XCTestCase {
             ))
             try connection.executeScript(sql)
         }
+    }
+
+    private func restoreVersionEighteenTicketSchema(_ connection: SQLiteConnection) throws {
+        let frozen = try SQLiteConnection(url: versionTwelveFixtureURL, immutableReadOnly: true)
+        let ticketTableSQL = try XCTUnwrap(frozen.scalarText(
+            "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'tickets'"
+        ))
+        let ticketObjectNames = [
+            "tickets_project_phase_identity_unique",
+            "tickets_reject_legacy_continuation_insert",
+            "tickets_reject_legacy_continuation_regrant",
+            "ticket_task_plans_reject_ticket_delete",
+        ]
+        let ticketObjectSQL = try ticketObjectNames.map { name in
+            try XCTUnwrap(frozen.scalarText(
+                "SELECT sql FROM sqlite_schema WHERE name = ?",
+                bindings: [.text(name)]
+            ))
+        }
+        try connection.execute("PRAGMA foreign_keys = OFF")
+        defer { try? connection.execute("PRAGMA foreign_keys = ON") }
+        try connection.executeScript("""
+        PRAGMA legacy_alter_table = ON;
+        ALTER TABLE tickets RENAME TO tickets_v19;
+        \(ticketTableSQL);
+        INSERT INTO tickets (id, project_id, phase_id, outcome, lane, plan_legacy_continuation)
+            SELECT id, project_id, phase_id, outcome, lane, plan_legacy_continuation FROM tickets_v19;
+        DROP TABLE tickets_v19;
+        \(ticketObjectSQL.joined(separator: ";\n"));
+        PRAGMA legacy_alter_table = OFF;
+        """)
+        XCTAssertNil(try connection.row("PRAGMA foreign_key_check"))
     }
 
     private func assertMigrationUnavailable(

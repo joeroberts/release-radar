@@ -8,6 +8,71 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
     private static let phase = PhaseID(rawValue: "phase")
     private let actor = DeliveryActor(id: "delivery-policy-test")
 
+    func testUnassignedTicketCannotExecuteUntilItsFirstSameProjectPlacement() async throws {
+        let store = try await fixture(ticketCount: 0)
+        try await succeeds(store, .upsertUnassignedTicket(ticketID: "planned", outcome: "Plan the retained work"))
+        try await succeeds(store, .reviseTicketTaskPlan(
+            ticketID: "planned",
+            additions: [.init(id: .init(rawValue: "planned-task"), label: "Task 1", title: "Retained definition", sortOrder: 0)]
+        ))
+
+        for command in [
+            AgentCommand.transitionTicket(ticketID: "planned", lane: .inProgress),
+            .completeTicketTask(ticketID: "planned", taskID: "planned-task", expectedRevision: 1),
+            .requestReview(id: "planned-review", ticketID: "planned", kind: "review", summary: "Review"),
+            .recordCompletion(id: "planned-completion", ticketID: "planned", summary: "Done"),
+            .upsertTicket(ticketID: "planned", phaseID: "phase", outcome: "Bypass placement", lane: .backlog),
+            .placeUnassignedTicket(ticketID: "planned", phaseID: "phase", expectedPlanRevision: 1),
+            .placeUnassignedTicket(ticketID: "planned", phaseID: "foreign-phase", expectedPlanRevision: 0),
+        ] {
+            try await rejectsCommand(store, command)
+        }
+
+        let root = URL(fileURLWithPath: "/synthetic-task7")
+        let dispatcher = AgentCommandDispatcher(store: store, projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: Self.project, canonicalRoot: root, authorizedRoots: [root])
+        ]))
+        let placement = AgentCommandEnvelope(
+            version: 1, requestID: UUID(), projectRoot: root.path, reason: "Place planned work",
+            command: .placeUnassignedTicket(ticketID: "planned", phaseID: "phase", expectedPlanRevision: 0)
+        )
+        let result = await dispatcher.dispatch(placement)
+        XCTAssertNil(result.error)
+        XCTAssertEqual(result.phasePlanRevision, 1)
+        let replay = await dispatcher.dispatch(placement)
+        XCTAssertEqual(replay, result, "Exact replay returns the committed receipt")
+        let placed = try await store.read { connection in
+            (try connection.scalarText("SELECT phase_id FROM tickets WHERE id = 'planned'"),
+             try connection.scalarText("SELECT lane FROM tickets WHERE id = 'planned'"),
+             try connection.scalarInt("SELECT COUNT(*) FROM audit_events WHERE entity_id = 'planned'"),
+             try connection.scalarInt("SELECT COUNT(*) FROM ticket_tasks WHERE ticket_id = 'planned'"))
+        }
+        XCTAssertEqual(placed.0, "phase")
+        XCTAssertEqual(placed.1, TicketLane.backlog.rawValue)
+        XCTAssertEqual(placed.2, 3, "Create, task planning and first placement each retain one audit event")
+        XCTAssertEqual(placed.3, 1)
+    }
+
+    func testUpsertUnassignedTicketRejectsBothPartialPlacementShapes() async throws {
+        for corruption in [
+            "UPDATE tickets SET phase_id='phase', lane=NULL WHERE id='planned'",
+            "UPDATE tickets SET phase_id=NULL, lane='backlog' WHERE id='planned'",
+        ] {
+            let store = try await fixture(ticketCount: 0)
+            try await succeeds(store, .upsertUnassignedTicket(ticketID: "planned", outcome: "Original plan"))
+            try await store.transact(actor: actor, reason: "Inject legacy partial placement") { connection in
+                try connection.execute("PRAGMA ignore_check_constraints=ON")
+                try connection.execute(corruption)
+                try connection.execute("PRAGMA ignore_check_constraints=OFF")
+            }
+
+            try await rejectsCommand(
+                store,
+                .upsertUnassignedTicket(ticketID: "planned", outcome: "Must not update partial placement")
+            )
+        }
+    }
+
     func testGovernedBacklogPhaseMovePreservesAssignmentHistory() async throws {
         let store = try await readyFixture()
         _ = try await revise(store, revision: 1, unassigned: ["t"])

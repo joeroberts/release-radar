@@ -18,6 +18,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
     var route: AppRoute
     var registration: ProjectRegistration?
     var phaseID: PhaseID?
+    var showsAllPhases: Bool
     var filter: DeliveryGoalFilter?
     var selectedTicketID: TicketID?
     var focus: NavigationFocus?
@@ -26,6 +27,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         route: AppRoute,
         registration: ProjectRegistration? = nil,
         phaseID: PhaseID? = nil,
+        showsAllPhases: Bool = false,
         filter: DeliveryGoalFilter? = nil,
         selectedTicketID: TicketID? = nil,
         focus: NavigationFocus? = nil
@@ -33,6 +35,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         self.route = route
         self.registration = registration
         self.phaseID = phaseID
+        self.showsAllPhases = showsAllPhases
         self.filter = filter
         self.selectedTicketID = selectedTicketID
         self.focus = focus
@@ -64,6 +67,7 @@ struct NavigationHistory: Equatable, Sendable {
         to route: AppRoute,
         registration: ProjectRegistration? = nil,
         phaseID: PhaseID? = nil,
+        showsAllPhases: Bool = false,
         filter: DeliveryGoalFilter? = nil,
         selectedTicketID: TicketID? = nil,
         focus: NavigationFocus? = nil
@@ -72,6 +76,7 @@ struct NavigationHistory: Equatable, Sendable {
             route: route,
             registration: registration,
             phaseID: phaseID,
+            showsAllPhases: showsAllPhases,
             filter: filter,
             selectedTicketID: selectedTicketID,
             focus: focus
@@ -81,12 +86,14 @@ struct NavigationHistory: Equatable, Sendable {
     mutating func updateCurrent(
         registration: ProjectRegistration? = nil,
         phaseID: PhaseID?,
+        showsAllPhases: Bool = false,
         filter: DeliveryGoalFilter? = nil,
         selectedTicketID: TicketID?,
         focus: NavigationFocus? = nil
     ) {
         entries[index].registration = registration ?? entries[index].registration
         entries[index].phaseID = phaseID
+        entries[index].showsAllPhases = showsAllPhases
         entries[index].filter = filter
         entries[index].selectedTicketID = selectedTicketID
         entries[index].focus = focus

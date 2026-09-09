@@ -112,3 +112,20 @@ and ticket/Codex-goal links.
 - Silently dropping Delivery Goals from portable archive v1.
 - Combining plan revision and finalization into an omission-sensitive bulk
   replacement command.
+
+## Phase 5A first placement amendment — 2026-09-09
+
+An unassigned ticket has no phase or lane and cannot belong to a phase-owned
+Delivery Goal. First placement into a same-project phase preserves its ID and
+content, enters Backlog, and increments/invalidates the destination structural
+plan revision through an exact audited transaction. Placement does not finalize
+readiness, assign a goal implicitly, start execution or change active context.
+Ready/start and goal-acceptance gates remain unchanged. Existing placed-ticket
+commands retain their explicit semantics; omitted fields never mean unplacement.
+
+Goal obligations must carry forward on plan changes under the owner's Phase 5
+direction. The separately bounded successor/coverage slice owns the amendment
+needed for withdrawal/replacement/splitting and transfers. Phase 5A adds first
+placement only; current assignment-event history and Backlog assignment removal
+are not claimed as an implementation of outstanding obligations. Preserve started
+assignment and immutable Accepted protections until that contract is implemented.
