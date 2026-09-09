@@ -420,3 +420,21 @@ reference only; their Goals/History routes and other unselected behaviors do not
 become requirements. New Project Plan composition uses existing components and
 accessible compact/wide behavior, verified in the isolated native app. Browsing
 remains read-only; typed agent operations perform formal planning changes.
+
+The delivered Phase 5A composition uses a single scrolling list of phase cards
+with explicit readiness revision, coverage, ticket count and phase-owned Delivery
+Goals, followed by a visually separate **Not placed** section and the existing
+ticket inspector. The all-phase board reuses the established five-lane visual
+grammar, adds an explicit board-scope selector, and shows a phase label on every
+card. At compact widths both surfaces stack the inspector below the primary
+content and retain vertical scrolling; the board preserves all five lanes through
+horizontal scrolling rather than shrinking their content below a readable width.
+
+Native comparison retained the approved Phase Board lane colors, bordered columns,
+compact/full-density behavior and inspector hierarchy. It intentionally differs
+from the proposed Work Board by keeping the approved **Phase Board** route name,
+omitting the unselected Goals and History routes, and using the existing detailed
+inspector. It differs from the historical planning proposal by showing readiness
+rather than inventing phase lifecycle groups and by retaining board-local scope
+switching, as required by the later owner selection for one shared phase/all-phase
+board. These differences do not introduce lifecycle or ordering semantics.

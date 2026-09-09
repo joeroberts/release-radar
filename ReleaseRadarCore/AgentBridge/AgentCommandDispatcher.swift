@@ -211,6 +211,11 @@ public actor AgentCommandDispatcher {
             commandFieldsAreValid = (try? envelope.command.validateDocumentation()) != nil
         case let .upsertPhase(phaseID, name):
             commandFieldsAreValid = valid(phaseID, maximum: 256) && valid(name)
+        case let .upsertUnassignedTicket(ticketID, outcome):
+            commandFieldsAreValid = valid(ticketID, maximum: 256) && valid(outcome)
+        case let .placeUnassignedTicket(ticketID, phaseID, expectedPlanRevision):
+            commandFieldsAreValid = valid(ticketID, maximum: 256) && valid(phaseID, maximum: 256)
+                && expectedPlanRevision >= 0
         case let .upsertTicket(ticketID, phaseID, outcome, _):
             commandFieldsAreValid = valid(ticketID, maximum: 256) && valid(phaseID, maximum: 256) && valid(outcome)
         case let .transitionTicket(ticketID, lane, ticketTaskPlanRevision):
@@ -339,6 +344,10 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: command.documentationIDs, auditEventID: auditEventID, error: nil)
         case let .upsertPhase(phaseID, _):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
+        case let .upsertUnassignedTicket(ticketID, _):
+            return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
+        case let .placeUnassignedTicket(ticketID, _, _):
+            return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil, phasePlanRevision: revision)
         case let .upsertTicket(ticketID, _, _, _):
             return .init(entityIDs: [ticketID], auditEventID: auditEventID, error: nil)
         case let .transitionTicket(ticketID, _, _):
@@ -367,7 +376,7 @@ public actor AgentCommandDispatcher {
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence: (.project, projectID.rawValue)
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
-        case let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
+        case let .upsertUnassignedTicket(ticketID, _), let .placeUnassignedTicket(ticketID, _, _), let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
         case let .reviseTicketTaskPlan(ticketID, _, _, _, _), let .completeTicketTask(ticketID, _, _): (.ticketTaskPlan, ticketID)
         case let .setDependency(id, kind, _, _):
             (kind == .ticket ? .ticketDependency : .phaseDependency, id)
@@ -459,6 +468,16 @@ public actor AgentCommandDispatcher {
                 projectID: projectID,
                 connection: connection
             )
+        case let .upsertUnassignedTicket(ticketID, outcome):
+            try requireWritableID(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try DeliveryPlanningPolicy.upsertUnassignedTicket(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), outcome: outcome, connection: connection)
+        case let .placeUnassignedTicket(ticketID, phaseID, expectedPlanRevision):
+            try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try requireProjectEntity(phaseID, table: "phases", projectID: projectID, connection: connection)
+            return try DeliveryPlanningPolicy.placeUnassignedTicket(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), phaseID: .init(rawValue: phaseID),
+                expectedPlanRevision: expectedPlanRevision, connection: connection).revision
         case let .transitionTicket(ticketID, lane, ticketTaskPlanRevision):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             let previousLane = try connection.scalarText(

@@ -3,6 +3,43 @@ import XCTest
 @testable import ReleaseRadar
 
 final class DashboardProjectionTests: XCTestCase {
+    func testProjectPlanAndAllPhaseBoardKeepUnassignedPlacementDistinctFromGoalCoverage() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(actor: .init(id: "phase5a-fixture"), reason: "Recorded planning projection") { connection in
+            try connection.execute("INSERT INTO projects (id,name) VALUES ('plan-project','Plan project')")
+            try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('alpha','plan-project','Alpha'),('beta','plan-project','Beta')")
+            try connection.execute("INSERT INTO project_active_phases (project_id,phase_id) VALUES ('plan-project','alpha')")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('alpha-ticket','plan-project','alpha','Alpha outcome','backlog'),('beta-ticket','plan-project','beta','Beta outcome','blocked'),('unassigned-ticket','plan-project',NULL,'Recorded without placement',NULL)")
+            try connection.execute("INSERT INTO ticket_dependencies (id,project_id,ticket_id,depends_on_ticket_id) VALUES ('unassigned-dependency','plan-project','unassigned-ticket','alpha-ticket')")
+            try connection.execute("INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('unassigned-evidence','plan-project','unassigned-ticket','/synthetic/plan.md',0)")
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: .init(rawValue: "plan-project"), ticketID: .init(rawValue: "unassigned-ticket"),
+                expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "planned-task"), label: "Task 1", title: "Preserve identity", sortOrder: 0)],
+                definitionRevisions: [], supersededTaskIDs: [], connection: connection
+            )
+        }
+
+        let projection = try await DashboardProjection.load(from: store)
+        let projectID = ProjectID(rawValue: "plan-project")
+        let plan = try XCTUnwrap(projection.plan(for: projectID))
+        XCTAssertEqual(plan.phases.map(\.name), ["Alpha", "Beta"])
+        XCTAssertEqual(plan.phases.map(\.ticketCount), [1, 1])
+        XCTAssertEqual(plan.recordedTicketCount, 3)
+        XCTAssertEqual(plan.unassignedTickets.map(\.id.rawValue), ["unassigned-ticket"])
+        let unassigned = try XCTUnwrap(plan.detail(for: .init(rawValue: "unassigned-ticket")))
+        guard case let .loaded(taskPlan) = unassigned.taskPlan else { return XCTFail("Expected the retained task plan") }
+        XCTAssertEqual(taskPlan.tasks.map(\.id.rawValue), ["planned-task"])
+        XCTAssertEqual(unassigned.requires.map(\.id.rawValue), ["alpha-ticket"])
+        XCTAssertEqual(unassigned.evidence.map(\.id.rawValue), ["unassigned-evidence"])
+
+        let allPhases = try XCTUnwrap(projection.allPhaseBoard(for: projectID))
+        XCTAssertEqual(allPhases.lanes.flatMap(\.cards).map(\.id.rawValue).sorted(), ["alpha-ticket", "beta-ticket"])
+        XCTAssertEqual(Set(allPhases.lanes.flatMap(\.cards).compactMap(\.phaseName)), ["Alpha", "Beta"])
+        XCTAssertEqual(allPhases.filtered(by: .unassigned).lanes.flatMap(\.cards).map(\.id.rawValue), ["alpha-ticket", "beta-ticket"],
+                       "No Delivery Goal remains a board filter and must not mean No phase")
+    }
+
     func testByteDistinctGoalIDsRemainSeparateInBoardsAndFilters() async throws {
         let composed = DeliveryGoalID(rawValue: "\u{e9}"), decomposed = DeliveryGoalID(rawValue: "e\u{301}")
         let first = DeliveryGoalFilter.goal(composed), second = DeliveryGoalFilter.goal(decomposed)
@@ -59,7 +96,12 @@ final class DashboardProjectionTests: XCTestCase {
     }
 
     func testInactiveBoardPreservesAuthorizedEvidenceMetadataAndRecovery() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("task9-evidence-\(UUID().uuidString)").resolvingSymlinksInPath()
+        let cacheRoot = try XCTUnwrap(
+            FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+        ).appendingPathComponent("ReleaseRadarDashboardTests", isDirectory: true)
+        try FileManager.default.createDirectory(at: cacheRoot, withIntermediateDirectories: true)
+        let root = cacheRoot.appendingPathComponent("task9-evidence-\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
         let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Fixtures/RepositoryDocuments/valid")
         try FileManager.default.copyItem(at: fixture, to: root)
         try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
@@ -601,8 +643,12 @@ final class DashboardProjectionTests: XCTestCase {
             phaseID: .init(rawValue: "phase-current"),
             selectedTicketID: .init(rawValue: "CURRENT-A")
         )
-        XCTAssertEqual(Set(initialGraph.nodes.map(\.id.rawValue)), ["CURRENT-A", "CURRENT-B"])
-        XCTAssertNil(initialGraph.node(id: .init(rawValue: "ROAD-B1")))
+        XCTAssertEqual(Set(initialGraph.nodes.map(\.id.rawValue)), Set(
+            ["CURRENT-A", "CURRENT-B", "HISTORY-A"]
+                + (1...8).map { "ROAD-B\($0)" }
+                + (1...3).map { "ROAD-X\($0)" }
+        ))
+        XCTAssertEqual(initialGraph.node(id: .init(rawValue: "ROAD-B1"))?.phaseName, "Roadmap delivery")
 
         let before = try await Self.phaseSelectionPersistenceSnapshot(store)
         XCTAssertEqual(before.activeRows, ["phase-selection-project|phase-current"])
@@ -640,7 +686,7 @@ final class DashboardProjectionTests: XCTestCase {
             phaseID: .init(rawValue: "phase-roadmap"),
             selectedTicketID: .init(rawValue: "ROAD-B1")
         )
-        XCTAssertNil(roadmapGraph.node(id: .init(rawValue: "CURRENT-A")))
+        XCTAssertEqual(roadmapGraph.node(id: .init(rawValue: "CURRENT-A"))?.phaseName, "Current")
         let after = try await Self.phaseSelectionPersistenceSnapshot(relaunchedStore)
         XCTAssertEqual(after.phases, before.phases)
         XCTAssertEqual(after.tickets, before.tickets)

@@ -60,23 +60,26 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 bindings: [.text(projectID.rawValue)]
             )
             let ticketLanes: [TicketID: TicketLane] = try Dictionary(
-                uniqueKeysWithValues: ticketRows.map { row in
+                uniqueKeysWithValues: ticketRows.compactMap { row in
                     let id = TicketID(rawValue: try row.activityText("id"))
-                    guard let lane = TicketLane(rawValue: try row.activityText("lane")) else {
-                        throw ProjectActivityProjectionError.invalidLane(try row.activityText("lane"))
+                    guard let laneText = row.activityOptionalText("lane") else { return nil }
+                    guard let lane = TicketLane(rawValue: laneText) else {
+                        throw ProjectActivityProjectionError.invalidLane(laneText)
                     }
                     return (id, lane)
                 }
             )
-            let ticketPhases = try Dictionary(uniqueKeysWithValues: ticketRows.map {
-                (TicketID(rawValue: try $0.activityText("id")), PhaseID(rawValue: try $0.activityText("phase_id")))
+            let ticketPhases: [TicketID: PhaseID] = try Dictionary(uniqueKeysWithValues: ticketRows.compactMap {
+                guard let phaseID = $0.activityOptionalText("phase_id") else { return nil }
+                return (TicketID(rawValue: try $0.activityText("id")), PhaseID(rawValue: phaseID))
             })
             let goalPhases = try Dictionary(uniqueKeysWithValues: connection.activityRows(
                 "SELECT id, phase_id FROM delivery_goals WHERE project_id = ? ORDER BY id",
                 bindings: [.text(projectID.rawValue)]
             ).map { (Data(try $0.activityText("id").utf8), PhaseID(rawValue: try $0.activityText("phase_id"))) })
             var assignmentsByAudit: [AuditEventID: [DeliveryGoalAssignmentEventRecord]] = [:]
-            for ticketID in ticketLanes.keys.sorted(by: { $0.rawValue.utf8.lexicographicallyPrecedes($1.rawValue.utf8) }) {
+            for ticketID in try ticketRows.map({ TicketID(rawValue: try $0.activityText("id")) })
+                .sorted(by: { $0.rawValue.utf8.lexicographicallyPrecedes($1.rawValue.utf8) }) {
                 for event in try DeliveryPlanningPolicy.loadAssignmentHistory(projectID: projectID, ticketID: ticketID, connection: connection) {
                     assignmentsByAudit[event.auditEventID, default: []].append(event)
                 }

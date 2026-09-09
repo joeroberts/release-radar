@@ -404,6 +404,145 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testProjectPlanAllPhaseBoardAndDependenciesRestoreExactScopeAndUnassignedSelection() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "phase5a-fixture"), reason: "Recorded planning navigation") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('PLAN-ONLY',?,NULL,'Retain this planned ticket',NULL)",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_dependencies (id,project_id,ticket_id,depends_on_ticket_id) VALUES ('plan-only-dependency',?,'PLAN-ONLY','ROAD-1')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: fixture.store, externalServicesSuppressed: true)
+        await model.loadDashboard()
+        XCTAssertNil(model.dashboardError)
+        XCTAssertNotNil(model.dashboard?.plan(for: fixture.projectID))
+
+        await model.navigate(to: .projectPlan(fixture.projectID))
+        model.selectTicket(.init(rawValue: "PLAN-ONLY"))
+        await model.navigate(to: .dependencies(fixture.projectID))
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected.ticket.id.rawValue, "PLAN-ONLY")
+        XCTAssertEqual(model.dependencyGraph(for: fixture.projectID)?.selected.ticket.phaseName, "Unassigned")
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID.rawValue, "PLAN-ONLY")
+
+        model.viewAllPhases(projectID: fixture.projectID)
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        let boardTicket = try XCTUnwrap(model.viewedAllPhaseBoard(for: fixture.projectID)?.lanes.flatMap(\.cards).first?.id)
+        model.selectTicket(boardTicket)
+        await model.navigate(to: .activity(fixture.projectID))
+        await model.goBack()
+
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+        XCTAssertNotNil(model.viewedAllPhaseBoard(for: fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID, boardTicket)
+        XCTAssertEqual(model.navigationFocus, .ticket(boardTicket))
+    }
+
+    @MainActor
+    func testNativeProjectPlanAndAllPhaseBoardRenderWideAndCompactWithTruthfulMembership() async throws {
+        let fixture = try await makeTask10PlanningFixture()
+        try await fixture.store.transact(actor: .init(id: "phase5a-fixture"), reason: "Native recorded planning fixture") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('PLAN-ONLY',?,NULL,'Retain planning without execution',NULL)",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let dashboard = try await DashboardProjection.load(from: fixture.store)
+        let plan = try XCTUnwrap(dashboard.plan(for: fixture.projectID))
+        let allBoard = try XCTUnwrap(dashboard.allPhaseBoard(for: fixture.projectID))
+        XCTAssertEqual(plan.unassignedTickets.map(\.id.rawValue), ["PLAN-ONLY"])
+        XCTAssertEqual(allBoard.lanes.map(\.lane), TicketLane.allCases)
+        XCTAssertFalse(allBoard.lanes.flatMap(\.cards).contains { $0.id.rawValue == "PLAN-ONLY" })
+        XCTAssertTrue(allBoard.lanes.flatMap(\.cards).allSatisfy { $0.phaseName?.isEmpty == false })
+        XCTAssertFalse(ProjectPlanLayout.usesStackedInspector(forWidth: 1_500))
+        XCTAssertTrue(ProjectPlanLayout.usesStackedInspector(forWidth: 760))
+        XCTAssertFalse(AllPhaseBoardLayout.usesStackedInspector(forWidth: 1_500))
+        XCTAssertTrue(AllPhaseBoardLayout.usesStackedInspector(forWidth: 760))
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+                              styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 5A recorded planning — isolated native acceptance"
+        defer { window.close() }
+
+        for width in [1_500.0, 760.0] {
+            let planHosting = NSHostingView(rootView: ProjectPlanView(
+                plan: plan, selectedTicketID: .constant(.init(rawValue: "PLAN-ONLY")),
+                openAllPhases: {}, openPhase: { _ in }
+            ).environment(\.colorScheme, .dark))
+            planHosting.appearance = window.appearance
+            planHosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
+            window.contentView = planHosting
+            window.setContentSize(NSSize(width: width, height: 900))
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(200))
+            planHosting.layoutSubtreeIfNeeded()
+            XCTAssertTrue(window.isVisible)
+            XCTAssertEqual(planHosting.frame.width, width, accuracy: 1)
+            try taskCapture(planHosting, name: "phase5a-project-plan-\(Int(width))")
+
+            let selected = allBoard.lanes.flatMap(\.cards).first?.id ?? .init(rawValue: "")
+            let boardHosting = NSHostingView(rootView: AllPhaseBoardView(
+                board: allBoard, selectedTicketID: .constant(selected), filter: .constant(.all), viewPhase: { _ in }
+            ).environment(\.colorScheme, .dark))
+            boardHosting.appearance = window.appearance
+            boardHosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
+            window.contentView = boardHosting
+            window.setContentSize(NSSize(width: width, height: 900))
+            try await Task.sleep(for: .milliseconds(200))
+            boardHosting.layoutSubtreeIfNeeded()
+            XCTAssertTrue(window.isVisible)
+            XCTAssertEqual(boardHosting.frame.width, width, accuracy: 1)
+            try taskCapture(boardHosting, name: "phase5a-all-phase-board-\(Int(width))")
+        }
+
+        let interactionMarker = URL(fileURLWithPath: "/tmp/release-radar-phase5a-interaction-check")
+        if FileManager.default.fileExists(atPath: interactionMarker.path) {
+            try FileManager.default.removeItem(at: interactionMarker)
+            let model = AppModel(
+                store: fixture.store,
+                projectOnboarding: fixture.onboarding,
+                externalServicesSuppressed: true
+            )
+            await model.loadDashboard()
+            model.selection = .projectPlan(fixture.projectID)
+            model.selectedTicketID = .init(rawValue: "PLAN-ONLY")
+            let interactionHosting = NSHostingView(rootView: SidebarView(model: model)
+                .environment(\.colorScheme, .dark))
+            interactionHosting.appearance = window.appearance
+            interactionHosting.frame = NSRect(x: 0, y: 0, width: 1_500, height: 900)
+            window.contentView = interactionHosting
+            window.setContentSize(NSSize(width: 1_500, height: 900))
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(500))
+            interactionHosting.layoutSubtreeIfNeeded()
+            print("PHASE5A INTERACTION READY: exercise Plan, all-phase board, Dependencies, Back, and Forward")
+            let completionMarker = URL(fileURLWithPath: "/tmp/release-radar-phase5a-interaction-complete")
+            try? FileManager.default.removeItem(at: completionMarker)
+            for _ in 0..<900 where !FileManager.default.fileExists(atPath: completionMarker.path) {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+            try? FileManager.default.removeItem(at: completionMarker)
+            XCTAssertEqual(model.selection, .dependencies(fixture.projectID))
+            XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
+            XCTAssertEqual(model.navigationFocus, .route(.dependencies(fixture.projectID)))
+            try taskCapture(interactionHosting, name: "phase5a-interaction-final")
+        }
+    }
+
+    @MainActor
     func testTask10OwnerAcceptanceUsesTrustedOriginAndCannotRepeatFromStaleInbox() async throws {
         let fixture = try await makeTask10AwaitingGoalFixture()
         let model = AppModel(store: fixture.store, projectOnboarding: fixture.onboarding,
@@ -2141,18 +2280,21 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(routes, [
             .projectOverview(projectID),
+            .projectPlan(projectID),
             .phaseBoard(projectID),
             .dependencies(projectID),
             .activity(projectID),
         ])
         XCTAssertEqual(routes.map(\.title), [
             "Overview",
+            "Project Plan",
             "Phase Board",
             "Dependencies",
             "Activity",
         ])
         XCTAssertEqual(routes.map(\.systemImage), [
             "rectangle.grid.1x2",
+            "list.bullet.rectangle.portrait",
             "rectangle.split.3x1",
             "arrow.triangle.branch",
             "clock.arrow.circlepath",
@@ -2207,6 +2349,7 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(model.currentProject?.name, "Beta")
         XCTAssertEqual(AppRoute.projectRoutes(for: model.currentProjectID), [
             .projectOverview(second.id),
+            .projectPlan(second.id),
             .phaseBoard(second.id),
             .dependencies(second.id),
             .activity(second.id),

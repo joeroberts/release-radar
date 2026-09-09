@@ -222,10 +222,10 @@ struct DependencyGraphView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(node.lane.graphColor.opacity(isSelected ? 0.28 : 0.15))
+                .background((node.lane?.graphColor ?? RekonTheme.secondaryText).opacity(isSelected ? 0.28 : 0.15))
                 .overlay {
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected ? RekonTheme.accent : node.lane.graphColor, lineWidth: isSelected ? 2.5 : 1)
+                        .stroke(isSelected ? RekonTheme.accent : (node.lane?.graphColor ?? RekonTheme.secondaryText), lineWidth: isSelected ? 2.5 : 1)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 if node.blockerCount > 0 {
@@ -241,7 +241,7 @@ struct DependencyGraphView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(node.id.rawValue), \(node.phaseName), \(node.lane.dashboardTitle), \(node.blockerCount) "
+            "\(node.id.rawValue), \(node.phaseName), \(node.lane?.dashboardTitle ?? "No delivery lane"), \(node.blockerCount) "
                 + "blocker\(node.blockerCount == 1 ? "" : "s"), \(role.title)"
                 + (isSelected ? ", selected" : "")
         )
@@ -267,7 +267,7 @@ struct DependencyGraphView: View {
                         .accessibilityAddTraits(.isHeader)
                     Text(selection.ticket.outcome)
                 }
-                LabeledContent("Delivery lane", value: selection.ticket.lane.dashboardTitle)
+                LabeledContent("Delivery lane", value: selection.ticket.lane?.dashboardTitle ?? "Not placed")
                 LabeledContent("Runtime", value: freshness.state.rawValue.capitalized)
                 LabeledContent("Freshness", value: freshnessDescription)
                 if let codexFailure = FailureStatePresentation(freshness: freshness) {
@@ -303,19 +303,19 @@ struct DependencyGraphView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Circle()
-                                .fill(node.lane.graphColor)
+                                .fill(node.lane?.graphColor ?? RekonTheme.secondaryText)
                                 .frame(width: 8, height: 8)
                             Text(node.id.rawValue)
                                 .font(.system(.subheadline, design: .monospaced))
                             Spacer(minLength: 8)
-                            Text(node.lane.dashboardTitle)
+                            Text(node.lane?.dashboardTitle ?? "Not placed")
                                 .font(.caption)
                                 .foregroundStyle(node.lane == .blocked ? .red : .secondary)
                         }
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(node.id.rawValue), \(node.lane.dashboardTitle)")
+                    .accessibilityLabel("\(node.id.rawValue), \(node.lane?.dashboardTitle ?? "not placed")")
                     .accessibilityHint("Select to show this ticket's dependency path")
                 }
             }

@@ -10,6 +10,7 @@ struct ProjectOverviewView: View {
     var documentationStatus: DocumentationObservationStatus? = nil
     let projectRoot: URL?
     let phaseSelectionStatus: ActivePhaseSelectionStatus
+    var openPlan: () -> Void = {}
     let openBoard: () -> Void
     let selectActivePhase: (PhaseID) async -> Void
     let reloadActivePhase: () async -> Void
@@ -295,6 +296,9 @@ struct ProjectOverviewView: View {
                 onReauthorize: reauthorizeActivePhase
             )
             if board != nil {
+                Button("Open project plan", action: openPlan)
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("open-project-plan")
                 Button("Open phase board", action: openBoard)
                     .buttonStyle(RekonPrimaryButtonStyle())
                     .accessibilityIdentifier("open-phase-board")
