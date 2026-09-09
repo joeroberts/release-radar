@@ -597,6 +597,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-09-phase5b-reference-impacts",
+      "path": "docs/delivery/task-briefs/2026-09-09-phase5b-reference-impacts",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 5B revision-specific references and recorded impacts delivery scope",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5088,8 +5103,8 @@
       "artifactID": "rr-phase5a-recorded-planning-brief-2026-09-09",
       "path": "docs/delivery/task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-09-phase5a-recorded-planning",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5097,8 +5112,7 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.phase5a-recorded-planning"
+      }
     },
     {
       "artifactID": "rr-2026-09-09-phase5a-recorded-planning",
@@ -5170,6 +5184,22 @@
       "supersedes": [],
       "applicationSensitivity": [
         "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-reference-impacts-brief-2026-09-09",
+      "path": "docs/delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.phase5b-reference-impacts",
+      "parentCollection": "delivery.task-briefs.2026-09-09-phase5b-reference-impacts",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"

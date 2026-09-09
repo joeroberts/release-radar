@@ -6,32 +6,30 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is verified in [PR #38](https://github.com/joeroberts/release-radar/pull/38), awaiting owner merge approval.** The owner selected
+**Phase 5A is merged; Phase 5B contract preparation is active.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
 [selection record](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#phase-5-owner-selections-and-implementation-authorization--2026-09-09)
 distinguishes these from unselected proposals.
 
-First slice: [Phase 5A recorded planning and placement](task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md),
-including the complete Overview/Plan/shared-board journey and recovery preservation.
-Delivery writer `01a086c4-8938-7a01-aa24-825586eca413` delivered from committed
-handoff `d58f3d8` on `codex/phase5a-recorded-planning`. Started Terra Medium;
-escalated the same assignment to Sol High after two premature partial turn endings
-left migration/projection/native integration unfinished without a blocker. The
-source candidate `53d05943ed99b5689fd3e519b7041ef625c6ad38` is committed and pushed,
-integrated into the orchestrator branch with its catalogued evidence. Fresh Sol High reviewer
-`01a08719-d238-7e61-add1-9a4e263ef959` returned four Required findings on `2543cd6`:
-phase/lane pairing is not enforced in storage; the native test fails independently;
-Project Plan lacks actual ticket-focus restoration; and all-phase filter-summary
-focus is not applied. The same Sol High writer delivered correction `cb64def`,
-integrated into this branch: storage pairing and defensive policy checks, read-only
-test-host interaction markers, real Plan ticket/filter-summary focus and no fallback
-inspector after filtering. The same reviewer passed combined candidate `9a2c573`
-with no remaining Required findings, including a fresh live native focus/filter
-journey. Both bounded peers report no pending writes or test/host processes and
-are archived; their source and useful review results are preserved here and in
-the evidence document.
+The owner explicitly approved merging [PR #38](https://github.com/joeroberts/release-radar/pull/38).
+It merged at `a8877aac3bcbfb4e32abba48073704a253035583` on 2026-09-09 after
+passing direct checks and independent review. The [Phase 5A brief](task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md)
+and [evidence](evidence/2026-09-09-phase5a-recorded-planning.md) preserve its scope,
+corrections and results. Its delivery/review peers are complete and archived.
+
+Phase 5B delivers revision-specific requirement/decision links and recorded reverse
+impacts. Fresh read-only chief-architecture task `01a08799-b7e0-7ab2-ae44-74849d8cd892`
+(Astra High, ceiling Astra High) completed the reference/resolution/recovery
+assessment from merged `a8877aa`, with no unresolved owner choice. Its findings
+are preserved in the [Phase 5B brief](task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+and affected ADR/design amendments. No files or processes were created; the peer
+is archived. The orchestrator owns brief/catalog integration; one Sol High delivery
+writer will start from the committed handoff. This profile addresses safe content
+resolution, authority, retained history/recovery and native navigation across
+components, with Astra High ceiling. One independent Astra High reviewer covers
+those material risks and native UX/QA after direct verification.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -108,8 +106,9 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is owner approval to merge PR #38. Approved
-proposal/successor slices follow without gating independent first-slice work.
+Next eligible action is the Phase 5B contract handoff and complete bounded delivery.
+Approved proposal, successor/carry-forward and lifecycle slices follow in the
+recorded sequence. Later merges still require separate owner approval.
 
 Phase 5A raw results are preserved outside Xcode's rolling logs in
 `/tmp/release-radar-phase5a-review.Tbu6kw/`; the older cited transport bundle was

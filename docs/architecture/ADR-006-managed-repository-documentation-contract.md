@@ -301,3 +301,22 @@ direction only. It does not authorize implementation, tests, app launch,
 installation, storage migration, guidance activation, repository moves,
 evidence mutation, Task 4B, Issue #1, Git operations, or external issue
 changes.
+
+## Phase 5B revision-specific source links — 2026-09-09
+
+This amendment applies the later owner-authorized Phase 5 scope; earlier approval
+statements above retain their historical context. Ticket requirement/decision
+links reuse the accepted managed-root/catalog and bounded no-follow reader
+boundaries but do not change evidence locator uniqueness. New or revised links
+require an active controlling source in the exact accepted repository/catalog and
+a revalidated complete-source SHA-256 digest. Catalog digest identifies metadata,
+not mutable content revision or prose approval. No mutable-document checksum is
+added to the catalog merely to support link identity.
+
+Retain link versions, source-local IDs and observed path/authority metadata. Resolve
+current state by artifact identity: changed, moved, retired, superseded and
+unavailable are separate facts. Missing files do not prove catalog retirement.
+Never relink automatically or present current bytes as an unavailable historical
+revision. Link retirement retains history and does not require the source to remain
+readable. New/revised links still require full managed authorization; no operation
+implicitly binds or accepts a catalog. See the [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md).

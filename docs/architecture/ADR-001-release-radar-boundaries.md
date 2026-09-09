@@ -218,3 +218,21 @@ into a same-project phase atomically enters Backlog while preserving identity an
 all planning content/history. Existing signed typed app-owned operations, receipt
 replay, actor/reason, project scope and sole-store-writer authority apply. New
 planning views do not authorize owner-facing manual delivery mutations.
+
+## Phase 5B reference authority amendment — 2026-09-09
+
+The owner-approved revision-specific requirement/decision links remain distinct
+from authoritative repository prose and generic evidence. Stable ticket-link
+identities and retained versions bind project/ticket, repository/artifact, supplied
+source-local identity where available, and complete safely read content digest.
+Native browsing remains read-only; typed app-owned commands create, revise and
+retire links atomically with audit and replay receipts. Accepted ticket link sets
+are immutable. Source changes alter resolution facts, not accepted history.
+
+New records must survive placement, archive/restore, removal history and full
+backup without reconnecting historical registrations on re-add. Future complete
+portable packages must represent all link/version/retirement facts and required
+source documents without transferring capabilities. This amendment does not change
+v1, implement export/import, or implement later proposals/successors/lifecycle.
+The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+contains the bounded delivery contract and verification.
