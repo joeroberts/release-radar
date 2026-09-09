@@ -1,6 +1,6 @@
 # Shared Execution Integration V1 — source implementation plan
 
-**Status:** planning candidate; implementation is not authorized
+**Status:** source implementation authorized; staged path release applies
 
 **Prepared:** 2026-09-09
 
@@ -15,11 +15,17 @@
 the [full-product plan](../../plans/2026-09-06-full-product-architecture-and-delivery-plan.md)
 
 This plan translates the reviewed shared-execution design candidate into a
-bounded source-delivery sequence. It does not approve that proposed design,
-authorize source changes, install or update a plugin, adopt a consumer
-repository, run a runtime pilot, or mutate Release Radar application state.
-The design candidate and this plan must first be integrated, registered, and
-independently reviewed through the parent delivery task.
+bounded source-delivery sequence. The design and plan are integrated,
+registered, and independently reviewed at
+`3a49fb278dfbbbc80d9322e1f3ea757f4eceafda`. This owner-requested sequencing
+amendment is a descendant of that candidate. The owner authorizes one fresh
+isolated delivery task to begin disjoint source implementation in parallel with
+Phase 5, with overlapping paths released only by the parent after Phase 5B.
+This authorization does not install or update a plugin, adopt a consumer
+repository, run a runtime pilot, mutate Release Radar application state, push,
+open a PR, or merge. The catalogued supporting/proposed lifecycle remains a
+documentation classification; it does not erase the explicit source authority
+recorded here.
 
 ## Objective and complete outcome
 
@@ -61,9 +67,10 @@ the source and tests exist.
   patterns, with actionable but non-mutating recovery guidance.
 - Focused Core, helper, package-contract, reducer, and SwiftUI presentation
   tests plus synthetic repository fixtures.
-- Documentation updates made necessary by the implementation, catalog/index
-  registration, progress/evidence recording, scoped commit, and the required
-  independent review—only when separately authorized for the source slice.
+- Documentation updates made necessary by the implementation when their exact
+  paths are released, plus parent-owned catalog/index registration,
+  progress/evidence recording, scoped commits, and the required independent
+  review.
 
 ### Excluded
 
@@ -102,9 +109,9 @@ equivalence are incompatible:
 | Capability key | exact manifest version + normalized package digest |
 
 The first V1-capable package is reserved as plugin version `0.1.8`, the next
-version after the baseline package `0.1.7`. That reservation becomes
-controlling only if the later source-delivery authorization retains it. The
-registry must contain both rows after delivery:
+version after the baseline package `0.1.7`. The current source-delivery
+authorization retains that reservation. The registry must contain both rows
+after delivery:
 
 | Manifest version | Normalized package digest | Shared standard versions |
 | --- | --- | --- |
@@ -119,42 +126,84 @@ range, version-only inference, or digest-only inference is not acceptable.
 
 ## Dependencies and Phase 5 sequencing
 
-The planning file is source-disjoint from active Phase 5 work and may be
-prepared now. Future implementation must not begin from this planning baseline.
+The owner authorizes one Shared Execution V1 source task to start from the exact
+committed descendant of reviewed candidate
+`3a49fb278dfbbbc80d9322e1f3ea757f4eceafda` that contains this amendment while
+Phase 5 continues. The parent supplies that exact baseline at dispatch; paths
+not expressly released remain held. This staged start changes sequencing, not
+the complete V1 outcome, design contract, test obligations, or final review.
 
-Phase 5B currently owns source on its own active candidate. Its sole writer has
-confirmed two planned collisions with Shared Execution V1:
+Phase 5B's current source ownership includes:
 
 - `ReleaseRadar/App/AppModel.swift`;
-- `ReleaseRadarTests/ProjectDocumentationRenderingTests.swift`.
+- `ReleaseRadarTests/ProjectDocumentationRenderingTests.swift`;
+- `ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md`;
+- `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`; and
+- `ReleaseRadarAgentTools/main.swift`;
+- `ReleaseRadarTests/DocumentationCallbackTests.swift`; and
+- all observation/UI paths until the reviewed Phase 5B descendant and ownership
+  handoff, including `ReleaseRadar/App/DocumentationObservation.swift`,
+  `ReleaseRadar/Projects/ProjectOverviewView.swift`, and any shared rendering or
+  observation tests.
 
-Phase 5B does not currently plan to edit
-`ReleaseRadar.xcodeproj/project.pbxproj`,
-`ReleaseRadar/App/DocumentationObservation.swift`, the lifecycle/helper/checker
-paths, `ProjectGuidanceInspection.swift`, `ProjectOverviewView.swift`, or the
-other lifecycle/index/installation/observation tests listed below. That negative
-map reduces merge ambiguity but does not release concurrent source ownership;
-the Phase 5B writer will notify the parent before any unexpected overlap.
+Those paths are held until Phase 5B has a reviewed committed candidate and the
+parent explicitly hands off ownership. The existing-skill edit also changes the
+normalized plugin package bytes, so final package inventory and digest work is
+held even where its implementation files are otherwise disjoint. Never compute
+or freeze the `0.1.8` digest against the obsolete pre-Phase-5B skill bytes.
 
-Therefore the simplest safe delivery order is:
+The Phase 5 owner has confirmed this initial released path set for the sole
+source writer:
 
-1. finish Phase 5B direct verification, independent review, and its authorized
-   commit/PR endpoint;
-2. integrate or otherwise provide the reviewed immutable Phase 5B candidate in
-   the shared-integration writer's exact baseline;
-3. have the parent task record the exact descendant baseline and confirm that
-   Phase 5B's writer has released every overlapping file and shared test host;
-4. dispatch one Shared Execution V1 writer with sole ownership of the source
-   paths in this plan; and
-5. after its direct checks and local candidate commit, dispatch one fresh
-   independent reviewer against that exact immutable candidate.
+- `ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json`;
+- new `ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/skills/shared-execution/SKILL.md`;
+- `ReleaseRadar.xcodeproj/project.pbxproj`;
+- `ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift`;
+- `ReleaseRadarPluginLifecycleHelper/main.swift`;
+- `ReleaseRadar/App/AppNotificationCoordinator.swift`;
+- new `ReleaseRadarCore/Documentation/RepositoryDocumentDiagnostic.swift`;
+- `ReleaseRadarCore/Documentation/RepositoryDocumentIndexTool.swift`;
+- `ReleaseRadarDocumentationTool/main.swift`;
+- `ReleaseRadarTests/RepositoryDocumentIndexTests.swift`;
+- `ReleaseRadarTests/DocumentationToolInstallationTests.swift`; and
+- new `ReleaseRadarTests/SharedExecutionSkillContractTests.swift`;
+- new `ReleaseRadarTests/RecognizedPluginCapabilityTests.swift`; and
+- new `ReleaseRadarTests/RepositoryDocumentDiagnosticTests.swift`.
 
-No Phase 5 dependency is imposed by this proposed integration. Do not ask the
-active Phase 5 writer to absorb these changes, and do not split the shared
-integration into a parallel partial writer merely because most package/helper
-subpaths are currently disjoint: `AppModel`, project-documentation rendering,
-and the combined test result still make the eventual source candidate one
-integration boundary.
+This release allows Chunk 2's additive `diagnose` contract and the disjoint
+portion of Chunk 1 to begin. It is not a blanket lifecycle-test release. The
+writer must reserve the shared test-host slot with the parent before any build
+or test-host launch; source ownership alone does not grant concurrent host use.
+
+Early release does not include the held lifecycle acceptance test, final
+package inventory/digest/capability mapping, observation/UI paths, combined UI
+tests, or any newly discovered Phase 5 overlap. If package work cannot remain
+independent, narrow the first release to Chunk 2 rather than sharing ownership.
+
+The staged delivery order is:
+
+1. the parent dispatches the exact committed baseline containing this amendment
+   and the released path set above;
+2. one fresh isolated Shared Execution V1 writer starts only those paths and may
+   make bounded local checkpoint commits;
+3. the same task stops at every hold—no early checkpoint is full V1 completion,
+   final package validation, or a review candidate;
+4. before any build/test-host launch, the writer obtains the parent's explicit
+   test-host reservation; if no slot is available, source work pauses without
+   inventing test evidence;
+5. Phase 5B completes its direct checks, independent review, and committed
+   candidate, then the parent supplies the exact descendant and releases
+   overlapping ownership;
+6. the same Shared Execution writer integrates that baseline, computes and
+   freezes the final package inventory/digest, and completes all remaining
+   chunks and full-source validation; and
+7. after the complete local candidate is immutable, one fresh independent
+   reviewer evaluates the entire V1 outcome.
+
+Do not ask the active Phase 5 writer to absorb Shared Execution work or create a
+second source writer for the later integration. Parallelism is path-scoped
+inside one delivery task; the complete source result remains one integration
+and review boundary.
 
 ## Delivery ownership and exact source map
 
@@ -171,27 +220,35 @@ metadata unless the later dispatch explicitly transfers those paths.
 | Local adoption inspection | new `ReleaseRadarCore/SharedExecution/SharedExecutionCompatibility.swift`; `ReleaseRadarCore/Onboarding/ProjectGuidanceInspection.swift` | Parse only the exact standard marker and full managed block from `AGENTS.md`. Read through descriptor-relative no-follow access, validate stability after the read, and report absence/difference/unsafe/unavailable truthfully without writing. Keep shared-execution state separate from guidance-version state. |
 | App observation | `ReleaseRadar/App/DocumentationObservation.swift`; `ReleaseRadar/App/AppModel.swift` | Carry a generation-safe snapshot of root, repository diagnosis, plugin package identity/capability, checker contract, and local adoption. Invalidate it under the same project/root/binding changes as documentation observations; never persist it as a new domain record. |
 | Project presentation | new `ReleaseRadar/Projects/SharedExecutionCompatibilityView.swift`; `ReleaseRadar/Projects/ProjectOverviewView.swift`; `ReleaseRadar/Projects/ProjectLifecycleSupport.swift` only if the existing health-row API cannot represent the reviewed states without semantic loss | Add one read-only compatibility surface within the existing project overview/health language. Do not create an unrelated destination or imply an owner action occurred. Preserve keyboard, accessibility, compact/wide layout, selection, and refresh behavior. |
-| Source tests | `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`; `ReleaseRadarTests/CodexPluginLifecycleTransportTests.swift`; `ReleaseRadarTests/ManagedGuidanceCompatibilityTests.swift`; `ReleaseRadarTests/RepositoryDocumentIndexTests.swift`; `ReleaseRadarTests/DocumentationToolInstallationTests.swift`; `ReleaseRadarTests/ProjectDocumentationRenderingTests.swift`; new `ReleaseRadarTests/SharedExecutionSkillContractTests.swift`; new `ReleaseRadarTests/SharedExecutionCompatibilityTests.swift`; any exact observation test file introduced by the final Phase 5B baseline | Freeze package bytes/inventories, helper compatibility, checker JSON/exit codes, reducer states, no-follow/stability behavior, observation invalidation, and UI copy/accessibility. Preserve Phase 5B rendering coverage and extend repository-native fixtures; do not build a new harness. |
-| Delivery documents | `docs/design/shared-execution-integration-v1-design.md`; `docs/architecture/ADR-002-codex-plugin-lifecycle.md`; `docs/architecture/ADR-006-managed-repository-documentation-contract.md`; `docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md`; `docs/delivery/progress.md`; `docs/catalog.json`; affected `docs/**/README.md`; one bounded evidence record under `docs/delivery/evidence/` | Update only facts made current by the separately authorized implementation. Design status changes require explicit owner approval; source completion alone must not silently promote proposed design. Parent task owns shared metadata/ledger integration by default. |
+| Source tests | `ReleaseRadarTests/CodexPluginLifecycleAcceptanceTests.swift`; `ReleaseRadarTests/CodexPluginLifecycleTransportTests.swift`; `ReleaseRadarTests/ManagedGuidanceCompatibilityTests.swift`; `ReleaseRadarTests/RepositoryDocumentIndexTests.swift`; `ReleaseRadarTests/DocumentationToolInstallationTests.swift`; `ReleaseRadarTests/ProjectDocumentationRenderingTests.swift`; new `ReleaseRadarTests/SharedExecutionSkillContractTests.swift`; new `ReleaseRadarTests/RecognizedPluginCapabilityTests.swift`; new `ReleaseRadarTests/RepositoryDocumentDiagnosticTests.swift`; new `ReleaseRadarTests/SharedExecutionCompatibilityTests.swift`; any exact observation test file introduced by the final Phase 5B baseline | Freeze package bytes/inventories, helper compatibility, checker JSON/exit codes, reducer states, no-follow/stability behavior, observation invalidation, and UI copy/accessibility. Preserve Phase 5B rendering coverage and extend repository-native fixtures; do not build a new harness. |
+| Delivery documents | `docs/design/shared-execution-integration-v1-design.md`; `docs/architecture/ADR-002-codex-plugin-lifecycle.md`; `docs/architecture/ADR-006-managed-repository-documentation-contract.md`; `docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md`; `docs/delivery/progress.md`; `docs/catalog.json`; affected `docs/**/README.md`; one bounded evidence record under `docs/delivery/evidence/` | Update only facts made current by the owner-authorized implementation. Design status changes require explicit owner approval; source completion alone must not silently promote proposed design. The parent/Phase 5 owner owns shared metadata/ledger integration. |
 
-Before source dispatch, the delivery owner must re-resolve this map against the
-chosen post-Phase-5B baseline. Newly introduced Phase 5 filenames may replace a
-test filename above, but must not expand the behavior or ownership boundary.
+Before initial dispatch, the parent must use the released and held sets above.
+Before resuming held work, the delivery owner must re-resolve this map against
+the chosen post-Phase-5B baseline. Newly introduced Phase 5 filenames may
+replace a test filename above, but must not expand the behavior or ownership
+boundary.
 
 ## Implementation sequence
 
-All behavior changes use test-first development. Each chunk ends with its
-focused tests before the next chunk begins; a failure in unrelated baseline
-tests is recorded and classified, not silently repaired.
+All behavior changes use test-first development after the parent reserves the
+test-host slot. Chunk numbering describes the complete dependency structure,
+not a requirement to wait before released Chunk 2 work: the writer may execute
+Chunk 2 and disjoint Chunk 1 steps first, while held steps remain untouched.
+Early source or failing-test preparation is not a pass claim. A failure in
+unrelated baseline tests is recorded and classified, not silently repaired.
 
 ### Chunk 1 — freeze the package contract and recognized capability
 
 1. Add failing package-contract tests that require the exact
    `$release-radar:shared-execution` skill, V1 marker/block, eight task fields
    (`Standard`, `Root`, `Outcome`, `Scope`, `Authority`, `Endpoint`, `Direct
-   checks`, `Review`), and the reviewed result-row vocabulary.
+   checks`, `Review`), and the reviewed result-row vocabulary. Use the released
+   new skill-contract and capability test files for early work; do not fold them
+   into a held lifecycle test.
 2. Add failing lifecycle/helper tests that preserve recognition of `0.1.7` with
-   no shared standard and reject unknown version/digest combinations.
+   no shared standard and reject unknown version/digest combinations. Changes
+   to `CodexPluginLifecycleAcceptanceTests.swift` wait for the Phase 5B handoff.
 3. Add the V1 skill and retained version update. Freeze its exact normalized
    inventory in both the app lifecycle and helper boundary.
 4. Compute the final package digest once bytes are frozen, add the exact
@@ -206,8 +263,9 @@ typed owner action.
 
 ### Chunk 2 — add the additive checker diagnosis
 
-1. Add failing Core tests for the exact result envelope and all bounded failure
-   cases before changing the helper.
+1. Add failing Core tests in the released new
+   `ReleaseRadarTests/RepositoryDocumentDiagnosticTests.swift` for the exact
+   result envelope and all bounded failure cases before changing the helper.
 2. Introduce typed `RepositoryDocumentDiagnostic` values with:
    - top-level `format = com.rekonlabs.release-radar.documentation-check-result`
      and `schemaVersion = 1`;
@@ -294,20 +352,22 @@ explicit evidence supplied to it.
 
 ### Chunk 5 — integrate documentation and prepare one immutable candidate
 
-1. Update only documentation made inaccurate by the delivered source. Preserve
-   `ADR-002` lifecycle authority, `ADR-006` repository-document boundaries, and
-   `ADR-007` proportional validation.
-2. Register every changed durable artifact in `docs/catalog.json` and the
-   affected indexes. Record concise direct evidence and update the single
-   progress ledger; do not add another ledger, process transcript, or validation
-   harness.
+1. After the parent releases the applicable paths, update only documentation
+   made inaccurate by the delivered source. Preserve `ADR-002` lifecycle
+   authority, `ADR-006` repository-document boundaries, and `ADR-007`
+   proportional validation.
+2. Report the exact changed durable-artifact set and direct evidence to the
+   parent/Phase 5 owner. That coordinator remains the sole writer for
+   `docs/catalog.json`, generated indexes, and `docs/delivery/progress.md`; it
+   integrates those updates without creating another ledger, process transcript,
+   or validation harness.
 3. Run the focused tests below, repository documentation validation, link/path
    checks, and `git diff --check` from the exact authorized worktree.
 4. Inspect the final diff against the frozen identities, exclusions, and chosen
    Phase 5 baseline. Attribute only this slice's changes.
-5. Commit one scoped local candidate if the later delivery authorization
-   includes a commit. Push/PR remain separate owner decisions; merge is never
-   implied.
+5. Commit bounded local checkpoints and one complete scoped local candidate.
+   Push/PR require separately resolved authorization; merge always requires
+   explicit owner approval.
 
 ## Test and validation strategy
 
@@ -326,8 +386,9 @@ explicit evidence supplied to it.
   stability behavior.
 - Observation generation/identity tests and synthetic SwiftUI tests for
   compact/wide, keyboard, accessibility, focus, refresh, and error recovery.
-- The repository's focused affected Xcode test suites, with isolated DerivedData
-  and synthetic per-process state following the established test-host pattern.
+- The repository's focused affected Xcode test suites, only after the parent
+  reserves the shared test-host slot, with isolated DerivedData and synthetic
+  per-process state following the established test-host pattern.
 - Exact-root repository documentation check, affected-link/path validation, and
   `git diff --check`.
 
@@ -428,23 +489,29 @@ are true:
 
 ## Assignment and delivery endpoint
 
-### Later source writer
+### Authorized source writer
 
 - **Profile:** `gpt-5.6-sol` / `high` because the slice crosses plugin package
   integrity, CLI compatibility, root-bound untrusted file reading, asynchronous
   app observation, and user-facing recovery. Astra `high` is the escalation
   ceiling only for a named unresolved shared-contract or authority conflict.
   `xhigh`, `max`, and `ultra` are not authorized.
-- **Baseline:** an exact parent-supplied descendant containing the reviewed
-  design, this plan, registered documentation metadata, and the applicable
-  reviewed Phase 5B result. Never infer a default branch or use a dirty checkout.
-- **Ownership:** sole writer for the product/test paths listed above; shared
-  documentation metadata and ledger remain parent-owned unless explicitly
-  transferred at dispatch.
-- **Endpoint:** direct checks, necessary documentation, one scoped local commit,
-  and stopped processes. Push/PR, installation, catalog acceptance, app-state
-  mutation, consumer adoption, runtime pilot, and merge each require separate
-  owner authorization.
+- **Initial baseline:** the exact parent-supplied committed descendant of
+  `3a49fb278dfbbbc80d9322e1f3ea757f4eceafda` containing this sequencing
+  amendment. The initial release is limited to the explicit disjoint paths
+  above.
+- **Continuation baseline:** before held work or final package digest/inventory,
+  the same task integrates the parent's exact reviewed Phase 5B descendant and
+  receives an explicit ownership handoff. Never infer a default branch or use a
+  dirty checkout.
+- **Ownership:** sole source writer for the complete V1 outcome, but only for
+  paths the parent has released at that stage. The parent/Phase 5 owner remains
+  sole writer for shared catalog/index/progress metadata.
+- **Endpoint:** direct checks, necessary released documentation, bounded local
+  checkpoint commits, one complete scoped local candidate, and stopped
+  processes. Push/PR require separately resolved authorization; installation,
+  catalog acceptance, app-state mutation, consumer adoption, runtime pilot, and
+  merge each require separate owner authorization.
 
 ### Independent reviewer
 
