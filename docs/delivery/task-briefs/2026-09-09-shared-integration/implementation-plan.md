@@ -209,13 +209,15 @@ typed owner action.
 1. Add failing Core tests for the exact result envelope and all bounded failure
    cases before changing the helper.
 2. Introduce typed `RepositoryDocumentDiagnostic` values with:
-   - `format = com.rekonlabs.release-radar.documentation-check-result`;
-   - `schemaVersion = 1`, `contractVersion = 1`;
-   - nullable `toolVersion` and `build` when not available;
-   - `supportedCatalogVersions = [1]`;
-   - nullable target repository ID, catalog version, and digest;
-   - `status` of `passed` or `failed`; and
-   - a bounded nullable structured error.
+   - top-level `format = com.rekonlabs.release-radar.documentation-check-result`
+     and `schemaVersion = 1`;
+   - `checker.contractVersion = 1`;
+   - nullable `checker.toolVersion` and `checker.toolBuild` when not available;
+   - `checker.supportedCatalogVersions = [1]`;
+   - nullable `target.repositoryID`, `target.catalogVersion`, and
+     `target.catalogDigest`;
+   - top-level `status` of `passed` or `failed`; and
+   - a bounded nullable structured top-level `error`.
 3. Refactor `RepositoryDocumentIndexTool` only enough for `check` and
    `diagnose` to share the same `RepositoryDocumentReader`, validated snapshot,
    and stability check. Do not reread the tree merely to populate identity.
