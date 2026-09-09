@@ -7,7 +7,31 @@ struct DocumentationRootContext: Sendable {
     let root: URL
     let bookmark: Data
     let binding: ProjectDocumentationBinding?
+    let registration: ProjectRegistration?
+    let incarnationID: String?
     let schemaVersion: Int
+
+    init(
+        projectID: String,
+        projectName: String,
+        rootID: String,
+        root: URL,
+        bookmark: Data,
+        binding: ProjectDocumentationBinding?,
+        registration: ProjectRegistration? = nil,
+        incarnationID: String? = nil,
+        schemaVersion: Int
+    ) {
+        self.projectID = projectID
+        self.projectName = projectName
+        self.rootID = rootID
+        self.root = root
+        self.bookmark = bookmark
+        self.binding = binding
+        self.registration = registration
+        self.incarnationID = incarnationID
+        self.schemaVersion = schemaVersion
+    }
 
     static func read(_ c: SQLiteConnection, path: String, projectID: String? = nil, rootID: String? = nil, schemaVersion: Int = 13) throws -> Self {
         guard path.hasPrefix("/"), !path.utf8.contains(0), path.utf8.count <= 4096,
@@ -28,7 +52,32 @@ struct DocumentationRootContext: Sendable {
         let version = schemaVersion
         return try .init(projectID: actualProject, projectName: name, rootID: actualRoot,
                          root: URL(fileURLWithPath: path), bookmark: bookmark,
-                         binding: binding(c, projectID: actualProject, version: version), schemaVersion: version)
+                         binding: binding(c, projectID: actualProject, version: version),
+                         registration: registration(c, projectID: actualProject, version: version),
+                         incarnationID: incarnationID(c, version: version), schemaVersion: version)
+    }
+    private static func registration(_ c: SQLiteConnection, projectID: String, version: Int) throws -> ProjectRegistration? {
+        guard version >= 15,
+              let row = try c.row(
+                "SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?",
+                bindings: [.text(projectID)]
+              ) else { return nil }
+        guard case let .text(registrationID)? = row["registration_id"],
+              case let .integer(requestGeneration)? = row["request_generation"] else {
+            throw DocumentationOperationError.staleRegistration
+        }
+        return .init(
+            projectID: .init(rawValue: projectID),
+            registrationID: registrationID,
+            requestGeneration: requestGeneration
+        )
+    }
+    private static func incarnationID(_ c: SQLiteConnection, version: Int) throws -> String? {
+        guard version >= 18 else { return nil }
+        guard let value = try c.scalarText(
+            "SELECT incarnation_id FROM application_recovery_state WHERE singleton_id = 1"
+        ) else { throw DocumentationOperationError.staleRegistration }
+        return value
     }
     static func binding(_ c: SQLiteConnection, projectID: String, version: Int = 13) throws -> ProjectDocumentationBinding? {
         guard version >= 13, let row = try c.row("SELECT * FROM project_documentation_bindings WHERE project_id = ?", bindings: [.text(projectID)]) else { return nil }
@@ -45,7 +94,13 @@ struct DocumentationRootContext: Sendable {
         guard resolved.url.isFileURL, resolved.url.path == root.path else { throw DocumentationOperationError.rootMismatch }
     }
     func verifyPersisted(_ c: SQLiteConnection) throws {
-        let current = try Self.read(c, path: root.path, projectID: projectID, rootID: rootID)
+        let current = try Self.read(
+            c, path: root.path, projectID: projectID, rootID: rootID, schemaVersion: schemaVersion
+        )
+        guard current.registration == registration,
+              current.incarnationID == incarnationID else {
+            throw DocumentationOperationError.staleRegistration
+        }
         guard current.bookmark == bookmark, current.binding == binding else { throw DocumentationOperationError.bindingMismatch }
     }
     func requireAccepted(_ snapshot: RepositoryDocumentSnapshot) throws {

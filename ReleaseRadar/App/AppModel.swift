@@ -305,14 +305,15 @@ final class AppModel {
             guard generation == navigationGeneration else { return }
             documentationObserver.invalidate(projectID: projectID)
         }
-        selection = resolvedRoute
         if let destinationProjectID = resolvedRoute.projectID,
            destinationProjectID != previousProjectID {
             selectedTicketID = TicketID(rawValue: "")
         }
         if let projectID = resolvedRoute.projectID {
             _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
+            guard generation == navigationGeneration else { return }
         }
+        selection = resolvedRoute
         guard generation == navigationGeneration else { return }
         navigationFocus = .route(resolvedRoute)
         navigationHistory.navigate(to: historyEntry(for: resolvedRoute, focus: navigationFocus))
@@ -476,6 +477,13 @@ final class AppModel {
                     .detail(for: ticketID) != nil
             }
             if case .projectPlan = route {
+                return dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
+            }
+            if case let .referenceSource(_, routeTicketID, _, _) = route {
+                return routeTicketID == ticketID
+                    && dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
+            }
+            if case .recordedImpacts = route {
                 return dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
             }
             return dashboard?.boards.contains(where: {
@@ -876,6 +884,175 @@ final class AppModel {
             return .init(identity: preview.identity, path: nil, status: .rejected, content: nil)
         }
         return preview
+    }
+
+    func loadTicketReferences(
+        projectID: ProjectID,
+        ticketID: TicketID
+    ) async -> ReferenceLoadResult<TicketReferenceSet> {
+        await loadReferenceQuery(
+            projectID: projectID,
+            query: { rootID in
+                .ticketReferences(
+                    projectID: projectID.rawValue,
+                    rootID: rootID,
+                    ticketID: ticketID.rawValue
+                )
+            },
+            value: \.ticketReferences
+        )
+    }
+
+    func referenceQueryIdentity(projectID: ProjectID) -> String {
+        let status = documentationObserver.status(for: projectID)
+        let generation: UInt64
+        let identity: DocumentationObservationIdentity?
+        let readiness: String
+        switch status {
+        case let .checking(value, valueGeneration):
+            identity = value
+            generation = valueGeneration
+            readiness = "checking"
+        case let .observed(observation):
+            identity = observation.identity
+            generation = observation.generation
+            readiness = "observed"
+        case nil:
+            identity = nil
+            generation = 0
+            readiness = "unavailable"
+        }
+        let registration = identity?.registration
+        let binding = identity?.binding
+        return [
+            projectID.rawValue,
+            String(documentationServiceGeneration),
+            readiness,
+            String(generation),
+            registration?.registrationID ?? "no-registration",
+            registration.map { String($0.requestGeneration) } ?? "no-request-generation",
+            identity?.rootID?.rawValue ?? "no-root",
+            identity?.rootPath ?? projectRoots[projectID]?.path ?? "no-root-path",
+            binding?.repositoryID ?? "no-repository",
+            binding.map { String($0.acceptedCatalogVersion) } ?? "no-catalog-version",
+            binding?.acceptedCatalogDigest ?? "no-catalog-digest",
+        ].joined(separator: ":")
+    }
+
+    func loadRecordedImpacts(
+        projectID: ProjectID,
+        repositoryID: String,
+        artifactID: String
+    ) async -> ReferenceLoadResult<RecordedImpacts> {
+        await loadReferenceQuery(
+            projectID: projectID,
+            query: { rootID in
+                .recordedImpacts(
+                    projectID: projectID.rawValue,
+                    rootID: rootID,
+                    repositoryID: repositoryID,
+                    artifactID: artifactID
+                )
+            },
+            value: \.recordedImpacts
+        )
+    }
+
+    private func loadReferenceQuery<Value: Sendable>(
+        projectID: ProjectID,
+        query: (String) -> AgentQuery,
+        value: KeyPath<AgentCommandResult, Value?>
+    ) async -> ReferenceLoadResult<Value> {
+        let serviceGeneration = documentationServiceGeneration
+        let currentStore = store
+        let currentObserver = documentationObserver
+        guard let root = projectRoots[projectID],
+              case let .observed(observation) = currentObserver.status(for: projectID),
+              let rootID = observation.identity.rootID?.rawValue else {
+            return .failed(.init(
+                title: "References unavailable",
+                detail: "Restore this project's exact documentation root and reload before browsing recorded references.",
+                systemImage: "questionmark.folder",
+                tone: .warning,
+                accessibilityID: "reference-query-unavailable"
+            ))
+        }
+        let result = await AgentQueryDispatcher(store: currentStore).dispatch(.init(
+            version: 1,
+            projectRoot: root.path,
+            query: query(rootID)
+        ))
+        guard !Task.isCancelled,
+              serviceGeneration == documentationServiceGeneration,
+              currentStore === store,
+              currentObserver === documentationObserver,
+              currentObserver.status(for: projectID) == .observed(observation),
+              projectRoots[projectID]?.path == root.path else {
+            return .failed(.init(
+                title: "Reference context changed",
+                detail: "The project registration, root, or selection changed while this source was loading. Reload the current ticket; no alternate source was selected.",
+                systemImage: "arrow.clockwise",
+                tone: .warning,
+                accessibilityID: "reference-query-withdrawn"
+            ))
+        }
+        if let loaded = result[keyPath: value] { return .loaded(loaded) }
+        if let error = result.error, let presentation = FailureStatePresentation(agentError: error) {
+            return .failed(presentation)
+        }
+        return .failed(.init(
+            title: "References unavailable",
+            detail: "The exact recorded reference could not be read. No replacement source or ticket was selected.",
+            systemImage: "exclamationmark.triangle",
+            tone: .warning,
+            accessibilityID: "reference-query-failed"
+        ))
+    }
+
+    func openReferenceSource(
+        projectID: ProjectID,
+        ticketID: TicketID,
+        linkID: String,
+        version: Int64
+    ) async {
+        await navigate(to: .referenceSource(
+            projectID: projectID,
+            ticketID: ticketID,
+            linkID: linkID,
+            version: version
+        ))
+        setNavigationFocus(.referenceSource(linkID: linkID, version: version))
+    }
+
+    func openRecordedImpacts(
+        projectID: ProjectID,
+        repositoryID: String,
+        artifactID: String
+    ) async {
+        await navigate(to: .recordedImpacts(
+            projectID: projectID,
+            repositoryID: repositoryID,
+            artifactID: artifactID
+        ))
+        setNavigationFocus(.recordedImpacts)
+    }
+
+    func openRecordedImpactTicket(projectID: ProjectID, impact: RecordedImpact) async {
+        setNavigationFocus(.recordedImpact(rowID: impact.id))
+        let ticketID = TicketID(rawValue: impact.ticketID)
+        if dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil {
+            await navigate(to: .projectPlan(projectID))
+            selectTicket(ticketID)
+        } else if let board = dashboard?.boards.values.first(where: {
+            $0.project.id == projectID && $0.detail(for: ticketID) != nil
+        }) {
+            await navigate(to: .phaseBoard(projectID))
+            viewPhase(projectID: projectID, phaseID: board.phaseID)
+            selectTicket(ticketID)
+        } else {
+            navigationRecoveryMessage = "The recorded ticket is unavailable; no other ticket was selected."
+            navigationFocus = .recovery
+        }
     }
 
     func projectRoot(for projectID: ProjectID) -> URL? {

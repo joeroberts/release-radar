@@ -6,32 +6,46 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is verified in [PR #38](https://github.com/joeroberts/release-radar/pull/38), awaiting owner merge approval.** The owner selected
+**Phase 5A is merged; Phase 5B source and independent review are complete; PR #39 awaits owner merge approval.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
 [selection record](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#phase-5-owner-selections-and-implementation-authorization--2026-09-09)
 distinguishes these from unselected proposals.
 
-First slice: [Phase 5A recorded planning and placement](task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md),
-including the complete Overview/Plan/shared-board journey and recovery preservation.
-Delivery writer `01a086c4-8938-7a01-aa24-825586eca413` delivered from committed
-handoff `d58f3d8` on `codex/phase5a-recorded-planning`. Started Terra Medium;
-escalated the same assignment to Sol High after two premature partial turn endings
-left migration/projection/native integration unfinished without a blocker. The
-source candidate `53d05943ed99b5689fd3e519b7041ef625c6ad38` is committed and pushed,
-integrated into the orchestrator branch with its catalogued evidence. Fresh Sol High reviewer
-`01a08719-d238-7e61-add1-9a4e263ef959` returned four Required findings on `2543cd6`:
-phase/lane pairing is not enforced in storage; the native test fails independently;
-Project Plan lacks actual ticket-focus restoration; and all-phase filter-summary
-focus is not applied. The same Sol High writer delivered correction `cb64def`,
-integrated into this branch: storage pairing and defensive policy checks, read-only
-test-host interaction markers, real Plan ticket/filter-summary focus and no fallback
-inspector after filtering. The same reviewer passed combined candidate `9a2c573`
-with no remaining Required findings, including a fresh live native focus/filter
-journey. Both bounded peers report no pending writes or test/host processes and
-are archived; their source and useful review results are preserved here and in
-the evidence document.
+The owner explicitly approved merging [PR #38](https://github.com/joeroberts/release-radar/pull/38).
+It merged at `a8877aac3bcbfb4e32abba48073704a253035583` on 2026-09-09 after
+passing direct checks and independent review. The [Phase 5A brief](task-briefs/2026-09-09-phase5a-recorded-planning/phase5a-recorded-planning-brief.md)
+and [evidence](evidence/2026-09-09-phase5a-recorded-planning.md) preserve its scope,
+corrections and results. Its delivery/review peers are complete and archived.
+
+Phase 5B delivers revision-specific requirement/decision links and recorded reverse
+impacts. Fresh read-only chief-architecture task `01a08799-b7e0-7ab2-ae44-74849d8cd892`
+(Astra High, ceiling Astra High) completed the reference/resolution/recovery
+assessment from merged `a8877aa`, with no unresolved owner choice. Its findings
+are preserved in the [Phase 5B brief](task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+and affected ADR/design amendments. No files or processes were created; the peer
+is archived. The orchestrator owns brief/catalog integration. Fresh Sol High delivery
+writer `01a087a0-96ae-7dc3-9c7d-ff86450a0aed` starts from committed handoff
+`6c03d5bba17f2e52c3fcfc9c3c3c72f88844d7e2`. This profile addresses safe content
+resolution, authority, retained history/recovery and native navigation across
+components, with Astra High ceiling. One independent Astra High reviewer covers
+those material risks and native UX/QA after direct verification. The writer committed
+and pushed `a0295a8db079f09e872497f530461e39a36bf26e`; its source and
+[evidence](evidence/2026-09-09-phase5b-reference-impacts.md) are integrated here.
+The writer completed corrections at `08a870a566d0d8c1c27fb0d9a01a96dd639346e7`.
+Independent Astra High reviewer `01a0881b-58cd-7e41-8f3b-3e240fa3bba2` passed
+integrated candidate `e8ab4a5842d0caa8526ac83f917e7fc472c10337`, closing all six
+Required findings: caller digest precondition, exact mounted context/readiness,
+query authority revalidation, historical-version facts, exact impact-row Back
+focus and reverse source digests. Direct readback confirms 22 correction tests
+and 2 readiness tests passed. External accessibility inspection verified Back to
+the non-first historical row and Forward to its ticket. The broad run remains
+non-green: 700 passed, 13 failed, 3 skipped; baseline attribution and isolated
+relocation passes remain documented in the evidence. Both bounded writer/reviewer
+tasks are complete and archived, with results preserved and no running hosts.
+[PR #39](https://github.com/joeroberts/release-radar/pull/39) is open against
+`codex/release-radar-mvp`; its merge awaits separate owner approval.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -40,10 +54,29 @@ protections hold. The owner also confirmed Unassessed / Upcoming / In delivery /
 Completed, existing phases Unassessed, multiple In delivery, explicit completion
 after obligations resolve and explicit reopening or new phase for further work.
 No product-choice approval from this batch remains outstanding.
-Shared execution integration is separately owner-authorized for design only in
-parent-owned task `01a0871b-fc68-7741-8d11-da6b66a17826` (Sol High). Its sole new
-file is `docs/design/shared-execution-integration-v1-design.md`; no shared metadata
-writes are delegated. It remains non-gating and authorizes no implementation.
+Shared execution design and implementation planning completed separate review at
+local candidate `3a49fb278dfbbbc80d9322e1f3ea757f4eceafda`, branch
+`codex/shared-integration-implementation-plan` in preserved worktree `6684`.
+The parent-owned design/plan remain separate from this branch; the completed plan
+reviewer is archived. The owner subsequently authorized parallel implementation
+of disjoint shared package/capability and documentation-diagnose work, superseding
+only the plan's all-source-after-B sequence. The parent owns that fresh assignment.
+No shared remote, merge, installation or app-state authority is inferred.
+
+Parent-owned shared writer `01a087e0-4e89-72b3-8f34-2e998315047b`
+(Sol High) works separately from sequencing amendment `22b82305` on branch
+`codex/shared-execution-integration-v1-ae3f`. Diagnose checkpoint `64025a6`
+passed 31 focused tests; package/capability checkpoint `6a90c74` is clean and
+passed its skill/capability and 20 lifecycle tests. The one managed-guidance
+docs-only fixture broken-link baseline limitation is retained, without repair. Phase 5B retains
+AppModel, ProjectDocumentationRenderingTests, DocumentationCallbackTests, the
+agent-tool main and B UI/contract/metadata paths. After confirming no B changes,
+the existing packaged release-radar skill and CodexPluginLifecycleAcceptanceTests
+were released to the shared writer along with its disjoint diagnostic/package
+paths. Reviewed B descendant `e8ab4a5` was handed to the parent/shared writer with B
+source overlap ownership released for the parent-owned shared assignment. Final
+combined package verification and shared source review remain outstanding. Build/test/native hosts
+remain serialized by reservation. No shared integration becomes a B dependency.
 
 ## Current authorization and ownership
 
@@ -108,8 +141,11 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is owner approval to merge PR #38. Approved
-proposal/successor slices follow without gating independent first-slice work.
+Next eligible action is the separate owner merge decision for Phase 5B PR #39.
+Phase 5C source dispatch must also respect shared ownership of AppModel and
+observation/UI paths until a coordinated handback; no overlapping writer is released.
+Approved proposal, successor/carry-forward and lifecycle slices follow in the
+recorded sequence. Later merges still require separate owner approval.
 
 Phase 5A raw results are preserved outside Xcode's rolling logs in
 `/tmp/release-radar-phase5a-review.Tbu6kw/`; the older cited transport bundle was

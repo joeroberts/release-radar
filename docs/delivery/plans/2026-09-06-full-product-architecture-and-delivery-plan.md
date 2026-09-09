@@ -276,8 +276,16 @@ obligation disappeared. Implementing full lifecycle earlier would require that
 same coverage enforcement, rather than a temporary current-count guard. Nonterminal
 lifecycle alone would be a partial journey and is not the preferred next slice.
 These checkpoints preserve the complete approved Phase 5 outcome; Phase 5 is not
-complete until all selected behavior ships. Phase 5A independent review and owner
-merge approval remain separate gates.
+complete until all selected behavior ships. Phase 5A passed direct checks and
+independent review, then merged with explicit owner approval in PR #38 at
+`a8877aa`. Later slices retain separate merge approval.
+
+Phase 5B's [controlling brief](../task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+incorporates the fresh read-only chief-architecture assessment on merged `a8877aa`:
+separate retained ticket-link versions, complete safe-byte content digests distinct
+from catalog acceptance, current versus historical resolution, typed link mutations
+and read-only native recorded-impact navigation. No unresolved owner choice was
+identified; proposals, successor obligations and lifecycle remain later slices.
 
 Each actual new record participates in additive migration, archive/restore,
 retained removal history, full backup and stale-request invalidation. No inferred

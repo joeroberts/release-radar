@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 19
+    static let currentVersion: Int64 = 20
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -93,6 +93,9 @@ enum StoreMigrations {
             }
             if version > 0, version < 19 {
                 try connection.executeScript(schemaVersion19)
+            }
+            if version < 20 {
+                try connection.executeScript(schemaVersion20)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -578,6 +581,32 @@ enum StoreMigrations {
             "singleton_id", "incarnation_id", "requires_scoped_commands",
             "last_operation_kind", "last_operation_id", "completed_at",
         ]),
+        (20, "ticket_reference_link_sets", [
+            "project_id", "ticket_id", "revision", "created_at", "updated_at",
+        ]),
+        (20, "ticket_reference_links", [
+            "project_id", "ticket_id", "id", "kind", "repository_id", "artifact_id",
+            "current_version", "relationship", "retired_version", "retired_at",
+            "retirement_reason", "created_at", "updated_at",
+        ]),
+        (20, "ticket_reference_versions", [
+            "project_id", "ticket_id", "link_id", "version", "content_digest",
+            "source_local_id", "locator", "catalog_version", "catalog_digest",
+            "observed_path", "observed_lifecycle", "observed_authority",
+            "created_at",
+        ]),
+        (20, "retained_ticket_reference_links", [
+            "removal_id", "historical_project_id", "ticket_id", "link_id", "kind",
+            "repository_id", "artifact_id", "current_version", "relationship",
+            "retired_version", "retired_at", "retirement_reason", "link_set_revision",
+            "created_at", "updated_at",
+        ]),
+        (20, "retained_ticket_reference_versions", [
+            "removal_id", "historical_project_id", "ticket_id", "link_id", "version",
+            "content_digest", "source_local_id", "locator", "catalog_version",
+            "catalog_digest", "observed_path", "observed_lifecycle",
+            "observed_authority", "created_at",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -642,6 +671,14 @@ enum StoreMigrations {
         (17, "index", "removed_projects_historical_registration_unique"),
         (17, "index", "removed_projects_historical_project_index"),
         (17, "index", "audit_events_historical_project_index"),
+        (20, "index", "ticket_reference_links_source_index"),
+        (20, "index", "ticket_reference_versions_source_index"),
+        (20, "index", "retained_ticket_reference_links_source_index"),
+        (20, "trigger", "ticket_reference_versions_reject_update"),
+        (20, "trigger", "ticket_reference_versions_reject_delete"),
+        (20, "trigger", "ticket_reference_links_reject_identity_update"),
+        (20, "trigger", "ticket_reference_links_reject_delete"),
+        (20, "trigger", "ticket_reference_link_sets_reject_delete"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -893,6 +930,72 @@ enum StoreMigrations {
     END
     """
 
+    private static let ticketReferenceVersionsRejectUpdateTrigger = """
+    CREATE TRIGGER ticket_reference_versions_reject_update
+    BEFORE UPDATE ON ticket_reference_versions
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket reference versions are immutable');
+    END
+    """
+
+    private static let ticketReferenceVersionsRejectDeleteTrigger = """
+    CREATE TRIGGER ticket_reference_versions_reject_delete
+    BEFORE DELETE ON ticket_reference_versions
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket reference versions cannot be deleted');
+    END
+    """
+
+    private static let ticketReferenceLinksRejectIdentityUpdateTrigger = """
+    CREATE TRIGGER ticket_reference_links_reject_identity_update
+    BEFORE UPDATE OF project_id, ticket_id, id, kind, repository_id, artifact_id, created_at
+        ON ticket_reference_links
+    WHEN OLD.project_id <> NEW.project_id
+      OR OLD.ticket_id <> NEW.ticket_id
+      OR OLD.id <> NEW.id
+      OR OLD.kind <> NEW.kind
+      OR OLD.repository_id <> NEW.repository_id
+      OR OLD.artifact_id <> NEW.artifact_id
+      OR OLD.created_at <> NEW.created_at
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket reference identity is immutable');
+    END
+    """
+
+    private static let ticketReferenceLinksRejectDeleteTrigger = """
+    CREATE TRIGGER ticket_reference_links_reject_delete
+    BEFORE DELETE ON ticket_reference_links
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket reference links cannot be deleted');
+    END
+    """
+
+    private static let ticketReferenceLinkSetsRejectDeleteTrigger = """
+    CREATE TRIGGER ticket_reference_link_sets_reject_delete
+    BEFORE DELETE ON ticket_reference_link_sets
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'ticket reference link sets cannot be deleted');
+    END
+    """
+
     private static let criticalTriggers: [(version: Int64, name: String, sql: String)] = [
         (1, "reject_phase_dependency_cycle_insert", phaseDependencyCycleInsertTrigger),
         (1, "reject_phase_dependency_cycle_update", phaseDependencyCycleUpdateTrigger),
@@ -908,6 +1011,11 @@ enum StoreMigrations {
         (12, "ticket_tasks_reject_delete", ticketTasksRejectDeleteTrigger),
         (12, "ticket_task_plans_reject_ticket_delete", ticketTaskPlansRejectTicketDeleteTrigger),
         (12, "ticket_task_plans_reject_project_delete", ticketTaskPlansRejectProjectDeleteTrigger),
+        (20, "ticket_reference_versions_reject_update", ticketReferenceVersionsRejectUpdateTrigger),
+        (20, "ticket_reference_versions_reject_delete", ticketReferenceVersionsRejectDeleteTrigger),
+        (20, "ticket_reference_links_reject_identity_update", ticketReferenceLinksRejectIdentityUpdateTrigger),
+        (20, "ticket_reference_links_reject_delete", ticketReferenceLinksRejectDeleteTrigger),
+        (20, "ticket_reference_link_sets_reject_delete", ticketReferenceLinkSetsRejectDeleteTrigger),
     ]
 
     private static let criticalIndexes: [(
@@ -959,6 +1067,12 @@ enum StoreMigrations {
          [("historical_project_id", false), ("removed_at", true)]),
         (17, "audit_events_historical_project_index", "audit_events", false,
          [("historical_project_id", false), ("historical_registration_id", false), ("created_at", true)]),
+        (20, "ticket_reference_links_source_index", "ticket_reference_links", false,
+         [("project_id", false), ("repository_id", false), ("artifact_id", false)]),
+        (20, "ticket_reference_versions_source_index", "ticket_reference_versions", false,
+         [("project_id", false), ("link_id", false), ("version", true)]),
+        (20, "retained_ticket_reference_links_source_index", "retained_ticket_reference_links", false,
+         [("historical_project_id", false), ("repository_id", false), ("artifact_id", false)]),
     ]
 
     private static let requiredForeignKeys: [(
@@ -1016,6 +1130,11 @@ enum StoreMigrations {
         (12, "ticket_tasks", "project_id,ticket_id", "ticket_task_plans", "project_id,ticket_id", "NO ACTION"),
         (17, "retained_project_activity_events", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
         (17, "retained_delivery_goal_assignment_events", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (20, "ticket_reference_link_sets", "project_id,ticket_id", "tickets", "project_id,id", "NO ACTION"),
+        (20, "ticket_reference_links", "project_id,ticket_id", "ticket_reference_link_sets", "project_id,ticket_id", "NO ACTION"),
+        (20, "ticket_reference_versions", "project_id,ticket_id,link_id", "ticket_reference_links", "project_id,ticket_id,id", "NO ACTION"),
+        (20, "retained_ticket_reference_links", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (20, "retained_ticket_reference_versions", "removal_id,historical_project_id,ticket_id,link_id", "retained_ticket_reference_links", "removal_id,historical_project_id,ticket_id,link_id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -1834,5 +1953,110 @@ enum StoreMigrations {
     \(rejectLegacyContinuationRegrantTrigger);
     \(ticketTaskPlansRejectTicketDeleteVersionSeventeenTrigger);
     PRAGMA legacy_alter_table = OFF;
+    """
+
+    // Reference history starts empty. Existing documentation and ticket text are
+    // deliberately not interpreted as links during migration.
+    private static let schemaVersion20 = """
+    CREATE TABLE ticket_reference_link_sets (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id),
+        FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE ticket_reference_links (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        id TEXT NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 256),
+        kind TEXT NOT NULL CHECK (kind IN ('requirement', 'decision')),
+        repository_id TEXT NOT NULL CHECK (length(repository_id) = 36 AND repository_id = lower(repository_id)),
+        artifact_id TEXT NOT NULL CHECK (length(CAST(artifact_id AS BLOB)) BETWEEN 1 AND 128),
+        current_version INTEGER NOT NULL CHECK (current_version > 0),
+        relationship TEXT NOT NULL CHECK (relationship IN ('current', 'retired')),
+        retired_version INTEGER,
+        retired_at TEXT,
+        retirement_reason TEXT CHECK (retirement_reason IS NULL OR length(CAST(retirement_reason AS BLOB)) BETWEEN 1 AND 4096),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id, id),
+        FOREIGN KEY(project_id, ticket_id) REFERENCES ticket_reference_link_sets(project_id, ticket_id) ON DELETE NO ACTION,
+        CHECK ((relationship = 'current' AND retired_version IS NULL AND retired_at IS NULL AND retirement_reason IS NULL)
+            OR (relationship = 'retired' AND retired_version = current_version AND retired_at IS NOT NULL))
+    );
+    CREATE INDEX ticket_reference_links_source_index
+        ON ticket_reference_links(project_id, repository_id, artifact_id);
+
+    CREATE TABLE ticket_reference_versions (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        link_id TEXT NOT NULL,
+        version INTEGER NOT NULL CHECK (version > 0),
+        content_digest TEXT NOT NULL CHECK (length(content_digest) = 64 AND content_digest NOT GLOB '*[^0-9a-f]*'),
+        source_local_id TEXT CHECK (source_local_id IS NULL OR length(CAST(source_local_id AS BLOB)) BETWEEN 1 AND 256),
+        locator TEXT CHECK (locator IS NULL OR length(CAST(locator AS BLOB)) BETWEEN 1 AND 4096),
+        catalog_version INTEGER NOT NULL CHECK (catalog_version > 0),
+        catalog_digest TEXT NOT NULL CHECK (length(catalog_digest) = 64 AND catalog_digest NOT GLOB '*[^0-9a-f]*'),
+        observed_path TEXT NOT NULL CHECK (length(CAST(observed_path AS BLOB)) BETWEEN 1 AND 4096),
+        observed_lifecycle TEXT NOT NULL CHECK (observed_lifecycle IN ('proposed', 'active', 'completed', 'superseded', 'archived')),
+        observed_authority TEXT NOT NULL CHECK (observed_authority IN ('controlling', 'supporting', 'nonAuthoritative')),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id, link_id, version),
+        FOREIGN KEY(project_id, ticket_id, link_id)
+            REFERENCES ticket_reference_links(project_id, ticket_id, id) ON DELETE NO ACTION
+    );
+    CREATE INDEX ticket_reference_versions_source_index
+        ON ticket_reference_versions(project_id, link_id, version DESC);
+
+    CREATE TABLE retained_ticket_reference_links (
+        removal_id TEXT NOT NULL REFERENCES removed_projects(removal_id) ON DELETE NO ACTION,
+        historical_project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        link_id TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('requirement', 'decision')),
+        repository_id TEXT NOT NULL,
+        artifact_id TEXT NOT NULL,
+        current_version INTEGER NOT NULL,
+        relationship TEXT NOT NULL CHECK (relationship IN ('current', 'retired')),
+        retired_version INTEGER,
+        retired_at TEXT,
+        retirement_reason TEXT,
+        link_set_revision INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, ticket_id, link_id)
+    );
+    CREATE INDEX retained_ticket_reference_links_source_index
+        ON retained_ticket_reference_links(historical_project_id, repository_id, artifact_id);
+
+    CREATE TABLE retained_ticket_reference_versions (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        link_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        content_digest TEXT NOT NULL,
+        source_local_id TEXT,
+        locator TEXT,
+        catalog_version INTEGER NOT NULL,
+        catalog_digest TEXT NOT NULL,
+        observed_path TEXT NOT NULL,
+        observed_lifecycle TEXT NOT NULL,
+        observed_authority TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, ticket_id, link_id, version),
+        FOREIGN KEY(removal_id, historical_project_id, ticket_id, link_id)
+            REFERENCES retained_ticket_reference_links(removal_id, historical_project_id, ticket_id, link_id)
+            ON DELETE NO ACTION
+    );
+
+    \(ticketReferenceVersionsRejectUpdateTrigger);
+    \(ticketReferenceVersionsRejectDeleteTrigger);
+    \(ticketReferenceLinksRejectIdentityUpdateTrigger);
+    \(ticketReferenceLinksRejectDeleteTrigger);
+    \(ticketReferenceLinkSetsRejectDeleteTrigger);
     """
 }

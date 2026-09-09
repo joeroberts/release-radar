@@ -1455,6 +1455,7 @@ extension FolderProjectOnboarding {
                     root: activeRoot,
                     bookmark: bookmark,
                     binding: source.binding,
+                    registration: source.registration,
                     schemaVersion: store.schemaVersionForDocumentation
                 )
                 let documentationState = ProjectGuidanceInspection.inspectDocumentation(

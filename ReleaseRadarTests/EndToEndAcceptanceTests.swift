@@ -1135,6 +1135,7 @@ final class EndToEndAcceptanceTests: XCTestCase {
         _ connection: SQLiteConnection,
         restoreTaskDeleteProtection: Bool
     ) throws {
+        try removeVersionTwentyReferenceSchema(connection)
         try connection.executeScript("""
         DROP TRIGGER IF EXISTS ticket_task_plans_reject_project_delete;
         DROP TRIGGER IF EXISTS ticket_task_plans_reject_ticket_delete;

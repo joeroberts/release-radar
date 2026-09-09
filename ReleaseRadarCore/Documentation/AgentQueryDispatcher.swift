@@ -12,10 +12,59 @@ public struct AgentQueryDispatcher: Sendable {
         guard envelope.version == 1 else { return .init(entityIDs: [], auditEventID: nil, error: .unsupportedVersion(found: envelope.version, supported: 1)) }
         do {
             if let deadline = admissionDeadline, deadline <= Date().timeIntervalSince1970 { return .init(entityIDs: [], auditEventID: nil, error: .appUnavailable) }
-            let projectID: String?; let rootID: String?
-            switch envelope.query { case let .inventoryEvidence(project, root): projectID = project; rootID = root }
-            for identity in [projectID, rootID].compactMap({ $0 }) {
+            let projectID: String?; let rootID: String?; let extraIdentities: [String]
+            switch envelope.query {
+            case let .inventoryEvidence(project, root):
+                projectID = project; rootID = root; extraIdentities = []
+            case let .ticketReferences(project, root, ticket):
+                projectID = project; rootID = root; extraIdentities = [ticket]
+            case let .recordedImpacts(project, root, repository, artifact):
+                projectID = project; rootID = root; extraIdentities = [repository, artifact]
+            }
+            for identity in [projectID, rootID].compactMap({ $0 }) + extraIdentities {
                 guard !identity.isEmpty, identity.utf8.count <= 256, !identity.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else { throw DocumentationOperationError.invalidRequest }
+            }
+            switch envelope.query {
+            case .inventoryEvidence:
+                break
+            case let .ticketReferences(project, root, ticket):
+                let capture = try await store.documentationRead { connection in
+                    let context = try DocumentationRootContext.read(
+                        connection, path: envelope.projectRoot, projectID: project, rootID: root,
+                        schemaVersion: store.schemaVersionForDocumentation
+                    )
+                    return try TicketReferenceCapture(connection, context: context, ticketID: ticket)
+                }
+                return try await bookmarkStore.withSecurityScopedAccess(bookmark: capture.context.bookmark) { resolved in
+                    try capture.context.verifyAuthorization(resolved)
+                    let result = AgentCommandResult(entityIDs: [ticket], auditEventID: nil, error: nil,
+                                                    ticketReferences: capture.resolve())
+                    try await store.documentationRead { try capture.context.verifyPersisted($0) }
+                    guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
+                        throw DocumentationOperationError.inventoryTooLarge
+                    }
+                    return result
+                }
+            case let .recordedImpacts(project, root, repository, artifact):
+                let capture = try await store.documentationRead { connection in
+                    let context = try DocumentationRootContext.read(
+                        connection, path: envelope.projectRoot, projectID: project, rootID: root,
+                        schemaVersion: store.schemaVersionForDocumentation
+                    )
+                    return try RecordedImpactsCapture(
+                        connection, context: context, repositoryID: repository, artifactID: artifact
+                    )
+                }
+                return try await bookmarkStore.withSecurityScopedAccess(bookmark: capture.context.bookmark) { resolved in
+                    try capture.context.verifyAuthorization(resolved)
+                    let result = AgentCommandResult(entityIDs: [], auditEventID: nil, error: nil,
+                                                    recordedImpacts: capture.result)
+                    try await store.documentationRead { try capture.context.verifyPersisted($0) }
+                    guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
+                        throw DocumentationOperationError.inventoryTooLarge
+                    }
+                    return result
+                }
             }
             let captured = try await store.documentationRead { c in
                 let context = try DocumentationRootContext.read(c, path: envelope.projectRoot, projectID: projectID, rootID: rootID, schemaVersion: store.schemaVersionForDocumentation)
@@ -25,9 +74,12 @@ public struct AgentQueryDispatcher: Sendable {
                 try captured.context.verifyAuthorization(resolved)
                 let inventory = try captured.resolve()
                 let result = AgentCommandResult(entityIDs: [], auditEventID: nil, error: nil, inventory: inventory)
+                try await store.documentationRead { try captured.context.verifyPersisted($0) }
                 guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else { throw DocumentationOperationError.inventoryTooLarge }
                 return result
             }
+        } catch TicketReferenceMutationError.notFound {
+            return .init(entityIDs: [], auditEventID: nil, error: .ticketReferenceNotFound)
         } catch let error as DocumentationOperationError { return .init(entityIDs: [], auditEventID: nil, error: .documentation(error)) }
         catch { return .init(entityIDs: [], auditEventID: nil, error: .documentation(DocumentationCatalogContext.map(error))) }
     }

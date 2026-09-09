@@ -37,6 +37,8 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case addManagedEvidence(target: DocumentationTarget, id: String, ticketID: String?, artifactID: String)
     case adoptManagedEvidence(target: DocumentationTarget, adoptions: [DocumentationAdoption])
     case relocateLegacyEvidence(projectID: String, rootID: String, evidenceID: String, expectedPath: String, newPath: String)
+    case upsertTicketReference(target: DocumentationTarget, ticketID: String, linkID: String, kind: TicketReferenceKind, artifactID: String, sourceLocalID: String?, locator: String?, expectedContentDigest: String, expectedLinkSetRevision: Int64)
+    case retireTicketReference(projectID: String, rootID: String, ticketID: String, linkID: String, version: Int64, expectedLinkSetRevision: Int64)
     case upsertPhase(phaseID: String, name: String)
     case upsertUnassignedTicket(ticketID: String, outcome: String)
     case placeUnassignedTicket(ticketID: String, phaseID: String, expectedPlanRevision: Int64)
@@ -93,6 +95,11 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case ownerAcceptanceRequired
     case goalAcceptanceEvidenceUnavailable([TicketID])
     case invalidPlanMutation(String)
+    case ticketReferenceLinkSetRevisionConflict(expected: Int64, current: Int64)
+    case ticketReferenceNotFound
+    case ticketReferenceIdentityImmutable
+    case ticketReferenceTicketAccepted
+    case ticketReferenceSourceNotAuthoritative
     case outcomeUnknown
     case internalFailure(String)
 }
@@ -104,14 +111,20 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let inventory: EvidenceInventory?
     public let ticketTaskPlanRevision: Int64?
     public let phasePlanRevision: Int64?
+    public let ticketReferenceLinkSetRevision: Int64?
+    public let ticketReferences: TicketReferenceSet?
+    public let recordedImpacts: RecordedImpacts?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
         self.inventory = inventory
         self.ticketTaskPlanRevision = ticketTaskPlanRevision
         self.phasePlanRevision = phasePlanRevision
+        self.ticketReferenceLinkSetRevision = ticketReferenceLinkSetRevision
+        self.ticketReferences = ticketReferences
+        self.recordedImpacts = recordedImpacts
     }
 }
 

@@ -331,7 +331,7 @@ final class StoreAcceptanceTests: XCTestCase {
         }
         let migrated = try SQLiteConnection(url: url)
 
-        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), 19)
+        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), recordsBefore)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasksBefore)
         XCTAssertEqual(try migrated.scalarInt("SELECT [notnull] FROM pragma_table_info('tickets') WHERE name='phase_id'"), 0)
@@ -413,6 +413,7 @@ final class StoreAcceptanceTests: XCTestCase {
         let before = try Dictionary(uniqueKeysWithValues: tables.map { table in
             (table, try legacy.rows("SELECT * FROM \(table) ORDER BY rowid"))
         })
+        try removeVersionTwentyReferenceSchema(legacy)
         try legacy.execute("PRAGMA user_version = 18")
 
         let migratedStore = DeliveryStore(databaseURL: url)
@@ -424,7 +425,7 @@ final class StoreAcceptanceTests: XCTestCase {
             (table, try migrated.rows("SELECT * FROM \(table) ORDER BY rowid"))
         })
         XCTAssertEqual(after, before)
-        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), 19)
+        XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try migrated.scalarInt("SELECT [notnull] FROM pragma_table_info('tickets') WHERE name='phase_id'"), 0)
         XCTAssertEqual(try migrated.scalarInt("SELECT [notnull] FROM pragma_table_info('tickets') WHERE name='lane'"), 0)
         XCTAssertNil(try migrated.row("PRAGMA foreign_key_check"))
@@ -535,7 +536,7 @@ final class StoreAcceptanceTests: XCTestCase {
         XCTAssertEqual(try migrated.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         let fullManifest = try versionTwelveSchemaManifest(migrated)
         XCTAssertEqual(SHA256.hash(data: Data(fullManifest.utf8)).map { String(format: "%02x", $0) }.joined(),
-                       "9f744d8532ec84f05e7b53c3f440e93bc33e755f0c973e943a301c2842fa245b")
+                       "82e40889f77104a721ae34c42da768d77e38cf3663a9b993b613b306960c44d2")
         XCTAssertEqual(try semanticVersionElevenSnapshot(migrated), legacy)
         XCTAssertEqual(try taskTableSnapshot(migrated), tasks)
         XCTAssertEqual(try migrated.scalarInt("SELECT COUNT(*) FROM project_documentation_bindings"), 0)
@@ -3448,6 +3449,7 @@ final class StoreAcceptanceTests: XCTestCase {
     }
 
     private func restoreVersionEighteenTicketSchema(_ connection: SQLiteConnection) throws {
+        try removeVersionTwentyReferenceSchema(connection)
         let frozen = try SQLiteConnection(url: versionTwelveFixtureURL, immutableReadOnly: true)
         let ticketTableSQL = try XCTUnwrap(frozen.scalarText(
             "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = 'tickets'"
