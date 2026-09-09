@@ -75,43 +75,55 @@ private struct StoredLink: Sendable {
     let versions: [StoredVersion]
 
     func resolve(snapshot: RepositoryDocumentSnapshot, reader: RepositoryDocumentReader) -> TicketReference {
-        var facts: [TicketReferenceImpactFact] = []
+        var sharedFacts: [TicketReferenceImpactFact] = []
         var path: String?
         var digest: String?
         var lifecycle: RepositoryDocumentArtifact.Lifecycle?
         var authority: RepositoryDocumentArtifact.Authority?
         var bytes: Data?
         if repositoryID != snapshot.catalog.repositoryID.lowercased() {
-            facts = [.unavailable, .unchecked]
+            sharedFacts = [.unavailable, .unchecked]
         } else if let artifact = snapshot.catalog.artifacts.first(where: { $0.artifactID == artifactID }) {
             path = artifact.path
             lifecycle = artifact.lifecycle
             authority = artifact.authorityLevel
-            if versions.first?.observedPath != artifact.path { facts.append(.moved) }
             if artifact.lifecycle == .superseded || snapshot.catalog.artifacts.contains(where: { $0.supersedes.contains(artifactID) }) {
-                facts.append(.superseded)
+                sharedFacts.append(.superseded)
             }
-            if artifact.lifecycle == .archived { facts.append(.archived) }
-            if artifact.authorityLevel != .controlling { facts.append(.noLongerControlling) }
+            if artifact.lifecycle == .archived { sharedFacts.append(.archived) }
+            if artifact.authorityLevel != .controlling { sharedFacts.append(.noLongerControlling) }
             do {
                 let current = try reader.read(artifact.path)
                 let currentDigest = documentationDigest(current)
                 bytes = current
                 digest = currentDigest
-                if versions.first?.contentDigest != currentDigest { facts.append(.changed) }
             } catch {
-                facts.append(contentsOf: [.unavailable, .unchecked])
+                sharedFacts.append(contentsOf: [.unavailable, .unchecked])
             }
         } else if snapshot.catalog.retiredArtifactIDs.contains(artifactID) {
-            facts.append(.retired)
+            sharedFacts.append(.retired)
         } else {
-            facts.append(contentsOf: [.unavailable, .unchecked])
+            sharedFacts.append(contentsOf: [.unavailable, .unchecked])
         }
-        let uniqueFacts = TicketReferenceImpactFact.stableOrder.filter(Set(facts).contains)
+        func resolution(for version: StoredVersion) -> TicketReferenceResolution {
+            var facts = sharedFacts
+            if let path, version.observedPath != path { facts.append(.moved) }
+            if let digest, version.contentDigest != digest { facts.append(.changed) }
+            return .init(
+                facts: TicketReferenceImpactFact.stableOrder.filter(Set(facts).contains),
+                currentPath: path,
+                currentDigest: digest,
+                currentLifecycle: lifecycle,
+                currentAuthority: authority
+            )
+        }
+        let currentResolution = versions.first(where: { $0.version == currentVersion }).map(resolution)
+            ?? .init(facts: [.unavailable, .unchecked], currentPath: path, currentDigest: digest,
+                     currentLifecycle: lifecycle, currentAuthority: authority)
         return reference(
-            resolution: .init(facts: uniqueFacts, currentPath: path, currentDigest: digest,
-                              currentLifecycle: lifecycle, currentAuthority: authority),
-            previewBytes: bytes
+            resolution: currentResolution,
+            previewBytes: bytes,
+            versionResolution: resolution
         )
     }
 
@@ -119,16 +131,25 @@ private struct StoredLink: Sendable {
         reference(
             resolution: .init(facts: [.unavailable, .unchecked], currentPath: nil, currentDigest: nil,
                               currentLifecycle: nil, currentAuthority: nil),
-            previewBytes: nil
+            previewBytes: nil,
+            versionResolution: { _ in
+                .init(facts: [.unavailable, .unchecked], currentPath: nil, currentDigest: nil,
+                      currentLifecycle: nil, currentAuthority: nil)
+            }
         )
     }
 
-    private func reference(resolution: TicketReferenceResolution, previewBytes: Data?) -> TicketReference {
+    private func reference(
+        resolution: TicketReferenceResolution,
+        previewBytes: Data?,
+        versionResolution: (StoredVersion) -> TicketReferenceResolution
+    ) -> TicketReference {
         .init(
             id: id, kind: kind, repositoryID: repositoryID, artifactID: artifactID,
             currentVersion: currentVersion, relationship: relationship,
             retiredVersion: retiredVersion, retiredAt: retiredAt, retirementReason: retirementReason,
-            versions: versions.map { $0.output(previewBytes: previewBytes) }, resolution: resolution
+            versions: versions.map { $0.output(previewBytes: previewBytes, resolution: versionResolution($0)) },
+            resolution: resolution
         )
     }
 }
@@ -164,7 +185,7 @@ private struct StoredVersion: Sendable {
         self.observedAuthority = observedAuthority; self.createdAt = createdAt
     }
 
-    func output(previewBytes: Data?) -> TicketReferenceVersion {
+    func output(previewBytes: Data?, resolution: TicketReferenceResolution) -> TicketReferenceVersion {
         let matches = previewBytes.map { documentationDigest($0) == contentDigest } == true
         let preview: String?
         if matches, let previewBytes, String(data: previewBytes, encoding: .utf8) != nil {
@@ -176,7 +197,7 @@ private struct StoredVersion: Sendable {
             version: version, contentDigest: contentDigest, sourceLocalID: sourceLocalID,
             locator: locator, catalogVersion: catalogVersion, catalogDigest: catalogDigest,
             observedPath: observedPath, observedLifecycle: observedLifecycle,
-            observedAuthority: observedAuthority, createdAt: createdAt,
+            observedAuthority: observedAuthority, createdAt: createdAt, resolution: resolution,
             historicalPreview: preview, previewIsTruncated: matches && (previewBytes?.count ?? 0) > Self.maximumPreviewBytes
         )
     }
@@ -199,7 +220,7 @@ struct RecordedImpactsCapture: Sendable {
         let rows = try connection.rows(
             """
             SELECT v.ticket_id, t.phase_id, p.name AS phase_name, v.link_id, l.kind,
-                   v.source_local_id, v.version, l.current_version, l.relationship
+                   v.source_local_id, v.content_digest, v.version, l.current_version, l.relationship
             FROM ticket_reference_versions v
             JOIN ticket_reference_links l
               ON l.project_id = v.project_id AND l.ticket_id = v.ticket_id AND l.id = v.link_id
@@ -215,6 +236,7 @@ struct RecordedImpactsCapture: Sendable {
             guard let ticketID = row["ticket_id"].text,
                   let linkID = row["link_id"].text,
                   let kind = row["kind"].text.flatMap(TicketReferenceKind.init(rawValue:)),
+                  let contentDigest = row["content_digest"].text,
                   let version = row["version"].integer,
                   let currentVersion = row["current_version"].integer,
                   let relationship = row["relationship"].text else {
@@ -223,7 +245,8 @@ struct RecordedImpactsCapture: Sendable {
             return .init(
                 ticketID: ticketID, phaseID: row["phase_id"].text,
                 phaseLabel: row["phase_name"].text ?? "Not placed", linkID: linkID,
-                kind: kind, sourceLocalID: row["source_local_id"].text, version: version,
+                kind: kind, sourceLocalID: row["source_local_id"].text,
+                contentDigest: contentDigest, version: version,
                 isCurrent: relationship == "current" && version == currentVersion
             )
         }

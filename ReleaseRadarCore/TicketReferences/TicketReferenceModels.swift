@@ -33,6 +33,7 @@ public struct TicketReferenceVersion: Codable, Equatable, Sendable, Identifiable
     public let observedLifecycle: RepositoryDocumentArtifact.Lifecycle
     public let observedAuthority: RepositoryDocumentArtifact.Authority
     public let createdAt: String
+    public let resolution: TicketReferenceResolution
     public let historicalPreview: String?
     public let previewIsTruncated: Bool
 }
@@ -76,6 +77,7 @@ public struct RecordedImpact: Codable, Equatable, Sendable, Identifiable {
     public let linkID: String
     public let kind: TicketReferenceKind
     public let sourceLocalID: String?
+    public let contentDigest: String
     public let version: Int64
     public let isCurrent: Bool
 }
@@ -106,7 +108,7 @@ extension AgentCommand {
 
     var ticketReferenceProjectAndRoot: (projectID: String, rootID: String)? {
         switch self {
-        case let .upsertTicketReference(target, _, _, _, _, _, _, _):
+        case let .upsertTicketReference(target, _, _, _, _, _, _, _, _):
             (target.projectID, target.rootID)
         case let .retireTicketReference(projectID, rootID, _, _, _, _):
             (projectID, rootID)
@@ -117,7 +119,7 @@ extension AgentCommand {
 
     var ticketReferenceIDs: (ticketID: String, linkID: String)? {
         switch self {
-        case let .upsertTicketReference(_, ticketID, linkID, _, _, _, _, _),
+        case let .upsertTicketReference(_, ticketID, linkID, _, _, _, _, _, _),
              let .retireTicketReference(_, _, ticketID, linkID, _, _):
             (ticketID, linkID)
         default:

@@ -14,6 +14,7 @@ private enum ReferenceSectionState {
 }
 
 struct TicketReferencesSection: View {
+    let identity: String
     let load: () async -> ReferenceLoadResult<TicketReferenceSet>
     let openSource: (String, Int64) -> Void
     @State private var state: ReferenceSectionState = .idle
@@ -58,7 +59,7 @@ struct TicketReferencesSection: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
         }
-        .task { await reload() }
+        .task(id: identity) { await reload() }
         .accessibilityIdentifier("ticket-references")
     }
 
@@ -183,17 +184,17 @@ struct TicketReferenceSourceView: View {
 
     private var resolution: some View {
         referencePanel("Current resolution", systemImage: "point.3.connected.trianglepath.dotted") {
-            if link.resolution.facts.isEmpty {
+            if selectedVersion.resolution.facts.isEmpty {
                 Label("Current source matches linked revision", systemImage: "checkmark.circle")
                     .foregroundStyle(RekonTheme.success)
             } else {
-                ForEach(link.resolution.facts, id: \.self) { fact in
+                ForEach(selectedVersion.resolution.facts, id: \.self) { fact in
                     Label(fact.displayName, systemImage: fact.systemImage)
                 }
             }
-            if let path = link.resolution.currentPath { metadataRow("Current path", path) }
-            if let lifecycle = link.resolution.currentLifecycle { metadataRow("Lifecycle", lifecycle.rawValue) }
-            if let authority = link.resolution.currentAuthority { metadataRow("Authority", authority.rawValue) }
+            if let path = selectedVersion.resolution.currentPath { metadataRow("Current path", path) }
+            if let lifecycle = selectedVersion.resolution.currentLifecycle { metadataRow("Lifecycle", lifecycle.rawValue) }
+            if let authority = selectedVersion.resolution.currentAuthority { metadataRow("Authority", authority.rawValue) }
         }
     }
 
@@ -255,9 +256,9 @@ struct RecordedImpactsView: View {
     let impacts: RecordedImpacts
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
-    let openTicket: (TicketID) -> Void
-    @FocusState private var focusedTicketID: TicketID?
-    @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
+    let openTicket: (RecordedImpact) -> Void
+    @FocusState private var focusedRowID: String?
+    @AccessibilityFocusState private var accessibilityFocusedRowID: String?
 
     var body: some View {
         ScrollView {
@@ -275,7 +276,8 @@ struct RecordedImpactsView: View {
                     LazyVStack(spacing: 10) {
                         ForEach(impacts.rows) { row in
                             Button {
-                                openTicket(.init(rawValue: row.ticketID))
+                                focusChanged(.recordedImpact(rowID: row.id))
+                                openTicket(row)
                             } label: {
                                 HStack(alignment: .top, spacing: 12) {
                                     Image(systemName: row.kind.systemImage)
@@ -290,6 +292,9 @@ struct RecordedImpactsView: View {
                                                 .foregroundStyle(row.isCurrent ? RekonTheme.success : .secondary)
                                         }
                                         Text("\(row.kind.displayName) · version \(row.version)")
+                                        Text("SHA-256 \(row.contentDigest)")
+                                            .font(.system(.caption, design: .monospaced))
+                                            .foregroundStyle(.secondary)
                                         if let sourceLocalID = row.sourceLocalID {
                                             Text(sourceLocalID).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
                                         }
@@ -301,8 +306,8 @@ struct RecordedImpactsView: View {
                             }
                             .buttonStyle(RekonSecondaryButtonStyle())
                             .focusable()
-                            .focused($focusedTicketID, equals: .init(rawValue: row.ticketID))
-                            .accessibilityFocused($accessibilityFocusedTicketID, equals: .init(rawValue: row.ticketID))
+                            .focused($focusedRowID, equals: row.id)
+                            .accessibilityFocused($accessibilityFocusedRowID, equals: row.id)
                             .accessibilityIdentifier("recorded-impact-\(row.id)")
                         }
                     }
@@ -318,12 +323,19 @@ struct RecordedImpactsView: View {
     }
 
     private func applyRequestedFocus() {
-        guard requestedFocus == .recordedImpacts,
-              let first = impacts.rows.first else { return }
-        let ticketID = TicketID(rawValue: first.ticketID)
-        focusedTicketID = ticketID
-        accessibilityFocusedTicketID = ticketID
-        focusChanged(.recordedImpacts)
+        let rowID: String?
+        switch requestedFocus {
+        case .recordedImpacts:
+            rowID = impacts.rows.first?.id
+        case let .recordedImpact(requestedRowID):
+            rowID = impacts.rows.first(where: { $0.id == requestedRowID })?.id
+        default:
+            rowID = nil
+        }
+        guard let rowID else { return }
+        focusedRowID = rowID
+        accessibilityFocusedRowID = rowID
+        focusChanged(.recordedImpact(rowID: rowID))
     }
 }
 
@@ -334,6 +346,7 @@ private enum SourceRouteState {
 }
 
 struct TicketReferenceSourceRouteView: View {
+    let identity: String
     let ticketID: TicketID
     let linkID: String
     let version: Int64
@@ -372,7 +385,7 @@ struct TicketReferenceSourceRouteView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(RekonTheme.background)
-        .task(id: "\(linkID):\(version)") { await reload() }
+        .task(id: "\(identity):\(linkID):\(version)") { await reload() }
     }
 
     @MainActor
@@ -411,7 +424,7 @@ struct RecordedImpactsRouteView: View {
     let requestedFocus: NavigationFocus?
     let focusChanged: (NavigationFocus?) -> Void
     let load: () async -> ReferenceLoadResult<RecordedImpacts>
-    let openTicket: (TicketID) -> Void
+    let openTicket: (RecordedImpact) -> Void
     @State private var state: ImpactsRouteState = .loading
 
     var body: some View {

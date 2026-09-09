@@ -15,6 +15,7 @@ struct AllPhaseBoardView: View {
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
     var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
+    var referenceContextIdentity: String? = nil
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
     @State private var density: BoardDensity = .fullOutcomes
@@ -234,7 +235,8 @@ struct AllPhaseBoardView: View {
                 },
                 openReferenceSource: openReferenceSource.map { opener in
                     { linkID, version in opener(selected.id, linkID, version) }
-                }
+                },
+                referenceContextIdentity: referenceContextIdentity
             )
         } else {
             ContentUnavailableView("Select a ticket", systemImage: "rectangle.on.rectangle")

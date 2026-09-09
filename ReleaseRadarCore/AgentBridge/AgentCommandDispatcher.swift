@@ -223,13 +223,18 @@ public actor AgentCommandDispatcher {
                 && valid(phaseID, maximum: 256) && !phaseID.contains("\0") && revision >= 0
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             commandFieldsAreValid = (try? envelope.command.validateDocumentation()) != nil
-        case let .upsertTicketReference(target, ticketID, linkID, _, artifactID, sourceLocalID, locator, revision):
+        case let .upsertTicketReference(target, ticketID, linkID, _, artifactID, sourceLocalID, locator, expectedContentDigest, revision):
             commandFieldsAreValid = valid(target.projectID, maximum: 256) && valid(target.rootID, maximum: 256)
                 && valid(target.repositoryID, maximum: 36) && target.catalogVersion > 0
                 && target.catalogDigest.count == 64 && valid(ticketID, maximum: 256)
                 && valid(linkID, maximum: 256) && valid(artifactID, maximum: 128)
                 && sourceLocalID.map { valid($0, maximum: 256) } != false
-                && locator.map { valid($0) } != false && revision >= 0
+                && locator.map { valid($0) } != false
+                && expectedContentDigest.count == 64
+                && expectedContentDigest.utf8.allSatisfy {
+                    ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102)
+                }
+                && revision >= 0
         case let .retireTicketReference(projectID, rootID, ticketID, linkID, version, revision):
             commandFieldsAreValid = valid(projectID, maximum: 256) && valid(rootID, maximum: 256)
                 && valid(ticketID, maximum: 256) && valid(linkID, maximum: 256)
@@ -367,7 +372,7 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [ticketID, taskID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: revision)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             return .init(entityIDs: command.documentationIDs, auditEventID: auditEventID, error: nil)
-        case let .upsertTicketReference(_, ticketID, linkID, _, _, _, _, _),
+        case let .upsertTicketReference(_, ticketID, linkID, _, _, _, _, _, _),
              let .retireTicketReference(_, _, ticketID, linkID, _, _):
             return .init(entityIDs: [ticketID, linkID], auditEventID: auditEventID, error: nil,
                          ticketReferenceLinkSetRevision: revision)
@@ -403,7 +408,7 @@ public actor AgentCommandDispatcher {
         case let .applyPhasePlanRevision(_, phaseID, _, _, _, _, _), let .finalizePhasePlan(_, phaseID, _): (.phasePlan, phaseID)
         case let .transitionDeliveryGoal(_, _, goalID, _, _): (.deliveryGoal, goalID)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence: (.project, projectID.rawValue)
-        case let .upsertTicketReference(_, _, linkID, _, _, _, _, _),
+        case let .upsertTicketReference(_, _, linkID, _, _, _, _, _, _),
              let .retireTicketReference(_, _, _, linkID, _, _): (.ticketReference, linkID)
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)

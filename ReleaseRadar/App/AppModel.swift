@@ -903,6 +903,37 @@ final class AppModel {
         )
     }
 
+    func referenceQueryIdentity(projectID: ProjectID) -> String {
+        let status = documentationObserver.status(for: projectID)
+        let generation: UInt64
+        let identity: DocumentationObservationIdentity?
+        switch status {
+        case let .checking(value, valueGeneration):
+            identity = value
+            generation = valueGeneration
+        case let .observed(observation):
+            identity = observation.identity
+            generation = observation.generation
+        case nil:
+            identity = nil
+            generation = 0
+        }
+        let registration = identity?.registration
+        let binding = identity?.binding
+        return [
+            projectID.rawValue,
+            String(documentationServiceGeneration),
+            String(generation),
+            registration?.registrationID ?? "no-registration",
+            registration.map { String($0.requestGeneration) } ?? "no-request-generation",
+            identity?.rootID?.rawValue ?? "no-root",
+            identity?.rootPath ?? projectRoots[projectID]?.path ?? "no-root-path",
+            binding?.repositoryID ?? "no-repository",
+            binding.map { String($0.acceptedCatalogVersion) } ?? "no-catalog-version",
+            binding?.acceptedCatalogDigest ?? "no-catalog-digest",
+        ].joined(separator: ":")
+    }
+
     func loadRecordedImpacts(
         projectID: ProjectID,
         repositoryID: String,
@@ -1001,7 +1032,9 @@ final class AppModel {
         setNavigationFocus(.recordedImpacts)
     }
 
-    func openRecordedImpactTicket(projectID: ProjectID, ticketID: TicketID) async {
+    func openRecordedImpactTicket(projectID: ProjectID, impact: RecordedImpact) async {
+        setNavigationFocus(.recordedImpact(rowID: impact.id))
+        let ticketID = TicketID(rawValue: impact.ticketID)
         if dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil {
             await navigate(to: .projectPlan(projectID))
             selectTicket(ticketID)

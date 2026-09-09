@@ -52,6 +52,7 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
                 artifactID: "current",
                 sourceLocalID: "REQ-1",
                 locator: "Acceptance criteria",
+                expectedContentDigest: initialDigest,
                 expectedLinkSetRevision: 0
             ),
             requestID: createRequestID
@@ -83,12 +84,15 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             .upsertTicketReference(
                 target: target, ticketID: "unassigned", linkID: "requirement-main",
                 kind: .requirement, artifactID: "current", sourceLocalID: "REQ-1",
-                locator: "Conflicting replay", expectedLinkSetRevision: 1
+                locator: "Conflicting replay", expectedContentDigest: initialDigest,
+                expectedLinkSetRevision: 1
             ),
             requestID: createRequestID
         ))
         XCTAssertEqual(conflictingReplay.error, .requestIDReused)
 
+        let sharedBytes = Data("Shared authoritative requirements\n".utf8)
+        try sharedBytes.write(to: source)
         let second = await fixture.dispatcher.dispatch(envelope(
             fixture.root,
             .upsertTicketReference(
@@ -99,6 +103,7 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
                 artifactID: "current",
                 sourceLocalID: "ADR-SHARED",
                 locator: nil,
+                expectedContentDigest: documentationDigest(sharedBytes),
                 expectedLinkSetRevision: 0
             )
         ))
@@ -121,6 +126,10 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
         ))
         XCTAssertEqual(sharedImpacts.recordedImpacts?.rows.map(\.ticketID), ["placed", "unassigned"])
         XCTAssertEqual(sharedImpacts.recordedImpacts?.rows.map(\.phaseLabel), ["Phase", "Not placed"])
+        XCTAssertEqual(
+            sharedImpacts.recordedImpacts?.rows.map(\.contentDigest),
+            [documentationDigest(sharedBytes), initialDigest]
+        )
 
         let first = try await fixture.store.read { connection in
             try connection.row("SELECT * FROM ticket_reference_versions WHERE link_id = 'requirement-main' AND version = 1")
@@ -150,6 +159,7 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
                 artifactID: "current",
                 sourceLocalID: "REQ-1",
                 locator: "Revised acceptance criteria",
+                expectedContentDigest: documentationDigest(revisedBytes),
                 expectedLinkSetRevision: 1
             )
         ))
@@ -203,14 +213,17 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
         let proposed = await fixture.dispatcher.dispatch(envelope(
             fixture.root,
             .upsertTicketReference(target: target, ticketID: "unassigned", linkID: "bad", kind: .decision,
-                                   artifactID: "draft", sourceLocalID: nil, locator: nil, expectedLinkSetRevision: 0)
+                                   artifactID: "draft", sourceLocalID: nil, locator: nil,
+                                   expectedContentDigest: try sourceDigest(fixture.root, artifactID: "draft"),
+                                   expectedLinkSetRevision: 0)
         ))
         XCTAssertEqual(proposed.error, .ticketReferenceSourceNotAuthoritative)
 
         let created = await fixture.dispatcher.dispatch(envelope(
             fixture.root,
             .upsertTicketReference(target: target, ticketID: "accepted", linkID: "accepted-link", kind: .decision,
-                                   artifactID: "current", sourceLocalID: nil, locator: nil, expectedLinkSetRevision: 0)
+                                   artifactID: "current", sourceLocalID: nil, locator: nil,
+                                   expectedContentDigest: try sourceDigest(fixture.root), expectedLinkSetRevision: 0)
         ))
         XCTAssertEqual(created.error, .ticketReferenceTicketAccepted)
 
@@ -242,7 +255,8 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             .upsertTicketReference(
                 target: target, ticketID: "unassigned", linkID: "unsafe",
                 kind: .requirement, artifactID: "current", sourceLocalID: nil,
-                locator: nil, expectedLinkSetRevision: 0
+                locator: nil, expectedContentDigest: String(repeating: "0", count: 64),
+                expectedLinkSetRevision: 0
             )
         ))
         XCTAssertNotNil(unsafe.error)
@@ -270,6 +284,39 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
         XCTAssertEqual(countsAfterStale, countsBefore)
     }
 
+    func testReferenceMutationRejectsBytesChangedAfterReviewWithoutSideEffects() async throws {
+        let fixture = try await makeReferenceFixture()
+        let target = try documentationTarget(fixture.root)
+        let bound = await fixture.dispatcher.dispatch(
+            envelope(fixture.root, .bindDocumentationRepository(target: target))
+        )
+        XCTAssertNil(bound.error)
+        let reviewedDigest = try sourceDigest(fixture.root)
+        try Data("Changed after caller review\n".utf8).write(
+            to: fixture.root.appendingPathComponent("docs/plans/current.md")
+        )
+        let before = try await referenceMutationCounts(fixture.store)
+
+        let result = await fixture.dispatcher.dispatch(envelope(
+            fixture.root,
+            .upsertTicketReference(
+                target: target,
+                ticketID: "unassigned",
+                linkID: "stale-bytes",
+                kind: .requirement,
+                artifactID: "current",
+                sourceLocalID: "REQ-STALE",
+                locator: nil,
+                expectedContentDigest: reviewedDigest,
+                expectedLinkSetRevision: 0
+            )
+        ))
+
+        XCTAssertEqual(result.error, .documentation(.staleEvidence))
+        let after = try await referenceMutationCounts(fixture.store)
+        XCTAssertEqual(after, before)
+    }
+
     func testReadOnlyTicketHistoryAndRecordedImpactsExposeCurrentAndHistoricalFacts() async throws {
         let fixture = try await makeReferenceFixture()
         let target = try documentationTarget(fixture.root)
@@ -279,7 +326,8 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             fixture.root,
             .upsertTicketReference(target: target, ticketID: "unassigned", linkID: "requirement-main",
                                    kind: .requirement, artifactID: "current", sourceLocalID: "REQ-1",
-                                   locator: "Acceptance criteria", expectedLinkSetRevision: 0)
+                                   locator: "Acceptance criteria",
+                                   expectedContentDigest: try sourceDigest(fixture.root), expectedLinkSetRevision: 0)
         ))
         XCTAssertNil(initial.error)
 
@@ -317,9 +365,19 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             fixture.root,
             .upsertTicketReference(target: target, ticketID: "unassigned", linkID: "requirement-main",
                                    kind: .requirement, artifactID: "current", sourceLocalID: "REQ-1",
-                                   locator: "Changed criteria", expectedLinkSetRevision: 1)
+                                   locator: "Changed criteria",
+                                   expectedContentDigest: try sourceDigest(fixture.root), expectedLinkSetRevision: 1)
         ))
         XCTAssertEqual(revised.ticketReferenceLinkSetRevision, 2)
+        let historyResult = await queries.dispatch(.init(
+            version: 1,
+            projectRoot: fixture.root.path,
+            query: .ticketReferences(projectID: "p", rootID: "root", ticketID: "unassigned")
+        ))
+        let history = try XCTUnwrap(historyResult.ticketReferences?.links.first?.versions)
+        XCTAssertEqual(history.map(\.version), [2, 1])
+        XCTAssertEqual(history[0].resolution.facts, [])
+        XCTAssertEqual(history[1].resolution.facts, [.changed])
 
         let impactsResult = await queries.dispatch(.init(
             version: 1,
@@ -342,6 +400,39 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
         XCTAssertEqual(missing.error, .ticketReferenceNotFound)
     }
 
+    func testReadOnlyReferenceQueryWithdrawsResultAfterAuthorizationReplacement() async throws {
+        let fixture = try await makeReferenceFixture()
+        let target = try documentationTarget(fixture.root)
+        let bound = await fixture.dispatcher.dispatch(
+            envelope(fixture.root, .bindDocumentationRepository(target: target))
+        )
+        XCTAssertNil(bound.error)
+        let gate = TicketReferenceQueryAccessGate()
+        let dispatcher = AgentQueryDispatcher(
+            store: fixture.store,
+            bookmarkStore: BlockingTicketReferenceBookmarkStore(root: fixture.root, gate: gate)
+        )
+        let query = Task {
+            await dispatcher.dispatch(.init(
+                version: 1,
+                projectRoot: fixture.root.path,
+                query: .ticketReferences(projectID: "p", rootID: "root", ticketID: "unassigned")
+            ))
+        }
+        await gate.waitUntilEntered()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Replace authorization") { connection in
+            try connection.execute(
+                "UPDATE project_bookmarks SET bookmark_data = X'02' WHERE project_id = 'p' AND path = ?",
+                bindings: [.text(fixture.root.path)]
+            )
+        }
+        await gate.release()
+
+        let result = await query.value
+        XCTAssertNil(result.ticketReferences)
+        XCTAssertEqual(result.error, .documentation(.bindingMismatch))
+    }
+
     func testAcceptedMoveCanCoexistWithChangedBytesWithoutSubstitutingHistoricalContent() async throws {
         let fixture = try await makeReferenceFixture()
         let accepted = try documentationTarget(fixture.root)
@@ -354,7 +445,8 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             .upsertTicketReference(
                 target: accepted, ticketID: "unassigned", linkID: "moved-link",
                 kind: .requirement, artifactID: "current", sourceLocalID: nil,
-                locator: nil, expectedLinkSetRevision: 0
+                locator: nil, expectedContentDigest: try sourceDigest(fixture.root),
+                expectedLinkSetRevision: 0
             )
         ))
         XCTAssertNil(linked.error)
@@ -382,14 +474,29 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
         ))
         XCTAssertNil(acceptance.error)
 
+        let revised = await fixture.dispatcher.dispatch(envelope(
+            fixture.root,
+            .upsertTicketReference(
+                target: candidate, ticketID: "unassigned", linkID: "moved-link",
+                kind: .requirement, artifactID: "current", sourceLocalID: nil,
+                locator: "Moved source", expectedContentDigest: try sourceDigest(fixture.root),
+                expectedLinkSetRevision: 1
+            )
+        ))
+        XCTAssertEqual(revised.ticketReferenceLinkSetRevision, 2)
+
         let result = await queryDispatcher(fixture).dispatch(.init(
             version: 1,
             projectRoot: fixture.root.path,
             query: .ticketReferences(projectID: "p", rootID: "root", ticketID: "unassigned")
         ))
-        XCTAssertEqual(result.ticketReferences?.links.first?.resolution.facts, [.changed, .moved])
-        XCTAssertNil(result.ticketReferences?.links.first?.versions.first?.historicalPreview)
-        XCTAssertEqual(result.ticketReferences?.links.first?.versions.first?.observedPath, "docs/plans/current.md")
+        let link = try XCTUnwrap(result.ticketReferences?.links.first)
+        XCTAssertEqual(link.resolution.facts, [])
+        XCTAssertEqual(link.versions.map(\.version), [2, 1])
+        XCTAssertEqual(link.versions[0].resolution.facts, [])
+        XCTAssertEqual(link.versions[1].resolution.facts, [.changed, .moved])
+        XCTAssertNil(link.versions[1].historicalPreview)
+        XCTAssertEqual(link.versions[1].observedPath, "docs/plans/current.md")
     }
 
     func testAcceptedSupersessionAndRetirementRemainDistinctResolutionFacts() async throws {
@@ -404,7 +511,8 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             .upsertTicketReference(
                 target: accepted, ticketID: "unassigned", linkID: "lifecycle-link",
                 kind: .decision, artifactID: "current", sourceLocalID: "ADR-CURRENT",
-                locator: nil, expectedLinkSetRevision: 0
+                locator: nil, expectedContentDigest: try sourceDigest(fixture.root),
+                expectedLinkSetRevision: 0
             )
         ))
         XCTAssertNil(linked.error)
@@ -484,7 +592,8 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             fixture.root,
             .upsertTicketReference(target: target, ticketID: "unassigned", linkID: "decision-main",
                                    kind: .decision, artifactID: "current", sourceLocalID: "ADR-1",
-                                   locator: "Decision", expectedLinkSetRevision: 0)
+                                   locator: "Decision", expectedContentDigest: try sourceDigest(fixture.root),
+                                   expectedLinkSetRevision: 0)
         ))
         XCTAssertNil(created.error)
         let retired = await fixture.dispatcher.dispatch(envelope(
@@ -538,7 +647,8 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
             .upsertTicketReference(
                 target: target, ticketID: "unassigned", linkID: "backup-link",
                 kind: .requirement, artifactID: "current", sourceLocalID: "REQ-BACKUP",
-                locator: "Backup behavior", expectedLinkSetRevision: 0
+                locator: "Backup behavior", expectedContentDigest: try sourceDigest(fixture.root),
+                expectedLinkSetRevision: 0
             )
         ))
         XCTAssertNil(linked.error)
@@ -618,6 +728,12 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
                      catalogVersion: snapshot.version, catalogDigest: snapshot.digest)
     }
 
+    private func sourceDigest(_ root: URL, artifactID: String = "current") throws -> String {
+        let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: root)
+        let artifact = try XCTUnwrap(snapshot.catalog.artifacts.first { $0.artifactID == artifactID })
+        return documentationDigest(try Data(contentsOf: root.appendingPathComponent(artifact.path)))
+    }
+
     private func referenceMutationCounts(_ store: DeliveryStore) async throws -> [Int64] {
         try await store.read { connection in
             [
@@ -654,4 +770,47 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
               reason: "Authorized reference operation", command: command)
     }
 
+}
+
+private struct BlockingTicketReferenceBookmarkStore: ProjectBookmarkStoring {
+    let root: URL
+    let gate: TicketReferenceQueryAccessGate
+
+    func makeBookmark(for url: URL) throws -> Data { Data(url.path.utf8) }
+    func resolve(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        .init(url: root, isStale: false)
+    }
+    func withSecurityScopedAccess<T: Sendable>(
+        bookmark: Data,
+        _ body: @Sendable (ResolvedProjectBookmark) async throws -> T
+    ) async throws -> T {
+        await gate.pause()
+        return try await body(resolve(bookmark))
+    }
+}
+
+private actor TicketReferenceQueryAccessGate {
+    private var entered = false
+    private var released = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func pause() async {
+        entered = true
+        enteredContinuations.forEach { $0.resume() }
+        enteredContinuations.removeAll()
+        guard !released else { return }
+        await withCheckedContinuation { releaseContinuations.append($0) }
+    }
+
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+
+    func release() {
+        released = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
+    }
 }

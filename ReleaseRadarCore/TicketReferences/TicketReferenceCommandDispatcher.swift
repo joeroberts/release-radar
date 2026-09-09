@@ -148,7 +148,7 @@ struct TicketReferenceCommandDispatcher: Sendable {
         _ command: AgentCommand,
         context: DocumentationRootContext
     ) throws -> PreparedSource? {
-        guard case let .upsertTicketReference(target, _, _, _, artifactID, _, _, _) = command else {
+        guard case let .upsertTicketReference(target, _, _, _, artifactID, _, _, expectedContentDigest, _) = command else {
             guard case .retireTicketReference = command else {
                 throw DocumentationOperationError.invalidRequest
             }
@@ -164,6 +164,9 @@ struct TicketReferenceCommandDispatcher: Sendable {
         }
         let bytes = try catalog.reader.read(artifact.path)
         try catalog.reader.verifyStable()
+        guard documentationDigest(bytes) == expectedContentDigest else {
+            throw DocumentationOperationError.staleEvidence
+        }
         return .init(
             repositoryID: snapshot.catalog.repositoryID.lowercased(),
             artifactID: artifact.artifactID,
@@ -198,7 +201,7 @@ struct TicketReferenceCommandDispatcher: Sendable {
             bindings: [.text(context.projectID), .text(ids.ticketID)]
         ) ?? 0
         let expectedRevision: Int64 = switch command {
-        case let .upsertTicketReference(_, _, _, _, _, _, _, value): value
+        case let .upsertTicketReference(_, _, _, _, _, _, _, _, value): value
         case let .retireTicketReference(_, _, _, _, _, value): value
         default: throw DocumentationOperationError.invalidRequest
         }
@@ -212,7 +215,7 @@ struct TicketReferenceCommandDispatcher: Sendable {
         let now = timestamp()
 
         switch command {
-        case let .upsertTicketReference(_, _, linkID, kind, artifactID, sourceLocalID, locator, _):
+        case let .upsertTicketReference(_, _, linkID, kind, artifactID, sourceLocalID, locator, _, _):
             guard let prepared else { throw DocumentationOperationError.invalidRequest }
             let existing = try connection.row(
                 "SELECT kind, repository_id, artifact_id, current_version, relationship FROM ticket_reference_links WHERE project_id = ? AND ticket_id = ? AND id = ?",
