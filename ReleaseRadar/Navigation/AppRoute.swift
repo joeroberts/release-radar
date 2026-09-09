@@ -12,6 +12,8 @@ enum AppRoute: Hashable, Sendable {
     case phaseBoard(ProjectID)
     case dependencies(ProjectID)
     case activity(ProjectID)
+    case referenceSource(projectID: ProjectID, ticketID: TicketID, linkID: String, version: Int64)
+    case recordedImpacts(projectID: ProjectID, repositoryID: String, artifactID: String)
 
     static let primaryRoutes: [AppRoute] = [
         .projects,
@@ -43,6 +45,8 @@ enum AppRoute: Hashable, Sendable {
         case .phaseBoard: "Phase Board"
         case .dependencies: "Dependencies"
         case .activity: "Activity"
+        case .referenceSource: "Reference source"
+        case .recordedImpacts: "Recorded impacts"
         }
     }
 
@@ -59,6 +63,8 @@ enum AppRoute: Hashable, Sendable {
         case .phaseBoard: "rectangle.split.3x1"
         case .dependencies: "arrow.triangle.branch"
         case .activity: "clock.arrow.circlepath"
+        case .referenceSource: "doc.text.magnifyingglass"
+        case .recordedImpacts: "arrow.triangle.branch"
         }
     }
 
@@ -69,7 +75,9 @@ enum AppRoute: Hashable, Sendable {
              let .archivedProject(projectID),
              let .phaseBoard(projectID),
              let .dependencies(projectID),
-             let .activity(projectID):
+             let .activity(projectID),
+             let .referenceSource(projectID, _, _, _),
+             let .recordedImpacts(projectID, _, _):
             projectID
         case .projects, .needsReview, .notifications, .settings, .removedProject:
             nil

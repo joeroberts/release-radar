@@ -515,6 +515,10 @@ public actor ApplicationRecoveryManager {
                 SELECT * FROM current_state.retained_project_activity_events;
             INSERT OR IGNORE INTO retained_delivery_goal_assignment_events
                 SELECT * FROM current_state.retained_delivery_goal_assignment_events;
+            INSERT OR IGNORE INTO retained_ticket_reference_links
+                SELECT * FROM current_state.retained_ticket_reference_links;
+            INSERT OR IGNORE INTO retained_ticket_reference_versions
+                SELECT * FROM current_state.retained_ticket_reference_versions;
             INSERT OR IGNORE INTO audit_events
                 SELECT * FROM current_state.audit_events
                 WHERE historical_project_id IS NOT NULL AND project_id IS NULL;
@@ -620,6 +624,44 @@ public actor ApplicationRecoveryManager {
               ON registrations.project_id = assignments.project_id
             JOIN removed_projects removed
               ON removed.historical_project_id = assignments.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_ticket_reference_links (
+                removal_id, historical_project_id, ticket_id, link_id, kind,
+                repository_id, artifact_id, current_version, relationship,
+                retired_version, retired_at, retirement_reason, link_set_revision,
+                created_at, updated_at
+            )
+            SELECT removed.removal_id, links.project_id, links.ticket_id, links.id,
+                links.kind, links.repository_id, links.artifact_id, links.current_version,
+                links.relationship, links.retired_version, links.retired_at,
+                links.retirement_reason, sets.revision, links.created_at, links.updated_at
+            FROM current_state.ticket_reference_links links
+            JOIN current_state.ticket_reference_link_sets sets
+              ON sets.project_id = links.project_id AND sets.ticket_id = links.ticket_id
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = links.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = links.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_ticket_reference_versions (
+                removal_id, historical_project_id, ticket_id, link_id, version,
+                content_digest, source_local_id, locator, catalog_version,
+                catalog_digest, observed_path, observed_lifecycle,
+                observed_authority, created_at
+            )
+            SELECT removed.removal_id, versions.project_id, versions.ticket_id,
+                versions.link_id, versions.version, versions.content_digest,
+                versions.source_local_id, versions.locator, versions.catalog_version,
+                versions.catalog_digest, versions.observed_path,
+                versions.observed_lifecycle, versions.observed_authority,
+                versions.created_at
+            FROM current_state.ticket_reference_versions versions
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = versions.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = versions.project_id
              AND removed.registration_id = registrations.registration_id;
 
             INSERT INTO observed_threads (id, project_id, status, last_observed_at)

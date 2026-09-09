@@ -833,7 +833,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let session = try Self.runToolSession(helper, tool: "release_radar_finalize_phase_plan", arguments: ["version": true])
         let result = try XCTUnwrap(session.list["result"] as? [String: Any])
         let tools = try XCTUnwrap(result["tools"] as? [[String: Any]])
-        XCTAssertEqual(tools.count, 26)
+        XCTAssertEqual(tools.count, 30)
         for name in ["apply_phase_plan_revision", "finalize_phase_plan", "transition_delivery_goal"] {
             let tool = tools.first { $0["name"] as? String == "release_radar_" + name }
             XCTAssertNotNil(tool, name)
@@ -868,7 +868,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let response = try Self.runToolSession(packagedTool, tool: "release_radar_revise_ticket_task_plan", arguments: [
             "version": true,
         ])
-        XCTAssertTrue(Self.hasTypedToolSchema(response.list), "The packaged helper must preserve 19 tools and add the two strict task schemas")
+        XCTAssertTrue(Self.hasTypedToolSchema(response.list), "The packaged helper must preserve the typed tool surface, including ticket references")
         XCTAssertEqual(jsonRPCErrorCode(response.call), -32602)
     }
 
@@ -1393,7 +1393,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 26,
+              tools.count == 30,
               hasTicketTaskToolSchemas(tools),
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
               let transitionSchema = transition["inputSchema"] as? [String: Any],

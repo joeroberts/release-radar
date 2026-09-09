@@ -60,6 +60,8 @@ struct PhaseBoardView: View {
     var restoreDocumentationFolderAccess: ((URL, DocumentationObservationIdentity) async throws -> Void)? = nil
     var openWorktreeRecovery: (() -> Void)? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
+    var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
+    var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
     var viewPhase: (PhaseID) -> Void = { _ in }
     var viewAllPhases: () -> Void = {}
     var requestedFocus: NavigationFocus? = nil
@@ -364,6 +366,12 @@ struct PhaseBoardView: View {
                 restoreDocumentationFolderAccess: documentationRestorationAction,
                 openWorktreeRecovery: openWorktreeRecovery,
                 loadEvidencePreview: loadEvidencePreview,
+                loadReferences: loadTicketReferences.map { loader in
+                    { await loader(selected.id) }
+                },
+                openReferenceSource: openReferenceSource.map { opener in
+                    { linkID, version in opener(selected.id, linkID, version) }
+                },
                 reload: reloadActivePhase
             )
         } else {

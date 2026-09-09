@@ -44,7 +44,7 @@ final class DocumentationCallbackTests: XCTestCase {
         XCTAssertEqual(rejection.error, .appUnavailable)
     }
 
-    func testPackagedHelperPublishesSixExactAdditiveSchemasWithoutConnecting() throws {
+    func testPackagedHelperPublishesReferenceSchemasWithoutConnecting() throws {
         let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
         let process = Process(); process.executableURL = helper
         let input = Pipe(); let output = Pipe(); process.standardInput = input; process.standardOutput = output
@@ -57,14 +57,25 @@ final class DocumentationCallbackTests: XCTestCase {
         let response = try JSONSerialization.jsonObject(with: Data(try XCTUnwrap(data.split(separator: 10).last))) as! [String: Any]
         let tools = (response["result"] as! [String: Any])["tools"] as! [[String: Any]]
         let names = Set(tools.compactMap { $0["name"] as? String })
-        let expected: Set<String> = ["release_radar_inventory_evidence", "release_radar_bind_documentation_repository", "release_radar_accept_documentation_catalog", "release_radar_add_managed_evidence", "release_radar_adopt_managed_evidence", "release_radar_relocate_legacy_evidence"]
+        let expected: Set<String> = [
+            "release_radar_inventory_evidence", "release_radar_ticket_references",
+            "release_radar_recorded_impacts", "release_radar_bind_documentation_repository",
+            "release_radar_accept_documentation_catalog", "release_radar_add_managed_evidence",
+            "release_radar_adopt_managed_evidence", "release_radar_relocate_legacy_evidence",
+            "release_radar_upsert_ticket_reference", "release_radar_retire_ticket_reference",
+        ]
         XCTAssertTrue(expected.isSubset(of: names))
         XCTAssertTrue(names.contains("release_radar_add_evidence"))
         XCTAssertTrue(names.contains("release_radar_revise_ticket_task_plan"))
         XCTAssertTrue(names.contains("release_radar_complete_ticket_task"))
-        XCTAssertEqual(names.count, 24)
+        XCTAssertEqual(names.count, 30)
         let inventory = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_inventory_evidence" })
         XCTAssertEqual((inventory["inputSchema"] as? [String: Any])?["required"] as? [String], ["version", "projectRoot"])
+        let upsert = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_upsert_ticket_reference" })
+        XCTAssertEqual(
+            (upsert["inputSchema"] as? [String: Any])?["required"] as? [String],
+            ["version", "requestID", "projectRoot", "reason", "target", "ticketID", "linkID", "kind", "artifactID", "expectedLinkSetRevision"]
+        )
     }
     private func send(_ callback: AgentBridgeAppCallback, data: Data) async throws -> AgentCommandResult {
         let response = await withCheckedContinuation { continuation in

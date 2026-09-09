@@ -282,6 +282,15 @@ struct FailureStatePresentation: Equatable, Sendable {
             self.init(title: "Task action rejected",
                       detail: "Refresh the ticket task plan and check the requested tasks before retrying. Definitions of completed tasks cannot change, and a plan must retain an active task. No delivery state changed.",
                       systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-agent-validation")
+        case let .ticketReferenceLinkSetRevisionConflict(_, current):
+            self.init(title: "Reference links changed",
+                      detail: "The current reference-link revision is \(current). Refresh the ticket before retrying. No reference state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-reference-validation")
+        case .ticketReferenceNotFound, .ticketReferenceIdentityImmutable,
+             .ticketReferenceTicketAccepted, .ticketReferenceSourceNotAuthoritative:
+            self.init(title: "Reference action rejected",
+                      detail: "Refresh the ticket and its accepted documentation catalog. Only active controlling artifacts can be linked, and Accepted ticket references are immutable.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-reference-validation")
         case let .documentation(error):
             self.init(title: "Documentation action rejected",
                       detail: "Documentation operation failed (\(error.rawValue)). Inspect the project evidence inventory and retry the exact approved operation.",
