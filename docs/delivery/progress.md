@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is verified and ready for a source PR and owner merge approval.** The owner selected
+**Phase 5A is verified in [PR #38](https://github.com/joeroberts/release-radar/pull/38), awaiting owner merge approval.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -29,7 +29,9 @@ integrated into this branch: storage pairing and defensive policy checks, read-o
 test-host interaction markers, real Plan ticket/filter-summary focus and no fallback
 inspector after filtering. The same reviewer passed combined candidate `9a2c573`
 with no remaining Required findings, including a fresh live native focus/filter
-journey. Both bounded peers report no pending writes or test/host processes.
+journey. Both bounded peers report no pending writes or test/host processes and
+are archived; their source and useful review results are preserved here and in
+the evidence document.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -106,7 +108,7 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is a source PR for separate owner merge approval. Approved
+Next eligible action is owner approval to merge PR #38. Approved
 proposal/successor slices follow without gating independent first-slice work.
 
 Phase 5A raw results are preserved outside Xcode's rolling logs in
