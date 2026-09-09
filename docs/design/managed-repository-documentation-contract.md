@@ -741,3 +741,19 @@ The owner subsequently approved M1 and accepted ADR-007. M2, Task 4B, app
 launch, tests, storage migration, guidance activation, document movement,
 evidence mutation, Git commit/push, and external issue changes each remain
 separately authorization-gated.
+
+## Phase 5B source revision and readback extension — 2026-09-09
+
+The later owner-approved Phase 5B links use exact content revisions independently
+of catalog snapshots. A bounded authorized full-byte read and stability check
+produces the source digest; preview truncation never defines that revision. A
+supplied source-local identifier is preserved, while headings/lines remain
+locators. No copied prose or derived heading becomes requirement authority.
+
+Recorded source metadata and current resolution are presented separately. Denied,
+pending, missing, unsafe or unstable access remains explicit, and late callbacks
+cannot republish content after context changes. Historical content is shown only
+when safely resolved bytes match the linked digest. Scoped link/history/reverse
+queries report incomplete results honestly and never mutate app or repository
+state. The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+defines command admission, recovery and verification for this extension.

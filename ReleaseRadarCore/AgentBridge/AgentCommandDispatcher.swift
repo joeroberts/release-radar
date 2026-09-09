@@ -53,6 +53,20 @@ public actor AgentCommandDispatcher {
            case .externalAgent = origin {
             return .init(entityIDs: [], auditEventID: nil, error: .ownerAcceptanceRequired)
         }
+        if envelope.command.isTicketReferenceMutation {
+            guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+            }
+            guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+            }
+            guard let body = try? canonicalRequestBody(envelope) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .invalidEnvelope("Reference request could not be encoded"))
+            }
+            return await TicketReferenceCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
+                .dispatch(envelope, requestBody: body, origin: origin,
+                          admissionDeadline: admissionDeadline, expectedRegistration: project.registration)
+        }
         if envelope.command.isDocumentationMutation {
             guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
@@ -209,6 +223,22 @@ public actor AgentCommandDispatcher {
                 && valid(phaseID, maximum: 256) && !phaseID.contains("\0") && revision >= 0
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             commandFieldsAreValid = (try? envelope.command.validateDocumentation()) != nil
+        case let .upsertTicketReference(target, ticketID, linkID, _, artifactID, sourceLocalID, locator, expectedContentDigest, revision):
+            commandFieldsAreValid = valid(target.projectID, maximum: 256) && valid(target.rootID, maximum: 256)
+                && valid(target.repositoryID, maximum: 36) && target.catalogVersion > 0
+                && target.catalogDigest.count == 64 && valid(ticketID, maximum: 256)
+                && valid(linkID, maximum: 256) && valid(artifactID, maximum: 128)
+                && sourceLocalID.map { valid($0, maximum: 256) } != false
+                && locator.map { valid($0) } != false
+                && expectedContentDigest.count == 64
+                && expectedContentDigest.utf8.allSatisfy {
+                    ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102)
+                }
+                && revision >= 0
+        case let .retireTicketReference(projectID, rootID, ticketID, linkID, version, revision):
+            commandFieldsAreValid = valid(projectID, maximum: 256) && valid(rootID, maximum: 256)
+                && valid(ticketID, maximum: 256) && valid(linkID, maximum: 256)
+                && version > 0 && revision >= 0
         case let .upsertPhase(phaseID, name):
             commandFieldsAreValid = valid(phaseID, maximum: 256) && valid(name)
         case let .upsertUnassignedTicket(ticketID, outcome):
@@ -342,6 +372,10 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [ticketID, taskID], auditEventID: auditEventID, error: nil, ticketTaskPlanRevision: revision)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
             return .init(entityIDs: command.documentationIDs, auditEventID: auditEventID, error: nil)
+        case let .upsertTicketReference(_, ticketID, linkID, _, _, _, _, _, _),
+             let .retireTicketReference(_, _, ticketID, linkID, _, _):
+            return .init(entityIDs: [ticketID, linkID], auditEventID: auditEventID, error: nil,
+                         ticketReferenceLinkSetRevision: revision)
         case let .upsertPhase(phaseID, _):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
         case let .upsertUnassignedTicket(ticketID, _):
@@ -374,6 +408,8 @@ public actor AgentCommandDispatcher {
         case let .applyPhasePlanRevision(_, phaseID, _, _, _, _, _), let .finalizePhasePlan(_, phaseID, _): (.phasePlan, phaseID)
         case let .transitionDeliveryGoal(_, _, goalID, _, _): (.deliveryGoal, goalID)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence: (.project, projectID.rawValue)
+        case let .upsertTicketReference(_, _, linkID, _, _, _, _, _, _),
+             let .retireTicketReference(_, _, _, linkID, _, _): (.ticketReference, linkID)
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
         case let .upsertUnassignedTicket(ticketID, _), let .placeUnassignedTicket(ticketID, _, _), let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
@@ -435,7 +471,8 @@ public actor AgentCommandDispatcher {
                 projectID: projectID, ticketID: .init(rawValue: ticketID), taskID: .init(rawValue: taskID),
                 expectedRevision: expectedRevision, connection: connection
             ).revision
-        case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence:
+        case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence,
+             .upsertTicketReference, .retireTicketReference:
             throw DocumentationOperationError.invalidRequest
         case let .upsertPhase(phaseID, name):
             try requireWritableID(phaseID, table: "phases", projectID: projectID, connection: connection)
@@ -819,6 +856,16 @@ public actor AgentCommandDispatcher {
                 }
             }
         default: break
+        }
+        if let error = error as? TicketReferenceMutationError {
+            switch error {
+            case let .linkSetRevisionConflict(expected, current):
+                return .ticketReferenceLinkSetRevisionConflict(expected: expected, current: current)
+            case .notFound: return .ticketReferenceNotFound
+            case .identityImmutable: return .ticketReferenceIdentityImmutable
+            case .ticketAccepted: return .ticketReferenceTicketAccepted
+            case .sourceNotAuthoritative: return .ticketReferenceSourceNotAuthoritative
+            }
         }
         if let error = error as? DocumentationOperationError { return .documentation(error) }
         if let validation = error as? CommandValidation {

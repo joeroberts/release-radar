@@ -8,6 +8,9 @@ struct TicketDetailView: View {
     var restoreDocumentationFolderAccess: (() -> Void)? = nil
     var openWorktreeRecovery: (() -> Void)? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
+    var loadReferences: (() async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
+    var openReferenceSource: ((String, Int64) -> Void)? = nil
+    var referenceContextIdentity: String? = nil
     var reload: () async -> Void = {}
     @State private var isReloadingTasks = false
     @ScaledMetric(relativeTo: .subheadline) private var taskFontSize = 12
@@ -29,6 +32,16 @@ struct TicketDetailView: View {
                 }
 
                 tasksSection
+
+                if let loadReferences, let openReferenceSource {
+                    let identity = "\(referenceContextIdentity ?? "unavailable"):\(detail.id.rawValue)"
+                    TicketReferencesSection(
+                        identity: identity,
+                        load: loadReferences,
+                        openSource: openReferenceSource
+                    )
+                    .id(identity)
+                }
 
                 detailSection("Delivery Goal", systemImage: "target") {
                     if let goal = detail.deliveryGoal {

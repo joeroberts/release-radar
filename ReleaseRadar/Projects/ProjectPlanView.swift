@@ -13,6 +13,9 @@ struct ProjectPlanView: View {
     let openPhase: (PhaseID) -> Void
     var documentationStatus: DocumentationObservationStatus? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
+    var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
+    var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
+    var referenceContextIdentity: String? = nil
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
     @FocusState private var focusedTicketID: TicketID?
@@ -164,8 +167,18 @@ struct ProjectPlanView: View {
 
     @ViewBuilder private var inspector: some View {
         if let detail = plan.detail(for: selectedTicketID) ?? plan.unassignedDetails.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first {
-            TicketDetailView(detail: detail, documentationStatus: documentationStatus,
-                             loadEvidencePreview: loadEvidencePreview)
+            TicketDetailView(
+                detail: detail,
+                documentationStatus: documentationStatus,
+                loadEvidencePreview: loadEvidencePreview,
+                loadReferences: loadTicketReferences.map { loader in
+                    { await loader(detail.id) }
+                },
+                openReferenceSource: openReferenceSource.map { opener in
+                    { linkID, version in opener(detail.id, linkID, version) }
+                },
+                referenceContextIdentity: referenceContextIdentity
+            )
                 .accessibilityIdentifier("project-plan-inspector")
         } else {
             ContentUnavailableView("Select an unassigned ticket", systemImage: "rectangle.on.rectangle")

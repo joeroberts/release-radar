@@ -154,11 +154,29 @@ private struct MCPServer {
 
     private static func makeEnvelope(tool: String, arguments: [String: Any]) throws -> Data {
         let version = try integer("version", in: arguments)
-        if tool == "release_radar_inventory_evidence" {
-            var query: [String: Any] = [:]
-            for key in ["projectID", "rootID"] { if let value = try optionalString(key, in: arguments) { query[key] = value } }
-            let data = try JSONSerialization.data(withJSONObject: ["version": version, "projectRoot": try string("projectRoot", in: arguments), "query": ["inventoryEvidence": query]])
-            guard data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes else { throw ToolFailure.invalidRequest("Inventory query exceeds the transport limit") }
+        if ["release_radar_inventory_evidence", "release_radar_ticket_references", "release_radar_recorded_impacts"].contains(tool) {
+            let query: [String: Any]
+            switch tool {
+            case "release_radar_inventory_evidence":
+                var value: [String: Any] = [:]
+                for key in ["projectID", "rootID"] { if let item = try optionalString(key, in: arguments) { value[key] = item } }
+                query = ["inventoryEvidence": value]
+            case "release_radar_ticket_references":
+                query = ["ticketReferences": [
+                    "projectID": try string("projectID", in: arguments),
+                    "rootID": try string("rootID", in: arguments),
+                    "ticketID": try string("ticketID", in: arguments),
+                ]]
+            default:
+                query = ["recordedImpacts": [
+                    "projectID": try string("projectID", in: arguments),
+                    "rootID": try string("rootID", in: arguments),
+                    "repositoryID": try string("repositoryID", in: arguments),
+                    "artifactID": try string("artifactID", in: arguments),
+                ]]
+            }
+            let data = try JSONSerialization.data(withJSONObject: ["version": version, "projectRoot": try string("projectRoot", in: arguments), "query": query])
+            guard data.count <= ReleaseRadarBridgeTransport.maximumEnvelopeBytes else { throw ToolFailure.invalidRequest("Read-only query exceeds the transport limit") }
             return data
         }
         let requestID = try string("requestID", in: arguments)
@@ -338,6 +356,34 @@ private struct MCPServer {
             var value: [String: Any] = [:]
             for key in ["projectID", "rootID", "evidenceID", "expectedPath", "newPath"] { value[key] = try string(key, in: arguments) }
             return ("relocateLegacyEvidence", value)
+        case "release_radar_upsert_ticket_reference":
+            try requireTaskFields(arguments, allowed: ["target", "ticketID", "linkID", "kind", "artifactID", "sourceLocalID", "locator", "expectedContentDigest", "expectedLinkSetRevision"])
+            let kind = try string("kind", in: arguments)
+            guard ["requirement", "decision"].contains(kind) else {
+                throw ToolFailure.invalidRequest("kind must be requirement or decision")
+            }
+            var value: [String: Any] = [
+                "target": try documentationTarget(arguments),
+                "ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256),
+                "linkID": try taskString("linkID", in: arguments, maximumBytes: 256),
+                "kind": kind,
+                "artifactID": try taskString("artifactID", in: arguments, maximumBytes: 128),
+                "expectedContentDigest": try digest("expectedContentDigest", in: arguments),
+                "expectedLinkSetRevision": try phaseRevision("expectedLinkSetRevision", in: arguments),
+            ]
+            if let sourceLocalID = try optionalString("sourceLocalID", in: arguments) { value["sourceLocalID"] = sourceLocalID }
+            if let locator = try optionalString("locator", in: arguments) { value["locator"] = locator }
+            return try boundedTaskCommand("upsertTicketReference", value: value)
+        case "release_radar_retire_ticket_reference":
+            try requireTaskFields(arguments, allowed: ["projectID", "rootID", "ticketID", "linkID", "referenceVersion", "expectedLinkSetRevision"])
+            return try boundedTaskCommand("retireTicketReference", value: [
+                "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                "rootID": try taskString("rootID", in: arguments, maximumBytes: 256),
+                "ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256),
+                "linkID": try taskString("linkID", in: arguments, maximumBytes: 256),
+                "version": try positiveRevision("referenceVersion", in: arguments),
+                "expectedLinkSetRevision": try phaseRevision("expectedLinkSetRevision", in: arguments),
+            ])
         case "release_radar_upsert_phase":
             return ("upsertPhase", ["phaseID": try string("phaseID", in: arguments), "name": try string("name", in: arguments)])
         case "release_radar_upsert_unassigned_ticket":
@@ -449,6 +495,17 @@ private struct MCPServer {
         return value
     }
 
+    private static func digest(_ key: String, in arguments: [String: Any]) throws -> String {
+        let value = try string(key, in: arguments)
+        guard value.count == 64,
+              value.utf8.allSatisfy({
+                  ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102)
+              }) else {
+            throw ToolFailure.invalidRequest("\(key) must be a lowercase 64-character SHA-256 digest")
+        }
+        return value
+    }
+
     private static func phaseRevision(_ key: String, in arguments: [String: Any]) throws -> Int64 {
         let value = try integer(key, in: arguments)
         guard value >= 0, let revision = Int64(exactly: value) else {
@@ -551,11 +608,41 @@ private struct MCPServer {
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
              "inputSchema": ["type": "object", "additionalProperties": false, "required": ["version", "projectRoot"],
                              "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string, "projectID": string, "rootID": string]]],
+            ["name": "release_radar_ticket_references", "description": "Read a ticket's retained requirement and decision link history plus exact current source facts. This never mutates delivery state.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false,
+                             "required": ["version", "projectRoot", "projectID", "rootID", "ticketID"],
+                             "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string,
+                                            "projectID": taskID, "rootID": taskID, "ticketID": taskID]]],
+            ["name": "release_radar_recorded_impacts", "description": "Read project-scoped current and historical ticket impacts for one repository artifact. This never mutates delivery state.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false,
+                             "required": ["version", "projectRoot", "projectID", "rootID", "repositoryID", "artifactID"],
+                             "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string,
+                                            "projectID": taskID, "rootID": taskID,
+                                            "repositoryID": ["type": "string", "format": "uuid"], "artifactID": taskID]]],
             definition("release_radar_bind_documentation_repository", required: ["target"], fields: ["target": target]),
             definition("release_radar_accept_documentation_catalog", required: ["target", "priorCatalogVersion", "priorCatalogDigest"], fields: ["target": target, "priorCatalogVersion": ["type": "integer", "const": 1], "priorCatalogDigest": string]),
             definition("release_radar_add_managed_evidence", required: ["target", "id", "artifactID"], fields: ["target": target, "id": string, "ticketID": string, "artifactID": string]),
             definition("release_radar_adopt_managed_evidence", required: ["target", "adoptions"], fields: ["target": target, "adoptions": adoption]),
             definition("release_radar_relocate_legacy_evidence", required: ["projectID", "rootID", "evidenceID", "expectedPath", "newPath"], fields: ["projectID": string, "rootID": string, "evidenceID": string, "expectedPath": string, "newPath": string]),
+            definition(
+                "release_radar_upsert_ticket_reference",
+                required: ["target", "ticketID", "linkID", "kind", "artifactID", "expectedContentDigest", "expectedLinkSetRevision"],
+                fields: ["target": target, "ticketID": taskID, "linkID": taskID,
+                         "kind": ["type": "string", "enum": ["requirement", "decision"]],
+                         "artifactID": taskID, "sourceLocalID": taskID, "locator": taskTitle,
+                         "expectedContentDigest": ["type": "string", "pattern": "^[0-9a-f]{64}$"],
+                         "expectedLinkSetRevision": phaseRevision],
+                description: "Create or revise one ticket reference using the complete safe bytes of an active controlling artifact in the exact accepted catalog. Returns the committed link-set revision."
+            ),
+            definition(
+                "release_radar_retire_ticket_reference",
+                required: ["projectID", "rootID", "ticketID", "linkID", "referenceVersion", "expectedLinkSetRevision"],
+                fields: ["projectID": taskID, "rootID": taskID, "ticketID": taskID, "linkID": taskID,
+                         "referenceVersion": taskRevision, "expectedLinkSetRevision": phaseRevision],
+                description: "Retire the exact current link version without requiring the source artifact to remain available. History is retained."
+            ),
             definition("release_radar_upsert_phase", required: ["phaseID", "name"], fields: ["phaseID": string, "name": string]),
             definition(
                 "release_radar_upsert_unassigned_ticket",

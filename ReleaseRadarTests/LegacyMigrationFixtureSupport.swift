@@ -1,7 +1,38 @@
 import XCTest
 @testable import ReleaseRadarCore
 
+func removeVersionTwentyReferenceSchema(_ connection: SQLiteConnection) throws {
+    for table in [
+        "ticket_reference_versions",
+        "ticket_reference_links",
+        "ticket_reference_link_sets",
+        "retained_ticket_reference_versions",
+        "retained_ticket_reference_links",
+    ] {
+        XCTAssertEqual(
+            try connection.scalarInt("SELECT COUNT(*) FROM \(table)"),
+            0,
+            "Synthetic legacy fixtures must not discard reference history"
+        )
+    }
+    try connection.execute("PRAGMA foreign_keys = OFF")
+    defer { try? connection.execute("PRAGMA foreign_keys = ON") }
+    try connection.executeScript("""
+    DROP TRIGGER IF EXISTS ticket_reference_versions_reject_update;
+    DROP TRIGGER IF EXISTS ticket_reference_versions_reject_delete;
+    DROP TRIGGER IF EXISTS ticket_reference_links_reject_identity_update;
+    DROP TRIGGER IF EXISTS ticket_reference_links_reject_delete;
+    DROP TRIGGER IF EXISTS ticket_reference_link_sets_reject_delete;
+    DROP TABLE IF EXISTS ticket_reference_versions;
+    DROP TABLE IF EXISTS ticket_reference_links;
+    DROP TABLE IF EXISTS ticket_reference_link_sets;
+    DROP TABLE IF EXISTS retained_ticket_reference_versions;
+    DROP TABLE IF EXISTS retained_ticket_reference_links;
+    """)
+}
+
 func restorePreVersionNineteenTicketSchema(_ connection: SQLiteConnection) throws {
+    try removeVersionTwentyReferenceSchema(connection)
     try connection.execute("PRAGMA foreign_keys = OFF")
     defer { try? connection.execute("PRAGMA foreign_keys = ON") }
     try connection.executeScript("""

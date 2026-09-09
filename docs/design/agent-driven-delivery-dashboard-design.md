@@ -438,3 +438,22 @@ inspector. It differs from the historical planning proposal by showing readiness
 rather than inventing phase lifecycle groups and by retaining board-local scope
 switching, as required by the later owner selection for one shared phase/all-phase
 board. These differences do not introduce lifecycle or ordering semantics.
+
+## Phase 5B references and recorded impacts — 2026-09-09
+
+Placed and unassigned ticket inspectors expose requirement/decision links with
+linked revision, current resolution facts and retained link history. Source details
+lead to **Recorded impacts**: project-scoped tickets explicitly linked to that
+source, labelled by phase or Not placed, kind, source-local identity/revision and
+current versus historical relationship. These results do not assert complete
+semantic impact or delivery coverage. Ticket dependencies remain separately named.
+
+Use existing inspector/navigation and supplied RDS patterns. Back/Forward restores
+the source/link context, ticket, scope/filter and actual keyboard/accessibility
+focus. Unavailable historical content remains visibly unavailable, never replaced
+by current prose; missing targets never select another ticket. Native browsing is
+read-only, with link creation/revision/retirement performed through typed agent
+commands. Wide/compact and recovery journeys must be verified against the Phase
+Board/Dependencies visual language. The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+sets the complete bounded acceptance criteria; it does not adopt later proposal
+or lifecycle surfaces.
