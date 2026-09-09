@@ -55,6 +55,7 @@
 | rr-phase3b-preview-evidence-2026-09-08 | [docs/delivery/evidence/2026-09-08-phase3b-evidence-preview.md](evidence/2026-09-08-phase3b-evidence-preview.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase4-navigation-evidence-2026-09-08 | [docs/delivery/evidence/2026-09-08-phase4-navigation.md](evidence/2026-09-08-phase4-navigation.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-09-phase5a-recorded-planning | [docs/delivery/evidence/2026-09-09-phase5a-recorded-planning.md](evidence/2026-09-09-phase5a-recorded-planning.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-09-phase5b-reference-impacts | [docs/delivery/evidence/2026-09-09-phase5b-reference-impacts.md](evidence/2026-09-09-phase5b-reference-impacts.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
@@ -103,6 +104,15 @@
 | rr-phase5a-all-phase-board-wide | [docs/delivery/evidence/phase5a-all-phase-board-wide.png](evidence/phase5a-all-phase-board-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase5a-project-plan-compact | [docs/delivery/evidence/phase5a-project-plan-compact.png](evidence/phase5a-project-plan-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase5a-project-plan-wide | [docs/delivery/evidence/phase5a-project-plan-wide.png](evidence/phase5a-project-plan-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-recorded-impacts-compact | [docs/delivery/evidence/phase5b-recorded-impacts-compact.png](evidence/phase5b-recorded-impacts-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-recorded-impacts-empty | [docs/delivery/evidence/phase5b-recorded-impacts-empty.png](evidence/phase5b-recorded-impacts-empty.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-recorded-impacts-error | [docs/delivery/evidence/phase5b-recorded-impacts-error.png](evidence/phase5b-recorded-impacts-error.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-recorded-impacts-wide | [docs/delivery/evidence/phase5b-recorded-impacts-wide.png](evidence/phase5b-recorded-impacts-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-reference-live-journey-final | [docs/delivery/evidence/phase5b-reference-live-journey-final.png](evidence/phase5b-reference-live-journey-final.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-reference-source-compact | [docs/delivery/evidence/phase5b-reference-source-compact.png](evidence/phase5b-reference-source-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-reference-source-incomplete | [docs/delivery/evidence/phase5b-reference-source-incomplete.png](evidence/phase5b-reference-source-incomplete.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-reference-source-unavailable | [docs/delivery/evidence/phase5b-reference-source-unavailable.png](evidence/phase5b-reference-source-unavailable.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5b-reference-source-wide | [docs/delivery/evidence/phase5b-reference-source-wide.png](evidence/phase5b-reference-source-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 94fa2ee5-a1e3-43a6-800e-78d94446f16b | [docs/delivery/evidence/rr-r10-task10-board-compact.png](evidence/rr-r10-task10-board-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | a21d7257-8f90-479a-a76b-0d69dfc04eca | [docs/delivery/evidence/rr-r10-task10-board-wide.png](evidence/rr-r10-task10-board-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | b76d1e50-d364-4dbf-b1aa-c31f675be7c7 | [docs/delivery/evidence/rr-r10-task10-filtered-wide.png](evidence/rr-r10-task10-filtered-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |

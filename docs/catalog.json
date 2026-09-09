@@ -5204,6 +5204,156 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-2026-09-09-phase5b-reference-impacts",
+      "path": "docs/delivery/evidence/2026-09-09-phase5b-reference-impacts.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-recorded-impacts-compact",
+      "path": "docs/delivery/evidence/phase5b-recorded-impacts-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-recorded-impacts-empty",
+      "path": "docs/delivery/evidence/phase5b-recorded-impacts-empty.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-recorded-impacts-error",
+      "path": "docs/delivery/evidence/phase5b-recorded-impacts-error.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-recorded-impacts-wide",
+      "path": "docs/delivery/evidence/phase5b-recorded-impacts-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-reference-live-journey-final",
+      "path": "docs/delivery/evidence/phase5b-reference-live-journey-final.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-reference-source-compact",
+      "path": "docs/delivery/evidence/phase5b-reference-source-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-reference-source-incomplete",
+      "path": "docs/delivery/evidence/phase5b-reference-source-incomplete.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-reference-source-unavailable",
+      "path": "docs/delivery/evidence/phase5b-reference-source-unavailable.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5b-reference-source-wide",
+      "path": "docs/delivery/evidence/phase5b-reference-source-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
