@@ -37,7 +37,7 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case addManagedEvidence(target: DocumentationTarget, id: String, ticketID: String?, artifactID: String)
     case adoptManagedEvidence(target: DocumentationTarget, adoptions: [DocumentationAdoption])
     case relocateLegacyEvidence(projectID: String, rootID: String, evidenceID: String, expectedPath: String, newPath: String)
-    case upsertTicketReference(target: DocumentationTarget, ticketID: String, linkID: String, kind: TicketReferenceKind, artifactID: String, sourceLocalID: String?, locator: String?, expectedLinkSetRevision: Int64)
+    case upsertTicketReference(target: DocumentationTarget, ticketID: String, linkID: String, kind: TicketReferenceKind, artifactID: String, sourceLocalID: String?, locator: String?, expectedContentDigest: String, expectedLinkSetRevision: Int64)
     case retireTicketReference(projectID: String, rootID: String, ticketID: String, linkID: String, version: Int64, expectedLinkSetRevision: Int64)
     case upsertPhase(phaseID: String, name: String)
     case upsertUnassignedTicket(ticketID: String, outcome: String)

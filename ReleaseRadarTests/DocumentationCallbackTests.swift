@@ -74,7 +74,7 @@ final class DocumentationCallbackTests: XCTestCase {
         let upsert = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_upsert_ticket_reference" })
         XCTAssertEqual(
             (upsert["inputSchema"] as? [String: Any])?["required"] as? [String],
-            ["version", "requestID", "projectRoot", "reason", "target", "ticketID", "linkID", "kind", "artifactID", "expectedLinkSetRevision"]
+            ["version", "requestID", "projectRoot", "reason", "target", "ticketID", "linkID", "kind", "artifactID", "expectedContentDigest", "expectedLinkSetRevision"]
         )
     }
     private func send(_ callback: AgentBridgeAppCallback, data: Data) async throws -> AgentCommandResult {

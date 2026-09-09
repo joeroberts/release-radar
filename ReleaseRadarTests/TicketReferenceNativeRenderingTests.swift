@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import XCTest
 @testable import ReleaseRadar
@@ -28,13 +29,14 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
 
         var history = NavigationHistory(initial: .projectPlan(projectID))
         history.navigate(to: source, selectedTicketID: ticketID, focus: .referenceSource(linkID: "requirement-main", version: 2))
-        history.navigate(to: impacts, selectedTicketID: ticketID, focus: .recordedImpacts)
+        let exactImpactFocus = NavigationFocus.recordedImpact(rowID: "RR-5B:requirement-main:2")
+        history.navigate(to: impacts, selectedTicketID: ticketID, focus: exactImpactFocus)
         XCTAssertTrue(history.goBack())
         XCTAssertEqual(history.current.route, source)
         XCTAssertEqual(history.current.focus, .referenceSource(linkID: "requirement-main", version: 2))
         XCTAssertTrue(history.goForward())
         XCTAssertEqual(history.current.route, impacts)
-        XCTAssertEqual(history.current.focus, .recordedImpacts)
+        XCTAssertEqual(history.current.focus, exactImpactFocus)
     }
 
     func testProjectRoutesAreNotPresentedWhileTheirDocumentationObservationIsChecking() async throws {
@@ -116,6 +118,13 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             observedLifecycle: .active,
             observedAuthority: .controlling,
             createdAt: "2026-09-09T12:00:00Z",
+            resolution: .init(
+                facts: [.changed, .moved],
+                currentPath: "docs/current-requirements.md",
+                currentDigest: String(repeating: "c", count: 64),
+                currentLifecycle: .active,
+                currentAuthority: .controlling
+            ),
             historicalPreview: "The exact historical source content.",
             previewIsTruncated: false
         )
@@ -145,9 +154,11 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             artifactID: "requirements",
             rows: [
                 .init(ticketID: "RR-5B", phaseID: "phase", phaseLabel: "Delivery", linkID: link.id,
-                      kind: .requirement, sourceLocalID: "REQ-5B", version: 2, isCurrent: true),
+                      kind: .requirement, sourceLocalID: "REQ-5B",
+                      contentDigest: String(repeating: "a", count: 64), version: 2, isCurrent: true),
                 .init(ticketID: "RR-OLD", phaseID: nil, phaseLabel: "Not placed", linkID: link.id,
-                      kind: .requirement, sourceLocalID: "REQ-5B", version: 1, isCurrent: false),
+                      kind: .requirement, sourceLocalID: "REQ-5B",
+                      contentDigest: String(repeating: "d", count: 64), version: 1, isCurrent: false),
             ]
         )
 
@@ -197,7 +208,7 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(150))
             impactsHost.layoutSubtreeIfNeeded()
             XCTAssertGreaterThan(impactsHost.fittingSize.height, 0)
-            XCTAssertEqual(impactsFocus, .recordedImpacts)
+            XCTAssertEqual(impactsFocus, .recordedImpact(rowID: impacts.rows[0].id))
             try capture(impactsHost, name: "phase5b-recorded-impacts-\(Int(width))")
         }
     }
@@ -219,7 +230,18 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             repositoryID: "repository",
             artifactID: "requirements"
         )
-        await model.openRecordedImpactTicket(projectID: projectID, ticketID: ticketID)
+        let impact = RecordedImpact(
+            ticketID: ticketID.rawValue,
+            phaseID: "phase",
+            phaseLabel: "Phase",
+            linkID: "requirement-main",
+            kind: .requirement,
+            sourceLocalID: "REQ-5B",
+            contentDigest: String(repeating: "a", count: 64),
+            version: 1,
+            isCurrent: false
+        )
+        await model.openRecordedImpactTicket(projectID: projectID, impact: impact)
         XCTAssertEqual(model.selection, .phaseBoard(projectID))
         XCTAssertEqual(model.selectedTicketID, ticketID)
         XCTAssertEqual(model.navigationFocus, .ticket(ticketID))
@@ -229,19 +251,92 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             model.selection,
             .recordedImpacts(projectID: projectID, repositoryID: "repository", artifactID: "requirements")
         )
-        XCTAssertEqual(model.navigationFocus, .recordedImpacts)
+        XCTAssertEqual(model.navigationFocus, .recordedImpact(rowID: impact.id))
         await model.goForward()
         XCTAssertEqual(model.selection, .phaseBoard(projectID))
         XCTAssertEqual(model.selectedTicketID, ticketID)
         XCTAssertEqual(model.navigationFocus, .ticket(ticketID))
     }
 
+    func testRecordedImpactsRestoresExactNonFirstVersionForDuplicateTicket() async throws {
+        let current = RecordedImpact(
+            ticketID: "RR-DUPLICATE", phaseID: "phase", phaseLabel: "Phase",
+            linkID: "requirement-main", kind: .requirement, sourceLocalID: "REQ-5B",
+            contentDigest: String(repeating: "a", count: 64), version: 2, isCurrent: true
+        )
+        let historical = RecordedImpact(
+            ticketID: "RR-DUPLICATE", phaseID: "phase", phaseLabel: "Phase",
+            linkID: "requirement-main", kind: .requirement, sourceLocalID: "REQ-5B",
+            contentDigest: String(repeating: "b", count: 64), version: 1, isCurrent: false
+        )
+        let impacts = RecordedImpacts(
+            title: "Recorded impacts", projectID: "project", repositoryID: "repository",
+            artifactID: "requirements", rows: [current, historical]
+        )
+        var restoredFocus: NavigationFocus?
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let hosting = NSHostingView(rootView: RecordedImpactsView(
+            impacts: impacts,
+            requestedFocus: .recordedImpact(rowID: historical.id),
+            focusChanged: { restoredFocus = $0 },
+            openTicket: { _ in }
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 700, height: 700)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.title = "Phase 5B exact recorded-impact focus"
+        window.isReleasedWhenClosed = false
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        try await Task.sleep(for: .milliseconds(150))
+
+        XCTAssertEqual(restoredFocus, .recordedImpact(rowID: historical.id))
+        XCTAssertNotEqual(current.id, historical.id)
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        XCTAssertNotNil(accessibilityElement(application, identifier: "recorded-impact-\(current.id)"))
+        XCTAssertNotNil(accessibilityElement(application, identifier: "recorded-impact-\(historical.id)"))
+    }
+
+    func testTicketReferenceSectionWithdrawsLateResultWhenTicketChangesInPlace() async throws {
+        let notification = Notification.Name("phase5b-switch-ticket-\(UUID().uuidString)")
+        let gate = TicketReferenceSectionLoadGate()
+        let hosting = NSHostingView(rootView: TicketReferenceSectionSwitchHarness(
+            notification: notification,
+            gate: gate
+        ))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.title = "Phase 5B reference identity switch"
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        await gate.waitUntilOldLoadEntered()
+
+        NotificationCenter.default.post(name: notification, object: nil)
+        try await Task.sleep(for: .milliseconds(150))
+        await gate.releaseOldLoad()
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+
+        let text = accessibilityText(AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier))
+        XCTAssertTrue(text.contains("Ticket B current"))
+        XCTAssertTrue(text.contains("REQ-B"))
+        XCTAssertFalse(text.contains("Ticket A stale"))
+        XCTAssertFalse(text.contains("REQ-A"))
+    }
+
     func testLiveReferenceJourneyUsesNativeControlsAndRestoresFocus() async throws {
-        let enableMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5b-live-journey-01a087a0-v4-enabled")
+        let enableMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5b-live-journey-01a087a0-v5-enabled")
         guard FileManager.default.fileExists(atPath: enableMarker.path) else {
             throw XCTSkip("Create the one-shot Phase 5B interaction marker to run this isolated native journey.")
         }
-        let completionMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5b-live-journey-01a087a0-v4-complete")
+        let completionMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5b-live-journey-01a087a0-v5-complete")
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("release-radar-reference-interaction-\(UUID().uuidString)")
         let root = directory.appendingPathComponent("repository")
@@ -313,10 +408,27 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
                 artifactID: "current",
                 sourceLocalID: "REQ-5B",
                 locator: "Native journey",
+                expectedContentDigest: documentationDigest(
+                    try Data(contentsOf: root.appendingPathComponent("docs/plans/current.md"))
+                ),
                 expectedLinkSetRevision: 0
             )))
             XCTAssertNil(result.error)
         }
+        let revisedPlaced = await dispatcher.dispatch(envelope(.upsertTicketReference(
+            target: target,
+            ticketID: "placed",
+            linkID: "placed-reference",
+            kind: .requirement,
+            artifactID: "current",
+            sourceLocalID: "REQ-5B",
+            locator: "Native journey current version",
+            expectedContentDigest: documentationDigest(
+                try Data(contentsOf: root.appendingPathComponent("docs/plans/current.md"))
+            ),
+            expectedLinkSetRevision: 1
+        )))
+        XCTAssertNil(revisedPlaced.error)
 
         let onboarding = FolderProjectOnboarding(store: store, bookmarkStore: bookmarks)
         let model = AppModel(
@@ -376,6 +488,10 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             observedLifecycle: .active,
             observedAuthority: .controlling,
             createdAt: "2026-09-09T12:00:00Z",
+            resolution: .init(
+                facts: [.unavailable, .unchecked], currentPath: nil, currentDigest: nil,
+                currentLifecycle: nil, currentAuthority: nil
+            ),
             historicalPreview: nil,
             previewIsTruncated: false
         )
@@ -453,6 +569,7 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         )
         try await renderState(
             TicketReferenceSourceRouteView(
+                identity: "project:root:registration",
                 ticketID: .init(rawValue: "RR-MISSING"),
                 linkID: "missing-link",
                 version: 1,
@@ -505,6 +622,131 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func accessibilityText(_ root: AXUIElement) -> String {
+        var pending = [root]
+        var text: [String] = []
+        var count = 0
+        while let element = pending.popLast(), count < 1_000 {
+            count += 1
+            for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
+                var value: CFTypeRef?
+                if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+                   let value = value as? String {
+                    text.append(value)
+                }
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return text.joined(separator: "\n")
+    }
+
+    private func accessibilityElement(_ root: AXUIElement, identifier: String) -> AXUIElement? {
+        var pending = [root]
+        var count = 0
+        while let element = pending.popLast(), count < 1_000 {
+            count += 1
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXIdentifierAttribute as CFString, &value) == .success,
+               value as? String == identifier {
+                return element
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return nil
+    }
+}
+
+private struct TicketReferenceSectionSwitchHarness: View {
+    let notification: Notification.Name
+    let gate: TicketReferenceSectionLoadGate
+    @State private var ticketID = "ticket-a"
+
+    var body: some View {
+        let capturedTicketID = ticketID
+        TicketReferencesSection(
+            identity: "project:registration:root:\(capturedTicketID)",
+            load: { await gate.load(ticketID: capturedTicketID) },
+            openSource: { _, _ in }
+        )
+        .id(capturedTicketID)
+        .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in
+            ticketID = "ticket-b"
+        }
+    }
+}
+
+private actor TicketReferenceSectionLoadGate {
+    private var oldLoadEntered = false
+    private var entryWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+    func load(ticketID: String) async -> ReferenceLoadResult<TicketReferenceSet> {
+        if ticketID == "ticket-a" {
+            oldLoadEntered = true
+            entryWaiters.forEach { $0.resume() }
+            entryWaiters.removeAll()
+            await withCheckedContinuation { releaseContinuation = $0 }
+            return .loaded(Self.referenceSet(
+                ticketID: ticketID,
+                phaseLabel: "Ticket A stale",
+                sourceLocalID: "REQ-A"
+            ))
+        }
+        return .loaded(Self.referenceSet(
+            ticketID: ticketID,
+            phaseLabel: "Ticket B current",
+            sourceLocalID: "REQ-B"
+        ))
+    }
+
+    func waitUntilOldLoadEntered() async {
+        if oldLoadEntered { return }
+        await withCheckedContinuation { entryWaiters.append($0) }
+    }
+
+    func releaseOldLoad() {
+        releaseContinuation?.resume()
+        releaseContinuation = nil
+    }
+
+    private static func referenceSet(
+        ticketID: String,
+        phaseLabel: String,
+        sourceLocalID: String
+    ) -> TicketReferenceSet {
+        let resolution = TicketReferenceResolution(
+            facts: [], currentPath: "docs/current.md",
+            currentDigest: String(repeating: "a", count: 64),
+            currentLifecycle: .active, currentAuthority: .controlling
+        )
+        let version = TicketReferenceVersion(
+            version: 1, contentDigest: String(repeating: "a", count: 64),
+            sourceLocalID: sourceLocalID, locator: nil, catalogVersion: 1,
+            catalogDigest: String(repeating: "b", count: 64), observedPath: "docs/current.md",
+            observedLifecycle: .active, observedAuthority: .controlling,
+            createdAt: "2026-09-09T12:00:00Z", resolution: resolution,
+            historicalPreview: "Current", previewIsTruncated: false
+        )
+        return .init(
+            projectID: "project", ticketID: ticketID, phaseID: nil,
+            phaseLabel: phaseLabel, linkSetRevision: 1,
+            links: [.init(
+                id: "link-\(ticketID)", kind: .requirement, repositoryID: "repository",
+                artifactID: "requirements", currentVersion: 1, relationship: .current,
+                retiredVersion: nil, retiredAt: nil, retirementReason: nil,
+                versions: [version], resolution: resolution
+            )]
+        )
     }
 }
 

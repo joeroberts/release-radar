@@ -357,7 +357,7 @@ private struct MCPServer {
             for key in ["projectID", "rootID", "evidenceID", "expectedPath", "newPath"] { value[key] = try string(key, in: arguments) }
             return ("relocateLegacyEvidence", value)
         case "release_radar_upsert_ticket_reference":
-            try requireTaskFields(arguments, allowed: ["target", "ticketID", "linkID", "kind", "artifactID", "sourceLocalID", "locator", "expectedLinkSetRevision"])
+            try requireTaskFields(arguments, allowed: ["target", "ticketID", "linkID", "kind", "artifactID", "sourceLocalID", "locator", "expectedContentDigest", "expectedLinkSetRevision"])
             let kind = try string("kind", in: arguments)
             guard ["requirement", "decision"].contains(kind) else {
                 throw ToolFailure.invalidRequest("kind must be requirement or decision")
@@ -368,6 +368,7 @@ private struct MCPServer {
                 "linkID": try taskString("linkID", in: arguments, maximumBytes: 256),
                 "kind": kind,
                 "artifactID": try taskString("artifactID", in: arguments, maximumBytes: 128),
+                "expectedContentDigest": try digest("expectedContentDigest", in: arguments),
                 "expectedLinkSetRevision": try phaseRevision("expectedLinkSetRevision", in: arguments),
             ]
             if let sourceLocalID = try optionalString("sourceLocalID", in: arguments) { value["sourceLocalID"] = sourceLocalID }
@@ -494,6 +495,17 @@ private struct MCPServer {
         return value
     }
 
+    private static func digest(_ key: String, in arguments: [String: Any]) throws -> String {
+        let value = try string(key, in: arguments)
+        guard value.count == 64,
+              value.utf8.allSatisfy({
+                  ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102)
+              }) else {
+            throw ToolFailure.invalidRequest("\(key) must be a lowercase 64-character SHA-256 digest")
+        }
+        return value
+    }
+
     private static func phaseRevision(_ key: String, in arguments: [String: Any]) throws -> Int64 {
         let value = try integer(key, in: arguments)
         guard value >= 0, let revision = Int64(exactly: value) else {
@@ -616,10 +628,11 @@ private struct MCPServer {
             definition("release_radar_relocate_legacy_evidence", required: ["projectID", "rootID", "evidenceID", "expectedPath", "newPath"], fields: ["projectID": string, "rootID": string, "evidenceID": string, "expectedPath": string, "newPath": string]),
             definition(
                 "release_radar_upsert_ticket_reference",
-                required: ["target", "ticketID", "linkID", "kind", "artifactID", "expectedLinkSetRevision"],
+                required: ["target", "ticketID", "linkID", "kind", "artifactID", "expectedContentDigest", "expectedLinkSetRevision"],
                 fields: ["target": target, "ticketID": taskID, "linkID": taskID,
                          "kind": ["type": "string", "enum": ["requirement", "decision"]],
                          "artifactID": taskID, "sourceLocalID": taskID, "locator": taskTitle,
+                         "expectedContentDigest": ["type": "string", "pattern": "^[0-9a-f]{64}$"],
                          "expectedLinkSetRevision": phaseRevision],
                 description: "Create or revise one ticket reference using the complete safe bytes of an active controlling artifact in the exact accepted catalog. Returns the committed link-set revision."
             ),

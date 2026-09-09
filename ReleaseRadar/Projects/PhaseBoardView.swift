@@ -62,6 +62,7 @@ struct PhaseBoardView: View {
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
     var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
+    var referenceContextIdentity: String? = nil
     var viewPhase: (PhaseID) -> Void = { _ in }
     var viewAllPhases: () -> Void = {}
     var requestedFocus: NavigationFocus? = nil
@@ -372,6 +373,7 @@ struct PhaseBoardView: View {
                 openReferenceSource: openReferenceSource.map { opener in
                     { linkID, version in opener(selected.id, linkID, version) }
                 },
+                referenceContextIdentity: referenceContextIdentity,
                 reload: reloadActivePhase
             )
         } else {

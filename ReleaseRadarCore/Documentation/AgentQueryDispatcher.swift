@@ -39,6 +39,7 @@ public struct AgentQueryDispatcher: Sendable {
                     try capture.context.verifyAuthorization(resolved)
                     let result = AgentCommandResult(entityIDs: [ticket], auditEventID: nil, error: nil,
                                                     ticketReferences: capture.resolve())
+                    try await store.documentationRead { try capture.context.verifyPersisted($0) }
                     guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
                         throw DocumentationOperationError.inventoryTooLarge
                     }
@@ -58,6 +59,7 @@ public struct AgentQueryDispatcher: Sendable {
                     try capture.context.verifyAuthorization(resolved)
                     let result = AgentCommandResult(entityIDs: [], auditEventID: nil, error: nil,
                                                     recordedImpacts: capture.result)
+                    try await store.documentationRead { try capture.context.verifyPersisted($0) }
                     guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
                         throw DocumentationOperationError.inventoryTooLarge
                     }
@@ -72,6 +74,7 @@ public struct AgentQueryDispatcher: Sendable {
                 try captured.context.verifyAuthorization(resolved)
                 let inventory = try captured.resolve()
                 let result = AgentCommandResult(entityIDs: [], auditEventID: nil, error: nil, inventory: inventory)
+                try await store.documentationRead { try captured.context.verifyPersisted($0) }
                 guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else { throw DocumentationOperationError.inventoryTooLarge }
                 return result
             }

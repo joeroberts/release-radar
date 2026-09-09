@@ -12,6 +12,7 @@ enum NavigationFocus: Hashable, Sendable {
     case ticket(TicketID)
     case referenceSource(linkID: String, version: Int64)
     case recordedImpacts
+    case recordedImpact(rowID: String)
     case filterSummary
     case recovery
 }

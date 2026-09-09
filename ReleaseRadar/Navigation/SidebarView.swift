@@ -364,6 +364,7 @@ struct SidebarView: View {
                                 )
                             }
                         },
+                        referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
                     )
@@ -420,6 +421,7 @@ struct SidebarView: View {
                                 )
                             }
                         },
+                        referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
                     )
@@ -470,6 +472,7 @@ struct SidebarView: View {
                                 )
                             }
                         },
+                        referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
                         viewPhase: { model.viewPhase(projectID: projectID, phaseID: $0) },
                         viewAllPhases: { model.viewAllPhases(projectID: projectID) },
                         requestedFocus: model.navigationFocus,
@@ -523,6 +526,7 @@ struct SidebarView: View {
                 }
             case let .referenceSource(projectID, ticketID, linkID, version):
                 TicketReferenceSourceRouteView(
+                    identity: model.referenceQueryIdentity(projectID: projectID),
                     ticketID: ticketID,
                     linkID: linkID,
                     version: version,
@@ -543,7 +547,7 @@ struct SidebarView: View {
                 )
             case let .recordedImpacts(projectID, repositoryID, artifactID):
                 RecordedImpactsRouteView(
-                    identity: "\(projectID.rawValue):\(repositoryID):\(artifactID)",
+                    identity: "\(model.referenceQueryIdentity(projectID: projectID)):\(repositoryID):\(artifactID)",
                     requestedFocus: model.navigationFocus,
                     focusChanged: { model.setNavigationFocus($0) },
                     load: {
@@ -553,8 +557,8 @@ struct SidebarView: View {
                             artifactID: artifactID
                         )
                     },
-                    openTicket: { ticketID in
-                        Task { await model.openRecordedImpactTicket(projectID: projectID, ticketID: ticketID) }
+                    openTicket: { impact in
+                        Task { await model.openRecordedImpactTicket(projectID: projectID, impact: impact) }
                     }
                 )
             case .settings:
