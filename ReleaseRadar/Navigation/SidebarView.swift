@@ -350,7 +350,9 @@ struct SidebarView: View {
                         documentationStatus: model.documentationObservationStatus(for: projectID),
                         loadEvidencePreview: { evidenceID in
                             await model.previewEvidence(projectID: projectID, evidenceID: evidenceID)
-                        }
+                        },
+                        requestedFocus: model.navigationFocus,
+                        focusChanged: { model.setNavigationFocus($0) }
                     )
                 } else {
                     ProjectEmptyStateView(presentation: .phaseBoard)

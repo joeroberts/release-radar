@@ -13,6 +13,10 @@ struct ProjectPlanView: View {
     let openPhase: (PhaseID) -> Void
     var documentationStatus: DocumentationObservationStatus? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
+    var requestedFocus: NavigationFocus? = nil
+    var focusChanged: (NavigationFocus?) -> Void = { _ in }
+    @FocusState private var focusedTicketID: TicketID?
+    @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
 
     var body: some View {
         GeometryReader { geometry in
@@ -38,6 +42,8 @@ struct ProjectPlanView: View {
         .background(RekonTheme.background)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-plan")
+        .onChange(of: requestedFocus) { _, _ in applyRequestedFocus() }
+        .task { applyRequestedFocus() }
     }
 
     private var header: some View {
@@ -91,6 +97,15 @@ struct ProjectPlanView: View {
                         TicketCardView(card: card, presentation: .fullOutcome,
                                        isSelected: selectedTicketID == card.id) {
                             selectedTicketID = card.id
+                            focusChanged(.ticket(card.id))
+                        }
+                        .focusable()
+                        .focused($focusedTicketID, equals: card.id)
+                        .accessibilityFocused($accessibilityFocusedTicketID, equals: card.id)
+                        .onAppear {
+                            guard requestedFocus == .ticket(card.id) else { return }
+                            focusedTicketID = card.id
+                            accessibilityFocusedTicketID = card.id
                         }
                     }
                 }
@@ -164,5 +179,12 @@ struct ProjectPlanView: View {
         case .ready: "Ready"
         }
         return "\(state) · revision \(readiness.revision) · \(readiness.coveredUpcomingCount)/\(readiness.upcomingCount) covered"
+    }
+
+    private func applyRequestedFocus() {
+        guard case let .ticket(ticketID) = requestedFocus,
+              plan.detail(for: ticketID) != nil else { return }
+        focusedTicketID = ticketID
+        accessibilityFocusedTicketID = ticketID
     }
 }

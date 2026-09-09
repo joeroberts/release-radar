@@ -53,6 +53,26 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
         XCTAssertEqual(placed.3, 1)
     }
 
+    func testUpsertUnassignedTicketRejectsBothPartialPlacementShapes() async throws {
+        for corruption in [
+            "UPDATE tickets SET phase_id='phase', lane=NULL WHERE id='planned'",
+            "UPDATE tickets SET phase_id=NULL, lane='backlog' WHERE id='planned'",
+        ] {
+            let store = try await fixture(ticketCount: 0)
+            try await succeeds(store, .upsertUnassignedTicket(ticketID: "planned", outcome: "Original plan"))
+            try await store.transact(actor: actor, reason: "Inject legacy partial placement") { connection in
+                try connection.execute("PRAGMA ignore_check_constraints=ON")
+                try connection.execute(corruption)
+                try connection.execute("PRAGMA ignore_check_constraints=OFF")
+            }
+
+            try await rejectsCommand(
+                store,
+                .upsertUnassignedTicket(ticketID: "planned", outcome: "Must not update partial placement")
+            )
+        }
+    }
+
     func testGovernedBacklogPhaseMovePreservesAssignmentHistory() async throws {
         let store = try await readyFixture()
         _ = try await revise(store, revision: 1, unassigned: ["t"])

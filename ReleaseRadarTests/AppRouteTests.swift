@@ -430,6 +430,7 @@ final class AppRouteTests: XCTestCase {
         await model.goBack()
         XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
         XCTAssertEqual(model.selectedTicketID.rawValue, "PLAN-ONLY")
+        XCTAssertEqual(model.navigationFocus, .ticket(.init(rawValue: "PLAN-ONLY")))
 
         model.viewAllPhases(projectID: fixture.projectID)
         await model.navigate(to: .phaseBoard(fixture.projectID))
@@ -460,6 +461,12 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(allBoard.lanes.map(\.lane), TicketLane.allCases)
         XCTAssertFalse(allBoard.lanes.flatMap(\.cards).contains { $0.id.rawValue == "PLAN-ONLY" })
         XCTAssertTrue(allBoard.lanes.flatMap(\.cards).allSatisfy { $0.phaseName?.isEmpty == false })
+        let selectionFilteredOut = allBoard.filtered(by: .goal(.init(rawValue: "road-goal-2")))
+        XCTAssertFalse(selectionFilteredOut.details.isEmpty)
+        XCTAssertNil(AllPhaseBoardView.inspectorDetail(
+            in: selectionFilteredOut,
+            selectedTicketID: .init(rawValue: "ROAD-1")
+        ), "Filtering out the selection must not silently display another ticket")
         XCTAssertFalse(ProjectPlanLayout.usesStackedInspector(forWidth: 1_500))
         XCTAssertTrue(ProjectPlanLayout.usesStackedInspector(forWidth: 760))
         XCTAssertFalse(AllPhaseBoardLayout.usesStackedInspector(forWidth: 1_500))
@@ -478,7 +485,8 @@ final class AppRouteTests: XCTestCase {
         for width in [1_500.0, 760.0] {
             let planHosting = NSHostingView(rootView: ProjectPlanView(
                 plan: plan, selectedTicketID: .constant(.init(rawValue: "PLAN-ONLY")),
-                openAllPhases: {}, openPhase: { _ in }
+                openAllPhases: {}, openPhase: { _ in },
+                requestedFocus: .ticket(.init(rawValue: "PLAN-ONLY"))
             ).environment(\.colorScheme, .dark))
             planHosting.appearance = window.appearance
             planHosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
@@ -494,7 +502,8 @@ final class AppRouteTests: XCTestCase {
 
             let selected = allBoard.lanes.flatMap(\.cards).first?.id ?? .init(rawValue: "")
             let boardHosting = NSHostingView(rootView: AllPhaseBoardView(
-                board: allBoard, selectedTicketID: .constant(selected), filter: .constant(.all), viewPhase: { _ in }
+                board: allBoard, selectedTicketID: .constant(selected), filter: .constant(.all),
+                viewPhase: { _ in }, requestedFocus: .ticket(selected)
             ).environment(\.colorScheme, .dark))
             boardHosting.appearance = window.appearance
             boardHosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
@@ -509,15 +518,14 @@ final class AppRouteTests: XCTestCase {
 
         let interactionMarker = URL(fileURLWithPath: "/tmp/release-radar-phase5a-interaction-check")
         if FileManager.default.fileExists(atPath: interactionMarker.path) {
-            try FileManager.default.removeItem(at: interactionMarker)
             let model = AppModel(
                 store: fixture.store,
                 projectOnboarding: fixture.onboarding,
                 externalServicesSuppressed: true
             )
             await model.loadDashboard()
-            model.selection = .projectPlan(fixture.projectID)
-            model.selectedTicketID = .init(rawValue: "PLAN-ONLY")
+            await model.navigate(to: .projectPlan(fixture.projectID))
+            model.selectTicket(.init(rawValue: "PLAN-ONLY"))
             let interactionHosting = NSHostingView(rootView: SidebarView(model: model)
                 .environment(\.colorScheme, .dark))
             interactionHosting.appearance = window.appearance
@@ -530,11 +538,9 @@ final class AppRouteTests: XCTestCase {
             interactionHosting.layoutSubtreeIfNeeded()
             print("PHASE5A INTERACTION READY: exercise Plan, all-phase board, Dependencies, Back, and Forward")
             let completionMarker = URL(fileURLWithPath: "/tmp/release-radar-phase5a-interaction-complete")
-            try? FileManager.default.removeItem(at: completionMarker)
             for _ in 0..<900 where !FileManager.default.fileExists(atPath: completionMarker.path) {
                 try await Task.sleep(for: .milliseconds(200))
             }
-            try? FileManager.default.removeItem(at: completionMarker)
             XCTAssertEqual(model.selection, .dependencies(fixture.projectID))
             XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
             XCTAssertEqual(model.navigationFocus, .route(.dependencies(fixture.projectID)))
