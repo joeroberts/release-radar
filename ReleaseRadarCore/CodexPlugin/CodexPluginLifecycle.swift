@@ -436,12 +436,57 @@ public enum CodexPluginPackageError: Error, Equatable, Sendable {
     case readFailed
 }
 
+public struct RecognizedPluginCapability: Equatable, Sendable {
+    public let manifestVersion: String
+    public let normalizedPackageDigest: String
+    public let sharedExecutionStandardVersions: [Int]
+
+    public init(
+        manifestVersion: String,
+        normalizedPackageDigest: String,
+        sharedExecutionStandardVersions: [Int]
+    ) {
+        self.manifestVersion = manifestVersion
+        self.normalizedPackageDigest = normalizedPackageDigest
+        self.sharedExecutionStandardVersions = sharedExecutionStandardVersions
+    }
+
+    public static let known = [
+        Self(
+            manifestVersion: "0.1.7",
+            normalizedPackageDigest: "75f513d53675b6ae5679d2add575b76f9d32575d605f77702fd91a8c70d9f198",
+            sharedExecutionStandardVersions: []
+        ),
+        Self(
+            manifestVersion: "0.1.8",
+            normalizedPackageDigest: "ecc221b2ca91ac8913e73555b6ed310bce63d7f1ac9462d05b025478173d5a40",
+            sharedExecutionStandardVersions: [1]
+        ),
+    ]
+
+    public static func recognize(
+        manifestVersion: String,
+        normalizedPackageDigest: String
+    ) -> Self? {
+        known.first {
+            $0.manifestVersion == manifestVersion
+                && $0.normalizedPackageDigest == normalizedPackageDigest
+        }
+    }
+}
+
 public struct CodexPluginPackage: Equatable, Sendable {
     public static let pluginID = "release-radar"
+    private static let legacyRelativeFiles = [
+        ".codex-plugin/plugin.json",
+        ".mcp.json",
+        "skills/release-radar/SKILL.md",
+    ]
     public static let relativeFiles = [
         ".codex-plugin/plugin.json",
         ".mcp.json",
         "skills/release-radar/SKILL.md",
+        "skills/shared-execution/SKILL.md",
     ]
 
     public let marketplaceRoot: URL
@@ -460,12 +505,13 @@ public struct CodexPluginPackage: Equatable, Sendable {
     ) throws {
         marketplaceRoot = rootURL
         pluginRoot = rootURL.appendingPathComponent("plugins/release-radar", isDirectory: true)
-        relativeFiles = Self.relativeFiles
 
-        let files = try Self.stableSnapshot(
+        let snapshot = try Self.stableSnapshot(
             rootURL: rootURL,
             afterReadingFile: afterReadingFile
         )
+        let files = snapshot.files
+        relativeFiles = snapshot.relativeFiles
         try Self.validateMarketplace(files[".agents/plugins/marketplace.json"]!)
         let manifestData = files["plugins/release-radar/.codex-plugin/plugin.json"]!
         let manifest = try Self.object(from: manifestData, error: .invalidManifest)
@@ -485,7 +531,7 @@ public struct CodexPluginPackage: Equatable, Sendable {
               (server["args"] as? [Any])?.isEmpty == true
         else { throw CodexPluginPackageError.invalidMCP }
 
-        digest = Self.digest(files: files)
+        digest = Self.digest(files: files, relativeFiles: relativeFiles)
     }
 
     private static func validateMarketplace(_ data: Data) throws {
@@ -499,7 +545,7 @@ public struct CodexPluginPackage: Equatable, Sendable {
         else { throw CodexPluginPackageError.invalidMarketplace }
     }
 
-    private static func digest(files: [String: Data]) -> String {
+    private static func digest(files: [String: Data], relativeFiles: [String]) -> String {
         var hasher = SHA256()
         for relative in relativeFiles.sorted(by: { $0.utf8.lexicographicallyPrecedes($1.utf8) }) {
             let data = files["plugins/release-radar/\(relative)"]!
@@ -515,30 +561,42 @@ public struct CodexPluginPackage: Equatable, Sendable {
     private static func stableSnapshot(
         rootURL: URL,
         afterReadingFile: (String) -> Void
-    ) throws -> [String: Data] {
+    ) throws -> (files: [String: Data], relativeFiles: [String]) {
         var checked: [CheckedDescriptor] = []
         defer { for item in checked.reversed() { close(item.fileDescriptor) } }
 
         func openDirectory(
             parent: Int32? = nil,
             name: String,
-            entries: Set<String>
+            entries: Set<String>,
+            alternateEntries: Set<String>? = nil
         ) throws -> Int32 {
             let descriptor = parent.map {
                 openat($0, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
             } ?? open(name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
             guard descriptor >= 0,
                   let metadata = fileMetadata(descriptor),
-                  (metadata.mode & S_IFMT) == S_IFDIR,
-                  try directoryEntries(descriptor) == entries
+                  (metadata.mode & S_IFMT) == S_IFDIR
             else {
                 if descriptor >= 0 { close(descriptor) }
+                throw CodexPluginPackageError.invalidInventory
+            }
+            let actualEntries: Set<String>
+            do {
+                actualEntries = try directoryEntries(descriptor)
+            } catch {
+                close(descriptor)
+                throw error
+            }
+            let matchesAlternate = alternateEntries.map { actualEntries == $0 } ?? false
+            guard actualEntries == entries || matchesAlternate else {
+                close(descriptor)
                 throw CodexPluginPackageError.invalidInventory
             }
             checked.append(.init(
                 fileDescriptor: descriptor,
                 metadata: metadata,
-                directoryEntries: entries
+                directoryEntries: actualEntries
             ))
             return descriptor
         }
@@ -582,18 +640,34 @@ public struct CodexPluginPackage: Equatable, Sendable {
             name: ".codex-plugin",
             entries: ["plugin.json"]
         )
-        let skills = try openDirectory(parent: plugin, name: "skills", entries: [pluginID])
+        let skills = try openDirectory(
+            parent: plugin,
+            name: "skills",
+            entries: [pluginID],
+            alternateEntries: [pluginID, "shared-execution"]
+        )
+        let hasSharedExecution = try directoryEntries(skills).contains("shared-execution")
         let skillDirectory = try openDirectory(
             parent: skills,
             name: pluginID,
             entries: ["SKILL.md"]
         )
-        let sources: [(String, Int32, String)] = [
+        let sharedExecutionDirectory = try hasSharedExecution
+            ? openDirectory(parent: skills, name: "shared-execution", entries: ["SKILL.md"])
+            : nil
+        var sources: [(String, Int32, String)] = [
             (".agents/plugins/marketplace.json", agentPlugins, "marketplace.json"),
             ("plugins/release-radar/.codex-plugin/plugin.json", manifestDirectory, "plugin.json"),
             ("plugins/release-radar/.mcp.json", plugin, ".mcp.json"),
             ("plugins/release-radar/skills/release-radar/SKILL.md", skillDirectory, "SKILL.md"),
         ]
+        if let sharedExecutionDirectory {
+            sources.append((
+                "plugins/release-radar/skills/shared-execution/SKILL.md",
+                sharedExecutionDirectory,
+                "SKILL.md"
+            ))
+        }
         var files: [String: Data] = [:]
         for (relative, parent, name) in sources {
             files[relative] = try readFile(openFile(parent: parent, name: name))
@@ -608,7 +682,10 @@ public struct CodexPluginPackage: Equatable, Sendable {
                 throw CodexPluginPackageError.invalidInventory
             }
         }
-        return files
+        return (
+            files,
+            hasSharedExecution ? relativeFiles : legacyRelativeFiles
+        )
     }
 
     private static func fileMetadata(_ descriptor: Int32) -> StableFileMetadata? {
