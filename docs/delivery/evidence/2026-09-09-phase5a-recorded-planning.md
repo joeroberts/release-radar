@@ -78,6 +78,14 @@ The coordinator's combined candidate includes this document and its screenshots
 in the catalog and generated indexes. Repository validation does not constitute
 application catalog acceptance; application state operations remain unauthorized.
 
+The same independent reviewer passed correction candidate
+`9a2c573d61e15749466d61e8f38d06882752e64a` with no remaining Required findings.
+The live Plan Back and filtered-selection journey passed independently in
+`/tmp/release-radar-phase5a-review.Tbu6kw/Test-Reviewer-Correction-Native-Phase5A.xcresult`
+(1 passed, zero failures). Review processes stopped. Raw bundles and the
+controller-owned interaction/completion markers remain retained; no cleanup was
+performed.
+
 ## Native comparison
 
 The isolated XCTest host rendered both surfaces at 1500 × 900 and 760 × 900 in

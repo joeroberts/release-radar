@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A corrections are delivered for independent recheck.** The owner selected
+**Phase 5A is verified and ready for a source PR and owner merge approval.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -27,7 +27,9 @@ Project Plan lacks actual ticket-focus restoration; and all-phase filter-summary
 focus is not applied. The same Sol High writer delivered correction `cb64def`,
 integrated into this branch: storage pairing and defensive policy checks, read-only
 test-host interaction markers, real Plan ticket/filter-summary focus and no fallback
-inspector after filtering. The same reviewer will recheck affected behavior.
+inspector after filtering. The same reviewer passed combined candidate `9a2c573`
+with no remaining Required findings, including a fresh live native focus/filter
+journey. Both bounded peers report no pending writes or test/host processes.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -90,8 +92,8 @@ readback on the first candidate failed twice with `InvalidTransition`. Correctio
 diagnosis isolated sandbox-denied deletion of externally owned test markers.
 Fresh correction result readback confirms 5 targeted tests, 230 affected tests
 (one unchanged signed-picker skip), and the native Plan Back/filter-focus journey
-passed with zero failures. Independent correction recheck remains required;
-no installed-owner acceptance or completion
+passed with zero failures. Independent correction recheck passed, including one
+fresh native test with zero failures. No installed-owner acceptance or completion
 of all Phase 5 work is claimed. Catalog metadata remains pending application
 acceptance; application readback and acceptance are not authorized.
 
@@ -104,8 +106,7 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is the existing reviewer's bounded correction recheck,
-then a source PR for separate owner merge approval. Approved
+Next eligible action is a source PR for separate owner merge approval. Approved
 proposal/successor slices follow without gating independent first-slice work.
 
 Phase 5A raw results are preserved outside Xcode's rolling logs in
