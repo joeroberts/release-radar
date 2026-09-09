@@ -14,11 +14,12 @@
 - Each historical reference version is resolved against its own stored digest and observed path. Current resolution reports changed, moved, retired, superseded, archived, no-longer-controlling, unavailable, and unchecked facts without substituting current prose for unavailable historical bytes.
 - Project archive, restore, removal, backup, and application restore preserve the reference records and renew authority through the existing lifecycle boundaries.
 - Four additive packaged helper tools expose strict JSON schemas for upsert, retire, ticket-reference history, and project-scoped recorded impacts. The packaged helper now publishes 30 schemas.
-- Project Plan and Phase Board ticket details show References. Source and Recorded impacts are native routes with recoverable failure states, accessible controls, responsive layouts, identity-keyed query state, and identity-preserving Back/Forward history. Recorded-impact rows display their exact digest and restore focus by ticket, link, and version row identity.
+- Project Plan and Phase Board ticket details show References. Source and Recorded impacts are native routes with recoverable failure states, accessible controls, responsive layouts, readiness- and identity-keyed query state, and identity-preserving Back/Forward history. A mounted view reloads automatically when a same-generation documentation observation moves from checking to observed; source-route identity includes the exact ticket, link, and version. Recorded-impact rows display their exact digest and restore focus by ticket, link, and version row identity.
 
 ## Direct verification
 
 - `CorrectionsFinal.xcresult`: 22/22 passed across `TicketReferenceAcceptanceTests`, `TicketReferenceNativeRenderingTests`, and `DocumentationCallbackTests`. This covers stale reviewed bytes with no side effects, bookmark replacement during a paused query, per-version changed/moved resolution, distinct stored digests, in-place ticket switching with a deliberately late old result, exact historical-row restoration, helper schemas, and callback replay.
+- `ReadinessFinal.xcresult`: 2/2 passed. The mounted References section first rendered its checking-time failure, then automatically replaced it with the exact loaded ticket reference when readiness changed to observed without changing the observation generation; the companion test confirmed the model's query identity changes across that transition.
 - The v5 isolated external accessibility journey used a synthetic store/root with external services suppressed. It exposed current placed v2, current unassigned v1, and non-first historical placed v1 as distinct AX rows. Activating `recorded-impact-placed:placed-reference:1` opened `ticket-placed`; Back restored the actual focused UI element to that exact historical AX identifier; Forward restored focus to `ticket-placed`.
 - Two earlier in-process attempts (`ExactFocusAX.xcresult` and `ExactFocusAX2.xcresult`) reported no focused AX element from either the process or hosted accessibility root even though the exact SwiftUI focus callback succeeded. No equivalent retry or VoiceOver change was made. The externally controlled isolated journey above supplied the actual focus observation.
 - `FocusedFinal.xcresult`: 13/13 focused reference, transport, lifecycle, backup/restore, navigation, and native rendering tests passed.
@@ -87,6 +88,7 @@ The source and impact routes were compared with `docs/design/mockups/phase_board
 - `/private/tmp/release-radar-phase5b-corrections.uhFRfc/ExactFocusAX.xcresult`
 - `/private/tmp/release-radar-phase5b-corrections.uhFRfc/ExactFocusAX2.xcresult`
 - `/private/tmp/release-radar-phase5b-corrections.uhFRfc/CorrectionsFinal.xcresult`
+- `/private/tmp/release-radar-phase5b-corrections.uhFRfc/ReadinessFinal.xcresult`
 - `/private/tmp/release-radar-phase5b-corrections.uhFRfc/final-attachments`
 
 Earlier red, correction, skipped, and failed live-run bundles and their controller markers remain preserved under `/private/tmp`; no temporary evidence was deleted.

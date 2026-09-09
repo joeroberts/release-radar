@@ -81,9 +81,12 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
             )
         }
         await gate.waitUntilPaused()
+        let checkingReferenceIdentity = model.referenceQueryIdentity(projectID: projectID)
         XCTAssertEqual(model.selection, .projectPlan(projectID))
         await gate.resume()
         await navigation.value
+        let observedReferenceIdentity = model.referenceQueryIdentity(projectID: projectID)
+        XCTAssertNotEqual(checkingReferenceIdentity, observedReferenceIdentity)
         XCTAssertEqual(
             model.selection,
             .referenceSource(
@@ -329,6 +332,30 @@ final class TicketReferenceNativeRenderingTests: XCTestCase {
         XCTAssertTrue(text.contains("REQ-B"))
         XCTAssertFalse(text.contains("Ticket A stale"))
         XCTAssertFalse(text.contains("REQ-A"))
+    }
+
+    func testMountedTicketReferencesReloadWhenObservationBecomesReadyInSameGeneration() async throws {
+        let notification = Notification.Name("phase5b-observation-ready-\(UUID().uuidString)")
+        let hosting = NSHostingView(rootView: TicketReferenceReadinessHarness(notification: notification))
+        hosting.frame = .init(x: 0, y: 0, width: 620, height: 700)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.title = "Phase 5B reference readiness transition"
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        try await Task.sleep(for: .milliseconds(150))
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        XCTAssertTrue(accessibilityText(application).contains("Observation still checking"))
+        NotificationCenter.default.post(name: notification, object: nil)
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+
+        let recoveredText = accessibilityText(application)
+        XCTAssertTrue(recoveredText.contains("Ticket ready"))
+        XCTAssertTrue(recoveredText.contains("REQ-READY"))
+        XCTAssertFalse(recoveredText.contains("Observation still checking"))
     }
 
     func testLiveReferenceJourneyUsesNativeControlsAndRestoresFocus() async throws {
@@ -685,6 +712,38 @@ private struct TicketReferenceSectionSwitchHarness: View {
     }
 }
 
+private struct TicketReferenceReadinessHarness: View {
+    let notification: Notification.Name
+    @State private var isReady = false
+
+    var body: some View {
+        let capturedIsReady = isReady
+        TicketReferencesSection(
+            identity: "project:service-1:generation-7:\(capturedIsReady ? "observed" : "checking")",
+            load: {
+                if capturedIsReady {
+                    return .loaded(TicketReferenceSectionLoadGate.referenceSet(
+                        ticketID: "ticket-ready",
+                        phaseLabel: "Ticket ready",
+                        sourceLocalID: "REQ-READY"
+                    ))
+                }
+                return .failed(.init(
+                    title: "Observation still checking",
+                    detail: "References are not yet authoritative.",
+                    systemImage: "clock",
+                    tone: .warning,
+                    accessibilityID: "reference-observation-checking"
+                ))
+            },
+            openSource: { _, _ in }
+        )
+        .onReceive(NotificationCenter.default.publisher(for: notification)) { _ in
+            isReady = true
+        }
+    }
+}
+
 private actor TicketReferenceSectionLoadGate {
     private var oldLoadEntered = false
     private var entryWaiters: [CheckedContinuation<Void, Never>] = []
@@ -719,7 +778,7 @@ private actor TicketReferenceSectionLoadGate {
         releaseContinuation = nil
     }
 
-    private static func referenceSet(
+    fileprivate static func referenceSet(
         ticketID: String,
         phaseLabel: String,
         sourceLocalID: String
