@@ -69,15 +69,14 @@ Reviewer corrections were directly rechecked in these additional bundles:
   `/tmp/release-radar-phase5a-native-corrected-repeat1-final.xcresult` and
   `/tmp/release-radar-phase5a-native-corrected-repeat2-final.xcresult`.
 
-The original timestamped bundles remain under
-`/tmp/release-radar-phase5a-derived/Logs/Test/`; the correction bundles remain
+The original timestamped bundles are preserved outside Xcode's rolling logs under
+`/tmp/release-radar-phase5a-review.Tbu6kw/`; the correction bundles remain
 at the explicit `/tmp` paths above. They are temporary diagnostic output rather
 than durable evidence artifacts.
 
-The repository documentation checker currently reports this evidence document
-as `uncataloguedFile`. Catalog and generated-index integration is intentionally
-left to the coordinator; this correction does not modify `docs/catalog.json`,
-generated indexes, or `docs/delivery/progress.md`.
+The coordinator's combined candidate includes this document and its screenshots
+in the catalog and generated indexes. Repository validation does not constitute
+application catalog acceptance; application state operations remain unauthorized.
 
 ## Native comparison
 
