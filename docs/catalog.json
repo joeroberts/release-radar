@@ -704,6 +704,22 @@
       "isLeaf": true,
       "firstRead": "rr-phase6b-goals-brief-2026-09-10",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase6c-evidence",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6c-evidence",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 6C revision-bound delivery evidence",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-phase6c-evidence-brief-2026-09-10",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5884,6 +5900,22 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-phase6c-evidence-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase6c-evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      },
+      "authorityRole": "delivery.phase6c-evidence"
     }
   ]
 }

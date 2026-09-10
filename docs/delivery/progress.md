@@ -49,17 +49,21 @@ canonical evidence records this limitation and retained scratch; no repair or
 cleanup is authorized. Unchanged properties retain their earlier terminal checks.
 
 Phase 6C architecture consultation `01a08d16-cc19-7143-b158-f175f88ef1a6`
-(Astra High, ceiling Astra High) is active read-only at `3eb5e47` to resolve the
-minimal revision-evidence contracts for the next writer. It owns no product,
-application state or ledger files. The task is consultation, not implementation
-review; a fresh independent reviewer will review the actual candidate.
+(Astra High) is complete, quiescent and archived, with no blocking owner choice. Its bounded
+recommendations are preserved in the
+[6C brief](task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md): explicit
+recorded target, immutable observations, exact applicability, typed replay and
+existing removal/backup recovery extensions. This is consultation, not candidate
+review. The fresh Sol High writer will start from the committed brief handoff;
+one independent Astra High reviewer covers the actual contracts, security,
+recovery and native QA. Ceiling remains Astra High; no subagents.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
 workspace search/saved views and contextual Help. Next eligible source slice is
-6C revision-bound delivery evidence; the writer awaits its committed bounded brief.
+6C revision-bound delivery evidence under its catalogued brief.
 The reviewed 6A publication endpoint is pinned locally at `codex/phase6a-reviewed`,
 `95cad491f096c83d1bfec9a5decb60b270f454a4`, and sent to the parent; no push occurred.
 Local source/tests/affected docs, scoped commits and necessary
