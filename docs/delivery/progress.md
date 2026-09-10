@@ -57,24 +57,29 @@ recommendations are preserved in the
 [6C brief](task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md): explicit
 recorded target, immutable observations, exact applicability, typed replay and
 existing removal/backup recovery extensions. This is consultation, not candidate
-review. Fresh Sol High writer `01a08d1c-cecc-7670-817a-7c5a1e3f3d69` is active in
-worktree `df09`, assigned `codex/phase6c-evidence` from exact handoff
-`84a7a8f42461166a0f4fba28bd8bce76083eb692`;
-one independent Astra High reviewer covers the actual contracts, security,
-recovery and native QA. Ceiling remains Astra High; no subagents. Writer is now
-explicitly escalated via tool to Astra High for the bounded unresolved compact
-native visibility/capture problem after repeated Sol fixture errors. No product
-scope expands. Core/recovery checks and integrated Help focus/open/dismiss have
-passed; compact visible panel evidence and independent review remain required.
-The writer holds the sole isolated build/test reservation under
-`/private/tmp/release-radar-phase6c.7kHIve`; no owner app/state access is authorized.
+review. Writer `01a08d1c-cecc-7670-817a-7c5a1e3f3d69` (initial Sol High,
+bounded Astra High escalation) completed source and native evidence in worktree
+`df09`. Initial candidate `9baf37b92dab2756c1d31fe05cb313d3ce837463` and correction
+`a5dac63970d9d02ff76adac7f3d4bcd5423706b1` are integrated at
+`2335873892299310a811cb2b8cb0d8a139d10ef6`. The final native evidence passed 1/1;
+root verified the visible compact panel and Help, and the independent reviewer
+reported no visual findings. Four Required applicability/provenance findings were
+corrected with 17/17 affected tests passing. The same independent Astra High
+reviewer `01a08d84-9063-7af2-bfb6-bd4c23328d8b` is checking that bounded delta;
+6C approval remains pending. Writer processes are stopped and its build/test
+reservation is released. Evidence and retained scratch are described in the
+[canonical record](evidence/2026-09-10-phase6c-evidence.md).
+
+Fresh read-only chief consultation `01a08d93-8aa5-7611-a33e-e8fdb960d52c`
+(Astra High) is assessing the existing 6D adoption contracts from the integrated
+6C candidate. It does not release dependent implementation before 6C approval.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
 workspace search/saved views and contextual Help. Next eligible source slice is
-6C revision-bound delivery evidence under its catalogued brief.
+6D generic task adoption after 6C correction approval and a committed bounded brief.
 Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
 Publication state:
 
