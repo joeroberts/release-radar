@@ -519,6 +519,51 @@ public actor ProjectRemovalManager {
             try connection.execute("DELETE FROM delivery_goals WHERE project_id = ?", bindings: [project])
             try connection.execute(
                 """
+                INSERT INTO retained_ticket_delivery_evidence_targets (
+                    removal_id, historical_project_id, ticket_id, version, repository_id,
+                    root_id, revision_data, expectations_data, registration_id,
+                    request_generation, recorded_at, evidence_revision, current_target_version
+                )
+                SELECT ?, targets.project_id, targets.ticket_id, targets.version,
+                       targets.repository_id, targets.root_id, targets.revision_data,
+                       targets.expectations_data, targets.registration_id,
+                       targets.request_generation, targets.recorded_at,
+                       sets.revision, sets.current_target_version
+                FROM ticket_delivery_evidence_targets targets
+                JOIN ticket_delivery_evidence_sets sets
+                  ON sets.project_id = targets.project_id AND sets.ticket_id = targets.ticket_id
+                WHERE targets.project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                """
+                INSERT INTO retained_ticket_delivery_evidence_observations (
+                    removal_id, historical_project_id, ticket_id, id, target_version,
+                    fact_data, source_data, source_availability, outcome, observed_at,
+                    recorded_at, attachment_evidence_id, supersedes_observation_id
+                )
+                SELECT ?, project_id, ticket_id, id, target_version, fact_data,
+                       source_data, source_availability, outcome, observed_at,
+                       recorded_at, attachment_evidence_id, supersedes_observation_id
+                FROM ticket_delivery_evidence_observations WHERE project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "DELETE FROM ticket_delivery_evidence_observations WHERE project_id = ?",
+                bindings: [project]
+            )
+            try connection.execute(
+                "DELETE FROM ticket_delivery_evidence_targets WHERE project_id = ?",
+                bindings: [project]
+            )
+            try connection.execute(
+                "DELETE FROM ticket_delivery_evidence_sets WHERE project_id = ?",
+                bindings: [project]
+            )
+            try connection.execute(
+                """
                 INSERT INTO retained_ticket_reference_links (
                     removal_id, historical_project_id, ticket_id, link_id, kind,
                     repository_id, artifact_id, current_version, relationship,

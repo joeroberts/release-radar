@@ -339,6 +339,18 @@ struct FailureStatePresentation: Equatable, Sendable {
             self.init(title: "Reference action rejected",
                       detail: "Refresh the ticket and its accepted documentation catalog. Only active controlling artifacts can be linked, and Accepted ticket references are immutable.",
                       systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-reference-validation")
+        case let .deliveryEvidenceRevisionConflict(_, current):
+            self.init(title: "Delivery evidence changed",
+                      detail: "The current evidence revision is \(current). Refresh the ticket before retrying. No evidence state changed.",
+                      systemImage: "arrow.clockwise", tone: .warning, accessibilityID: "failure-delivery-evidence-stale")
+        case .deliveryEvidenceNotFound, .deliveryEvidenceTicketAccepted:
+            self.init(title: "Delivery evidence action rejected",
+                      detail: "Refresh the ticket and its accepted documentation catalog. Evidence can be recorded only for an active ticket and the exact current target.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-delivery-evidence-validation")
+        case let .invalidDeliveryEvidence(message):
+            self.init(title: "Delivery evidence action rejected",
+                      detail: "\(message) No evidence state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-delivery-evidence-validation")
         case let .planChangeProposalVersionConflict(_, current):
             self.init(title: "Proposal changed",
                       detail: "The current proposal version is \(current.map(String.init) ?? "unavailable"). Refresh the proposal before retrying. No planning state changed.",

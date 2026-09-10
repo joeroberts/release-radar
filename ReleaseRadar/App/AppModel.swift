@@ -100,6 +100,7 @@ final class AppModel {
     private let reviewInboxLoader: @Sendable (DeliveryStore, ProjectID) async throws -> ReviewInboxProjection
     private let dashboardLoader: @Sendable (DeliveryStore, [ProjectID: [EvidenceReadback]]) async throws -> DashboardProjection
     private var documentationObserver: DocumentationObservationCoordinator
+    private let deliveryEvidenceBookmarkStore: any ProjectBookmarkStoring
     private let evidencePreviewLoader: @Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview
     private let requestIDGenerator: () -> UUID
     private(set) var selectedProjectID: ProjectID?
@@ -155,6 +156,7 @@ final class AppModel {
         externalServicesSuppressed: Bool = false,
         seedSampleData: Bool = false,
         documentationObserver: DocumentationObservationCoordinator? = nil,
+        deliveryEvidenceBookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(),
         evidencePreviewLoader: (@Sendable (DeliveryStore, ProjectID, EvidenceID) async -> EvidencePreview)? = nil
     ) {
         let resolvedKeychain = pushoverKeychain ?? PushoverKeychainStore()
@@ -183,6 +185,7 @@ final class AppModel {
                 pluginCoordinator: codexPluginCoordinator,
                 shippedCapability: codexPluginShippedCapability
             )
+        self.deliveryEvidenceBookmarkStore = deliveryEvidenceBookmarkStore
         self.evidencePreviewLoader = evidencePreviewLoader ?? { store, projectID, evidenceID in
             await store.previewEvidence(projectID: projectID, evidenceID: evidenceID)
         }
@@ -1341,6 +1344,63 @@ final class AppModel {
             },
             value: \.ticketReferences
         )
+    }
+
+    func loadTicketDeliveryEvidence(
+        projectID: ProjectID,
+        ticketID: TicketID
+    ) async -> ReferenceLoadResult<TicketDeliveryEvidence> {
+        let serviceGeneration = documentationServiceGeneration
+        let currentStore = store
+        let currentObserver = documentationObserver
+        guard let root = projectRoots[projectID],
+              case let .observed(observation) = currentObserver.status(for: projectID),
+              let rootID = observation.identity.rootID?.rawValue else {
+            return .failed(.init(
+                title: "Delivery evidence unavailable",
+                detail: "Restore this project's exact documentation root and reload before reading revision-bound evidence.",
+                systemImage: "questionmark.folder",
+                tone: .warning,
+                accessibilityID: "delivery-evidence-query-unavailable"
+            ))
+        }
+        let result = await AgentQueryDispatcher(
+            store: currentStore,
+            bookmarkStore: deliveryEvidenceBookmarkStore
+        ).dispatch(.init(
+            version: 1,
+            projectRoot: root.path,
+            query: .ticketDeliveryEvidence(
+                projectID: projectID.rawValue,
+                rootID: rootID,
+                ticketID: ticketID.rawValue
+            )
+        ))
+        guard !Task.isCancelled,
+              serviceGeneration == documentationServiceGeneration,
+              currentStore === store,
+              currentObserver === documentationObserver,
+              currentObserver.status(for: projectID) == .observed(observation),
+              projectRoots[projectID]?.path == root.path else {
+            return .failed(.init(
+                title: "Delivery evidence context changed",
+                detail: "The project registration, root, or selected ticket changed while evidence was loading. Reload the current ticket; no alternate evidence was selected.",
+                systemImage: "arrow.clockwise",
+                tone: .warning,
+                accessibilityID: "delivery-evidence-query-withdrawn"
+            ))
+        }
+        if let evidence = result.deliveryEvidence { return .loaded(evidence) }
+        if let error = result.error, let presentation = FailureStatePresentation(agentError: error) {
+            return .failed(presentation)
+        }
+        return .failed(.init(
+            title: "Delivery evidence unavailable",
+            detail: "The exact recorded evidence could not be read. No replacement target, source, or ticket was selected.",
+            systemImage: "exclamationmark.triangle",
+            tone: .warning,
+            accessibilityID: "delivery-evidence-query-failed"
+        ))
     }
 
     func referenceQueryIdentity(projectID: ProjectID) -> String {

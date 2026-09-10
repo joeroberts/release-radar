@@ -9,6 +9,7 @@ struct TicketDetailView: View {
     var openWorktreeRecovery: (() -> Void)? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var loadReferences: (() async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
+    var loadDeliveryEvidence: (() async -> ReferenceLoadResult<TicketDeliveryEvidence>)? = nil
     var openReferenceSource: ((String, Int64) -> Void)? = nil
     var referenceContextIdentity: String? = nil
     var reload: () async -> Void = {}
@@ -32,6 +33,12 @@ struct TicketDetailView: View {
                 }
 
                 tasksSection
+
+                if let loadDeliveryEvidence {
+                    let identity = "\(referenceContextIdentity ?? "unavailable"):\(detail.id.rawValue)"
+                    TicketDeliveryEvidenceSection(identity: identity, load: loadDeliveryEvidence)
+                        .id(identity)
+                }
 
                 if let loadReferences, let openReferenceSource {
                     let identity = "\(referenceContextIdentity ?? "unavailable"):\(detail.id.rawValue)"

@@ -885,7 +885,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let session = try Self.runToolSession(helper, tool: "release_radar_finalize_phase_plan", arguments: ["version": true])
         let result = try XCTUnwrap(session.list["result"] as? [String: Any])
         let tools = try XCTUnwrap(result["tools"] as? [[String: Any]])
-        XCTAssertEqual(tools.count, 32)
+        XCTAssertEqual(tools.count, 36)
         for name in ["apply_phase_plan_revision", "finalize_phase_plan", "transition_delivery_goal"] {
             let tool = tools.first { $0["name"] as? String == "release_radar_" + name }
             XCTAssertNotNil(tool, name)
@@ -922,6 +922,44 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         ])
         XCTAssertTrue(Self.hasTypedToolSchema(response.list), "The packaged helper must preserve the typed tool surface, including ticket references")
         XCTAssertEqual(jsonRPCErrorCode(response.call), -32602)
+    }
+
+    func testDeliveryEvidenceToolsExposeExactSchemasAndRejectMalformedFactsBeforeTransport() throws {
+        let packagedTool = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let response = try Self.runToolSession(
+            packagedTool,
+            tool: "release_radar_append_delivery_evidence_observation",
+            arguments: [
+                "version": 1,
+                "requestID": "88888888-8888-4888-8888-888888888888",
+                "projectRoot": "/phase6c-parser-only",
+                "reason": "Reject malformed evidence locally",
+                "target": [
+                    "projectID": "project", "rootID": "root",
+                    "repositoryID": "11111111-1111-1111-1111-111111111111",
+                    "catalogVersion": 1, "catalogDigest": String(repeating: "a", count: 64),
+                ],
+                "ticketID": "RR-6C",
+                "observation": [
+                    "id": "malformed-check", "targetVersion": 1,
+                    "fact": [
+                        "category": "check", "scope": "unit",
+                        "repositoryID": "11111111-1111-1111-1111-111111111111",
+                    ],
+                    "source": ["kind": "recordedClaim", "label": "Parser test"],
+                    "sourceAvailability": "available", "outcome": "passed",
+                    "observedAt": "2026-09-10T17:00:00Z", "recordedAt": "2026-09-10T17:00:01Z",
+                ],
+                "expectedEvidenceRevision": 1,
+            ]
+        )
+        XCTAssertTrue(Self.hasTypedToolSchema(response.list))
+        XCTAssertEqual(jsonRPCErrorCode(response.call), -32602)
+        XCTAssertTrue(
+            ((response.call["error"] as? [String: Any])?["message"] as? String ?? "")
+                .contains("Evidence fact fields do not match category check")
+        )
     }
 
     func testMalformedTicketTaskInputsRejectBeforeTransport() throws {
@@ -1445,8 +1483,9 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 32,
+              tools.count == 36,
               hasTicketTaskToolSchemas(tools),
+              hasDeliveryEvidenceToolSchemas(tools),
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
               let transitionSchema = transition["inputSchema"] as? [String: Any],
               let transitionProperties = transitionSchema["properties"] as? [String: Any],
@@ -1542,6 +1581,43 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             && (draftProperties["title"] as? [String: Any])?["maxLength"] as? Int == 4_096
             && (draftProperties["sortOrder"] as? [String: Any])?["minimum"] as? Int == 0
             && (draftProperties["sortOrder"] as? [String: Any])?["maximum"] as? Int == Int.max
+    }
+
+    nonisolated private static func hasDeliveryEvidenceToolSchemas(_ tools: [[String: Any]]) -> Bool {
+        guard let query = tools.first(where: { $0["name"] as? String == "release_radar_ticket_delivery_evidence" }),
+              let queryAnnotations = query["annotations"] as? [String: Any],
+              let querySchema = query["inputSchema"] as? [String: Any],
+              let targetSchema = tools.first(where: { $0["name"] as? String == "release_radar_record_delivery_evidence_target" })?["inputSchema"] as? [String: Any],
+              let targetProperties = targetSchema["properties"] as? [String: Any],
+              let expectations = targetProperties["expectations"] as? [String: Any],
+              let expectation = expectations["items"] as? [String: Any],
+              let appendSchema = tools.first(where: { $0["name"] as? String == "release_radar_append_delivery_evidence_observation" })?["inputSchema"] as? [String: Any],
+              let appendProperties = appendSchema["properties"] as? [String: Any],
+              let observation = appendProperties["observation"] as? [String: Any],
+              let observationProperties = observation["properties"] as? [String: Any],
+              let fact = observationProperties["fact"] as? [String: Any],
+              let variants = fact["oneOf"] as? [[String: Any]],
+              variants.count == 7
+        else { return false }
+        let categories = Set(variants.compactMap { variant -> String? in
+            guard variant["additionalProperties"] as? Bool == false,
+                  let properties = variant["properties"] as? [String: Any],
+                  let category = properties["category"] as? [String: Any]
+            else { return nil }
+            return category["const"] as? String
+        })
+        return queryAnnotations["readOnlyHint"] as? Bool == true
+            && queryAnnotations["destructiveHint"] as? Bool == false
+            && querySchema["additionalProperties"] as? Bool == false
+            && Set(querySchema["required"] as? [String] ?? []) == ["version", "projectRoot", "projectID", "rootID", "ticketID"]
+            && targetSchema["additionalProperties"] as? Bool == false
+            && Set(targetSchema["required"] as? [String] ?? []).isSuperset(of: ["target", "ticketID", "revision", "expectations", "expectedEvidenceRevision"])
+            && expectations["maxItems"] as? Int == 64
+            && expectation["additionalProperties"] as? Bool == false
+            && appendSchema["additionalProperties"] as? Bool == false
+            && Set(appendSchema["required"] as? [String] ?? []).isSuperset(of: ["target", "ticketID", "observation", "expectedEvidenceRevision"])
+            && observation["additionalProperties"] as? Bool == false
+            && categories == ["repository", "commit", "pullRequest", "check", "document", "build", "installation"]
     }
 
     private func decodeCommandResult(_ response: [String: Any]) throws -> AgentCommandResult {

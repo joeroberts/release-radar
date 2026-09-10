@@ -157,6 +157,7 @@ private struct MCPServer {
         if [
             "release_radar_inventory_evidence",
             "release_radar_ticket_references",
+            "release_radar_ticket_delivery_evidence",
             "release_radar_recorded_impacts",
             "release_radar_plan_change_proposals",
             "release_radar_phase_lifecycles",
@@ -169,6 +170,12 @@ private struct MCPServer {
                 query = ["inventoryEvidence": value]
             case "release_radar_ticket_references":
                 query = ["ticketReferences": [
+                    "projectID": try string("projectID", in: arguments),
+                    "rootID": try string("rootID", in: arguments),
+                    "ticketID": try string("ticketID", in: arguments),
+                ]]
+            case "release_radar_ticket_delivery_evidence":
+                query = ["ticketDeliveryEvidence": [
                     "projectID": try string("projectID", in: arguments),
                     "rootID": try string("rootID", in: arguments),
                     "ticketID": try string("ticketID", in: arguments),
@@ -420,6 +427,35 @@ private struct MCPServer {
                 "linkID": try taskString("linkID", in: arguments, maximumBytes: 256),
                 "version": try positiveRevision("referenceVersion", in: arguments),
                 "expectedLinkSetRevision": try phaseRevision("expectedLinkSetRevision", in: arguments),
+            ])
+        case "release_radar_record_delivery_evidence_target":
+            try requireTaskFields(
+                arguments,
+                allowed: ["target", "ticketID", "revision", "expectations", "expectedEvidenceRevision"]
+            )
+            guard let expectations = arguments["expectations"] as? [[String: Any]], expectations.count <= 64 else {
+                throw ToolFailure.invalidRequest("expectations must be an array of at most 64 records")
+            }
+            return try boundedTaskCommand("recordDeliveryEvidenceTarget", value: [
+                "target": try documentationTarget(arguments),
+                "ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256),
+                "revision": try deliveryEvidenceRevision("revision", in: arguments),
+                "expectations": try expectations.map(deliveryEvidenceExpectation),
+                "expectedEvidenceRevision": try phaseRevision("expectedEvidenceRevision", in: arguments),
+            ])
+        case "release_radar_append_delivery_evidence_observation":
+            try requireTaskFields(
+                arguments,
+                allowed: ["target", "ticketID", "observation", "expectedEvidenceRevision"]
+            )
+            guard let observation = arguments["observation"] as? [String: Any] else {
+                throw ToolFailure.invalidRequest("observation must be a typed evidence record")
+            }
+            return try boundedTaskCommand("appendDeliveryEvidenceObservation", value: [
+                "target": try documentationTarget(arguments),
+                "ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256),
+                "observation": try deliveryEvidenceObservation(observation),
+                "expectedEvidenceRevision": try positiveRevision("expectedEvidenceRevision", in: arguments),
             ])
         case "release_radar_upsert_phase":
             return ("upsertPhase", ["phaseID": try string("phaseID", in: arguments), "name": try string("name", in: arguments)])
@@ -699,6 +735,188 @@ private struct MCPServer {
         return value
     }
 
+    private static func deliveryEvidenceRevision(
+        _ key: String,
+        in arguments: [String: Any]
+    ) throws -> [String: Any] {
+        guard let value = arguments[key] as? [String: Any],
+              Set(value.keys).isSubset(of: ["commitSHA", "checkoutState", "dirtySnapshotID"]),
+              Set(value.keys).isSuperset(of: ["commitSHA", "checkoutState"]) else {
+            throw ToolFailure.invalidRequest("\(key) must contain commitSHA, checkoutState and optional dirtySnapshotID")
+        }
+        let commit = try taskString("commitSHA", in: value, maximumBytes: 64)
+        guard (40...64).contains(commit.utf8.count),
+              commit.utf8.allSatisfy({ ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102) }) else {
+            throw ToolFailure.invalidRequest("commitSHA must be a lowercase hexadecimal revision")
+        }
+        let checkout = try string("checkoutState", in: value)
+        guard ["clean", "dirty", "unknown"].contains(checkout) else {
+            throw ToolFailure.invalidRequest("checkoutState must be clean, dirty or unknown")
+        }
+        let snapshot = try optionalString("dirtySnapshotID", in: value)
+        guard (checkout == "dirty") == (snapshot != nil) else {
+            throw ToolFailure.invalidRequest("dirty checkout state requires exactly one dirtySnapshotID")
+        }
+        var result: [String: Any] = ["commitSHA": commit, "checkoutState": checkout]
+        if let snapshot { result["dirtySnapshotID"] = snapshot }
+        return result
+    }
+
+    private static func deliveryEvidenceExpectation(_ value: [String: Any]) throws -> [String: Any] {
+        guard Set(value.keys).isSubset(of: ["category", "scope"]), value["category"] != nil else {
+            throw ToolFailure.invalidRequest("Each expectation requires category and optional scope")
+        }
+        let category = try deliveryEvidenceCategory("category", in: value)
+        var result: [String: Any] = ["category": category]
+        if value["scope"] != nil {
+            result["scope"] = try taskString("scope", in: value, maximumBytes: 256)
+        }
+        return result
+    }
+
+    private static func deliveryEvidenceObservation(_ value: [String: Any]) throws -> [String: Any] {
+        let required: Set<String> = [
+            "id", "targetVersion", "fact", "source", "sourceAvailability", "outcome",
+            "observedAt", "recordedAt",
+        ]
+        guard Set(value.keys).isSubset(of: required.union(["attachmentEvidenceID", "supersedesObservationID"])),
+              Set(value.keys).isSuperset(of: required),
+              let fact = value["fact"] as? [String: Any],
+              let source = value["source"] as? [String: Any],
+              Set(source.keys) == ["kind", "label"] else {
+            throw ToolFailure.invalidRequest("observation fields are incomplete or unsupported")
+        }
+        let targetVersion = try positiveRevision("targetVersion", in: value)
+        let sourceKind = try string("kind", in: source)
+        guard ["localObservation", "recordedClaim", "managedDocument", "importedLegacy"].contains(sourceKind) else {
+            throw ToolFailure.invalidRequest("source kind is unsupported")
+        }
+        let availability = try string("sourceAvailability", in: value)
+        guard ["available", "unavailable", "unknown"].contains(availability) else {
+            throw ToolFailure.invalidRequest("sourceAvailability is unsupported")
+        }
+        let outcome = try string("outcome", in: value)
+        guard ["observed", "passed", "failed", "skipped", "unknown"].contains(outcome) else {
+            throw ToolFailure.invalidRequest("outcome is unsupported")
+        }
+        var result: [String: Any] = [
+            "id": try taskString("id", in: value, maximumBytes: 256),
+            "targetVersion": targetVersion,
+            "fact": try deliveryEvidenceFact(fact),
+            "source": [
+                "kind": sourceKind,
+                "label": try taskString("label", in: source, maximumBytes: 1_024),
+            ],
+            "sourceAvailability": availability,
+            "outcome": outcome,
+            "observedAt": try taskString("observedAt", in: value, maximumBytes: 64),
+            "recordedAt": try taskString("recordedAt", in: value, maximumBytes: 64),
+        ]
+        for key in ["attachmentEvidenceID", "supersedesObservationID"] where value[key] != nil {
+            result[key] = try taskString(key, in: value, maximumBytes: 256)
+        }
+        return result
+    }
+
+    private static func deliveryEvidenceFact(_ value: [String: Any]) throws -> [String: Any] {
+        let category = try deliveryEvidenceCategory("category", in: value)
+        var payload = value
+        payload.removeValue(forKey: "category")
+        let allowed: Set<String>
+        let required: Set<String>
+        switch category {
+        case "repository":
+            allowed = ["repositoryID", "rootID", "revision"]
+            required = ["repositoryID", "revision"]
+        case "commit":
+            allowed = ["repositoryID", "revision"]
+            required = allowed
+        case "pullRequest":
+            allowed = ["repositoryID", "revision", "number", "headSHA", "mergeSHA", "state"]
+            required = ["repositoryID", "revision", "number", "headSHA", "state"]
+        case "check":
+            allowed = ["scope"]
+            required = allowed
+        case "document":
+            allowed = ["repositoryID", "revision", "artifactID", "contentDigest", "catalogVersion", "catalogDigest"]
+            required = allowed
+        case "build":
+            allowed = ["repositoryID", "revision", "buildID", "scope"]
+            required = ["repositoryID", "revision", "buildID"]
+        case "installation":
+            allowed = ["repositoryID", "revision", "installationID", "buildID", "context"]
+            required = ["context"]
+        default:
+            throw ToolFailure.invalidRequest("Evidence category is unsupported")
+        }
+        guard Set(payload.keys).isSubset(of: allowed), Set(payload.keys).isSuperset(of: required) else {
+            throw ToolFailure.invalidRequest("Evidence fact fields do not match category \(category)")
+        }
+        if payload["repositoryID"] != nil {
+            let repositoryID = try taskString("repositoryID", in: payload, maximumBytes: 36)
+            guard UUID(uuidString: repositoryID) != nil, repositoryID == repositoryID.lowercased() else {
+                throw ToolFailure.invalidRequest("repositoryID must be a lowercase UUID")
+            }
+            payload["repositoryID"] = repositoryID
+        }
+        if payload["revision"] != nil {
+            payload["revision"] = try deliveryEvidenceRevision("revision", in: payload)
+        }
+        switch category {
+        case "repository":
+            if payload["rootID"] != nil {
+                payload["rootID"] = try taskString("rootID", in: payload, maximumBytes: 256)
+            }
+        case "pullRequest":
+            payload["number"] = try positiveRevision("number", in: payload)
+            payload["headSHA"] = try lowercaseHexRevision("headSHA", in: payload)
+            if payload["mergeSHA"] != nil {
+                payload["mergeSHA"] = try lowercaseHexRevision("mergeSHA", in: payload)
+            }
+            let state = try string("state", in: payload)
+            guard ["open", "closed", "merged", "unknown"].contains(state) else {
+                throw ToolFailure.invalidRequest("pull-request state is unsupported")
+            }
+        case "check":
+            payload["scope"] = try taskString("scope", in: payload, maximumBytes: 256)
+        case "document":
+            payload["artifactID"] = try taskString("artifactID", in: payload, maximumBytes: 128)
+            payload["contentDigest"] = try digest("contentDigest", in: payload)
+            payload["catalogVersion"] = try positiveRevision("catalogVersion", in: payload)
+            payload["catalogDigest"] = try digest("catalogDigest", in: payload)
+        case "build":
+            payload["buildID"] = try taskString("buildID", in: payload, maximumBytes: 256)
+            if payload["scope"] != nil {
+                payload["scope"] = try taskString("scope", in: payload, maximumBytes: 256)
+            }
+        case "installation":
+            for (key, maximum) in [("installationID", 256), ("buildID", 256)] where payload[key] != nil {
+                payload[key] = try taskString(key, in: payload, maximumBytes: maximum)
+            }
+            payload["context"] = try taskString("context", in: payload, maximumBytes: 4_096)
+        default:
+            break
+        }
+        return [category: ["_0": payload]]
+    }
+
+    private static func lowercaseHexRevision(_ key: String, in value: [String: Any]) throws -> String {
+        let revision = try taskString(key, in: value, maximumBytes: 64)
+        guard (40...64).contains(revision.utf8.count),
+              revision.utf8.allSatisfy({ ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102) }) else {
+            throw ToolFailure.invalidRequest("\(key) must be a lowercase hexadecimal revision")
+        }
+        return revision
+    }
+
+    private static func deliveryEvidenceCategory(_ key: String, in value: [String: Any]) throws -> String {
+        let category = try string(key, in: value)
+        guard ["repository", "commit", "pullRequest", "check", "document", "build", "installation"].contains(category) else {
+            throw ToolFailure.invalidRequest("Evidence category is unsupported")
+        }
+        return category
+    }
+
     private static func phaseRevision(_ key: String, in arguments: [String: Any]) throws -> Int64 {
         let value = try integer(key, in: arguments)
         guard value >= 0, let revision = Int64(exactly: value) else {
@@ -774,6 +992,96 @@ private struct MCPServer {
         let adoption: [String: Any] = ["type": "array", "minItems": 1, "maxItems": 128,
             "items": ["type": "object", "additionalProperties": false, "required": ["evidenceID", "expectedPath", "expectedTicketID", "artifactID"],
                       "properties": ["evidenceID": string, "expectedPath": string, "expectedTicketID": ["type": ["string", "null"]], "artifactID": string]]]
+        let evidenceRevision: [String: Any] = [
+            "type": "object", "additionalProperties": false,
+            "required": ["commitSHA", "checkoutState"],
+            "properties": [
+                "commitSHA": ["type": "string", "pattern": "^[0-9a-f]{40,64}$"],
+                "checkoutState": ["type": "string", "enum": ["clean", "dirty", "unknown"]],
+                "dirtySnapshotID": ["type": "string", "minLength": 1, "maxLength": 256],
+            ],
+        ]
+        let evidenceCategory = ["type": "string", "enum": [
+            "repository", "commit", "pullRequest", "check", "document", "build", "installation",
+        ]] as [String: Any]
+        let evidenceExpectation: [String: Any] = [
+            "type": "object", "additionalProperties": false, "required": ["category"],
+            "properties": ["category": evidenceCategory, "scope": ["type": "string", "minLength": 1, "maxLength": 256]],
+        ]
+        func evidenceFactSchema(
+            category: String,
+            required: [String],
+            fields: [String: [String: Any]]
+        ) -> [String: Any] {
+            var properties = fields
+            properties["category"] = ["type": "string", "const": category]
+            return [
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["category"] + required,
+                "properties": properties,
+            ]
+        }
+        let repositoryID: [String: Any] = ["type": "string", "format": "uuid"]
+        let hexRevision: [String: Any] = ["type": "string", "pattern": "^[0-9a-f]{40,64}$"]
+        let digestSchema: [String: Any] = ["type": "string", "pattern": "^[0-9a-f]{64}$"]
+        let evidenceScope: [String: Any] = ["type": "string", "minLength": 1, "maxLength": 256]
+        let evidenceFact: [String: Any] = [
+            "oneOf": [
+                evidenceFactSchema(category: "repository", required: ["repositoryID", "revision"], fields: [
+                    "repositoryID": repositoryID, "rootID": evidenceScope, "revision": evidenceRevision,
+                ]),
+                evidenceFactSchema(category: "commit", required: ["repositoryID", "revision"], fields: [
+                    "repositoryID": repositoryID, "revision": evidenceRevision,
+                ]),
+                evidenceFactSchema(category: "pullRequest", required: ["repositoryID", "revision", "number", "headSHA", "state"], fields: [
+                    "repositoryID": repositoryID, "revision": evidenceRevision,
+                    "number": ["type": "integer", "minimum": 1], "headSHA": hexRevision,
+                    "mergeSHA": hexRevision,
+                    "state": ["type": "string", "enum": ["open", "closed", "merged", "unknown"]],
+                ]),
+                evidenceFactSchema(category: "check", required: ["scope"], fields: ["scope": evidenceScope]),
+                evidenceFactSchema(category: "document", required: ["repositoryID", "revision", "artifactID", "contentDigest", "catalogVersion", "catalogDigest"], fields: [
+                    "repositoryID": repositoryID, "revision": evidenceRevision,
+                    "artifactID": ["type": "string", "minLength": 1, "maxLength": 128],
+                    "contentDigest": digestSchema, "catalogVersion": ["type": "integer", "minimum": 1],
+                    "catalogDigest": digestSchema,
+                ]),
+                evidenceFactSchema(category: "build", required: ["repositoryID", "revision", "buildID"], fields: [
+                    "repositoryID": repositoryID, "revision": evidenceRevision,
+                    "buildID": ["type": "string", "minLength": 1, "maxLength": 256], "scope": evidenceScope,
+                ]),
+                evidenceFactSchema(category: "installation", required: ["context"], fields: [
+                    "repositoryID": repositoryID, "revision": evidenceRevision,
+                    "installationID": ["type": "string", "minLength": 1, "maxLength": 256],
+                    "buildID": ["type": "string", "minLength": 1, "maxLength": 256],
+                    "context": ["type": "string", "minLength": 1, "maxLength": 4_096],
+                ]),
+            ],
+        ]
+        let evidenceObservation: [String: Any] = [
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "targetVersion", "fact", "source", "sourceAvailability", "outcome", "observedAt", "recordedAt"],
+            "properties": [
+                "id": ["type": "string", "minLength": 1, "maxLength": 256],
+                "targetVersion": ["type": "integer", "minimum": 1],
+                "fact": evidenceFact,
+                "source": [
+                    "type": "object", "additionalProperties": false,
+                    "required": ["kind", "label"],
+                    "properties": [
+                        "kind": ["type": "string", "enum": ["localObservation", "recordedClaim", "managedDocument", "importedLegacy"]],
+                        "label": ["type": "string", "minLength": 1, "maxLength": 1_024],
+                    ],
+                ],
+                "sourceAvailability": ["type": "string", "enum": ["available", "unavailable", "unknown"]],
+                "outcome": ["type": "string", "enum": ["observed", "passed", "failed", "skipped", "unknown"]],
+                "observedAt": ["type": "string", "minLength": 1, "maxLength": 64],
+                "recordedAt": ["type": "string", "minLength": 1, "maxLength": 64],
+                "attachmentEvidenceID": ["type": "string", "minLength": 1, "maxLength": 256],
+                "supersedesObservationID": ["type": "string", "minLength": 1, "maxLength": 256],
+            ],
+        ]
         let taskID: [String: Any] = ["type": "string", "minLength": 1, "maxLength": 256, "description": "Nonblank, at most 256 UTF-8 bytes."]
         let taskTitle: [String: Any] = ["type": "string", "minLength": 1, "maxLength": 4_096, "description": "Nonblank, at most 4,096 UTF-8 bytes."]
         let taskOrder: [String: Any] = ["type": "integer", "minimum": 0, "maximum": Int.max]
@@ -870,6 +1178,12 @@ private struct MCPServer {
                              "required": ["version", "projectRoot", "projectID", "rootID", "ticketID"],
                              "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string,
                                             "projectID": taskID, "rootID": taskID, "ticketID": taskID]]],
+            ["name": "release_radar_ticket_delivery_evidence", "description": "Read one ticket's complete revision-target history, immutable evidence observations, applicability, expectation states and separate owner acceptance. This never mutates delivery state.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false,
+                             "required": ["version", "projectRoot", "projectID", "rootID", "ticketID"],
+                             "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string,
+                                            "projectID": taskID, "rootID": taskID, "ticketID": taskID]]],
             ["name": "release_radar_recorded_impacts", "description": "Read project-scoped current and historical ticket impacts for one repository artifact. This never mutates delivery state.",
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
              "inputSchema": ["type": "object", "additionalProperties": false,
@@ -921,6 +1235,25 @@ private struct MCPServer {
                 fields: ["projectID": taskID, "rootID": taskID, "ticketID": taskID, "linkID": taskID,
                          "referenceVersion": taskRevision, "expectedLinkSetRevision": phaseRevision],
                 description: "Retire the exact current link version without requiring the source artifact to remain available. History is retained."
+            ),
+            definition(
+                "release_radar_record_delivery_evidence_target",
+                required: ["target", "ticketID", "revision", "expectations", "expectedEvidenceRevision"],
+                fields: [
+                    "target": target, "ticketID": taskID, "revision": evidenceRevision,
+                    "expectations": ["type": "array", "maxItems": 64, "items": evidenceExpectation],
+                    "expectedEvidenceRevision": phaseRevision,
+                ],
+                description: "Record a new immutable repository revision target and its explicitly scoped evidence expectations. This does not execute checks or imply acceptance."
+            ),
+            definition(
+                "release_radar_append_delivery_evidence_observation",
+                required: ["target", "ticketID", "observation", "expectedEvidenceRevision"],
+                fields: [
+                    "target": target, "ticketID": taskID, "observation": evidenceObservation,
+                    "expectedEvidenceRevision": taskRevision,
+                ],
+                description: "Append one immutable typed observation against the exact current evidence target. Results, source availability and applicability remain separate facts."
             ),
             definition("release_radar_upsert_phase", required: ["phaseID", "name"], fields: ["phaseID": string, "name": string]),
             definition(

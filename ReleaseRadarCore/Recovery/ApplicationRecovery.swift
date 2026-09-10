@@ -515,6 +515,7 @@ public actor ApplicationRecoveryManager {
                OR EXISTS (SELECT 1 FROM ticket_retirements WHERE project_id = projects.id)
                OR EXISTS (SELECT 1 FROM delivery_goal_obligations WHERE project_id = projects.id)
                OR EXISTS (SELECT 1 FROM phase_lifecycle_events WHERE project_id = projects.id)
+               OR EXISTS (SELECT 1 FROM ticket_delivery_evidence_sets WHERE project_id = projects.id)
             ORDER BY projects.id
             """
         )
@@ -596,6 +597,14 @@ public actor ApplicationRecoveryManager {
                 bindings: [removal, project]
             )
             try connection.execute(
+                "INSERT INTO retained_ticket_delivery_evidence_targets SELECT ?, targets.project_id, targets.ticket_id, targets.version, targets.repository_id, targets.root_id, targets.revision_data, targets.expectations_data, targets.registration_id, targets.request_generation, targets.recorded_at, sets.revision, sets.current_target_version FROM ticket_delivery_evidence_targets targets JOIN ticket_delivery_evidence_sets sets ON sets.project_id=targets.project_id AND sets.ticket_id=targets.ticket_id WHERE targets.project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_ticket_delivery_evidence_observations SELECT ?, project_id, ticket_id, id, target_version, fact_data, source_data, source_availability, outcome, observed_at, recorded_at, attachment_evidence_id, supersedes_observation_id FROM ticket_delivery_evidence_observations WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
                 "INSERT INTO retained_plan_change_proposal_versions SELECT ?, project_id, proposal_id, version, registration_id, request_generation, baseline_digest, baseline_data, operations_data, diff_data, source_impacts_data, rationale, created_at FROM plan_change_proposal_versions WHERE project_id = ?",
                 bindings: [removal, project]
             )
@@ -667,6 +676,10 @@ public actor ApplicationRecoveryManager {
                 SELECT * FROM current_state.retained_ticket_reference_links;
             INSERT OR IGNORE INTO retained_ticket_reference_versions
                 SELECT * FROM current_state.retained_ticket_reference_versions;
+            INSERT OR IGNORE INTO retained_ticket_delivery_evidence_targets
+                SELECT * FROM current_state.retained_ticket_delivery_evidence_targets;
+            INSERT OR IGNORE INTO retained_ticket_delivery_evidence_observations
+                SELECT * FROM current_state.retained_ticket_delivery_evidence_observations;
             INSERT OR IGNORE INTO retained_plan_change_proposals
                 SELECT * FROM current_state.retained_plan_change_proposals;
             INSERT OR IGNORE INTO retained_plan_change_proposal_versions
@@ -916,6 +929,44 @@ public actor ApplicationRecoveryManager {
               ON registrations.project_id = versions.project_id
             JOIN removed_projects removed
               ON removed.historical_project_id = versions.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_ticket_delivery_evidence_targets (
+                removal_id, historical_project_id, ticket_id, version, repository_id,
+                root_id, revision_data, expectations_data, registration_id,
+                request_generation, recorded_at, evidence_revision, current_target_version
+            )
+            SELECT removed.removal_id, targets.project_id, targets.ticket_id,
+                targets.version, targets.repository_id, targets.root_id,
+                targets.revision_data, targets.expectations_data,
+                targets.registration_id, targets.request_generation, targets.recorded_at,
+                sets.revision, sets.current_target_version
+            FROM current_state.ticket_delivery_evidence_targets targets
+            JOIN current_state.ticket_delivery_evidence_sets sets
+              ON sets.project_id = targets.project_id AND sets.ticket_id = targets.ticket_id
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = targets.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = targets.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_ticket_delivery_evidence_observations (
+                removal_id, historical_project_id, ticket_id, id, target_version,
+                fact_data, source_data, source_availability, outcome, observed_at,
+                recorded_at, attachment_evidence_id, supersedes_observation_id
+            )
+            SELECT removed.removal_id, observations.project_id,
+                observations.ticket_id, observations.id, observations.target_version,
+                observations.fact_data, observations.source_data,
+                observations.source_availability, observations.outcome,
+                observations.observed_at, observations.recorded_at,
+                observations.attachment_evidence_id,
+                observations.supersedes_observation_id
+            FROM current_state.ticket_delivery_evidence_observations observations
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = observations.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = observations.project_id
              AND removed.registration_id = registrations.registration_id;
 
             INSERT OR IGNORE INTO retained_plan_change_proposals (
