@@ -27,13 +27,17 @@ Chief assessment/review `01a08bdb-88c4-7f72-a529-8bdb0fe72443` (Astra High),
 writer `01a08be3-987c-79a1-aa61-10520c4e8c97` (Sol High, bounded R4 escalation
 Astra High), and independent reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
 (Astra High) are complete and archived. Their files/results are preserved and
-task-owned processes stopped. No native reservation is active.
+task-owned processes stopped. No 6A reservation remains active.
 
 Fresh 6B writer `01a08c9d-e36f-7a92-abba-69ade43678af` is dispatched with actual
 Terra Medium tool settings, ceiling Astra High, from committed controlling
 handoff `c374a155589f2b9077787718c209008929bb1744`. It exclusively owns Goals
 source/tests/affected design/evidence; no launches are authorized until a concrete
-sanitized unsigned inert-host reservation. Setup/baseline confirmation is pending.
+sanitized unsigned inert-host reservation. Baseline confirmed; writer branch is `codex/phase6b-goals`. The writer now holds
+the sole focused-XCTest reservation for sanitized unsigned serial red/green tests,
+with unique results under `/private/tmp/release-radar-phase6b.PTQwNy` and a copied
+clean pinned SourcePackages cache. HOME/USER/LOGNAME use the known sanitized
+configuration. Native CUA session reservation remains pending concrete setup.
 
 ## Authorization and next eligible work
 
