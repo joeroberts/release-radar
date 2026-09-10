@@ -44,10 +44,12 @@ replacement recovery. Writer reports task-owned processes stopped and releases
 its reservation. Fresh independent Sol High reviewer `01a08cde-c8c9-70d1-9ba1-1e4a566cb52b`
 is dispatched on integrated `5aa039631e8bc278b418216674142c32a05b5b24`. Its first pass found four Required correction areas: unplaced-work discovery,
 displayed versus recorded selection/registration, stale exact Execution-link
-validation, and distinct lifecycle/readiness/acceptance facts. Same Sol High writer
-owns corrections with exact focused non-native tests under the full sanitized
-unsigned configuration; no native reservation yet. Same reviewer handles the
-correction delta and native QA. 6B is not complete.
+validation, and distinct lifecycle/readiness/acceptance facts. Correction `f9ed6e9d2ba6de85ba502c3e5b8c7e2a89099442` is integrated at
+`877a950499d0d610e93660526508a116778c85e2`. Direct readback confirms all 11
+focused source tests pass, zero failures/skips; canonical documentation check passes.
+Same reviewer now checks that correction delta and prepares the affected native QA
+configuration; no launch reservation yet. Writer is quiescent pending review.
+6B is not complete.
 
 A same-project cross-phase duplicate-goal hypothesis was withdrawn because the
 store primary key is project+goal and the retained fixture directly failed that
