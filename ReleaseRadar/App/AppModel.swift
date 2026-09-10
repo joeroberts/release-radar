@@ -488,6 +488,9 @@ final class AppModel {
             if case .projectPlan = route {
                 return dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
             }
+            if case .activity = route {
+                return dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
+            }
             if case let .referenceSource(_, routeTicketID, _, _) = route {
                 return routeTicketID == ticketID
                     && dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
@@ -538,7 +541,20 @@ final class AppModel {
                  let .assignTicketToGoal(id, _, _),
                  let .addTicketDependency(_, id, _):
                 id == ticketID
-            case .addPhase, .addDeliveryGoal, .addPhaseDependency:
+            case let .retireTicket(id, _, _, successors):
+                id == ticketID || successors.contains(ticketID)
+            case let .moveBacklogTicket(id, _, _),
+                 let .reassignTicketToGoal(id, _, _, _):
+                id == ticketID
+            case let .carryGoalObligation(source, descendants, _):
+                source.ticketID == ticketID || descendants.contains(where: { $0.ticketID == ticketID })
+            case let .dropGoalObligation(obligation, _):
+                obligation.ticketID == ticketID
+            case let .retargetTicketDependency(_, id, from, to):
+                id == ticketID || from == ticketID || to == ticketID
+            case let .removeTicketDependency(_, id, dependency):
+                id == ticketID || dependency == ticketID
+            case .addPhase, .addDeliveryGoal, .addPhaseDependency, .supersedeDeliveryGoal:
                 false
             }
         }

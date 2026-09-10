@@ -3,6 +3,38 @@ import XCTest
 @testable import ReleaseRadar
 
 final class DashboardProjectionTests: XCTestCase {
+    func testRetiredOriginalLeavesActiveBoardsAndRemainsVisibleWithCoverageInPlan() async throws {
+        let store = DeliveryStore(databaseURL: databaseURL)
+        try await store.transact(
+            actor: .init(id: "phase5d-fixture"), reason: "Project retired successor projection",
+            auditEventID: .init(rawValue: "phase5d-projection-audit"),
+            auditScope: .init(projectID: .init(rawValue: "p"), entityType: .ticket, entityID: "original")
+        ) { connection in
+            try connection.execute("INSERT INTO projects (id,name) VALUES ('p','Project')")
+            try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('phase','p','Phase')")
+            try connection.execute("INSERT INTO project_active_phases (project_id,phase_id) VALUES ('p','phase')")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('original','p','phase','Original scope','backlog'),('successor','p','phase','Successor scope','backlog')")
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('p','phase','goal','Goal','Ship scope','draft',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id,phase_id,goal_id,sort_order,criterion) VALUES ('p','phase','goal',0,'Accepted')")
+            try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('p','phase','goal','original'),('p','phase','goal','successor')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('p','phase','goal','original','Original scope','current','2026-09-10T00:00:00Z'),('p','phase','goal','successor','Successor scope','current','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('p','original','replaced','Replace scope','phase','backlog','phase5d-projection-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_successor_links (project_id,original_ticket_id,successor_ticket_id,relation,sort_order,audit_event_id,created_at) VALUES ('p','original','successor','replacement',0,'phase5d-projection-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligation_lineage (project_id,source_phase_id,source_goal_id,source_ticket_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id,reason,audit_event_id,created_at) VALUES ('p','phase','goal','original','phase','goal','successor','Carry scope','phase5d-projection-audit','2026-09-10T00:00:00Z')")
+        }
+
+        let dashboard = try await DashboardProjection.load(from: store)
+        let board = try XCTUnwrap(dashboard.board(for: .init(rawValue: "p")))
+        XCTAssertEqual(board.lanes.flatMap(\.cards).map(\.id.rawValue), ["successor"])
+        XCTAssertEqual(board.deliveryGoals.first?.ticketIDs.map(\.rawValue), ["successor"])
+        XCTAssertEqual(board.deliveryGoals.first?.coverage?.obligations.map(\.state), [.carried, .required])
+        let plan = try XCTUnwrap(dashboard.plan(for: .init(rawValue: "p")))
+        XCTAssertEqual(plan.recordedTicketCount, 2)
+        XCTAssertEqual(plan.retiredTickets.map(\.id.rawValue), ["original"])
+        XCTAssertEqual(plan.retiredTickets.first?.successorTicketIDs.map(\.rawValue), ["successor"])
+        XCTAssertEqual(plan.detail(for: .init(rawValue: "original"))?.outcome, "Original scope")
+    }
+
     func testProjectPlanAndAllPhaseBoardKeepUnassignedPlacementDistinctFromGoalCoverage() async throws {
         let store = DeliveryStore(databaseURL: databaseURL)
         try await store.transact(actor: .init(id: "phase5a-fixture"), reason: "Recorded planning projection") { connection in

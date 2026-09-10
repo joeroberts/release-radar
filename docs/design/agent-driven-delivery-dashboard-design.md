@@ -486,3 +486,12 @@ missing or changed current source remains an explicit unavailable/changed state;
 the UI never substitutes current prose for the recorded version. The
 [Phase 5C brief](../delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
 contains the bounded delivery contract and verification.
+
+## Phase 5D retained work and coverage — 2026-09-10
+
+Extend Project Plan proposal details with complete retirement/last-lane, successor,
+obligation and dependency before/after readback. Retained originals remain reachable
+with their task/evidence history. Uncovered, carried, explicitly dropped and delivered
+are distinct states; no sixth board lane or automatic acceptance. Existing native
+Plan/board/detail counts and exact Back/Forward focus must agree with canonical
+coverage, including compact layouts and recoverable stale/unknown states.

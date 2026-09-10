@@ -8,6 +8,24 @@ public struct PlanChangeProposalID: DeliveryRecordID {
     }
 }
 
+public enum TicketRetirementDisposition: String, Codable, Equatable, Sendable {
+    case withdrawn
+    case replaced
+    case split
+}
+
+public struct DeliveryGoalObligationKey: Codable, Equatable, Hashable, Sendable {
+    public let phaseID: PhaseID
+    public let goalID: DeliveryGoalID
+    public let ticketID: TicketID
+
+    public init(phaseID: PhaseID, goalID: DeliveryGoalID, ticketID: TicketID) {
+        self.phaseID = phaseID
+        self.goalID = goalID
+        self.ticketID = ticketID
+    }
+}
+
 public enum PlanChangeOperation: Codable, Equatable, Sendable {
     case addPhase(id: PhaseID, name: String)
     case addDeliveryGoal(phaseID: PhaseID, goal: DeliveryGoalDraft)
@@ -21,6 +39,37 @@ public enum PlanChangeOperation: Codable, Equatable, Sendable {
         dependsOnPhaseID: PhaseID
     )
     case addTicketDependency(
+        id: TicketDependencyID,
+        ticketID: TicketID,
+        dependsOnTicketID: TicketID
+    )
+    case retireTicket(
+        ticketID: TicketID,
+        disposition: TicketRetirementDisposition,
+        reason: String,
+        successorTicketIDs: [TicketID]
+    )
+    case moveBacklogTicket(ticketID: TicketID, fromPhaseID: PhaseID, toPhaseID: PhaseID)
+    case reassignTicketToGoal(
+        ticketID: TicketID,
+        phaseID: PhaseID,
+        fromGoalID: DeliveryGoalID,
+        toGoalID: DeliveryGoalID
+    )
+    case supersedeDeliveryGoal(phaseID: PhaseID, goalID: DeliveryGoalID)
+    case carryGoalObligation(
+        source: DeliveryGoalObligationKey,
+        descendants: [DeliveryGoalObligationKey],
+        reason: String
+    )
+    case dropGoalObligation(obligation: DeliveryGoalObligationKey, reason: String)
+    case retargetTicketDependency(
+        id: TicketDependencyID,
+        ticketID: TicketID,
+        fromDependsOnTicketID: TicketID,
+        toDependsOnTicketID: TicketID
+    )
+    case removeTicketDependency(
         id: TicketDependencyID,
         ticketID: TicketID,
         dependsOnTicketID: TicketID
@@ -112,7 +161,12 @@ public enum PlanChangeBaselineCategory: String, Codable, Equatable, CaseIterable
     case goals
     case goalCriteria = "goal_criteria"
     case goalAssignments = "goal_assignments"
+    case goalObligations = "goal_obligations"
+    case goalObligationLineage = "goal_obligation_lineage"
+    case goalObligationDrops = "goal_obligation_drops"
     case tickets
+    case ticketRetirements = "ticket_retirements"
+    case ticketSuccessors = "ticket_successors"
     case taskPlans = "task_plans"
     case tasks
     case phaseDependencies = "phase_dependencies"
@@ -120,6 +174,9 @@ public enum PlanChangeBaselineCategory: String, Codable, Equatable, CaseIterable
     case referenceSets = "reference_sets"
     case referenceLinks = "reference_links"
     case referenceVersions = "reference_versions"
+    case evidence
+    case ticketThreads = "ticket_threads"
+    case ticketGoalLinks = "ticket_goal_links"
     case documentationBinding = "documentation_binding"
     case recoveryAuthority = "recovery_authority"
 }

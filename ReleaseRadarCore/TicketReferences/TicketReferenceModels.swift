@@ -95,6 +95,7 @@ enum TicketReferenceMutationError: Error, Equatable, Sendable {
     case notFound
     case identityImmutable
     case ticketAccepted
+    case ticketRetired
     case sourceNotAuthoritative
 }
 

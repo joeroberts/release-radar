@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 import XCTest
 @testable import ReleaseRadarCore
@@ -448,9 +449,25 @@ final class AppRouteTests: XCTestCase {
     @MainActor
     func testNativeProjectPlanAndAllPhaseBoardRenderWideAndCompactWithTruthfulMembership() async throws {
         let fixture = try await makeTask10PlanningFixture()
-        try await fixture.store.transact(actor: .init(id: "phase5a-fixture"), reason: "Native recorded planning fixture") { connection in
+        try await fixture.store.transact(
+            actor: .init(id: "phase5a-fixture"), reason: "Native recorded planning fixture",
+            auditEventID: .init(rawValue: "phase5d-native-plan-audit"),
+            auditScope: .init(projectID: fixture.projectID, entityType: .ticket, entityID: "RETIRED")
+        ) { connection in
             try connection.execute(
                 "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('PLAN-ONLY',?,NULL,'Retain planning without execution',NULL)",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('RETIRED',?,?,'Retained original scope','backlog')",
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES (?, 'RETIRED','replaced','Superseded by the retained successor',?,'backlog','phase5d-native-plan-audit','2026-09-10T00:00:00Z')",
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_successor_links (project_id,original_ticket_id,successor_ticket_id,relation,sort_order,audit_event_id,created_at) VALUES (?,'RETIRED','ROAD-1','replacement',0,'phase5d-native-plan-audit','2026-09-10T00:00:00Z')",
                 bindings: [.text(fixture.projectID.rawValue)]
             )
         }
@@ -458,6 +475,8 @@ final class AppRouteTests: XCTestCase {
         let plan = try XCTUnwrap(dashboard.plan(for: fixture.projectID))
         let allBoard = try XCTUnwrap(dashboard.allPhaseBoard(for: fixture.projectID))
         XCTAssertEqual(plan.unassignedTickets.map(\.id.rawValue), ["PLAN-ONLY"])
+        XCTAssertEqual(plan.retiredTickets.map(\.id.rawValue), ["RETIRED"])
+        XCTAssertEqual(plan.retiredTickets.first?.successorTicketIDs.map(\.rawValue), ["ROAD-1"])
         XCTAssertEqual(allBoard.lanes.map(\.lane), TicketLane.allCases)
         XCTAssertFalse(allBoard.lanes.flatMap(\.cards).contains { $0.id.rawValue == "PLAN-ONLY" })
         XCTAssertTrue(allBoard.lanes.flatMap(\.cards).allSatisfy { $0.phaseName?.isEmpty == false })
@@ -517,7 +536,9 @@ final class AppRouteTests: XCTestCase {
         }
 
         let interactionMarker = URL(fileURLWithPath: "/tmp/release-radar-phase5a-interaction-check")
-        if FileManager.default.fileExists(atPath: interactionMarker.path) {
+        let completionMarker = URL(fileURLWithPath: "/tmp/release-radar-phase5a-interaction-complete")
+        if FileManager.default.fileExists(atPath: interactionMarker.path),
+           !FileManager.default.fileExists(atPath: completionMarker.path) {
             let model = AppModel(
                 store: fixture.store,
                 projectOnboarding: fixture.onboarding,
@@ -537,7 +558,6 @@ final class AppRouteTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(500))
             interactionHosting.layoutSubtreeIfNeeded()
             print("PHASE5A INTERACTION READY: exercise Plan, all-phase board, Dependencies, Back, and Forward")
-            let completionMarker = URL(fileURLWithPath: "/tmp/release-radar-phase5a-interaction-complete")
             for _ in 0..<900 where !FileManager.default.fileExists(atPath: completionMarker.path) {
                 try await Task.sleep(for: .milliseconds(200))
             }
@@ -546,6 +566,408 @@ final class AppRouteTests: XCTestCase {
             XCTAssertEqual(model.navigationFocus, .route(.dependencies(fixture.projectID)))
             try taskCapture(interactionHosting, name: "phase5a-interaction-final")
         }
+    }
+
+    @MainActor
+    func testNativeRetiredOriginalRowOpensRetainedDetailAndRestoresFocusWideAndCompact() async throws {
+        let fixture = try await makeTask10PlanningFixture(
+            temporaryRoot: URL(
+                fileURLWithPath: "/private/tmp/release-radar-phase5d-writer",
+                isDirectory: true
+            ),
+            preserveDirectory: true
+        )
+        let retiredTicketID = TicketID(rawValue: "RETIRED")
+        let evidenceURL = fixture.projectRoot.appendingPathComponent("retired-evidence.txt")
+        try Data("Retained Phase 5D evidence\n".utf8).write(to: evidenceURL)
+        try await fixture.store.transact(
+            actor: .init(id: "phase5d-native-fixture"),
+            reason: "Seed retained original native journey",
+            auditEventID: .init(rawValue: "phase5d-native-journey-audit"),
+            auditScope: .init(
+                projectID: fixture.projectID,
+                entityType: .ticket,
+                entityID: retiredTicketID.rawValue
+            )
+        ) { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('RETIRED',?,?,'Retained original scope','backlog')",
+                bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)]
+            )
+            try connection.execute("INSERT INTO ticket_task_plans (project_id,ticket_id,revision,created_at,updated_at) VALUES (?,'RETIRED',1,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute("INSERT INTO ticket_tasks (project_id,ticket_id,id,label,title,sort_order,completion,lifecycle,created_at,updated_at) VALUES (?,'RETIRED','retired-task','Retained','Retained original task',0,'pending','active','2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')", bindings: [.text(fixture.projectID.rawValue)])
+            try connection.execute("INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('retired-evidence',?,'RETIRED',?,1)", bindings: [.text(fixture.projectID.rawValue), .text(evidenceURL.path)])
+            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES (?,'RETIRED','replaced','Superseded by the retained successor',?,'backlog','phase5d-native-journey-audit','2026-09-10T00:00:00Z')", bindings: [.text(fixture.projectID.rawValue), .text(fixture.roadmapPhaseID.rawValue)])
+            try connection.execute("INSERT INTO ticket_successor_links (project_id,original_ticket_id,successor_ticket_id,relation,sort_order,audit_event_id,created_at) VALUES (?,'RETIRED','ROAD-1','replacement',0,'phase5d-native-journey-audit','2026-09-10T00:00:00Z')", bindings: [.text(fixture.projectID.rawValue)])
+        }
+
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .projectPlan(fixture.projectID))
+        model.selectTicket(.init(rawValue: "ROAD-1"))
+        model.setNavigationFocus(.ticket(retiredTicketID))
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 5D retired original — isolated native acceptance"
+        defer { window.close() }
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.frame = window.contentView?.bounds ?? .zero
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        try await Task.sleep(for: .milliseconds(500))
+        hosting.layoutSubtreeIfNeeded()
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(
+            accessibilityWindow(application, title: window.title),
+            "The isolated Phase 5D native window must be available to AX."
+        )
+        let retiredRowCandidate = await scrollToAccessibilityElement(
+            nativeWindow, identifier: "retired-ticket-RETIRED"
+        )
+        let retiredRow = try XCTUnwrap(
+            retiredRowCandidate,
+            "The requested retained original must be brought into the native viewport."
+        )
+        try taskCapture(hosting, name: "phase5d-retired-original-wide-row")
+        XCTAssertEqual(AXUIElementPerformAction(retiredRow, kAXPressAction as CFString), .success)
+        for _ in 0..<30 where model.selectedTicketID != retiredTicketID {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        XCTAssertEqual(model.selectedTicketID, retiredTicketID)
+        XCTAssertEqual(model.navigationFocus, .ticket(retiredTicketID))
+        let wideInspector = await scrollToAccessibilityElement(
+            nativeWindow, identifier: "project-plan-inspector"
+        )
+        _ = try XCTUnwrap(
+            wideInspector,
+            "The retained original inspector must be reachable after native activation."
+        )
+        let wideText = accessibilityText(nativeWindow)
+        XCTAssertTrue(wideText.contains("Last placement: \(fixture.roadmapPhaseID.rawValue) · Backlog"))
+        XCTAssertTrue(wideText.contains("Retained original task"))
+        XCTAssertTrue(wideText.contains("retired-evidence.txt"))
+        try taskCapture(hosting, name: "phase5d-retired-original-wide-detail")
+
+        await model.navigate(to: .activity(fixture.projectID))
+        await model.goBack()
+        XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID, retiredTicketID)
+        XCTAssertEqual(model.navigationFocus, .ticket(retiredTicketID))
+        try await Task.sleep(for: .milliseconds(300))
+        hosting.layoutSubtreeIfNeeded()
+        let restoredRetiredRow = accessibilityElement(
+            nativeWindow, identifier: "retired-ticket-RETIRED"
+        )
+        XCTAssertNotNil(
+            restoredRetiredRow,
+            "Back must reveal the retained row without requiring manual scrolling."
+        )
+        if let restoredRetiredRow {
+            var restoredRowIsFocused: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(
+                    restoredRetiredRow, kAXFocusedAttribute as CFString, &restoredRowIsFocused
+                ),
+                .success
+            )
+            XCTAssertEqual(restoredRowIsFocused as? Bool, true)
+        }
+        await model.goForward()
+        XCTAssertEqual(model.selection, .activity(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID, retiredTicketID)
+        XCTAssertNil(
+            model.navigationRecoveryMessage,
+            "A retained ticket remains valid context on Activity history entries."
+        )
+        await model.goBack()
+
+        window.setContentSize(NSSize(width: 760, height: 900))
+        try await Task.sleep(for: .milliseconds(500))
+        hosting.layoutSubtreeIfNeeded()
+        let compactRowCandidate = await scrollToAccessibilityElement(
+            nativeWindow, identifier: "retired-ticket-RETIRED"
+        )
+        let compactRow = try XCTUnwrap(
+            compactRowCandidate,
+            "The retained original must remain AX-reachable at compact width."
+        )
+        XCTAssertEqual(
+            AXUIElementSetAttributeValue(compactRow, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+            .success
+        )
+        var isFocused: CFTypeRef?
+        XCTAssertEqual(
+            AXUIElementCopyAttributeValue(compactRow, kAXFocusedAttribute as CFString, &isFocused),
+            .success
+        )
+        XCTAssertEqual(isFocused as? Bool, true)
+        XCTAssertEqual(model.navigationFocus, .ticket(retiredTicketID))
+        try taskCapture(hosting, name: "phase5d-retired-original-compact-row")
+        let compactInspector = await scrollToAccessibilityElement(
+            nativeWindow, identifier: "project-plan-inspector"
+        )
+        _ = try XCTUnwrap(
+            compactInspector,
+            "The retained original inspector must remain reachable at compact width."
+        )
+        let compactText = accessibilityText(nativeWindow)
+        XCTAssertTrue(compactText.contains("Last placement: \(fixture.roadmapPhaseID.rawValue) · Backlog"))
+        XCTAssertTrue(compactText.contains("Retained original task"))
+        XCTAssertTrue(compactText.contains("retired-evidence.txt"))
+        try taskCapture(hosting, name: "phase5d-retired-original-compact-detail")
+
+        let externalInspectionMarker = URL(
+            fileURLWithPath: "/private/tmp/release-radar-phase5d-writer/24-retired-native-external-6C0D43D8-enable"
+        )
+        let externalCompletionMarker = URL(
+            fileURLWithPath: "/private/tmp/release-radar-phase5d-writer/24-retired-native-external-6C0D43D8-complete"
+        )
+        if FileManager.default.fileExists(atPath: externalInspectionMarker.path),
+           !FileManager.default.fileExists(atPath: externalCompletionMarker.path) {
+            window.title = "Phase 5D retained detail — external native acceptance 6C0D43D8"
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            print("PHASE5D EXTERNAL READY: inspect compact retained detail, then exercise Activity, Back, Forward, and Back; finish on the Project Plan with RETIRED focused")
+            for _ in 0..<900 where !FileManager.default.fileExists(atPath: externalCompletionMarker.path) {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+            XCTAssertTrue(
+                FileManager.default.fileExists(atPath: externalCompletionMarker.path),
+                "External inspection must signal completion within three minutes."
+            )
+            XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
+            XCTAssertEqual(model.selectedTicketID, retiredTicketID)
+            XCTAssertEqual(model.navigationFocus, .ticket(retiredTicketID))
+        }
+    }
+
+    @MainActor
+    func testNativeSuccessorProposalApprovesRelaunchesAppliesAndRestoresCompactRetiredFocus() async throws {
+        let fixture = try await makeTask10PlanningFixture(
+            temporaryRoot: URL(fileURLWithPath: "/private/tmp/release-radar-phase5d-writer", isDirectory: true),
+            preserveDirectory: true
+        )
+        let originalID = TicketID(rawValue: "ROAD-1")
+        let successorID = TicketID(rawValue: "ROAD-1-NEXT")
+        let evidenceURL = fixture.projectRoot.appendingPathComponent("phase5d-native-owner-evidence.txt")
+        try Data("Phase 5D owner journey evidence\n".utf8).write(to: evidenceURL)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed owner journey evidence") { connection in
+            try connection.execute(
+                "INSERT INTO evidence (id,project_id,ticket_id,path,is_available) VALUES ('phase5d-owner-evidence',?,'ROAD-1',?,1)",
+                bindings: [.text(fixture.projectID.rawValue), .text(evidenceURL.path)]
+            )
+        }
+        let registration = ProjectRegistration(
+            projectID: fixture.projectID,
+            registrationID: "phase5d-native-owner-registration",
+            requestGeneration: 1
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Register native successor owner journey") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id,registration_id,request_generation,setup_state) VALUES (?, ?, 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue), .text(registration.registrationID)]
+            )
+        }
+        let approvalModel = AppModel(
+            store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true
+        )
+        await approvalModel.loadDashboard()
+        await approvalModel.navigate(to: .projectPlan(fixture.projectID))
+        let dispatcher = AgentCommandDispatcher(
+            store: fixture.store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(registration: registration, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
+            ])
+        )
+        let saved = await dispatcher.dispatch(.init(
+            version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+            expectedRegistration: registration,
+            reason: "Save native successor owner journey", command: .savePlanChangeProposal(
+                proposalID: "phase5d-native-successor", expectedPreviousVersion: nil,
+                rationale: "Replace retained scope through the owner workflow.", operations: [
+                    .addUnassignedTicket(id: successorID, outcome: "Deliver the explicit successor"),
+                    .addPendingTicketTasks(ticketID: successorID, tasks: [
+                        .init(id: .init(rawValue: "phase5d-successor-task"), label: "Successor", title: "Deliver replacement scope", sortOrder: 0),
+                    ]),
+                    .placeTicket(ticketID: successorID, phaseID: fixture.roadmapPhaseID),
+                    .assignTicketToGoal(ticketID: successorID, phaseID: fixture.roadmapPhaseID, goalID: .init(rawValue: "road-goal-1")),
+                    .retireTicket(ticketID: originalID, disposition: .replaced, reason: "Use the explicit replacement", successorTicketIDs: [successorID]),
+                    .carryGoalObligation(
+                        source: .init(phaseID: fixture.roadmapPhaseID, goalID: .init(rawValue: "road-goal-1"), ticketID: originalID),
+                        descendants: [.init(phaseID: fixture.roadmapPhaseID, goalID: .init(rawValue: "road-goal-1"), ticketID: successorID)],
+                        reason: "The successor retains the original delivery scope"
+                    ),
+                ]
+            )
+        ))
+        XCTAssertNil(saved.error)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        await approvalModel.loadDashboard()
+        let approvalWindow = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        approvalWindow.isReleasedWhenClosed = false
+        approvalWindow.appearance = NSAppearance(named: .darkAqua)
+        approvalWindow.title = "Phase 5D successor approval — isolated native acceptance"
+        let approvalHosting = NSHostingView(rootView: SidebarView(model: approvalModel).environment(\.colorScheme, .dark))
+        approvalWindow.contentView = approvalHosting
+        approvalWindow.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer { approvalWindow.close() }
+        try await Task.sleep(for: .milliseconds(500))
+        approvalHosting.layoutSubtreeIfNeeded()
+        let approvalApplication = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let approvalNativeWindow = try XCTUnwrap(accessibilityWindow(approvalApplication, title: approvalWindow.title))
+        for scrollBar in accessibilityElements(approvalNativeWindow, role: kAXScrollBarRole) {
+            _ = AXUIElementSetAttributeValue(
+                scrollBar, kAXValueAttribute as CFString, NSNumber(value: 1.0)
+            )
+        }
+        try await Task.sleep(for: .milliseconds(200))
+        let approvalText = accessibilityText(approvalNativeWindow)
+        XCTAssertTrue(approvalText.contains("Before: \(fixture.roadmapPhaseID.rawValue) Backlog"))
+        XCTAssertTrue(approvalText.contains("Original scope: Roadmap backlog one."))
+        XCTAssertTrue(approvalText.contains("ROAD-1-NEXT → road-goal-1 in \(fixture.roadmapPhaseID.rawValue)"))
+        let approveCandidate = await scrollToAccessibilityElement(
+            approvalNativeWindow, identifier: "approve-plan-change-proposal"
+        )
+        let approve = try XCTUnwrap(approveCandidate)
+        XCTAssertEqual(AXUIElementPerformAction(approve, kAXPressAction as CFString), .success)
+        for _ in 0..<50 {
+            let decisionCount = try await fixture.store.read {
+                try $0.scalarInt("SELECT COUNT(*) FROM plan_change_proposal_decisions WHERE proposal_id='phase5d-native-successor'") ?? 0
+            }
+            if decisionCount == 1 { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let approvalState = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM plan_change_proposal_decisions WHERE proposal_id='phase5d-native-successor'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_retirements WHERE ticket_id='ROAD-1'")
+            )
+        }
+        XCTAssertEqual(approvalState.0, 1)
+        XCTAssertEqual(approvalState.1, 0, "Approval alone must not apply the successor package.")
+        guard approvalState.0 == 1 else { return }
+        approvalWindow.close()
+
+        let relaunchedModel = AppModel(
+            store: fixture.store, projectOnboarding: fixture.onboarding, externalServicesSuppressed: true
+        )
+        await relaunchedModel.loadDashboard()
+        await relaunchedModel.navigate(to: .projectPlan(fixture.projectID))
+        let applyWindow = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        applyWindow.isReleasedWhenClosed = false
+        applyWindow.appearance = NSAppearance(named: .darkAqua)
+        applyWindow.title = "Phase 5D successor apply — isolated native acceptance"
+        let applyHosting = NSHostingView(rootView: SidebarView(model: relaunchedModel).environment(\.colorScheme, .dark))
+        applyWindow.contentView = applyHosting
+        applyWindow.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer { applyWindow.close() }
+        try await Task.sleep(for: .milliseconds(500))
+        applyHosting.layoutSubtreeIfNeeded()
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: applyWindow.title))
+        for scrollBar in accessibilityElements(nativeWindow, role: kAXScrollBarRole) {
+            _ = AXUIElementSetAttributeValue(
+                scrollBar, kAXValueAttribute as CFString, NSNumber(value: 1.0)
+            )
+        }
+        try await Task.sleep(for: .milliseconds(200))
+        let applyCandidate = await scrollToAccessibilityElement(
+            nativeWindow, identifier: "apply-plan-change-proposal"
+        )
+        let apply = try XCTUnwrap(applyCandidate)
+        XCTAssertEqual(AXUIElementPerformAction(apply, kAXPressAction as CFString), .success)
+        for _ in 0..<50 {
+            let retirementCount = try await fixture.store.read {
+                try $0.scalarInt("SELECT COUNT(*) FROM ticket_retirements WHERE ticket_id='ROAD-1'") ?? 0
+            }
+            if retirementCount == 1 { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let appliedRetirementCount = try await fixture.store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM ticket_retirements WHERE ticket_id='ROAD-1'")
+        }
+        XCTAssertEqual(appliedRetirementCount, 1)
+
+        relaunchedModel.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        let phaseBoard = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "sidebar-phase-board"))
+        XCTAssertEqual(AXUIElementPerformAction(phaseBoard, kAXPressAction as CFString), .success)
+        for _ in 0..<30 where relaunchedModel.selection != .phaseBoard(fixture.projectID) {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let successorCandidate = await scrollToAccessibilityElement(
+            nativeWindow, identifier: "ticket-ROAD-1-NEXT"
+        )
+        let successor = try XCTUnwrap(successorCandidate)
+        XCTAssertEqual(AXUIElementPerformAction(successor, kAXPressAction as CFString), .success)
+        XCTAssertEqual(relaunchedModel.selectedTicketID, successorID)
+
+        let projectPlan = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "sidebar-project-plan"))
+        XCTAssertEqual(AXUIElementPerformAction(projectPlan, kAXPressAction as CFString), .success)
+        for _ in 0..<30 where relaunchedModel.selection != .projectPlan(fixture.projectID) {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let originalCandidate = await scrollToAccessibilityElement(
+            nativeWindow, identifier: "retired-ticket-ROAD-1"
+        )
+        let original = try XCTUnwrap(originalCandidate)
+        XCTAssertEqual(AXUIElementPerformAction(original, kAXPressAction as CFString), .success)
+        let retainedText = accessibilityText(nativeWindow)
+        XCTAssertTrue(retainedText.contains("Last placement: \(fixture.roadmapPhaseID.rawValue) · Backlog"))
+        XCTAssertTrue(retainedText.contains("Verify the complete outcome"))
+        XCTAssertTrue(retainedText.contains("phase5d-native-owner-evidence.txt"))
+
+        applyWindow.setContentSize(NSSize(width: 760, height: 900))
+        try await Task.sleep(for: .milliseconds(500))
+        let activity = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "sidebar-activity"))
+        XCTAssertEqual(AXUIElementPerformAction(activity, kAXPressAction as CFString), .success)
+        for _ in 0..<30 where relaunchedModel.selection != .activity(fixture.projectID) {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        let back = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "navigation-back"))
+        XCTAssertEqual(AXUIElementPerformAction(back, kAXPressAction as CFString), .success)
+        for _ in 0..<30 where relaunchedModel.selection != .projectPlan(fixture.projectID) {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        try await Task.sleep(for: .milliseconds(300))
+        applyHosting.layoutSubtreeIfNeeded()
+        let automaticallyRestoredRow = accessibilityElement(nativeWindow, identifier: "retired-ticket-ROAD-1")
+        XCTAssertNotNil(automaticallyRestoredRow, "Compact Back must reveal the retained row without manual scrolling.")
+        if let automaticallyRestoredRow {
+            var focused: CFTypeRef?
+            XCTAssertEqual(AXUIElementCopyAttributeValue(
+                automaticallyRestoredRow, kAXFocusedAttribute as CFString, &focused
+            ), .success)
+            XCTAssertEqual(focused as? Bool, true)
+        }
+        XCTAssertNil(relaunchedModel.navigationRecoveryMessage)
     }
 
     @MainActor
@@ -621,8 +1043,14 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
-    private func makeTask10AwaitingGoalFixture() async throws -> RR9OwnerFixture {
-        let fixture = try await makeRR9OwnerFixture()
+    private func makeTask10AwaitingGoalFixture(
+        temporaryRoot: URL = FileManager.default.temporaryDirectory,
+        preserveDirectory: Bool = false
+    ) async throws -> RR9OwnerFixture {
+        let fixture = try await makeRR9OwnerFixture(
+            temporaryRoot: temporaryRoot,
+            preserveDirectory: preserveDirectory
+        )
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Synthetic completed work") { c in
             try c.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('DONE-1','rr9-owner-project','phase-empty','Complete the owner outcome','backlog')")
         }
@@ -1021,8 +1449,14 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
-    private func makeTask10PlanningFixture() async throws -> RR9OwnerFixture {
-        let fixture = try await makeTask10AwaitingGoalFixture()
+    private func makeTask10PlanningFixture(
+        temporaryRoot: URL = FileManager.default.temporaryDirectory,
+        preserveDirectory: Bool = false
+    ) async throws -> RR9OwnerFixture {
+        let fixture = try await makeTask10AwaitingGoalFixture(
+            temporaryRoot: temporaryRoot,
+            preserveDirectory: preserveDirectory
+        )
         _ = try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Task 10 read-only task regression") { c in
             try TicketTaskPlanningPolicy.revisePlan(projectID: fixture.projectID,
                 ticketID: .init(rawValue: "ROAD-1"), expectedRevision: nil,
@@ -1591,6 +2025,136 @@ final class AppRouteTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
 
+    }
+
+    private func accessibilityWindow(_ application: AXUIElement, title: String) -> AXUIElement? {
+        func matches(_ element: AXUIElement) -> Bool {
+            var candidateTitle: CFTypeRef?
+            return AXUIElementCopyAttributeValue(
+                element, kAXTitleAttribute as CFString, &candidateTitle
+            ) == .success && (candidateTitle as? String) == title
+        }
+        var value: CFTypeRef?
+        if AXUIElementCopyAttributeValue(application, kAXWindowsAttribute as CFString, &value) == .success,
+           let window = (value as? [AXUIElement])?.first(where: matches) {
+            return window
+        }
+        for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+            var candidate: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                application, attribute as CFString, &candidate
+            ) == .success,
+                  let candidate,
+                  CFGetTypeID(candidate) == AXUIElementGetTypeID() else { continue }
+            let element = candidate as! AXUIElement
+            if matches(element) { return element }
+        }
+        return nil
+    }
+
+    private func accessibilityElement(_ root: AXUIElement, identifier: String) -> AXUIElement? {
+        var pending = [root]
+        var inspected = 0
+        while let element = pending.popLast(), inspected < 2_000 {
+            inspected += 1
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(
+                element, kAXIdentifierAttribute as CFString, &value
+            ) == .success,
+               (value as? String) == identifier {
+                return element
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(
+                element, kAXChildrenAttribute as CFString, &children
+            ) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return nil
+    }
+
+    @MainActor
+    private func scrollToAccessibilityElement(
+        _ root: AXUIElement,
+        identifier: String
+    ) async -> AXUIElement? {
+        if let element = accessibilityElement(root, identifier: identifier) {
+            _ = AXUIElementPerformAction(element, "AXScrollToVisible" as CFString)
+            try? await Task.sleep(for: .milliseconds(150))
+            return accessibilityElement(root, identifier: identifier) ?? element
+        }
+        let verticalScrollBars = accessibilityElements(root, role: kAXScrollBarRole).filter { element in
+            var value: CFTypeRef?
+            return AXUIElementCopyAttributeValue(
+                element, kAXOrientationAttribute as CFString, &value
+            ) == .success && (value as? String) == kAXVerticalOrientationValue
+        }
+        for position in stride(from: 0.0, through: 1.0, by: 0.1) {
+            for scrollBar in verticalScrollBars {
+                _ = AXUIElementSetAttributeValue(
+                    scrollBar, kAXValueAttribute as CFString, NSNumber(value: position)
+                )
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+            if let element = accessibilityElement(root, identifier: identifier) {
+                _ = AXUIElementPerformAction(element, "AXScrollToVisible" as CFString)
+                try? await Task.sleep(for: .milliseconds(150))
+                return accessibilityElement(root, identifier: identifier) ?? element
+            }
+        }
+        return nil
+    }
+
+    private func accessibilityElements(_ root: AXUIElement, role: String) -> [AXUIElement] {
+        var pending = [root]
+        var matches: [AXUIElement] = []
+        var inspected = 0
+        while let element = pending.popLast(), inspected < 2_000 {
+            inspected += 1
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(
+                element, kAXRoleAttribute as CFString, &value
+            ) == .success,
+               (value as? String) == role {
+                matches.append(element)
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(
+                element, kAXChildrenAttribute as CFString, &children
+            ) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return matches
+    }
+
+    private func accessibilityText(_ root: AXUIElement) -> String {
+        var pending = [root]
+        var text: [String] = []
+        var inspected = 0
+        while let element = pending.popLast(), inspected < 2_000 {
+            inspected += 1
+            for attribute in [kAXTitleAttribute, kAXDescriptionAttribute, kAXValueAttribute] {
+                var value: CFTypeRef?
+                if AXUIElementCopyAttributeValue(
+                    element, attribute as CFString, &value
+                ) == .success,
+                   let value = value as? String {
+                    text.append(value)
+                }
+            }
+            var children: CFTypeRef?
+            if AXUIElementCopyAttributeValue(
+                element, kAXChildrenAttribute as CFString, &children
+            ) == .success,
+               let children = children as? [AXUIElement] {
+                pending.append(contentsOf: children)
+            }
+        }
+        return text.joined(separator: "\n")
     }
 
     @MainActor

@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 21
+    static let currentVersion: Int64 = 22
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -99,6 +99,9 @@ enum StoreMigrations {
             }
             if version < 21 {
                 try connection.executeScript(schemaVersion21)
+            }
+            if version < 22 {
+                try connection.executeScript(schemaVersion22)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -272,7 +275,9 @@ enum StoreMigrations {
         if version >= 11 {
             guard try hasExpectedLegacyContinuationColumn(connection, throughVersion: version) else { return false }
             for table in planningTableSQL {
-                let expectedSQL = version >= 14 && table.name == "delivery_goal_assignment_events"
+                let expectedSQL = version >= 22 && table.name == "delivery_goal_assignment_events"
+                    ? deliveryGoalAssignmentEventsVersionTwentyTwoTableSQL
+                    : version >= 14 && table.name == "delivery_goal_assignment_events"
                     ? deliveryGoalAssignmentEventsVersionFourteenTableSQL : table.sql
                 guard let actualSQL = try connection.scalarText(
                     "SELECT sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
@@ -645,6 +650,48 @@ enum StoreMigrations {
             "removal_id", "historical_project_id", "proposal_id", "version", "id",
             "decision_id", "audit_event_id", "applied_at",
         ]),
+        (22, "ticket_retirements", [
+            "project_id", "ticket_id", "disposition", "reason", "last_phase_id",
+            "last_lane", "audit_event_id", "retired_at",
+        ]),
+        (22, "ticket_successor_links", [
+            "project_id", "original_ticket_id", "successor_ticket_id", "relation",
+            "sort_order", "audit_event_id", "created_at",
+        ]),
+        (22, "delivery_goal_obligations", [
+            "project_id", "phase_id", "goal_id", "ticket_id", "scope",
+            "assessment", "created_at",
+        ]),
+        (22, "delivery_goal_obligation_lineage", [
+            "project_id", "source_phase_id", "source_goal_id", "source_ticket_id",
+            "descendant_phase_id", "descendant_goal_id", "descendant_ticket_id",
+            "reason", "audit_event_id", "created_at",
+        ]),
+        (22, "delivery_goal_obligation_drops", [
+            "project_id", "phase_id", "goal_id", "ticket_id", "reason",
+            "audit_event_id", "created_at",
+        ]),
+        (22, "retained_ticket_retirements", [
+            "removal_id", "historical_project_id", "ticket_id", "outcome", "disposition", "reason",
+            "last_phase_id", "last_lane", "audit_event_id", "retired_at",
+        ]),
+        (22, "retained_ticket_successor_links", [
+            "removal_id", "historical_project_id", "original_ticket_id", "successor_ticket_id",
+            "relation", "sort_order", "audit_event_id", "created_at",
+        ]),
+        (22, "retained_delivery_goal_obligations", [
+            "removal_id", "historical_project_id", "phase_id", "goal_id", "ticket_id",
+            "scope", "assessment", "created_at",
+        ]),
+        (22, "retained_delivery_goal_obligation_lineage", [
+            "removal_id", "historical_project_id", "source_phase_id", "source_goal_id",
+            "source_ticket_id", "descendant_phase_id", "descendant_goal_id",
+            "descendant_ticket_id", "reason", "audit_event_id", "created_at",
+        ]),
+        (22, "retained_delivery_goal_obligation_drops", [
+            "removal_id", "historical_project_id", "phase_id", "goal_id", "ticket_id",
+            "reason", "audit_event_id", "created_at",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -731,6 +778,16 @@ enum StoreMigrations {
         (21, "trigger", "retained_plan_change_proposal_decisions_reject_delete"),
         (21, "trigger", "retained_plan_change_proposal_applications_reject_update"),
         (21, "trigger", "retained_plan_change_proposal_applications_reject_delete"),
+        (22, "trigger", "retained_ticket_retirements_reject_update"),
+        (22, "trigger", "retained_ticket_retirements_reject_delete"),
+        (22, "trigger", "retained_ticket_successor_links_reject_update"),
+        (22, "trigger", "retained_ticket_successor_links_reject_delete"),
+        (22, "trigger", "retained_delivery_goal_obligations_reject_update"),
+        (22, "trigger", "retained_delivery_goal_obligations_reject_delete"),
+        (22, "trigger", "retained_delivery_goal_obligation_lineage_reject_update"),
+        (22, "trigger", "retained_delivery_goal_obligation_lineage_reject_delete"),
+        (22, "trigger", "retained_delivery_goal_obligation_drops_reject_update"),
+        (22, "trigger", "retained_delivery_goal_obligation_drops_reject_delete"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -1161,6 +1218,16 @@ enum StoreMigrations {
         (21, "retained_plan_change_proposal_decisions_reject_delete", immutableRetainedTrigger(table: "retained_plan_change_proposal_decisions", action: "delete")),
         (21, "retained_plan_change_proposal_applications_reject_update", immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "update")),
         (21, "retained_plan_change_proposal_applications_reject_delete", immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "delete")),
+        (22, "retained_ticket_retirements_reject_update", immutableRetainedTrigger(table: "retained_ticket_retirements", action: "update")),
+        (22, "retained_ticket_retirements_reject_delete", immutableRetainedTrigger(table: "retained_ticket_retirements", action: "delete")),
+        (22, "retained_ticket_successor_links_reject_update", immutableRetainedTrigger(table: "retained_ticket_successor_links", action: "update")),
+        (22, "retained_ticket_successor_links_reject_delete", immutableRetainedTrigger(table: "retained_ticket_successor_links", action: "delete")),
+        (22, "retained_delivery_goal_obligations_reject_update", immutableRetainedTrigger(table: "retained_delivery_goal_obligations", action: "update")),
+        (22, "retained_delivery_goal_obligations_reject_delete", immutableRetainedTrigger(table: "retained_delivery_goal_obligations", action: "delete")),
+        (22, "retained_delivery_goal_obligation_lineage_reject_update", immutableRetainedTrigger(table: "retained_delivery_goal_obligation_lineage", action: "update")),
+        (22, "retained_delivery_goal_obligation_lineage_reject_delete", immutableRetainedTrigger(table: "retained_delivery_goal_obligation_lineage", action: "delete")),
+        (22, "retained_delivery_goal_obligation_drops_reject_update", immutableRetainedTrigger(table: "retained_delivery_goal_obligation_drops", action: "update")),
+        (22, "retained_delivery_goal_obligation_drops_reject_delete", immutableRetainedTrigger(table: "retained_delivery_goal_obligation_drops", action: "delete")),
     ]
 
     private static let criticalIndexes: [(
@@ -1292,6 +1359,24 @@ enum StoreMigrations {
         (21, "retained_plan_change_proposal_applications", "removal_id,historical_project_id,proposal_id,version", "retained_plan_change_proposal_versions", "removal_id,historical_project_id,proposal_id,version", "NO ACTION"),
         (21, "retained_plan_change_proposal_applications", "removal_id,historical_project_id,proposal_id,version,decision_id", "retained_plan_change_proposal_decisions", "removal_id,historical_project_id,proposal_id,version,id", "NO ACTION"),
         (21, "retained_plan_change_proposal_applications", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (22, "ticket_retirements", "project_id,ticket_id", "tickets", "project_id,id", "NO ACTION"),
+        (22, "ticket_retirements", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (22, "ticket_successor_links", "project_id,original_ticket_id", "ticket_retirements", "project_id,ticket_id", "NO ACTION"),
+        (22, "ticket_successor_links", "project_id,successor_ticket_id", "tickets", "project_id,id", "NO ACTION"),
+        (22, "ticket_successor_links", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (22, "delivery_goal_obligations", "project_id,phase_id,goal_id", "delivery_goals", "project_id,phase_id,id", "NO ACTION"),
+        (22, "delivery_goal_obligations", "project_id,ticket_id", "tickets", "project_id,id", "NO ACTION"),
+        (22, "delivery_goal_obligation_lineage", "project_id,source_phase_id,source_goal_id,source_ticket_id", "delivery_goal_obligations", "project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
+        (22, "delivery_goal_obligation_lineage", "project_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id", "delivery_goal_obligations", "project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
+        (22, "delivery_goal_obligation_lineage", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (22, "delivery_goal_obligation_drops", "project_id,phase_id,goal_id,ticket_id", "delivery_goal_obligations", "project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
+        (22, "delivery_goal_obligation_drops", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (22, "retained_ticket_retirements", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (22, "retained_ticket_successor_links", "removal_id,historical_project_id,original_ticket_id", "retained_ticket_retirements", "removal_id,historical_project_id,ticket_id", "NO ACTION"),
+        (22, "retained_delivery_goal_obligations", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (22, "retained_delivery_goal_obligation_lineage", "removal_id,historical_project_id,source_phase_id,source_goal_id,source_ticket_id", "retained_delivery_goal_obligations", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
+        (22, "retained_delivery_goal_obligation_lineage", "removal_id,historical_project_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id", "retained_delivery_goal_obligations", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
+        (22, "retained_delivery_goal_obligation_drops", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "retained_delivery_goal_obligations", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -1954,6 +2039,38 @@ enum StoreMigrations {
     )
     """
 
+    private static let deliveryGoalAssignmentEventsVersionTwentyTwoTableSQL = """
+    CREATE TABLE delivery_goal_assignment_events (
+        audit_event_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        previous_goal_id TEXT,
+        current_goal_id TEXT,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        action TEXT NOT NULL CHECK (action IN ('assigned', 'unassigned', 'reassigned')),
+        PRIMARY KEY(audit_event_id, phase_id, ticket_id),
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) DEFERRABLE INITIALLY DEFERRED,
+        FOREIGN KEY(project_id, phase_id) REFERENCES phase_plans(project_id, phase_id),
+        FOREIGN KEY(project_id, ticket_id)
+            REFERENCES tickets(project_id, id),
+        FOREIGN KEY(project_id, phase_id, previous_goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id),
+        FOREIGN KEY(project_id, phase_id, current_goal_id)
+            REFERENCES delivery_goals(project_id, phase_id, id),
+        CHECK (
+            (action = 'assigned' AND previous_goal_id IS NULL AND current_goal_id IS NOT NULL)
+            OR (action = 'unassigned' AND previous_goal_id IS NOT NULL AND current_goal_id IS NULL)
+            OR (
+                action = 'reassigned'
+                AND previous_goal_id IS NOT NULL
+                AND current_goal_id IS NOT NULL
+                AND previous_goal_id <> current_goal_id
+            )
+        )
+    )
+    """
+
     private static let ticketTaskPlansTableSQL = """
     CREATE TABLE ticket_task_plans (
         project_id TEXT NOT NULL,
@@ -2365,5 +2482,218 @@ enum StoreMigrations {
     \(immutableRetainedTrigger(table: "retained_plan_change_proposal_decisions", action: "delete"));
     \(immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "update"));
     \(immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "delete"));
+    """
+
+    // Current goal membership becomes explicit coverage. Historical membership
+    // loss is preserved as unassessed debt; migration never invents a carry,
+    // successor, drop, approval, or completed result.
+    private static let schemaVersion22 = """
+    ALTER TABLE delivery_goal_assignment_events RENAME TO delivery_goal_assignment_events_v21;
+    \(deliveryGoalAssignmentEventsVersionTwentyTwoTableSQL);
+    INSERT INTO delivery_goal_assignment_events
+        SELECT * FROM delivery_goal_assignment_events_v21;
+    DROP TABLE delivery_goal_assignment_events_v21;
+    CREATE UNIQUE INDEX delivery_goal_assignment_events_ticket_revision_unique
+        ON delivery_goal_assignment_events(project_id, phase_id, ticket_id, revision);
+
+    CREATE TABLE ticket_retirements (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        disposition TEXT NOT NULL CHECK (disposition IN ('withdrawn', 'replaced', 'split')),
+        reason TEXT NOT NULL CHECK (length(CAST(reason AS BLOB)) BETWEEN 1 AND 4096),
+        last_phase_id TEXT,
+        last_lane TEXT CHECK (last_lane IS NULL OR last_lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted')),
+        audit_event_id TEXT NOT NULL,
+        retired_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id),
+        FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id) ON DELETE NO ACTION,
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+        CHECK ((last_phase_id IS NULL) = (last_lane IS NULL))
+    );
+
+    CREATE TABLE ticket_successor_links (
+        project_id TEXT NOT NULL,
+        original_ticket_id TEXT NOT NULL,
+        successor_ticket_id TEXT NOT NULL,
+        relation TEXT NOT NULL CHECK (relation IN ('replacement', 'split')),
+        sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+        audit_event_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, original_ticket_id, successor_ticket_id),
+        UNIQUE(project_id, successor_ticket_id),
+        FOREIGN KEY(project_id, original_ticket_id) REFERENCES ticket_retirements(project_id, ticket_id) ON DELETE NO ACTION,
+        FOREIGN KEY(project_id, successor_ticket_id) REFERENCES tickets(project_id, id) ON DELETE NO ACTION,
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+        CHECK (original_ticket_id <> successor_ticket_id)
+    );
+
+    CREATE TABLE delivery_goal_obligations (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        goal_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        scope TEXT NOT NULL CHECK (length(CAST(scope AS BLOB)) BETWEEN 1 AND 4096),
+        assessment TEXT NOT NULL CHECK (assessment IN ('current', 'unassessed')),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, phase_id, goal_id, ticket_id),
+        FOREIGN KEY(project_id, phase_id, goal_id) REFERENCES delivery_goals(project_id, phase_id, id) ON DELETE NO ACTION,
+        FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE delivery_goal_obligation_lineage (
+        project_id TEXT NOT NULL,
+        source_phase_id TEXT NOT NULL,
+        source_goal_id TEXT NOT NULL,
+        source_ticket_id TEXT NOT NULL,
+        descendant_phase_id TEXT NOT NULL,
+        descendant_goal_id TEXT NOT NULL,
+        descendant_ticket_id TEXT NOT NULL,
+        reason TEXT NOT NULL CHECK (length(CAST(reason AS BLOB)) BETWEEN 1 AND 4096),
+        audit_event_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(
+            project_id, source_phase_id, source_goal_id, source_ticket_id,
+            descendant_phase_id, descendant_goal_id, descendant_ticket_id
+        ),
+        UNIQUE(project_id, descendant_phase_id, descendant_goal_id, descendant_ticket_id),
+        FOREIGN KEY(project_id, source_phase_id, source_goal_id, source_ticket_id)
+            REFERENCES delivery_goal_obligations(project_id, phase_id, goal_id, ticket_id) ON DELETE NO ACTION,
+        FOREIGN KEY(project_id, descendant_phase_id, descendant_goal_id, descendant_ticket_id)
+            REFERENCES delivery_goal_obligations(project_id, phase_id, goal_id, ticket_id) ON DELETE NO ACTION,
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+        CHECK (
+            source_phase_id <> descendant_phase_id
+            OR source_goal_id <> descendant_goal_id
+            OR source_ticket_id <> descendant_ticket_id
+        )
+    );
+
+    CREATE TABLE delivery_goal_obligation_drops (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        goal_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        reason TEXT NOT NULL CHECK (length(CAST(reason AS BLOB)) BETWEEN 1 AND 4096),
+        audit_event_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, phase_id, goal_id, ticket_id),
+        FOREIGN KEY(project_id, phase_id, goal_id, ticket_id)
+            REFERENCES delivery_goal_obligations(project_id, phase_id, goal_id, ticket_id) ON DELETE NO ACTION,
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED
+    );
+
+    CREATE TABLE retained_ticket_retirements (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        disposition TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        last_phase_id TEXT,
+        last_lane TEXT,
+        audit_event_id TEXT NOT NULL,
+        retired_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, ticket_id),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_ticket_successor_links (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        original_ticket_id TEXT NOT NULL,
+        successor_ticket_id TEXT NOT NULL,
+        relation TEXT NOT NULL,
+        sort_order INTEGER NOT NULL,
+        audit_event_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, original_ticket_id, successor_ticket_id),
+        FOREIGN KEY(removal_id, historical_project_id, original_ticket_id)
+            REFERENCES retained_ticket_retirements(removal_id, historical_project_id, ticket_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_delivery_goal_obligations (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        goal_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        scope TEXT NOT NULL,
+        assessment TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, phase_id, goal_id, ticket_id),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_delivery_goal_obligation_lineage (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        source_phase_id TEXT NOT NULL,
+        source_goal_id TEXT NOT NULL,
+        source_ticket_id TEXT NOT NULL,
+        descendant_phase_id TEXT NOT NULL,
+        descendant_goal_id TEXT NOT NULL,
+        descendant_ticket_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        audit_event_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(
+            removal_id, historical_project_id, source_phase_id, source_goal_id, source_ticket_id,
+            descendant_phase_id, descendant_goal_id, descendant_ticket_id
+        ),
+        FOREIGN KEY(removal_id, historical_project_id, source_phase_id, source_goal_id, source_ticket_id)
+            REFERENCES retained_delivery_goal_obligations(removal_id, historical_project_id, phase_id, goal_id, ticket_id) ON DELETE NO ACTION,
+        FOREIGN KEY(removal_id, historical_project_id, descendant_phase_id, descendant_goal_id, descendant_ticket_id)
+            REFERENCES retained_delivery_goal_obligations(removal_id, historical_project_id, phase_id, goal_id, ticket_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_delivery_goal_obligation_drops (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        goal_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        audit_event_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, phase_id, goal_id, ticket_id),
+        FOREIGN KEY(removal_id, historical_project_id, phase_id, goal_id, ticket_id)
+            REFERENCES retained_delivery_goal_obligations(removal_id, historical_project_id, phase_id, goal_id, ticket_id) ON DELETE NO ACTION
+    );
+
+    \(immutableRetainedTrigger(table: "retained_ticket_retirements", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_ticket_retirements", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_ticket_successor_links", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_ticket_successor_links", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_delivery_goal_obligations", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_delivery_goal_obligations", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_delivery_goal_obligation_lineage", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_delivery_goal_obligation_lineage", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_delivery_goal_obligation_drops", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_delivery_goal_obligation_drops", action: "delete"));
+
+    INSERT INTO delivery_goal_obligations (
+        project_id, phase_id, goal_id, ticket_id, scope, assessment, created_at
+    )
+    SELECT assignments.project_id, assignments.phase_id, assignments.goal_id,
+           assignments.ticket_id, tickets.outcome, 'current',
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    FROM delivery_goal_ticket_assignments AS assignments
+    JOIN tickets
+      ON tickets.project_id = assignments.project_id
+     AND tickets.id = assignments.ticket_id;
+
+    INSERT OR IGNORE INTO delivery_goal_obligations (
+        project_id, phase_id, goal_id, ticket_id, scope, assessment, created_at
+    )
+    SELECT events.project_id, events.phase_id, events.previous_goal_id,
+           events.ticket_id, tickets.outcome, 'unassessed',
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    FROM delivery_goal_assignment_events AS events
+    JOIN tickets
+      ON tickets.project_id = events.project_id
+     AND tickets.id = events.ticket_id
+    WHERE events.action IN ('unassigned', 'reassigned')
+      AND events.previous_goal_id IS NOT NULL
+      AND tickets.lane <> 'accepted';
     """
 }

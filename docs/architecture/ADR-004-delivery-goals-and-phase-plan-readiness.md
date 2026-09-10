@@ -144,3 +144,18 @@ change goal/phase lifecycle. Existing ticket subjects must still be unassigned o
 Backlog and satisfy the existing unstarted protections. Those limits preserve the
 outstanding carry-forward contract for Phase 5D rather than treating an additive
 proposal as reconciliation.
+
+## Phase 5D explicit obligation amendment — 2026-09-10
+
+Goal-owned obligations persist separately from current membership and assignment
+history. Every membership-loss path preserves uncovered debt or exact approved
+reconciliation; reassignment, goal edits or supersession cannot erase scope.
+Cross-phase carry uses explicit obligation lineage, retaining same-phase membership
+and one current goal per ticket. Split coverage requires every required descendant.
+Reasoned owner-approved drop is removed scope, never delivery or acceptance.
+
+A shared store-owned coverage assessment informs readiness, goal acceptance and
+dependency eligibility. Carried/already-delivered coverage can be structurally ready
+without local upcoming members; uncovered/unassessed debt cannot. Acceptance remains
+non-vacuous, requires actual Accepted work and explicit owner action. Phase5E alone
+adds full phase lifecycle and consumes these facts without inferring completion.

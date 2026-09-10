@@ -207,3 +207,43 @@ The next approved slice is Phase 5D successor/carry-forward through this proposa
 path, after coordinated baseline/ownership handoff. Publication is separately
 blocked: inherited shared/C commits remain local-only until explicit owner
 authorization for their remote endpoint; every merge is separately approved.
+
+## Phase 5D local completion and next boundary
+
+Phase 5D completed the [successor/carry-forward slice](task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md)
+from committed handoff `19306fb`. Original writer
+`01a0898e-8240-72e0-962d-7091504b5d72` (Sol High) delivered source
+`fe4d9f1` and bounded corrections `cdaadc33` and
+`34b26519b7e981d29aa914393051b991cc1b1ffa`; final source is integrated at
+`dcb360b932ff31b472ea3d3d7699b838dc1640f2`. Independent Astra High reviewer
+`01a08a3e-c94b-7a42-96ad-66456baf971d` returned PASS, closing all six Required
+findings and their correction interactions. Requested settings are not independently
+exposed. The prior read-only chief consultation is complete and archived.
+
+The [canonical evidence](evidence/2026-09-10-phase5d-successors.md) records
+schema/atomic proposals, obligation and dependency gates, retired-write rejection,
+recovery and native owner workflow. Final targeted corrections passed 3/3 and
+affected compatibility 4/4; corrected native preview/retained journeys passed 2/2.
+External verification confirmed compact Back reveals and focuses the retained
+original without assistance. No full-suite or full-process-restart claim is made.
+The named writer branch `codex/phase5d-successors` preserves the passed source;
+`codex/phase5d-orchestrator` owns catalog/ledger integration. All test hosts are
+stopped; both bounded writer and reviewer tasks are complete and archived after
+source/evidence preservation and final handoff.
+
+All durable evidence and selected images are catalogued in the repository.
+Documentation validation passed on integrated source; application readback,
+binding and catalog acceptance remain unauthorized, so no managed-current or
+application synchronization claim is made. Temporary outputs and markers remain
+under `/private/tmp/release-radar-phase5d-writer/`; no cleanup occurred.
+
+External controller selection once started plain DerivedData process 41579 before
+the test host was ready. It showed a schema-19 mismatch, received no clicks and was
+terminated. Zero incidental startup effects are not claimed; installed owner app
+60590 was not controlled. The canonical evidence retains the exact distinction.
+
+Parent authorization was local only. Inherited shared+C/D push, PR and merge
+remain unapproved; no installation, adoption, runtime pilot or owner-state change
+is authorized. Phase 5E full lifecycle is next eligible under the approved sequence,
+after parent-coordinated authorization and baseline/ownership handoff. Eligibility
+alone does not release a writer.

@@ -172,7 +172,7 @@ struct DashboardProjection: Equatable, Sendable {
                     activePhaseID.map { phase.id.rawValue.utf8.elementsEqual($0.rawValue.utf8) } == true
                 }
                 let activeLanes = try connection.dashboardRows(
-                    "SELECT lane FROM tickets WHERE project_id = ? AND phase_id = ?",
+                    "SELECT lane FROM tickets WHERE project_id = ? AND phase_id = ? AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id)",
                     bindings: [.text(projectID.rawValue), activePhase.map { .text($0.id.rawValue) } ?? .null]
                 ).map { try $0.text("lane") }
                 let project = ProjectDashboardProjection(
@@ -188,18 +188,28 @@ struct DashboardProjection: Equatable, Sendable {
                 for phase in phases {
                     let phaseID = phase.id
                     let ticketRows = try connection.dashboardRows(
-                        "SELECT id, outcome, lane, plan_legacy_continuation FROM tickets WHERE project_id = ? AND phase_id = ? ORDER BY rowid",
+                        "SELECT id, outcome, lane, plan_legacy_continuation FROM tickets WHERE project_id = ? AND phase_id = ? AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY rowid",
                         bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
                     )
                     guard let plan = try DeliveryPlanningPolicy.loadPlan(projectID: projectID, phaseID: phaseID, connection: connection) else {
                         throw DeliveryPlanningPolicyError.phasePlanNotFound
                     }
                     let assignments = try DeliveryPlanningPolicy.loadAssignments(projectID: projectID, phaseID: phaseID, connection: connection)
+                    let retiredTicketIDs = Set(try connection.dashboardRows(
+                        "SELECT ticket_id FROM ticket_retirements WHERE project_id=?",
+                        bindings: [.text(projectID.rawValue)]
+                    ).map { Data((try $0.text("ticket_id")).utf8) })
                     let goals = try DeliveryPlanningPolicy.loadGoals(projectID: projectID, phaseID: phaseID, connection: connection).map { goal in
                         DeliveryGoalSummaryProjection(
                             goalID: goal.id, title: goal.title, outcome: goal.outcome, lifecycle: goal.lifecycle,
                             doneCriteria: try DeliveryPlanningPolicy.loadCriteria(projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection).map(\.text),
-                            ticketIDs: assignments.filter { $0.goalID.rawValue.utf8.elementsEqual(goal.id.rawValue.utf8) }.map(\.ticketID)
+                            ticketIDs: assignments.filter {
+                                $0.goalID.rawValue.utf8.elementsEqual(goal.id.rawValue.utf8)
+                                    && !retiredTicketIDs.contains(Data($0.ticketID.rawValue.utf8))
+                            }.map(\.ticketID),
+                            coverage: try DeliveryGoalCoveragePolicy.assess(
+                                projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection
+                            )
                         )
                     }
                     let goalsByID = Dictionary(uniqueKeysWithValues: goals.map { ($0.id, $0) })
@@ -281,7 +291,7 @@ struct DashboardProjection: Equatable, Sendable {
                     )
                 }
                 let unassignedRows = try connection.dashboardRows(
-                    "SELECT id, outcome FROM tickets WHERE project_id = ? AND phase_id IS NULL AND lane IS NULL ORDER BY id COLLATE BINARY",
+                    "SELECT id, outcome FROM tickets WHERE project_id = ? AND phase_id IS NULL AND lane IS NULL AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY id COLLATE BINARY",
                     bindings: [.text(projectID.rawValue)]
                 )
                 let unassignedIDs = try unassignedRows.map { TicketID(rawValue: try $0.text("id")) }
@@ -312,10 +322,86 @@ struct DashboardProjection: Equatable, Sendable {
                         evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == ticketID }.map(EvidenceProjection.init)
                     )
                 }
+                let retiredRows = try connection.dashboardRows(
+                    """
+                    SELECT retirements.ticket_id,tickets.outcome,retirements.disposition,
+                           retirements.reason,retirements.last_phase_id,retirements.last_lane
+                    FROM ticket_retirements retirements
+                    JOIN tickets ON tickets.project_id=retirements.project_id AND tickets.id=retirements.ticket_id
+                    WHERE retirements.project_id=? ORDER BY retirements.retired_at DESC,retirements.ticket_id
+                    """,
+                    bindings: [.text(projectID.rawValue)]
+                )
+                let retiredTickets = try retiredRows.map { row in
+                    guard let disposition = TicketRetirementDisposition(
+                        rawValue: try row.text("disposition")
+                    ) else {
+                        throw DashboardProjectionError.invalidRetirementDisposition
+                    }
+                    return RetiredTicketProjection(
+                        id: .init(rawValue: try row.text("ticket_id")), outcome: try row.text("outcome"),
+                        disposition: disposition,
+                        reason: try row.text("reason"),
+                        lastPhaseID: try row.nullableText("last_phase_id").map(PhaseID.init(rawValue:)),
+                        lastLane: try row.nullableText("last_lane").flatMap(TicketLane.init(rawValue:)),
+                        successorTicketIDs: try connection.dashboardRows(
+                            "SELECT successor_ticket_id FROM ticket_successor_links WHERE project_id=? AND original_ticket_id=? ORDER BY sort_order,successor_ticket_id",
+                            bindings: [.text(projectID.rawValue), .text(try row.text("ticket_id"))]
+                        ).map { TicketID(rawValue: try $0.text("successor_ticket_id")) }
+                    )
+                }
+                var retiredDetails: [TicketID: TicketDetailProjection] = [:]
+                for row in retiredRows {
+                    let ticketID = TicketID(rawValue: try row.text("ticket_id"))
+                    let outcome = try row.text("outcome")
+                    let phaseID = try row.nullableText("last_phase_id").map(PhaseID.init(rawValue:))
+                    let taskPlan: TicketTaskPlanProjection
+                    if let phaseID {
+                        taskPlan = TicketTaskPlanProjection.load(
+                            connection, projectID: projectID, phaseID: phaseID,
+                            ticketIDs: [ticketID], query: taskRows
+                        )[ticketID] ?? .unavailable(recovery: .init())
+                    } else {
+                        taskPlan = TicketTaskPlanProjection.loadUnassigned(
+                            connection, projectID: projectID, ticketIDs: [ticketID]
+                        )[ticketID] ?? .unavailable(recovery: .init())
+                    }
+                    let goalRow = try connection.dashboardRows(
+                        """
+                        SELECT goals.phase_id,goals.id,goals.title,goals.outcome,goals.lifecycle
+                        FROM delivery_goal_ticket_assignments assignments
+                        JOIN delivery_goals goals
+                          ON goals.project_id=assignments.project_id
+                         AND goals.phase_id=assignments.phase_id AND goals.id=assignments.goal_id
+                        WHERE assignments.project_id=? AND assignments.ticket_id=?
+                        """,
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                    ).first
+                    let deliveryGoal: TicketDeliveryGoalProjection? = try goalRow.map { goal in
+                        guard let lifecycle = DeliveryGoalLifecycle(rawValue: try goal.text("lifecycle")) else {
+                            throw DashboardProjectionError.invalidColumn("lifecycle")
+                        }
+                        return TicketDeliveryGoalProjection(
+                            goalID: .init(rawValue: try goal.text("id")), title: try goal.text("title"),
+                            outcome: try goal.text("outcome"), lifecycle: lifecycle,
+                            doneCriteria: try DeliveryPlanningPolicy.loadCriteria(
+                                projectID: projectID,
+                                phaseID: .init(rawValue: try goal.text("phase_id")),
+                                goalID: .init(rawValue: try goal.text("id")), connection: connection
+                            ).map(\.text)
+                        )
+                    }
+                    retiredDetails[ticketID] = try connection.ticketDetail(
+                        projectID: projectID, ticketID: ticketID, outcome: outcome,
+                        taskPlan: taskPlan, deliveryGoal: deliveryGoal, isLegacyContinuation: false,
+                        evidence: (evidenceByProject[projectID] ?? []).filter { $0.evidence.ticketID == ticketID }.map(EvidenceProjection.init)
+                    )
+                }
                 projectPlans[projectID] = ProjectPlanProjection(
                     project: project, phases: phasePlans, unassignedTickets: unassignedCards,
                     unassignedDetails: unassignedDetails,
-                    proposals: try PlanChangeProposalQuery.load(from: connection, projectID: projectID)
+                    proposals: try PlanChangeProposalQuery.load(from: connection, projectID: projectID),
+                    retiredTickets: retiredTickets, retiredDetails: retiredDetails
                 )
                 let projectBoards = phases.compactMap { boards[PhaseBoardKey(projectID: projectID, phaseID: $0.id)] }
                 let allLanes = TicketLane.allCases.map { lane in
@@ -393,9 +479,13 @@ struct DashboardProjection: Equatable, Sendable {
             let details = plan.unassignedDetails.mapValues { detail in
                 detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
             }
+            let retiredDetails = plan.retiredDetails.mapValues { detail in
+                detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
+            }
             return ProjectPlanProjection(project: project, phases: plan.phases,
                                          unassignedTickets: plan.unassignedTickets, unassignedDetails: details,
-                                         proposals: plan.proposals)
+                                         proposals: plan.proposals, retiredTickets: plan.retiredTickets,
+                                         retiredDetails: retiredDetails)
         }
         let allPhaseBoards = allPhaseBoards.mapValues { board in
             guard board.project.id == projectID, let project else { return board }
@@ -477,23 +567,43 @@ struct ProjectPlanProjection: Equatable, Sendable {
     let unassignedTickets: [TicketCardProjection]
     let unassignedDetails: [TicketID: TicketDetailProjection]
     let proposals: [PlanChangeProposalRecord]
+    let retiredTickets: [RetiredTicketProjection]
+    let retiredDetails: [TicketID: TicketDetailProjection]
 
     init(
         project: ProjectDashboardProjection,
         phases: [ProjectPlanPhaseProjection],
         unassignedTickets: [TicketCardProjection],
         unassignedDetails: [TicketID: TicketDetailProjection],
-        proposals: [PlanChangeProposalRecord] = []
+        proposals: [PlanChangeProposalRecord] = [],
+        retiredTickets: [RetiredTicketProjection] = [],
+        retiredDetails: [TicketID: TicketDetailProjection] = [:]
     ) {
         self.project = project
         self.phases = phases
         self.unassignedTickets = unassignedTickets
         self.unassignedDetails = unassignedDetails
         self.proposals = proposals
+        self.retiredTickets = retiredTickets
+        self.retiredDetails = retiredDetails
     }
 
-    var recordedTicketCount: Int { phases.reduce(0) { $0 + $1.ticketCount } + unassignedTickets.count }
-    func detail(for ticketID: TicketID) -> TicketDetailProjection? { unassignedDetails[ticketID] }
+    var recordedTicketCount: Int {
+        phases.reduce(0) { $0 + $1.ticketCount } + unassignedTickets.count + retiredTickets.count
+    }
+    func detail(for ticketID: TicketID) -> TicketDetailProjection? {
+        unassignedDetails[ticketID] ?? retiredDetails[ticketID]
+    }
+}
+
+struct RetiredTicketProjection: Equatable, Sendable, Identifiable {
+    let id: TicketID
+    let outcome: String
+    let disposition: TicketRetirementDisposition
+    let reason: String
+    let lastPhaseID: PhaseID?
+    let lastLane: TicketLane?
+    let successorTicketIDs: [TicketID]
 }
 
 struct PhaseBoardKey: Hashable, Sendable {
@@ -531,13 +641,29 @@ struct DeliveryGoalSummaryProjection: Equatable, Sendable, Identifiable {
     let lifecycle: DeliveryGoalLifecycle
     let doneCriteria: [String]
     let ticketIDs: [TicketID]
+    let coverage: DeliveryGoalCoverageAssessment?
+
+    init(
+        goalID: DeliveryGoalID, title: String, outcome: String,
+        lifecycle: DeliveryGoalLifecycle, doneCriteria: [String], ticketIDs: [TicketID],
+        coverage: DeliveryGoalCoverageAssessment? = nil
+    ) {
+        self.goalID = goalID
+        self.title = title
+        self.outcome = outcome
+        self.lifecycle = lifecycle
+        self.doneCriteria = doneCriteria
+        self.ticketIDs = ticketIDs
+        self.coverage = coverage
+    }
 
     // SQLite uses BINARY identity; Swift String equality normalizes Unicode.
     var id: Data { Data(goalID.rawValue.utf8) }
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id && lhs.title == rhs.title && lhs.outcome == rhs.outcome
-            && lhs.lifecycle == rhs.lifecycle && lhs.doneCriteria == rhs.doneCriteria && lhs.ticketIDs == rhs.ticketIDs
+            && lhs.lifecycle == rhs.lifecycle && lhs.doneCriteria == rhs.doneCriteria
+            && lhs.ticketIDs == rhs.ticketIDs && lhs.coverage == rhs.coverage
     }
 }
 
@@ -753,6 +879,7 @@ enum DashboardProjectionError: Error, Equatable {
     case missingColumn(String)
     case invalidColumn(String)
     case invalidLane(String)
+    case invalidRetirementDisposition
     case invalidRemovedProject
 }
 

@@ -528,6 +528,17 @@ private struct MCPServer {
         func recordID(_ key: String, in values: [String: Any] = operation) throws -> [String: Any] {
             ["rawValue": try taskString(key, in: values, maximumBytes: 256)]
         }
+        func obligation(_ key: String, in values: [String: Any] = operation) throws -> [String: Any] {
+            guard let value = values[key] as? [String: Any],
+                  Set(value.keys) == ["phaseID", "goalID", "ticketID"] else {
+                throw ToolFailure.invalidRequest("\(key) must name exact phaseID, goalID and ticketID fields")
+            }
+            return [
+                "phaseID": try recordID("phaseID", in: value),
+                "goalID": try recordID("goalID", in: value),
+                "ticketID": try recordID("ticketID", in: value),
+            ]
+        }
         switch kind {
         case "addPhase":
             try requireExact(["id", "name"])
@@ -617,6 +628,47 @@ private struct MCPServer {
                 "ticketID": try recordID("ticketID"),
                 "dependsOnTicketID": try recordID("dependsOnTicketID"),
             ]]
+        case "retireTicket":
+            try requireExact(["ticketID", "disposition", "reason", "successorTicketIDs"])
+            let disposition = try taskString("disposition", in: operation, maximumBytes: 16)
+            guard ["withdrawn", "replaced", "split"].contains(disposition),
+                  let successors = operation["successorTicketIDs"] as? [String] else {
+                throw ToolFailure.invalidRequest("retireTicket requires a supported disposition and successorTicketIDs")
+            }
+            return ["retireTicket": [
+                "ticketID": try recordID("ticketID"),
+                "disposition": disposition,
+                "reason": try taskString("reason", in: operation, maximumBytes: 4_096),
+                "successorTicketIDs": try successors.map { ["rawValue": try taskString("successorTicketID", in: ["successorTicketID": $0], maximumBytes: 256)] },
+            ]]
+        case "moveBacklogTicket":
+            try requireExact(["ticketID", "fromPhaseID", "toPhaseID"])
+            return ["moveBacklogTicket": ["ticketID": try recordID("ticketID"), "fromPhaseID": try recordID("fromPhaseID"), "toPhaseID": try recordID("toPhaseID")]]
+        case "reassignTicketToGoal":
+            try requireExact(["ticketID", "phaseID", "fromGoalID", "toGoalID"])
+            return ["reassignTicketToGoal": ["ticketID": try recordID("ticketID"), "phaseID": try recordID("phaseID"), "fromGoalID": try recordID("fromGoalID"), "toGoalID": try recordID("toGoalID")]]
+        case "supersedeDeliveryGoal":
+            try requireExact(["phaseID", "goalID"])
+            return ["supersedeDeliveryGoal": ["phaseID": try recordID("phaseID"), "goalID": try recordID("goalID")]]
+        case "carryGoalObligation":
+            try requireExact(["source", "descendants", "reason"])
+            guard let descendants = operation["descendants"] as? [[String: Any]], !descendants.isEmpty else {
+                throw ToolFailure.invalidRequest("carryGoalObligation requires nonempty descendants")
+            }
+            return ["carryGoalObligation": [
+                "source": try obligation("source"),
+                "descendants": try descendants.map { try obligation("descendant", in: ["descendant": $0]) },
+                "reason": try taskString("reason", in: operation, maximumBytes: 4_096),
+            ]]
+        case "dropGoalObligation":
+            try requireExact(["obligation", "reason"])
+            return ["dropGoalObligation": ["obligation": try obligation("obligation"), "reason": try taskString("reason", in: operation, maximumBytes: 4_096)]]
+        case "retargetTicketDependency":
+            try requireExact(["id", "ticketID", "fromDependsOnTicketID", "toDependsOnTicketID"])
+            return ["retargetTicketDependency": ["id": try recordID("id"), "ticketID": try recordID("ticketID"), "fromDependsOnTicketID": try recordID("fromDependsOnTicketID"), "toDependsOnTicketID": try recordID("toDependsOnTicketID")]]
+        case "removeTicketDependency":
+            try requireExact(["id", "ticketID", "dependsOnTicketID"])
+            return ["removeTicketDependency": ["id": try recordID("id"), "ticketID": try recordID("ticketID"), "dependsOnTicketID": try recordID("dependsOnTicketID")]]
         default:
             throw ToolFailure.invalidRequest("Unknown plan-change operation kind")
         }
@@ -767,6 +819,11 @@ private struct MCPServer {
                 "sortOrder": taskOrder,
             ],
         ]
+        let proposalObligation: [String: Any] = [
+            "type": "object", "additionalProperties": false,
+            "required": ["phaseID", "goalID", "ticketID"],
+            "properties": ["phaseID": taskID, "goalID": taskID, "ticketID": taskID],
+        ]
         let planChangeOperation: [String: Any] = ["oneOf": [
             proposalOperation(kind: "addPhase", required: ["id", "name"], fields: ["id": taskID, "name": taskTitle]),
             proposalOperation(kind: "addDeliveryGoal", required: ["phaseID", "goal"], fields: ["phaseID": taskID, "goal": proposalGoal]),
@@ -779,6 +836,23 @@ private struct MCPServer {
             proposalOperation(kind: "assignTicketToGoal", required: ["ticketID", "phaseID", "goalID"], fields: ["ticketID": taskID, "phaseID": taskID, "goalID": taskID]),
             proposalOperation(kind: "addPhaseDependency", required: ["id", "phaseID", "dependsOnPhaseID"], fields: ["id": taskID, "phaseID": taskID, "dependsOnPhaseID": taskID]),
             proposalOperation(kind: "addTicketDependency", required: ["id", "ticketID", "dependsOnTicketID"], fields: ["id": taskID, "ticketID": taskID, "dependsOnTicketID": taskID]),
+            proposalOperation(kind: "retireTicket", required: ["ticketID", "disposition", "reason", "successorTicketIDs"], fields: [
+                "ticketID": taskID,
+                "disposition": ["type": "string", "enum": ["withdrawn", "replaced", "split"]],
+                "reason": taskTitle,
+                "successorTicketIDs": ["type": "array", "items": taskID],
+            ]),
+            proposalOperation(kind: "moveBacklogTicket", required: ["ticketID", "fromPhaseID", "toPhaseID"], fields: ["ticketID": taskID, "fromPhaseID": taskID, "toPhaseID": taskID]),
+            proposalOperation(kind: "reassignTicketToGoal", required: ["ticketID", "phaseID", "fromGoalID", "toGoalID"], fields: ["ticketID": taskID, "phaseID": taskID, "fromGoalID": taskID, "toGoalID": taskID]),
+            proposalOperation(kind: "supersedeDeliveryGoal", required: ["phaseID", "goalID"], fields: ["phaseID": taskID, "goalID": taskID]),
+            proposalOperation(kind: "carryGoalObligation", required: ["source", "descendants", "reason"], fields: [
+                "source": proposalObligation,
+                "descendants": ["type": "array", "minItems": 1, "items": proposalObligation],
+                "reason": taskTitle,
+            ]),
+            proposalOperation(kind: "dropGoalObligation", required: ["obligation", "reason"], fields: ["obligation": proposalObligation, "reason": taskTitle]),
+            proposalOperation(kind: "retargetTicketDependency", required: ["id", "ticketID", "fromDependsOnTicketID", "toDependsOnTicketID"], fields: ["id": taskID, "ticketID": taskID, "fromDependsOnTicketID": taskID, "toDependsOnTicketID": taskID]),
+            proposalOperation(kind: "removeTicketDependency", required: ["id", "ticketID", "dependsOnTicketID"], fields: ["id": taskID, "ticketID": taskID, "dependsOnTicketID": taskID]),
         ]]
         return [
             ["name": "release_radar_inventory_evidence", "description": "Read a complete authorized project evidence inventory. Oversized or unavailable inventory fails closed; no rows are silently omitted.",
@@ -813,7 +887,7 @@ private struct MCPServer {
                     "rationale": taskTitle,
                     "operations": ["type": "array", "minItems": 1, "maxItems": 256, "items": planChangeOperation],
                 ],
-                description: "Save a new immutable version of one bounded additive plan-change proposal against the app-captured baseline. This does not approve or apply the proposal."
+                description: "Save a new immutable version of one bounded plan-change proposal against the app-captured baseline, including explicit successor and obligation reconciliation. This does not approve or apply the proposal."
             ),
             definition("release_radar_bind_documentation_repository", required: ["target"], fields: ["target": target]),
             definition("release_radar_accept_documentation_catalog", required: ["target", "priorCatalogVersion", "priorCatalogDigest"], fields: ["target": target, "priorCatalogVersion": ["type": "integer", "const": 1], "priorCatalogDigest": string]),

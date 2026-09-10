@@ -499,6 +499,8 @@ public actor ApplicationRecoveryManager {
             WHERE EXISTS (
                 SELECT 1 FROM plan_change_proposals proposals WHERE proposals.project_id = projects.id
             )
+               OR EXISTS (SELECT 1 FROM ticket_retirements WHERE project_id = projects.id)
+               OR EXISTS (SELECT 1 FROM delivery_goal_obligations WHERE project_id = projects.id)
             ORDER BY projects.id
             """
         )
@@ -540,6 +542,26 @@ public actor ApplicationRecoveryManager {
             )
             try connection.execute(
                 "INSERT INTO retained_plan_change_proposals SELECT ?, project_id, id, current_version, created_at, updated_at FROM plan_change_proposals WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_ticket_retirements SELECT ?, retirements.project_id, retirements.ticket_id, tickets.outcome, retirements.disposition, retirements.reason, retirements.last_phase_id, retirements.last_lane, retirements.audit_event_id, retirements.retired_at FROM ticket_retirements retirements JOIN tickets ON tickets.project_id=retirements.project_id AND tickets.id=retirements.ticket_id WHERE retirements.project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_ticket_successor_links SELECT ?, project_id, original_ticket_id, successor_ticket_id, relation, sort_order, audit_event_id, created_at FROM ticket_successor_links WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_delivery_goal_obligations SELECT ?, project_id, phase_id, goal_id, ticket_id, scope, assessment, created_at FROM delivery_goal_obligations WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_delivery_goal_obligation_lineage SELECT ?, project_id, source_phase_id, source_goal_id, source_ticket_id, descendant_phase_id, descendant_goal_id, descendant_ticket_id, reason, audit_event_id, created_at FROM delivery_goal_obligation_lineage WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_delivery_goal_obligation_drops SELECT ?, project_id, phase_id, goal_id, ticket_id, reason, audit_event_id, created_at FROM delivery_goal_obligation_drops WHERE project_id = ?",
                 bindings: [removal, project]
             )
             try connection.execute(
@@ -588,6 +610,16 @@ public actor ApplicationRecoveryManager {
             try connection.executeScript("""
             INSERT OR IGNORE INTO removed_projects
                 SELECT * FROM current_state.removed_projects;
+            INSERT OR IGNORE INTO retained_ticket_retirements
+                SELECT * FROM current_state.retained_ticket_retirements;
+            INSERT OR IGNORE INTO retained_ticket_successor_links
+                SELECT * FROM current_state.retained_ticket_successor_links;
+            INSERT OR IGNORE INTO retained_delivery_goal_obligations
+                SELECT * FROM current_state.retained_delivery_goal_obligations;
+            INSERT OR IGNORE INTO retained_delivery_goal_obligation_lineage
+                SELECT * FROM current_state.retained_delivery_goal_obligation_lineage;
+            INSERT OR IGNORE INTO retained_delivery_goal_obligation_drops
+                SELECT * FROM current_state.retained_delivery_goal_obligation_drops;
             INSERT OR IGNORE INTO retained_project_activity_events
                 SELECT * FROM current_state.retained_project_activity_events;
             INSERT OR IGNORE INTO retained_delivery_goal_assignment_events
@@ -709,6 +741,64 @@ public actor ApplicationRecoveryManager {
               ON registrations.project_id = assignments.project_id
             JOIN removed_projects removed
               ON removed.historical_project_id = assignments.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_ticket_retirements
+            SELECT removed.removal_id, retirements.project_id, retirements.ticket_id,
+                tickets.outcome, retirements.disposition, retirements.reason, retirements.last_phase_id,
+                retirements.last_lane, retirements.audit_event_id, retirements.retired_at
+            FROM current_state.ticket_retirements retirements
+            JOIN current_state.tickets tickets
+              ON tickets.project_id=retirements.project_id AND tickets.id=retirements.ticket_id
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = retirements.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = retirements.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_ticket_successor_links
+            SELECT removed.removal_id, links.project_id, links.original_ticket_id,
+                links.successor_ticket_id, links.relation, links.sort_order,
+                links.audit_event_id, links.created_at
+            FROM current_state.ticket_successor_links links
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = links.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = links.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_delivery_goal_obligations
+            SELECT removed.removal_id, obligations.project_id, obligations.phase_id,
+                obligations.goal_id, obligations.ticket_id, obligations.scope,
+                obligations.assessment, obligations.created_at
+            FROM current_state.delivery_goal_obligations obligations
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = obligations.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = obligations.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_delivery_goal_obligation_lineage
+            SELECT removed.removal_id, lineage.project_id, lineage.source_phase_id,
+                lineage.source_goal_id, lineage.source_ticket_id,
+                lineage.descendant_phase_id, lineage.descendant_goal_id,
+                lineage.descendant_ticket_id, lineage.reason,
+                lineage.audit_event_id, lineage.created_at
+            FROM current_state.delivery_goal_obligation_lineage lineage
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = lineage.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = lineage.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_delivery_goal_obligation_drops
+            SELECT removed.removal_id, drops.project_id, drops.phase_id, drops.goal_id,
+                drops.ticket_id, drops.reason, drops.audit_event_id, drops.created_at
+            FROM current_state.delivery_goal_obligation_drops drops
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = drops.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = drops.project_id
              AND removed.registration_id = registrations.registration_id;
 
             INSERT OR IGNORE INTO retained_ticket_reference_links (

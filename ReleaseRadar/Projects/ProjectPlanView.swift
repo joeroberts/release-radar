@@ -52,7 +52,7 @@ struct ProjectPlanView: View {
                     .padding(24)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .onChange(of: proposalScrollTargetID(forWidth: geometry.size.width), initial: true) { _, targetID in
+                .onChange(of: navigationScrollTargetID(forWidth: geometry.size.width), initial: true) { _, targetID in
                     guard let targetID else { return }
                     proxy.scrollTo(targetID, anchor: .center)
                     applyRequestedFocus()
@@ -124,6 +124,21 @@ struct ProjectPlanView: View {
                     ForEach(plan.phases) { phase in phaseCard(phase) }
                 }
             }
+            sectionHeading("Retired originals", count: plan.retiredTickets.count)
+            Text("Retired tickets remain read-only with their disposition, rationale, and successor lineage. They do not appear on active boards.")
+                .font(.caption)
+                .foregroundStyle(RekonTheme.secondaryText)
+            if plan.retiredTickets.isEmpty {
+                Text("No retired tickets")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .padding(.vertical, 8)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(plan.retiredTickets) { ticket in
+                        retiredTicketRow(ticket)
+                    }
+                }
+            }
             sectionHeading("Not placed", count: plan.unassignedTickets.count)
             Text("Planning content is retained here. Execution and completion begin only after first placement into a phase Backlog.")
                 .font(.caption)
@@ -145,6 +160,7 @@ struct ProjectPlanView: View {
                         .focusable()
                         .focused($focusedTicketID, equals: card.id)
                         .accessibilityFocused($accessibilityFocusedTicketID, equals: card.id)
+                        .id("project-plan-ticket-scroll-\(card.id.rawValue)")
                         .onAppear {
                             guard requestedFocus == .ticket(card.id) else { return }
                             focusedTicketID = card.id
@@ -236,6 +252,27 @@ struct ProjectPlanView: View {
                             Text(goal.title).font(.subheadline.weight(.medium))
                             Text("\(goal.lifecycle.displayName) · \(goal.ticketIDs.count) tickets")
                                 .font(.caption).foregroundStyle(.secondary)
+                            if let coverage = goal.coverage {
+                                Text(coverageSummary(coverage))
+                                    .font(.caption)
+                                    .foregroundStyle(coverage.isAcceptanceEligible ? RekonTheme.success : RekonTheme.secondaryText)
+                                    .accessibilityIdentifier("delivery-goal-coverage-\(goal.goalID.rawValue)")
+                                ForEach(coverage.obligations) { obligation in
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text("\(obligation.key.ticketID.rawValue) · \(coverageStateName(obligation.state))")
+                                            .font(.caption.weight(.medium))
+                                        Text(obligation.scope)
+                                            .font(.caption2)
+                                            .foregroundStyle(RekonTheme.secondaryText)
+                                        if let reason = obligation.reason {
+                                            Text(reason)
+                                                .font(.caption2)
+                                                .foregroundStyle(RekonTheme.secondaryText)
+                                        }
+                                    }
+                                    .accessibilityIdentifier("goal-obligation-\(obligation.key.ticketID.rawValue)")
+                                }
+                            }
                         }
                     }
                 }
@@ -246,6 +283,81 @@ struct ProjectPlanView: View {
         .overlay { RoundedRectangle(cornerRadius: 12).stroke(RekonTheme.border, lineWidth: RekonBorder.hairline) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-plan-phase-\(phase.id.rawValue)")
+    }
+
+    private func retiredTicketRow(_ ticket: RetiredTicketProjection) -> some View {
+        Button {
+            selectedProposalID = nil
+            selectedProposalVersion = nil
+            selectedTicketID = ticket.id
+            focusChanged(.ticket(ticket.id))
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(ticket.id.rawValue).font(.system(.subheadline, design: .monospaced).weight(.semibold))
+                    Spacer()
+                    Text(ticket.disposition.rawValue.capitalized)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(RekonTheme.warning)
+                }
+                Text(ticket.outcome).font(.subheadline)
+                Text(ticket.reason).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                if let phaseID = ticket.lastPhaseID, let lane = ticket.lastLane {
+                    Text("Last placement: \(phaseID.rawValue) · \(lane.dashboardTitle)")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                } else if let phaseID = ticket.lastPhaseID {
+                    Text("Last phase: \(phaseID.rawValue)")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                } else if let lane = ticket.lastLane {
+                    Text("Last lane: \(lane.dashboardTitle)")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                }
+                if !ticket.successorTicketIDs.isEmpty {
+                    Text("Successors: \(ticket.successorTicketIDs.map(\.rawValue).joined(separator: ", "))")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.accent)
+                }
+            }
+            .padding(12)
+            .background(selectedTicketID == ticket.id ? RekonTheme.elevatedSurface : RekonTheme.surface,
+                        in: RoundedRectangle(cornerRadius: 10))
+            .overlay { RoundedRectangle(cornerRadius: 10).stroke(
+                selectedTicketID == ticket.id ? RekonTheme.accent : RekonTheme.border,
+                lineWidth: RekonBorder.hairline
+            ) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .focused($focusedTicketID, equals: ticket.id)
+        .accessibilityFocused($accessibilityFocusedTicketID, equals: ticket.id)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("retired-ticket-\(ticket.id.rawValue)")
+        .id("project-plan-ticket-scroll-\(ticket.id.rawValue)")
+    }
+
+    private func coverageSummary(_ coverage: DeliveryGoalCoverageAssessment) -> String {
+        if coverage.obligations.contains(where: { $0.state == .unassessed }) {
+            return "Coverage needs assessment"
+        }
+        if coverage.isAcceptanceEligible {
+            return "Coverage resolved · \(coverage.deliveredLeafCount) delivered"
+        }
+        return "Coverage open · \(coverage.deliveredLeafCount) of \(coverage.requiredLeafCount) delivered"
+    }
+
+    private func coverageStateName(_ state: DeliveryGoalObligationCoverageState) -> String {
+        switch state {
+        case .required: "Required"
+        case .uncovered: "Uncovered"
+        case .carried: "Carried"
+        case .dropped: "Dropped"
+        case .delivered: "Delivered"
+        case .unassessed: "Needs assessment"
+        }
     }
 
     private func sectionHeading(_ title: String, count: Int) -> some View {
@@ -581,7 +693,12 @@ struct ProjectPlanView: View {
         }
     }
 
-    private func proposalScrollTargetID(forWidth width: CGFloat) -> String? {
+    private func navigationScrollTargetID(forWidth width: CGFloat) -> String? {
+        if case let .ticket(ticketID)? = requestedFocus,
+           plan.retiredTickets.contains(where: { $0.id == ticketID })
+            || plan.unassignedTickets.contains(where: { $0.id == ticketID }) {
+            return "project-plan-ticket-scroll-\(ticketID.rawValue)"
+        }
         guard ProjectPlanLayout.usesStackedInspector(forWidth: width) else { return nil }
         guard case let .planChangeProposal(proposalID, version, ticketID)? = requestedFocus,
               let ticketID,

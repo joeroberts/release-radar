@@ -253,3 +253,12 @@ The packaged agent interface exposes `release_radar_save_plan_change_proposal` a
 the read-only `release_radar_plan_change_proposals` query. It intentionally exposes
 no decision or application tool: those operations remain trusted owner-app actions
 and the dispatcher rejects external-origin attempts before replay lookup.
+
+## Phase 5D retained retirement and successor authority — 2026-09-10
+
+Ticket retirement is distinct from lane and retains original identity/history.
+Replacement/split links name newly created incomplete successors; Accepted originals
+remain immutable. Retirement grants no external-run cancellation authority. Retired
+work is protected across affected writers and association rehoming. Only validated
+owner-approved proposal application grants narrow detachment/drop exceptions;
+ordinary caller fields and revisions cannot assert that authority.
