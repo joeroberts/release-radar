@@ -110,6 +110,15 @@ enum PlanChangeProposalPolicy {
         ) == 0 else {
             throw PlanChangeProposalError.decisionConflict
         }
+        guard case let .blob(savedBaseline)? = row["baseline_data"] else {
+            throw PlanChangeProposalError.invalidStoredProposal
+        }
+        let currentBaseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
+        guard currentBaseline == savedBaseline else {
+            throw PlanChangeProposalError.stale(
+                try PlanningBaseline.changedCategories(from: savedBaseline, to: currentBaseline)
+            )
+        }
         try connection.execute(
             """
             INSERT INTO plan_change_proposal_decisions (
@@ -420,21 +429,66 @@ enum PlanChangeProposalPolicy {
         for operation in operations {
             switch operation {
             case let .addPhase(id, name):
-                phaseItems.append(.init(summary: "Add phase \(name) (\(id.rawValue))"))
+                phaseItems.append(.init(summary: """
+                Add phase \(id.rawValue)
+                Before: absent
+                After:
+                Name: \(name)
+                """))
             case let .addDeliveryGoal(phaseID, goal):
-                goalItems.append(.init(summary: "Add goal \(goal.title) (\(goal.id.rawValue)) to \(phaseID.rawValue)"))
+                goalItems.append(.init(summary: """
+                Add goal \(goal.id.rawValue) to \(phaseID.rawValue)
+                Before: absent
+                After:
+                Title: \(goal.title)
+                Outcome: \(goal.outcome)
+                Done criteria: \(goal.doneCriteria.joined(separator: " | "))
+                Sort order: \(goal.sortOrder)
+                """))
             case let .addUnassignedTicket(id, outcome):
-                ticketItems.append(.init(summary: "Add unassigned ticket \(id.rawValue): \(outcome)"))
+                ticketItems.append(.init(summary: """
+                Add ticket \(id.rawValue)
+                Before: absent
+                After:
+                Outcome: \(outcome)
+                Placement: unassigned
+                """))
             case let .addPendingTicketTasks(ticketID, tasks):
-                taskItems.append(.init(summary: "Add \(tasks.count) pending task\(tasks.count == 1 ? "" : "s") to \(ticketID.rawValue)"))
+                taskItems.append(contentsOf: tasks.map { task in
+                    .init(summary: """
+                    Add task \(task.id.rawValue) to \(ticketID.rawValue)
+                    Before: absent
+                    After:
+                    Label: \(task.label)
+                    Title: \(task.title)
+                    Sort order: \(task.sortOrder)
+                    Completion: pending
+                    """)
+                })
             case let .placeTicket(ticketID, phaseID):
-                ticketItems.append(.init(summary: "Place \(ticketID.rawValue) in \(phaseID.rawValue) Backlog"))
+                ticketItems.append(.init(summary: """
+                Place ticket \(ticketID.rawValue)
+                Before: unassigned
+                After: \(phaseID.rawValue) Backlog
+                """))
             case let .assignTicketToGoal(ticketID, phaseID, goalID):
-                assignmentItems.append(.init(summary: "Assign \(ticketID.rawValue) to \(goalID.rawValue) in \(phaseID.rawValue)"))
-            case let .addPhaseDependency(_, phaseID, dependsOnPhaseID):
-                dependencyItems.append(.init(summary: "Make phase \(phaseID.rawValue) depend on \(dependsOnPhaseID.rawValue)"))
-            case let .addTicketDependency(_, ticketID, dependsOnTicketID):
-                dependencyItems.append(.init(summary: "Make ticket \(ticketID.rawValue) depend on \(dependsOnTicketID.rawValue)"))
+                assignmentItems.append(.init(summary: """
+                Assign ticket \(ticketID.rawValue)
+                Before: unassigned
+                After: \(goalID.rawValue) in \(phaseID.rawValue)
+                """))
+            case let .addPhaseDependency(id, phaseID, dependsOnPhaseID):
+                dependencyItems.append(.init(summary: """
+                Add phase dependency \(id.rawValue)
+                Before: absent
+                After: \(phaseID.rawValue) depends on \(dependsOnPhaseID.rawValue)
+                """))
+            case let .addTicketDependency(id, ticketID, dependsOnTicketID):
+                dependencyItems.append(.init(summary: """
+                Add ticket dependency \(id.rawValue)
+                Before: absent
+                After: \(ticketID.rawValue) depends on \(dependsOnTicketID.rawValue)
+                """))
             }
         }
         var groups: [PlanChangeDiffGroup] = []
@@ -536,7 +590,7 @@ enum PlanChangeProposalPolicy {
         }
     }
 
-    private static func captureSourceImpacts(
+    static func captureSourceImpacts(
         for operations: [PlanChangeOperation],
         projectID: ProjectID,
         connection: SQLiteConnection
@@ -598,6 +652,37 @@ enum PlanChangeProposalPolicy {
             }
         }
         return impacts
+    }
+
+    static func sourceImpacts(
+        for command: AgentCommand,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws -> [PlanChangeRecordedSourceImpact] {
+        switch command {
+        case let .savePlanChangeProposal(_, _, _, operations):
+            return try captureSourceImpacts(
+                for: operations,
+                projectID: projectID,
+                connection: connection
+            )
+        case let .decidePlanChangeProposal(proposalID, version, _, _, _),
+             let .applyPlanChangeProposal(proposalID, version, _, _, _):
+            guard let row = try storedVersion(
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID),
+                version: version,
+                connection: connection
+            ) else {
+                return []
+            }
+            guard case let .blob(data)? = row["source_impacts_data"] else {
+                throw PlanChangeProposalError.invalidStoredProposal
+            }
+            return try JSONDecoder().decode([PlanChangeRecordedSourceImpact].self, from: data)
+        default:
+            return []
+        }
     }
 
     private static func storedVersion(

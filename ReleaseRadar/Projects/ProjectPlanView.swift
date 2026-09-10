@@ -320,6 +320,8 @@ struct ProjectPlanView: View {
                         Label(item.summary, systemImage: "plus.circle")
                             .font(.caption)
                             .foregroundStyle(RekonTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
                     }
                 }
             }

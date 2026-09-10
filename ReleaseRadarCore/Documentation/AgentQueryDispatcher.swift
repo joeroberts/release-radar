@@ -5,8 +5,20 @@ public struct AgentQueryDispatcher: Sendable {
     public static let maximumResponseBytes = 131_072
     private let store: DeliveryStore
     private let bookmarkStore: any ProjectBookmarkStoring
+    private let afterPlanChangeAuthorization: (@Sendable () async -> Void)?
     public init(store: DeliveryStore, bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore()) {
-        self.store = store; self.bookmarkStore = bookmarkStore
+        self.store = store
+        self.bookmarkStore = bookmarkStore
+        self.afterPlanChangeAuthorization = nil
+    }
+    init(
+        store: DeliveryStore,
+        bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(),
+        afterPlanChangeAuthorization: @escaping @Sendable () async -> Void
+    ) {
+        self.store = store
+        self.bookmarkStore = bookmarkStore
+        self.afterPlanChangeAuthorization = afterPlanChangeAuthorization
     }
     public func dispatch(_ envelope: AgentQueryEnvelope, admissionDeadline: TimeInterval? = nil) async -> AgentCommandResult {
         guard envelope.version == 1 else { return .init(entityIDs: [], auditEventID: nil, error: .unsupportedVersion(found: envelope.version, supported: 1)) }
@@ -73,10 +85,54 @@ public struct AgentQueryDispatcher: Sendable {
                       Data(project.projectID.rawValue.utf8) == Data(assertedProjectID.utf8) else {
                     return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
                 }
-                let proposals = try await PlanChangeProposalQuery.load(
-                    from: store,
-                    projectID: project.projectID
-                )
+                await afterPlanChangeAuthorization?()
+                let authorizedRoot = AuthorizedProject.canonicalize(
+                    URL(fileURLWithPath: envelope.projectRoot)
+                ).path
+                let proposals = try await store.read { connection -> [PlanChangeProposalRecord]? in
+                    guard try connection.scalarInt(
+                        """
+                        SELECT COUNT(*)
+                        FROM project_roots
+                        JOIN projects ON projects.id = project_roots.project_id
+                        WHERE project_roots.path = ?
+                          AND project_roots.project_id = ?
+                          AND projects.lifecycle = 'active'
+                        """,
+                        bindings: [
+                            .text(authorizedRoot),
+                            .text(project.projectID.rawValue),
+                        ]
+                    ) == 1 else {
+                        return nil
+                    }
+                    if let registration = project.registration {
+                        guard try connection.scalarInt(
+                            "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ?",
+                            bindings: [
+                                .text(registration.projectID.rawValue),
+                                .text(registration.registrationID),
+                                .integer(registration.requestGeneration),
+                            ]
+                        ) == 1 else {
+                            return nil
+                        }
+                    } else {
+                        guard try connection.scalarInt(
+                            "SELECT COUNT(*) FROM project_registrations WHERE project_id = ?",
+                            bindings: [.text(project.projectID.rawValue)]
+                        ) == 0 else {
+                            return nil
+                        }
+                    }
+                    return try PlanChangeProposalQuery.load(
+                        from: connection,
+                        projectID: project.projectID
+                    )
+                }
+                guard let proposals else {
+                    return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+                }
                 let result = AgentCommandResult(
                     entityIDs: proposals.map(\.id.rawValue),
                     auditEventID: nil,

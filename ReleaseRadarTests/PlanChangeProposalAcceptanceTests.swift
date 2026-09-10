@@ -42,8 +42,8 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         XCTAssertEqual(version.operations.count, 2)
         XCTAssertEqual(version.diff.groups.map(\.kind), [.phases, .tickets])
         XCTAssertEqual(version.diff.groups.flatMap(\.items).map(\.summary), [
-            "Add phase Next (phase-next)",
-            "Add unassigned ticket ticket-next: Deliver the next slice",
+            "Add phase phase-next\nBefore: absent\nAfter:\nName: Next",
+            "Add ticket ticket-next\nBefore: absent\nAfter:\nOutcome: Deliver the next slice\nPlacement: unassigned",
         ])
         XCTAssertEqual(version.baselineDigest.count, 64)
         XCTAssertFalse(version.baseline.isEmpty)
@@ -64,6 +64,44 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         ))
         XCTAssertEqual(unauthorizedQuery.error, .unauthorizedProjectRoot)
         XCTAssertNil(unauthorizedQuery.planChangeProposals)
+    }
+
+    func testReadOnlyProposalQueryWithdrawsResultAfterProjectIsArchived() async throws {
+        let fixture = try await makeFixture()
+        _ = await fixture.dispatcher.dispatch(envelope(
+            fixture,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000002")!,
+            command: .savePlanChangeProposal(
+                proposalID: "proposal-query-race",
+                expectedPreviousVersion: nil,
+                rationale: "Exercise authorization withdrawal.",
+                operations: [.addPhase(id: .init(rawValue: "phase-query-race"), name: "Query race")]
+            )
+        ))
+        let gate = PlanChangeProposalQueryGate()
+        let dispatcher = AgentQueryDispatcher(
+            store: fixture.store,
+            afterPlanChangeAuthorization: { await gate.pause() }
+        )
+        let query = Task {
+            await dispatcher.dispatch(.init(
+                version: 1,
+                projectRoot: fixture.root.path,
+                query: .planChangeProposals(projectID: fixture.registration.projectID.rawValue)
+            ))
+        }
+        await gate.waitUntilEntered()
+        _ = try await ProjectLifecycleManager(store: fixture.store).apply(
+            try await ProjectLifecycleManager(store: fixture.store).preview(
+                projectID: fixture.registration.projectID,
+                transition: .archive
+            )
+        )
+        await gate.release()
+
+        let result = await query.value
+        XCTAssertEqual(result.error, .unauthorizedProjectRoot)
+        XCTAssertNil(result.planChangeProposals)
     }
 
     func testOwnerApprovalBindsExactVersionAndApplyCommitsCompleteAdditiveWorkPackage() async throws {
@@ -231,6 +269,172 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         XCTAssertEqual(proposal.versions.map(\.version), [2, 1])
         XCTAssertNil(proposal.versions[0].decision)
         XCTAssertEqual(proposal.versions[1].decision?.id, "decision-stale-1")
+    }
+
+    func testDecisionRejectsActualInterveningPlanningChangesWithoutDecisionAuditOrReceipt() async throws {
+        let cases: [(name: String, expected: [PlanChangeBaselineCategory])] = [
+            ("phase", [.phases]),
+            ("ticket", [.tickets]),
+            ("task", [.taskPlans, .tasks]),
+            ("dependency", [.phaseDependencies]),
+            ("reference", [.referenceSets, .referenceLinks, .referenceVersions]),
+        ]
+        for testCase in cases {
+            let fixture = try await makeFixture()
+            if testCase.name == "dependency" {
+                try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed dependency target") {
+                    try DeliveryPlanningPolicy.upsertPhase(
+                        projectID: fixture.registration.projectID,
+                        phaseID: .init(rawValue: "phase-prerequisite"),
+                        name: "Prerequisite",
+                        mode: .governed,
+                        connection: $0
+                    )
+                }
+            }
+            _ = await fixture.dispatcher.dispatch(envelope(
+                fixture,
+                requestID: UUID(),
+                command: .savePlanChangeProposal(
+                    proposalID: "proposal-stale-\(testCase.name)",
+                    expectedPreviousVersion: nil,
+                    rationale: "Reject approval after actual \(testCase.name) changes.",
+                    operations: [.addPhase(
+                        id: .init(rawValue: "phase-stale-\(testCase.name)"),
+                        name: "Future"
+                    )]
+                )
+            ))
+            let proposals = try await PlanChangeProposalQuery.load(
+                from: fixture.store,
+                projectID: fixture.registration.projectID
+            )
+            let proposal = try XCTUnwrap(proposals.first?.versions.first)
+            try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Change actual \(testCase.name)") { connection in
+                switch testCase.name {
+                case "phase":
+                    try DeliveryPlanningPolicy.upsertPhase(
+                        projectID: fixture.registration.projectID,
+                        phaseID: .init(rawValue: "phase-current"),
+                        name: "Current renamed before approval",
+                        mode: .governed,
+                        connection: connection
+                    )
+                case "ticket":
+                    try DeliveryPlanningPolicy.upsertUnassignedTicket(
+                        projectID: fixture.registration.projectID,
+                        ticketID: .init(rawValue: "ticket-existing"),
+                        outcome: "Changed ticket outcome before approval",
+                        connection: connection
+                    )
+                case "task":
+                    _ = try TicketTaskPlanningPolicy.revisePlan(
+                        projectID: fixture.registration.projectID,
+                        ticketID: .init(rawValue: "ticket-existing"),
+                        expectedRevision: nil,
+                        additions: [.init(
+                            id: .init(rawValue: "task-intervening"),
+                            label: "T1",
+                            title: "Intervening task",
+                            sortOrder: 0
+                        )],
+                        definitionRevisions: [],
+                        supersededTaskIDs: [],
+                        connection: connection
+                    )
+                case "dependency":
+                    try connection.execute(
+                        "INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('dependency-intervening', 'proposal-project', 'phase-current', 'phase-prerequisite')"
+                    )
+                default:
+                    try connection.execute(
+                        "INSERT INTO ticket_reference_link_sets (project_id,ticket_id,revision,created_at,updated_at) VALUES ('proposal-project','ticket-existing',1,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')"
+                    )
+                    try connection.execute(
+                        "INSERT INTO ticket_reference_links (project_id,ticket_id,id,kind,repository_id,artifact_id,current_version,relationship,created_at,updated_at) VALUES ('proposal-project','ticket-existing','reference-intervening','requirement','9141d1ea-3342-4462-9e06-6934d816c03f','current',1,'current','2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')"
+                    )
+                    try connection.execute(
+                        "INSERT INTO ticket_reference_versions (project_id,ticket_id,link_id,version,content_digest,source_local_id,locator,catalog_version,catalog_digest,observed_path,observed_lifecycle,observed_authority,created_at) VALUES ('proposal-project','ticket-existing','reference-intervening',1,?,NULL,NULL,1,?,'docs/plans/current.md','active','controlling','2026-09-10T00:00:00Z')",
+                        bindings: [.text(String(repeating: "a", count: 64)), .text(String(repeating: "b", count: 64))]
+                    )
+                }
+            }
+            let countsBefore = try await proposalRecordCounts(fixture.store)
+
+            let decision = await fixture.dispatcher.dispatch(envelope(
+                fixture,
+                requestID: UUID(),
+                command: .decidePlanChangeProposal(
+                    proposalID: "proposal-stale-\(testCase.name)",
+                    version: 1,
+                    baselineDigest: proposal.baselineDigest,
+                    decisionID: "decision-stale-\(testCase.name)",
+                    disposition: .approved
+                )
+            ), origin: .ownerApp)
+
+            XCTAssertEqual(decision.error, .planChangeProposalStale(testCase.expected), testCase.name)
+            let countsAfter = try await proposalRecordCounts(fixture.store)
+            XCTAssertEqual(countsAfter, countsBefore, testCase.name)
+            let refresh = await fixture.dispatcher.dispatch(envelope(
+                fixture,
+                requestID: UUID(),
+                command: .savePlanChangeProposal(
+                    proposalID: "proposal-stale-\(testCase.name)",
+                    expectedPreviousVersion: 1,
+                    rationale: "Refresh after actual \(testCase.name) change.",
+                    operations: [.addPhase(
+                        id: .init(rawValue: "phase-stale-\(testCase.name)"),
+                        name: "Future"
+                    )]
+                )
+            ))
+            XCTAssertEqual(refresh.planChangeProposalVersion, 2, testCase.name)
+        }
+    }
+
+    func testSavedDiffShowsCompleteGoalAndTaskDefinitionsBeforeOwnerApproval() async throws {
+        let fixture = try await makeFixture()
+        _ = await fixture.dispatcher.dispatch(envelope(
+            fixture,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000028")!,
+            command: .savePlanChangeProposal(
+                proposalID: "proposal-complete-diff",
+                expectedPreviousVersion: nil,
+                rationale: "Expose exact definitions for approval.",
+                operations: completeWorkPackage()
+            )
+        ))
+        let proposals = try await PlanChangeProposalQuery.load(
+            from: fixture.store,
+            projectID: fixture.registration.projectID
+        )
+        let version = try XCTUnwrap(proposals.first?.versions.first)
+        let phaseText = try XCTUnwrap(version.diff.groups.first { $0.kind == .phases }?.items.first?.summary)
+        XCTAssertTrue(phaseText.contains("Before: absent"))
+        XCTAssertTrue(phaseText.contains("Name: Next"))
+        let goalText = try XCTUnwrap(version.diff.groups.first { $0.kind == .goals }?.items.first?.summary)
+        XCTAssertTrue(goalText.contains("Before: absent"))
+        XCTAssertTrue(goalText.contains("Outcome: The next slice is usable"))
+        XCTAssertTrue(goalText.contains("Done criteria: The focused acceptance path passes"))
+        XCTAssertTrue(goalText.contains("Sort order: 0"))
+        let ticketText = try XCTUnwrap(version.diff.groups.first { $0.kind == .tickets }?.items.first?.summary)
+        XCTAssertTrue(ticketText.contains("Before: absent"))
+        XCTAssertTrue(ticketText.contains("Outcome: Deliver the next slice"))
+        let taskText = try XCTUnwrap(version.diff.groups.first { $0.kind == .tasks }?.items.first?.summary)
+        XCTAssertTrue(taskText.contains("task-next"))
+        XCTAssertTrue(taskText.contains("Before: absent"))
+        XCTAssertTrue(taskText.contains("Label: T1"))
+        XCTAssertTrue(taskText.contains("Title: Implement the slice"))
+        XCTAssertTrue(taskText.contains("Sort order: 0"))
+        let assignmentText = try XCTUnwrap(version.diff.groups.first { $0.kind == .assignments }?.items.first?.summary)
+        XCTAssertTrue(assignmentText.contains("Before: unassigned"))
+        XCTAssertTrue(assignmentText.contains("After: goal-next in phase-next"))
+        let dependencyText = version.diff.groups
+            .first { $0.kind == .dependencies }?.items.map(\.summary).joined(separator: "\n") ?? ""
+        XCTAssertTrue(dependencyText.contains("phase-dependency-next"))
+        XCTAssertTrue(dependencyText.contains("ticket-dependency-next"))
+        XCTAssertTrue(dependencyText.contains("Before: absent"))
     }
 
     func testDecisionApplyAuthorityReplayAndCompetingRequestsAreExactAndSingleUse() async throws {
@@ -482,7 +686,7 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
     }
 
     func testSourceImpactsPreserveExactRecordedVersionsForBothDependencyEnds() async throws {
-        let fixture = try await makeFixture()
+        let fixture = try await makeFixture(withDocumentation: true)
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed recorded reference impacts") { connection in
             try DeliveryPlanningPolicy.upsertUnassignedTicket(
                 projectID: fixture.registration.projectID,
@@ -490,24 +694,14 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
                 outcome: "Dependent recorded work",
                 connection: connection
             )
-            for (ticketID, linkID, artifactID, digest) in [
-                ("ticket-existing", "requirement-link", "requirement-artifact", String(repeating: "a", count: 64)),
-                ("ticket-dependent", "decision-link", "decision-artifact", String(repeating: "b", count: 64)),
-            ] {
-                try connection.execute(
-                    "INSERT INTO ticket_reference_link_sets (project_id,ticket_id,revision,created_at,updated_at) VALUES ('proposal-project',?,1,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')",
-                    bindings: [.text(ticketID)]
-                )
-                try connection.execute(
-                    "INSERT INTO ticket_reference_links (project_id,ticket_id,id,kind,repository_id,artifact_id,current_version,relationship,created_at,updated_at) VALUES ('proposal-project',?,?,?,'00000000-0000-4000-8000-000000000001',?,1,'current','2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')",
-                    bindings: [.text(ticketID), .text(linkID), .text(linkID == "requirement-link" ? "requirement" : "decision"), .text(artifactID)]
-                )
-                try connection.execute(
-                    "INSERT INTO ticket_reference_versions (project_id,ticket_id,link_id,version,content_digest,source_local_id,locator,catalog_version,catalog_digest,observed_path,observed_lifecycle,observed_authority,created_at) VALUES ('proposal-project',?,?,1,?,NULL,NULL,1,?,'docs/missing.md','active','controlling','2026-09-10T00:00:00Z')",
-                    bindings: [.text(ticketID), .text(linkID), .text(digest), .text(String(repeating: "c", count: 64))]
-                )
-            }
         }
+        _ = try await bindCurrentSource(to: "ticket-existing", fixture: fixture)
+        _ = try await bindCurrentSource(
+            to: "ticket-dependent",
+            linkID: "decision-link",
+            kind: .decision,
+            fixture: fixture
+        )
         _ = await fixture.dispatcher.dispatch(envelope(
             fixture,
             requestID: UUID(),
@@ -525,7 +719,7 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         let impacts = try XCTUnwrap(firstLoad.first?.versions.first?.sourceImpacts)
         XCTAssertEqual(impacts.map(\.ticketID.rawValue), ["ticket-dependent", "ticket-existing"])
         XCTAssertEqual(impacts.map(\.version), [1, 1])
-        XCTAssertEqual(Set(impacts.map(\.observedPath)), ["docs/missing.md"])
+        XCTAssertEqual(Set(impacts.map(\.observedPath)), ["docs/plans/current.md"])
 
         try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Advance current source metadata") { connection in
             try connection.execute(
@@ -536,6 +730,123 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         }
         let afterCurrentAdvance = try await PlanChangeProposalQuery.load(from: fixture.store, projectID: fixture.registration.projectID)
         XCTAssertEqual(afterCurrentAdvance.first?.versions.first?.sourceImpacts, impacts)
+    }
+
+    func testChangedReferencedSourceAfterApprovalRejectsApplyWithoutGraphApplicationAuditOrReceipt() async throws {
+        let fixture = try await makeFixture(withDocumentation: true)
+        let source = try await bindCurrentSource(to: "ticket-existing", fixture: fixture)
+        _ = await fixture.dispatcher.dispatch(envelope(
+            fixture,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000029")!,
+            command: .savePlanChangeProposal(
+                proposalID: "proposal-source-change",
+                expectedPreviousVersion: nil,
+                rationale: "Use the exact current requirement source.",
+                operations: [.addPendingTicketTasks(
+                    ticketID: .init(rawValue: "ticket-existing"),
+                    tasks: [.init(
+                        id: .init(rawValue: "task-source-change"),
+                        label: "T1",
+                        title: "Implement from current source",
+                        sortOrder: 0
+                    )]
+                )]
+            )
+        ))
+        let proposals = try await PlanChangeProposalQuery.load(
+            from: fixture.store,
+            projectID: fixture.registration.projectID
+        )
+        let proposal = try XCTUnwrap(proposals.first?.versions.first)
+        let approved = await fixture.dispatcher.dispatch(envelope(
+            fixture,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-00000000002a")!,
+            command: .decidePlanChangeProposal(
+                proposalID: "proposal-source-change",
+                version: 1,
+                baselineDigest: proposal.baselineDigest,
+                decisionID: "decision-source-change",
+                disposition: .approved
+            )
+        ), origin: .ownerApp)
+        XCTAssertNil(approved.error)
+        let graphBefore = try await planningGraph(fixture.store)
+        let recordsBefore = try await proposalRecordCounts(fixture.store)
+        try Data("Changed requirement bytes\n".utf8).write(to: source)
+
+        let applied = await fixture.dispatcher.dispatch(envelope(
+            fixture,
+            requestID: UUID(uuidString: "00000000-0000-4000-8000-00000000002b")!,
+            command: .applyPlanChangeProposal(
+                proposalID: "proposal-source-change",
+                version: 1,
+                baselineDigest: proposal.baselineDigest,
+                decisionID: "decision-source-change",
+                applicationID: "application-source-change"
+            )
+        ), origin: .ownerApp)
+
+        XCTAssertEqual(applied.error, .planChangeProposalStale([.referenceVersions]))
+        let graphAfter = try await planningGraph(fixture.store)
+        let recordsAfter = try await proposalRecordCounts(fixture.store)
+        XCTAssertEqual(graphAfter, graphBefore)
+        XCTAssertEqual(recordsAfter, recordsBefore)
+    }
+
+    func testUnavailableReferencedSourceOrAccessRejectsDecisionWithoutDecisionAuditOrReceipt() async throws {
+        for invalidation in ["file", "access"] {
+            let fixture = try await makeFixture(withDocumentation: true)
+            let source = try await bindCurrentSource(to: "ticket-existing", fixture: fixture)
+            _ = await fixture.dispatcher.dispatch(envelope(
+                fixture,
+                requestID: UUID(),
+                command: .savePlanChangeProposal(
+                    proposalID: "proposal-source-\(invalidation)",
+                    expectedPreviousVersion: nil,
+                    rationale: "Reject unavailable source before owner approval.",
+                    operations: [.addPendingTicketTasks(
+                        ticketID: .init(rawValue: "ticket-existing"),
+                        tasks: [.init(
+                            id: .init(rawValue: "task-source-\(invalidation)"),
+                            label: "T1",
+                            title: "Implement from available source",
+                            sortOrder: 0
+                        )]
+                    )]
+                )
+            ))
+            let proposals = try await PlanChangeProposalQuery.load(
+                from: fixture.store,
+                projectID: fixture.registration.projectID
+            )
+            let proposal = try XCTUnwrap(proposals.first?.versions.first)
+            if invalidation == "file" {
+                try FileManager.default.removeItem(at: source)
+            } else {
+                try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Withdraw root access") {
+                    try $0.execute(
+                        "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = 'proposal-project'"
+                    )
+                }
+            }
+            let countsBefore = try await proposalRecordCounts(fixture.store)
+
+            let decision = await fixture.dispatcher.dispatch(envelope(
+                fixture,
+                requestID: UUID(),
+                command: .decidePlanChangeProposal(
+                    proposalID: "proposal-source-\(invalidation)",
+                    version: 1,
+                    baselineDigest: proposal.baselineDigest,
+                    decisionID: "decision-source-\(invalidation)",
+                    disposition: .approved
+                )
+            ), origin: .ownerApp)
+
+            XCTAssertEqual(decision.error, .planChangeProposalStale([.referenceVersions]))
+            let countsAfter = try await proposalRecordCounts(fixture.store)
+            XCTAssertEqual(countsAfter, countsBefore)
+        }
     }
 
     func testLateApplyFailureRollsBackEveryGraphChangeApplicationAndAudit() async throws {
@@ -845,13 +1156,23 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         let registration: ProjectRegistration
     }
 
-    private func makeFixture() async throws -> Fixture {
+    private func makeFixture(withDocumentation: Bool = false) async throws -> Fixture {
         let cacheRoot = try XCTUnwrap(
             FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
         ).appendingPathComponent("ReleaseRadarPhase5CProposalTests", isDirectory: true)
         let root = cacheRoot
             .appendingPathComponent("fixture-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        if withDocumentation {
+            let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+                .appendingPathComponent("Fixtures/RepositoryDocuments/valid")
+            try FileManager.default.copyItem(
+                at: source.appendingPathComponent("docs"),
+                to: root.appendingPathComponent("docs")
+            )
+            try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+                .write(to: root.appendingPathComponent("AGENTS.md"))
+        }
         let store = DeliveryStore(databaseURL: root.appendingPathComponent("store.sqlite"))
         let registration = ProjectRegistration(
             projectID: .init(rawValue: "proposal-project"),
@@ -869,6 +1190,12 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
             try connection.execute(
                 "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('proposal-project', 'registration-1', 1, 'complete')"
             )
+            if withDocumentation {
+                try connection.execute(
+                    "INSERT INTO project_bookmarks (project_id, path, bookmark_data, is_stale) VALUES ('proposal-project', ?, ?, 0)",
+                    bindings: [.text(root.path), .blob(Data(root.path.utf8))]
+                )
+            }
             try DeliveryPlanningPolicy.upsertPhase(
                 projectID: registration.projectID,
                 phaseID: .init(rawValue: "phase-current"),
@@ -892,7 +1219,12 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
             store: store,
             dispatcher: AgentCommandDispatcher(
                 store: store,
-                projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project]),
+                bookmarkStore: ProjectBookmarkStore(
+                    resolver: { _ in .init(url: root, isStale: false) },
+                    startAccessing: { _ in true },
+                    stopAccessing: { _ in }
+                )
             ),
             root: root,
             registration: registration
@@ -973,6 +1305,66 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         }
     }
 
+    private func bindCurrentSource(
+        to ticketID: String,
+        linkID: String = "requirement-link",
+        kind: TicketReferenceKind = .requirement,
+        fixture: Fixture
+    ) async throws -> URL {
+        let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: fixture.root)
+        let target = DocumentationTarget(
+            projectID: fixture.registration.projectID.rawValue,
+            rootID: "root-1",
+            repositoryID: snapshot.catalog.repositoryID.lowercased(),
+            catalogVersion: snapshot.version,
+            catalogDigest: snapshot.digest
+        )
+        let bindingCount = try await fixture.store.read {
+            try $0.scalarInt(
+                "SELECT COUNT(*) FROM project_documentation_bindings WHERE project_id = 'proposal-project'"
+            ) ?? 0
+        }
+        if bindingCount == 0 {
+            let bound = await fixture.dispatcher.dispatch(envelope(
+                fixture,
+                requestID: UUID(),
+                command: .bindDocumentationRepository(target: target)
+            ))
+            XCTAssertNil(bound.error)
+        }
+        let artifact = try XCTUnwrap(snapshot.catalog.artifacts.first { $0.artifactID == "current" })
+        let source = fixture.root.appendingPathComponent(artifact.path)
+        let linked = await fixture.dispatcher.dispatch(envelope(
+            fixture,
+            requestID: UUID(),
+            command: .upsertTicketReference(
+                target: target,
+                ticketID: ticketID,
+                linkID: linkID,
+                kind: kind,
+                artifactID: artifact.artifactID,
+                sourceLocalID: "REQ-CURRENT",
+                locator: nil,
+                expectedContentDigest: documentationDigest(try Data(contentsOf: source)),
+                expectedLinkSetRevision: 0
+            )
+        ))
+        XCTAssertNil(linked.error)
+        return source
+    }
+
+    private func proposalRecordCounts(_ store: DeliveryStore) async throws -> [Int64] {
+        try await store.read { connection in
+            [
+                try connection.scalarInt("SELECT COUNT(*) FROM plan_change_proposal_decisions") ?? 0,
+                try connection.scalarInt("SELECT COUNT(*) FROM plan_change_proposal_applications") ?? 0,
+                try connection.scalarInt("SELECT COUNT(*) FROM audit_events") ?? 0,
+                try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests") ?? 0,
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_tasks") ?? 0,
+            ]
+        }
+    }
+
     private func planningGraph(_ store: DeliveryStore) async throws -> [[String: SQLiteValue]] {
         try await store.read { connection in
             try connection.rows(
@@ -980,5 +1372,31 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
                 maximum: 100
             )
         }
+    }
+}
+
+private actor PlanChangeProposalQueryGate {
+    private var entered = false
+    private var released = false
+    private var enteredContinuations: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuations: [CheckedContinuation<Void, Never>] = []
+
+    func pause() async {
+        entered = true
+        enteredContinuations.forEach { $0.resume() }
+        enteredContinuations.removeAll()
+        guard !released else { return }
+        await withCheckedContinuation { releaseContinuations.append($0) }
+    }
+
+    func waitUntilEntered() async {
+        if entered { return }
+        await withCheckedContinuation { enteredContinuations.append($0) }
+    }
+
+    func release() {
+        released = true
+        releaseContinuations.forEach { $0.resume() }
+        releaseContinuations.removeAll()
     }
 }

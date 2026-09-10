@@ -37,9 +37,18 @@ focus through Back and Forward.
   guard but its assertion expected different wording. The assertion-only correction
   passed 1/1 in `27-packaged-parser.xcresult`. The parser test never connected to or
   registered the owner bridge.
+- `30-required-green.xcresult`: all 5 reviewer-regression tests passed, covering
+  changed and unavailable recorded sources, stale planning baselines, complete
+  owner-visible definitions and post-await query withdrawal after lifecycle or
+  registration changes.
+- `31-required-affected.xcresult`: 18/19 affected proposal, projection and navigation
+  tests passed. Its sole failure was the native-render fixture's obsolete synthetic
+  source setup. The corrected fixture binds a valid managed catalog and records the
+  real current source through public commands; `39-native-corrected.xcresult` then
+  passed the exact native selector 1/1.
 - Repository diff whitespace validation passed. The final wide and compact captures
   below were exported unchanged from the passing native-render test in
-  `23-targeted.xcresult` and compared with the approved
+  `39-native-corrected.xcresult` and compared with the approved
   [Phase Board](../../design/mockups/phase_board.png) and current Plan composition.
 
 ## Native captures
@@ -50,15 +59,22 @@ focus through Back and Forward.
 
 ## Limitations and retained raw evidence
 
-The isolated source fixture deliberately points to a missing document. The live
-journey therefore verifies honest `rootUnavailable` recovery, exact history and
-focus restoration; it does not claim successful current-source resolution. The
-compact static capture records the top of the stacked Plan flow, while the live
-journey supplied the direct scrolling/focus observation.
+The earlier live journey deliberately points to a missing document, so it verifies
+honest `rootUnavailable` recovery, exact history and focus restoration rather than
+successful current-source resolution. The corrected native-render fixture uses a
+valid managed catalog and real recorded source; its wide inspector capture shows
+the complete grouped definitions and source impact. The compact static capture
+records the top of the stacked Plan flow, while the live journey supplied the direct
+scrolling/focus observation.
 
 `24-migration-fix.xcresult` contains no executed test because the first sanitized
 rerun omitted the no-signing overrides; it is retained but is not completion
-evidence. All raw bundles, attachment exports and one-shot marker files remain under
-`/private/tmp/release-radar-phase5c-writer/`. No installed owner application,
-credentials, external service, repository content outside this worktree, push or
-pull request was changed.
+evidence. Runs 32 and 33 likewise contain no executed test after setup failures;
+runs 34 through 38 are retained diagnostic failures that isolated the native fixture
+path mismatch corrected in run 39. All raw bundles, attachment exports and one-shot
+marker files remain under `/private/tmp/release-radar-phase5c-writer/`. The run-39
+fixture remains under `/Users/Shared/ReleaseRadar-RR9Owner-4BF8E306-45B1-4E91-BCCB-E2D6E431172B/`,
+and its path preflight remains under
+`/Users/Shared/ReleaseRadar-Phase5C-Preflight-C5B53D27-D3F9-4576-B6B1-1D5D1561BA81/`.
+No installed owner application, credentials, external service, repository content
+outside this worktree, push or pull request was changed.

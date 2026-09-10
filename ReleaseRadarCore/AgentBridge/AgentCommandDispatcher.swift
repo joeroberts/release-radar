@@ -96,6 +96,11 @@ public actor AgentCommandDispatcher {
         guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
             return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
         }
+        let proposalSourcePreflight = await planChangeProposalSourcePreflight(
+            command: envelope.command,
+            project: project,
+            projectRoot: envelope.projectRoot
+        )
 
         do {
             let requestBody = try canonicalRequestBody(envelope)
@@ -167,6 +172,11 @@ public actor AgentCommandDispatcher {
                         throw DispatchControl.replay(priorResult)
                     }
 
+                    try proposalSourcePreflight.requireCurrent(
+                        command: envelope.command,
+                        projectID: project.projectID,
+                        connection: connection
+                    )
                     let revision = try Self.apply(envelope.command, project: project, origin: origin, auditEventID: auditEventID, connection: connection)
                     let result = Self.resultForCommand(envelope.command, auditEventID: auditEventID, revision: revision)
                     let resultData = try JSONEncoder().encode(result)
@@ -199,6 +209,54 @@ public actor AgentCommandDispatcher {
             return .init(entityIDs: [], auditEventID: nil, error: .internalFailure(error.localizedDescription))
         } catch {
             return .init(entityIDs: [], auditEventID: nil, error: Self.map(error, command: envelope.command))
+        }
+    }
+
+    private func planChangeProposalSourcePreflight(
+        command: AgentCommand,
+        project: AuthorizedProject,
+        projectRoot: String
+    ) async -> PlanChangeProposalSourcePreflight {
+        guard command.isPlanChangeProposalCommand else { return .notRequired }
+        do {
+            let capture = try await store.documentationRead { connection in
+                let impacts = try PlanChangeProposalPolicy.sourceImpacts(
+                    for: command,
+                    projectID: project.projectID,
+                    connection: connection
+                )
+                guard !impacts.isEmpty else { return nil as PlanChangeProposalSourceCapture? }
+                let context = try DocumentationRootContext.read(
+                    connection,
+                    path: projectRoot,
+                    projectID: project.projectID.rawValue,
+                    schemaVersion: store.schemaVersionForDocumentation
+                )
+                return PlanChangeProposalSourceCapture(context: context, impacts: impacts)
+            }
+            guard let capture else { return .notRequired }
+            return try await bookmarkStore.withSecurityScopedAccess(bookmark: capture.context.bookmark) { resolved in
+                try capture.context.verifyAuthorization(resolved)
+                let catalog = try DocumentationCatalogContext(root: resolved.url)
+                let snapshot = try catalog.managedSnapshot()
+                try capture.context.requireAccepted(snapshot)
+                for impact in capture.impacts {
+                    guard impact.repositoryID == snapshot.catalog.repositoryID.lowercased(),
+                          let artifact = snapshot.catalog.artifacts.first(where: {
+                              $0.artifactID == impact.artifactID
+                          }),
+                          artifact.path == impact.observedPath,
+                          artifact.lifecycle == impact.observedLifecycle,
+                          artifact.authorityLevel == impact.observedAuthority,
+                          documentationDigest(try catalog.reader.read(artifact.path)) == impact.contentDigest else {
+                        return .unavailable
+                    }
+                }
+                try catalog.reader.verifyStable()
+                return .verified(context: capture.context, impacts: capture.impacts)
+            }
+        } catch {
+            return .unavailable
         }
     }
 
@@ -1046,6 +1104,49 @@ private enum DispatchControl: Error, Sendable {
     case archivedProject
     case replay(AgentCommandResult)
     case requestIDReused
+}
+
+private struct PlanChangeProposalSourceCapture: Sendable {
+    let context: DocumentationRootContext
+    let impacts: [PlanChangeRecordedSourceImpact]
+}
+
+private enum PlanChangeProposalSourcePreflight: Sendable {
+    case notRequired
+    case unavailable
+    case verified(
+        context: DocumentationRootContext,
+        impacts: [PlanChangeRecordedSourceImpact]
+    )
+
+    func requireCurrent(
+        command: AgentCommand,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        let current = try PlanChangeProposalPolicy.sourceImpacts(
+            for: command,
+            projectID: projectID,
+            connection: connection
+        )
+        switch self {
+        case .notRequired:
+            guard current.isEmpty else {
+                throw PlanChangeProposalError.stale([.referenceVersions])
+            }
+        case .unavailable:
+            throw PlanChangeProposalError.stale([.referenceVersions])
+        case let .verified(context, impacts):
+            do {
+                try context.verifyPersisted(connection)
+            } catch {
+                throw PlanChangeProposalError.stale([.referenceVersions])
+            }
+            guard current == impacts else {
+                throw PlanChangeProposalError.stale([.referenceVersions])
+            }
+        }
+    }
 }
 
 private enum CommandValidation: Error, Sendable {
