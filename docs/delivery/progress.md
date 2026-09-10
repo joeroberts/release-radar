@@ -49,9 +49,12 @@ validation, and distinct lifecycle/readiness/acceptance facts. Correction `f9ed6
 focused source tests pass, zero failures/skips; canonical documentation check passes.
 Same reviewer found two bounded leftovers: documentation/evidence projection
 replacement drops exact Execution links, and collision cues omit Execution and
-unassigned-work row domains. Same writer owns focused corrections; other completed
-source checks remain terminal. Native QA remains pending a corrected candidate
-and concrete reservation. No native host is active.
+unassigned-work row domains. Final bounded correction `dd5625d1cc96997fcf137cebefdeac97dea6a333` is integrated
+at `bcf1c3fcd65f55261271429dd1d6d91bf5c6cfae`; direct readback confirms all 13
+Goals source tests pass, zero failures/skips, and documentation check passes.
+Writer is clean/quiescent. Same reviewer checks only these leftovers and outstanding
+corrected native QA; prior completed checks remain terminal. No native reservation
+is active until its concrete configuration is returned.
 6B is not complete.
 
 A same-project cross-phase duplicate-goal hypothesis was withdrawn because the
