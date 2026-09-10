@@ -61,6 +61,85 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
         )
     }
 
+    func testDocumentationReplacementPreservesExactExecutionGoalLinks() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceDocumentationReplacement-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let dashboard = try await DashboardProjection.load(from: store)
+        let goal = try XCTUnwrap(dashboard.workspaceGoals.execution.first { $0.link.ticketID != nil })
+        let filter = DeliveryGoalFilter.execution(try XCTUnwrap(goal.boardFilter))
+
+        let replaced = dashboard.replacingDocumentation(for: goal.project.id, with: [])
+        let board = try XCTUnwrap(replaced.allPhaseBoard(for: goal.project.id))
+
+        XCTAssertTrue(board.hasExactExecutionGoalLink(try XCTUnwrap(goal.boardFilter)))
+        XCTAssertEqual(
+            board.filtered(by: filter).lanes.flatMap(\.cards).map(\.id),
+            [try XCTUnwrap(goal.link.ticketID)]
+        )
+    }
+
+    func testRemainingWorkspaceRowCollisionsReceiveStableIdentityCuesOnlyWhenNeeded() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalRowCollisions-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let dashboard = try await DashboardProjection.load(from: store)
+        let project = try XCTUnwrap(dashboard.projects.first)
+        let duplicateProject = ProjectDashboardProjection(
+            id: .init(rawValue: "workspace-collision-project"),
+            name: project.name,
+            activePhaseName: project.activePhaseName,
+            goalContext: project.goalContext,
+            currentWorkCount: 1,
+            attentionCount: 0
+        )
+        let firstExecution = WorkspaceExecutionGoalProjection(
+            project: project, goalID: "collision-goal-a", threadID: "collision-thread-a",
+            status: "Completed", text: "Identical visible execution outcome", observedAt: nil,
+            link: .unlinked
+        )
+        let secondExecution = WorkspaceExecutionGoalProjection(
+            project: duplicateProject, goalID: "collision-goal-b", threadID: "collision-thread-b",
+            status: firstExecution.status, text: firstExecution.text, observedAt: nil,
+            link: .unlinked
+        )
+        let executions = [firstExecution, secondExecution]
+
+        XCTAssertNil(workspaceExecutionIdentityCue(for: firstExecution, among: [firstExecution]))
+        XCTAssertEqual(
+            Set(executions.compactMap { workspaceExecutionIdentityCue(for: $0, among: executions) }).count,
+            2
+        )
+
+        let firstUnassigned = WorkspaceUnassignedDeliveryWorkProjection(
+            project: project,
+            phaseID: .init(rawValue: "collision-phase-a"),
+            phaseName: "Same phase name",
+            tickets: [.init(id: .init(rawValue: "COLLISION-A"), outcome: "A", dependencyCount: 0, blockerCount: 0)]
+        )
+        let secondUnassigned = WorkspaceUnassignedDeliveryWorkProjection(
+            project: duplicateProject,
+            phaseID: .init(rawValue: "collision-phase-b"),
+            phaseName: firstUnassigned.phaseName,
+            tickets: [.init(id: .init(rawValue: "COLLISION-B"), outcome: "B", dependencyCount: 0, blockerCount: 0)]
+        )
+        let unassigned = [firstUnassigned, secondUnassigned]
+
+        XCTAssertNil(workspaceUnassignedIdentityCue(for: firstUnassigned, among: [firstUnassigned]))
+        XCTAssertEqual(
+            Set(unassigned.compactMap { workspaceUnassignedIdentityCue(for: $0, among: unassigned) }).count,
+            2
+        )
+    }
+
     func testGoalsRouteIsAWorkspaceDestination() {
         XCTAssertEqual(AppRoute.goals.title, "Goals")
         XCTAssertNil(AppRoute.goals.projectID)

@@ -580,10 +580,13 @@ state filters, selected exact goal, actual scroll position and keyboard/
 accessibility focus. A missing or replaced registration produces an accessible
 recovery explanation rather than selecting another project or goal.
 
-The project picker and Delivery rows use stable identity cues only when stored
-names collide. Initial and filtered detail is rendered only for the exact selection
-recorded in the model and navigation history; it never substitutes a visually
-convenient first row for a missing selection.
+The project picker, Delivery rows, Execution rows and work-without-goal rows use
+stable identity cues only when their normally visible labels collide. Initial and
+filtered detail is rendered only for the exact selection recorded in the model and
+navigation history; it never substitutes a visually convenient first row for a
+missing selection. Documentation evidence refresh preserves current exact
+Execution observation/link identities and cannot invalidate an otherwise current
+board filter.
 
 The delivered surface retains the mockup's workspace route, cross-project list,
 source treatment and wide list/detail rhythm while adding the required formal

@@ -60,6 +60,31 @@ func workspaceDeliveryIdentityCue(
     return "Project \(item.project.id.rawValue) · phase \(item.phaseID.rawValue) · goal \(item.goal.goalID.rawValue)"
 }
 
+func workspaceExecutionIdentityCue(
+    for item: WorkspaceExecutionGoalProjection,
+    among items: [WorkspaceExecutionGoalProjection]
+) -> String? {
+    let collides = items.filter {
+        $0.project.name == item.project.name
+            && $0.text == item.text
+            && $0.status == item.status
+            && $0.link.ticketID == item.link.ticketID
+    }.count > 1
+    guard collides else { return nil }
+    return "Project \(item.project.id.rawValue) · thread \(item.threadID) · goal \(item.goalID)"
+}
+
+func workspaceUnassignedIdentityCue(
+    for item: WorkspaceUnassignedDeliveryWorkProjection,
+    among items: [WorkspaceUnassignedDeliveryWorkProjection]
+) -> String? {
+    let collides = items.filter {
+        $0.project.name == item.project.name && $0.phaseName == item.phaseName
+    }.count > 1
+    guard collides else { return nil }
+    return "Project \(item.project.id.rawValue) · phase \(item.phaseID?.rawValue ?? "not placed")"
+}
+
 struct WorkspaceDeliveryGoalFacts: Equatable {
     let formalState: String
     let phaseLifecycle: String
@@ -298,6 +323,9 @@ struct WorkspaceGoalsView: View {
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("\(item.project.name) · \(item.phaseName ?? "Not placed")")
+                        if let cue = workspaceUnassignedIdentityCue(for: item, among: unassignedWork) {
+                            Text(cue).font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                        }
                         Text("\(item.tickets.count) persisted work item\(item.tickets.count == 1 ? "" : "s") · no goal inferred")
                             .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
                     }
@@ -378,6 +406,9 @@ struct WorkspaceGoalsView: View {
         VStack(alignment: .leading, spacing: 5) {
             Text(item.text).font(RekonTypography.cardTitle).lineLimit(2)
             Text("\(item.project.name) · \(item.status)").font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+            if let cue = workspaceExecutionIdentityCue(for: item, among: execution) {
+                Text(cue).font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+            }
             Text(item.link.ticketID.map { "Exact work link: \($0.rawValue)" } ?? "No exact work link")
                 .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
         }

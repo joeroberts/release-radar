@@ -20,7 +20,8 @@ registration identity. Unplaced work opens Project Plan; placed work without a
 goal opens the all-phase board. Delivery detail reports criteria, membership,
 formal state, phase lifecycle, carried-obligation coverage, structural readiness
 and explicit owner acceptance as separate facts. Superseded or dropped scope does
-not become delivered credit. Stored-name collisions receive stable identity cues
+not become delivered credit. Stored-label collisions in the project picker,
+Delivery, Execution and work-without-goal rows receive stable identity cues
 without exposing internal identifiers on every row.
 
 Execution discovers every persisted goal observation for active projects,
@@ -39,6 +40,8 @@ identity. An Execution filter shows its ticket only while that exact persisted
 thread/goal observation and link remain current; removal or replacement produces
 explicit recovery rather than ticket-only substitution. Browsing performs no
 delivery, lifecycle, lane, acceptance or attention mutation.
+Documentation evidence refresh retains those exact observation/link identities,
+so it cannot falsely invalidate a current Execution filter.
 
 Navigation history stores the Goals domain, project and state filters, exact
 selection, actual viewport and keyboard/accessibility focus. Back and Forward
@@ -100,6 +103,11 @@ SourcePackages checkout at RekonDesignSystem revision
   of a removed exact Execution Goal link despite the ticket remaining, separate
   Delivery/phase/readiness/coverage/owner-acceptance facts, and collision-only
   byte-stable identity cues.
+- `phase6b-review-v29-source.xcresult` passed the final expanded Goals suite
+  13/13 in 2.748 seconds. Its two additional regressions prove documentation
+  evidence replacement preserves exact Execution observation/link identities
+  and that Execution plus work-without-goal rows add stable identity cues only
+  when their ordinary labels collide.
 
 The passing native result emitted a benign teardown warning after the temporary
 fixture directory was unlinked while SQLite still held a vnode. The test and all
