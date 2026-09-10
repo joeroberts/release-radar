@@ -124,8 +124,16 @@ because its first assertion compared the raw offset before activating Open (2404
 with the navigation-captured/restored offset after AppKit's 6-point focus visibility
 adjustment (2410.5). The candidate now compares the restored model value with the
 offset captured at navigation time while retaining direct before/after accessibility
-viewport and focus assertions. R4 remains pending one fresh independent focused and
-native verification pass.
+viewport and focus assertions.
+
+The independent reviewer's fresh sanitized run of candidate `d4b5df3` executed
+3 tests: 2 passed and the native test failed only its assumption that the captured
+compact offset could not decrease. Focus/layout reduced that offset by 12 points
+while the actual scrollbar remained at 1.0; wide viewport restoration, compact
+bottom, full inspector/Open visibility and focus checks passed. This candidate
+removes the directional comparison and retains the captured/restored offset
+equality, actual before/after viewport and Open focus assertions. R4 remains
+pending the reviewer's rerun of only the affected native test.
 
 After that observation, verification departed from the authorized sanitized inert
 XCTest-host path. An unsanitized build-for-testing succeeded and re-signed the

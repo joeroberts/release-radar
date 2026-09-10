@@ -5220,7 +5220,7 @@ final class AppRouteTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(200))
         }
         XCTAssertTrue(FileManager.default.fileExists(atPath: compactSelectionMarker.path))
-        let compactViewport = try XCTUnwrap(model.historyViewportOffset(for: projectID))
+        XCTAssertNotNil(model.historyViewportOffset(for: projectID))
         let compactScrollValue = try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow))
         XCTAssertEqual(compactScrollValue, 1, accuracy: 0.001)
         XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
@@ -5236,7 +5236,6 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(model.historyFilter(for: projectID), .audit)
         XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
         let capturedCompactViewport = try XCTUnwrap(model.navigationHistory.current.historyViewportOffset)
-        XCTAssertGreaterThanOrEqual(capturedCompactViewport, compactViewport)
         XCTAssertEqual(
             try XCTUnwrap(model.historyViewportOffset(for: projectID)),
             capturedCompactViewport,
