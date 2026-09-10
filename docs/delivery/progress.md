@@ -42,9 +42,19 @@ Native checks cover both goal domains, exact typed associated-work filters,
 wide/compact actual viewport/focus through Back/Forward, Help and registration
 replacement recovery. Writer reports task-owned processes stopped and releases
 its reservation. Fresh independent Sol High reviewer `01a08cde-c8c9-70d1-9ba1-1e4a566cb52b`
-is dispatched on integrated `5aa039631e8bc278b418216674142c32a05b5b24`. It starts
-read-only with no launch reservation. Source, authority and native QA review
-remain pending; 6B is not complete.
+is dispatched on integrated `5aa039631e8bc278b418216674142c32a05b5b24`. Its first pass found four Required correction areas: unplaced-work discovery,
+displayed versus recorded selection/registration, stale exact Execution-link
+validation, and distinct lifecycle/readiness/acceptance facts. Same Sol High writer
+owns corrections with exact focused non-native tests under the full sanitized
+unsigned configuration; no native reservation yet. Same reviewer handles the
+correction delta and native QA. 6B is not complete.
+
+A same-project cross-phase duplicate-goal hypothesis was withdrawn because the
+store primary key is project+goal and the retained fixture directly failed that
+constraint. A blanket raw registration/request-generation identity panel is
+Optional; exact identity scoping and meaningful target disambiguation remain in
+scope. Viewport correction must preserve coherent real departure context, not
+force selection visibility against deliberate user scrolling.
 
 During implementation, an overbroad route selector and failed static native
 fixture were stopped; observed commands retained sanitized unsigned settings.
