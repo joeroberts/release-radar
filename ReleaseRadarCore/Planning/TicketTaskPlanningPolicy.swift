@@ -68,6 +68,8 @@ public enum TicketTaskPlanningPolicy {
         connection: SQLiteConnection
     ) throws -> TicketTaskPlanRecord {
         try validateOwnerIdentities(projectID: projectID, ticketID: ticketID)
+        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+            projectID: projectID, ticketID: ticketID, connection: connection)
         try requireMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
 
         let operationCount = additions.count + definitionRevisions.count + supersededTaskIDs.count
@@ -235,6 +237,8 @@ public enum TicketTaskPlanningPolicy {
         connection: SQLiteConnection
     ) throws -> TicketTaskPlanRecord {
         try validateOwnerIdentities(projectID: projectID, ticketID: ticketID)
+        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+            projectID: projectID, ticketID: ticketID, connection: connection)
         try requirePlacedMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
         guard let currentPlan = try loadPlan(projectID: projectID, ticketID: ticketID, connection: connection) else {
             throw TicketTaskPlanningPolicyError.ticketTaskPlanNotFound
@@ -290,6 +294,8 @@ public enum TicketTaskPlanningPolicy {
         connection: SQLiteConnection
     ) throws {
         try validateOwnerIdentities(projectID: projectID, ticketID: ticketID)
+        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+            projectID: projectID, ticketID: ticketID, connection: connection)
         try requirePlacedMutableTicket(projectID: projectID, ticketID: ticketID, connection: connection)
         guard let plan = try loadPlan(projectID: projectID, ticketID: ticketID, connection: connection) else {
             guard expectedRevision == nil else {

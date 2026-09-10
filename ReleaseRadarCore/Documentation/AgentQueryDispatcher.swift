@@ -34,6 +34,8 @@ public struct AgentQueryDispatcher: Sendable {
                 projectID = project; rootID = root; extraIdentities = [repository, artifact]
             case let .planChangeProposals(project):
                 projectID = project; rootID = nil; extraIdentities = []
+            case let .phaseLifecycles(project):
+                projectID = project; rootID = nil; extraIdentities = []
             }
             for identity in [projectID, rootID].compactMap({ $0 }) + extraIdentities {
                 guard !identity.isEmpty, identity.utf8.count <= 256, !identity.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else { throw DocumentationOperationError.invalidRequest }
@@ -138,6 +140,58 @@ public struct AgentQueryDispatcher: Sendable {
                     auditEventID: nil,
                     error: nil,
                     planChangeProposals: proposals
+                )
+                guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
+                    throw DocumentationOperationError.inventoryTooLarge
+                }
+                return result
+            case let .phaseLifecycles(assertedProjectID):
+                guard let project = await PersistedAuthorizedProjectRegistry(store: store)
+                    .resolve(projectRoot: envelope.projectRoot),
+                      Data(project.projectID.rawValue.utf8) == Data(assertedProjectID.utf8) else {
+                    return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+                }
+                let authorizedRoot = AuthorizedProject.canonicalize(
+                    URL(fileURLWithPath: envelope.projectRoot)
+                ).path
+                let readback = try await store.read { connection -> ([PhaseLifecycleRecord], [PhaseLifecycleEventRecord], [PhaseCompletionAssessment])? in
+                    guard try connection.scalarInt(
+                        """
+                        SELECT COUNT(*) FROM project_roots
+                        JOIN projects ON projects.id=project_roots.project_id
+                        WHERE project_roots.path=? AND project_roots.project_id=?
+                          AND projects.lifecycle='active'
+                        """,
+                        bindings: [.text(authorizedRoot), .text(project.projectID.rawValue)]
+                    ) == 1 else { return nil }
+                    if let registration = project.registration {
+                        guard try connection.scalarInt(
+                            "SELECT COUNT(*) FROM project_registrations WHERE project_id=? AND registration_id=? AND request_generation=?",
+                            bindings: [
+                                .text(registration.projectID.rawValue), .text(registration.registrationID),
+                                .integer(registration.requestGeneration),
+                            ]
+                        ) == 1 else { return nil }
+                    }
+                    let lifecycles = try PhaseLifecyclePolicy.all(
+                        projectID: project.projectID, connection: connection)
+                    let assessments = try lifecycles.map {
+                        try PhaseLifecyclePolicy.assessCompletion(
+                            projectID: project.projectID, phaseID: $0.phaseID, connection: connection)
+                    }
+                    let events = try lifecycles.flatMap {
+                        try PhaseLifecyclePolicy.history(
+                            projectID: project.projectID, phaseID: $0.phaseID, connection: connection)
+                    }
+                    return (lifecycles, events, assessments)
+                }
+                guard let readback else {
+                    return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+                }
+                let result = AgentCommandResult(
+                    entityIDs: readback.0.map(\.phaseID.rawValue), auditEventID: nil, error: nil,
+                    phaseLifecycles: readback.0, phaseLifecycleEvents: readback.1,
+                    phaseCompletionAssessments: readback.2
                 )
                 guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
                     throw DocumentationOperationError.inventoryTooLarge

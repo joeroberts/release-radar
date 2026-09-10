@@ -928,6 +928,11 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         let legacy = try SQLiteConnection(url: databaseURL)
         try legacy.executeScript(
             """
+            DROP TRIGGER phase_lifecycles_after_phase_insert;
+            DROP TABLE retained_phase_lifecycle_events;
+            DROP TABLE retained_phase_lifecycles;
+            DROP TABLE phase_lifecycle_events;
+            DROP TABLE phase_lifecycles;
             DROP TABLE retained_plan_change_proposal_applications;
             DROP TABLE retained_plan_change_proposal_decisions;
             DROP TABLE retained_plan_change_proposal_versions;
@@ -961,7 +966,7 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
             )
         }
         let verifier = try SQLiteConnection(url: databaseURL)
-        XCTAssertEqual(try verifier.scalarInt("PRAGMA user_version"), 22)
+        XCTAssertEqual(try verifier.scalarInt("PRAGMA user_version"), 23)
         XCTAssertEqual(migrationFacts.0, 0)
         XCTAssertEqual(migrationFacts.1, 0)
     }
