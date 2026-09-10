@@ -572,9 +572,9 @@ struct SidebarView: View {
                             get: { model.selectedHistoryEventID(for: projectID) },
                             set: { model.selectHistoryEvent($0, projectID: projectID) }
                         ),
-                        viewportEventID: Binding(
-                            get: { model.historyViewportEventID(for: projectID) },
-                            set: { model.setHistoryViewportEventID($0, projectID: projectID) }
+                        viewportOffset: Binding(
+                            get: { model.historyViewportOffset(for: projectID) },
+                            set: { model.setHistoryViewportOffset($0, projectID: projectID) }
                         ),
                         requestedFocus: model.navigationFocus,
                         focusChanged: { focus in

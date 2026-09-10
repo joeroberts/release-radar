@@ -2094,6 +2094,26 @@ final class AppRouteTests: XCTestCase {
         return identifierValue as? String
     }
 
+    private func accessibilityVerticalScrollValue(_ root: AXUIElement) -> Double? {
+        for scrollBar in accessibilityElements(root, role: kAXScrollBarRole) {
+            var orientationValue: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                scrollBar,
+                kAXOrientationAttribute as CFString,
+                &orientationValue
+            ) == .success,
+                  (orientationValue as? String) == kAXVerticalOrientationValue else { continue }
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                scrollBar,
+                kAXValueAttribute as CFString,
+                &value
+            ) == .success else { continue }
+            if let number = value as? NSNumber { return number.doubleValue }
+        }
+        return nil
+    }
+
     @MainActor
     private func scrollToAccessibilityElement(
         _ root: AXUIElement,
@@ -5164,13 +5184,16 @@ final class AppRouteTests: XCTestCase {
             )
         }
         try taskCapture(hosting, name: "phase6a-history-wide-before-external")
-        print("PHASE6A HISTORY WIDE READY: use native History filter and rows; scroll to and select RR9-HISTORY; wait for the wide-open-ready marker before activating Open")
+        print("PHASE6A HISTORY WIDE READY: use native History filter and rows; select RR9-HISTORY and leave Open visible at a non-edge scroll position; wait for the wide-open-ready marker before activating Open")
 
         for _ in 0..<900 where !FileManager.default.fileExists(atPath: wideSelectionMarker.path) {
             try await Task.sleep(for: .milliseconds(200))
         }
         XCTAssertTrue(FileManager.default.fileExists(atPath: wideSelectionMarker.path))
-        let wideViewport = try XCTUnwrap(model.historyViewportEventID(for: projectID))
+        let wideViewport = try XCTUnwrap(model.historyViewportOffset(for: projectID))
+        let wideScrollValue = try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow))
+        XCTAssertGreaterThan(wideScrollValue, 0.05)
+        XCTAssertLessThan(wideScrollValue, 0.95)
         XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
         XCTAssertEqual(model.navigationFocus, .historyEvent(target.identity))
         try Data().write(to: wideOpenReadyMarker, options: .atomic)
@@ -5182,7 +5205,8 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(model.selection, .activity(projectID))
         XCTAssertEqual(model.historyFilter(for: projectID), .audit)
         XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
-        XCTAssertEqual(model.historyViewportEventID(for: projectID), wideViewport)
+        XCTAssertEqual(try XCTUnwrap(model.historyViewportOffset(for: projectID)), wideViewport, accuracy: 1)
+        XCTAssertEqual(try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow)), wideScrollValue, accuracy: 0.01)
         XCTAssertEqual(model.navigationFocus, .historyDetail(target.identity))
         XCTAssertEqual(accessibilityFocusedIdentifier(nativeApplication), "history-open-entity")
         XCTAssertNil(model.navigationRecoveryMessage)
@@ -5191,12 +5215,14 @@ final class AppRouteTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(750))
         hosting.layoutSubtreeIfNeeded()
         try taskCapture(hosting, name: "phase6a-history-compact-before-external")
-        print("PHASE6A HISTORY COMPACT READY: verify stacked detail; scroll to and select RR9-HISTORY; confirm the full recorded detail; wait for the compact-open-ready marker before activating Open")
+        print("PHASE6A HISTORY COMPACT READY: verify stacked detail; select RR9-HISTORY, confirm the full recorded detail and scroll to the absolute bottom with Open visible; wait for the compact-open-ready marker before activating Open")
         for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactSelectionMarker.path) {
             try await Task.sleep(for: .milliseconds(200))
         }
         XCTAssertTrue(FileManager.default.fileExists(atPath: compactSelectionMarker.path))
-        let compactViewport = try XCTUnwrap(model.historyViewportEventID(for: projectID))
+        let compactViewport = try XCTUnwrap(model.historyViewportOffset(for: projectID))
+        let compactScrollValue = try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow))
+        XCTAssertEqual(compactScrollValue, 1, accuracy: 0.001)
         XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
         XCTAssertEqual(model.navigationFocus, .historyEvent(target.identity))
         let detailRecord = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "history-detail-record"))
@@ -5209,7 +5235,14 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(model.selection, .activity(projectID))
         XCTAssertEqual(model.historyFilter(for: projectID), .audit)
         XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
-        XCTAssertEqual(model.historyViewportEventID(for: projectID), compactViewport)
+        let capturedCompactViewport = try XCTUnwrap(model.navigationHistory.current.historyViewportOffset)
+        XCTAssertGreaterThanOrEqual(capturedCompactViewport, compactViewport)
+        XCTAssertEqual(
+            try XCTUnwrap(model.historyViewportOffset(for: projectID)),
+            capturedCompactViewport,
+            accuracy: 1
+        )
+        XCTAssertEqual(try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow)), compactScrollValue, accuracy: 0.01)
         XCTAssertEqual(model.navigationFocus, .historyDetail(target.identity))
         XCTAssertEqual(accessibilityFocusedIdentifier(nativeApplication), "history-open-entity")
         XCTAssertNil(model.navigationRecoveryMessage)
