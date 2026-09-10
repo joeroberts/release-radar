@@ -29,15 +29,22 @@ Astra High), and independent reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
 (Astra High) are complete and archived. Their files/results are preserved and
 task-owned processes stopped. No 6A reservation remains active.
 
-Fresh 6B writer `01a08c9d-e36f-7a92-abba-69ade43678af` is dispatched with actual
-Terra Medium tool settings, ceiling Astra High, from committed controlling
-handoff `c374a155589f2b9077787718c209008929bb1744`. It exclusively owns Goals
-source/tests/affected design/evidence; no launches are authorized until a concrete
-sanitized unsigned inert-host reservation. Baseline confirmed; writer branch is `codex/phase6b-goals`. The writer now holds
-the sole focused-XCTest reservation for sanitized unsigned serial red/green tests,
-with unique results under `/private/tmp/release-radar-phase6b.PTQwNy` and a copied
-clean pinned SourcePackages cache. HOME/USER/LOGNAME use the known sanitized
-configuration. Native CUA session reservation remains pending concrete setup.
+Fresh 6B writer `01a08c9d-e36f-7a92-abba-69ade43678af` owns Goals source in
+worktree `4112`, branch `codex/phase6b-goals`, from committed handoff
+`c374a155589f2b9077787718c209008929bb1744`. Initial Terra Medium assignment is
+now explicitly escalated via tool to Sol High for unresolved actual native
+navigation/verification; ceiling remains Astra High, runtime settings not
+independently exposed. Intermediate candidate `a6eb4f49eb277bc6c67904ecb73dbf72bd48e0bd`
+has focused projection/route 2/2 but lacks complete native acceptance/evidence.
+It is not integrated or slice-complete.
+
+The writer broadened a focused test selector to AppRouteTests, then attempted a
+static native fixture that restarted/crashed without a usable pass. Those observed
+commands retained sanitized unsigned settings. Conflicting process reporting was
+resolved to task-owned quiescence. All launches are paused pending concrete real
+Goals AppRootView fixture/copied-runfile setup; source work remains authorized.
+No unrelated retained-row failure repair. Temporary results remain under
+`/private/tmp/release-radar-phase6b.PTQwNy`; no cleanup occurred.
 
 ## Authorization and next eligible work
 
