@@ -31,9 +31,11 @@ state, acceptance or attention.
 Removal, re-add and full backup recovery retain the original event identity and
 facts without transferring authority to the replacement registration. Exact
 ticket and nonactive-phase navigation uses shared typed navigation history. Back
-restores the selected event and filter. Missing targets, including legacy audit
-rows without recorded identity, present an accessible recovery state instead of
-substituting a current ticket or registration.
+restores the selected event, filter, bounded viewport and actual keyboard or
+accessibility focus. Removed-project History keeps its own mutable browsing state
+while exposing no action that can reopen or mutate the removed registration.
+Missing targets, including legacy audit rows without recorded identity, present an
+accessible recovery state instead of substituting a current ticket or registration.
 
 The visible Activity route is now History while the existing internal route and
 file names remain for compatibility. The wide surface presents a timeline beside
@@ -76,6 +78,28 @@ serial macOS execution, signing disabled and a sanitized environment rooted at
   reaching its notification/replay checks. No planning repair was made. The five
   notification invariants selected by the Phase 6A scope pass in the final run.
 - `git diff --check` passed before candidate preparation.
+
+Independent review identified seven required corrections. The correction preserves
+schema-24 audit facts during older-backup recovery, keeps removed History controls
+interactive, qualifies retained runtime identities by thread and goal, restores
+the exact History viewport and detail focus, renders the complete recorded detail,
+merges retained lifecycle metadata into the original audit event, and leaves
+unrecorded observation times unknown.
+
+- `history-review-corrections-final.xcresult` passed 10/10 affected projection,
+  migration, lifecycle-removal, project-removal, recovery and navigation tests.
+- `history-native-correction-10.xcresult` passed its corrected isolated native host
+  journey 1/1 in 190.886 seconds. External CUA attached only to the matching
+  DerivedData app at host PID 95442 and the window titled
+  `Phase 6A History — isolated native interaction correction-root-v10`.
+- At wide and compact widths, the corrected native journey scrolled to the exact
+  event, selected it, displayed all four recorded-detail lines, opened its
+  nonactive ticket and returned through Back with the exact Audit filter, selected
+  identity, viewport and `history-open-entity` accessibility focus. It then removed
+  the synthetic project, changed the removed History filter, selected different
+  rows at both widths, restored the full detail and verified that no Open action
+  existed. The installed owner application remained PID 60590 and was never
+  selected or controlled.
 
 ## Native visual evidence
 

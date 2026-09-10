@@ -572,8 +572,18 @@ struct SidebarView: View {
                             get: { model.selectedHistoryEventID(for: projectID) },
                             set: { model.selectHistoryEvent($0, projectID: projectID) }
                         ),
+                        viewportEventID: Binding(
+                            get: { model.historyViewportEventID(for: projectID) },
+                            set: { model.setHistoryViewportEventID($0, projectID: projectID) }
+                        ),
                         requestedFocus: model.navigationFocus,
-                        focusChanged: { model.setNavigationFocus($0) },
+                        focusChanged: { focus in
+                            if case let .historyEvent(identity)? = focus,
+                               model.navigationFocus == .historyDetail(identity) {
+                                return
+                            }
+                            model.setNavigationFocus(focus)
+                        },
                         openEntity: { item in Task { await model.openHistoryEntity(item) } }
                     )
                 } else {

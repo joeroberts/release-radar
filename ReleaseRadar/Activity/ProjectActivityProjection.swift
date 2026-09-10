@@ -337,7 +337,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     provenance: .localAudit,
                     title: title,
                     detail: try row.activityText("reason"),
-                    observedAt: auditCreatedAt,
+                    observedAt: nil,
                     occurredAt: row.activityOptionalText("event_occurred_at").flatMap(formatter.date(from:)),
                     recordedAt: row.activityOptionalText("event_recorded_at").flatMap(formatter.date(from:))
                         ?? auditCreatedAt,
@@ -401,7 +401,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     provenance: .reviewRecord,
                     title: "Review \(try row.activityText("status"))",
                     detail: try row.activityText("summary"),
-                    observedAt: reviewObservedAt[reviewID],
+                    observedAt: nil,
                     occurredAt: nil,
                     recordedAt: reviewObservedAt[reviewID],
                     eventFacts: nil,
@@ -424,7 +424,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     provenance: .completionRecord,
                     title: "Completed",
                     detail: try row.activityText("summary"),
-                    observedAt: formatter.date(from: try row.activityText("created_at")),
+                    observedAt: nil,
                     occurredAt: formatter.date(from: try row.activityText("created_at")),
                     recordedAt: nil,
                     eventFacts: nil,
@@ -451,7 +451,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     provenance: .notificationDelivery,
                     title: row.activityOptionalText("title") ?? fallbackTitle,
                     detail: row.activityOptionalText("message") ?? "Persisted notification delivery event.",
-                    observedAt: row.activityOptionalText("created_at").flatMap(formatter.date(from:)),
+                    observedAt: nil,
                     occurredAt: row.activityOptionalText("created_at").flatMap(formatter.date(from:)),
                     recordedAt: row.activityOptionalText("completed_at").flatMap(formatter.date(from:)),
                     eventFacts: nil,
@@ -509,9 +509,6 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 "SELECT * FROM retained_phase_lifecycles WHERE removal_id = ? ORDER BY phase_id",
                 bindings: [.text(removalID.rawValue)]
             )
-            let phaseNames = try Dictionary(uniqueKeysWithValues: retainedLifecycleRows.map {
-                (PhaseID(rawValue: try $0.activityText("phase_id")), try $0.activityText("phase_name"))
-            })
             let retainedLifecycleItems = try retainedLifecycleRows.map { row in
                 let historicalProjectID = ProjectID(rawValue: try row.activityText("historical_project_id"))
                 guard historicalProjectID == projectID else {
@@ -535,62 +532,27 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     source: .audit, provenance: .retainedSource,
                     title: "Phase lifecycle · \(phaseName)",
                     detail: "Current · \(current.displayName) · revision \(revision)",
-                    observedAt: lifecycleDate(row, column: "updated_at"),
-                    occurredAt: lifecycleDate(row, column: "updated_at"), recordedAt: nil,
+                    observedAt: nil,
+                    occurredAt: nil, recordedAt: lifecycleDate(row, column: "updated_at"),
                     eventFacts: nil,
                     ticketID: nil, deliveryLane: nil, runtimeState: nil,
                     notificationState: nil, notificationStatusText: nil,
                     phaseID: phaseID, retainedPhaseLifecycle: activity
                 )
             }
-            let retainedLifecycleEvents = try connection.activityRows(
+            let retainedLifecycleEventRows = try connection.activityRows(
                 "SELECT * FROM retained_phase_lifecycle_events WHERE removal_id = ? ORDER BY phase_id, revision",
                 bindings: [.text(removalID.rawValue)]
-            ).map { row -> ProjectActivityItem in
+            )
+            var lifecycleEventsByAuditID: [AuditEventID: [String: SQLiteValue]] = [:]
+            for row in retainedLifecycleEventRows {
                 let historicalProjectID = ProjectID(rawValue: try row.activityText("historical_project_id"))
                 guard historicalProjectID == projectID else {
                     throw ProjectActivityProjectionError.invalidColumn("historical_project_id")
                 }
-                let phaseID = PhaseID(rawValue: try row.activityText("phase_id"))
-                guard let phaseName = phaseNames[phaseID] else {
-                    throw ProjectActivityProjectionError.invalidColumn("phase_id")
-                }
-                let previous = try lifecycle(row, column: "previous_lifecycle")
-                let current = try lifecycle(row, column: "current_lifecycle")
-                let transitionAction = try action(row)
-                let revision = try row.activityInteger("revision")
-                let reason = try row.activityText("reason")
                 let auditEventID = AuditEventID(rawValue: try row.activityText("audit_event_id"))
-                let registration = ProjectRegistration(
-                    projectID: historicalProjectID,
-                    registrationID: try row.activityText("registration_id"),
-                    requestGeneration: try row.activityInteger("request_generation")
-                )
-                let activity = RetainedPhaseLifecycleActivity(
-                    kind: .transition, removalID: removalID,
-                    historicalProjectID: historicalProjectID, phaseID: phaseID,
-                    phaseName: phaseName, lifecycle: current, revision: revision,
-                    previousLifecycle: previous, action: transitionAction, reason: reason,
-                    auditEventID: auditEventID, registration: registration,
-                    planningBaselineDigest: row.activityOptionalText("planning_baseline_digest")
-                )
-                return ProjectActivityItem(
-                    id: "phase-lifecycle-event-\(phaseID.rawValue)-\(revision)",
-                    identity: .init(projectID: historicalProjectID, registrationID: registrationID, source: .audit, sourceID: auditEventID.rawValue),
-                    source: .audit, provenance: .retainedSource,
-                    title: "Phase lifecycle transition · \(phaseName)",
-                    detail: "\(previous.displayName) → \(current.displayName) · \(transitionAction.displayName) · revision \(revision) · \(reason)",
-                    observedAt: lifecycleDate(row, column: "created_at"),
-                    occurredAt: lifecycleDate(row, column: "created_at"), recordedAt: nil,
-                    eventFacts: nil,
-                    ticketID: nil, deliveryLane: nil, runtimeState: nil,
-                    notificationState: nil, notificationStatusText: nil,
-                    phaseID: phaseID, retainedPhaseLifecycle: activity
-                )
+                lifecycleEventsByAuditID[auditEventID] = row
             }
-            let retainedLifecycleAuditIDs = Set(retainedLifecycleEvents.compactMap {
-                $0.retainedPhaseLifecycle?.auditEventID
-            })
 
             var assignmentsByAudit: [AuditEventID: [DeliveryGoalAssignmentEventRecord]] = [:]
             for row in try connection.activityRows(
@@ -626,11 +588,33 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 bindings: [.text(projectID.rawValue), .text(registrationID)]
             ).compactMap { row -> ProjectActivityItem? in
                 let auditID = AuditEventID(rawValue: try row.activityText("id"))
-                if retainedLifecycleAuditIDs.contains(auditID) { return nil }
                 let auditCreatedAt = formatter.date(from: try row.activityText("created_at"))
+                let auditReason = try row.activityText("reason")
                 let entityType = row.activityOptionalText("entity_type").flatMap(AuditEntityType.init(rawValue:))
                 let entityID = row.activityOptionalText("entity_id")
                 let assignments = assignmentsByAudit[auditID] ?? []
+                let lifecycleRow = lifecycleEventsByAuditID[auditID]
+                let retainedLifecycle: RetainedPhaseLifecycleActivity? = try lifecycleRow.map { lifecycleRow in
+                    let phaseID = PhaseID(rawValue: try lifecycleRow.activityText("phase_id"))
+                    let eventPhaseName = row.activityOptionalText("event_phase_name") ?? "Unknown"
+                    return .init(
+                        kind: .transition, removalID: removalID,
+                        historicalProjectID: projectID, phaseID: phaseID,
+                        phaseName: eventPhaseName,
+                        lifecycle: try lifecycle(lifecycleRow, column: "current_lifecycle"),
+                        revision: try lifecycleRow.activityInteger("revision"),
+                        previousLifecycle: try lifecycle(lifecycleRow, column: "previous_lifecycle"),
+                        action: try action(lifecycleRow),
+                        reason: try lifecycleRow.activityText("reason"),
+                        auditEventID: auditID,
+                        registration: .init(
+                            projectID: projectID,
+                            registrationID: try lifecycleRow.activityText("registration_id"),
+                            requestGeneration: try lifecycleRow.activityInteger("request_generation")
+                        ),
+                        planningBaselineDigest: lifecycleRow.activityOptionalText("planning_baseline_digest")
+                    )
+                }
                 let ticketID: TicketID?
                 switch entityType {
                 case .ticket, .ticketTaskPlan: ticketID = entityID.map(TicketID.init(rawValue:))
@@ -640,9 +624,12 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     id: "audit-\(auditID.rawValue)",
                     identity: .init(projectID: projectID, registrationID: row.activityOptionalText("event_registration_id") ?? registrationID, source: .audit, sourceID: auditID.rawValue),
                     source: .audit, provenance: .localAudit,
-                    title: entityType == .deliveryGoal ? "Delivery Goal updated" : "Delivery record updated",
-                    detail: try row.activityText("reason"),
-                    observedAt: auditCreatedAt,
+                    title: retainedLifecycle.map { "Phase lifecycle transition · \($0.phaseName)" }
+                        ?? (entityType == .deliveryGoal ? "Delivery Goal updated" : "Delivery record updated"),
+                    detail: retainedLifecycle.map {
+                        "\($0.previousLifecycle?.displayName ?? "Unknown") → \($0.lifecycle.displayName) · \($0.action?.displayName ?? "Unknown") · revision \($0.revision) · \($0.reason ?? "Unknown")"
+                    } ?? auditReason,
+                    observedAt: nil,
                     occurredAt: row.activityOptionalText("event_occurred_at").flatMap(formatter.date(from:)),
                     recordedAt: row.activityOptionalText("event_recorded_at").flatMap(formatter.date(from:))
                         ?? auditCreatedAt,
@@ -660,17 +647,18 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     ) : nil,
                     ticketID: ticketID, deliveryLane: nil, runtimeState: nil,
                     notificationState: nil, notificationStatusText: nil,
-                    phaseID: assignments.first?.phaseID ?? (entityType == .phase ? entityID.map(PhaseID.init(rawValue:)) : nil),
+                    phaseID: retainedLifecycle?.phaseID ?? assignments.first?.phaseID
+                        ?? (entityType == .phase ? entityID.map(PhaseID.init(rawValue:)) : nil),
                     deliveryGoalID: entityType == .deliveryGoal ? entityID.map(DeliveryGoalID.init(rawValue:)) : nil,
                     actorID: row.activityOptionalText("actor_id"),
                     originatingThreadID: row.activityOptionalText("thread_id"),
                     threadAttribution: row.activityOptionalText("thread_attribution").flatMap(ThreadAttribution.init(rawValue:)),
-                    assignmentEvents: assignments
+                    assignmentEvents: assignments,
+                    retainedPhaseLifecycle: retainedLifecycle
                 )
             }
 
             items += retainedLifecycleItems
-            items += retainedLifecycleEvents
 
             items += try connection.activityRows(
                 "SELECT * FROM retained_project_activity_events WHERE removal_id = ?",
@@ -682,15 +670,21 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 let runtime = row.activityOptionalText("runtime_state").map(RuntimeStateLanguage.init(storedValue:))
                 let notification = row.activityOptionalText("notification_state").flatMap(NotificationDeliveryState.init(rawValue:))
                 let lane = row.activityOptionalText("delivery_lane").flatMap(TicketLane.init(rawValue:))
-                let timestamp = ["occurred_at", "observed_at", "recorded_at"]
-                    .compactMap { row.activityOptionalText($0).flatMap(formatter.date(from:)) }
-                    .first
+                let rawSourceID = try row.activityText("source_id")
+                let sourceID: String
+                if source == .runtime,
+                   !rawSourceID.contains("|"),
+                   let threadID = row.activityOptionalText("originating_thread_id") {
+                    sourceID = "\(threadID)|\(rawSourceID)"
+                } else {
+                    sourceID = rawSourceID
+                }
                 return ProjectActivityItem(
-                    id: "\(source.rawValue)-\(try row.activityText("source_id"))",
-                    identity: .init(projectID: projectID, registrationID: registrationID, source: source, sourceID: try row.activityText("source_id")),
+                    id: "\(source.rawValue)-\(sourceID)",
+                    identity: .init(projectID: projectID, registrationID: registrationID, source: source, sourceID: sourceID),
                     source: source, provenance: .retainedSource,
                     title: try row.activityText("title"), detail: try row.activityText("detail"),
-                    observedAt: timestamp,
+                    observedAt: row.activityOptionalText("observed_at").flatMap(formatter.date(from:)),
                     occurredAt: row.activityOptionalText("occurred_at").flatMap(formatter.date(from:)),
                     recordedAt: row.activityOptionalText("recorded_at").flatMap(formatter.date(from:)),
                     eventFacts: nil,

@@ -110,6 +110,7 @@ final class AppModel {
     private var allPhaseBoardFilters: [Data: DeliveryGoalFilter] = [:]
     private var historyFilters: [Data: HistoryFilter] = [:]
     private var selectedHistoryEventIDs: [Data: HistoryEventIdentity] = [:]
+    private var historyViewportEventIDs: [Data: HistoryEventIdentity] = [:]
     private var deliveryGoalReloadRequired: Set<Data> = []
     private var performingReviewActionProjectIDs: Set<ProjectID> = []
     private var alertRulesFailureState: AlertRulesFailureState?
@@ -365,6 +366,9 @@ final class AppModel {
         let selectedHistoryEventID = projectID.flatMap { projectID in
             if case .activity = route { selectedHistoryEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
         }
+        let historyViewportEventID = projectID.flatMap { projectID in
+            if case .activity = route { historyViewportEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
+        }
         let selectedNavigationTicketID: TicketID? = if case .activity = route {
             nil
         } else {
@@ -378,6 +382,7 @@ final class AppModel {
             selectedTicketID: selectedNavigationTicketID,
             historyFilter: historyFilter,
             selectedHistoryEventID: selectedHistoryEventID,
+            historyViewportEventID: historyViewportEventID,
             focus: navigationFocus
         )
     }
@@ -398,6 +403,9 @@ final class AppModel {
         let selectedHistoryEventID = projectID.flatMap { projectID in
             if case .activity = route { selectedHistoryEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
         }
+        let historyViewportEventID = projectID.flatMap { projectID in
+            if case .activity = route { historyViewportEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
+        }
         let selectedNavigationTicketID: TicketID? = if case .activity = route {
             nil
         } else {
@@ -412,6 +420,7 @@ final class AppModel {
             selectedTicketID: selectedNavigationTicketID,
             historyFilter: historyFilter,
             selectedHistoryEventID: selectedHistoryEventID,
+            historyViewportEventID: historyViewportEventID,
             focus: focus
         )
     }
@@ -515,6 +524,12 @@ final class AppModel {
                     recovery.append("The exact History event is unavailable; no replacement event was selected.")
                 }
             }
+            if let viewportID = entry.historyViewportEventID,
+               projectActivities[projectID]?.items.contains(where: { $0.identity == viewportID }) == true {
+                historyViewportEventIDs[key] = viewportID
+            } else {
+                historyViewportEventIDs.removeValue(forKey: key)
+            }
         }
         let ticketIsAvailable = entry.selectedTicketID.map { ticketID in
             guard let projectID = restoredProjectID else { return false }
@@ -569,6 +584,14 @@ final class AppModel {
             } ?? false
             if !focusIsAvailable, entry.selectedHistoryEventID == nil {
                 recovery.append("The exact History event focus is unavailable; no replacement event was selected.")
+            }
+        }
+        if case let .historyDetail(eventID)? = entry.focus {
+            focusIsAvailable = restoredProjectID.map { projectID in
+                projectActivities[projectID]?.items.contains(where: { $0.identity == eventID }) == true
+            } ?? false
+            if !focusIsAvailable {
+                recovery.append("The exact History detail focus is unavailable; no replacement event was selected.")
             }
         }
         navigationFocus = focusIsAvailable && (ticketIsAvailable || entry.selectedTicketID == nil)
@@ -973,6 +996,17 @@ final class AppModel {
 
     func selectedHistoryEventID(for projectID: ProjectID) -> HistoryEventIdentity? {
         selectedHistoryEventIDs[Data(projectID.rawValue.utf8)]
+    }
+
+    func historyViewportEventID(for projectID: ProjectID) -> HistoryEventIdentity? {
+        historyViewportEventIDs[Data(projectID.rawValue.utf8)]
+    }
+
+    func setHistoryViewportEventID(_ eventID: HistoryEventIdentity?, projectID: ProjectID) {
+        let key = Data(projectID.rawValue.utf8)
+        if let eventID { historyViewportEventIDs[key] = eventID }
+        else { historyViewportEventIDs.removeValue(forKey: key) }
+        captureCurrentNavigationContext()
     }
 
     func setHistoryFilter(_ filter: HistoryFilter, projectID: ProjectID) {

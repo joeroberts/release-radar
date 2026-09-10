@@ -698,11 +698,24 @@ public actor ApplicationRecoveryManager {
             INSERT OR IGNORE INTO audit_events (
                 id, actor_id, thread_id, reason, created_at, thread_attribution,
                 project_id, entity_type, entity_id,
-                historical_project_id, historical_registration_id
+                historical_project_id, historical_registration_id,
+                event_facts_recorded, event_provenance, event_occurred_at,
+                event_recorded_at, event_project_name, event_registration_id,
+                event_request_generation, event_ticket_id, event_phase_id,
+                event_phase_name, event_ticket_outcome, event_previous_lane,
+                event_current_lane, event_previous_phase_id, event_current_phase_id
             )
             SELECT audit.id, audit.actor_id, audit.thread_id, audit.reason, audit.created_at,
                 audit.thread_attribution, NULL, audit.entity_type, audit.entity_id,
-                audit.project_id, registrations.registration_id
+                audit.project_id, registrations.registration_id,
+                audit.event_facts_recorded, audit.event_provenance,
+                audit.event_occurred_at, audit.event_recorded_at,
+                audit.event_project_name, audit.event_registration_id,
+                audit.event_request_generation, audit.event_ticket_id,
+                audit.event_phase_id, audit.event_phase_name,
+                audit.event_ticket_outcome, audit.event_previous_lane,
+                audit.event_current_lane, audit.event_previous_phase_id,
+                audit.event_current_phase_id
             FROM current_state.audit_events audit
             JOIN current_state.project_registrations registrations
               ON registrations.project_id = audit.project_id;
@@ -711,7 +724,7 @@ public actor ApplicationRecoveryManager {
                 removal_id, source, source_id, title, detail, observed_at, ticket_id,
                 delivery_goal_id, originating_thread_id, runtime_state
             )
-            SELECT removed.removal_id, 'runtime', goals.id, goals.status, goals.text,
+            SELECT removed.removal_id, 'runtime', goals.thread_id || '|' || goals.id, goals.status, goals.text,
                 goals.last_observed_at, links.ticket_id, goals.id, goals.thread_id, goals.status
             FROM current_state.observed_goals goals
             JOIN current_state.project_registrations registrations
