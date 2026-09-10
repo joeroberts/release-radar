@@ -58,7 +58,13 @@ review. Fresh Sol High writer `01a08d1c-cecc-7670-817a-7c5a1e3f3d69` is active i
 worktree `df09`, assigned `codex/phase6c-evidence` from exact handoff
 `84a7a8f42461166a0f4fba28bd8bce76083eb692`;
 one independent Astra High reviewer covers the actual contracts, security,
-recovery and native QA. Ceiling remains Astra High; no subagents.
+recovery and native QA. Ceiling remains Astra High; no subagents. Writer is now
+explicitly escalated via tool to Astra High for the bounded unresolved compact
+native visibility/capture problem after repeated Sol fixture errors. No product
+scope expands. Core/recovery checks and integrated Help focus/open/dismiss have
+passed; compact visible panel evidence and independent review remain required.
+The writer holds the sole isolated build/test reservation under
+`/private/tmp/release-radar-phase6c.7kHIve`; no owner app/state access is authorized.
 
 ## Authorization and next eligible work
 
