@@ -253,6 +253,54 @@ struct FailureStatePresentation: Equatable, Sendable {
 
     init?(agentError: AgentCommandError) {
         switch agentError {
+        case .phaseLifecycleOwnerAuthorityRequired:
+            self.init(
+                title: "Owner action required",
+                detail: "Decide phase lifecycle in Release Radar. External agents can inspect lifecycle but cannot change it.",
+                systemImage: "lock.trianglebadge.exclamationmark",
+                tone: .error,
+                accessibilityID: "failure-phase-lifecycle-authority"
+            )
+        case let .phaseLifecycleRevisionConflict(_, current):
+            self.init(
+                title: "Phase lifecycle changed",
+                detail: "The current lifecycle revision is \(current). Refresh the phase before retrying. No lifecycle state changed.",
+                systemImage: "arrow.clockwise",
+                tone: .warning,
+                accessibilityID: "failure-phase-lifecycle-stale"
+            )
+        case .phaseLifecyclePlanningBaselineRequired, .phaseLifecyclePlanningBaselineConflict:
+            self.init(
+                title: "Completion readiness changed",
+                detail: "Refresh the phase completion assessment before retrying. No lifecycle state changed.",
+                systemImage: "arrow.clockwise",
+                tone: .warning,
+                accessibilityID: "failure-phase-lifecycle-stale"
+            )
+        case let .phaseCompletionBlocked(blockers):
+            self.init(
+                title: "Phase completion blocked",
+                detail: blockers.map(\.message).joined(separator: " "),
+                systemImage: "xmark.octagon",
+                tone: .error,
+                accessibilityID: "failure-phase-completion-blocked"
+            )
+        case .phaseLifecycleNotFound, .invalidPhaseLifecycleTransition:
+            self.init(
+                title: "Phase lifecycle action rejected",
+                detail: "Refresh the phase and choose an action available from its current lifecycle. No lifecycle state changed.",
+                systemImage: "xmark.octagon",
+                tone: .error,
+                accessibilityID: "failure-phase-lifecycle-validation"
+            )
+        case let .completedPhaseReadOnly(phaseID):
+            self.init(
+                title: "Completed phase is read-only",
+                detail: "Reopen \(phaseID.rawValue) before adding or revising delivery work. Read-only inspection remains available.",
+                systemImage: "lock",
+                tone: .warning,
+                accessibilityID: "failure-completed-phase-read-only"
+            )
         case let .planRevisionConflict(_, current):
             self.init(title: "Phase plan changed",
                       detail: "The current phase plan revision is \(current). Refresh the phase before retrying. No delivery state changed.",

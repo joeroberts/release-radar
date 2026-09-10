@@ -394,6 +394,19 @@ struct SidebarView: View {
                                 operations: operations
                             )
                         },
+                        transitionPhaseLifecycle: { phaseID, revision, action, baseline, reason in
+                            await model.transitionPhaseLifecycle(
+                                projectID: projectID,
+                                phaseID: phaseID,
+                                expectedRevision: revision,
+                                action: action,
+                                planningBaselineDigest: baseline,
+                                reason: reason
+                            )
+                        },
+                        reloadPhaseLifecycle: {
+                            await model.reloadPhaseLifecycle()
+                        },
                         referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }
