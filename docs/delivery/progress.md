@@ -34,26 +34,25 @@ worktree `4112`, branch `codex/phase6b-goals`, from committed handoff
 `c374a155589f2b9077787718c209008929bb1744`. Initial Terra Medium assignment is
 now explicitly escalated via tool to Sol High for unresolved actual native
 navigation/verification; ceiling remains Astra High, runtime settings not
-independently exposed. Intermediate candidate `a6eb4f49eb277bc6c67904ecb73dbf72bd48e0bd`
-has focused projection/route 2/2 but lacks complete native acceptance/evidence.
-It is not integrated or slice-complete.
+independently exposed. Writer candidate `66fe0a46df47d3753ec0bc4055e6ef9eb48e6350` is integrated locally
+with its [canonical evidence](evidence/2026-09-10-phase6b-goals.md), wide/compact/
+recovery screenshots and design amendment. Direct xcresult readback confirms
+7/7 focused source tests and the final native journey 1/1, zero failures/skips.
+Native checks cover both goal domains, exact typed associated-work filters,
+wide/compact actual viewport/focus through Back/Forward, Help and registration
+replacement recovery. Writer reports task-owned processes stopped and releases
+its reservation. Independent Sol High review remains pending; 6B is not complete.
 
-The writer broadened a focused test selector to AppRouteTests, then attempted a
-static native fixture that restarted/crashed without a usable pass. Those observed
-commands retained sanitized unsigned settings. Conflicting process reporting was
-resolved to task-owned quiescence. Six exact Goals source tests now pass, including exact Execution associated-work
-filtering. The writer holds the sole native reservation for
-`testLiveWorkspaceGoalsJourneyUsesNativeWideAndCompactControlsAndRestoresExactContext`,
-session `phase6b-goals-writer-20260910-01`, in fresh `native-DerivedData` under its
-scratch root. The known sanitized unsigned serial/offline build-for-testing and
-fresh copied-xctestrun setup apply; actual PID/window must match before CUA.
-Native checks corrected a multi-goal project selector crash and wide detail
-visibility, then verified both domains and exact filters. Session 03 exposed actual
-compact Back viewport/focus, Forward focus and recovery-focus failures; the same
-writer owns bounded navigation corrections and an affected fresh-session rerun.
-Native acceptance remains non-green. No broad selectors or fallback is authorized.
-No unrelated retained-row failure repair. Temporary results remain under
-`/private/tmp/release-radar-phase6b.PTQwNy`; no cleanup occurred.
+During implementation, an overbroad route selector and failed static native
+fixture were stopped; observed commands retained sanitized unsigned settings.
+Native runs then identified and corrected a legal multi-goal project selector
+crash, wide detail visibility and navigation-state failures. A proposed stale-row
+viewport workaround was discarded; the final check captures a visibly actionable
+control's actual departure context. Final session provenance clarification is
+pending because result 06 references a runfile named 05 and its command omits some
+previously assigned identity/Developer/destination fields while retaining env-i
+and unsigned flags. No repeat run is authorized for this clarification. All scratch
+remains under `/private/tmp/release-radar-phase6b.PTQwNy`; no cleanup occurred.
 
 ## Authorization and next eligible work
 
