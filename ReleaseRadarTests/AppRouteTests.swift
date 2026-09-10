@@ -5042,13 +5042,22 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     func testLiveHistoryJourneyUsesNativeWideAndCompactControlsAndRestoresExactContext() async throws {
-        let enableMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M/phase6a-native-01a08be3-v3-enabled")
+        guard let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6A_NATIVE_SESSION"] else {
+            throw XCTSkip("The external controller must supply a unique Phase 6A native session.")
+        }
+        guard !sessionID.isEmpty,
+              sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+            XCTFail("The Phase 6A native session must contain only letters, numbers, hyphens and underscores.")
+            return
+        }
+        let markerRoot = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M", isDirectory: true)
+        let enableMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-enabled")
         guard FileManager.default.fileExists(atPath: enableMarker.path) else {
             throw XCTSkip("The external controller must create the fresh Phase 6A enable marker.")
         }
         try FileManager.default.removeItem(at: enableMarker)
-        let wideMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M/phase6a-native-01a08be3-v3-wide-complete")
-        let compactMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M/phase6a-native-01a08be3-v3-compact-complete")
+        let wideMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-wide-complete")
+        let compactMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-compact-complete")
         XCTAssertFalse(FileManager.default.fileExists(atPath: wideMarker.path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: compactMarker.path))
 
@@ -5081,7 +5090,7 @@ final class AppRouteTests: XCTestCase {
         )
         window.isReleasedWhenClosed = false
         window.appearance = NSAppearance(named: .darkAqua)
-        window.title = "Phase 6A History — isolated native interaction 01a08be3-v3"
+        window.title = "Phase 6A History — isolated native interaction \(sessionID)"
         let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
         hosting.frame = .init(x: 0, y: 0, width: 1_500, height: 940)
         window.contentView = hosting
