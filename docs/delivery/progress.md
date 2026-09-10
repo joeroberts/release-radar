@@ -21,15 +21,16 @@ candidate is `fbbf138b00b0ff9e0b0de3ec33b269984288d30b`; evidence closeout is
 [brief](task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md) and
 [canonical evidence](evidence/2026-09-10-phase6a-history.md) retain the outcome,
 checks, visual references and limitations. Seven Required findings were corrected;
-one new Required reset-state correction is active before the authorized PR merge.
+the subsequent Required reset-state correction is now verified and merged in PR #44.
 
 Chief assessment/review `01a08bdb-88c4-7f72-a529-8bdb0fe72443` (Astra High),
 writer `01a08be3-987c-79a1-aa61-10520c4e8c97` (Sol High, bounded R4 escalation
 Astra High), and independent reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
-(Astra High) are complete and archived. Their files/results are preserved. Writer and reviewer are restored only for the
-same 6A reset-state correction after PR #44 feedback; writer Sol High remains
-source-only under its prior launch restriction, reviewer Astra High owns the
-focused direct tests when reserved. No prior terminal property is reopened.
+(Astra High) are complete and archived. Their files/results are preserved. Writer and reviewer completed the same-outcome reset correction and are archived
+again. Reviewer observed the intended red result then 2/2 passing model tests on
+`ef190dc6063443956853903e2177328b746c1d85`; writer performed no launches.
+Evidence closeout `da52b47ada7ec3d1b5966adf956d48e5268ee00b` was pushed and
+PR #44 merged at `4f917b0c76fa74ebf4e0f4615cbf7e7dd4ac8597`.
 
 Phase 6B Workspace Goals is complete locally. Independently approved source is
 `4c751867b8d6e4f42e1a5edaa3df19e66718c679`; documentation closeout
@@ -75,21 +76,23 @@ Delivery and Execution Goals, revision-bound evidence, generic task adoption,
 workspace search/saved views and contextual Help. Next eligible source slice is
 6C revision-bound delivery evidence under its catalogued brief.
 Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
-Both are published and verified OPEN at the pinned reviewed heads:
+Publication state:
 
 - [PR #44](https://github.com/joeroberts/release-radar/pull/44):
-  `codex/phase6a-reviewed`, head `95cad491f096c83d1bfec9a5decb60b270f454a4`,
-  base `codex/release-radar-mvp`.
+  MERGED, head `da52b47ada7ec3d1b5966adf956d48e5268ee00b`,
+  base `codex/release-radar-mvp`, merge `4f917b0c76fa74ebf4e0f4615cbf7e7dd4ac8597`.
 - [PR #45](https://github.com/joeroberts/release-radar/pull/45):
   `codex/phase6b-reviewed`, head `024a3b5d48517129e3309327ed9fed15cb3c6a38`,
-  base `codex/phase6a-reviewed`; follows #44.
+  OPEN, retargeted base `codex/release-radar-mvp`; follows merged #44.
 
-No 6C implementation or coordination branch was pushed. Neither PR was merged. The owner subsequently authorized merging #44 then #45
-and necessary scoped correction pushes. One Required #44 correction clears the
-three History dictionaries during ephemeral reset/store replacement. Other four
-bot suggestions are non-blocking after source assessment; current failure recovery,
-event-time unknown provenance and direct migration checks are preserved. Root
-prioritizes this correction and sequential merges; 6C stays local.
+No 6C implementation or coordination branch was pushed. PR #44's Required reset correction passed direct tests and independent review.
+The other four bot suggestions were assessed as non-blocking; event-time unknown
+provenance, existing failure recovery and direct migration checks are preserved.
+Root posted the owner-requested CodeRabbit review on #45 after retargeting.
+The bot [reported a review limit](https://github.com/joeroberts/release-radar/pull/45#issuecomment-5626551605)
+at 22:58 UTC; no actual review completed. Retry after approximately 23:58 UTC.
+Do not merge #45 before the requested actual review and disposition of any Required
+findings. Owner merge authorization persists; no new approval is needed.
 Local source/tests/affected docs, scoped commits and necessary
 fresh bounded peer tasks are authorized. One product writer at a time; the
 orchestrator does not implement product or use subagents. Exact committed baselines
@@ -156,8 +159,13 @@ integrated native route/Help test 1/1, zero failures/skips; root controlled only
 verified PID 30450/tokenized window, stopped CUA, then wrote completion before
 host exit. Final compact capture visibly contains the panel. Prior focused
 acceptance, applicability, recovery and transport evidence is recorded canonically.
-Independent candidate review remains required. Publication correction/merges take
-priority; no 6C source or coordination branch is published.
+Independent reviewer `01a08d84-9063-7af2-bfb6-bd4c23328d8b` (Astra High)
+returned four Required corrections: withdraw superseded evidence from current
+assessment, app-owned recording time/order, unknown checkout applicability, and
+consistent PR head/merge revision identity. Same writer is correcting these under
+the existing scope; reviewer is quiescent awaiting the affected delta. Native
+visual/Help evidence is accepted and terminal. No 6C source or coordination branch
+is published.
 
 Owner additionally requires an actual CodeRabbit review on PR #45 after #44 is
 merged and #45 retargeted to `codex/release-radar-mvp`. Root is authorized to post
