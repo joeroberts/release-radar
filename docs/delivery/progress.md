@@ -41,8 +41,10 @@ It is not integrated or slice-complete.
 The writer broadened a focused test selector to AppRouteTests, then attempted a
 static native fixture that restarted/crashed without a usable pass. Those observed
 commands retained sanitized unsigned settings. Conflicting process reporting was
-resolved to task-owned quiescence. All launches are paused pending concrete real
-Goals AppRootView fixture/copied-runfile setup; source work remains authorized.
+resolved to task-owned quiescence. Visible native launches remain paused pending concrete real Goals AppRootView
+fixture/copied-runfile setup. Specifically named non-native Goals identity/navigation
+regressions may run red/green with the same sanitized unsigned serial configuration;
+class-wide native selectors remain prohibited. Source work remains authorized.
 No unrelated retained-row failure repair. Temporary results remain under
 `/private/tmp/release-radar-phase6b.PTQwNy`; no cleanup occurred.
 
