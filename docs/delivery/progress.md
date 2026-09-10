@@ -30,6 +30,12 @@ chief authored no material design or files, independently passed the exact
 orchestrator plan/brief candidate, and stopped with no files/hosts/temporary
 outputs. The completed chief/review task is archived.
 
+History writer `01a08be3-987c-79a1-aa61-10520c4e8c97` (requested Sol High,
+ceiling Astra High) verified exact handoff
+`6bcd31ed4a6fcc9b9c88c1e074e5f24a93787e7f` and owns source in worktree `7e93`,
+branch `codex/phase6a-history`. Its source/tests/affected product documentation
+assignment is exclusive; orchestrator retains ledger/catalog/index ownership.
+
 ## Authorization and ownership
 
 Local source/tests/affected docs, scoped commits and necessary fresh bounded
@@ -55,8 +61,8 @@ notifications, external security scans, runtime/hooks, packaging or cleanup.
 
 The baseline repository documentation check passes using the packaged standalone
 checker. Candidate documentation validation and diff checks passed; independent planning
-review passed with no findings. Next: release the bounded History writer from this
-committed controlling handoff, without another implementation-approval gate.
+review passed with no findings. Next: complete the active History slice, preserve its local candidate and
+direct evidence, then independent review before the first publication request.
 
 All native test hosts require explicit serialized reservation here. No reservation
 is currently held. Before launch inspect the established inert synthetic XCTest
