@@ -40,7 +40,11 @@ for fresh independent review. Direct xcresult readback confirms focused 20/20 an
 native 1/1, zero failures/skips; [canonical evidence](evidence/2026-09-10-phase6a-history.md)
 retains runtime checks, limitations and screenshots. A broader Task 11A readiness
 prerequisite failure remains separately reported; no full-suite green claim.
-The writer checkout is clean; source writes are paused for review.
+Fresh independent Astra High reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
+reviews integrated candidate `d1bfc232d21a41ea82d9db33bcec7171de1dc01e` in worktree
+`dbfa`, covering event/persistence authority, recovery and native UX/QA. Product
+source is paused; writer is making only a fresh native-test session configuration
+adjustment because consumed writer markers cannot be reused by the reviewer.
 
 ## Authorization and ownership
 
@@ -71,7 +75,8 @@ review passed with no findings. Next: complete the active History slice, preserv
 direct evidence, then independent review before the first publication request.
 
 All native test hosts require explicit serialized reservation here. The writer explicitly released the reservation after confirming all
-task-owned build/XCTest/native processes stopped. No reservation is currently held. Before launch inspect the established inert synthetic XCTest
+task-owned build/XCTest/native processes stopped. Reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf` now holds the exclusive
+reservation; writer tests/launches remain paused until explicit handback. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
