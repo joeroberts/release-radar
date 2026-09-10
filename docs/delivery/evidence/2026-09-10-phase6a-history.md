@@ -165,8 +165,16 @@ are recorded in
 
 The bounded correction adds the three missing dictionary resets to
 `clearEphemeralViewState`. Normal Back and Forward navigation outside reset and
-recovery continues to preserve History context. Final focused verification and
-independent review remain pending on this correction candidate.
+recovery continues to preserve History context. On exact correction candidate
+`ef190dc6063443956853903e2177328b746c1d85`, the same two selectors passed 2/2
+with zero failures or skips and `xcodebuild` exited successfully. The direct
+red-to-green result establishes that preference reset and recovered-store adoption
+clear all three History values immediately and after reopening the same project ID,
+including when the recovered store uses a fresh registration. The independent
+bounded source and test review classified the Required reset defect as resolved and
+reported no additional Required or Optional findings. Final results are retained at
+`/private/tmp/release-radar-phase6a-reset-review-01a08c37-12ddb97/final.xcresult`
+and `final.log`; the isolated host exited and the reviewer checkout was clean.
 
 Before the fresh reviewer runs, writer verification departed from the authorized
 sanitized inert XCTest-host path. An unsanitized build-for-testing succeeded and re-signed the
