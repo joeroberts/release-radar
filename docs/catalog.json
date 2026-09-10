@@ -736,6 +736,22 @@
       "isLeaf": true,
       "firstRead": "rr-phase6d-adoption-brief-2026-09-10",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase6e-search",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6e-search",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 6E workspace search, saved views and Help",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-phase6e-search-brief-2026-09-10",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5993,6 +6009,22 @@
         "policy": "notApplicable"
       },
       "authorityRole": "delivery.phase6d-adoption"
+    },
+    {
+      "artifactID": "rr-phase6e-search-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase6e-search",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      },
+      "authorityRole": "delivery.phase6e-search"
     }
   ]
 }
