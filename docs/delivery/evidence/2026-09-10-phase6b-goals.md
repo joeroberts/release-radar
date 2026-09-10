@@ -3,12 +3,17 @@
 - Date: 2026-09-10
 - Branch: `codex/phase6b-goals`
 - Baseline: `c374a155589f2b9077787718c209008929bb1744`
+- Final writer source revision: `da3c0d5b3fc838d8dd232c3c07ad6bede83c7bef`
+- Independently approved integrated candidate:
+  `4c751867b8d6e4f42e1a5edaa3df19e66718c679`
 - Controlling brief:
   [`phase6b-goals-brief.md`](../task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md)
 - Scope: local source, synthetic stores, isolated native XCTest host, canonical
   evidence and local commits. No push, pull request, merge, installation,
-  owner-application state, catalog acceptance, credentials, notifications or
-  external-service mutation was authorized or performed.
+  owner-application state mutation, catalog acceptance, credentials,
+  notifications or external-service mutation was authorized or intentionally
+  performed. One unintended launch during native controller recovery is recorded
+  below; its incidental local effects are unestablished.
 
 ## Delivered behavior
 
@@ -54,9 +59,9 @@ identity.
 
 ## Direct verification
 
-Every build/test run used `ReleaseRadar.xcodeproj`, scheme `ReleaseRadar`, serial
-macOS execution, signing disabled and a sanitized environment under the retained
-Phase 6B scratch root. Dependencies were resolved from the pinned offline
+Writer builds and tests used `ReleaseRadar.xcodeproj`, scheme `ReleaseRadar`,
+serial macOS execution, signing disabled and a sanitized environment under the
+retained writer scratch root. Dependencies were resolved from the pinned offline
 SourcePackages checkout at RekonDesignSystem revision
 `6d1fb9d341850ee1d13ba9391fada072534eb684`.
 
@@ -108,31 +113,71 @@ SourcePackages checkout at RekonDesignSystem revision
   evidence replacement preserves exact Execution observation/link identities
   and that Execution plus work-without-goal rows add stable identity cues only
   when their ordinary labels collide.
+- The independent reviewer built the exact integrated candidate
+  `bcf1c3fcd65f55261271429dd1d6d91bf5c6cfae` from a fresh full `env -i`,
+  unsigned arm64 product set, then ran
+  `phase6b-native-review-run.xcresult`. Direct result-bundle readback reported
+  Passed, 1/1, zero failures and zero skips in 160.321 seconds. The reviewer
+  exercised the actual filter-zero, Delivery/Execution, Help, wide/compact,
+  associated-work, Back/Forward and replaced-registration recovery journey.
+  A later accessibility-tree inspection retracted that candidate's approval only
+  for missing sidebar selected semantics; this passing full journey remains
+  terminal evidence for every unchanged property. The test host and `xcodebuild`
+  process were stopped and the sole native reservation released.
+- `phase6b-accessibility-v31-build.xcresult` records a successful full sanitized,
+  unsigned arm64 build-for-testing of the final writer correction. The guarded
+  raw AX assertion first failed on the intermediate integrated candidate: Goals
+  and unfocused Needs Review both reported `role=AXButton`, `selected=true`, with
+  Needs Review reporting `value=nil` and `focused=false`. That failed result is
+  retained as
+  `/private/tmp/release-radar-phase6b-review-01a08cde.L147PW/results/phase6b-native-review-sidebar-run.xcresult`.
+- On final integrated candidate `4c751867b8d6e4f42e1a5edaa3df19e66718c679`,
+  the unchanged raw assertion passed: Goals reported selected and Needs Review
+  did not. Corrected repeat 03 then timed out because the compact and recovery
+  completion markers were not written during controller compaction; its result
+  did not finalize and lacked `Info.plist`, so it is not reported as a passing
+  run. No rerun was warranted: the raw changed behavior passed directly, while
+  the prior full 1/1 journey remains terminal for unchanged behavior. The
+  independent reviewer approved the combined evidence with no Required findings.
 
-The passing native result emitted a benign teardown warning after the temporary
-fixture directory was unlinked while SQLite still held a vnode. The test and all
-assertions completed successfully; no product store, owner data or external
-state was involved.
+The independent native run logged a vnode-unlinked warning during teardown after
+all assertions, when the isolated temporary fixture database was removed while
+SQLite still held the vnode. There is no evidence of product-state corruption;
+the optional fixture-teardown note is non-blocking and no further change was made.
+
+After the reviewer had terminated test host PID 13673, a controller race launched
+plain fresh-product PID 14029, which displayed the schema-19-unrecognized screen.
+The orchestrator sent `TERM` to PID 14029 and performed no intentional owner-state
+action in that process. Because the unintended launch occurred, zero incidental
+local effects are not claimed.
 
 ## Native visual and accessibility evidence
 
 ![Wide Execution Goals list and detail](2026-09-10-phase6b-goals-wide.png)
 
-The wide capture shows the cross-project Execution list and selected exact
+Captured at 2026-09-10 16:24:11 EDT from the passing `bcf1c3f` wide
+Execution journey, the wide image shows the cross-project list and exact goal 12
 detail side by side, with unavailable-live-observer guidance, persisted-source
 copy and filters remaining visible.
 
 ![Compact linked Execution Goal after Back](2026-09-10-phase6b-goals-compact.png)
 
-The compact capture shows the goal row retaining native focus after Back, the
-detail stacked in the same vertical scroll surface and the associated-work action
+Captured at 2026-09-10 16:25:20 EDT from the passing `bcf1c3f` compact Back
+journey, the compact image shows linked goal 12 retaining native focus, the detail
+stacked in the same vertical scroll surface and the associated-work action
 remaining reachable without horizontal clipping.
 
 ![Replaced-registration recovery](2026-09-10-phase6b-goals-registration-recovery.png)
 
-The recovery capture shows the exact registration failure on Projects and the
-separate recovery focus target. Accessibility readback contained the same refusal
-to substitute a different registration.
+Captured at 2026-09-10 16:25:35 EDT from the passing `bcf1c3f`
+registration-replacement and Back journey, the recovery image shows the exact
+registration failure on Projects and the separate recovery focus target.
+Accessibility readback contained the same refusal to substitute a different
+registration.
+
+The final correction changes only the sidebar's accessibility selected trait and
+does not change these pixels. The extracted reviewer attachments matched the
+canonical PNGs byte for byte and were visually inspected after comparison.
 
 The Goals mockup remains the Execution-domain reference for workspace discovery,
 source chips and wide list/detail composition. The delivered UI preserves the
@@ -145,17 +190,21 @@ necessary product-boundary and responsive adaptations, not new delivery states.
 
 ## Candidate closeout
 
-The packaged documentation check was run against the exact repository root from
-the pinned isolated build. Before orchestrator-owned catalog/index integration it
-correctly reports the new compact capture as an uncatalogued file. The writer does
-not own those metadata files; the four intended evidence entries were supplied to
-the orchestrator for the required integration and final check. The final local
-candidate commit and independent review disposition are reported in the delivery
-closeout after that owned integration.
+The orchestrator integrated the final source revision as
+`4c751867b8d6e4f42e1a5edaa3df19e66718c679`. The independent reviewer approved
+that exact candidate with no Required findings, based on the source review,
+13/13 focused Goals tests, fresh unsigned arm64 build, the final successful raw
+sidebar assertions and the prior passing full native journey for unchanged
+properties. This documentation-only closeout is returned to the orchestrator for
+its owned catalog, index, progress-ledger and final documentation-check readback.
 
 ## Temporary-output status
 
 No cleanup was authorized or performed. Result bundles, logs, marker files,
 isolated DerivedData, dependency checkout, attachment exports and synthetic
-stores remain under `/private/tmp/release-radar-phase6b.PTQwNy`. The three PNGs
-above are the verified canonical repository copies.
+stores remain under `/private/tmp/release-radar-phase6b.PTQwNy`, including the
+fresh `reviewer-captures.MMMqYi` export subdirectory. The reviewer's read-only
+source bundle remains under
+`/private/tmp/release-radar-phase6b-review-01a08cde.L147PW`. The three PNGs above
+were visually inspected after replacement and are the verified canonical
+repository copies.
