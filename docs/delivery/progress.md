@@ -21,13 +21,15 @@ candidate is `fbbf138b00b0ff9e0b0de3ec33b269984288d30b`; evidence closeout is
 [brief](task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md) and
 [canonical evidence](evidence/2026-09-10-phase6a-history.md) retain the outcome,
 checks, visual references and limitations. Seven Required findings were corrected;
-no Required review finding remains.
+one new Required reset-state correction is active before the authorized PR merge.
 
 Chief assessment/review `01a08bdb-88c4-7f72-a529-8bdb0fe72443` (Astra High),
 writer `01a08be3-987c-79a1-aa61-10520c4e8c97` (Sol High, bounded R4 escalation
 Astra High), and independent reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
-(Astra High) are complete and archived. Their files/results are preserved and
-task-owned processes stopped. No 6A reservation remains active.
+(Astra High) are complete and archived. Their files/results are preserved. Writer and reviewer are restored only for the
+same 6A reset-state correction after PR #44 feedback; writer Sol High remains
+source-only under its prior launch restriction, reviewer Astra High owns the
+focused direct tests when reserved. No prior terminal property is reopened.
 
 Phase 6B Workspace Goals is complete locally. Independently approved source is
 `4c751867b8d6e4f42e1a5edaa3df19e66718c679`; documentation closeout
@@ -82,7 +84,12 @@ Both are published and verified OPEN at the pinned reviewed heads:
   `codex/phase6b-reviewed`, head `024a3b5d48517129e3309327ed9fed15cb3c6a38`,
   base `codex/phase6a-reviewed`; follows #44.
 
-No 6C implementation or coordination branch was pushed. Neither PR was merged.
+No 6C implementation or coordination branch was pushed. Neither PR was merged. The owner subsequently authorized merging #44 then #45
+and necessary scoped correction pushes. One Required #44 correction clears the
+three History dictionaries during ephemeral reset/store replacement. Other four
+bot suggestions are non-blocking after source assessment; current failure recovery,
+event-time unknown provenance and direct migration checks are preserved. Root
+prioritizes this correction and sequential merges; 6C stays local.
 Local source/tests/affected docs, scoped commits and necessary
 fresh bounded peer tasks are authorized. One product writer at a time; the
 orchestrator does not implement product or use subagents. Exact committed baselines
@@ -94,7 +101,7 @@ preserve immutable shared-V1 version/digest pairs. No governing AGENTS, installe
 skills/config, consumer instructions or guardrails may change.
 
 Publication authorization covers only the reviewed 6A/6B endpoints above.
-6C push/PR, remote merge and installation require separate approval. Installation/other-Mac owner testing wait until
+6C push/PR or merge, and all installation, require separate approval. Installation/other-Mac owner testing wait until
 September 11 or later and do not block authorized source work. No owner
 state/SQLite, credentials, catalog binding/acceptance, consumer adoption,
 notifications, external security scans, runtime/hooks, packaging or cleanup.
