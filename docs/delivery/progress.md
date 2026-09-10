@@ -262,3 +262,11 @@ affected compatibility cases in 42. Updated canonical captures visibly show
 last placement. Integrated documentation validation passed; stable artifact
 identities and checksum policies remain unchanged. Independent correction
 review is pending; no completion or publication is claimed.
+
+
+Correction recheck closed live recovery, automatic historical delivery credit and
+frozen preview findings. Four Required cases remain: phase-level non-vacuity,
+explicit reconciliation of detached debt after destination acceptance, debt-free
+superseded goals, and split coverage against pre-existing lineage. The original
+writer owns these bounded corrections; successful recovery/native properties
+remain closed. No additional review layer or full-suite restart is authorized.
