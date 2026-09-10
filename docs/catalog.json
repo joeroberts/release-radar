@@ -642,6 +642,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase5d-successors",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5d-successors",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 5D retained successors and carried goal obligations",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5530,6 +5545,22 @@
       "supersedes": [],
       "applicationSensitivity": [
         "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5d-successors-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.phase5d-successors",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase5d-successors",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"

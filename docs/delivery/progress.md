@@ -207,3 +207,15 @@ The next approved slice is Phase 5D successor/carry-forward through this proposa
 path, after coordinated baseline/ownership handoff. Publication is separately
 blocked: inherited shared/C commits remain local-only until explicit owner
 authorization for their remote endpoint; every merge is separately approved.
+
+## Active Phase 5D local handoff
+
+Parent authorized Phase5D from exact local closeout `dcfc709`, releasing overlapping
+source ownership. The [Phase5D brief](task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md)
+incorporates read-only Astra High chief consultation `01a08988-2e67-72f2-b682-3ac707e5a37f`:
+all assignment-loss paths, explicit goal-owned obligations, successor history,
+readiness/dependency gates and retention. No new owner choice is outstanding. The completed chief is archived; it created
+no files or processes.
+Orchestration is local `codex/phase5d-orchestrator`; fresh Sol High writer follows
+the committed handoff, with one independent Astra High risk review. All inherited
+shared+C/D publication remains unapproved; E full lifecycle follows D.

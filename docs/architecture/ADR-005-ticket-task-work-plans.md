@@ -306,3 +306,11 @@ Proposal operations cannot revise, replace, complete or supersede existing tasks
 and cannot mutate started or Accepted tickets. Existing task IDs, completion,
 lifecycle and outstanding obligations are preserved; successor and carry-forward
 reconciliation remain Phase 5D.
+
+## Phase 5D successor task preservation — 2026-09-10
+
+Retired originals retain task definitions, completion and history but cannot receive
+new task execution or definition changes. Successor tasks use new identities and
+Active/Pending state; inherited evidence is provenance and supplies no completion
+credit. An approved successor proposal preserves original acceptance/history and
+does not stop external execution.
