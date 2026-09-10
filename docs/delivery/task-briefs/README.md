@@ -600,7 +600,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase6a-history-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md](2026-09-10-phase6a-history/phase6a-history-brief.md) | document | supporting | proposed | none | none |
+| rr-phase6a-history-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md](2026-09-10-phase6a-history/phase6a-history-brief.md) | document | controlling &#40;delivery.phase6a-history&#41; | active | none | none |
 
 ### Children
 

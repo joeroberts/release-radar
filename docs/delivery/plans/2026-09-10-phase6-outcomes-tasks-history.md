@@ -1,6 +1,7 @@
 # Phase 6: outcomes, tasks and history
 
-Status: planning candidate under independent architecture/sequencing review.
+Status: controlling Phase 6 implementation sequence; independent review passed at
+`22126cf560b6b4c527b20543a0f7064a91ac95ad` with no Required findings.
 Source baseline: `e5372d170d9202d207922fe51f38bcf0827a2967` (merged Phase 5 and shared V1 plus ledger closeout).
 
 ## Outcome and authority

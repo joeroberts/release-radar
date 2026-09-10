@@ -1,6 +1,7 @@
 # Phase 6A: truthful event-time History
 
-Status: candidate for independent plan review; writer not released.
+Status: controlling brief; independent planning review passed at `22126cf` with
+no Required findings. Local implementation is authorized.
 
 ## Objective and outcome
 

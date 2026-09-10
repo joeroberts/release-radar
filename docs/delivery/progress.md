@@ -18,16 +18,17 @@ The [Phase 6 plan](plans/2026-09-10-phase6-outcomes-tasks-history.md) preserves 
 complete selected outcome: History/attention, distinct Delivery and Execution
 Goals, revision-bound evidence, generic task adoption, workspace search/saved views
 and contextual Help. Its [first brief](task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md)
-selects event-time History as the first complete outcome. Both are review candidates;
-no product writer is yet released.
+selects event-time History as the first complete outcome. Independent Astra High review passed exact candidate `22126cf560b6b4c527b20543a0f7064a91ac95ad`
+with no findings. Plan and brief now control the authorized local implementation.
 
 Chief architecture/sequencing task `01a08bdb-88c4-7f72-a529-8bdb0fe72443`
 (requested Astra High, ceiling Astra High) completed read-only current-contract
 assessment: no unresolved owner choice blocks the selected phase; History first
 is sound, phase-owned goals and 1:1 execution links remain, retained unknown facts
 must stay unknown, and saved queries must enter the full-backup boundary. The
-chief authored no material design or files and is assigned independent review of
-the orchestrator's exact plan/brief candidate. No hosts or temporary files created.
+chief authored no material design or files, independently passed the exact
+orchestrator plan/brief candidate, and stopped with no files/hosts/temporary
+outputs. The completed chief/review task is archived.
 
 ## Authorization and ownership
 
@@ -53,9 +54,9 @@ notifications, external security scans, runtime/hooks, packaging or cleanup.
 ## Verification, blockers and next work
 
 The baseline repository documentation check passes using the packaged standalone
-checker. Planning candidate validation/review is pending. Next: complete that
-review, commit the controlling handoff and release the bounded History writer
-without another blanket implementation-approval gate.
+checker. Candidate documentation validation and diff checks passed; independent planning
+review passed with no findings. Next: release the bounded History writer from this
+committed controlling handoff, without another implementation-approval gate.
 
 All native test hosts require explicit serialized reservation here. No reservation
 is currently held. Before launch inspect the established inert synthetic XCTest
