@@ -66,8 +66,17 @@ The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
 workspace search/saved views and contextual Help. Next eligible source slice is
 6C revision-bound delivery evidence under its catalogued brief.
-The reviewed 6A publication endpoint is pinned locally at `codex/phase6a-reviewed`,
-`95cad491f096c83d1bfec9a5decb60b270f454a4`, and sent to the parent; no push occurred.
+Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
+Both are published and verified OPEN at the pinned reviewed heads:
+
+- [PR #44](https://github.com/joeroberts/release-radar/pull/44):
+  `codex/phase6a-reviewed`, head `95cad491f096c83d1bfec9a5decb60b270f454a4`,
+  base `codex/release-radar-mvp`.
+- [PR #45](https://github.com/joeroberts/release-radar/pull/45):
+  `codex/phase6b-reviewed`, head `024a3b5d48517129e3309327ed9fed15cb3c6a38`,
+  base `codex/phase6a-reviewed`; follows #44.
+
+No 6C implementation or coordination branch was pushed. Neither PR was merged.
 Local source/tests/affected docs, scoped commits and necessary
 fresh bounded peer tasks are authorized. One product writer at a time; the
 orchestrator does not implement product or use subagents. Exact committed baselines
@@ -78,9 +87,8 @@ and focused audited-handoff/compatibility tests. ADR-006 reserves guidance v3;
 preserve immutable shared-V1 version/digest pairs. No governing AGENTS, installed
 skills/config, consumer instructions or guardrails may change.
 
-Present the reviewed 6A branch/head to the parent for the first publication
-endpoint. Phase 6 push/PR is not yet authorized; remote merge and installation
-require separate approval. Installation/other-Mac owner testing wait until
+Publication authorization covers only the reviewed 6A/6B endpoints above.
+6C push/PR, remote merge and installation require separate approval. Installation/other-Mac owner testing wait until
 September 11 or later and do not block authorized source work. No owner
 state/SQLite, credentials, catalog binding/acceptance, consumer adoption,
 notifications, external security scans, runtime/hooks, packaging or cleanup.
@@ -119,3 +127,7 @@ All scratch, including contaminated products/symlinks, remains; no cleanup occur
 
 An empty incidental scratch file `/tmp/phase6b-unused` was created during
 coordination and is temporary; it remains retained with no cleanup authorization.
+
+Temporary PR body files remain in `/tmp/release-radar-phase6-publication/`
+(`phase6a-pr.md`, `phase6b-pr.md`); the published PR descriptions are canonical.
+No cleanup authorization was requested or granted during publication.
