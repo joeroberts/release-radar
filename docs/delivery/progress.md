@@ -42,9 +42,13 @@ retains runtime checks, limitations and screenshots. A broader Task 11A readines
 prerequisite failure remains separately reported; no full-suite green claim.
 Fresh independent Astra High reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
 reviews integrated candidate `d1bfc232d21a41ea82d9db33bcec7171de1dc01e` in worktree
-`dbfa`, covering event/persistence authority, recovery and native UX/QA. Product
-source is paused; writer is making only a fresh native-test session configuration
-adjustment because consumed writer markers cannot be reused by the reviewer.
+`dbfa`, covering event/persistence authority, recovery and native UX/QA. Review found seven Required gaps: newer-audit backup reconciliation; removed
+History controls; observation identity across retention; actual viewport/focus
+restoration; full reason detail; retained lifecycle fact preservation; and honest
+observation timestamps. The original writer owns bounded corrections plus focused
+regressions. Test-only fresh-session support is committed at `229ad8703cb7a6096fc6eb9928f697f087969f4d`.
+Same reviewer will recheck corrections and independently verify native UX; no
+publication or completion claim is made for the current candidate.
 
 ## Authorization and ownership
 
@@ -75,8 +79,9 @@ review passed with no findings. Next: complete the active History slice, preserv
 direct evidence, then independent review before the first publication request.
 
 All native test hosts require explicit serialized reservation here. The writer explicitly released the reservation after confirming all
-task-owned build/XCTest/native processes stopped. Reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf` now holds the exclusive
-reservation; writer tests/launches remain paused until explicit handback. Before launch inspect the established inert synthetic XCTest
+task-owned build/XCTest/native processes stopped. Reviewer released the reservation without launching a host. The original writer
+now holds the exclusive reservation for Required corrections; it must stop and
+release before the same reviewer resumes native QA. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
