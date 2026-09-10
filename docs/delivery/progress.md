@@ -256,10 +256,16 @@ Parent explicitly authorized Phase 5E full lifecycle from exact D closeout
 The [Phase 5E brief](task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
 preserves the selected lifecycle, guarded completion and explicit reopen policy.
 Fresh read-only chief task `01a08a76-9040-75a2-9e8d-9b367e08903e` (Astra High)
-completed contract guidance with no new owner choice, files or runtime actions.
+completed contract guidance with no new owner choice, files or runtime actions;
+the completed consultation is archived.
 The handoff incorporates owner authority, D coverage composition, all-writer
 admission and live recovery preservation. Orchestration uses
 `codex/phase5e-orchestrator`; one fresh Sol High writer and one independent Astra
 High reviewer are the authorized delivery profiles, ceiling Astra High.
+Fresh writer `01a08a7d-c80d-7530-9791-94689a1456e3` is active from committed
+handoff `2bee505a255b1d4dc32d9e3d377bcce015acbcdf`, requested Sol High, with
+source/tests/evidence ownership in its isolated worktree. Actual runtime settings
+are not independently exposed. Each native or test run requires a separate
+sanitized-host reservation; no run has been released at this handoff.
 Shared+C/D/E publication, installation, app-state/catalog acceptance and cleanup
 remain excluded. The documented D startup limitation remains retained.
