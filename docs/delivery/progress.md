@@ -247,3 +247,79 @@ remain unapproved; no installation, adoption, runtime pilot or owner-state chang
 is authorized. Phase 5E full lifecycle is next eligible under the approved sequence,
 after parent-coordinated authorization and baseline/ownership handoff. Eligibility
 alone does not release a writer.
+
+
+## Phase 5E local completion
+
+Phase 5E delivers the approved explicit lifecycle from handoff `2bee505`.
+Writer `01a08a7d-c80d-7530-9791-94689a1456e3` (requested Sol High) preserved
+candidate `068c8ddad6a9f4d555839f1f6896cf394a7f81df` on
+`codex/phase5e-lifecycle`; final evidence-only HEAD is
+`c924d79699fd4a8c880969f14801600dc6d55a84`. Fresh independent Astra High reviewer
+`01a08af7-8419-7b51-9443-c1d7f410ab3d` returned READY on that exact candidate.
+Both Required findings are closed: mixed delivered/fully dropped completion and
+exact-removal retained lifecycle readback, including timestamp/chronology.
+The read-only chief consultation is complete and archived. Actual runtime model
+settings are not independently exposed; no orchestrator subagents were used.
+
+The [brief](task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
+and [canonical evidence](evidence/2026-09-10-phase5e-lifecycle.md) retain scope
+and verification. Final lifecycle/schema checks passed 12/12; affected correction
+checks passed 3/3 and the timestamp residual passed 1/1. The isolated native v2
+journey passed 1/1 with external wide/compact controls, explicit reopening and
+completion, reload, reason focus, three In-delivery phases and unchanged active
+phase. Native v1 exposed a false recovery banner; its bounded correction passed
+regression and native verification. Full process restart was not verified.
+
+Source and canonical evidence/PNG are integrated locally. Catalog and indexes
+record completed evidence and brief disposition; application binding, catalog
+acceptance and readback remain unauthorized, so no application synchronization
+claim is made. Orchestrator branch `codex/phase5e-orchestrator` preserves the
+integrated source and delivery metadata. Documentation validation passed. Both
+bounded writer and reviewer are complete and archived after terminal handback;
+all task-owned command, test and native-host processes are stopped.
+
+Temporary bundles/logs/markers/exports remain under
+`/private/tmp/release-radar-phase5e-writer/` and synthetic roots under
+`/Users/Shared/` and XCTest temporary locations as detailed in the evidence.
+Pre-correction native-v1 fixture teardown removed its own live-store temporary
+root; that cleanup was removed, and no orchestrator cleanup occurred. No plain
+E app launch occurred; installed owner app 60590 remained untouched.
+
+A/B are merged; shared execution V1 and C/D/E are complete locally. Parent receives
+the local closeout for next sequencing and publication decisions. Shared+C/D/E
+push, PR, merge, installation, owner-state/catalog acceptance and cleanup remain
+unapproved. No further product writer is released by eligibility alone.
+
+## Authorized publication — 2026-09-10
+
+The owner explicitly authorized pushing and opening separate sequential PRs for
+shared execution and Phase 5C–5E. This supersedes the earlier local-only push/PR
+restrictions above, only for this publication endpoint. The Phase 5 orchestrator
+is the sole publication/integration owner. No PR merge, installation, consumer
+adoption, owner application/catalog mutation or evidence cleanup is authorized.
+
+The following PRs are open in order. Heads below identify the initial publication
+commits; the Phase 5E branch also carries this subsequent publication-ledger
+closeout. Each branch preserves its reviewed endpoint without rewriting history.
+
+| Slice | PR | Head branch / initial commit | Base branch |
+| --- | --- | --- | --- |
+| Shared execution | [#40](https://github.com/joeroberts/release-radar/pull/40) | `codex/publish-shared-execution` / `bda726c2f00c5b52efa376d39f90e431a3f7f35b` | `codex/release-radar-mvp` |
+| Phase 5C | [#41](https://github.com/joeroberts/release-radar/pull/41) | `codex/publish-phase5c` / `4e9eb8c0883362751f2fb6e230e40d5d0b3ff82c` | `codex/publish-shared-execution` |
+| Phase 5D | [#42](https://github.com/joeroberts/release-radar/pull/42) | `codex/publish-phase5d` / `3f06cb6e290c3e3911e7c993656191fdb0541ed5` | `codex/publish-phase5c` |
+| Phase 5E | [#43](https://github.com/joeroberts/release-radar/pull/43) | `codex/publish-phase5e` / `c0223b84f6a37a11d92927e7727e26e4cdb181a3` | `codex/publish-phase5d` |
+
+The shared publication merge incorporated current remote target `de523882` and
+resolved only older ledger text in favor of already verified delivery facts.
+That ancestry was merged forward through C/D/E. All four publication trees
+matched their preserved endpoints (`28d323a`, `dcfc709`, `9bd11ca`, `489c6e3`)
+exactly before this ledger-only update. No product code changed and terminal
+source reviews/tests were not repeated. Repository documentation validation and
+diff checks passed; GitHub reported all four PRs open and mergeable at readback.
+Mergeability is not approval or a CI-pass claim. Merge in stack order only after
+separate owner authorization, updating later PR bases as needed.
+
+Temporary PR body files remain in `/private/tmp/release-radar-publication/`;
+the published descriptions and this ledger are their durable counterparts.
+Existing verification outputs remain retained. No cleanup occurred.

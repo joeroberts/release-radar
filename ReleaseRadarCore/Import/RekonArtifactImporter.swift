@@ -246,14 +246,22 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
 
     public func apply(_ preview: ImportPreview, to project: ProjectID) async throws {
         guard project == self.project.projectID else { throw RekonImportError.targetProjectMismatch }
-        guard preview.documentationCatalogDigest != nil else { return try await applyValidated(preview, to: project, documentation: nil) }
         do {
+            guard preview.documentationCatalogDigest != nil else {
+                return try await applyValidated(preview, to: project, documentation: nil)
+            }
             let context = try await store.documentationRead { try DocumentationRootContext.read($0, path: preview.sourceRoot.path, projectID: project.rawValue) }
             try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
                 try context.verifyAuthorization(resolved)
                 try await applyValidated(preview, to: project, documentation: context)
             }
         } catch let error as RekonImportError { throw error }
+        catch let error as PhaseLifecyclePolicyError {
+            if case let .completedPhaseReadOnly(phaseID) = error {
+                throw RekonImportError.completedPhaseReadOnly(phaseID)
+            }
+            throw error
+        }
         catch { throw RekonImportError.documentation(DocumentationCatalogContext.map(error)) }
     }
 
@@ -289,6 +297,9 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
             ) == projectID else {
                 throw RekonImportError.projectNotFound
             }
+
+            try Self.requireOpenPhaseOwners(
+                preview: preview, projectID: project, connection: connection)
 
             var managedArtifacts: [String: String] = [:]
             if let documentation {
@@ -578,6 +589,76 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
                         connection: connection
                     )
                 }
+            }
+        }
+    }
+
+    private static func requireOpenPhaseOwners(
+        preview: ImportPreview,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        func phase(_ phaseID: PhaseID) throws {
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM phases WHERE project_id=? AND id=?",
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+            ) == 1 else { return }
+            try PhaseLifecyclePolicy.requireOpen(
+                projectID: projectID, phaseID: phaseID, connection: connection)
+        }
+        func ticket(_ ticketID: TicketID) throws {
+            try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                projectID: projectID, ticketID: ticketID, connection: connection)
+        }
+        func rowText(_ value: SQLiteValue?) -> String? {
+            guard case let .text(text)? = value else { return nil }
+            return text
+        }
+
+        // Applying a fresh import marks every prior importer-owned evidence row
+        // unavailable before refreshing the rows present in the artifact. That
+        // global write must honor the old association, even when the evidence
+        // is absent from the incoming preview.
+        for row in try connection.rows(
+            "SELECT DISTINCT ticket_id FROM evidence WHERE project_id=? AND id LIKE 'import-evidence:%' AND ticket_id IS NOT NULL ORDER BY ticket_id",
+            bindings: [.text(projectID.rawValue)]
+        ) {
+            if let ticketID = rowText(row["ticket_id"]) { try ticket(.init(rawValue: ticketID)) }
+        }
+        if preview.documentationCatalogDigest != nil {
+            for row in try connection.rows(
+                "SELECT DISTINCT ticket_id FROM evidence WHERE project_id=? AND artifact_id IS NOT NULL AND ticket_id IS NOT NULL ORDER BY ticket_id",
+                bindings: [.text(projectID.rawValue)]
+            ) {
+                if let ticketID = rowText(row["ticket_id"]) { try ticket(.init(rawValue: ticketID)) }
+            }
+        }
+
+        for importedPhase in preview.phases { try phase(importedPhase.id) }
+        for importedTicket in preview.tickets {
+            try ticket(importedTicket.id)
+            try phase(importedTicket.phaseID)
+        }
+        for dependency in preview.phaseDependencies { try phase(dependency.phaseID) }
+        for dependency in preview.ticketDependencies { try ticket(dependency.ticketID) }
+        for evidence in preview.evidence {
+            if let ticketID = evidence.ticketID { try ticket(ticketID) }
+            if let oldTicketID = try connection.scalarText(
+                "SELECT ticket_id FROM evidence WHERE project_id=? AND path=?",
+                bindings: [.text(projectID.rawValue), .text(evidence.path)]
+            ) {
+                try ticket(.init(rawValue: oldTicketID))
+            }
+        }
+        for review in preview.reviewItems {
+            if let ticketID = review.ticketID { try ticket(ticketID) }
+            let reviewID = stableID(
+                "review", projectID.rawValue, review.kind.rawValue, review.sourceID)
+            if let oldTicketID = try connection.scalarText(
+                "SELECT ticket_id FROM review_items WHERE project_id=? AND id=?",
+                bindings: [.text(projectID.rawValue), .text(reviewID)]
+            ) {
+                try ticket(.init(rawValue: oldTicketID))
             }
         }
     }

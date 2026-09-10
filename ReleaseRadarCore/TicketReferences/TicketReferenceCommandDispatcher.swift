@@ -43,6 +43,13 @@ struct TicketReferenceCommandDispatcher: Sendable {
                 }) {
                     return replay
                 }
+                try await store.documentationRead { connection in
+                    try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                        projectID: .init(rawValue: identity.projectID),
+                        ticketID: .init(rawValue: ids.ticketID),
+                        connection: connection
+                    )
+                }
 
                 let prepared = try Self.prepare(envelope.command, context: context)
                 let auditID = AuditEventID(rawValue: UUID().uuidString)
@@ -81,6 +88,11 @@ struct TicketReferenceCommandDispatcher: Sendable {
                         ) {
                             throw TicketReferenceControl.replay(replay)
                         }
+                        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                            projectID: .init(rawValue: identity.projectID),
+                            ticketID: .init(rawValue: ids.ticketID),
+                            connection: connection
+                        )
                         try context.verifyPersisted(connection)
                         let current = try Self.prepare(envelope.command, context: context)
                         guard current == prepared else {
@@ -121,6 +133,11 @@ struct TicketReferenceCommandDispatcher: Sendable {
             return .init(entityIDs: [], auditEventID: nil, error: .appUnavailable)
         } catch let error as TicketReferenceMutationError {
             return .init(entityIDs: [], auditEventID: nil, error: Self.map(error))
+        } catch let error as PhaseLifecyclePolicyError {
+            if case let .completedPhaseReadOnly(phaseID) = error {
+                return .init(entityIDs: [], auditEventID: nil, error: .completedPhaseReadOnly(phaseID))
+            }
+            return .init(entityIDs: [], auditEventID: nil, error: .internalFailure(error.localizedDescription))
         } catch let error as DocumentationOperationError {
             return .init(entityIDs: [], auditEventID: nil, error: .documentation(error))
         } catch let error as StoreError {

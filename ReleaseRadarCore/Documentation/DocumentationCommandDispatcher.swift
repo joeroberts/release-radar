@@ -27,6 +27,13 @@ struct DocumentationCommandDispatcher: Sendable {
                 }) {
                     return result
                 }
+                try await store.documentationRead { connection in
+                    try Self.requireOpenPhaseOwners(
+                        for: envelope.command,
+                        projectID: .init(rawValue: projectID),
+                        connection: connection
+                    )
+                }
                 let prepared = try Self.prepare(envelope.command, context: context)
                 let auditID = AuditEventID(rawValue: UUID().uuidString)
                 let result = AgentCommandResult(entityIDs: envelope.command.documentationIDs, auditEventID: auditID, error: nil)
@@ -44,6 +51,11 @@ struct DocumentationCommandDispatcher: Sendable {
                             connection: c
                         )
                         if let result = try Self.replay(c, requestID: envelope.requestID, body: receiptBody, registration: expectedRegistration) { throw DocumentationControl.replay(result) }
+                        try Self.requireOpenPhaseOwners(
+                            for: envelope.command,
+                            projectID: .init(rawValue: projectID),
+                            connection: c
+                        )
                         try context.verifyPersisted(c)
                         // Re-read while the authorized scope and the store transaction are held.
                         // No mutation occurs until this exact snapshot has been revalidated.
@@ -58,6 +70,12 @@ struct DocumentationCommandDispatcher: Sendable {
             }
         } catch DocumentationControl.requestIDReused { return .init(entityIDs: [], auditEventID: nil, error: .requestIDReused) }
         catch DocumentationControl.expired { return .init(entityIDs: [], auditEventID: nil, error: .appUnavailable) }
+        catch let error as PhaseLifecyclePolicyError {
+            if case let .completedPhaseReadOnly(phaseID) = error {
+                return .init(entityIDs: [], auditEventID: nil, error: .completedPhaseReadOnly(phaseID))
+            }
+            return .init(entityIDs: [], auditEventID: nil, error: .internalFailure(error.localizedDescription))
+        }
         catch let error as DocumentationOperationError { return .init(entityIDs: [], auditEventID: nil, error: .documentation(error)) }
         catch { return .init(entityIDs: [], auditEventID: nil, error: .documentation(DocumentationCatalogContext.map(error))) }
     }
@@ -82,6 +100,34 @@ struct DocumentationCommandDispatcher: Sendable {
               row["request_body"] == .blob(body), case let .blob(bytes) = row["result_data"],
               let result = try? JSONDecoder().decode(AgentCommandResult.self, from: bytes) else { throw DocumentationControl.requestIDReused }
         return result
+    }
+    private static func requireOpenPhaseOwners(
+        for command: AgentCommand,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        func ticket(_ rawID: String) throws {
+            try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                projectID: projectID, ticketID: .init(rawValue: rawID), connection: connection)
+        }
+        switch command {
+        case let .addManagedEvidence(_, _, ticketID, _):
+            if let ticketID { try ticket(ticketID) }
+        case let .adoptManagedEvidence(_, adoptions):
+            for adoption in adoptions {
+                if let oldTicketID = try connection.scalarText(
+                    "SELECT ticket_id FROM evidence WHERE project_id=? AND id=?",
+                    bindings: [.text(projectID.rawValue), .text(adoption.evidenceID)]
+                ) {
+                    try ticket(oldTicketID)
+                }
+                if let expectedTicketID = adoption.expectedTicketID { try ticket(expectedTicketID) }
+            }
+        case .relocateLegacyEvidence, .bindDocumentationRepository, .acceptDocumentationCatalog:
+            break
+        default:
+            throw DocumentationOperationError.invalidRequest
+        }
     }
     private static func prepare(_ command: AgentCommand, context: DocumentationRootContext) throws -> RepositoryDocumentSnapshot? {
         let catalog = try DocumentationCatalogContext(root: context.root)

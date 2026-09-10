@@ -194,6 +194,10 @@ struct DashboardProjection: Equatable, Sendable {
                     guard let plan = try DeliveryPlanningPolicy.loadPlan(projectID: projectID, phaseID: phaseID, connection: connection) else {
                         throw DeliveryPlanningPolicyError.phasePlanNotFound
                     }
+                    let lifecycle = try PhaseLifecyclePolicy.current(
+                        projectID: projectID, phaseID: phaseID, connection: connection)
+                    let completionAssessment = try PhaseLifecyclePolicy.assessCompletion(
+                        projectID: projectID, phaseID: phaseID, connection: connection)
                     let assignments = try DeliveryPlanningPolicy.loadAssignments(projectID: projectID, phaseID: phaseID, connection: connection)
                     let retiredTicketIDs = Set(try connection.dashboardRows(
                         "SELECT ticket_id FROM ticket_retirements WHERE project_id=?",
@@ -276,6 +280,8 @@ struct DashboardProjection: Equatable, Sendable {
                         phaseID: phaseID,
                         phaseName: phase.name,
                         phasePlan: phasePlan,
+                        phaseLifecycle: lifecycle,
+                        completionAssessment: completionAssessment,
                         deliveryGoals: goals,
                         lanes: lanes,
                         details: details
@@ -286,6 +292,8 @@ struct DashboardProjection: Equatable, Sendable {
                     guard let board = boards[PhaseBoardKey(projectID: projectID, phaseID: phase.id)] else { return nil }
                     return ProjectPlanPhaseProjection(
                         id: phase.id, name: phase.name, readiness: board.phasePlan,
+                        lifecycle: board.phaseLifecycle!,
+                        completionAssessment: board.completionAssessment!,
                         deliveryGoals: board.deliveryGoals,
                         ticketCount: board.lanes.reduce(0) { $0 + $1.count }
                     )
@@ -469,6 +477,8 @@ struct DashboardProjection: Equatable, Sendable {
                 phaseID: board.phaseID,
                 phaseName: board.phaseName,
                 phasePlan: board.phasePlan,
+                phaseLifecycle: board.phaseLifecycle,
+                completionAssessment: board.completionAssessment,
                 deliveryGoals: board.deliveryGoals,
                 lanes: board.lanes,
                 details: details
@@ -557,6 +567,8 @@ struct ProjectPlanPhaseProjection: Equatable, Sendable, Identifiable {
     let id: PhaseID
     let name: String
     let readiness: PhasePlanProjection
+    let lifecycle: PhaseLifecycleRecord
+    let completionAssessment: PhaseCompletionAssessment
     let deliveryGoals: [DeliveryGoalSummaryProjection]
     let ticketCount: Int
 }
@@ -709,6 +721,8 @@ struct PhaseBoardProjection: Equatable, Sendable {
     let phaseID: PhaseID
     let phaseName: String
     let phasePlan: PhasePlanProjection
+    let phaseLifecycle: PhaseLifecycleRecord?
+    let completionAssessment: PhaseCompletionAssessment?
     let deliveryGoals: [DeliveryGoalSummaryProjection]
     let lanes: [DashboardLaneProjection]
     let details: [TicketID: TicketDetailProjection]
@@ -716,6 +730,7 @@ struct PhaseBoardProjection: Equatable, Sendable {
     static func == (lhs: Self, rhs: Self) -> Bool {
         PhaseBoardKey(projectID: lhs.project.id, phaseID: lhs.phaseID) == PhaseBoardKey(projectID: rhs.project.id, phaseID: rhs.phaseID)
             && lhs.project == rhs.project && lhs.phaseName == rhs.phaseName && lhs.phasePlan == rhs.phasePlan
+            && lhs.phaseLifecycle == rhs.phaseLifecycle && lhs.completionAssessment == rhs.completionAssessment
             && lhs.deliveryGoals == rhs.deliveryGoals && lhs.lanes == rhs.lanes && lhs.details == rhs.details
     }
 
@@ -738,7 +753,8 @@ struct PhaseBoardProjection: Equatable, Sendable {
         }
         let visibleIDs = Set(filteredLanes.flatMap { $0.cards.map(\.id) })
         return PhaseBoardProjection(project: project, phaseID: phaseID, phaseName: phaseName,
-            phasePlan: phasePlan, deliveryGoals: deliveryGoals, lanes: filteredLanes,
+            phasePlan: phasePlan, phaseLifecycle: phaseLifecycle,
+            completionAssessment: completionAssessment, deliveryGoals: deliveryGoals, lanes: filteredLanes,
             details: details.filter { visibleIDs.contains($0.key) })
     }
 

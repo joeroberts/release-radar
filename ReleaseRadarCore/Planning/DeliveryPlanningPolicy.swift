@@ -84,6 +84,7 @@ public enum DeliveryPlanningPolicy {
         guard try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id=? AND id=?", bindings: identity(projectID, phaseID)) == 1 else {
             throw invalid("The destination phase does not belong to this project.")
         }
+        try PhaseLifecyclePolicy.requireOpen(projectID: projectID, phaseID: phaseID, connection: connection)
         let plan = try currentPlan(projectID, phaseID, connection)
         guard plan.revision == expectedPlanRevision else {
             throw DeliveryPlanningPolicyError.planRevisionConflict(expected: expectedPlanRevision, current: plan.revision)
@@ -115,6 +116,7 @@ public enum DeliveryPlanningPolicy {
             guard identityKey(owner) == identityKey(projectID.rawValue) else {
                 throw invalid("The phase belongs to another project.")
             }
+            try PhaseLifecyclePolicy.requireOpen(projectID: projectID, phaseID: phaseID, connection: connection)
             try connection.execute("UPDATE phases SET name=? WHERE project_id=? AND id=?",
                                    bindings: [.text(name)] + identity(projectID, phaseID))
             return
@@ -145,6 +147,7 @@ public enum DeliveryPlanningPolicy {
                                        bindings: identity(projectID, phaseID)) == 1 else {
             throw invalid("The destination phase does not belong to this project.")
         }
+        try PhaseLifecyclePolicy.requireOpen(projectID: projectID, phaseID: phaseID, connection: connection)
         let current = try connection.row("SELECT project_id,phase_id,outcome,lane FROM tickets WHERE id=?",
                                          bindings: [.text(ticketID.rawValue)])
         guard let current else {
@@ -161,6 +164,7 @@ public enum DeliveryPlanningPolicy {
             throw invalid("Place unassigned tickets with the first-placement operation.")
         }
         let oldPhase = PhaseID(rawValue: try requiredText(current, "phase_id"))
+        try PhaseLifecyclePolicy.requireOpen(projectID: projectID, phaseID: oldPhase, connection: connection)
         let oldLane = try requiredText(current, "lane")
         guard oldLane != TicketLane.accepted.rawValue else { throw invalid("Accepted tickets are immutable. Create new Backlog work.") }
         let moved = identityKey(oldPhase.rawValue) != identityKey(phaseID.rawValue)
@@ -190,6 +194,8 @@ public enum DeliveryPlanningPolicy {
     ) throws {
         try requireNotRetired(projectID, ticketID, connection)
         let ticket = try requireTicket(projectID, ticketID, connection)
+        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+            projectID: projectID, ticketID: ticketID, connection: connection)
         guard ticket["phase_id"] != .null, ticket["lane"] != .null else {
             throw invalid("Place this ticket into a phase Backlog before executing delivery work.")
         }
@@ -231,6 +237,8 @@ public enum DeliveryPlanningPolicy {
     ) throws {
         try requireNotRetired(projectID, ticketID, connection)
         let ticket = try requireTicket(projectID, ticketID, connection)
+        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+            projectID: projectID, ticketID: ticketID, connection: connection)
         guard ticket["phase_id"] != .null, ticket["lane"] != .null else {
             throw invalid("Place this ticket into a phase Backlog before recording review or completion.")
         }
@@ -397,6 +405,7 @@ public enum DeliveryPlanningPolicy {
         auditEventID: AuditEventID,
         connection: SQLiteConnection
     ) throws -> PhasePlanRecord {
+        try PhaseLifecyclePolicy.requireOpen(projectID: projectID, phaseID: phaseID, connection: connection)
         let plan = try requirePlan(projectID, phaseID, expectedRevision, connection)
         let goalCount = goalUpserts.count + supersededGoalIDs.count
         let assignmentCount = assignments.count + unassignedTicketIDs.count
@@ -479,6 +488,7 @@ public enum DeliveryPlanningPolicy {
         expectedRevision: Int64,
         connection: SQLiteConnection
     ) throws -> PhasePlanRecord {
+        try PhaseLifecyclePolicy.requireOpen(projectID: projectID, phaseID: phaseID, connection: connection)
         let plan = try requirePlan(projectID, phaseID, expectedRevision, connection)
         // A delivered Ready plan remains valid even after the last ticket is Accepted.
         if plan.state == .ready, plan.readyRevision == plan.revision { return plan }
@@ -575,6 +585,7 @@ public enum DeliveryPlanningPolicy {
         origin: AgentCommandOrigin,
         connection: SQLiteConnection
     ) throws -> DeliveryGoalRecord {
+        try PhaseLifecyclePolicy.requireOpen(projectID: projectID, phaseID: phaseID, connection: connection)
         let plan = try requirePlan(projectID, phaseID, expectedPlanRevision, connection)
         let goal = try requireGoal(projectID, phaseID, goalID, connection)
         guard plan.state == .ready, plan.readyRevision == plan.revision else {

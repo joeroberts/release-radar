@@ -18,6 +18,8 @@ struct ProjectPlanView: View {
     var decideProposal: ((PlanChangeProposalID, Int64, String, PlanChangeDecisionDisposition) async -> AgentCommandResult)? = nil
     var applyProposal: ((PlanChangeProposalID, Int64, String, String) async -> AgentCommandResult)? = nil
     var refreshProposal: ((PlanChangeProposalID, Int64, String, [PlanChangeOperation]) async -> AgentCommandResult)? = nil
+    var transitionPhaseLifecycle: ((PhaseID, Int64, PhaseLifecycleAction, String?, String) async -> AgentCommandResult)? = nil
+    var reloadPhaseLifecycle: (() async -> Void)? = nil
     var referenceContextIdentity: String? = nil
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
@@ -239,6 +241,10 @@ struct ProjectPlanView: View {
             Text(readinessSummary(phase.readiness))
                 .font(.subheadline)
                 .foregroundStyle(phase.readiness.state == .ready ? RekonTheme.success : RekonTheme.warning)
+            Text("Lifecycle: \(phase.lifecycle.lifecycle.displayName) · revision \(phase.lifecycle.revision)")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(RekonTheme.primaryText)
+                .accessibilityIdentifier("project-plan-phase-lifecycle-\(phase.id.rawValue)")
             Text("\(phase.ticketCount) tickets · \(phase.deliveryGoals.count) Delivery Goals")
                 .font(.caption)
                 .foregroundStyle(RekonTheme.secondaryText)
@@ -276,6 +282,16 @@ struct ProjectPlanView: View {
                         }
                     }
                 }
+            }
+            if let transitionPhaseLifecycle, let reloadPhaseLifecycle {
+                PhaseLifecycleControls(
+                    phase: phase,
+                    transition: { action, baseline, reason in
+                        await transitionPhaseLifecycle(
+                            phase.id, phase.lifecycle.revision, action, baseline, reason)
+                    },
+                    reload: reloadPhaseLifecycle
+                )
             }
         }
         .padding(14)

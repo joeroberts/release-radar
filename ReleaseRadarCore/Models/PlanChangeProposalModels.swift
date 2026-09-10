@@ -157,6 +157,8 @@ public enum PlanChangeBaselineCategory: String, Codable, Equatable, CaseIterable
     case registration
     case activePhase = "active_phase"
     case phases
+    case phaseLifecycles = "phase_lifecycles"
+    case phaseLifecycleEvents = "phase_lifecycle_events"
     case phasePlans = "phase_plans"
     case goals
     case goalCriteria = "goal_criteria"

@@ -495,3 +495,30 @@ with their task/evidence history. Uncovered, carried, explicitly dropped and del
 are distinct states; no sixth board lane or automatic acceptance. Existing native
 Plan/board/detail counts and exact Back/Forward focus must agree with canonical
 coverage, including compact layouts and recoverable stale/unknown states.
+
+## Phase 5E explicit phase lifecycle — 2026-09-10
+
+Project Plan phase controls display persisted Unassessed / Upcoming / In delivery /
+Completed separately from readiness and active/view context. Show exact phase,
+current state, intended transition, reason and completion blockers. Complete and
+Reopen are deliberate owner actions with visible pending, stale, failure and
+committed-refresh states. Multiple In-delivery phases remain visible; selecting or
+browsing a phase changes no lifecycle. Completed history remains accessible and
+new work explains the explicit reopen/new-phase requirement. Replace count-derived
+"delivery complete" wording with neutral readiness wording.
+
+Reuse existing Plan cards, RDS controls and five-lane board design, with compact
+stacking and real keyboard/accessibility focus restoration. Do not add another
+lifecycle lane, broad History surface or phase-ordering policy. The [Phase 5E brief](../delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
+sets migration, guard and native acceptance boundaries under the approved policy.
+
+The implemented native controls retain the existing dark Plan card hierarchy and
+RDS picker/button vocabulary. At compact width, state and intent stack without
+horizontal clipping while Completed guidance and explicit reopen remain visible.
+The selected [native capture](../delivery/evidence/phase5e-lifecycle-native.png)
+shows that compact state. The first external-control journey exposed a false
+navigation-recovery banner after a valid same-project placed-ticket selection;
+that discrepancy was corrected rather than accepted as a design deviation. The
+fresh journey retained exact reason accessibility focus after every save/reload
+at wide and compact widths. No design deviation is recorded for the delivered
+Phase 5E surface.

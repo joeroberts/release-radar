@@ -159,6 +159,7 @@ private struct MCPServer {
             "release_radar_ticket_references",
             "release_radar_recorded_impacts",
             "release_radar_plan_change_proposals",
+            "release_radar_phase_lifecycles",
         ].contains(tool) {
             let query: [String: Any]
             switch tool {
@@ -174,6 +175,10 @@ private struct MCPServer {
                 ]]
             case "release_radar_plan_change_proposals":
                 query = ["planChangeProposals": [
+                    "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                ]]
+            case "release_radar_phase_lifecycles":
+                query = ["phaseLifecycles": [
                     "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
                 ]]
             default:
@@ -873,6 +878,12 @@ private struct MCPServer {
                                             "projectID": taskID, "rootID": taskID,
                                             "repositoryID": ["type": "string", "format": "uuid"], "artifactID": taskID]]],
             ["name": "release_radar_plan_change_proposals", "description": "Read every saved version, exact baseline, derived diff, source impact, owner decision and application record for one authorized active project. This never mutates delivery state.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false,
+                             "required": ["version", "projectRoot", "projectID"],
+                             "properties": ["version": ["type": "integer", "const": 1],
+                                            "projectRoot": string, "projectID": taskID]]],
+            ["name": "release_radar_phase_lifecycles", "description": "Read every persisted phase lifecycle, immutable transition-history item, and current completion eligibility blocker for one authorized active project. This never mutates delivery state.",
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
              "inputSchema": ["type": "object", "additionalProperties": false,
                              "required": ["version", "projectRoot", "projectID"],

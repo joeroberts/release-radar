@@ -15,6 +15,17 @@ extension DeliveryGoalLifecycle {
     }
 }
 
+extension PhaseLifecycle {
+    var displayName: String {
+        switch self {
+        case .unassessed: "Unassessed"
+        case .upcoming: "Upcoming"
+        case .inDelivery: "In delivery"
+        case .completed: "Completed"
+        }
+    }
+}
+
 struct ByteStablePickerOption<Value> {
     let selection: String
     let value: Value
@@ -54,7 +65,7 @@ struct PhaseBoardPlanningControls: View {
     private var planSummary: String {
         let plan = board.phasePlan
         if plan.isDeliveryComplete {
-            return "Ready · delivery complete · revision \(plan.revision) · 0 upcoming · 0 unassigned"
+            return "Ready · revision \(plan.revision) · no upcoming work · 0 unassigned"
         }
         let state = switch plan.state {
         case .legacyUnassessed: "Legacy unassessed"
@@ -76,6 +87,11 @@ struct PhaseBoardPlanningControls: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("phase-plan-summary")
                 .focusable()
+            Text("Lifecycle: \(board.phaseLifecycle?.lifecycle.displayName ?? "Unavailable")")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(RekonTheme.primaryText)
+                .accessibilityIdentifier("phase-lifecycle-summary")
+                .accessibilityHint("Persisted phase lifecycle; independent of readiness and active or viewed phase.")
             if board.phasePlan.state != .ready {
                 Label("Backlog and Blocked work cannot start until coverage is finalized.", systemImage: "exclamationmark.triangle")
                     .font(.caption)

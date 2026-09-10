@@ -279,7 +279,7 @@ struct ReleaseRadarApp: App {
     }
 
     var body: some Scene {
-        Window("Release Radar", id: "main") {
+        Window(mainWindowTitle, id: "main") {
             Group {
                 if let model {
                     SidebarView(model: model)
@@ -329,6 +329,15 @@ struct ReleaseRadarApp: App {
             }
         }
 
+    }
+
+    private var mainWindowTitle: String {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--rr9-active-phase-fixture=phase-lifecycle") {
+            return "Release Radar — Phase 5E Synthetic"
+        }
+#endif
+        return "Release Radar"
     }
 }
 

@@ -262,3 +262,29 @@ remain immutable. Retirement grants no external-run cancellation authority. Reti
 work is protected across affected writers and association rehoming. Only validated
 owner-approved proposal application grants narrow detachment/drop exceptions;
 ordinary caller fields and revisions cannot assert that authority.
+
+## Phase 5E explicit lifecycle authority — 2026-09-10
+
+The owner authorized independent Unassessed / Upcoming / In delivery / Completed
+phase lifecycle, multiple In-delivery phases, explicit guarded completion and
+explicit reopening. Narrow typed owner-app decisions require exact registration,
+lifecycle revision, reason and relevant planning baseline; external agents may
+read but cannot assert this decision authority. Origin is checked before replay.
+Completed-phase delivery writes reject at store-owned admission boundaries until
+explicit reopening, including proposal apply and old/new association ownership.
+Read-only references to Completed work, observations and identity-preserving
+recovery remain distinct from new delivery work. Accepted ticket/goal and retired
+history is preserved. The [Phase 5E brief](../delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
+defines the bounded schema, authority, writer, recovery and native contract.
+
+A future complete portable project package must represent both the phase's current
+lifecycle value and its immutable transition history. Each history item must retain
+the exact phase identity, monotonically increasing revision, previous/current value,
+typed action, owner reason, decision timestamp, source registration/generation and
+the completion planning-baseline digest when applicable. Import must preserve this
+source history without replaying decisions, fabricating owner audits or silently
+deriving lifecycle from readiness, active/viewed phase, goals, lanes or counts. Any
+future compatibility design must either preserve all supported lifecycle facts or
+fail complete export explicitly. This records the Phase 5E portability requirement
+only: portable archive v1, the current exporter/importer implementation and their
+accepted fixtures are unchanged by this slice.

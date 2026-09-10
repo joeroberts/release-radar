@@ -459,6 +459,18 @@ public actor ProjectRemovalManager {
                     .integer(preview.counts.evidence), .integer(preview.counts.history),
                 ]
             )
+            try connection.execute(
+                "INSERT INTO retained_phase_lifecycles SELECT ?, lifecycles.project_id, lifecycles.phase_id, phases.name, lifecycles.lifecycle, lifecycles.revision, lifecycles.completion_baseline_digest, lifecycles.created_at, lifecycles.updated_at, lifecycles.completed_at FROM phase_lifecycles lifecycles JOIN phases ON phases.project_id=lifecycles.project_id AND phases.id=lifecycles.phase_id WHERE lifecycles.project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_phase_lifecycle_events SELECT ?, project_id, phase_id, revision, previous_lifecycle, current_lifecycle, action, reason, audit_event_id, registration_id, request_generation, planning_baseline_digest, created_at FROM phase_lifecycle_events WHERE project_id=?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "DELETE FROM phase_lifecycle_events WHERE project_id=?",
+                bindings: [project]
+            )
             try Self.retainActivity(projectID: preview.projectID, removalID: removalID, connection: connection)
             try connection.execute(
                 "DELETE FROM notification_events WHERE project_id IS NULL AND ticket_id IN (SELECT id FROM tickets WHERE project_id = ?)",

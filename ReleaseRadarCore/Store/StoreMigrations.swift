@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 22
+    static let currentVersion: Int64 = 23
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -102,6 +102,9 @@ enum StoreMigrations {
             }
             if version < 22 {
                 try connection.executeScript(schemaVersion22)
+            }
+            if version < 23 {
+                try connection.executeScript(schemaVersion23)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -692,6 +695,24 @@ enum StoreMigrations {
             "removal_id", "historical_project_id", "phase_id", "goal_id", "ticket_id",
             "reason", "audit_event_id", "created_at",
         ]),
+        (23, "phase_lifecycles", [
+            "project_id", "phase_id", "lifecycle", "revision",
+            "completion_baseline_digest", "created_at", "updated_at", "completed_at",
+        ]),
+        (23, "phase_lifecycle_events", [
+            "project_id", "phase_id", "revision", "previous_lifecycle", "current_lifecycle",
+            "action", "reason", "audit_event_id", "registration_id", "request_generation",
+            "planning_baseline_digest", "created_at",
+        ]),
+        (23, "retained_phase_lifecycles", [
+            "removal_id", "historical_project_id", "phase_id", "phase_name", "lifecycle",
+            "revision", "completion_baseline_digest", "created_at", "updated_at", "completed_at",
+        ]),
+        (23, "retained_phase_lifecycle_events", [
+            "removal_id", "historical_project_id", "phase_id", "revision",
+            "previous_lifecycle", "current_lifecycle", "action", "reason", "audit_event_id",
+            "registration_id", "request_generation", "planning_baseline_digest", "created_at",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -788,6 +809,13 @@ enum StoreMigrations {
         (22, "trigger", "retained_delivery_goal_obligation_lineage_reject_delete"),
         (22, "trigger", "retained_delivery_goal_obligation_drops_reject_update"),
         (22, "trigger", "retained_delivery_goal_obligation_drops_reject_delete"),
+        (23, "trigger", "phase_lifecycles_after_phase_insert"),
+        (23, "trigger", "phase_lifecycle_events_reject_update"),
+        (23, "trigger", "phase_lifecycle_events_reject_delete"),
+        (23, "trigger", "retained_phase_lifecycles_reject_update"),
+        (23, "trigger", "retained_phase_lifecycles_reject_delete"),
+        (23, "trigger", "retained_phase_lifecycle_events_reject_update"),
+        (23, "trigger", "retained_phase_lifecycle_events_reject_delete"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -1171,6 +1199,44 @@ enum StoreMigrations {
     END
     """
 
+    private static let phaseLifecyclesAfterPhaseInsertTrigger = """
+    CREATE TRIGGER phase_lifecycles_after_phase_insert
+    AFTER INSERT ON phases
+    BEGIN
+        INSERT INTO phase_lifecycles (
+            project_id, phase_id, lifecycle, revision, completion_baseline_digest,
+            created_at, updated_at, completed_at
+        ) VALUES (
+            NEW.project_id, NEW.id, 'unassessed', 0, NULL,
+            strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+            NULL
+        );
+    END
+    """
+
+    private static let phaseLifecycleEventsRejectUpdateTrigger = """
+    CREATE TRIGGER phase_lifecycle_events_reject_update
+    BEFORE UPDATE ON phase_lifecycle_events
+    BEGIN
+        SELECT RAISE(ABORT, 'phase lifecycle history is immutable');
+    END
+    """
+
+    private static let phaseLifecycleEventsRejectDeleteTrigger = """
+    CREATE TRIGGER phase_lifecycle_events_reject_delete
+    BEFORE DELETE ON phase_lifecycle_events
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'phase lifecycle history cannot be deleted');
+    END
+    """
+
     private static func immutableRetainedTrigger(
         table: String,
         action: String
@@ -1228,6 +1294,13 @@ enum StoreMigrations {
         (22, "retained_delivery_goal_obligation_lineage_reject_delete", immutableRetainedTrigger(table: "retained_delivery_goal_obligation_lineage", action: "delete")),
         (22, "retained_delivery_goal_obligation_drops_reject_update", immutableRetainedTrigger(table: "retained_delivery_goal_obligation_drops", action: "update")),
         (22, "retained_delivery_goal_obligation_drops_reject_delete", immutableRetainedTrigger(table: "retained_delivery_goal_obligation_drops", action: "delete")),
+        (23, "phase_lifecycles_after_phase_insert", phaseLifecyclesAfterPhaseInsertTrigger),
+        (23, "phase_lifecycle_events_reject_update", phaseLifecycleEventsRejectUpdateTrigger),
+        (23, "phase_lifecycle_events_reject_delete", phaseLifecycleEventsRejectDeleteTrigger),
+        (23, "retained_phase_lifecycles_reject_update", immutableRetainedTrigger(table: "retained_phase_lifecycles", action: "update")),
+        (23, "retained_phase_lifecycles_reject_delete", immutableRetainedTrigger(table: "retained_phase_lifecycles", action: "delete")),
+        (23, "retained_phase_lifecycle_events_reject_update", immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "update")),
+        (23, "retained_phase_lifecycle_events_reject_delete", immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "delete")),
     ]
 
     private static let criticalIndexes: [(
@@ -1377,6 +1450,11 @@ enum StoreMigrations {
         (22, "retained_delivery_goal_obligation_lineage", "removal_id,historical_project_id,source_phase_id,source_goal_id,source_ticket_id", "retained_delivery_goal_obligations", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
         (22, "retained_delivery_goal_obligation_lineage", "removal_id,historical_project_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id", "retained_delivery_goal_obligations", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
         (22, "retained_delivery_goal_obligation_drops", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "retained_delivery_goal_obligations", "removal_id,historical_project_id,phase_id,goal_id,ticket_id", "NO ACTION"),
+        (23, "phase_lifecycles", "project_id,phase_id", "phases", "project_id,id", "CASCADE"),
+        (23, "phase_lifecycle_events", "project_id,phase_id", "phases", "project_id,id", "NO ACTION"),
+        (23, "phase_lifecycle_events", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (23, "retained_phase_lifecycles", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (23, "retained_phase_lifecycle_events", "removal_id,historical_project_id,phase_id", "retained_phase_lifecycles", "removal_id,historical_project_id,phase_id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -2695,5 +2773,97 @@ enum StoreMigrations {
     WHERE events.action IN ('unassigned', 'reassigned')
       AND events.previous_goal_id IS NOT NULL
       AND tickets.lane <> 'accepted';
+    """
+
+    private static let schemaVersion23 = """
+    CREATE TABLE phase_lifecycles (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        lifecycle TEXT NOT NULL CHECK (lifecycle IN ('unassessed', 'upcoming', 'in_delivery', 'completed')),
+        revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0),
+        completion_baseline_digest TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        PRIMARY KEY(project_id, phase_id),
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id) ON DELETE CASCADE,
+        CHECK (
+            (lifecycle = 'completed' AND completion_baseline_digest IS NOT NULL AND completed_at IS NOT NULL)
+            OR (lifecycle <> 'completed' AND completion_baseline_digest IS NULL AND completed_at IS NULL)
+        )
+    );
+
+    CREATE TABLE phase_lifecycle_events (
+        project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        previous_lifecycle TEXT NOT NULL CHECK (previous_lifecycle IN ('unassessed', 'upcoming', 'in_delivery', 'completed')),
+        current_lifecycle TEXT NOT NULL CHECK (current_lifecycle IN ('upcoming', 'in_delivery', 'completed')),
+        action TEXT NOT NULL CHECK (action IN ('move_upcoming', 'begin_delivery', 'complete', 'reopen_in_delivery', 'reopen_upcoming')),
+        reason TEXT NOT NULL CHECK (length(CAST(reason AS BLOB)) BETWEEN 1 AND 4096),
+        audit_event_id TEXT NOT NULL,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL CHECK (request_generation >= 1),
+        planning_baseline_digest TEXT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, phase_id, revision),
+        FOREIGN KEY(project_id, phase_id) REFERENCES phases(project_id, id) ON DELETE NO ACTION,
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) ON DELETE NO ACTION DEFERRABLE INITIALLY DEFERRED,
+        CHECK ((action = 'complete') = (planning_baseline_digest IS NOT NULL)),
+        CHECK (previous_lifecycle <> current_lifecycle)
+    );
+
+    CREATE TABLE retained_phase_lifecycles (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        phase_name TEXT NOT NULL,
+        lifecycle TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        completion_baseline_digest TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        PRIMARY KEY(removal_id, historical_project_id, phase_id),
+        FOREIGN KEY(removal_id) REFERENCES removed_projects(removal_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_phase_lifecycle_events (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        phase_id TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        previous_lifecycle TEXT NOT NULL,
+        current_lifecycle TEXT NOT NULL,
+        action TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        audit_event_id TEXT NOT NULL,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL,
+        planning_baseline_digest TEXT,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, phase_id, revision),
+        FOREIGN KEY(removal_id, historical_project_id, phase_id)
+            REFERENCES retained_phase_lifecycles(removal_id, historical_project_id, phase_id)
+            ON DELETE NO ACTION
+    );
+
+    INSERT INTO phase_lifecycles (
+        project_id, phase_id, lifecycle, revision, completion_baseline_digest,
+        created_at, updated_at, completed_at
+    )
+    SELECT project_id, id, 'unassessed', 0, NULL,
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           NULL
+    FROM phases;
+
+    \(phaseLifecyclesAfterPhaseInsertTrigger);
+    \(phaseLifecycleEventsRejectUpdateTrigger);
+    \(phaseLifecycleEventsRejectDeleteTrigger);
+    \(immutableRetainedTrigger(table: "retained_phase_lifecycles", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_phase_lifecycles", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "delete"));
     """
 }

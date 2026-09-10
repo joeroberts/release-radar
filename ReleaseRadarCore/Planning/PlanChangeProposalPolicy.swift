@@ -27,6 +27,8 @@ enum PlanChangeProposalPolicy {
             )
         }
         try validate(operations, projectID: projectID, connection: connection)
+        try requireOpenPhaseOwners(
+            for: operations, projectID: projectID, connection: connection)
 
         let baseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
         let baselineDigest = SHA256.hash(data: baseline).map { String(format: "%02x", $0) }.joined()
@@ -191,13 +193,15 @@ enum PlanChangeProposalPolicy {
               case let .blob(operationData)? = row["operations_data"] else {
             throw PlanChangeProposalError.invalidStoredProposal
         }
+        let operations = try JSONDecoder().decode([PlanChangeOperation].self, from: operationData)
+        try requireOpenPhaseOwners(
+            for: operations, projectID: projectID, connection: connection)
         let currentBaseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
         guard currentBaseline == savedBaseline else {
             throw PlanChangeProposalError.stale(
                 try PlanningBaseline.changedCategories(from: savedBaseline, to: currentBaseline)
             )
         }
-        let operations = try JSONDecoder().decode([PlanChangeOperation].self, from: operationData)
         try validate(operations, projectID: projectID, connection: connection)
         try apply(
             operations,
@@ -217,6 +221,68 @@ enum PlanChangeProposalPolicy {
                 .text(timestamp()),
             ]
         )
+    }
+
+    /// Completed phases remain browsable and may be dependency targets, but
+    /// proposal save/apply cannot create or revise work owned by them. Check
+    /// both existing and proposed association owners before any mutation.
+    private static func requireOpenPhaseOwners(
+        for operations: [PlanChangeOperation],
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        func phase(_ phaseID: PhaseID) throws {
+            guard try connection.scalarInt(
+                "SELECT COUNT(*) FROM phases WHERE project_id=? AND id=?",
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+            ) == 1 else { return }
+            try PhaseLifecyclePolicy.requireOpen(
+                projectID: projectID, phaseID: phaseID, connection: connection)
+        }
+        func ticket(_ ticketID: TicketID) throws {
+            try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                projectID: projectID, ticketID: ticketID, connection: connection)
+        }
+
+        for operation in operations {
+            switch operation {
+            case .addPhase, .addUnassignedTicket:
+                break
+            case let .addDeliveryGoal(phaseID, _):
+                try phase(phaseID)
+            case let .addPendingTicketTasks(ticketID, _):
+                try ticket(ticketID)
+            case let .placeTicket(ticketID, phaseID):
+                try ticket(ticketID)
+                try phase(phaseID)
+            case let .assignTicketToGoal(ticketID, phaseID, _):
+                try ticket(ticketID)
+                try phase(phaseID)
+            case let .addPhaseDependency(_, phaseID, _):
+                try phase(phaseID)
+            case let .addTicketDependency(_, ticketID, _):
+                try ticket(ticketID)
+            case let .retireTicket(ticketID, _, _, _):
+                try ticket(ticketID)
+            case let .moveBacklogTicket(ticketID, fromPhaseID, toPhaseID):
+                try ticket(ticketID)
+                try phase(fromPhaseID)
+                try phase(toPhaseID)
+            case let .reassignTicketToGoal(ticketID, phaseID, _, _):
+                try ticket(ticketID)
+                try phase(phaseID)
+            case let .supersedeDeliveryGoal(phaseID, _):
+                try phase(phaseID)
+            case let .carryGoalObligation(source, descendants, _):
+                try phase(source.phaseID)
+                for descendant in descendants { try phase(descendant.phaseID) }
+            case let .dropGoalObligation(obligation, _):
+                try phase(obligation.phaseID)
+            case let .retargetTicketDependency(_, ticketID, _, _),
+                 let .removeTicketDependency(_, ticketID, _):
+                try ticket(ticketID)
+            }
+        }
     }
 
     private static func validate(
@@ -1372,6 +1438,8 @@ enum PlanningBaseline {
             ("registration", "SELECT project_id,registration_id,request_generation,setup_state FROM project_registrations WHERE project_id=?", [project]),
             ("active_phase", "SELECT project_id,phase_id FROM project_active_phases WHERE project_id=?", [project]),
             ("phases", "SELECT id,project_id,name FROM phases WHERE project_id=? ORDER BY id COLLATE BINARY", [project]),
+            ("phase_lifecycles", "SELECT * FROM phase_lifecycles WHERE project_id=? ORDER BY phase_id COLLATE BINARY", [project]),
+            ("phase_lifecycle_events", "SELECT * FROM phase_lifecycle_events WHERE project_id=? ORDER BY phase_id COLLATE BINARY,revision", [project]),
             ("phase_plans", "SELECT * FROM phase_plans WHERE project_id=? ORDER BY phase_id COLLATE BINARY", [project]),
             ("goals", "SELECT * FROM delivery_goals WHERE project_id=? ORDER BY phase_id COLLATE BINARY,id COLLATE BINARY", [project]),
             ("goal_criteria", "SELECT * FROM delivery_goal_done_criteria WHERE project_id=? ORDER BY phase_id COLLATE BINARY,goal_id COLLATE BINARY,sort_order", [project]),
@@ -1404,6 +1472,12 @@ enum PlanningBaseline {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         return try encoder.encode(sections)
+    }
+
+    static func digest(projectID: ProjectID, connection: SQLiteConnection) throws -> String {
+        SHA256.hash(data: try capture(projectID: projectID, connection: connection))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     static func changedCategories(from saved: Data, to current: Data) throws -> [PlanChangeBaselineCategory] {

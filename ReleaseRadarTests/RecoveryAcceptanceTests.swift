@@ -264,6 +264,72 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(repeatedRemovalCount, 3)
     }
 
+    func testOlderBackupRestoresLifecycleAndRetainsNewerLifecycleHistoryAcrossAuthorityRotation() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let projectID = ProjectID(rawValue: "project-one")
+        let phaseID = PhaseID(rawValue: "phase-project-one")
+        try await seedProject(
+            in: store, id: projectID.rawValue,
+            registrationID: "lifecycle-registration", ticketID: "delivered-ticket"
+        )
+        let originalRegistration = try await ProjectLifecycleManager(store: store)
+            .snapshot(projectID: projectID).registration
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"), reason: "Begin backed-up delivery",
+            auditEventID: .init(rawValue: "lifecycle-backup-revision-one")
+        ) { connection in
+            _ = try PhaseLifecyclePolicy.transition(
+                projectID: projectID, phaseID: phaseID, expectedRevision: 0,
+                action: .beginDelivery, planningBaselineDigest: nil,
+                reason: "Begin backed-up delivery", registration: originalRegistration,
+                origin: .ownerApp, auditEventID: .init(rawValue: "lifecycle-backup-revision-one"),
+                connection: connection
+            )
+        }
+        let packageURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("phase-lifecycle.release-radar-backup", isDirectory: true)
+        let backup = ApplicationBackupManager(store: store, databaseURL: databaseURL)
+        _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
+
+        try await store.transact(
+            actor: .init(id: "release-radar-owner"), reason: "Record newer lifecycle decision",
+            auditEventID: .init(rawValue: "lifecycle-newer-revision-two")
+        ) { connection in
+            _ = try PhaseLifecyclePolicy.transition(
+                projectID: projectID, phaseID: phaseID, expectedRevision: 1,
+                action: .moveToUpcoming, planningBaselineDigest: nil,
+                reason: "Record newer lifecycle decision", registration: originalRegistration,
+                origin: .ownerApp, auditEventID: .init(rawValue: "lifecycle-newer-revision-two"),
+                connection: connection
+            )
+        }
+
+        let recovery = ApplicationRecoveryManager(store: store, databaseURL: databaseURL)
+        let restored = try await recovery.restore(
+            try await recovery.previewRestore(packageURL: packageURL)
+        )
+        let rotatedRegistration = try await ProjectLifecycleManager(store: restored.store)
+            .snapshot(projectID: projectID).registration
+        let facts = try await restored.store.read { connection in
+            (
+                try connection.scalarText("SELECT lifecycle FROM phase_lifecycles WHERE project_id='project-one' AND phase_id='phase-project-one'"),
+                try connection.scalarInt("SELECT revision FROM phase_lifecycles WHERE project_id='project-one' AND phase_id='phase-project-one'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM phase_lifecycle_events WHERE project_id='project-one' AND phase_id='phase-project-one'"),
+                try connection.scalarText("SELECT lifecycle FROM retained_phase_lifecycles WHERE historical_project_id='project-one' AND phase_id='phase-project-one' ORDER BY revision DESC LIMIT 1"),
+                try connection.scalarInt("SELECT revision FROM retained_phase_lifecycles WHERE historical_project_id='project-one' AND phase_id='phase-project-one' ORDER BY revision DESC LIMIT 1"),
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_phase_lifecycle_events WHERE historical_project_id='project-one' AND phase_id='phase-project-one'")
+            )
+        }
+        XCTAssertNotEqual(rotatedRegistration, originalRegistration)
+        XCTAssertEqual(facts.0, "in_delivery")
+        XCTAssertEqual(facts.1, 1)
+        XCTAssertEqual(facts.2, 1)
+        XCTAssertEqual(facts.3, "upcoming")
+        XCTAssertEqual(facts.4, 2)
+        XCTAssertEqual(facts.5, 2)
+    }
+
     func testRestoreRotatesProposalAuthorityWithoutReactivatingRetiredPlanningFacts() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
