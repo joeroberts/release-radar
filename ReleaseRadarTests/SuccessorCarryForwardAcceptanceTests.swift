@@ -290,22 +290,27 @@ final class SuccessorCarryForwardAcceptanceTests: XCTestCase {
             auditScope: .init(projectID: projectID, entityType: .phasePlan, entityID: "source")
         ) { connection in
             try connection.execute("INSERT INTO projects (id,name) VALUES ('p','Project')")
-            for phase in ["source", "legacy", "consumer-one", "consumer-two", "consumer-three"] {
+            for phase in [
+                "source", "legacy", "empty", "dropped",
+                "consumer-one", "consumer-two", "consumer-three", "consumer-four", "consumer-five",
+            ] {
                 try DeliveryPlanningPolicy.upsertPhase(projectID: projectID, phaseID: .init(rawValue: phase), name: phase, mode: .governed, connection: connection)
             }
-            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('old','p','source','Old debt','backlog'),('delivered','p','source','Delivered','accepted'),('legacy-done','p','legacy','Legacy done','accepted'),('consumer-one','p','consumer-one','Consumer one','backlog'),('consumer-two','p','consumer-two','Consumer two','backlog'),('consumer-three','p','consumer-three','Consumer three','backlog')")
-            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('p','source','old-goal','Old','Old debt','superseded',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z'),('p','source','live-goal','Live','Delivered','active',1,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('old','p','source','Old debt','backlog'),('delivered','p','source','Delivered','accepted'),('legacy-done','p','legacy','Legacy done','accepted'),('dropped-work','p','dropped','Dropped work','backlog'),('consumer-one','p','consumer-one','Consumer one','backlog'),('consumer-two','p','consumer-two','Consumer two','backlog'),('consumer-three','p','consumer-three','Consumer three','backlog'),('consumer-four','p','consumer-four','Consumer four','backlog'),('consumer-five','p','consumer-five','Consumer five','backlog')")
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('p','source','old-goal','Old','Old debt','superseded',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z'),('p','source','unused-goal','Unused','No assigned scope','superseded',1,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z'),('p','source','live-goal','Live','Delivered','active',2,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z'),('p','dropped','dropped-goal','Dropped','Removed scope','superseded',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
             try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id,phase_id,goal_id,sort_order,criterion) VALUES ('p','source','live-goal',0,'Accepted')")
             try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('p','source','live-goal','delivered')")
             try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('p','source','old-goal','old','Old debt','current','2026-09-10T00:00:00Z'),('p','source','live-goal','delivered','Delivered','current','2026-09-10T00:00:00Z')")
-            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('p','old','withdrawn','Await explicit resolution','source','backlog','dependency-audit','2026-09-10T00:00:00Z')")
-            for consumer in ["consumer-one", "consumer-two", "consumer-three"] {
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('p','dropped','dropped-goal','dropped-work','Removed scope','current','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('p','old','withdrawn','Await explicit resolution','source','backlog','dependency-audit','2026-09-10T00:00:00Z'),('p','dropped-work','withdrawn','Removed without delivery','dropped','backlog','dependency-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligation_drops (project_id,phase_id,goal_id,ticket_id,reason,audit_event_id,created_at) VALUES ('p','dropped','dropped-goal','dropped-work','Removed scope','dependency-audit','2026-09-10T00:00:00Z')")
+            for consumer in ["consumer-one", "consumer-two", "consumer-three", "consumer-four", "consumer-five"] {
                 try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('p',?,?,'Consumer','Consume','planned',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')", bindings: [.text(consumer), .text("goal-\(consumer)")])
                 try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('p',?,?,?)", bindings: [.text(consumer), .text("goal-\(consumer)"), .text(consumer)])
                 try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('p',?,?,?,'Consume','current','2026-09-10T00:00:00Z')", bindings: [.text(consumer), .text("goal-\(consumer)"), .text(consumer)])
                 try connection.execute("UPDATE phase_plans SET state='ready',ready_revision=revision WHERE project_id='p' AND phase_id=?", bindings: [.text(consumer)])
             }
-            try connection.execute("INSERT INTO phase_dependencies (id,project_id,phase_id,depends_on_phase_id) VALUES ('dep-one','p','consumer-one','source'),('dep-two','p','consumer-two','source'),('dep-three','p','consumer-three','legacy')")
+            try connection.execute("INSERT INTO phase_dependencies (id,project_id,phase_id,depends_on_phase_id) VALUES ('dep-one','p','consumer-one','source'),('dep-two','p','consumer-two','source'),('dep-three','p','consumer-three','legacy'),('dep-four','p','consumer-four','empty'),('dep-five','p','consumer-five','dropped')")
         }
 
         do {
@@ -324,6 +329,21 @@ final class SuccessorCarryForwardAcceptanceTests: XCTestCase {
             }
             XCTFail("Unresolved superseded debt must block a dependent phase.")
         } catch { guard case DeliveryPlanningPolicyError.invalidPlanMutation = error else { throw error } }
+
+        for (consumer, reason) in [
+            ("consumer-four", "An empty prerequisite has no delivered outcome."),
+            ("consumer-five", "An entirely dropped prerequisite has no delivered outcome."),
+        ] {
+            do {
+                try await store.transact(actor: .init(id: "fixture"), reason: reason) {
+                    try DeliveryPlanningPolicy.transitionTicket(
+                        projectID: projectID, ticketID: .init(rawValue: consumer),
+                        to: .inProgress, connection: $0
+                    )
+                }
+                XCTFail("A prerequisite without delivered work must block \(consumer).")
+            } catch { guard case DeliveryPlanningPolicyError.invalidPlanMutation = error else { throw error } }
+        }
 
         try await store.transact(actor: .init(id: "fixture"), reason: "Resolve debt then add unassigned live work") { connection in
             try connection.execute("INSERT INTO delivery_goal_obligation_drops (project_id,phase_id,goal_id,ticket_id,reason,audit_event_id,created_at) VALUES ('p','source','old-goal','old','Removed scope','dependency-audit','2026-09-10T00:00:00Z')")

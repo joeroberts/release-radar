@@ -150,6 +150,27 @@ Correction verification used the same isolated, no-signing XCTest environment:
   a complete carried successor still permits source-plan refinalization and
   dependent work, and the combined replacement/move/reassignment/supersession
   package remains atomic under the tightened Backlog admission rule.
+- The same reviewer recheck then identified four remaining interactions inside
+  the existing findings: empty or dropped-only phase prerequisites lacked a
+  delivered-outcome requirement, detached historical debt became impossible to
+  reconcile after acceptance elsewhere, debt-free superseded goals blocked
+  readiness, and persisted carry lineage bypassed a later split's exact-successor
+  rule. Launch 43 stopped at a test-helper proposal-ID type mismatch and supplied
+  no behavioral evidence. After correcting only that fixture signature, launch
+  44 reached all three intended RED journeys and failed on each reported policy
+  behavior.
+- Launch 45 passed the three corrected journeys 3/3. It rejected empty and
+  dropped-only prerequisites while allowing a genuinely delivered legacy phase;
+  ignored a superseded goal with no obligations; completed actual approved move,
+  reassignment, destination finalization, and ticket acceptance before applying
+  both explicit drop and carry reconciliations in separate fixtures; and rejected
+  a later incompatible split after an actual earlier approved carry with no new
+  proposal or audit write.
+- Launch 46 passed 4/4 affected compatibility cases: exact-current Accepted
+  obligation guards, a valid complete split, carried-source refinalization and
+  dependent work, and the atomic replacement/move/reassignment/carry/
+  supersession package. No native or recovery rerun was needed because these
+  bounded corrections changed only planning policies and their store tests.
 
 Correction result bundles are retained at:
 
@@ -158,6 +179,9 @@ Correction result bundles are retained at:
 - `/private/tmp/release-radar-phase5d-writer/40-reassignment-green.xcresult`
 - `/private/tmp/release-radar-phase5d-writer/41-native-preview-corrections.xcresult`
 - `/private/tmp/release-radar-phase5d-writer/42-coverage-compatibility.xcresult`
+- `/private/tmp/release-radar-phase5d-writer/44-remaining-obligation-red.xcresult`
+- `/private/tmp/release-radar-phase5d-writer/45-remaining-obligation-green.xcresult`
+- `/private/tmp/release-radar-phase5d-writer/46-obligation-compatibility.xcresult`
 
 ## Visual evidence
 
