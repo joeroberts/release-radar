@@ -105,3 +105,14 @@ Independent reviewer raw output remains under
 `/private/tmp/release-radar-phase6a-review-01a08c37.09_u6p48/`; the observed compact
 viewport failure is in its CUA before/after output, not the preinteraction test
 attachments. No canonical image is claimed to show that failure.
+
+## R4 verification boundary discrepancy
+
+During R4, direct command readback showed writer test invocations without the
+required sanitized environment/no-signing flags, direct `xcrun xctest`, and
+symlinks added inside its temporary test bundle. The orchestrator revoked its
+native reservation and paused launches, requested exact outcomes and narrow
+stopped-process confirmation, and informed the parent. No owner effects or zero
+owner effects are inferred. Artifacts remain retained; no cleanup is authorized.
+Only the established sanitized inert-host path may resume after the discrepancy
+is understood. R4 remains unreviewed and publication is not authorized.
