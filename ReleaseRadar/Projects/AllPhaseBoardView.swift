@@ -160,8 +160,9 @@ struct AllPhaseBoardView: View {
             candidates.append(("Unavailable Delivery Goal · \(id.rawValue)", id.rawValue, .goal(id)))
         }
         if case let .execution(identity) = filter {
+            let prefix = board.hasExactExecutionGoalLink(identity) ? "Execution Goal" : "Unavailable Execution Goal link"
             candidates.append((
-                "Execution Goal \(identity.goalID) · Thread \(identity.threadID)",
+                "\(prefix) \(identity.goalID) · Thread \(identity.threadID)",
                 "\(identity.threadID)\u{0}\(identity.goalID)",
                 filter
             ))
@@ -179,7 +180,10 @@ struct AllPhaseBoardView: View {
         case .all: "All goals"
         case .unassigned: "No Delivery Goal"
         case let .goal(id): "Delivery Goal \(id.rawValue)"
-        case let .execution(identity): "Execution Goal \(identity.goalID) · Thread \(identity.threadID)"
+        case let .execution(identity):
+            board.hasExactExecutionGoalLink(identity)
+                ? "Execution Goal \(identity.goalID) · Thread \(identity.threadID)"
+                : "Unavailable Execution Goal link \(identity.goalID) · Thread \(identity.threadID)"
         }
         return "\(title): \(filtered.lanes.reduce(0) { $0 + $1.count }) tickets"
     }

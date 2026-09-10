@@ -27,6 +27,70 @@ enum WorkspaceGoalsLayout {
     static func usesStackedDetail(forWidth width: CGFloat) -> Bool { width < 1_000 }
 }
 
+struct WorkspaceGoalsProjectChoice: Equatable {
+    let id: Data
+    let label: String
+}
+
+func workspaceGoalsProjectChoices(_ projects: [ProjectDashboardProjection]) -> [WorkspaceGoalsProjectChoice] {
+    var unique: [Data: ProjectDashboardProjection] = [:]
+    for project in projects {
+        let id = Data(project.id.rawValue.utf8)
+        if unique[id] == nil { unique[id] = project }
+    }
+    let ordered = unique.values.sorted {
+        if $0.name != $1.name { return $0.name < $1.name }
+        return $0.id.rawValue.utf8.lexicographicallyPrecedes($1.id.rawValue.utf8)
+    }
+    return ByteStablePickerOption.disambiguating(ordered.map {
+        (label: $0.name, byteIdentity: $0.id.rawValue, value: Data($0.id.rawValue.utf8))
+    }).map { .init(id: $0.value, label: $0.selection) }
+}
+
+func workspaceDeliveryIdentityCue(
+    for item: WorkspaceDeliveryGoalProjection,
+    among items: [WorkspaceDeliveryGoalProjection]
+) -> String? {
+    let collides = items.filter {
+        $0.project.name == item.project.name
+            && $0.phaseName == item.phaseName
+            && $0.goal.title == item.goal.title
+    }.count > 1
+    guard collides else { return nil }
+    return "Project \(item.project.id.rawValue) · phase \(item.phaseID.rawValue) · goal \(item.goal.goalID.rawValue)"
+}
+
+struct WorkspaceDeliveryGoalFacts: Equatable {
+    let formalState: String
+    let phaseLifecycle: String
+    let structuralReadiness: String
+    let coverage: String
+    let ownerAcceptance: String
+}
+
+func workspaceDeliveryGoalFacts(_ item: WorkspaceDeliveryGoalProjection) -> WorkspaceDeliveryGoalFacts {
+    let readiness = switch item.phasePlan.state {
+    case .legacyUnassessed: "Legacy unassessed"
+    case .draft: "Draft"
+    case .ready: "Ready"
+    }
+    let coverage: String
+    if let assessment = item.goal.coverage {
+        coverage = "Carried-obligation coverage: \(assessment.deliveredLeafCount)/\(assessment.requiredLeafCount) delivered · \(assessment.isResolved ? "resolved" : "unresolved") · \(assessment.isAcceptanceEligible ? "acceptance eligible" : "not acceptance eligible")"
+    } else {
+        coverage = "Carried-obligation coverage: unavailable"
+    }
+    return .init(
+        formalState: "Formal Delivery Goal state: \(item.goal.lifecycle.displayName)",
+        phaseLifecycle: "Phase lifecycle: \(item.phaseLifecycle?.lifecycle.displayName ?? "Unavailable")",
+        structuralReadiness: "Structural readiness: \(readiness) · revision \(item.phasePlan.revision) · \(item.phasePlan.coveredUpcomingCount)/\(item.phasePlan.upcomingCount) upcoming work covered · \(item.phasePlan.unassignedUpcomingCount) unassigned",
+        coverage: coverage,
+        ownerAcceptance: item.goal.lifecycle == .accepted
+            ? "Owner acceptance: Recorded"
+            : "Owner acceptance: Not recorded"
+    )
+}
+
 struct WorkspaceGoalsView: View {
     let goals: WorkspaceGoalsProjection
     let freshness: CodexObservationFreshness
@@ -60,6 +124,10 @@ struct WorkspaceGoalsView: View {
             if projectsByID[id] == nil { projectsByID[id] = project }
         }
         return projectsByID.values.sorted { $0.name < $1.name }
+    }
+
+    private var projectChoices: [WorkspaceGoalsProjectChoice] {
+        workspaceGoalsProjectChoices(projects)
     }
 
     private var delivery: [WorkspaceDeliveryGoalProjection] {
@@ -170,8 +238,8 @@ struct WorkspaceGoalsView: View {
             }
         )) {
             Text("All Projects").tag(Data?.none)
-            ForEach(projects, id: \.workspaceByteID) { project in
-                Text(project.name).tag(Data?.some(Data(project.id.rawValue.utf8)))
+            ForEach(projectChoices, id: \.id) { choice in
+                Text(choice.label).tag(Data?.some(choice.id))
             }
         }
         .pickerStyle(.menu)
@@ -229,7 +297,7 @@ struct WorkspaceGoalsView: View {
             ForEach(unassignedWork) { item in
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(item.project.name) · \(item.phaseName)")
+                        Text("\(item.project.name) · \(item.phaseName ?? "Not placed")")
                         Text("\(item.tickets.count) persisted work item\(item.tickets.count == 1 ? "" : "s") · no goal inferred")
                             .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
                     }
@@ -249,20 +317,26 @@ struct WorkspaceGoalsView: View {
         VStack(alignment: .leading, spacing: 5) {
             Text(item.goal.title).font(RekonTypography.cardTitle)
             Text("\(item.project.name) · \(item.phaseName)").font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+            if let cue = workspaceDeliveryIdentityCue(for: item, among: delivery) {
+                Text(cue).font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+            }
             Text("\(item.goal.lifecycle.displayName) · \(item.goal.ticketIDs.count) associated work item\(item.goal.ticketIDs.count == 1 ? "" : "s")")
                 .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
         }
     }
 
     private func deliveryDetail(_ item: WorkspaceDeliveryGoalProjection) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let facts = workspaceDeliveryGoalFacts(item)
+        return VStack(alignment: .leading, spacing: 14) {
             Text("Delivery Goal · \(item.project.name) · \(item.phaseName)")
                 .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText).textCase(.uppercase)
             Text(item.goal.title).font(RekonTypography.screenTitle)
             Text(item.goal.outcome).foregroundStyle(RekonTheme.secondaryText)
-            Text(phasePlanSummary(item.phasePlan))
-            Text(coverageSummary(item.goal.coverage))
-            Text("Owner acceptance: \(item.goal.lifecycle.displayName). Browsing does not accept outcomes or change formal delivery state.")
+            Text(facts.formalState)
+            Text(facts.phaseLifecycle)
+            Text(facts.structuralReadiness)
+            Text(facts.coverage)
+            Text("\(facts.ownerAcceptance). Browsing does not accept outcomes or change formal delivery state.")
                 .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
             if item.goal.doneCriteria.isEmpty {
                 Text("No recorded criteria").foregroundStyle(RekonTheme.secondaryText)
@@ -395,16 +469,17 @@ struct WorkspaceGoalsView: View {
         .accessibilityLabel("\(items.count) goals")
     }
 
-    private func selectedDetail<Item: Identifiable, Detail: View>(
+    @ViewBuilder private func selectedDetail<Item: Identifiable, Detail: View>(
         _ items: [Item], selectedID: Binding<Data?>,
         @ViewBuilder detail: @escaping (Item) -> Detail
     ) -> some View where Item.ID == Data {
-        let selected = items.first { $0.id == selectedID.wrappedValue } ?? items[0]
-        return detail(selected)
-            .padding(18)
-            .frame(maxWidth: .infinity, minHeight: 280, alignment: .topLeading)
-            .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 12))
-            .accessibilityIdentifier("workspace-goal-detail")
+        if let selected = items.first(where: { $0.id == selectedID.wrappedValue }) {
+            detail(selected)
+                .padding(18)
+                .frame(maxWidth: .infinity, minHeight: 280, alignment: .topLeading)
+                .background(RekonTheme.surfaceGradient, in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityIdentifier("workspace-goal-detail")
+        }
     }
 
     private func goalsEmptyState(title: String, detail: String, canReset: Bool, reset: @escaping () -> Void) -> some View {
@@ -421,20 +496,6 @@ struct WorkspaceGoalsView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 360)
         .accessibilityIdentifier("goals-empty")
-    }
-
-    private func phasePlanSummary(_ plan: PhasePlanProjection) -> String {
-        let state = switch plan.state {
-        case .legacyUnassessed: "Legacy unassessed"
-        case .draft: "Draft"
-        case .ready: "Ready"
-        }
-        return "Structural readiness: \(state) · revision \(plan.revision) · \(plan.coveredUpcomingCount)/\(plan.upcomingCount) upcoming work covered · \(plan.unassignedUpcomingCount) unassigned"
-    }
-
-    private func coverageSummary(_ coverage: DeliveryGoalCoverageAssessment?) -> String {
-        guard let coverage else { return "Carried-obligation coverage: unavailable" }
-        return "Carried-obligation coverage: \(coverage.deliveredLeafCount)/\(coverage.requiredLeafCount) delivered · \(coverage.isResolved ? "resolved" : "unresolved") · \(coverage.isAcceptanceEligible ? "acceptance eligible" : "not acceptance eligible")"
     }
 
     private func matchesSelectedProject(_ candidate: ProjectID) -> Bool {
@@ -455,10 +516,6 @@ struct WorkspaceGoalsView: View {
         }
     }
 
-}
-
-private extension ProjectDashboardProjection {
-    var workspaceByteID: Data { Data(id.rawValue.utf8) }
 }
 
 private struct WorkspaceGoalsScrollOffsetBridge: NSViewRepresentable {

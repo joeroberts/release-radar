@@ -46,16 +46,21 @@ struct WorkspaceExecutionGoalProjection: Equatable, Sendable, Identifiable {
     var id: Data {
         Data(project.id.rawValue.utf8) + [0] + Data(threadID.utf8) + [0] + Data(goalID.utf8)
     }
+
+    var boardFilter: ExecutionGoalBoardFilter? {
+        link.ticketID.map { .init(threadID: threadID, goalID: goalID, ticketID: $0) }
+    }
 }
 
 struct WorkspaceUnassignedDeliveryWorkProjection: Equatable, Sendable, Identifiable {
     let project: ProjectDashboardProjection
-    let phaseID: PhaseID
-    let phaseName: String
+    let phaseID: PhaseID?
+    let phaseName: String?
     let tickets: [TicketCardProjection]
 
     var id: Data {
-        Data(project.id.rawValue.utf8) + [0] + Data(phaseID.rawValue.utf8)
+        let location = phaseID.map { Data("phase\0\($0.rawValue)".utf8) } ?? Data("unplaced".utf8)
+        return Data(project.id.rawValue.utf8) + [0] + location
     }
 }
 
@@ -69,7 +74,8 @@ struct WorkspaceGoalsProjection: Equatable, Sendable {
     static func load(
         connection: SQLiteConnection,
         projects: [ProjectDashboardProjection],
-        boards: [PhaseBoardKey: PhaseBoardProjection]
+        boards: [PhaseBoardKey: PhaseBoardProjection],
+        projectPlans: [ProjectID: ProjectPlanProjection]
     ) throws -> WorkspaceGoalsProjection {
         let delivery = boards.values.flatMap { board in
             board.deliveryGoals.map {
@@ -82,7 +88,7 @@ struct WorkspaceGoalsProjection: Equatable, Sendable {
             ($0.project.name, $0.phaseName, $0.goal.goalID.rawValue)
                 < ($1.project.name, $1.phaseName, $1.goal.goalID.rawValue)
         }
-        let unassignedDeliveryWork = boards.values.compactMap { board -> WorkspaceUnassignedDeliveryWorkProjection? in
+        let placedWithoutGoal = boards.values.compactMap { board -> WorkspaceUnassignedDeliveryWorkProjection? in
             let tickets = board.lanes.flatMap(\.cards).filter { $0.deliveryGoal == nil }
             guard !tickets.isEmpty else { return nil }
             return .init(
@@ -91,8 +97,13 @@ struct WorkspaceGoalsProjection: Equatable, Sendable {
                 phaseName: board.phaseName,
                 tickets: tickets
             )
-        }.sorted {
-            ($0.project.name, $0.phaseName) < ($1.project.name, $1.phaseName)
+        }
+        let unplaced = projectPlans.values.compactMap { plan -> WorkspaceUnassignedDeliveryWorkProjection? in
+            guard !plan.unassignedTickets.isEmpty else { return nil }
+            return .init(project: plan.project, phaseID: nil, phaseName: nil, tickets: plan.unassignedTickets)
+        }
+        let unassignedDeliveryWork = (placedWithoutGoal + unplaced).sorted {
+            ($0.project.name, $0.phaseName ?? "") < ($1.project.name, $1.phaseName ?? "")
         }
 
         let projectsByID = Dictionary(uniqueKeysWithValues: projects.map { (Data($0.id.rawValue.utf8), $0) })
