@@ -541,11 +541,11 @@ public actor ProjectRemovalManager {
                 INSERT INTO retained_ticket_delivery_evidence_observations (
                     removal_id, historical_project_id, ticket_id, id, target_version,
                     fact_data, source_data, source_availability, outcome, observed_at,
-                    recorded_at, attachment_evidence_id, supersedes_observation_id
+                    recorded_at, attachment_evidence_id, supersedes_observation_id, append_revision
                 )
                 SELECT ?, project_id, ticket_id, id, target_version, fact_data,
                        source_data, source_availability, outcome, observed_at,
-                       recorded_at, attachment_evidence_id, supersedes_observation_id
+                       recorded_at, attachment_evidence_id, supersedes_observation_id, append_revision
                 FROM ticket_delivery_evidence_observations WHERE project_id = ?
                 """,
                 bindings: [removal, project]

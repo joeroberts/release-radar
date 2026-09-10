@@ -332,6 +332,14 @@ stale registration or stale evidence-set revision is rejected. The target,
 observation, audit event and command receipt commit atomically, so a failed command
 cannot leave an orphaned evidence fact or provenance record.
 
+Observation recording time is assigned by the app. The evidence-set revision at
+append supplies persistent ordering, including when timestamps tie; removal and
+recovery preserve it. The request's legacy `recordedAt` field remains part of
+exact replay identity but does not supply persisted time. Explicit supersession
+withdraws the predecessor from current expectation assessment even when the
+correction changes category, scope or applicability; both observations remain
+visible as history.
+
 Applicability is a deterministic comparison with the currently recorded target,
 not a live source probe. Missing legacy identity remains unknown and mismatched
 known identity is stale; neither state is upgraded from current repository,
@@ -340,6 +348,11 @@ recorded managed-document artifact through the accepted catalog and authorized
 root solely to report availability and current digest. It does not execute tests
 or checks, make network requests, update the target or observation, or change
 ticket, phase or owner-acceptance state.
+
+Unknown checkout state or missing dirty-snapshot identity cannot establish exact
+applicability, including for checks bound to the recorded target. A PR revision
+must identify its recorded head or, for a merged PR, its recorded merge SHA.
+Evidence for the head does not thereby become evidence for the merge result.
 
 Project removal retains immutable evidence targets and observations with the
 historical registration identity while removing operational authority. Re-adding

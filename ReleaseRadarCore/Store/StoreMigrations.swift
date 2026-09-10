@@ -729,7 +729,7 @@ enum StoreMigrations {
         (25, "ticket_delivery_evidence_observations", [
             "project_id", "ticket_id", "id", "target_version", "fact_data", "source_data",
             "source_availability", "outcome", "observed_at", "recorded_at",
-            "attachment_evidence_id", "supersedes_observation_id",
+            "attachment_evidence_id", "supersedes_observation_id", "append_revision",
         ]),
         (25, "retained_ticket_delivery_evidence_targets", [
             "removal_id", "historical_project_id", "ticket_id", "version", "repository_id",
@@ -739,7 +739,7 @@ enum StoreMigrations {
         (25, "retained_ticket_delivery_evidence_observations", [
             "removal_id", "historical_project_id", "ticket_id", "id", "target_version",
             "fact_data", "source_data", "source_availability", "outcome", "observed_at",
-            "recorded_at", "attachment_evidence_id", "supersedes_observation_id",
+            "recorded_at", "attachment_evidence_id", "supersedes_observation_id", "append_revision",
         ]),
     ]
 
@@ -3033,7 +3033,9 @@ enum StoreMigrations {
         recorded_at TEXT NOT NULL,
         attachment_evidence_id TEXT,
         supersedes_observation_id TEXT,
+        append_revision INTEGER NOT NULL CHECK (append_revision > 0),
         PRIMARY KEY(project_id, ticket_id, id),
+        UNIQUE(project_id, ticket_id, append_revision),
         FOREIGN KEY(project_id, ticket_id, target_version)
             REFERENCES ticket_delivery_evidence_targets(project_id, ticket_id, version) ON DELETE NO ACTION,
         CHECK (supersedes_observation_id IS NULL OR supersedes_observation_id <> id)
@@ -3070,7 +3072,9 @@ enum StoreMigrations {
         recorded_at TEXT NOT NULL,
         attachment_evidence_id TEXT,
         supersedes_observation_id TEXT,
+        append_revision INTEGER NOT NULL CHECK (append_revision > 0),
         PRIMARY KEY(removal_id, historical_project_id, ticket_id, id),
+        UNIQUE(removal_id, historical_project_id, ticket_id, append_revision),
         FOREIGN KEY(removal_id, historical_project_id, ticket_id, target_version)
             REFERENCES retained_ticket_delivery_evidence_targets(
                 removal_id, historical_project_id, ticket_id, version

@@ -384,6 +384,10 @@ final class DeliveryEvidenceAcceptanceTests: XCTestCase {
         XCTAssertEqual(state.4, 1)
         XCTAssertEqual(state.5, 2)
         XCTAssertEqual(state.6, "evidence-registration")
+        let retainedOrder = try await fixture.store.read {
+            try $0.scalarInt("SELECT append_revision FROM retained_ticket_delivery_evidence_observations WHERE id='unit-check'")
+        }
+        XCTAssertEqual(retainedOrder, 2)
     }
 
     func testOlderBackupRestoreRotatesAuthorityAndReconcilesNewerEvidenceAsHistory() async throws {
@@ -495,6 +499,16 @@ final class DeliveryEvidenceAcceptanceTests: XCTestCase {
         XCTAssertEqual(retained.1, 2)
         XCTAssertEqual(retained.2, 1)
         XCTAssertEqual(retained.3, 1)
+        let preservedOrder = try await restored.store.read { connection in
+            (
+                try connection.scalarInt("SELECT append_revision FROM ticket_delivery_evidence_observations WHERE id='before-backup'"),
+                try connection.scalarInt("SELECT append_revision FROM retained_ticket_delivery_evidence_observations WHERE id='before-backup'"),
+                try connection.scalarInt("SELECT append_revision FROM retained_ticket_delivery_evidence_observations WHERE id='after-backup'")
+            )
+        }
+        XCTAssertEqual(preservedOrder.0, 2)
+        XCTAssertEqual(preservedOrder.1, 2)
+        XCTAssertEqual(preservedOrder.2, 4)
 
         let currentProject = AuthorizedProject(
             registration: registration,
@@ -521,6 +535,148 @@ final class DeliveryEvidenceAcceptanceTests: XCTestCase {
             )
         ))
         XCTAssertEqual(stale.error, .staleProjectRegistration)
+    }
+
+    func testAppOwnsRecordingTimeAndAppendOrderWhileExactReplayPreservesBoth() async throws {
+        let fixture = try await makeFixture()
+        let target = try documentationTarget(fixture.root)
+        let bound = await fixture.dispatcher.dispatch(envelope(fixture.root, .bindDocumentationRepository(target: target)))
+        XCTAssertNil(bound.error)
+        let created = await fixture.dispatcher.dispatch(envelope(fixture.root, .recordDeliveryEvidenceTarget(
+            target: target, ticketID: "ticket", revision: revision("a", checkout: .clean),
+            expectations: [.init(category: .check, scope: "unit")], expectedEvidenceRevision: 0
+        )))
+        XCTAssertNil(created.error)
+        var requests: [AgentCommandEnvelope] = []
+        var results: [AgentCommandResult] = []
+        for (index, values) in [("z-old-pass", "2999-01-01T00:00:00Z", DeliveryEvidenceOutcome.passed),
+                                ("a-new-failure", "1900-01-01T00:00:00Z", .failed)].enumerated() {
+            let observation = DeliveryEvidenceObservation(
+                id: values.0, targetVersion: 1, fact: .check(.init(scope: "unit")),
+                source: .init(kind: .recordedClaim, label: "Reported check"), sourceAvailability: .available,
+                outcome: values.2, observedAt: "2026-09-10T18:00:00Z", recordedAt: values.1
+            )
+            let request = envelope(fixture.root, .appendDeliveryEvidenceObservation(
+                target: target, ticketID: "ticket", observation: observation,
+                expectedEvidenceRevision: Int64(index + 1)
+            ))
+            let result = await fixture.dispatcher.dispatch(request)
+            XCTAssertNil(result.error)
+            requests.append(request)
+            results.append(result)
+        }
+        let queryEnvelope = AgentQueryEnvelope(
+            version: 1, projectRoot: fixture.root.path,
+            query: .ticketDeliveryEvidence(projectID: "p", rootID: "root", ticketID: "ticket")
+        )
+        let response = await query(fixture).dispatch(queryEnvelope)
+        let before = try XCTUnwrap(response.deliveryEvidence)
+        XCTAssertEqual(before.observations.map(\.id), ["z-old-pass", "a-new-failure"])
+        XCTAssertEqual(before.expectations.first?.status, .failed)
+        for observation in before.observations {
+            let date = try XCTUnwrap(ISO8601DateFormatter().date(from: observation.observation.recordedAt))
+            XCTAssertLessThan(abs(date.timeIntervalSinceNow), 60)
+            XCTAssertEqual(observation.observation.observedAt, "2026-09-10T18:00:00Z")
+        }
+        let appendRevisions = try await fixture.store.read { connection in
+            try connection.rows(
+                "SELECT id,append_revision FROM ticket_delivery_evidence_observations ORDER BY append_revision"
+            )
+        }
+        XCTAssertEqual(appendRevisions.map { $0["append_revision"] }, [.integer(2), .integer(3)])
+        for (request, original) in zip(requests, results) {
+            let replay = await fixture.dispatcher.dispatch(request)
+            XCTAssertEqual(replay, original)
+        }
+        let replayResponse = await query(fixture).dispatch(queryEnvelope)
+        XCTAssertEqual(replayResponse.deliveryEvidence, before)
+        let changedBody = envelope(fixture.root, .appendDeliveryEvidenceObservation(
+            target: target, ticketID: "ticket",
+            observation: .init(
+                id: "z-old-pass", targetVersion: 1, fact: .check(.init(scope: "unit")),
+                source: .init(kind: .recordedClaim, label: "Reported check"), sourceAvailability: .available,
+                outcome: .passed, observedAt: "2026-09-10T18:00:00Z", recordedAt: "2998-01-01T00:00:00Z"
+            ), expectedEvidenceRevision: 1
+        ), requestID: requests[0].requestID)
+        let changedReplay = await fixture.dispatcher.dispatch(changedBody)
+        XCTAssertEqual(changedReplay.error, .requestIDReused)
+    }
+
+    func testContradictoryPullRequestRevisionRejectsWithoutSideEffects() async throws {
+        let fixture = try await makeFixture()
+        let target = try documentationTarget(fixture.root)
+        let bound = await fixture.dispatcher.dispatch(envelope(fixture.root, .bindDocumentationRepository(target: target)))
+        XCTAssertNil(bound.error)
+        let created = await fixture.dispatcher.dispatch(envelope(fixture.root, .recordDeliveryEvidenceTarget(
+            target: target, ticketID: "ticket", revision: revision("a", checkout: .clean),
+            expectations: [], expectedEvidenceRevision: 0
+        )))
+        XCTAssertNil(created.error)
+        let before = try await fixture.store.read { connection in
+            (try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+             try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"))
+        }
+        let fact = DeliveryEvidenceObservation(
+            id: "contradictory-pr", targetVersion: 1,
+            fact: .pullRequest(.init(
+                repositoryID: target.repositoryID, revision: revision("a", checkout: .clean),
+                number: 42, headSHA: String(repeating: "b", count: 40),
+                mergeSHA: String(repeating: "c", count: 40), state: .merged
+            )),
+            source: .init(kind: .recordedClaim, label: "Reported PR"), sourceAvailability: .available,
+            outcome: .passed, observedAt: "2026-09-10T18:00:00Z", recordedAt: "2026-09-10T18:01:00Z"
+        )
+        let result = await fixture.dispatcher.dispatch(envelope(fixture.root, .appendDeliveryEvidenceObservation(
+            target: target, ticketID: "ticket", observation: fact, expectedEvidenceRevision: 1
+        )))
+        XCTAssertNotNil(result.error)
+        let after = try await fixture.store.read { connection in
+            (try connection.scalarInt("SELECT COUNT(*) FROM audit_events"),
+             try connection.scalarInt("SELECT COUNT(*) FROM agent_command_requests"),
+             try connection.scalarInt("SELECT COUNT(*) FROM ticket_delivery_evidence_observations"),
+             try connection.scalarInt("SELECT revision FROM ticket_delivery_evidence_sets"))
+        }
+        XCTAssertEqual(after.0, before.0)
+        XCTAssertEqual(after.1, before.1)
+        XCTAssertEqual(after.2, 0)
+        XCTAssertEqual(after.3, 1)
+    }
+
+    func testManagedDocumentReadbackPreservesUnknownCheckoutUntilBytesActuallyChange() async throws {
+        let fixture = try await makeFixture()
+        let target = try documentationTarget(fixture.root)
+        let bound = await fixture.dispatcher.dispatch(envelope(fixture.root, .bindDocumentationRepository(target: target)))
+        XCTAssertNil(bound.error)
+        let created = await fixture.dispatcher.dispatch(envelope(fixture.root, .recordDeliveryEvidenceTarget(
+            target: target, ticketID: "ticket", revision: revision("a", checkout: .unknown),
+            expectations: [.init(category: .document, scope: nil)], expectedEvidenceRevision: 0
+        )))
+        XCTAssertNil(created.error)
+        let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: fixture.root)
+        let artifact = try XCTUnwrap(snapshot.catalog.artifacts.first { $0.artifactID == "current" })
+        let sourceURL = fixture.root.appendingPathComponent(artifact.path)
+        let fact = DeliveryEvidenceObservation(
+            id: "unknown-document", targetVersion: 1,
+            fact: .document(.init(
+                repositoryID: target.repositoryID, revision: revision("a", checkout: .unknown),
+                artifactID: artifact.artifactID, contentDigest: documentationDigest(try Data(contentsOf: sourceURL)),
+                catalogVersion: snapshot.version, catalogDigest: snapshot.digest
+            )),
+            source: .init(kind: .managedDocument, label: artifact.artifactID), sourceAvailability: .available,
+            outcome: .observed, observedAt: "2026-09-10T18:00:00Z", recordedAt: "2026-09-10T18:01:00Z"
+        )
+        let appended = await fixture.dispatcher.dispatch(envelope(fixture.root, .appendDeliveryEvidenceObservation(
+            target: target, ticketID: "ticket", observation: fact, expectedEvidenceRevision: 1
+        )))
+        XCTAssertNil(appended.error)
+        let request = AgentQueryEnvelope(version: 1, projectRoot: fixture.root.path,
+                                         query: .ticketDeliveryEvidence(projectID: "p", rootID: "root", ticketID: "ticket"))
+        let unchanged = await query(fixture).dispatch(request)
+        XCTAssertEqual(unchanged.deliveryEvidence?.observations.first?.applicability.state, .unknown)
+        try Data("Changed bytes\n".utf8).write(to: sourceURL)
+        let changed = await query(fixture).dispatch(request)
+        XCTAssertEqual(changed.deliveryEvidence?.observations.first?.applicability.state, .stale)
+        XCTAssertTrue(changed.deliveryEvidence?.observations.first?.applicability.reasons.contains(.documentContentChanged) == true)
     }
 
     private func makeFixture() async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {

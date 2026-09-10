@@ -601,7 +601,7 @@ public actor ApplicationRecoveryManager {
                 bindings: [removal, project]
             )
             try connection.execute(
-                "INSERT INTO retained_ticket_delivery_evidence_observations SELECT ?, project_id, ticket_id, id, target_version, fact_data, source_data, source_availability, outcome, observed_at, recorded_at, attachment_evidence_id, supersedes_observation_id FROM ticket_delivery_evidence_observations WHERE project_id=?",
+                "INSERT INTO retained_ticket_delivery_evidence_observations SELECT ?, project_id, ticket_id, id, target_version, fact_data, source_data, source_availability, outcome, observed_at, recorded_at, attachment_evidence_id, supersedes_observation_id, append_revision FROM ticket_delivery_evidence_observations WHERE project_id=?",
                 bindings: [removal, project]
             )
             try connection.execute(
@@ -953,7 +953,7 @@ public actor ApplicationRecoveryManager {
             INSERT OR IGNORE INTO retained_ticket_delivery_evidence_observations (
                 removal_id, historical_project_id, ticket_id, id, target_version,
                 fact_data, source_data, source_availability, outcome, observed_at,
-                recorded_at, attachment_evidence_id, supersedes_observation_id
+                recorded_at, attachment_evidence_id, supersedes_observation_id, append_revision
             )
             SELECT removed.removal_id, observations.project_id,
                 observations.ticket_id, observations.id, observations.target_version,
@@ -961,7 +961,7 @@ public actor ApplicationRecoveryManager {
                 observations.source_availability, observations.outcome,
                 observations.observed_at, observations.recorded_at,
                 observations.attachment_evidence_id,
-                observations.supersedes_observation_id
+                observations.supersedes_observation_id, observations.append_revision
             FROM current_state.ticket_delivery_evidence_observations observations
             JOIN current_state.project_registrations registrations
               ON registrations.project_id = observations.project_id

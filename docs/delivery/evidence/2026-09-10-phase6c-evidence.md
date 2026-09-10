@@ -56,6 +56,32 @@ Phase 6C scratch directory. They are not controlling artifacts. No installation,
 owner application/store mutation, provider request, notification, network call,
 portable import/export or repository-document write occurred.
 
+## Review corrections
+
+The four Required findings from independent review received bounded corrections:
+superseded observations no longer satisfy expectations through either evaluator
+entry point; app recording time and evidence-set append revision replace caller
+time/ID ordering; unknown checkout identity stays Unknown, including target-bound
+checks and unchanged managed documents; and PR facts must identify their explicit
+head or a recorded merge revision when merged. A head observation still cannot
+satisfy a target at the merge revision.
+
+`results-review-fixes-01.xcresult` passed all 17 affected tests: 10 acceptance and
+7 applicability tests, zero failures, in 1.263 seconds of test execution. The
+sanitized unsigned arm64 run used the pinned package cache and exercised scope-
+and revision-changing corrections, app timestamps/order, exact and changed-body
+replay, PR rejection without side effects, unknown checkout/document readback,
+migration, atomicity, lifecycle guards, removal and older-backup recovery. Removal
+and recovery preserve the assigned append revision. Regression source was written
+before the implementation corrections; no pre-fix test execution occurred while
+the shared build reservation was occupied.
+
+The append-order column refines the same unshipped schema-25 migration and its
+retained tables. Earlier synthetic schema-25 candidate stores are not upgrade
+inputs; no installed or owner store was changed. The UI and native test are
+unchanged, so the existing native evidence remains applicable. The correction
+delta is subject to the same independent review before final acceptance.
+
 ## Native visual and accessibility evidence
 
 ![Wide integrated ticket evidence](2026-09-10-phase6c-evidence-wide.png)
