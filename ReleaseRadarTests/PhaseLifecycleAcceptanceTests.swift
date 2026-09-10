@@ -32,7 +32,7 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(facts.1, 0)
         XCTAssertEqual(facts.2, 0)
         XCTAssertEqual(facts.3, 0)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 23)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
     }
 
     func testLifecycleDecisionsRequireOwnerExactRegistrationAndReplayWithOneHistoryEvent() async throws {
@@ -692,6 +692,16 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
             origin: .ownerApp
         )
         XCTAssertNil(movedAgain.error)
+        let liveHistory = try await ProjectActivityProjection.load(
+            from: fixture.store,
+            projectID: fixture.registration.projectID
+        )
+        let liveSecondEvent = try XCTUnwrap(liveHistory.items.first {
+            $0.identity.sourceID == movedAgain.auditEventID?.rawValue
+        })
+        let liveFirstEvent = try XCTUnwrap(liveHistory.items.first {
+            $0.identity.sourceID == moved.auditEventID?.rawValue
+        })
         let liveLifecycle = try await fixture.store.read { connection in
             (
                 try PhaseLifecyclePolicy.current(
@@ -730,14 +740,15 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(current.phaseID?.rawValue, "phase-a")
         XCTAssertEqual(current.title, "Phase lifecycle · Phase A")
         XCTAssertEqual(current.detail, "Current · Upcoming · revision 2")
-        XCTAssertEqual(current.observedAt, liveLifecycle.0.updatedAt)
+        XCTAssertNil(current.observedAt)
+        XCTAssertEqual(current.recordedAt, liveLifecycle.0.updatedAt)
         XCTAssertEqual(current.retainedPhaseLifecycle?.kind, .current)
         XCTAssertEqual(current.retainedPhaseLifecycle?.removalID, removed.id)
         XCTAssertEqual(current.retainedPhaseLifecycle?.historicalProjectID, fixture.registration.projectID)
         XCTAssertEqual(current.retainedPhaseLifecycle?.lifecycle, .upcoming)
         XCTAssertEqual(current.retainedPhaseLifecycle?.revision, 2)
         let firstEvent = try XCTUnwrap(history.items.first {
-            $0.id == "phase-lifecycle-event-phase-a-1"
+            $0.identity.sourceID == moved.auditEventID?.rawValue
         })
         XCTAssertEqual(firstEvent.phaseID?.rawValue, "phase-a")
         XCTAssertEqual(firstEvent.title, "Phase lifecycle transition · Phase A")
@@ -745,7 +756,12 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
             firstEvent.detail,
             "Unassessed → In delivery · Begin delivery · revision 1 · Exercise owner phase lifecycle"
         )
-        XCTAssertEqual(firstEvent.observedAt, liveLifecycle.1[0].createdAt)
+        XCTAssertNil(firstEvent.observedAt)
+        XCTAssertEqual(firstEvent.occurredAt, liveFirstEvent.occurredAt)
+        XCTAssertNotNil(firstEvent.recordedAt)
+        XCTAssertEqual(firstEvent.provenance, .localAudit)
+        XCTAssertEqual(firstEvent.eventFacts?.phaseName, "Phase A")
+        XCTAssertEqual(firstEvent.actorID, "release-radar-owner")
         XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.kind, .transition)
         XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.previousLifecycle, .unassessed)
         XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.lifecycle, .inDelivery)
@@ -755,21 +771,33 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.registration, fixture.registration)
         XCTAssertNil(firstEvent.retainedPhaseLifecycle?.planningBaselineDigest)
         let secondEvent = try XCTUnwrap(history.items.first {
-            $0.id == "phase-lifecycle-event-phase-a-2"
+            $0.identity.sourceID == movedAgain.auditEventID?.rawValue
         })
-        XCTAssertEqual(secondEvent.observedAt, liveLifecycle.1[1].createdAt)
+        XCTAssertNil(secondEvent.observedAt)
+        XCTAssertEqual(secondEvent.occurredAt, liveSecondEvent.occurredAt)
+        XCTAssertNotNil(secondEvent.recordedAt)
+        XCTAssertEqual(secondEvent.identity, liveSecondEvent.identity)
+        XCTAssertEqual(secondEvent.provenance, liveSecondEvent.provenance)
+        XCTAssertEqual(secondEvent.eventFacts, liveSecondEvent.eventFacts)
+        XCTAssertEqual(secondEvent.occurredAt, liveSecondEvent.occurredAt)
+        XCTAssertEqual(secondEvent.recordedAt, liveSecondEvent.recordedAt)
+        XCTAssertEqual(secondEvent.actorID, liveSecondEvent.actorID)
+        XCTAssertEqual(secondEvent.originatingThreadID, liveSecondEvent.originatingThreadID)
+        XCTAssertEqual(secondEvent.threadAttribution, liveSecondEvent.threadAttribution)
         XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.previousLifecycle, .inDelivery)
         XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.lifecycle, .upcoming)
         XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.action, .moveToUpcoming)
         XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.auditEventID, movedAgain.auditEventID)
+        let lifecycleItemIDs = history.items.filter { $0.retainedPhaseLifecycle != nil }.map(\.id)
+        XCTAssertEqual(lifecycleItemIDs.count, 4)
         XCTAssertEqual(
-            history.items.filter { $0.retainedPhaseLifecycle != nil }.map(\.id),
-            [
+            Set(lifecycleItemIDs),
+            Set([
                 "phase-lifecycle-current-phase-a",
-                "phase-lifecycle-event-phase-a-2",
-                "phase-lifecycle-event-phase-a-1",
+                "audit-\(movedAgain.auditEventID!.rawValue)",
+                "audit-\(moved.auditEventID!.rawValue)",
                 "phase-lifecycle-current-phase-b",
-            ]
+            ])
         )
 
         let rejected = await fixture.dispatcher.dispatch(

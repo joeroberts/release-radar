@@ -926,34 +926,9 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         await current.close()
         XCTAssertTrue(FileManager.default.fileExists(atPath: databaseURL.path))
         let legacy = try SQLiteConnection(url: databaseURL)
-        try legacy.executeScript(
-            """
-            DROP TRIGGER phase_lifecycles_after_phase_insert;
-            DROP TABLE retained_phase_lifecycle_events;
-            DROP TABLE retained_phase_lifecycles;
-            DROP TABLE phase_lifecycle_events;
-            DROP TABLE phase_lifecycles;
-            DROP TABLE retained_plan_change_proposal_applications;
-            DROP TABLE retained_plan_change_proposal_decisions;
-            DROP TABLE retained_plan_change_proposal_versions;
-            DROP TABLE retained_plan_change_proposals;
-            DROP TABLE plan_change_proposal_applications;
-            DROP TABLE plan_change_proposal_decisions;
-            DROP TABLE plan_change_proposal_versions;
-            DROP TABLE plan_change_proposals;
-            DROP TABLE retained_delivery_goal_obligation_lineage;
-            DROP TABLE retained_delivery_goal_obligation_drops;
-            DROP TABLE retained_ticket_successor_links;
-            DROP TABLE retained_ticket_retirements;
-            DROP TABLE retained_delivery_goal_obligations;
-            DROP TABLE delivery_goal_obligation_drops;
-            DROP TABLE delivery_goal_obligation_lineage;
-            DROP TABLE ticket_successor_links;
-            DROP TABLE ticket_retirements;
-            DROP TABLE delivery_goal_obligations;
-            PRAGMA user_version = 20;
-            """
-        )
+        try removeVersionTwentyTwoCarryForwardSchema(legacy)
+        try removeVersionTwentyOneProposalSchema(legacy)
+        try legacy.execute("PRAGMA user_version = 20")
         legacy.close()
 
         let migrated = DeliveryStore(databaseURL: databaseURL)
@@ -966,7 +941,7 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
             )
         }
         let verifier = try SQLiteConnection(url: databaseURL)
-        XCTAssertEqual(try verifier.scalarInt("PRAGMA user_version"), 23)
+        XCTAssertEqual(try verifier.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(migrationFacts.0, 0)
         XCTAssertEqual(migrationFacts.1, 0)
     }

@@ -212,16 +212,33 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
         XCTAssertTrue(history.items.contains { $0.source == .notification && $0.id == "notification-attempt" && $0.notificationState == .unknown })
         XCTAssertTrue(history.items.contains { $0.source == .notification && $0.id == "notification-sent" && $0.notificationState == .sent })
         XCTAssertTrue(history.items.contains { $0.source == .notification && $0.id == "notification-legacy-queued" && $0.notificationState == .suppressed })
+        let assignmentHistory = try XCTUnwrap(history.items.first { $0.identity.sourceID == "assignment-audit" })
+        XCTAssertEqual(assignmentHistory.identity.projectID, fixture.projectID)
+        XCTAssertEqual(assignmentHistory.identity.registrationID, "registration-one")
+        XCTAssertEqual(assignmentHistory.provenance, .localAudit)
+        XCTAssertEqual(assignmentHistory.eventFacts?.projectName, "Project One")
+        XCTAssertEqual(assignmentHistory.eventFacts?.phaseID?.rawValue, "phase-one")
+        XCTAssertEqual(assignmentHistory.eventFacts?.phaseName, "Phase One")
+        XCTAssertEqual(assignmentHistory.actorID, "fixture")
+        XCTAssertEqual(assignmentHistory.originatingThreadID, "thread-one")
+        XCTAssertEqual(assignmentHistory.threadAttribution, .asserted)
+        XCTAssertNil(assignmentHistory.observedAt)
+        XCTAssertNotNil(assignmentHistory.occurredAt)
+        XCTAssertNotNil(assignmentHistory.recordedAt)
+        let retainedObservation = try XCTUnwrap(history.items.first { $0.source == .runtime })
+        XCTAssertEqual(retainedObservation.identity.sourceID, "thread-one|goal-one")
         XCTAssertEqual(
-            history.items.first(where: { $0.id == "runtime-goal-one" })?.observedAt,
+            history.items.first(where: { $0.id == "runtime-thread-one|goal-one" })?.observedAt,
             ISO8601DateFormatter().date(from: "2026-09-07T10:01:00Z")
         )
+        XCTAssertNil(history.items.first(where: { $0.id == "completion-completion-one" })?.observedAt)
         XCTAssertEqual(
-            history.items.first(where: { $0.id == "completion-completion-one" })?.observedAt,
+            history.items.first(where: { $0.id == "completion-completion-one" })?.occurredAt,
             ISO8601DateFormatter().date(from: "2026-09-07T10:02:00Z")
         )
+        XCTAssertNil(history.items.first(where: { $0.id == "notification-sent" })?.observedAt)
         XCTAssertEqual(
-            history.items.first(where: { $0.id == "notification-sent" })?.observedAt,
+            history.items.first(where: { $0.id == "notification-sent" })?.occurredAt,
             ISO8601DateFormatter().date(from: "2026-09-07T10:03:00Z")
         )
 

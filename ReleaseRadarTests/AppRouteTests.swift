@@ -2075,6 +2075,45 @@ final class AppRouteTests: XCTestCase {
         return nil
     }
 
+    private func accessibilityFocusedIdentifier(_ application: AXUIElement) -> String? {
+        var focusedValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            application,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedValue
+        ) == .success,
+              let focusedValue,
+              CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else { return nil }
+        let focusedElement = focusedValue as! AXUIElement
+        var identifierValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            focusedElement,
+            kAXIdentifierAttribute as CFString,
+            &identifierValue
+        ) == .success else { return nil }
+        return identifierValue as? String
+    }
+
+    private func accessibilityVerticalScrollValue(_ root: AXUIElement) -> Double? {
+        for scrollBar in accessibilityElements(root, role: kAXScrollBarRole) {
+            var orientationValue: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                scrollBar,
+                kAXOrientationAttribute as CFString,
+                &orientationValue
+            ) == .success,
+                  (orientationValue as? String) == kAXVerticalOrientationValue else { continue }
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                scrollBar,
+                kAXValueAttribute as CFString,
+                &value
+            ) == .success else { continue }
+            if let number = value as? NSNumber { return number.doubleValue }
+        }
+        return nil
+    }
+
     @MainActor
     private func scrollToAccessibilityElement(
         _ root: AXUIElement,
@@ -3221,14 +3260,14 @@ final class AppRouteTests: XCTestCase {
             "Project Plan",
             "Phase Board",
             "Dependencies",
-            "Activity",
+            "History",
         ])
         XCTAssertEqual(routes.map(\.systemImage), [
             "rectangle.grid.1x2",
             "list.bullet.rectangle.portrait",
             "rectangle.split.3x1",
             "arrow.triangle.branch",
-            "clock.arrow.circlepath",
+            "clock",
         ])
     }
 
@@ -5038,6 +5077,206 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(compactPhases.filter { $0.lifecycle.lifecycle == .inDelivery }.count, 3)
         XCTAssertEqual(model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.currentPhaseID)
         try taskCapture(hosting, name: "phase5e-lifecycle-live-journey-final")
+    }
+
+    @MainActor
+    func testLiveHistoryJourneyUsesNativeWideAndCompactControlsAndRestoresExactContext() async throws {
+        guard let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6A_NATIVE_SESSION"] else {
+            throw XCTSkip("The external controller must supply a unique Phase 6A native session.")
+        }
+        guard !sessionID.isEmpty,
+              sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+            XCTFail("The Phase 6A native session must contain only letters, numbers, hyphens and underscores.")
+            return
+        }
+        let markerRoot = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M", isDirectory: true)
+        let enableMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-enabled")
+        guard FileManager.default.fileExists(atPath: enableMarker.path) else {
+            throw XCTSkip("The external controller must create the fresh Phase 6A enable marker.")
+        }
+        try FileManager.default.removeItem(at: enableMarker)
+        let wideSelectionMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-wide-selection-complete")
+        let wideOpenReadyMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-wide-open-ready")
+        let wideMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-wide-complete")
+        let compactSelectionMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-compact-selection-complete")
+        let compactOpenReadyMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-compact-open-ready")
+        let compactMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-compact-complete")
+        let removedWideMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-removed-wide-complete")
+        let removedCompactMarker = markerRoot.appendingPathComponent("phase6a-native-\(sessionID)-removed-compact-complete")
+        for marker in [
+            wideSelectionMarker,
+            wideOpenReadyMarker,
+            wideMarker,
+            compactSelectionMarker,
+            compactOpenReadyMarker,
+            compactMarker,
+            removedWideMarker,
+            removedCompactMarker,
+        ] {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path))
+        }
+
+        let fixture = try await makeRR9CaptureModel(scenario: .phaseLifecycle)
+        let model = fixture.model
+        let projectID = RR9ActivePhaseCaptureFixture.primaryProjectID
+        let ticketID = TicketID(rawValue: "RR9-HISTORY")
+        try await fixture.store.transact(
+            actor: .init(id: "phase6a-native-fixture", threadID: "phase6a-asserted-thread"),
+            reason: "Open the nonactive History ticket\nRecorded detail line two remains visible.\nRecorded detail line three remains visible.\nRecorded detail final line remains visible.",
+            auditEventID: .init(rawValue: "phase6a-native-history-target"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: ticketID.rawValue)
+        ) { _ in }
+        for index in 0..<18 {
+            try await fixture.store.transact(
+                actor: .init(id: "phase6a-native-fixture", threadID: "phase6a-asserted-thread"),
+                reason: "Viewport fixture event \(index)",
+                auditEventID: .init(rawValue: "phase6a-native-viewport-\(index)"),
+                auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
+            ) { _ in }
+        }
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        await model.navigate(to: .activity(projectID))
+        model.setHistoryFilter(.audit, projectID: projectID)
+
+        let items = try XCTUnwrap(model.activity(for: projectID)?.filtered(by: .audit).items)
+        XCTAssertGreaterThanOrEqual(items.count, 2)
+        let first = try XCTUnwrap(items.first)
+        let last = try XCTUnwrap(items.last)
+        let target = try XCTUnwrap(items.first { $0.identity.sourceID == "phase6a-native-history-target" })
+        model.selectHistoryEvent(target.identity, projectID: projectID)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 940),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 6A History — isolated native interaction \(sessionID)"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.frame = .init(x: 0, y: 0, width: 1_500, height: 940)
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(window.isVisible)
+
+        let nativeApplication = AXUIElementCreateApplication(getpid())
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(nativeApplication, title: window.title))
+        let wideAccessibilityText = accessibilityText(nativeWindow)
+        XCTAssertTrue(wideAccessibilityText.contains("Event source"))
+        XCTAssertTrue(wideAccessibilityText.contains("EVENT DETAIL"))
+        for item in [first, last] {
+            let candidate = await scrollToAccessibilityElement(
+                nativeWindow,
+                identifier: "history-event-\(item.source.rawValue)-\(item.identity.sourceID)"
+            )
+            let element = try XCTUnwrap(candidate)
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                .success
+            )
+        }
+        try taskCapture(hosting, name: "phase6a-history-wide-before-external")
+        print("PHASE6A HISTORY WIDE READY: use native History filter and rows; select RR9-HISTORY and leave Open visible at a non-edge scroll position; wait for the wide-open-ready marker before activating Open")
+
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: wideSelectionMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: wideSelectionMarker.path))
+        let wideViewport = try XCTUnwrap(model.historyViewportOffset(for: projectID))
+        let wideScrollValue = try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow))
+        XCTAssertGreaterThan(wideScrollValue, 0.05)
+        XCTAssertLessThan(wideScrollValue, 0.95)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
+        XCTAssertEqual(model.navigationFocus, .historyEvent(target.identity))
+        try Data().write(to: wideOpenReadyMarker, options: .atomic)
+
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: wideMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: wideMarker.path))
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
+        XCTAssertEqual(try XCTUnwrap(model.historyViewportOffset(for: projectID)), wideViewport, accuracy: 1)
+        XCTAssertEqual(try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow)), wideScrollValue, accuracy: 0.01)
+        XCTAssertEqual(model.navigationFocus, .historyDetail(target.identity))
+        XCTAssertEqual(accessibilityFocusedIdentifier(nativeApplication), "history-open-entity")
+        XCTAssertNil(model.navigationRecoveryMessage)
+
+        window.setContentSize(NSSize(width: 760, height: 900))
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        try taskCapture(hosting, name: "phase6a-history-compact-before-external")
+        print("PHASE6A HISTORY COMPACT READY: verify stacked detail; select RR9-HISTORY, confirm the full recorded detail and scroll to the absolute bottom with Open visible; wait for the compact-open-ready marker before activating Open")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactSelectionMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactSelectionMarker.path))
+        XCTAssertNotNil(model.historyViewportOffset(for: projectID))
+        let compactScrollValue = try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow))
+        XCTAssertEqual(compactScrollValue, 1, accuracy: 0.001)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
+        XCTAssertEqual(model.navigationFocus, .historyEvent(target.identity))
+        let detailRecord = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "history-detail-record"))
+        XCTAssertTrue(accessibilityText(detailRecord).contains("Recorded detail final line remains visible."))
+        try Data().write(to: compactOpenReadyMarker, options: .atomic)
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactMarker.path))
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
+        let capturedCompactViewport = try XCTUnwrap(model.navigationHistory.current.historyViewportOffset)
+        XCTAssertEqual(
+            try XCTUnwrap(model.historyViewportOffset(for: projectID)),
+            capturedCompactViewport,
+            accuracy: 1
+        )
+        XCTAssertEqual(try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow)), compactScrollValue, accuracy: 0.01)
+        XCTAssertEqual(model.navigationFocus, .historyDetail(target.identity))
+        XCTAssertEqual(accessibilityFocusedIdentifier(nativeApplication), "history-open-entity")
+        XCTAssertNil(model.navigationRecoveryMessage)
+
+        let removalPreview = try await model.previewProjectRemoval(projectID: projectID)
+        let removed = try await model.applyProjectRemoval(removalPreview)
+        XCTAssertEqual(model.selection, .removedProject(removed.id))
+        window.setContentSize(NSSize(width: 1_500, height: 940))
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        try taskCapture(hosting, name: "phase6a-history-removed-wide-before-external")
+        print("PHASE6A REMOVED HISTORY WIDE READY: use the local source filter and event rows; select RR9-HISTORY; confirm the full recorded detail and that no Open action exists")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: removedWideMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: removedWideMarker.path))
+        XCTAssertEqual(model.selection, .removedProject(removed.id))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "history-open-entity"))
+        let removedWideDetail = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "history-detail-record"))
+        XCTAssertTrue(accessibilityText(removedWideDetail).contains("Recorded detail final line remains visible."))
+
+        window.setContentSize(NSSize(width: 760, height: 900))
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        try taskCapture(hosting, name: "phase6a-history-removed-compact-before-external")
+        print("PHASE6A REMOVED HISTORY COMPACT READY: use the local source filter and event rows; verify stacked full detail and read-only behavior")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: removedCompactMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: removedCompactMarker.path))
+        XCTAssertEqual(model.selection, .removedProject(removed.id))
+        XCTAssertNil(accessibilityElement(nativeWindow, identifier: "history-open-entity"))
+        let removedCompactDetail = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "history-detail-record"))
+        XCTAssertTrue(accessibilityText(removedCompactDetail).contains("Recorded detail final line remains visible."))
+        try taskCapture(hosting, name: "phase6a-history-removed-compact-final")
     }
 
     @MainActor

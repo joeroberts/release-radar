@@ -108,6 +108,9 @@ final class AppModel {
     private var allPhaseBoardProjectIDs: Set<Data> = []
     private var boardFilters: [PhaseBoardKey: DeliveryGoalFilter] = [:]
     private var allPhaseBoardFilters: [Data: DeliveryGoalFilter] = [:]
+    private var historyFilters: [Data: HistoryFilter] = [:]
+    private var selectedHistoryEventIDs: [Data: HistoryEventIdentity] = [:]
+    private var historyViewportOffsets: [Data: Double] = [:]
     private var deliveryGoalReloadRequired: Set<Data> = []
     private var performingReviewActionProjectIDs: Set<ProjectID> = []
     private var alertRulesFailureState: AlertRulesFailureState?
@@ -357,12 +360,29 @@ final class AppModel {
             showsAllPhases ? (allPhaseBoardFilters[Data(projectID.rawValue.utf8)] ?? .all)
                 : phaseID.map { boardFilters[PhaseBoardKey(projectID: projectID, phaseID: $0)] ?? .all }
         }
+        let historyFilter = projectID.flatMap { projectID in
+            if case .activity = route { historyFilters[Data(projectID.rawValue.utf8)] ?? .all } else { nil }
+        }
+        let selectedHistoryEventID = projectID.flatMap { projectID in
+            if case .activity = route { selectedHistoryEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
+        }
+        let historyViewportOffset = projectID.flatMap { projectID in
+            if case .activity = route { historyViewportOffsets[Data(projectID.rawValue.utf8)] } else { nil }
+        }
+        let selectedNavigationTicketID: TicketID? = if case .activity = route {
+            nil
+        } else {
+            projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
+        }
         navigationHistory.updateCurrent(
             registration: registration(for: route),
             phaseID: phaseID,
             showsAllPhases: showsAllPhases,
             filter: filter,
-            selectedTicketID: projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            selectedTicketID: selectedNavigationTicketID,
+            historyFilter: historyFilter,
+            selectedHistoryEventID: selectedHistoryEventID,
+            historyViewportOffset: historyViewportOffset,
             focus: navigationFocus
         )
     }
@@ -377,13 +397,30 @@ final class AppModel {
             showsAllPhases ? (allPhaseBoardFilters[Data(projectID.rawValue.utf8)] ?? .all)
                 : phaseID.map { boardFilters[PhaseBoardKey(projectID: projectID, phaseID: $0)] ?? .all }
         }
+        let historyFilter = projectID.flatMap { projectID in
+            if case .activity = route { historyFilters[Data(projectID.rawValue.utf8)] ?? .all } else { nil }
+        }
+        let selectedHistoryEventID = projectID.flatMap { projectID in
+            if case .activity = route { selectedHistoryEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
+        }
+        let historyViewportOffset = projectID.flatMap { projectID in
+            if case .activity = route { historyViewportOffsets[Data(projectID.rawValue.utf8)] } else { nil }
+        }
+        let selectedNavigationTicketID: TicketID? = if case .activity = route {
+            nil
+        } else {
+            projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID
+        }
         return .init(
             route: route,
             registration: registration(for: route),
             phaseID: phaseID,
             showsAllPhases: showsAllPhases,
             filter: filter,
-            selectedTicketID: projectID == nil || selectedTicketID.rawValue.isEmpty ? nil : selectedTicketID,
+            selectedTicketID: selectedNavigationTicketID,
+            historyFilter: historyFilter,
+            selectedHistoryEventID: selectedHistoryEventID,
+            historyViewportOffset: historyViewportOffset,
             focus: focus
         )
     }
@@ -475,6 +512,24 @@ final class AppModel {
 
         selectedProjectID = restoredProjectID
         selection = route
+        if case let .activity(projectID) = route {
+            let key = Data(projectID.rawValue.utf8)
+            historyFilters[key] = entry.historyFilter ?? .all
+            if let eventID = entry.selectedHistoryEventID,
+               projectActivities[projectID]?.items.contains(where: { $0.identity == eventID }) == true {
+                selectedHistoryEventIDs[key] = eventID
+            } else {
+                selectedHistoryEventIDs.removeValue(forKey: key)
+                if entry.selectedHistoryEventID != nil {
+                    recovery.append("The exact History event is unavailable; no replacement event was selected.")
+                }
+            }
+            if let viewportOffset = entry.historyViewportOffset {
+                historyViewportOffsets[key] = max(0, viewportOffset)
+            } else {
+                historyViewportOffsets.removeValue(forKey: key)
+            }
+        }
         let ticketIsAvailable = entry.selectedTicketID.map { ticketID in
             guard let projectID = restoredProjectID else { return false }
             if case .phaseBoard = route, entry.showsAllPhases {
@@ -520,6 +575,22 @@ final class AppModel {
             } ?? false
             if !focusIsAvailable {
                 recovery.append("The exact proposal version or ticket focus is unavailable; no other proposal was substituted.")
+            }
+        }
+        if case let .historyEvent(eventID)? = entry.focus {
+            focusIsAvailable = restoredProjectID.map { projectID in
+                projectActivities[projectID]?.items.contains(where: { $0.identity == eventID }) == true
+            } ?? false
+            if !focusIsAvailable, entry.selectedHistoryEventID == nil {
+                recovery.append("The exact History event focus is unavailable; no replacement event was selected.")
+            }
+        }
+        if case let .historyDetail(eventID)? = entry.focus {
+            focusIsAvailable = restoredProjectID.map { projectID in
+                projectActivities[projectID]?.items.contains(where: { $0.identity == eventID }) == true
+            } ?? false
+            if !focusIsAvailable {
+                recovery.append("The exact History detail focus is unavailable; no replacement event was selected.")
             }
         }
         navigationFocus = focusIsAvailable && (ticketIsAvailable || entry.selectedTicketID == nil)
@@ -838,6 +909,9 @@ final class AppModel {
         allPhaseBoardProjectIDs.removeAll()
         boardFilters.removeAll()
         allPhaseBoardFilters.removeAll()
+        historyFilters.removeAll()
+        selectedHistoryEventIDs.removeAll()
+        historyViewportOffsets.removeAll()
         navigationHistory.reset()
         navigationRecoveryMessage = nil
         navigationFocus = .route(.projects)
@@ -916,6 +990,86 @@ final class AppModel {
 
     func activity(for projectID: ProjectID) -> ProjectActivityProjection? {
         projectActivities[projectID]
+    }
+
+    func historyFilter(for projectID: ProjectID) -> HistoryFilter {
+        historyFilters[Data(projectID.rawValue.utf8)] ?? .all
+    }
+
+    func selectedHistoryEventID(for projectID: ProjectID) -> HistoryEventIdentity? {
+        selectedHistoryEventIDs[Data(projectID.rawValue.utf8)]
+    }
+
+    func historyViewportOffset(for projectID: ProjectID) -> Double? {
+        historyViewportOffsets[Data(projectID.rawValue.utf8)]
+    }
+
+    func setHistoryViewportOffset(_ offset: Double?, projectID: ProjectID) {
+        let key = Data(projectID.rawValue.utf8)
+        if let offset { historyViewportOffsets[key] = max(0, offset) }
+        else { historyViewportOffsets.removeValue(forKey: key) }
+        captureCurrentNavigationContext()
+    }
+
+    func setHistoryFilter(_ filter: HistoryFilter, projectID: ProjectID) {
+        let key = Data(projectID.rawValue.utf8)
+        historyFilters[key] = filter
+        if let selected = selectedHistoryEventIDs[key],
+           activity(for: projectID)?.items.first(where: { $0.identity == selected }).map({ !filter.includes($0.source) }) == true {
+            selectedHistoryEventIDs.removeValue(forKey: key)
+        }
+        navigationFocus = selectedHistoryEventIDs[key].map(NavigationFocus.historyEvent) ?? .filterSummary
+        captureCurrentNavigationContext()
+    }
+
+    func selectHistoryEvent(_ eventID: HistoryEventIdentity?, projectID: ProjectID) {
+        let key = Data(projectID.rawValue.utf8)
+        if let eventID {
+            selectedHistoryEventIDs[key] = eventID
+            navigationFocus = .historyEvent(eventID)
+        } else {
+            selectedHistoryEventIDs.removeValue(forKey: key)
+            navigationFocus = .filterSummary
+        }
+        captureCurrentNavigationContext()
+    }
+
+    func openHistoryEntity(_ item: ProjectActivityItem) async {
+        let projectID = item.identity.projectID
+        guard let currentRegistration = registration(for: .activity(projectID)),
+              item.identity.registrationID == currentRegistration.registrationID else {
+            navigationRecoveryMessage = "The event belongs to an unavailable project registration; a replacement registration was not opened."
+            navigationFocus = .recovery
+            captureCurrentNavigationContext()
+            return
+        }
+        if item.source == .audit, item.eventFacts == nil {
+            navigationRecoveryMessage = "The event target identity was not recorded; current project state was not substituted for the past."
+            navigationFocus = .recovery
+            captureCurrentNavigationContext()
+            return
+        }
+        let ticketID = item.eventFacts?.ticketID ?? item.ticketID
+        let preferredPhaseID = item.eventFacts?.currentPhaseID ?? item.eventFacts?.phaseID ?? item.phaseID
+        let target: (phaseID: PhaseID, ticketID: TicketID)? = ticketID.flatMap { ticketID in
+            if let preferredPhaseID,
+               dashboard?.board(for: projectID, phaseID: preferredPhaseID)?.detail(for: ticketID) != nil {
+                return (preferredPhaseID, ticketID)
+            }
+            return dashboard?.boards.first(where: {
+                $0.key.projectID == projectID && $0.value.detail(for: ticketID) != nil
+            }).map { ($0.key.phaseID, ticketID) }
+        }
+        guard let target else {
+            navigationRecoveryMessage = "The exact event target is unavailable; no replacement entity was opened."
+            navigationFocus = .recovery
+            captureCurrentNavigationContext()
+            return
+        }
+        await navigate(to: .phaseBoard(projectID))
+        guard selection == .phaseBoard(projectID) else { return }
+        viewPhase(projectID: projectID, phaseID: target.phaseID)
+        selectTicket(target.ticketID)
     }
 
     func removedActivity(for removalID: ProjectRemovalID) -> ProjectActivityProjection? {

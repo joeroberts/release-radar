@@ -557,15 +557,37 @@ struct SidebarView: View {
                     }
                 }
             case let .activity(projectID):
-                if let activity = model.activity(for: projectID),
-                   let project = dashboard.projects.first(where: { $0.id == projectID }) {
-                    ActivityView(
-                        activity: activity,
+                if let project = dashboard.projects.first(where: { $0.id == projectID }) {
+                    HistoryView(
+                        state: model.activity(for: projectID).map(HistorySurfaceState.loaded)
+                            ?? model.dashboardError.map(HistorySurfaceState.failed)
+                            ?? .incomplete("The project loaded, but one or more History sources are unavailable."),
                         projectName: project.name,
-                        freshness: model.codexSnapshot.freshness
+                        freshness: model.codexSnapshot.freshness,
+                        selectedFilter: Binding(
+                            get: { model.historyFilter(for: projectID) },
+                            set: { model.setHistoryFilter($0, projectID: projectID) }
+                        ),
+                        selectedEventID: Binding(
+                            get: { model.selectedHistoryEventID(for: projectID) },
+                            set: { model.selectHistoryEvent($0, projectID: projectID) }
+                        ),
+                        viewportOffset: Binding(
+                            get: { model.historyViewportOffset(for: projectID) },
+                            set: { model.setHistoryViewportOffset($0, projectID: projectID) }
+                        ),
+                        requestedFocus: model.navigationFocus,
+                        focusChanged: { focus in
+                            if case let .historyEvent(identity)? = focus,
+                               model.navigationFocus == .historyDetail(identity) {
+                                return
+                            }
+                            model.setNavigationFocus(focus)
+                        },
+                        openEntity: { item in Task { await model.openHistoryEntity(item) } }
                     )
                 } else {
-                    DetailUnavailableView(title: "Activity", image: "clock.arrow.circlepath")
+                    DetailUnavailableView(title: "History", image: "clock")
                 }
             case let .referenceSource(projectID, ticketID, linkID, version):
                 TicketReferenceSourceRouteView(

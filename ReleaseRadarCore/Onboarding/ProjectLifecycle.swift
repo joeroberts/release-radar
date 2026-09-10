@@ -686,7 +686,8 @@ public actor ProjectRemovalManager {
                 removal_id, source, source_id, title, detail, observed_at, ticket_id,
                 phase_id, delivery_goal_id, originating_thread_id, delivery_lane, runtime_state
             )
-            SELECT ?, 'runtime', observed_goals.id, observed_goals.status, observed_goals.text,
+            SELECT ?, 'runtime', observed_goals.thread_id || '|' || observed_goals.id,
+                   observed_goals.status, observed_goals.text,
                    observed_goals.last_observed_at, ticket_goal_links.ticket_id, NULL,
                    observed_goals.id, observed_goals.thread_id, NULL, observed_goals.status
             FROM observed_goals

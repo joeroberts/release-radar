@@ -62,6 +62,17 @@ public struct AuditScope: Equatable, Sendable {
     }
 }
 
+private struct AuditEventSnapshot {
+    let projectName: String?
+    let registrationID: String?
+    let requestGeneration: Int64?
+    let ticketID: String?
+    let phaseID: String?
+    let phaseName: String?
+    let ticketOutcome: String?
+    let lane: String?
+}
+
 public actor DeliveryStore {
     private var connection: SQLiteConnection?
     private var readOnlyFiles: ExistingDocumentationStoreFiles?
@@ -204,6 +215,12 @@ public actor DeliveryStore {
                 "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ?",
                 bindings: [.text(projectID.rawValue), .text(registrationID)]
             ) == 1 else { throw ProjectRemovalError.stalePreview }
+            let auditScope = AuditScope(
+                projectID: projectID,
+                entityType: .project,
+                entityID: projectID.rawValue
+            )
+            let eventSnapshot = try Self.auditEventSnapshot(connection: connection, scope: auditScope)
             try connection.execute(
                 "INSERT INTO project_removal_authorizations (project_id, registration_id, removal_id) VALUES (?, ?, ?)",
                 bindings: [.text(projectID.rawValue), .text(registrationID), .text(removalID.rawValue)]
@@ -222,19 +239,26 @@ public actor DeliveryStore {
             }
             try connection.execute("DELETE FROM projects WHERE id = ?", bindings: [.text(projectID.rawValue)])
             try connection.execute("DELETE FROM project_removal_authorizations WHERE project_id = ?", bindings: [.text(projectID.rawValue)])
+            let eventTimestamp = ISO8601DateFormatter().string(from: Date())
             try connection.execute(
                 """
                 INSERT INTO audit_events (
                     id, actor_id, thread_id, thread_attribution, project_id, entity_type,
-                    entity_id, reason, created_at, historical_project_id, historical_registration_id
-                ) VALUES (?, ?, ?, ?, NULL, 'project', ?, ?, ?, ?, ?)
+                    entity_id, reason, created_at, historical_project_id, historical_registration_id,
+                    event_facts_recorded, event_provenance, event_occurred_at, event_recorded_at,
+                    event_project_name, event_registration_id, event_request_generation
+                ) VALUES (?, ?, ?, ?, NULL, 'project', ?, ?, ?, ?, ?, 1, 'local_audit', ?, ?, ?, ?, ?)
                 """,
                 bindings: [
                     .text(auditEventID.rawValue), .text(actor.id),
                     actor.threadID.map(SQLiteValue.text) ?? .null,
                     .text(actor.threadAttribution.rawValue), .text(projectID.rawValue),
-                    .text(reason), .text(ISO8601DateFormatter().string(from: Date())),
+                    .text(reason), .text(eventTimestamp),
                     .text(projectID.rawValue), .text(registrationID),
+                    .text(eventTimestamp), .text(eventTimestamp),
+                    eventSnapshot.projectName.map(SQLiteValue.text) ?? .null,
+                    .text(registrationID),
+                    eventSnapshot.requestGeneration.map(SQLiteValue.integer) ?? .null,
                 ]
             )
             try connection.execute("COMMIT")
@@ -258,11 +282,8 @@ public actor DeliveryStore {
         let scopedConnection = connection.makeScopedConnection(access: .transaction)
         defer { scopedConnection.invalidate() }
         do {
-            let registrationBefore = try auditScope.flatMap { scope in
-                try connection.scalarText(
-                    "SELECT registration_id FROM project_registrations WHERE project_id = ?",
-                    bindings: [.text(scope.projectID.rawValue)]
-                )
+            let snapshotBefore = try auditScope.map {
+                try Self.auditEventSnapshot(connection: connection, scope: $0)
             }
             let result = try connection.withTransactionCallbackRestrictions {
                 try body(scopedConnection)
@@ -270,11 +291,8 @@ public actor DeliveryStore {
             guard connection.isInTransaction else {
                 throw SQLiteError(code: SQLITE_MISUSE, message: "The transaction callback ended the store-owned transaction")
             }
-            let registrationAfter = try auditScope.flatMap { scope in
-                try connection.scalarText(
-                    "SELECT registration_id FROM project_registrations WHERE project_id = ?",
-                    bindings: [.text(scope.projectID.rawValue)]
-                )
+            let snapshotAfter = try auditScope.map {
+                try Self.auditEventSnapshot(connection: connection, scope: $0)
             }
             let liveProjectID: SQLiteValue
             if let auditScope,
@@ -286,8 +304,27 @@ public actor DeliveryStore {
             } else {
                 liveProjectID = .null
             }
+            let eventTimestamp = ISO8601DateFormatter().string(from: Date())
+            let recordedFacts = auditScope != nil
+            let projectName = snapshotAfter?.projectName ?? snapshotBefore?.projectName
+            let registrationID = snapshotAfter?.registrationID ?? snapshotBefore?.registrationID
+            let requestGeneration = snapshotAfter?.requestGeneration ?? snapshotBefore?.requestGeneration
+            let ticketID = snapshotAfter?.ticketID ?? snapshotBefore?.ticketID
+            let phaseID = snapshotAfter?.phaseID ?? snapshotBefore?.phaseID
+            let phaseName = snapshotAfter?.phaseName ?? snapshotBefore?.phaseName
+            let ticketOutcome = snapshotAfter?.ticketOutcome ?? snapshotBefore?.ticketOutcome
             try connection.execute(
-                "INSERT INTO audit_events (id, actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id, reason, created_at, historical_project_id, historical_registration_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                """
+                INSERT INTO audit_events (
+                    id, actor_id, thread_id, thread_attribution, project_id, entity_type, entity_id,
+                    reason, created_at, historical_project_id, historical_registration_id,
+                    event_facts_recorded, event_provenance, event_occurred_at, event_recorded_at,
+                    event_project_name, event_registration_id, event_request_generation,
+                    event_ticket_id, event_phase_id, event_phase_name, event_ticket_outcome,
+                    event_previous_lane, event_current_lane,
+                    event_previous_phase_id, event_current_phase_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
                 bindings: [
                     .text(auditEventID.rawValue),
                     .text(actor.id),
@@ -297,9 +334,24 @@ public actor DeliveryStore {
                     auditScope.map { .text($0.entityType.rawValue) } ?? .null,
                     auditScope.map { .text($0.entityID) } ?? .null,
                     .text(reason),
-                    .text(ISO8601DateFormatter().string(from: Date())),
+                    .text(eventTimestamp),
                     auditScope.map { .text($0.projectID.rawValue) } ?? .null,
-                    (registrationAfter ?? registrationBefore).map(SQLiteValue.text) ?? .null,
+                    registrationID.map(SQLiteValue.text) ?? .null,
+                    .integer(recordedFacts ? 1 : 0),
+                    recordedFacts ? .text("local_audit") : .null,
+                    recordedFacts ? .text(eventTimestamp) : .null,
+                    recordedFacts ? .text(eventTimestamp) : .null,
+                    projectName.map(SQLiteValue.text) ?? .null,
+                    registrationID.map(SQLiteValue.text) ?? .null,
+                    requestGeneration.map(SQLiteValue.integer) ?? .null,
+                    ticketID.map(SQLiteValue.text) ?? .null,
+                    phaseID.map(SQLiteValue.text) ?? .null,
+                    phaseName.map(SQLiteValue.text) ?? .null,
+                    ticketOutcome.map(SQLiteValue.text) ?? .null,
+                    snapshotBefore?.lane.map(SQLiteValue.text) ?? .null,
+                    snapshotAfter?.lane.map(SQLiteValue.text) ?? .null,
+                    snapshotBefore?.phaseID.map(SQLiteValue.text) ?? .null,
+                    snapshotAfter?.phaseID.map(SQLiteValue.text) ?? .null,
                 ]
             )
             try connection.execute("COMMIT")
@@ -374,5 +426,106 @@ public actor DeliveryStore {
             throw StoreError.unavailable("Database could not be opened")
         }
         return connection
+    }
+
+    private static func auditEventSnapshot(
+        connection: SQLiteConnection,
+        scope: AuditScope
+    ) throws -> AuditEventSnapshot {
+        let projectName = try connection.scalarText(
+            "SELECT name FROM projects WHERE id = ?",
+            bindings: [.text(scope.projectID.rawValue)]
+        )
+        let registration = try connection.row(
+            "SELECT registration_id, request_generation FROM project_registrations WHERE project_id = ?",
+            bindings: [.text(scope.projectID.rawValue)]
+        )
+        let registrationID: String? = if case let .text(value)? = registration?["registration_id"] { value } else { nil }
+        let requestGeneration: Int64? = if case let .integer(value)? = registration?["request_generation"] { value } else { nil }
+
+        let ticketID: String? = switch scope.entityType {
+        case .ticket, .ticketTaskPlan:
+            scope.entityID
+        case .reviewItem:
+            try connection.scalarText(
+                "SELECT ticket_id FROM review_items WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .completion:
+            try connection.scalarText(
+                "SELECT ticket_id FROM completion_records WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .blocker:
+            try connection.scalarText(
+                "SELECT ticket_id FROM blockers WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .evidence:
+            try connection.scalarText(
+                "SELECT ticket_id FROM evidence WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .threadLink:
+            try connection.scalarText(
+                "SELECT ticket_id FROM thread_links WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .ticketReference:
+            try connection.scalarText(
+                "SELECT ticket_id FROM ticket_reference_links WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .ticketDependency:
+            try connection.scalarText(
+                "SELECT ticket_id FROM ticket_dependencies WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .project, .phase, .phaseLifecycle, .phasePlan, .deliveryGoal,
+             .phaseDependency, .planChangeProposal:
+            nil
+        }
+
+        let ticket = try ticketID.flatMap {
+            try connection.row(
+                "SELECT phase_id, outcome, lane FROM tickets WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text($0)]
+            )
+        }
+        let ticketPhaseID: String? = if case let .text(value)? = ticket?["phase_id"] { value } else { nil }
+        let phaseID: String? = switch scope.entityType {
+        case .phase, .phaseLifecycle, .phasePlan:
+            scope.entityID
+        case .deliveryGoal:
+            try connection.scalarText(
+                "SELECT phase_id FROM delivery_goals WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        case .phaseDependency:
+            try connection.scalarText(
+                "SELECT phase_id FROM phase_dependencies WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text(scope.entityID)]
+            )
+        default:
+            ticketPhaseID
+        }
+        let phaseName = try phaseID.flatMap {
+            try connection.scalarText(
+                "SELECT name FROM phases WHERE project_id = ? AND id = ?",
+                bindings: [.text(scope.projectID.rawValue), .text($0)]
+            )
+        }
+        let ticketOutcome: String? = if case let .text(value)? = ticket?["outcome"] { value } else { nil }
+        let lane: String? = if case let .text(value)? = ticket?["lane"] { value } else { nil }
+        return .init(
+            projectName: projectName,
+            registrationID: registrationID,
+            requestGeneration: requestGeneration,
+            ticketID: ticketID,
+            phaseID: phaseID,
+            phaseName: phaseName,
+            ticketOutcome: ticketOutcome,
+            lane: lane
+        )
     }
 }

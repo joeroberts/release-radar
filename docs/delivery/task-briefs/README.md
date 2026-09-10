@@ -58,6 +58,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-10-phase5c-proposals](2026-09-10-phase5c-proposals) — leaf; Phase 5C saved proposals, explicit approval and atomic application
 - [delivery.task-briefs.2026-09-10-phase5d-successors](2026-09-10-phase5d-successors) — leaf; Phase 5D retained successors and carried goal obligations
 - [delivery.task-briefs.2026-09-10-phase5e-lifecycle](2026-09-10-phase5e-lifecycle) — leaf; Phase 5E explicit phase lifecycle and guarded completion
+- [delivery.task-briefs.2026-09-10-phase6a-history](2026-09-10-phase6a-history) — leaf; Phase 6A truthful event-time History and attention
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -580,6 +581,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-phase5e-lifecycle-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md](2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-10-phase6a-history
+
+- Path: [docs/delivery/task-briefs/2026-09-10-phase6a-history](2026-09-10-phase6a-history)
+- Purpose: Phase 6A truthful event-time History and attention
+- Allowed contents: Task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-phase6a-history-brief-2026-09-10](2026-09-10-phase6a-history/phase6a-history-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-phase6a-history-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md](2026-09-10-phase6a-history/phase6a-history-brief.md) | document | controlling &#40;delivery.phase6a-history&#41; | active | none | none |
 
 ### Children
 

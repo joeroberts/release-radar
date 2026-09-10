@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 23
+    static let currentVersion: Int64 = 24
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -105,6 +105,9 @@ enum StoreMigrations {
             }
             if version < 23 {
                 try connection.executeScript(schemaVersion23)
+            }
+            if version < 24 {
+                try connection.executeScript(schemaVersion24)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -739,6 +742,21 @@ enum StoreMigrations {
         (16, "projects", "lifecycle"),
         (17, "audit_events", "historical_project_id"),
         (17, "audit_events", "historical_registration_id"),
+        (24, "audit_events", "event_facts_recorded"),
+        (24, "audit_events", "event_provenance"),
+        (24, "audit_events", "event_occurred_at"),
+        (24, "audit_events", "event_recorded_at"),
+        (24, "audit_events", "event_project_name"),
+        (24, "audit_events", "event_registration_id"),
+        (24, "audit_events", "event_request_generation"),
+        (24, "audit_events", "event_ticket_id"),
+        (24, "audit_events", "event_phase_id"),
+        (24, "audit_events", "event_phase_name"),
+        (24, "audit_events", "event_ticket_outcome"),
+        (24, "audit_events", "event_previous_lane"),
+        (24, "audit_events", "event_current_lane"),
+        (24, "audit_events", "event_previous_phase_id"),
+        (24, "audit_events", "event_current_phase_id"),
         (17, "agent_command_requests", "registration_project_id"),
         (17, "agent_command_requests", "registration_id"),
         (17, "agent_command_requests", "request_generation"),
@@ -2865,5 +2883,28 @@ enum StoreMigrations {
     \(immutableRetainedTrigger(table: "retained_phase_lifecycles", action: "delete"));
     \(immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "update"));
     \(immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "delete"));
+    """
+
+    private static let schemaVersion24 = """
+    ALTER TABLE audit_events ADD COLUMN event_facts_recorded INTEGER NOT NULL DEFAULT 0
+        CHECK (event_facts_recorded IN (0, 1));
+    ALTER TABLE audit_events ADD COLUMN event_provenance TEXT
+        CHECK (event_provenance IS NULL OR event_provenance IN ('local_audit'));
+    ALTER TABLE audit_events ADD COLUMN event_occurred_at TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_recorded_at TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_project_name TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_registration_id TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_request_generation INTEGER
+        CHECK (event_request_generation IS NULL OR event_request_generation > 0);
+    ALTER TABLE audit_events ADD COLUMN event_ticket_id TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_phase_id TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_phase_name TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_ticket_outcome TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_previous_lane TEXT
+        CHECK (event_previous_lane IS NULL OR event_previous_lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted'));
+    ALTER TABLE audit_events ADD COLUMN event_current_lane TEXT
+        CHECK (event_current_lane IS NULL OR event_current_lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted'));
+    ALTER TABLE audit_events ADD COLUMN event_previous_phase_id TEXT;
+    ALTER TABLE audit_events ADD COLUMN event_current_phase_id TEXT;
     """
 }

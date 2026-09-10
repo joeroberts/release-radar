@@ -65,6 +65,9 @@
 | rr-2026-09-10-phase5d-successors-wide-row | [docs/delivery/evidence/2026-09-10-phase5d-successors-wide-row.png](evidence/2026-09-10-phase5d-successors-wide-row.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase5d-successors | [docs/delivery/evidence/2026-09-10-phase5d-successors.md](evidence/2026-09-10-phase5d-successors.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase5e-lifecycle | [docs/delivery/evidence/2026-09-10-phase5e-lifecycle.md](evidence/2026-09-10-phase5e-lifecycle.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6a-history-compact | [docs/delivery/evidence/2026-09-10-phase6a-history-compact.png](evidence/2026-09-10-phase6a-history-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6a-history-wide | [docs/delivery/evidence/2026-09-10-phase6a-history-wide.png](evidence/2026-09-10-phase6a-history-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6a-history | [docs/delivery/evidence/2026-09-10-phase6a-history.md](evidence/2026-09-10-phase6a-history.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
@@ -182,6 +185,7 @@ Leaf: no child collections.
 | --- | --- | --- | --- | --- | --- | --- |
 | cd044b85-6519-4330-ae3c-dc0d9c20a65e | [docs/delivery/plans/2026-08-29-delivery-goals-roadmap-readiness.md](plans/2026-08-29-delivery-goals-roadmap-readiness.md) | document | controlling &#40;delivery.rr-r10-implementation&#41; | active | none | none |
 | rr-full-product-architecture-plan-2026-09-06 | [docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md](plans/2026-09-06-full-product-architecture-and-delivery-plan.md) | document | supporting | proposed | none | none |
+| rr-phase6-plan-2026-09-10 | [docs/delivery/plans/2026-09-10-phase6-outcomes-tasks-history.md](plans/2026-09-10-phase6-outcomes-tasks-history.md) | document | controlling &#40;delivery.phase6-sequence&#41; | active | none | none |
 
 ### Children
 

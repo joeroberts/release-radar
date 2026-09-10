@@ -437,6 +437,10 @@ struct ProjectRemovalConfirmationView: View {
 struct RemovedProjectView: View {
     let project: RemovedProjectRecord
     let activity: ProjectActivityProjection
+    @State private var selectedFilter: HistoryFilter = .all
+    @State private var selectedEventID: HistoryEventIdentity?
+    @State private var viewportOffset: Double?
+    @State private var historyFocus: NavigationFocus? = .filterSummary
 
     var body: some View {
         VStack(spacing: 0) {
@@ -463,7 +467,12 @@ struct RemovedProjectView: View {
                 activity: activity,
                 projectName: project.projectName,
                 freshness: .init(state: .unavailable, lastObservedAt: nil),
-                showsFreshness: false
+                showsFreshness: false,
+                selectedFilter: $selectedFilter,
+                selectedEventID: $selectedEventID,
+                viewportOffset: $viewportOffset,
+                requestedFocus: historyFocus,
+                focusChanged: { historyFocus = $0 }
             )
         }
         .background(RekonTheme.background)
