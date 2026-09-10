@@ -63,12 +63,23 @@ final class SharedExecutionCompatibilityTests: XCTestCase {
         }
 
         XCTAssertEqual(
-            SharedExecutionCompatibilityReducer.reduce(
-                base.replacing(declaration: .exact(version: 1), plugin: .clean(installed: legacy, shipped: current))
-            ).state,
-            .incompatible,
-            "A newer shipped SemVer-like identity must not make an unsupported installed package compatible"
+            SharedExecutionCompatibilityReducer.reduce(base.replacing(declaration: .duplicate)).issue,
+            .declarationDuplicate
         )
+        XCTAssertEqual(
+            SharedExecutionCompatibilityReducer.reduce(base.replacing(declaration: .modified(version: 1))).issue,
+            .declarationModified
+        )
+        XCTAssertEqual(
+            SharedExecutionCompatibilityReducer.reduce(base.replacing(declaration: .exact(version: 2))).issue,
+            .unsupportedDeclaredStandard
+        )
+
+        let unsupportedInstalled = SharedExecutionCompatibilityReducer.reduce(
+            base.replacing(declaration: .exact(version: 1), plugin: .clean(installed: legacy, shipped: current))
+        )
+        XCTAssertEqual(unsupportedInstalled.state, .incompatible)
+        XCTAssertEqual(unsupportedInstalled.issue, .installedCapabilityUnsupported)
     }
 
     func testReducerRejectsCheckerAndRepositoryIdentityMismatchAndPreservesPendingAcceptance() {
@@ -101,7 +112,9 @@ final class SharedExecutionCompatibilityTests: XCTestCase {
             directResults: []
         )
 
-        XCTAssertEqual(SharedExecutionCompatibilityReducer.reduce(input).state, .incompatible)
+        let mismatch = SharedExecutionCompatibilityReducer.reduce(input)
+        XCTAssertEqual(mismatch.state, .incompatible)
+        XCTAssertEqual(mismatch.issue, .repositoryIdentityMismatch)
         XCTAssertEqual(
             SharedExecutionCompatibilityReducer.reduce(input.replacing(
                 checker: .result(.init(

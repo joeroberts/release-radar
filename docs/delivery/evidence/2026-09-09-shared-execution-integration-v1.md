@@ -52,6 +52,29 @@ the safe `CodexPluginLifecycleTransportTests`, `DocumentationObservationTests`,
 `ProjectDocumentationRenderingTests`, and the focused AppModel plugin-observation
 refresh case.
 
+## Independent-review correction candidate
+
+The first independent review identified four required source corrections. The
+local correction candidate now:
+
+- binds a managed compatibility result to the accepted project/root binding and
+  exact repository ID, catalog version, and digest instead of trusting a later
+  diagnostic identity;
+- invalidates every active project's documentation generation before awaiting
+  plugin-triggered refresh, so an older in-flight result cannot win;
+- maps a valid changed catalog to pending acceptance; and
+- carries a closed mismatch reason into actionable UI recovery while retaining
+  only recognized, bounded repository-checker error codes in direct results.
+
+The focused RED bundle is
+`review-corrections-red.xcresult`. After correction, the focused race regression
+passed `1/1` in `review-race-corrected-green.xcresult`. The final affected
+correction suite passed `20`, skipped the same `2` environment-gated native
+picker cases, and failed `0` in `review-corrections-affected.xcresult`. The
+rendering portion repeated all nine states at 620 and 1100 points with no
+accessibility or screenshot assertion failure. Independent re-review of this
+correction candidate remains required.
+
 ## Visual comparison
 
 The synthetic native views were compared with the approved Goals compact and

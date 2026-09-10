@@ -90,10 +90,26 @@ extension DocumentationObservationPayload {
                 : .unknown("The repository identity could not be attributed.")
         }
         switch snapshot.documentationState {
-        case .managed:
-            return diagnostic.status == .passed
-                ? .accepted(identity)
-                : .invalid(diagnostic.error?.code ?? "Repository documentation failed validation.")
+        case let .managed(_, catalogVersion, catalogDigest):
+            guard diagnostic.status == .passed else {
+                return .invalid(diagnostic.error?.code ?? "Repository documentation failed validation.")
+            }
+            guard let binding = snapshot.binding,
+                  let rootID = snapshot.rootID,
+                  binding.projectID == snapshot.projectID,
+                  binding.rootID == rootID,
+                  binding.acceptedCatalogVersion == catalogVersion,
+                  binding.acceptedCatalogDigest == catalogDigest else {
+                return .identityMismatch
+            }
+            let acceptedIdentity = SharedExecutionRepositoryIdentity(
+                repositoryID: binding.repositoryID,
+                catalogVersion: binding.acceptedCatalogVersion,
+                catalogDigest: binding.acceptedCatalogDigest
+            )
+            return identity == acceptedIdentity
+                ? .accepted(acceptedIdentity)
+                : .identityMismatch
         case .stagedCatalog:
             return diagnostic.status == .passed
                 ? .pendingAcceptance(identity)
@@ -102,8 +118,10 @@ extension DocumentationObservationPayload {
             switch reason {
             case .rootUnavailable, .staleRoot:
                 return .unavailable(reason.rawValue)
-            case .bindingMissing:
-                return .pendingAcceptance(identity)
+            case .bindingMissing, .catalogUnaccepted:
+                return diagnostic.status == .passed
+                    ? .pendingAcceptance(identity)
+                    : .invalid(diagnostic.error?.code ?? reason.rawValue)
             default:
                 return .invalid(reason.rawValue)
             }
@@ -142,7 +160,7 @@ extension DocumentationObservationPayload {
                 source: "local observation; Git source unknown",
                 applicability: .unknown,
                 status: documentationStatus,
-                directResult: diagnostic.map { $0.status.rawValue } ?? "diagnostic unavailable",
+                directResult: documentationDirectResult(diagnostic),
                 limitation: "This app observation does not establish a tested Git revision or owner acceptance."
             ),
             .init(
@@ -156,6 +174,19 @@ extension DocumentationObservationPayload {
                 limitation: "A lifecycle receipt does not prove that the current task loaded the skill."
             ),
         ]
+    }
+
+    private static func documentationDirectResult(
+        _ diagnostic: RepositoryDocumentDiagnostic?
+    ) -> String {
+        guard let diagnostic else { return "diagnostic unavailable" }
+        guard diagnostic.status == .failed else { return diagnostic.status.rawValue }
+        guard let code = diagnostic.error?.code,
+              RepositoryDocumentError.Code(rawValue: code) != nil
+                || RepositoryDocumentIndexError.Code(rawValue: code) != nil else {
+            return diagnostic.status.rawValue
+        }
+        return "failed (\(code))"
     }
 
     private static func pluginDirectResult(

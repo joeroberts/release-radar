@@ -2428,6 +2428,11 @@ final class AppModel {
         } else if operation == .tryAgain {
             codexPluginSettingsMessage = nil
         }
+        if let dashboard {
+            for project in dashboard.projects {
+                documentationObserver.invalidate(projectID: project.id)
+            }
+        }
         await refreshActiveDocumentationObservations(withdrawCurrent: true)
         codexPluginOperation = nil
     }

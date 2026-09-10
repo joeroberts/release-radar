@@ -9,7 +9,11 @@ struct SharedExecutionCompatibilityPresentation: Equatable, Sendable {
     let systemImage: String
 
     init(state: SharedExecutionCompatibilityState) {
-        switch state {
+        self.init(result: .init(state: state, directResults: []))
+    }
+
+    init(result: SharedExecutionCompatibilityResult) {
+        switch result.state {
         case .notDeclared:
             status = "Not declared"
             detail = "This repository does not declare a shared-execution standard."
@@ -37,8 +41,9 @@ struct SharedExecutionCompatibilityPresentation: Equatable, Sendable {
             systemImage = "clock.badge.exclamationmark"
         case .incompatible:
             status = "Incompatible"
-            detail = "The declaration, exact plugin capability, checker, or repository contract does not agree."
-            recovery = "Standard-specific assistance remains disabled until the mismatch is resolved."
+            let copy = Self.incompatibilityCopy(for: result.issue)
+            detail = copy.detail
+            recovery = copy.recovery
             systemImage = "exclamationmark.triangle.fill"
         case .unavailable:
             status = "Compatibility unavailable"
@@ -55,6 +60,68 @@ struct SharedExecutionCompatibilityPresentation: Equatable, Sendable {
             detail = "A required observation was interrupted, ambiguous, or could not be attributed to this project."
             recovery = "Refresh the read-only observation before relying on this status."
             systemImage = "questionmark.circle.fill"
+        }
+    }
+
+    private static func incompatibilityCopy(
+        for issue: SharedExecutionCompatibilityIssue?
+    ) -> (detail: String, recovery: String) {
+        switch issue {
+        case .declarationDuplicate:
+            (
+                "Shared execution is declared more than once in AGENTS.md.",
+                "Keep one exact V1 block before refreshing compatibility."
+            )
+        case .declarationModified:
+            (
+                "The repository declaration does not match the V1 block.",
+                "Restore the exact V1 declaration before refreshing compatibility."
+            )
+        case .unsupportedDeclaredStandard:
+            (
+                "The declared standard is not supported by this Release Radar build.",
+                "Adopt a supported standard only through a separate owner-approved task."
+            )
+        case .pluginModified:
+            (
+                "The installed plugin package was modified and cannot establish an exact capability.",
+                "Use the separate owner-controlled plugin flow to restore the exact package."
+            )
+        case .pluginUnrecognized:
+            (
+                "The installed plugin capability is not recognized by this Release Radar build.",
+                "Use the separate owner-controlled plugin flow to inspect or replace the package."
+            )
+        case .installedCapabilityUnsupported:
+            (
+                "The installed exact plugin capability does not support the declared standard.",
+                "Use the separate owner-controlled plugin flow to update it, or retain a supported declaration."
+            )
+        case .checkerIncompatible:
+            (
+                "The repository checker contract is incompatible with this observation.",
+                "Use a compatible repository checker, then refresh the read-only observation."
+            )
+        case .checkerFailed:
+            (
+                "The repository checker failed or returned an unsupported contract.",
+                "Inspect the checker direct result, repair the reported repository problem, then refresh."
+            )
+        case .repositoryInvalid:
+            (
+                "The repository documentation did not satisfy its validated contract.",
+                "Inspect the checker direct result, repair the documentation, then refresh."
+            )
+        case .repositoryIdentityMismatch:
+            (
+                "The repository diagnosis does not match the accepted repository identity.",
+                "Recheck the exact root and accepted catalog before relying on compatibility."
+            )
+        case nil:
+            (
+                "The declaration, exact plugin capability, checker, or repository contract does not agree.",
+                "Standard-specific assistance remains disabled until the mismatch is resolved."
+            )
         }
     }
 
@@ -140,7 +207,7 @@ struct SharedExecutionCompatibilityView: View {
 
     private var presentation: SharedExecutionCompatibilityPresentation {
         guard case let .observed(observation) = documentationStatus else { return .checking }
-        return .init(state: observation.sharedExecutionCompatibility.state)
+        return .init(result: observation.sharedExecutionCompatibility)
     }
 
     private var directResults: [SharedExecutionDirectResult] {

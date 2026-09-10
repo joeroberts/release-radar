@@ -768,6 +768,24 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             XCTAssertFalse(presentation.detail.isEmpty)
             XCTAssertFalse(presentation.recovery.isEmpty)
         }
+
+        let mismatchCopy: [(SharedExecutionCompatibilityIssue, String, String)] = [
+            (.declarationDuplicate, "declared more than once", "Keep one exact V1 block"),
+            (.declarationModified, "does not match the V1 block", "Restore the exact V1 declaration"),
+            (.unsupportedDeclaredStandard, "declared standard is not supported", "Adopt a supported standard"),
+            (.installedCapabilityUnsupported, "installed exact plugin capability does not support", "Use the separate owner-controlled plugin flow"),
+            (.repositoryIdentityMismatch, "diagnosis does not match the accepted repository", "Recheck the exact root and accepted catalog"),
+            (.checkerFailed, "repository checker failed", "Inspect the checker direct result"),
+        ]
+        for (issue, detail, recovery) in mismatchCopy {
+            let presentation = SharedExecutionCompatibilityPresentation(result: .init(
+                state: .incompatible,
+                directResults: [],
+                issue: issue
+            ))
+            XCTAssertTrue(presentation.detail.contains(detail))
+            XCTAssertTrue(presentation.recovery.contains(recovery))
+        }
     }
 
     func testSharedExecutionCompatibilityRendersAllStatesAndDirectResultsAtWideAndCompactWidths() async throws {

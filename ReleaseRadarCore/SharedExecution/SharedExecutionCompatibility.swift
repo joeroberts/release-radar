@@ -12,6 +12,19 @@ public enum SharedExecutionCompatibilityState: String, Codable, Equatable, Senda
     case unknown
 }
 
+public enum SharedExecutionCompatibilityIssue: Equatable, Sendable {
+    case declarationModified
+    case declarationDuplicate
+    case unsupportedDeclaredStandard
+    case pluginModified
+    case pluginUnrecognized
+    case installedCapabilityUnsupported
+    case checkerIncompatible
+    case checkerFailed
+    case repositoryInvalid
+    case repositoryIdentityMismatch
+}
+
 public enum SharedExecutionAdoptionProgress: String, Codable, Equatable, Sendable {
     case workingTreeCandidate
     case committedCandidate
@@ -148,6 +161,7 @@ public enum SharedExecutionCheckerObservation: Equatable, Sendable {
 public enum SharedExecutionRepositoryObservation: Equatable, Sendable {
     case accepted(SharedExecutionRepositoryIdentity)
     case pendingAcceptance(SharedExecutionRepositoryIdentity)
+    case identityMismatch
     case invalid(String)
     case unavailable(String)
     case unknown(String)
@@ -181,27 +195,39 @@ public struct SharedExecutionCompatibilityInput: Equatable, Sendable {
 public struct SharedExecutionCompatibilityResult: Equatable, Sendable {
     public let state: SharedExecutionCompatibilityState
     public let directResults: [SharedExecutionDirectResult]
+    public let issue: SharedExecutionCompatibilityIssue?
 
-    public init(state: SharedExecutionCompatibilityState, directResults: [SharedExecutionDirectResult]) {
+    public init(
+        state: SharedExecutionCompatibilityState,
+        directResults: [SharedExecutionDirectResult],
+        issue: SharedExecutionCompatibilityIssue? = nil
+    ) {
         self.state = state
         self.directResults = directResults
+        self.issue = issue
     }
 }
 
 public enum SharedExecutionCompatibilityReducer {
     public static func reduce(_ input: SharedExecutionCompatibilityInput) -> SharedExecutionCompatibilityResult {
-        let state = state(for: input)
-        return .init(state: state, directResults: input.directResults)
+        let evaluation = evaluation(for: input)
+        return .init(
+            state: evaluation.state,
+            directResults: input.directResults,
+            issue: evaluation.issue
+        )
     }
 
-    private static func state(for input: SharedExecutionCompatibilityInput) -> SharedExecutionCompatibilityState {
+    private static func evaluation(
+        for input: SharedExecutionCompatibilityInput
+    ) -> (state: SharedExecutionCompatibilityState, issue: SharedExecutionCompatibilityIssue?) {
         switch input.root {
         case .unknown:
-            return .rootUnknown
+            return (.rootUnknown, nil)
         case .unavailable:
-            return .unavailable
+            return (.unavailable, nil)
         case let .exact(path) where path.isEmpty:
-            return .rootUnknown
+            return (.rootUnknown, nil)
         case .exact:
             break
         }
@@ -209,18 +235,20 @@ public enum SharedExecutionCompatibilityReducer {
         let declaredVersion: Int
         switch input.declaration {
         case .absent:
-            return .notDeclared
+            return (.notDeclared, nil)
         case let .exact(version), let .legacy(version):
             declaredVersion = version
-        case .modified, .duplicate:
-            return .incompatible
+        case .modified:
+            return (.incompatible, .declarationModified)
+        case .duplicate:
+            return (.incompatible, .declarationDuplicate)
         case .unavailable:
-            return .unavailable
+            return (.unavailable, nil)
         case .unknown:
-            return .unknown
+            return (.unknown, nil)
         }
         guard declaredVersion >= 0, declaredVersion <= SharedExecutionDeclarationInspector.currentVersion else {
-            return .incompatible
+            return (.incompatible, .unsupportedDeclaredStandard)
         }
 
         let installed: RecognizedPluginCapability
@@ -230,14 +258,16 @@ public enum SharedExecutionCompatibilityReducer {
             installed = installedCapability
             shipped = shippedCapability
         case .absent, .unavailable:
-            return .unavailable
-        case .modified, .unrecognized:
-            return .incompatible
+            return (.unavailable, nil)
+        case .modified:
+            return (.incompatible, .pluginModified)
+        case .unrecognized:
+            return (.incompatible, .pluginUnrecognized)
         case .unknown:
-            return .unknown
+            return (.unknown, nil)
         }
         guard installed.sharedExecutionStandardVersions.contains(declaredVersion) else {
-            return .incompatible
+            return (.incompatible, .installedCapabilityUnsupported)
         }
 
         let checker: SharedExecutionCheckerResult
@@ -245,14 +275,14 @@ public enum SharedExecutionCompatibilityReducer {
         case let .result(result):
             checker = result
         case .incompatible:
-            return .incompatible
+            return (.incompatible, .checkerIncompatible)
         case .unavailable:
-            return .unavailable
+            return (.unavailable, nil)
         case .unknown:
-            return .unknown
+            return (.unknown, nil)
         }
         guard checker.contractVersion == 1, checker.status == .passed else {
-            return .incompatible
+            return (.incompatible, .checkerFailed)
         }
 
         let repositoryIdentity: SharedExecutionRepositoryIdentity
@@ -264,29 +294,34 @@ public enum SharedExecutionCompatibilityReducer {
         case let .pendingAcceptance(identity):
             repositoryIdentity = identity
             pendingAcceptance = true
+        case .identityMismatch:
+            return (.incompatible, .repositoryIdentityMismatch)
         case .invalid:
-            return .incompatible
+            return (.incompatible, .repositoryInvalid)
         case .unavailable:
-            return .unavailable
+            return (.unavailable, nil)
         case .unknown:
-            return .unknown
+            return (.unknown, nil)
         }
         guard checker.supportedCatalogVersions.contains(repositoryIdentity.catalogVersion),
               checker.target == repositoryIdentity else {
-            return .incompatible
+            return (.incompatible, .repositoryIdentityMismatch)
         }
         if pendingAcceptance {
-            return .pendingCatalogAcceptance
+            return (.pendingCatalogAcceptance, nil)
         }
 
         let installedNewest = installed.sharedExecutionStandardVersions.max() ?? -1
         let shippedNewest = shipped.sharedExecutionStandardVersions.max() ?? -1
         if shippedNewest > installedNewest {
-            return .updateAvailable
+            return (.updateAvailable, nil)
         }
-        return declaredVersion < SharedExecutionDeclarationInspector.currentVersion
-            ? .compatibleOlder
-            : .compatibleV1
+        return (
+            declaredVersion < SharedExecutionDeclarationInspector.currentVersion
+                ? .compatibleOlder
+                : .compatibleV1,
+            nil
+        )
     }
 }
 

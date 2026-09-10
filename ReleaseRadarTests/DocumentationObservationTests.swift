@@ -721,6 +721,140 @@ final class DocumentationObservationTests: XCTestCase {
         coordinator.remove(projectID: projectID)
         XCTAssertNil(coordinator.status(for: projectID))
     }
+
+    @MainActor
+    func testManagedCompatibilityRejectsDiagnosticIdentityFromALaterCatalog() throws {
+        let accepted = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        var changedCatalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: accepted.canonicalCatalog) as? [String: Any]
+        )
+        changedCatalog["repositoryID"] = "d911c9b9-8f5e-4776-a70f-bf9ae09f2341"
+        let changed = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            JSONSerialization.data(withJSONObject: changedCatalog)
+        )
+        let projectID = ProjectID(rawValue: "managed-identity-race")
+        let rootID = ProjectRootID(rawValue: "managed-identity-race-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: accepted
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/managed-identity-race",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managed(
+                hasAuditedHandoff: true,
+                catalogVersion: accepted.version,
+                catalogDigest: accepted.digest
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(snapshot: changed, status: .passed, error: nil),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+        let capability = try XCTUnwrap(RecognizedPluginCapability.known.last)
+
+        let compatibility = DocumentationObservationPayload(
+            snapshot,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+
+        XCTAssertEqual(compatibility.state, .incompatible)
+        XCTAssertEqual(compatibility.issue, .repositoryIdentityMismatch)
+    }
+
+    @MainActor
+    func testCatalogUnacceptedMapsTheActualChangedCatalogToPendingAcceptance() throws {
+        let accepted = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        var changedCatalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: accepted.canonicalCatalog) as? [String: Any]
+        )
+        var collections = try XCTUnwrap(changedCatalog["collections"] as? [[String: Any]])
+        collections[0]["purpose"] = "Changed but still valid synthetic documentation"
+        changedCatalog["collections"] = collections
+        let changed = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            JSONSerialization.data(withJSONObject: changedCatalog)
+        )
+        XCTAssertEqual(changed.catalog.repositoryID, accepted.catalog.repositoryID)
+        XCTAssertNotEqual(changed.digest, accepted.digest)
+        let projectID = ProjectID(rawValue: "catalog-pending")
+        let rootID = ProjectRootID(rawValue: "catalog-pending-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: accepted
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/catalog-pending",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogUnaccepted,
+                validationError: nil
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(snapshot: changed, status: .passed, error: nil),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+        let capability = try XCTUnwrap(RecognizedPluginCapability.known.last)
+
+        let compatibility = DocumentationObservationPayload(
+            snapshot,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+
+        XCTAssertEqual(compatibility.state, .pendingCatalogAcceptance)
+        XCTAssertNil(compatibility.issue)
+    }
+
+    @MainActor
+    func testFailedRepositoryDiagnosticRetainsOnlyRecognizedBoundedErrorCode() throws {
+        let catalog = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        let projectID = ProjectID(rawValue: "bounded-diagnostic")
+        let rootID = ProjectRootID(rawValue: "bounded-diagnostic-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: catalog
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/bounded-diagnostic",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogInvalid,
+                validationError: .checksumMismatch
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(
+                snapshot: catalog,
+                status: .failed,
+                error: .init(code: "checksumMismatch", paths: ["docs/README.md"])
+            ),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+
+        let result = DocumentationObservationPayload(snapshot).sharedExecutionCompatibility
+
+        XCTAssertEqual(result.directResults.first?.directResult, "failed (checksumMismatch)")
+    }
 }
 
 private extension DocumentationObservationStatus {
@@ -896,7 +1030,7 @@ private actor DocumentationObservationGate {
     }
 }
 
-private actor SequencedDocumentationObservationGate {
+actor SequencedDocumentationObservationGate {
     private var calls = 0
     private var waiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
     private var loads: [Int: CheckedContinuation<DocumentationObservationPayload, Never>] = [:]
@@ -918,9 +1052,11 @@ private actor SequencedDocumentationObservationGate {
     func release(call: Int, with payload: DocumentationObservationPayload) {
         loads.removeValue(forKey: call)?.resume(returning: payload)
     }
+
+    func count() -> Int { calls }
 }
 
-private extension DocumentationObservationPayload {
+extension DocumentationObservationPayload {
     static func fixture(
         projectID: ProjectID,
         checkedAt: TimeInterval = 1_700_000_000,

@@ -2701,6 +2701,77 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testPluginStatusInvalidatesAnOlderInFlightCompatibilityObservation() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PluginCompatibilityRace-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let gate = SequencedDocumentationObservationGate()
+        let observer = DocumentationObservationCoordinator { projectID in
+            await gate.load(projectID: projectID)
+        }
+        let manager = AppLifecycleManager(replies: [
+            .init(wireVersion: 1, observedState: .absent, error: nil),
+        ])
+        let lifecycleStore = CodexPluginLifecycleStore(store: store)
+        let coordinator = CodexPluginLifecycleCoordinator(
+            manager: manager,
+            store: lifecycleStore,
+            shippedVersion: "0.1.8",
+            shippedDigest: "ecc221b2ca91ac8913e73555b6ed310bce63d7f1ac9462d05b025478173d5a40"
+        )
+        let model = AppModel(
+            store: store,
+            codexPluginCoordinator: coordinator,
+            codexPluginShippedVersion: "0.1.8",
+            externalServicesSuppressed: true,
+            documentationObserver: observer
+        )
+
+        let initialLoad = Task { await model.loadDashboard() }
+        await gate.waitUntilCallCount(1)
+        await gate.release(call: 1, with: .fixture(
+            projectID: DashboardSampleData.projectID,
+            checkedAt: 1,
+            compatibilityState: .compatibleV1
+        ))
+        await initialLoad.value
+
+        let olderRefresh = Task {
+            await model.refreshProjectDocumentation(DashboardSampleData.projectID)
+        }
+        await gate.waitUntilCallCount(2)
+        let pluginRefresh = Task { await model.loadCodexPluginStatus() }
+        try await Task.sleep(for: .milliseconds(100))
+        let callsAfterPluginChange = await gate.count()
+        XCTAssertEqual(callsAfterPluginChange, 3)
+        if callsAfterPluginChange >= 3 {
+            await gate.release(call: 3, with: .fixture(
+                projectID: DashboardSampleData.projectID,
+                checkedAt: 3,
+                compatibilityState: .incompatible
+            ))
+        }
+        await gate.release(call: 2, with: .fixture(
+            projectID: DashboardSampleData.projectID,
+            checkedAt: 2,
+            compatibilityState: .compatibleV1
+        ))
+        await pluginRefresh.value
+        await olderRefresh.value
+
+        guard case let .observed(observation) = model.documentationObservationStatus(
+            for: DashboardSampleData.projectID
+        ) else {
+            return XCTFail("Plugin refresh must publish its fresh compatibility observation")
+        }
+        XCTAssertEqual(observation.generation, 3)
+        XCTAssertEqual(observation.sharedExecutionCompatibility.state, .incompatible)
+    }
+
+    @MainActor
     func testRecoveryResumedLaunchUsesReadOnlyPluginStatus() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RecoveryPluginLaunch-\(UUID().uuidString)", isDirectory: true)
