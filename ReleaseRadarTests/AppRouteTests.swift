@@ -659,6 +659,7 @@ final class AppRouteTests: XCTestCase {
             "The retained original inspector must be reachable after native activation."
         )
         let wideText = accessibilityText(nativeWindow)
+        XCTAssertTrue(wideText.contains("Last placement: \(fixture.roadmapPhaseID.rawValue) · Backlog"))
         XCTAssertTrue(wideText.contains("Retained original task"))
         XCTAssertTrue(wideText.contains("retired-evidence.txt"))
         try taskCapture(hosting, name: "phase5d-retired-original-wide-detail")
@@ -726,6 +727,7 @@ final class AppRouteTests: XCTestCase {
             "The retained original inspector must remain reachable at compact width."
         )
         let compactText = accessibilityText(nativeWindow)
+        XCTAssertTrue(compactText.contains("Last placement: \(fixture.roadmapPhaseID.rawValue) · Backlog"))
         XCTAssertTrue(compactText.contains("Retained original task"))
         XCTAssertTrue(compactText.contains("retired-evidence.txt"))
         try taskCapture(hosting, name: "phase5d-retired-original-compact-detail")
@@ -843,6 +845,10 @@ final class AppRouteTests: XCTestCase {
             )
         }
         try await Task.sleep(for: .milliseconds(200))
+        let approvalText = accessibilityText(approvalNativeWindow)
+        XCTAssertTrue(approvalText.contains("Before: \(fixture.roadmapPhaseID.rawValue) Backlog"))
+        XCTAssertTrue(approvalText.contains("Original scope: Roadmap backlog one."))
+        XCTAssertTrue(approvalText.contains("ROAD-1-NEXT → road-goal-1 in \(fixture.roadmapPhaseID.rawValue)"))
         let approveCandidate = await scrollToAccessibilityElement(
             approvalNativeWindow, identifier: "approve-plan-change-proposal"
         )
@@ -934,6 +940,7 @@ final class AppRouteTests: XCTestCase {
         let original = try XCTUnwrap(originalCandidate)
         XCTAssertEqual(AXUIElementPerformAction(original, kAXPressAction as CFString), .success)
         let retainedText = accessibilityText(nativeWindow)
+        XCTAssertTrue(retainedText.contains("Last placement: \(fixture.roadmapPhaseID.rawValue) · Backlog"))
         XCTAssertTrue(retainedText.contains("Verify the complete outcome"))
         XCTAssertTrue(retainedText.contains("phase5d-native-owner-evidence.txt"))
 

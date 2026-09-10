@@ -1251,6 +1251,23 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
             projectID: fixture.registration.projectID
         )
         let proposal = try XCTUnwrap(loaded.first?.versions.first)
+        XCTAssertTrue(proposal.diff.groups.flatMap(\.items).contains(where: {
+            $0.summary == """
+            Retire ticket ticket-existing as split
+            Before: phase-current Backlog
+            After: retained original; successors: ticket-successor-a, ticket-successor-b
+            Reason: Separate independently deliverable outcomes
+            """
+        }))
+        XCTAssertTrue(proposal.diff.groups.flatMap(\.items).contains(where: {
+            $0.summary == """
+            Carry obligation ticket-existing
+            Before: goal-current in phase-current
+            Original scope: Existing planned work
+            After: ticket-successor-a → goal-current in phase-current; ticket-successor-b → goal-current in phase-current
+            Reason: Both split outcomes retain the original goal scope
+            """
+        }))
         let decision = await fixture.dispatcher.dispatch(envelope(
             fixture,
             requestID: UUID(uuidString: "00000000-0000-4000-8000-000000000072")!,
@@ -1705,6 +1722,101 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         guard case .invalidPlanChangeOperation = result.error else {
             return XCTFail("Expected Accepted retirement rejection, got \(String(describing: result.error))")
         }
+    }
+
+    func testAcceptedObligationsCannotBeCarriedDroppedOrUsedAsDescendants() async throws {
+        let source = DeliveryGoalObligationKey(
+            phaseID: .init(rawValue: "phase-current"), goalID: .init(rawValue: "goal-current"),
+            ticketID: .init(rawValue: "obligation-a")
+        )
+        let descendant = DeliveryGoalObligationKey(
+            phaseID: source.phaseID, goalID: source.goalID, ticketID: .init(rawValue: "obligation-b")
+        )
+        let scenarios: [(String, @Sendable (SQLiteConnection) throws -> Void, [PlanChangeOperation])] = [
+            ("accepted-source-carry", { connection in
+                try connection.execute("UPDATE tickets SET lane='accepted' WHERE project_id='proposal-project' AND id='obligation-a'")
+            }, [.carryGoalObligation(source: source, descendants: [descendant], reason: "Must reject delivered source")]),
+            ("accepted-goal-drop", { connection in
+                try connection.execute("UPDATE delivery_goals SET lifecycle='accepted' WHERE project_id='proposal-project' AND id='goal-current'")
+            }, [.dropGoalObligation(obligation: source, reason: "Must reject accepted goal scope")]),
+            ("accepted-descendant", { connection in
+                try connection.execute("UPDATE tickets SET lane='accepted' WHERE project_id='proposal-project' AND id='obligation-b'")
+                try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('proposal-project','phase-current','goal-current','obligation-b')")
+            }, [.carryGoalObligation(source: source, descendants: [descendant], reason: "Must reject terminal descendant")]),
+        ]
+
+        for (name, mutate, operations) in scenarios {
+            let fixture = try await makeCarryValidationFixture(persistedCycle: false)
+            try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed \(name)") { connection in
+                try mutate(connection)
+            }
+            let before = try await fixture.store.read {
+                (try $0.scalarInt("SELECT COUNT(*) FROM plan_change_proposals"),
+                 try $0.scalarInt("SELECT COUNT(*) FROM audit_events"))
+            }
+            let result = await fixture.dispatcher.dispatch(envelope(
+                fixture, requestID: UUID(), command: .savePlanChangeProposal(
+                    proposalID: "proposal-\(name)", expectedPreviousVersion: nil,
+                    rationale: "Reject terminal obligation mutation.", operations: operations
+                )
+            ))
+            guard case .invalidPlanChangeOperation = result.error else {
+                XCTFail("Expected terminal obligation rejection for \(name), got \(String(describing: result.error))")
+                continue
+            }
+            let after = try await fixture.store.read {
+                (try $0.scalarInt("SELECT COUNT(*) FROM plan_change_proposals"),
+                 try $0.scalarInt("SELECT COUNT(*) FROM audit_events"))
+            }
+            XCTAssertEqual(after.0, before.0, name)
+            XCTAssertEqual(after.1, before.1, name)
+        }
+    }
+
+    func testSplitRetirementRejectsCarryThatOmitsARequiredSuccessor() async throws {
+        let fixture = try await makeFixture()
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed split source obligation") { connection in
+            try connection.execute("UPDATE tickets SET phase_id='phase-current',lane='backlog' WHERE project_id='proposal-project' AND id='ticket-existing'")
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('proposal-project','phase-current','goal-current','Goal','Outcome','draft',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('proposal-project','phase-current','goal-current','ticket-existing','Original split scope','current','2026-09-10T00:00:00Z')")
+        }
+        let successorA = TicketID(rawValue: "successor-a")
+        let successorB = TicketID(rawValue: "successor-b")
+        let operations: [PlanChangeOperation] = [
+            .addUnassignedTicket(id: successorA, outcome: "First successor"),
+            .addUnassignedTicket(id: successorB, outcome: "Second successor"),
+            .addPendingTicketTasks(ticketID: successorA, tasks: [.init(id: .init(rawValue: "task-a"), label: "A", title: "First", sortOrder: 0)]),
+            .addPendingTicketTasks(ticketID: successorB, tasks: [.init(id: .init(rawValue: "task-b"), label: "B", title: "Second", sortOrder: 0)]),
+            .placeTicket(ticketID: successorA, phaseID: .init(rawValue: "phase-current")),
+            .placeTicket(ticketID: successorB, phaseID: .init(rawValue: "phase-current")),
+            .assignTicketToGoal(ticketID: successorA, phaseID: .init(rawValue: "phase-current"), goalID: .init(rawValue: "goal-current")),
+            .assignTicketToGoal(ticketID: successorB, phaseID: .init(rawValue: "phase-current"), goalID: .init(rawValue: "goal-current")),
+            .retireTicket(ticketID: .init(rawValue: "ticket-existing"), disposition: .split, reason: "Split all scope", successorTicketIDs: [successorA, successorB]),
+            .carryGoalObligation(
+                source: .init(phaseID: .init(rawValue: "phase-current"), goalID: .init(rawValue: "goal-current"), ticketID: .init(rawValue: "ticket-existing")),
+                descendants: [.init(phaseID: .init(rawValue: "phase-current"), goalID: .init(rawValue: "goal-current"), ticketID: successorA)],
+                reason: "Incomplete split carry"
+            ),
+        ]
+        let before = try await fixture.store.read {
+            (try $0.scalarInt("SELECT COUNT(*) FROM plan_change_proposals"),
+             try $0.scalarInt("SELECT COUNT(*) FROM audit_events"))
+        }
+        let result = await fixture.dispatcher.dispatch(envelope(
+            fixture, requestID: UUID(), command: .savePlanChangeProposal(
+                proposalID: "proposal-incomplete-split", expectedPreviousVersion: nil,
+                rationale: "Reject incomplete split coverage.", operations: operations
+            )
+        ))
+        guard case .invalidPlanChangeOperation = result.error else {
+            return XCTFail("Expected incomplete split carry rejection, got \(String(describing: result.error))")
+        }
+        let after = try await fixture.store.read {
+            (try $0.scalarInt("SELECT COUNT(*) FROM plan_change_proposals"),
+             try $0.scalarInt("SELECT COUNT(*) FROM audit_events"))
+        }
+        XCTAssertEqual(after.0, before.0)
+        XCTAssertEqual(after.1, before.1)
     }
 
     func testInvalidCarryGraphsRejectBeforeProposalOrAuditWrites() async throws {

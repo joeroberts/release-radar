@@ -302,6 +302,19 @@ struct ProjectPlanView: View {
                 }
                 Text(ticket.outcome).font(.subheadline)
                 Text(ticket.reason).font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                if let phaseID = ticket.lastPhaseID, let lane = ticket.lastLane {
+                    Text("Last placement: \(phaseID.rawValue) · \(lane.dashboardTitle)")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                } else if let phaseID = ticket.lastPhaseID {
+                    Text("Last phase: \(phaseID.rawValue)")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                } else if let lane = ticket.lastLane {
+                    Text("Last lane: \(lane.dashboardTitle)")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                }
                 if !ticket.successorTicketIDs.isEmpty {
                     Text("Successors: \(ticket.successorTicketIDs.map(\.rawValue).joined(separator: ", "))")
                         .font(.caption)

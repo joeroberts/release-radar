@@ -321,13 +321,29 @@ public enum DeliveryPlanningPolicy {
         for prerequisitePhaseID in prerequisitePhaseIDs {
             let goals = try loadGoals(
                 projectID: project, phaseID: .init(rawValue: prerequisitePhaseID), connection: db
-            ).filter { $0.lifecycle != .superseded }
+            )
             let hasUnresolvedGoal = try goals.contains(where: {
-                try !DeliveryGoalCoveragePolicy.assess(
+                let coverage = try DeliveryGoalCoveragePolicy.assess(
                     projectID: project, phaseID: $0.phaseID, goalID: $0.id, connection: db
-                ).isAcceptanceEligible
+                )
+                return $0.lifecycle == .superseded
+                    ? !coverage.isResolved
+                    : !coverage.isAcceptanceEligible
             })
-            if goals.isEmpty || hasUnresolvedGoal {
+            let unfinishedLiveTicketCount = try db.scalarInt(
+                """
+                SELECT COUNT(*) FROM tickets
+                WHERE project_id=? AND phase_id=? AND lane<>'accepted'
+                  AND NOT EXISTS (
+                    SELECT 1 FROM ticket_retirements
+                    WHERE ticket_retirements.project_id=tickets.project_id
+                      AND ticket_retirements.ticket_id=tickets.id
+                  )
+                """,
+                bindings: [.text(project.rawValue), .text(prerequisitePhaseID)]
+            ) ?? 0
+            let hasUnfinishedLiveTicket = unfinishedLiveTicketCount > 0
+            if hasUnresolvedGoal || hasUnfinishedLiveTicket {
                 unresolvedPhasePrerequisites = true
                 break
             }
@@ -454,10 +470,14 @@ public enum DeliveryPlanningPolicy {
         let goalsByID = Dictionary(uniqueKeysWithValues: goals.map { (identityKey($0.id.rawValue), $0) })
         let assignmentsByTicket = Dictionary(grouping: assignments, by: { identityKey($0.ticketID.rawValue) })
 
-        for goal in goals where goal.lifecycle != .superseded {
+        for goal in goals {
             let coverage = try DeliveryGoalCoveragePolicy.assess(
                 projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection
             )
+            if goal.lifecycle == .superseded {
+                if !coverage.isReadyCovered { incomplete.append(goal.id) }
+                continue
+            }
             let criteria = try loadCriteria(
                 projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection)
             if blank(goal.title) || blank(goal.outcome) || criteria.isEmpty
