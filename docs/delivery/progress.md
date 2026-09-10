@@ -41,7 +41,10 @@ recovery screenshots and design amendment. Direct xcresult readback confirms
 Native checks cover both goal domains, exact typed associated-work filters,
 wide/compact actual viewport/focus through Back/Forward, Help and registration
 replacement recovery. Writer reports task-owned processes stopped and releases
-its reservation. Independent Sol High review remains pending; 6B is not complete.
+its reservation. Fresh independent Sol High reviewer `01a08cde-c8c9-70d1-9ba1-1e4a566cb52b`
+is dispatched on integrated `5aa039631e8bc278b418216674142c32a05b5b24`. It starts
+read-only with no launch reservation. Source, authority and native QA review
+remain pending; 6B is not complete.
 
 During implementation, an overbroad route selector and failed static native
 fixture were stopped; observed commands retained sanitized unsigned settings.
