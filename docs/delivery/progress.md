@@ -64,8 +64,8 @@ checker. Candidate documentation validation and diff checks passed; independent 
 review passed with no findings. Next: complete the active History slice, preserve its local candidate and
 direct evidence, then independent review before the first publication request.
 
-All native test hosts require explicit serialized reservation here. No reservation
-is currently held. Before launch inspect the established inert synthetic XCTest
+All native test hosts require explicit serialized reservation here. History writer `01a08be3-987c-79a1-aa61-10520c4e8c97` holds the exclusive
+synthetic XCTest/native-host reservation until explicit stopped-process handback. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
