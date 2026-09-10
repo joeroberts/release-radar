@@ -34,7 +34,10 @@ task-owned processes stopped. No native reservation is active.
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
 workspace search/saved views and contextual Help. Next eligible source slice is
-6B Workspace Goals. Local source/tests/affected docs, scoped commits and necessary
+6B Workspace Goals under its [brief](task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md).
+The reviewed 6A publication endpoint is pinned locally at `codex/phase6a-reviewed`,
+`95cad491f096c83d1bfec9a5decb60b270f454a4`, and sent to the parent; no push occurred.
+Local source/tests/affected docs, scoped commits and necessary
 fresh bounded peer tasks are authorized. One product writer at a time; the
 orchestrator does not implement product or use subagents. Exact committed baselines
 and independent risk-appropriate review remain required.
@@ -82,3 +85,6 @@ listed in the canonical evidence, including writer roots and reviewer roots
 `/private/tmp/release-radar-phase6a-r4-review-01a08c37.MJLXYm`. Existing PNGs are
 accurately labelled initial native screenshots, not immediate after-Back captures.
 All scratch, including contaminated products/symlinks, remains; no cleanup occurred.
+
+An empty incidental scratch file `/tmp/phase6b-unused` was created during
+coordination and is temporary; it remains retained with no cleanup authorization.

@@ -688,6 +688,22 @@
       "isLeaf": true,
       "firstRead": "rr-phase6a-history-brief-2026-09-10",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase6b-goals",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6b-goals",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 6B workspace Delivery and Execution Goals",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-phase6b-goals-brief-2026-09-10",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5792,6 +5808,22 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-phase6b-goals-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase6b-goals",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      },
+      "authorityRole": "delivery.phase6b-goals"
     }
   ]
 }
