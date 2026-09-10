@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B is merged; shared integration correction review is pending.** The owner selected
+**Phase 5A is merged; Phase 5B is merged; shared integration local source delivery is complete.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -76,15 +76,16 @@ checks reported pending artifact registration and the known disposable-fixture
 assertion failure. Catalog integration resolves the former; the latter remains
 a reported baseline limitation. The writer yielded a clean checkout with no hosts
 running for serialized metadata/contracts integration and fresh independent review.
-Fresh Astra High reviewer `01a08889-1c24-7d90-9c46-a5846b96c125` requested four
-bounded corrections: diagnostic/accepted identity agreement, invalidation of all
-in-flight generations on plugin refresh, actual pending-catalog mapping and
-truthful bounded incompatibility recovery. The same writer completed correction
-`21955528f6bfa064e798d53554e2fc8bf4926215`; direct affected result readback confirms
-20 passed, 2 expected picker skips and no failures. The checkout is yielded for
-metadata validation and the same reviewer’s recheck. Shared source ownership
-remains reserved until coordinated handback. No source review pass, runtime pilot,
-installation, adoption or app synchronization is claimed.
+Independent Astra High reviewer `01a08889-1c24-7d90-9c46-a5846b96c125` passed
+exact corrected source `0c4c08969c7dd7d869a69acf3d5b0e40e6e89bba`, closing all
+four Required findings. Direct correction checks passed 20 with 2 expected picker
+skips; the final repository-identity boundary passed 2/2 and its containing suite
+passed 9 with the same 2 skips, no failures. The local source endpoint is complete.
+The clean branch is preserved; all writer/reviewer hosts are stopped. The completed
+reviewer is archived; writer archival waits parent confirmation of preservation. Metadata
+closeout is local only. Source ownership may hand back for coordinated Phase 5C
+work from this preserved baseline; no shared push, PR, merge, installation,
+adoption, runtime pilot or app synchronization is authorized.
 
 ## Current authorization and ownership
 
@@ -150,8 +151,8 @@ The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
 Phase 5B delivery is complete through its owner-approved merge.
-Phase 5C source dispatch must also respect shared ownership of AppModel and
-observation/UI paths until a coordinated handback; no overlapping writer is released.
+Phase 5C may proceed after the parent coordinates the preserved local shared
+baseline and hands source ownership back; no overlapping writer is released here.
 Approved proposal, successor/carry-forward and lifecycle slices follow in the
 recorded sequence. Later merges still require separate owner approval.
 

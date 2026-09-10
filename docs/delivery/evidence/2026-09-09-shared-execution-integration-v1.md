@@ -52,7 +52,7 @@ the safe `CodexPluginLifecycleTransportTests`, `DocumentationObservationTests`,
 `ProjectDocumentationRenderingTests`, and the focused AppModel plugin-observation
 refresh case.
 
-## Independent-review correction candidate
+## Independent review and corrections
 
 The first independent review identified four required source corrections. The
 local correction candidate now:
@@ -72,8 +72,8 @@ passed `1/1` in `review-race-corrected-green.xcresult`. The final affected
 correction suite passed `20`, skipped the same `2` environment-gated native
 picker cases, and failed `0` in `review-corrections-affected.xcresult`. The
 rendering portion repeated all nine states at 620 and 1100 points with no
-accessibility or screenshot assertion failure. Independent re-review of this
-correction candidate remains required.
+accessibility or screenshot assertion failure. The same reviewer rechecked these
+corrections within the original scope.
 
 That re-review found one residual interval-mismatch case within the same
 identity boundary: a valid unaccepted catalog diagnostic from another
@@ -83,8 +83,11 @@ match the captured project/root binding while still allowing a same-repository
 version or digest change to remain pending. Both boundary cases passed `2/2` in
 `review-catalog-identity-green.xcresult`; the containing observation suite then
 passed `9`, skipped the same `2` picker cases, and failed `0` in
-`review-catalog-identity-affected.xcresult`. Final same-reviewer confirmation
-remains required.
+`review-catalog-identity-affected.xcresult`. The same independent Astra High
+reviewer (`01a08889-1c24-7d90-9c46-a5846b96c125`) passed exact source commit
+`0c4c08969c7dd7d869a69acf3d5b0e40e6e89bba`, closing all four Required findings.
+The authorized local source outcome is complete; writer and reviewer hosts are
+stopped. This closeout adds documentation only.
 
 ## Visual comparison
 
@@ -122,7 +125,7 @@ Repository documentation validation and `git diff --check` passed after the
 serialized catalog/index and contract updates. The existing shared-design artifact
 retains its stable identity, proposed/supporting metadata and no-checksum policy;
 source authorization does not silently promote it to a controlling adoption record.
-One fresh independent review of the immutable combined candidate remains required.
+Independent review of the corrected combined source candidate is complete.
 This verification does not authorize a source runtime
 pilot, plugin installation, consumer adoption, push, PR, or merge.
 

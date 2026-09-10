@@ -304,8 +304,11 @@ root-bound compatibility observation and Project Overview presentation. The
 [design](../../design/shared-execution-integration-v1-design.md) and
 [evidence](../evidence/2026-09-09-shared-execution-integration-v1.md) distinguish
 source delivery from installed behavior. Direct affected checks report 101 passed,
-2 environment-gated skips and no failures; metadata integration and one fresh
-independent combined review remain the next steps.
+2 environment-gated skips and no failures. Metadata integration and the same
+independent reviewer’s correction recheck are complete at source
+`0c4c08969c7dd7d869a69acf3d5b0e40e6e89bba`, with all four Required findings
+closed; the evidence records focused correction results. This completes the
+authorized local source endpoint.
 
 This authorization does not establish consumer adoption, application catalog
 acceptance, plugin installation or a runtime pilot. The original assessment below
