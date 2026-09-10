@@ -323,3 +323,38 @@ separate owner authorization, updating later PR bases as needed.
 Temporary PR body files remain in `/private/tmp/release-radar-publication/`;
 the published descriptions and this ledger are their durable counterparts.
 Existing verification outputs remain retained. No cleanup occurred.
+
+## Owner-approved sequential merges — 2026-09-10
+
+The owner approved all four PR merges, superseding the separate merge waits above
+for #40–#43 only. They merged in sequence using merge commits, with each dependent
+PR retargeted to `codex/release-radar-mvp` after its predecessor merged.
+
+| Slice | PR | Verified merge commit |
+| --- | --- | --- |
+| Shared execution | [#40](https://github.com/joeroberts/release-radar/pull/40) | `665b5bc150fbd23efb4c92eb0373886e78ad67c1` |
+| Phase 5C | [#41](https://github.com/joeroberts/release-radar/pull/41) | `ea7b20a926af272db2a52f15ce5593d68a1e9e8d` |
+| Phase 5D | [#42](https://github.com/joeroberts/release-radar/pull/42) | `a9a699d675cd65d7e6da2865142cf66e608f4011` |
+| Phase 5E | [#43](https://github.com/joeroberts/release-radar/pull/43) | `e03a0dd2d104d4e7438421bce5fbdb14a8586112` |
+
+A new external review identified a scheduling race in the shared plugin-refresh
+test before #40 merged. Test-only correction `750fd7b` replaces a fixed sleep and
+conditional callback release with existing deterministic gate synchronization.
+The exact test passed 1/1; independent correction reviewer returned READY with no
+findings. Writer `01a08bc8-fd6c-76a1-98ed-38c787f7699d` and reviewer
+`01a08bcb-4366-7f02-98f4-27aca6aa5e65` are complete and archived. The correction
+was merged forward through the stack without product changes or history rewriting.
+Optional caching and external suggestions conflicting with governing instructions
+were not adopted. Raw test output remains under
+`/private/tmp/release-radar-shared-publication-fix/`.
+
+Each merge used the expected head guard after current readiness inspection.
+GitHub reported no required checks on these PRs. The shared PR's optional
+CodeRabbit recheck was pending when merged after independent correction approval;
+C/D/E reported success. No failed required check was bypassed. Remote readback
+confirmed all four merged and delivery branch HEAD `e03a0dd`.
+
+Shared execution V1 and Phase 5A–5E source delivery are now merged. This ledger
+closeout is preserved locally on `codex/phase5e-orchestrator` for parent handback.
+No installation, data migration, owner application/catalog acceptance, consumer
+adoption or cleanup occurred. Those actions remain outside this authorization.
