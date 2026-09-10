@@ -49,6 +49,21 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         XCTAssertFalse(version.baseline.isEmpty)
         XCTAssertNil(version.decision)
         XCTAssertNil(version.application)
+
+        let queryResult = await AgentQueryDispatcher(store: fixture.store).dispatch(.init(
+            version: 1,
+            projectRoot: fixture.root.path,
+            query: .planChangeProposals(projectID: fixture.registration.projectID.rawValue)
+        ))
+        XCTAssertNil(queryResult.error)
+        XCTAssertEqual(queryResult.planChangeProposals, proposals)
+        let unauthorizedQuery = await AgentQueryDispatcher(store: fixture.store).dispatch(.init(
+            version: 1,
+            projectRoot: fixture.root.appendingPathComponent("other").path,
+            query: .planChangeProposals(projectID: fixture.registration.projectID.rawValue)
+        ))
+        XCTAssertEqual(unauthorizedQuery.error, .unauthorizedProjectRoot)
+        XCTAssertNil(unauthorizedQuery.planChangeProposals)
     }
 
     func testOwnerApprovalBindsExactVersionAndApplyCommitsCompleteAdditiveWorkPackage() async throws {

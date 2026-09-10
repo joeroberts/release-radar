@@ -249,3 +249,7 @@ phase lifecycle remain later slices. Retained approval history never survives
 registration rotation as live application authority.
 The [Phase 5C brief](../delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
 defines the bounded operation set, baseline, recovery and native acceptance contract.
+The packaged agent interface exposes `release_radar_save_plan_change_proposal` and
+the read-only `release_radar_plan_change_proposals` query. It intentionally exposes
+no decision or application tool: those operations remain trusted owner-app actions
+and the dispatcher rejects external-origin attempts before replay lookup.

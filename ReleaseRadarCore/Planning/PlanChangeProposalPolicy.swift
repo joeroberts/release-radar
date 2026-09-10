@@ -224,6 +224,7 @@ enum PlanChangeProposalPolicy {
         var ticketDependencyIDs = Set<Data>()
         var placements = Set<Data>()
         var assignments = Set<Data>()
+        var goalCountsByPhase: [Data: Int] = [:]
         let proposedPhases = Set(operations.compactMap { operation -> Data? in
             guard case let .addPhase(id, _) = operation else { return nil }
             return Data(id.rawValue.utf8)
@@ -287,8 +288,13 @@ enum PlanChangeProposalPolicy {
                 try requireText(id.rawValue, label: "Phase ID", maximum: 256)
                 try requireText(name, label: "Phase name")
             case let .addDeliveryGoal(phaseID, goal):
+                let phaseKey = Data(phaseID.rawValue.utf8)
+                goalCountsByPhase[phaseKey, default: 0] += 1
                 guard try phaseExists(phaseID) else {
                     throw PlanChangeProposalError.invalidOperation("Goal \(goal.id.rawValue) names an unavailable phase.")
+                }
+                guard goalCountsByPhase[phaseKey, default: 0] <= DeliveryPlanningPolicy.maximumGoalOperationsPerRevision else {
+                    throw PlanChangeProposalError.invalidOperation("A proposed phase revision permits at most \(DeliveryPlanningPolicy.maximumGoalOperationsPerRevision) goal additions.")
                 }
                 guard goalIDs.insert(Data(goal.id.rawValue.utf8)).inserted,
                       try connection.scalarInt(
@@ -315,8 +321,9 @@ enum PlanChangeProposalPolicy {
                 try requireText(id.rawValue, label: "Ticket ID", maximum: 256)
                 try requireText(outcome, label: "Ticket outcome")
             case let .addPendingTicketTasks(ticketID, tasks):
-                guard try ticketExists(ticketID), !tasks.isEmpty else {
-                    throw PlanChangeProposalError.invalidOperation("Pending task additions need an available ticket and at least one task.")
+                guard try ticketExists(ticketID), !tasks.isEmpty,
+                      tasks.count <= TicketTaskPlanningPolicy.maximumOperationsPerRevision else {
+                    throw PlanChangeProposalError.invalidOperation("Pending task additions need an available ticket and 1...\(TicketTaskPlanningPolicy.maximumOperationsPerRevision) tasks.")
                 }
                 try requireEligibleExistingSubject(ticketID)
                 for task in tasks {

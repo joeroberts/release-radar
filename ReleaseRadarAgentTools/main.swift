@@ -154,7 +154,12 @@ private struct MCPServer {
 
     private static func makeEnvelope(tool: String, arguments: [String: Any]) throws -> Data {
         let version = try integer("version", in: arguments)
-        if ["release_radar_inventory_evidence", "release_radar_ticket_references", "release_radar_recorded_impacts"].contains(tool) {
+        if [
+            "release_radar_inventory_evidence",
+            "release_radar_ticket_references",
+            "release_radar_recorded_impacts",
+            "release_radar_plan_change_proposals",
+        ].contains(tool) {
             let query: [String: Any]
             switch tool {
             case "release_radar_inventory_evidence":
@@ -166,6 +171,10 @@ private struct MCPServer {
                     "projectID": try string("projectID", in: arguments),
                     "rootID": try string("rootID", in: arguments),
                     "ticketID": try string("ticketID", in: arguments),
+                ]]
+            case "release_radar_plan_change_proposals":
+                query = ["planChangeProposals": [
+                    "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
                 ]]
             default:
                 query = ["recordedImpacts": [
@@ -228,6 +237,29 @@ private struct MCPServer {
         arguments: [String: Any]
     ) throws -> (String, [String: Any]) {
         switch tool {
+        case "release_radar_save_plan_change_proposal":
+            try requireTaskFields(
+                arguments,
+                allowed: ["proposalID", "expectedPreviousVersion", "rationale", "operations"]
+            )
+            guard let previous = arguments["expectedPreviousVersion"] else {
+                throw ToolFailure.invalidRequest("expectedPreviousVersion is required and may be null")
+            }
+            guard let rawOperations = arguments["operations"] as? [[String: Any]],
+                  (1...256).contains(rawOperations.count) else {
+                throw ToolFailure.invalidRequest("operations must contain 1...256 exact operation records")
+            }
+            let expectedPreviousVersion: Any = if previous is NSNull {
+                NSNull()
+            } else {
+                try positiveRevision("expectedPreviousVersion", in: arguments)
+            }
+            return try boundedTaskCommand("savePlanChangeProposal", value: [
+                "proposalID": try taskString("proposalID", in: arguments, maximumBytes: 256),
+                "expectedPreviousVersion": expectedPreviousVersion,
+                "rationale": try taskString("rationale", in: arguments, maximumBytes: 4_096),
+                "operations": try rawOperations.map(planChangeOperation),
+            ])
         case "release_radar_apply_phase_plan_revision":
             try requireTaskFields(arguments, allowed: ["projectID", "phaseID", "expectedRevision", "goalUpserts", "assignments", "unassignedTicketIDs", "supersededGoalIDs"])
             var value: [String: Any] = [
@@ -486,6 +518,110 @@ private struct MCPServer {
         }
     }
 
+    private static func planChangeOperation(_ operation: [String: Any]) throws -> [String: Any] {
+        let kind = try string("kind", in: operation)
+        func requireExact(_ fields: Set<String>) throws {
+            guard Set(operation.keys) == fields.union(["kind"]) else {
+                throw ToolFailure.invalidRequest("Plan-change operation \(kind) requires exact fields")
+            }
+        }
+        func recordID(_ key: String, in values: [String: Any] = operation) throws -> [String: Any] {
+            ["rawValue": try taskString(key, in: values, maximumBytes: 256)]
+        }
+        switch kind {
+        case "addPhase":
+            try requireExact(["id", "name"])
+            return ["addPhase": [
+                "id": try recordID("id"),
+                "name": try taskString("name", in: operation, maximumBytes: 4_096),
+            ]]
+        case "addDeliveryGoal":
+            try requireExact(["phaseID", "goal"])
+            guard let goal = operation["goal"] as? [String: Any],
+                  Set(goal.keys) == ["id", "title", "outcome", "doneCriteria", "sortOrder"],
+                  let criteria = goal["doneCriteria"] as? [String], !criteria.isEmpty else {
+                throw ToolFailure.invalidRequest("addDeliveryGoal requires exact goal fields and nonempty doneCriteria")
+            }
+            for criterion in criteria {
+                _ = try taskString("doneCriteria", in: ["doneCriteria": criterion], maximumBytes: 4_096)
+            }
+            let sortOrder = try integer("sortOrder", in: goal)
+            guard sortOrder >= 0 else {
+                throw ToolFailure.invalidRequest("Goal sortOrder must be nonnegative")
+            }
+            return ["addDeliveryGoal": [
+                "phaseID": try recordID("phaseID"),
+                "goal": [
+                    "id": try recordID("id", in: goal),
+                    "title": try taskString("title", in: goal, maximumBytes: 4_096),
+                    "outcome": try taskString("outcome", in: goal, maximumBytes: 4_096),
+                    "doneCriteria": criteria,
+                    "sortOrder": sortOrder,
+                ],
+            ]]
+        case "addUnassignedTicket":
+            try requireExact(["id", "outcome"])
+            return ["addUnassignedTicket": [
+                "id": try recordID("id"),
+                "outcome": try taskString("outcome", in: operation, maximumBytes: 4_096),
+            ]]
+        case "addPendingTicketTasks":
+            try requireExact(["ticketID", "tasks"])
+            guard let tasks = operation["tasks"] as? [[String: Any]],
+                  (1...64).contains(tasks.count) else {
+                throw ToolFailure.invalidRequest("addPendingTicketTasks requires 1...64 exact task records")
+            }
+            let encodedTasks = try tasks.map { task -> [String: Any] in
+                guard Set(task.keys) == ["id", "label", "title", "sortOrder"] else {
+                    throw ToolFailure.invalidRequest("Pending task additions require exact id, label, title and sortOrder fields")
+                }
+                let sortOrder = try integer("sortOrder", in: task)
+                guard sortOrder >= 0 else {
+                    throw ToolFailure.invalidRequest("Task sortOrder must be nonnegative")
+                }
+                return [
+                    "id": try recordID("id", in: task),
+                    "label": try taskString("label", in: task, maximumBytes: 256),
+                    "title": try taskString("title", in: task, maximumBytes: 4_096),
+                    "sortOrder": sortOrder,
+                ]
+            }
+            return ["addPendingTicketTasks": [
+                "ticketID": try recordID("ticketID"),
+                "tasks": encodedTasks,
+            ]]
+        case "placeTicket":
+            try requireExact(["ticketID", "phaseID"])
+            return ["placeTicket": [
+                "ticketID": try recordID("ticketID"),
+                "phaseID": try recordID("phaseID"),
+            ]]
+        case "assignTicketToGoal":
+            try requireExact(["ticketID", "phaseID", "goalID"])
+            return ["assignTicketToGoal": [
+                "ticketID": try recordID("ticketID"),
+                "phaseID": try recordID("phaseID"),
+                "goalID": try recordID("goalID"),
+            ]]
+        case "addPhaseDependency":
+            try requireExact(["id", "phaseID", "dependsOnPhaseID"])
+            return ["addPhaseDependency": [
+                "id": try recordID("id"),
+                "phaseID": try recordID("phaseID"),
+                "dependsOnPhaseID": try recordID("dependsOnPhaseID"),
+            ]]
+        case "addTicketDependency":
+            try requireExact(["id", "ticketID", "dependsOnTicketID"])
+            return ["addTicketDependency": [
+                "id": try recordID("id"),
+                "ticketID": try recordID("ticketID"),
+                "dependsOnTicketID": try recordID("dependsOnTicketID"),
+            ]]
+        default:
+            throw ToolFailure.invalidRequest("Unknown plan-change operation kind")
+        }
+    }
+
     private static func taskString(_ key: String, in arguments: [String: Any], maximumBytes: Int) throws -> String {
         let value = try string(key, in: arguments)
         guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -603,6 +739,47 @@ private struct MCPServer {
             "type": "object", "additionalProperties": false, "required": ["goalID", "ticketID"],
             "properties": ["goalID": taskID, "ticketID": taskID],
         ]
+        func proposalOperation(
+            kind: String,
+            required: [String],
+            fields: [String: [String: Any]]
+        ) -> [String: Any] {
+            var properties = fields
+            properties["kind"] = ["type": "string", "const": kind]
+            return [
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind"] + required,
+                "properties": properties,
+            ]
+        }
+        let proposalTask: [String: Any] = [
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "label", "title", "sortOrder"],
+            "properties": ["id": taskID, "label": taskID, "title": taskTitle, "sortOrder": taskOrder],
+        ]
+        let proposalGoal: [String: Any] = [
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "title", "outcome", "doneCriteria", "sortOrder"],
+            "properties": [
+                "id": taskID, "title": taskTitle, "outcome": taskTitle,
+                "doneCriteria": ["type": "array", "minItems": 1, "items": taskTitle],
+                "sortOrder": taskOrder,
+            ],
+        ]
+        let planChangeOperation: [String: Any] = ["oneOf": [
+            proposalOperation(kind: "addPhase", required: ["id", "name"], fields: ["id": taskID, "name": taskTitle]),
+            proposalOperation(kind: "addDeliveryGoal", required: ["phaseID", "goal"], fields: ["phaseID": taskID, "goal": proposalGoal]),
+            proposalOperation(kind: "addUnassignedTicket", required: ["id", "outcome"], fields: ["id": taskID, "outcome": taskTitle]),
+            proposalOperation(kind: "addPendingTicketTasks", required: ["ticketID", "tasks"], fields: [
+                "ticketID": taskID,
+                "tasks": ["type": "array", "minItems": 1, "maxItems": 64, "items": proposalTask],
+            ]),
+            proposalOperation(kind: "placeTicket", required: ["ticketID", "phaseID"], fields: ["ticketID": taskID, "phaseID": taskID]),
+            proposalOperation(kind: "assignTicketToGoal", required: ["ticketID", "phaseID", "goalID"], fields: ["ticketID": taskID, "phaseID": taskID, "goalID": taskID]),
+            proposalOperation(kind: "addPhaseDependency", required: ["id", "phaseID", "dependsOnPhaseID"], fields: ["id": taskID, "phaseID": taskID, "dependsOnPhaseID": taskID]),
+            proposalOperation(kind: "addTicketDependency", required: ["id", "ticketID", "dependsOnTicketID"], fields: ["id": taskID, "ticketID": taskID, "dependsOnTicketID": taskID]),
+        ]]
         return [
             ["name": "release_radar_inventory_evidence", "description": "Read a complete authorized project evidence inventory. Oversized or unavailable inventory fails closed; no rows are silently omitted.",
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
@@ -621,6 +798,23 @@ private struct MCPServer {
                              "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string,
                                             "projectID": taskID, "rootID": taskID,
                                             "repositoryID": ["type": "string", "format": "uuid"], "artifactID": taskID]]],
+            ["name": "release_radar_plan_change_proposals", "description": "Read every saved version, exact baseline, derived diff, source impact, owner decision and application record for one authorized active project. This never mutates delivery state.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false,
+                             "required": ["version", "projectRoot", "projectID"],
+                             "properties": ["version": ["type": "integer", "const": 1],
+                                            "projectRoot": string, "projectID": taskID]]],
+            definition(
+                "release_radar_save_plan_change_proposal",
+                required: ["proposalID", "expectedPreviousVersion", "rationale", "operations"],
+                fields: [
+                    "proposalID": taskID,
+                    "expectedPreviousVersion": ["type": ["integer", "null"], "minimum": 1, "maximum": Int64.max],
+                    "rationale": taskTitle,
+                    "operations": ["type": "array", "minItems": 1, "maxItems": 256, "items": planChangeOperation],
+                ],
+                description: "Save a new immutable version of one bounded additive plan-change proposal against the app-captured baseline. This does not approve or apply the proposal."
+            ),
             definition("release_radar_bind_documentation_repository", required: ["target"], fields: ["target": target]),
             definition("release_radar_accept_documentation_catalog", required: ["target", "priorCatalogVersion", "priorCatalogDigest"], fields: ["target": target, "priorCatalogVersion": ["type": "integer", "const": 1], "priorCatalogDigest": string]),
             definition("release_radar_add_managed_evidence", required: ["target", "id", "artifactID"], fields: ["target": target, "id": string, "ticketID": string, "artifactID": string]),

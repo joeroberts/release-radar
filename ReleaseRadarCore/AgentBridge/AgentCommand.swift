@@ -142,8 +142,9 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let planChangeProposalVersion: Int64?
     public let planChangeProposalDecisionID: String?
     public let planChangeProposalApplicationID: String?
+    public let planChangeProposals: [PlanChangeProposalRecord]?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
@@ -156,6 +157,7 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
         self.planChangeProposalVersion = planChangeProposalVersion
         self.planChangeProposalDecisionID = planChangeProposalDecisionID
         self.planChangeProposalApplicationID = planChangeProposalApplicationID
+        self.planChangeProposals = planChangeProposals
     }
 }
 

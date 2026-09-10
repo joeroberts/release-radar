@@ -252,6 +252,7 @@ public actor AgentCommandDispatcher {
                     case let .addPendingTicketTasks(ticketID, tasks):
                         valid(ticketID.rawValue, maximum: 256) && !ticketID.rawValue.contains("\0")
                             && !tasks.isEmpty
+                            && tasks.count <= TicketTaskPlanningPolicy.maximumOperationsPerRevision
                             && tasks.allSatisfy {
                                 valid($0.id.rawValue, maximum: 256) && !$0.id.rawValue.contains("\0")
                                     && valid($0.label, maximum: 256) && !$0.label.contains("\0")
