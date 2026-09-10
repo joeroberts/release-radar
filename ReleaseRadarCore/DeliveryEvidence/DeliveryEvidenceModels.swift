@@ -106,6 +106,13 @@ public struct DeliveryEvidencePullRequestFact: Codable, Equatable, Sendable {
     public let mergeSHA: String?
     public let state: DeliveryEvidencePullRequestState
 
+    var hasConsistentRevision: Bool {
+        revision.commitSHA.caseInsensitiveCompare(headSHA) == .orderedSame
+            || (state == .merged && mergeSHA.map {
+                revision.commitSHA.caseInsensitiveCompare($0) == .orderedSame
+            } == true)
+    }
+
     public init(
         repositoryID: String,
         revision: DeliveryEvidenceRevision,
@@ -285,6 +292,8 @@ public struct DeliveryEvidenceObservation: Codable, Equatable, Sendable {
     public let sourceAvailability: DeliveryEvidenceSourceAvailability
     public let outcome: DeliveryEvidenceOutcome
     public let observedAt: String
+    /// Readback contains application recording time. On input this legacy field
+    /// remains part of exact replay identity but never supplies persisted time.
     public let recordedAt: String
     public let attachmentEvidenceID: String?
     public let supersedesObservationID: String?
@@ -456,17 +465,29 @@ public enum DeliveryEvidenceApplicabilityEvaluator {
         if stale.contains(.repositoryMismatch) {
             // Revision details from another repository cannot add a meaningful
             // applicability fact beyond the identity mismatch.
-        } else if let revision = observation.fact.revision {
+        } else if let revision = observation.fact.revision
+                    ?? (observation.fact.category == .check ? target.revision : nil) {
             if revision.commitSHA.caseInsensitiveCompare(target.revision.commitSHA) != .orderedSame {
                 stale.append(.revisionMismatch)
+            } else if revision.checkoutState == .unknown || target.revision.checkoutState == .unknown {
+                unknown.append(.revisionUnknown)
             } else if revision.checkoutState != target.revision.checkoutState {
                 stale.append(.checkoutStateMismatch)
+            } else if revision.checkoutState == .dirty,
+                      revision.dirtySnapshotID?.isEmpty != false || target.revision.dirtySnapshotID?.isEmpty != false {
+                unknown.append(.revisionUnknown)
             } else if revision.checkoutState == .dirty,
                       revision.dirtySnapshotID != target.revision.dirtySnapshotID {
                 stale.append(.dirtySnapshotMismatch)
             }
         } else if observation.fact.category == .installation {
             unknown.append(.revisionUnknown)
+        }
+
+        if case let .pullRequest(fact) = observation.fact,
+           !fact.hasConsistentRevision,
+           !stale.contains(.revisionMismatch) {
+            stale.append(.revisionMismatch)
         }
 
         if case let .repository(fact) = observation.fact,
@@ -493,8 +514,10 @@ public enum DeliveryEvidenceApplicabilityEvaluator {
         target: DeliveryEvidenceTargetVersion,
         observations: [DeliveryEvidenceObservation]
     ) -> [DeliveryEvidenceExpectationAssessment] {
-        target.expectations.map { expectation in
+        let superseded = Set(observations.compactMap(\.supersedesObservationID))
+        return target.expectations.map { expectation in
             let matching = observations
+                .filter { !superseded.contains($0.id) }
                 .filter { $0.fact.category == expectation.category && $0.fact.scope == expectation.scope }
                 .filter { evaluate($0, against: target).state == .applicable }
             guard let observation = matching.last else {
@@ -512,9 +535,11 @@ public enum DeliveryEvidenceApplicabilityEvaluator {
         target: DeliveryEvidenceTargetVersion,
         resolvedObservations: [DeliveryEvidenceResolvedObservation]
     ) -> [DeliveryEvidenceExpectationAssessment] {
-        target.expectations.map { expectation in
+        let superseded = Set(resolvedObservations.compactMap { $0.observation.supersedesObservationID })
+        return target.expectations.map { expectation in
             let matching = resolvedObservations.filter {
-                $0.observation.fact.category == expectation.category
+                !superseded.contains($0.id)
+                    && $0.observation.fact.category == expectation.category
                     && $0.observation.fact.scope == expectation.scope
                     && $0.applicability.state == .applicable
             }
@@ -665,6 +690,7 @@ extension AgentCommand {
                 factIsValid = fact.number > 0
                     && validSHA(fact.headSHA)
                     && (fact.mergeSHA.map(validSHA) ?? true)
+                    && fact.hasConsistentRevision
             case let .check(fact):
                 factIsValid = valid(fact.scope, maximum: 256)
             case let .document(fact):

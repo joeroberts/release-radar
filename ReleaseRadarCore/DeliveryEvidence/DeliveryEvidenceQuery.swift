@@ -76,7 +76,7 @@ struct DeliveryEvidenceCapture: Sendable {
             )
         }
         observations = try connection.rows(
-            "SELECT * FROM ticket_delivery_evidence_observations WHERE project_id=? AND ticket_id=? ORDER BY recorded_at,id",
+            "SELECT * FROM ticket_delivery_evidence_observations WHERE project_id=? AND ticket_id=? ORDER BY append_revision",
             bindings: [.text(context.projectID), .text(ticketID)],
             maximum: 4096
         ).map { row in
@@ -148,15 +148,15 @@ struct DeliveryEvidenceCapture: Sendable {
                 currentAvailability = current.availability
                 digest = current.digest
                 if current.availability == .available {
-                    var reasons = applicability.reasons
+                    var documentChanges: [DeliveryEvidenceApplicabilityReason] = []
                     if current.digest != fact.contentDigest {
-                        reasons.append(.documentContentChanged)
+                        documentChanges.append(.documentContentChanged)
                     }
                     if current.catalogVersion != fact.catalogVersion || current.catalogDigest != fact.catalogDigest {
-                        reasons.append(.documentCatalogChanged)
+                        documentChanges.append(.documentCatalogChanged)
                     }
-                    if !reasons.isEmpty {
-                        applicability = .init(state: .stale, reasons: reasons)
+                    if !documentChanges.isEmpty {
+                        applicability = .init(state: .stale, reasons: applicability.reasons + documentChanges)
                     }
                 }
             }

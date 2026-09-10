@@ -302,14 +302,15 @@ struct DeliveryEvidenceCommandDispatcher: Sendable {
                 }
             }
             try connection.execute(
-                "INSERT INTO ticket_delivery_evidence_observations (project_id,ticket_id,id,target_version,fact_data,source_data,source_availability,outcome,observed_at,recorded_at,attachment_evidence_id,supersedes_observation_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO ticket_delivery_evidence_observations (project_id,ticket_id,id,target_version,fact_data,source_data,source_availability,outcome,observed_at,recorded_at,attachment_evidence_id,supersedes_observation_id,append_revision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 bindings: [
                     .text(identity.projectID), .text(identity.ticketID), .text(observation.id),
                     .integer(Int64(observation.targetVersion)), .blob(try encoder.encode(observation.fact)),
                     .blob(try encoder.encode(observation.source)), .text(observation.sourceAvailability.rawValue),
-                    .text(observation.outcome.rawValue), .text(observation.observedAt), .text(observation.recordedAt),
+                    .text(observation.outcome.rawValue), .text(observation.observedAt), .text(now),
                     observation.attachmentEvidenceID.map(SQLiteValue.text) ?? .null,
                     observation.supersedesObservationID.map(SQLiteValue.text) ?? .null,
+                    .integer(nextRevision),
                 ]
             )
             try connection.execute(
