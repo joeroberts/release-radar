@@ -114,6 +114,15 @@ macOS execution, signing disabled and a sanitized environment rooted at
   `phase5e-review-green-1.xcresult`, was compile-blocked by a local `compactMap`
   inference ambiguity; adding the explicit optional result type was the only
   correction before the passing rerun.
+- The bounded reviewer recheck closed the completion finding and identified
+  fractional lifecycle timestamps missing from retained activity. The focused
+  `phase5e-review-timestamps-red-1.xcresult` executed 1 test with four expected
+  failures: current and both event dates were `nil`, and lifecycle activity fell
+  back to lexical rather than chronological order. The retained reader now uses
+  the live lifecycle reader's fractional-first ISO-8601 parsing with
+  nonfractional compatibility. `phase5e-review-timestamps-green-1.xcresult`
+  passed 1/1, proving exact retained dates, reverse-chronological ordering and
+  the existing no-reauthorization boundary.
 
 The installed owner application remained PID 60590 throughout native testing and
 was never selected, controlled, terminated or connected to. All stores were

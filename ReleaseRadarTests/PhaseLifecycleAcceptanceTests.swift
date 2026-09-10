@@ -678,6 +678,34 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
             origin: .ownerApp
         )
         XCTAssertNil(moved.error)
+        try await Task.sleep(for: .milliseconds(10))
+        let movedAgain = await fixture.dispatcher.dispatch(
+            envelope(
+                fixture,
+                requestID: UUID(),
+                command: .transitionPhaseLifecycle(
+                    projectID: fixture.registration.projectID.rawValue,
+                    phaseID: "phase-a", expectedRevision: 1,
+                    action: .moveToUpcoming, planningBaselineDigest: nil
+                )
+            ),
+            origin: .ownerApp
+        )
+        XCTAssertNil(movedAgain.error)
+        let liveLifecycle = try await fixture.store.read { connection in
+            (
+                try PhaseLifecyclePolicy.current(
+                    projectID: fixture.registration.projectID,
+                    phaseID: .init(rawValue: "phase-a"),
+                    connection: connection
+                ),
+                try PhaseLifecyclePolicy.history(
+                    projectID: fixture.registration.projectID,
+                    phaseID: .init(rawValue: "phase-a"),
+                    connection: connection
+                )
+            )
+        }
         let manager = ProjectRemovalManager(store: fixture.store)
         let preview = try await manager.preview(projectID: fixture.registration.projectID)
         let removed = try await manager.apply(preview)
@@ -688,9 +716,9 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
                 try connection.scalarInt("SELECT COUNT(*) FROM retained_phase_lifecycle_events WHERE historical_project_id='lifecycle-project' AND phase_id='phase-a'")
             )
         }
-        XCTAssertEqual(retained.0, "in_delivery")
-        XCTAssertEqual(retained.1, 1)
-        XCTAssertEqual(retained.2, 1)
+        XCTAssertEqual(retained.0, "upcoming")
+        XCTAssertEqual(retained.1, 2)
+        XCTAssertEqual(retained.2, 2)
 
         let history = try await ProjectActivityProjection.loadRemoved(
             from: fixture.store,
@@ -701,29 +729,48 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         })
         XCTAssertEqual(current.phaseID?.rawValue, "phase-a")
         XCTAssertEqual(current.title, "Phase lifecycle · Phase A")
-        XCTAssertEqual(current.detail, "Current · In delivery · revision 1")
+        XCTAssertEqual(current.detail, "Current · Upcoming · revision 2")
+        XCTAssertEqual(current.observedAt, liveLifecycle.0.updatedAt)
         XCTAssertEqual(current.retainedPhaseLifecycle?.kind, .current)
         XCTAssertEqual(current.retainedPhaseLifecycle?.removalID, removed.id)
         XCTAssertEqual(current.retainedPhaseLifecycle?.historicalProjectID, fixture.registration.projectID)
-        XCTAssertEqual(current.retainedPhaseLifecycle?.lifecycle, .inDelivery)
-        XCTAssertEqual(current.retainedPhaseLifecycle?.revision, 1)
-        let event = try XCTUnwrap(history.items.first {
+        XCTAssertEqual(current.retainedPhaseLifecycle?.lifecycle, .upcoming)
+        XCTAssertEqual(current.retainedPhaseLifecycle?.revision, 2)
+        let firstEvent = try XCTUnwrap(history.items.first {
             $0.id == "phase-lifecycle-event-phase-a-1"
         })
-        XCTAssertEqual(event.phaseID?.rawValue, "phase-a")
-        XCTAssertEqual(event.title, "Phase lifecycle transition · Phase A")
+        XCTAssertEqual(firstEvent.phaseID?.rawValue, "phase-a")
+        XCTAssertEqual(firstEvent.title, "Phase lifecycle transition · Phase A")
         XCTAssertEqual(
-            event.detail,
+            firstEvent.detail,
             "Unassessed → In delivery · Begin delivery · revision 1 · Exercise owner phase lifecycle"
         )
-        XCTAssertEqual(event.retainedPhaseLifecycle?.kind, .transition)
-        XCTAssertEqual(event.retainedPhaseLifecycle?.previousLifecycle, .unassessed)
-        XCTAssertEqual(event.retainedPhaseLifecycle?.lifecycle, .inDelivery)
-        XCTAssertEqual(event.retainedPhaseLifecycle?.action, .beginDelivery)
-        XCTAssertEqual(event.retainedPhaseLifecycle?.reason, "Exercise owner phase lifecycle")
-        XCTAssertEqual(event.retainedPhaseLifecycle?.auditEventID, moved.auditEventID)
-        XCTAssertEqual(event.retainedPhaseLifecycle?.registration, fixture.registration)
-        XCTAssertNil(event.retainedPhaseLifecycle?.planningBaselineDigest)
+        XCTAssertEqual(firstEvent.observedAt, liveLifecycle.1[0].createdAt)
+        XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.kind, .transition)
+        XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.previousLifecycle, .unassessed)
+        XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.lifecycle, .inDelivery)
+        XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.action, .beginDelivery)
+        XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.reason, "Exercise owner phase lifecycle")
+        XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.auditEventID, moved.auditEventID)
+        XCTAssertEqual(firstEvent.retainedPhaseLifecycle?.registration, fixture.registration)
+        XCTAssertNil(firstEvent.retainedPhaseLifecycle?.planningBaselineDigest)
+        let secondEvent = try XCTUnwrap(history.items.first {
+            $0.id == "phase-lifecycle-event-phase-a-2"
+        })
+        XCTAssertEqual(secondEvent.observedAt, liveLifecycle.1[1].createdAt)
+        XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.previousLifecycle, .inDelivery)
+        XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.lifecycle, .upcoming)
+        XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.action, .moveToUpcoming)
+        XCTAssertEqual(secondEvent.retainedPhaseLifecycle?.auditEventID, movedAgain.auditEventID)
+        XCTAssertEqual(
+            history.items.filter { $0.retainedPhaseLifecycle != nil }.map(\.id),
+            [
+                "phase-lifecycle-current-phase-a",
+                "phase-lifecycle-event-phase-a-2",
+                "phase-lifecycle-event-phase-a-1",
+                "phase-lifecycle-current-phase-b",
+            ]
+        )
 
         let rejected = await fixture.dispatcher.dispatch(
             envelope(
@@ -731,8 +778,8 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
                 requestID: UUID(),
                 command: .transitionPhaseLifecycle(
                     projectID: fixture.registration.projectID.rawValue,
-                    phaseID: "phase-a", expectedRevision: 1,
-                    action: .moveToUpcoming, planningBaselineDigest: nil
+                    phaseID: "phase-a", expectedRevision: 2,
+                    action: .beginDelivery, planningBaselineDigest: nil
                 )
             ),
             origin: .ownerApp

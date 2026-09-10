@@ -319,6 +319,13 @@ struct ProjectActivityProjection: Equatable, Sendable {
             let projectID = ProjectID(rawValue: try removal.activityText("historical_project_id"))
             let registrationID = try removal.activityText("registration_id")
             let formatter = ISO8601DateFormatter()
+            let fractionalFormatter = ISO8601DateFormatter()
+            fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            func lifecycleDate(_ row: [String: SQLiteValue], column: String) -> Date? {
+                guard let value = row.activityOptionalText(column) else { return nil }
+                return fractionalFormatter.date(from: value) ?? formatter.date(from: value)
+            }
 
             func lifecycle(_ row: [String: SQLiteValue], column: String) throws -> PhaseLifecycle {
                 let value = try row.activityText(column)
@@ -363,7 +370,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     id: "phase-lifecycle-current-\(phaseID.rawValue)", source: .audit,
                     title: "Phase lifecycle · \(phaseName)",
                     detail: "Current · \(current.displayName) · revision \(revision)",
-                    observedAt: row.activityOptionalText("updated_at").flatMap(formatter.date(from:)),
+                    observedAt: lifecycleDate(row, column: "updated_at"),
                     ticketID: nil, deliveryLane: nil, runtimeState: nil,
                     notificationState: nil, notificationStatusText: nil,
                     phaseID: phaseID, retainedPhaseLifecycle: activity
@@ -404,7 +411,7 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     id: "phase-lifecycle-event-\(phaseID.rawValue)-\(revision)", source: .audit,
                     title: "Phase lifecycle transition · \(phaseName)",
                     detail: "\(previous.displayName) → \(current.displayName) · \(transitionAction.displayName) · revision \(revision) · \(reason)",
-                    observedAt: row.activityOptionalText("created_at").flatMap(formatter.date(from:)),
+                    observedAt: lifecycleDate(row, column: "created_at"),
                     ticketID: nil, deliveryLane: nil, runtimeState: nil,
                     notificationState: nil, notificationStatusText: nil,
                     phaseID: phaseID, retainedPhaseLifecycle: activity
