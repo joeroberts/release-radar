@@ -86,8 +86,12 @@ direct evidence, then independent review before the first publication request.
 
 All native test hosts require explicit serialized reservation here. The writer explicitly released the reservation after confirming all
 task-owned build/XCTest/native processes stopped. Reviewer released the reservation without launching a host. The writer completed corrections and explicitly released after stopped-process
-confirmation. Reviewer released after its native host exited. The writer reservation is revoked. No task currently holds a launch reservation;
-the same reviewer is preparing the exact sanitized configuration for fresh products. Before launch inspect the established inert synthetic XCTest
+confirmation. Reviewer released after its native host exited. The writer reservation remains revoked. Reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
+holds the sole R4 reservation for a fresh DerivedData unsigned build and its one
+focused/native pass. Its explicit `env -i` invocation and inert startup were
+confirmed; only the clean pinned RDS SourcePackages cache may be copied from old
+scratch, never old Build products or xctestrun. Stop on startup/dependency failure;
+no signed, direct-xctest or linker fallback. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
