@@ -77,15 +77,19 @@ recommendations are preserved in the
 [6D brief](task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md): complete
 scoped inventory, guidance-driven exact approval/replay, existing task commands
 and native readback, 6C applicability and compatible guidance v3. This is a
-consultation, not independent candidate review. The brief is catalogued before
-writer dispatch.
+consultation, not independent candidate review; the chief task is archived.
+The catalogued brief was committed at `0265a102ccf06b7507f279896399860b6e3a05e7`
+before fresh Sol High writer `01a08d97-f771-7de2-9384-e58d69a9178f` was dispatched
+from that baseline. It owns source/tests/affected docs; root owns this ledger and
+catalog/index metadata. Ceiling Astra High, no subagents. Actual requested model
+and effort were set at dispatch; runtime settings are not independently exposed.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
-workspace search/saved views and contextual Help. Next eligible source slice is
-6D generic task adoption after a committed bounded brief.
+workspace search/saved views and contextual Help. Current source slice is
+6D generic task adoption under its committed brief; 6E follows its reviewed contracts.
 Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
 Publication state:
 
