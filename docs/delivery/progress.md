@@ -202,3 +202,14 @@ atomic graph changes, recovery and native behavior; one fresh Astra High reviewe
 will cover those risks independently. Actual runtime settings are not separately
 exposed. Inherited shared commits remain local-only: no C
 push/PR until the owner resolves shared publication authorization; merge is separate.
+
+Phase 5C writer committed local candidate `661b86c` (superseding source-only
+`f9f2841`) with canonical [evidence](evidence/2026-09-10-phase5c-proposals.md) and
+wide/compact captures. Packaged agent save/read entry points are now included;
+approval and apply remain trusted owner-app actions. Targeted results were
+78 passed / 1 synthetic migration fixture failure; its exact corrected rerun passed.
+Packaged save/query and schema checks passed, and the corrected inert parser test
+passed 1/1. External focus/history verification passed; its missing source fixture
+proves recovery navigation, not successful source resolution. Writer is clean and
+stopped, retained for required corrections. Fresh independent review remains
+pending; this is not a Phase 5C completion claim or publication authorization.
