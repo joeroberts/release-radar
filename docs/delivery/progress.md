@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B source and independent review are complete; PR #39 awaits owner merge approval.** The owner selected
+**Phase 5A is merged; Phase 5B is merged; shared integration correction review is pending.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -44,8 +44,10 @@ the non-first historical row and Forward to its ticket. The broad run remains
 non-green: 700 passed, 13 failed, 3 skipped; baseline attribution and isolated
 relocation passes remain documented in the evidence. Both bounded writer/reviewer
 tasks are complete and archived, with results preserved and no running hosts.
-[PR #39](https://github.com/joeroberts/release-radar/pull/39) is open against
-`codex/release-radar-mvp`; its merge awaits separate owner approval.
+The owner explicitly approved [PR #39](https://github.com/joeroberts/release-radar/pull/39).
+It merged into `codex/release-radar-mvp` at `de523882c8a696eb8c00e8a56141ee3419ea4bdd`
+on 2026-09-09 at 23:40:57 UTC, with the approved head and successful reported check.
+No installation or application-state action occurred.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -74,8 +76,15 @@ checks reported pending artifact registration and the known disposable-fixture
 assertion failure. Catalog integration resolves the former; the latter remains
 a reported baseline limitation. The writer yielded a clean checkout with no hosts
 running for serialized metadata/contracts integration and fresh independent review.
-Shared source ownership remains reserved until coordinated handback. No source
-review pass, runtime pilot, installation, adoption or app synchronization is claimed.
+Fresh Astra High reviewer `01a08889-1c24-7d90-9c46-a5846b96c125` requested four
+bounded corrections: diagnostic/accepted identity agreement, invalidation of all
+in-flight generations on plugin refresh, actual pending-catalog mapping and
+truthful bounded incompatibility recovery. The same writer completed correction
+`21955528f6bfa064e798d53554e2fc8bf4926215`; direct affected result readback confirms
+20 passed, 2 expected picker skips and no failures. The checkout is yielded for
+metadata validation and the same reviewer’s recheck. Shared source ownership
+remains reserved until coordinated handback. No source review pass, runtime pilot,
+installation, adoption or app synchronization is claimed.
 
 ## Current authorization and ownership
 
@@ -140,7 +149,7 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is the separate owner merge decision for Phase 5B PR #39.
+Phase 5B delivery is complete through its owner-approved merge.
 Phase 5C source dispatch must also respect shared ownership of AppModel and
 observation/UI paths until a coordinated handback; no overlapping writer is released.
 Approved proposal, successor/carry-forward and lifecycle slices follow in the

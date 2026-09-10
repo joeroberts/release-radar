@@ -496,7 +496,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase5b-reference-impacts-brief-2026-09-09 | [docs/delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md](2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md) | document | controlling &#40;delivery.phase5b-reference-impacts&#41; | active | none | none |
+| rr-phase5b-reference-impacts-brief-2026-09-09 | [docs/delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md](2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
