@@ -213,3 +213,11 @@ passed 1/1. External focus/history verification passed; its missing source fixtu
 proves recovery navigation, not successful source resolution. Writer is clean and
 stopped, retained for required corrections. Fresh independent review remains
 pending; this is not a Phase 5C completion claim or publication authorization.
+
+Fresh independent Astra High reviewer `01a08946-bb22-7182-aecb-fb77b4fa6a57`
+requested four Required corrections at `01add74`: actual source-content/access
+revalidation, complete owner-visible definitions and changes, current baseline
+rejection before decision writes, and same-read external query authorization.
+The same Sol High writer is active for these bounded corrections; direct behavior
+regressions and the same reviewer’s recheck remain required. No review pass or
+publication authorization is claimed. Reviewer created no files or processes.
