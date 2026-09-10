@@ -322,14 +322,22 @@ public enum DeliveryPlanningPolicy {
             let goals = try loadGoals(
                 projectID: project, phaseID: .init(rawValue: prerequisitePhaseID), connection: db
             )
-            let hasUnresolvedGoal = try goals.contains(where: {
+            var hasUnresolvedGoal = false
+            var hasTrackedGoal = false
+            var hasDeliveredOutcome = false
+            for goal in goals {
                 let coverage = try DeliveryGoalCoveragePolicy.assess(
-                    projectID: project, phaseID: $0.phaseID, goalID: $0.id, connection: db
+                    projectID: project, phaseID: goal.phaseID, goalID: goal.id, connection: db
                 )
-                return $0.lifecycle == .superseded
-                    ? !coverage.isResolved
-                    : !coverage.isAcceptanceEligible
-            })
+                if goal.lifecycle == .superseded, coverage.obligations.isEmpty { continue }
+                hasTrackedGoal = true
+                hasDeliveredOutcome = hasDeliveredOutcome || coverage.hasDeliveredOutcome
+                hasUnresolvedGoal = hasUnresolvedGoal || (
+                    goal.lifecycle == .superseded
+                        ? !coverage.isResolved
+                        : !coverage.isAcceptanceEligible
+                )
+            }
             let unfinishedLiveTicketCount = try db.scalarInt(
                 """
                 SELECT COUNT(*) FROM tickets
@@ -343,7 +351,25 @@ public enum DeliveryPlanningPolicy {
                 bindings: [.text(project.rawValue), .text(prerequisitePhaseID)]
             ) ?? 0
             let hasUnfinishedLiveTicket = unfinishedLiveTicketCount > 0
-            if hasUnresolvedGoal || hasUnfinishedLiveTicket {
+            let acceptedLegacyTicketCount: Int64
+            if hasTrackedGoal {
+                acceptedLegacyTicketCount = 0
+            } else {
+                acceptedLegacyTicketCount = try db.scalarInt(
+                    """
+                    SELECT COUNT(*) FROM tickets
+                    WHERE project_id=? AND phase_id=? AND lane='accepted'
+                      AND NOT EXISTS (
+                        SELECT 1 FROM ticket_retirements
+                        WHERE ticket_retirements.project_id=tickets.project_id
+                          AND ticket_retirements.ticket_id=tickets.id
+                      )
+                    """,
+                    bindings: [.text(project.rawValue), .text(prerequisitePhaseID)]
+                ) ?? 0
+            }
+            let hasPhaseDelivery = hasDeliveredOutcome || acceptedLegacyTicketCount > 0
+            if hasUnresolvedGoal || hasUnfinishedLiveTicket || !hasPhaseDelivery {
                 unresolvedPhasePrerequisites = true
                 break
             }
@@ -475,7 +501,9 @@ public enum DeliveryPlanningPolicy {
                 projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection
             )
             if goal.lifecycle == .superseded {
-                if !coverage.isReadyCovered { incomplete.append(goal.id) }
+                if !coverage.obligations.isEmpty, !coverage.isReadyCovered {
+                    incomplete.append(goal.id)
+                }
                 continue
             }
             let criteria = try loadCriteria(

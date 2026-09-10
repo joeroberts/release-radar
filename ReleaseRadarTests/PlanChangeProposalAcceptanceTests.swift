@@ -1735,6 +1735,7 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         let scenarios: [(String, @Sendable (SQLiteConnection) throws -> Void, [PlanChangeOperation])] = [
             ("accepted-source-carry", { connection in
                 try connection.execute("UPDATE tickets SET lane='accepted' WHERE project_id='proposal-project' AND id='obligation-a'")
+                try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('proposal-project','phase-current','goal-current','obligation-a')")
             }, [.carryGoalObligation(source: source, descendants: [descendant], reason: "Must reject delivered source")]),
             ("accepted-goal-drop", { connection in
                 try connection.execute("UPDATE delivery_goals SET lifecycle='accepted' WHERE project_id='proposal-project' AND id='goal-current'")
@@ -1819,6 +1820,125 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         XCTAssertEqual(after.1, before.1)
     }
 
+    func testDetachedHistoricalObligationCanBeDroppedOrCarriedAfterAcceptanceElsewhere() async throws {
+        for reconciliation in ["drop", "carry"] {
+            let (fixture, source) = try await makeAcceptedElsewhereFixture()
+            let operations: [PlanChangeOperation]
+            if reconciliation == "drop" {
+                operations = [
+                    .dropGoalObligation(
+                        obligation: source,
+                        reason: "Explicitly remove the uncovered historical scope"
+                    )
+                ]
+            } else {
+                let successor = TicketID(rawValue: "historical-successor")
+                let descendant = DeliveryGoalObligationKey(
+                    phaseID: source.phaseID, goalID: source.goalID, ticketID: successor
+                )
+                operations = [
+                    .addUnassignedTicket(id: successor, outcome: "Carry historical scope"),
+                    .addPendingTicketTasks(
+                        ticketID: successor,
+                        tasks: [.init(
+                            id: .init(rawValue: "historical-successor-task"), label: "Carry",
+                            title: "Complete historical scope", sortOrder: 0
+                        )]
+                    ),
+                    .placeTicket(ticketID: successor, phaseID: source.phaseID),
+                    .assignTicketToGoal(
+                        ticketID: successor, phaseID: source.phaseID, goalID: source.goalID
+                    ),
+                    .carryGoalObligation(
+                        source: source, descendants: [descendant],
+                        reason: "Carry uncovered historical scope to new work"
+                    ),
+                ]
+            }
+            try await saveApproveAndApply(
+                fixture, proposalID: "proposal-reconcile-\(reconciliation)", operations: operations
+            )
+            let coverage = try await fixture.store.read {
+                try DeliveryGoalCoveragePolicy.assess(
+                    projectID: fixture.registration.projectID,
+                    phaseID: source.phaseID,
+                    goalID: source.goalID,
+                    connection: $0
+                )
+            }
+            XCTAssertEqual(
+                coverage.obligations.first(where: { $0.key == source })?.state,
+                reconciliation == "drop" ? .dropped : .carried
+            )
+        }
+    }
+
+    func testExistingCarryCannotAuthorizeALaterSplitWithDifferentSuccessors() async throws {
+        let fixture = try await makeFixture()
+        let source = DeliveryGoalObligationKey(
+            phaseID: .init(rawValue: "phase-current"), goalID: .init(rawValue: "goal-current"),
+            ticketID: .init(rawValue: "ticket-existing")
+        )
+        let earlierDescendant = DeliveryGoalObligationKey(
+            phaseID: source.phaseID, goalID: source.goalID,
+            ticketID: .init(rawValue: "earlier-descendant")
+        )
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"), reason: "Seed earlier carried scope",
+            auditEventID: .init(rawValue: "earlier-carry-seed"),
+            auditScope: .init(
+                projectID: fixture.registration.projectID,
+                entityType: .phasePlan,
+                entityID: source.phaseID.rawValue
+            )
+        ) { connection in
+            try connection.execute("UPDATE tickets SET phase_id='phase-current',lane='backlog' WHERE project_id='proposal-project' AND id='ticket-existing'")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('earlier-descendant','proposal-project','phase-current','Earlier carried work','backlog')")
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('proposal-project','phase-current','goal-current','Goal','Outcome','draft',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('proposal-project','phase-current','goal-current','ticket-existing'),('proposal-project','phase-current','goal-current','earlier-descendant')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('proposal-project','phase-current','goal-current','ticket-existing','Original scope','current','2026-09-10T00:00:00Z'),('proposal-project','phase-current','goal-current','earlier-descendant','Earlier scope','current','2026-09-10T00:00:00Z')")
+        }
+        try await saveApproveAndApply(
+            fixture, proposalID: "proposal-earlier-carry",
+            operations: [.carryGoalObligation(
+                source: source, descendants: [earlierDescendant], reason: "Earlier approved carry"
+            )]
+        )
+
+        let successorA = TicketID(rawValue: "later-successor-a")
+        let successorB = TicketID(rawValue: "later-successor-b")
+        let operations: [PlanChangeOperation] = [
+            .addUnassignedTicket(id: successorA, outcome: "Later successor A"),
+            .addUnassignedTicket(id: successorB, outcome: "Later successor B"),
+            .addPendingTicketTasks(ticketID: successorA, tasks: [.init(id: .init(rawValue: "later-task-a"), label: "A", title: "A", sortOrder: 0)]),
+            .addPendingTicketTasks(ticketID: successorB, tasks: [.init(id: .init(rawValue: "later-task-b"), label: "B", title: "B", sortOrder: 0)]),
+            .retireTicket(
+                ticketID: source.ticketID, disposition: .split,
+                reason: "Later split must reconcile exact successors",
+                successorTicketIDs: [successorA, successorB]
+            ),
+        ]
+        let before = try await fixture.store.read {
+            (try $0.scalarInt("SELECT COUNT(*) FROM plan_change_proposals"),
+             try $0.scalarInt("SELECT COUNT(*) FROM audit_events"))
+        }
+        let result = await fixture.dispatcher.dispatch(envelope(
+            fixture, requestID: UUID(), command: .savePlanChangeProposal(
+                proposalID: "proposal-later-split", expectedPreviousVersion: nil,
+                rationale: "Reject incompatible historical carry.", operations: operations
+            )
+        ))
+        guard case .invalidPlanChangeOperation = result.error else {
+            return XCTFail("Expected incompatible earlier carry rejection, got \(String(describing: result.error))")
+        }
+        let after = try await fixture.store.read {
+            (try $0.scalarInt("SELECT COUNT(*) FROM plan_change_proposals"),
+             try $0.scalarInt("SELECT COUNT(*) FROM audit_events"))
+        }
+        XCTAssertEqual(after.0, before.0)
+        XCTAssertEqual(after.1, before.1)
+    }
+
     func testInvalidCarryGraphsRejectBeforeProposalOrAuditWrites() async throws {
         let a = DeliveryGoalObligationKey(
             phaseID: .init(rawValue: "phase-current"), goalID: .init(rawValue: "goal-current"),
@@ -1889,6 +2009,132 @@ final class PlanChangeProposalAcceptanceTests: XCTestCase {
         let dispatcher: AgentCommandDispatcher
         let root: URL
         let registration: ProjectRegistration
+    }
+
+    private func makeAcceptedElsewhereFixture() async throws -> (Fixture, DeliveryGoalObligationKey) {
+        let fixture = try await makeFixture()
+        let projectID = fixture.registration.projectID
+        let sourcePhase = PhaseID(rawValue: "phase-current")
+        let destinationPhase = PhaseID(rawValue: "phase-destination")
+        let sourceGoal = DeliveryGoalID(rawValue: "goal-current")
+        let destinationGoal = DeliveryGoalID(rawValue: "goal-destination")
+        let ticketID = TicketID(rawValue: "ticket-existing")
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"), reason: "Seed actual move source",
+            auditEventID: .init(rawValue: "accepted-elsewhere-seed"),
+            auditScope: .init(
+                projectID: projectID, entityType: .phasePlan, entityID: sourcePhase.rawValue
+            )
+        ) { connection in
+            try connection.execute("UPDATE tickets SET phase_id='phase-current',lane='backlog' WHERE project_id='proposal-project' AND id='ticket-existing'")
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: projectID, phaseID: destinationPhase,
+                name: "Destination", mode: .governed, connection: connection
+            )
+            _ = try TicketTaskPlanningPolicy.revisePlan(
+                projectID: projectID, ticketID: ticketID, expectedRevision: nil,
+                additions: [.init(
+                    id: .init(rawValue: "accepted-elsewhere-task"), label: "Move",
+                    title: "Complete moved scope", sortOrder: 0
+                )],
+                definitionRevisions: [], supersededTaskIDs: [], connection: connection
+            )
+            _ = try TicketTaskPlanningPolicy.completeTask(
+                projectID: projectID, ticketID: ticketID,
+                taskID: .init(rawValue: "accepted-elsewhere-task"),
+                expectedRevision: 1, connection: connection
+            )
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: projectID, phaseID: sourcePhase, expectedRevision: 0,
+                goalUpserts: [.init(
+                    id: sourceGoal, title: "Historical", outcome: "Historical scope",
+                    doneCriteria: ["Scope is reconciled"], sortOrder: 0
+                )],
+                assignments: [.init(goalID: sourceGoal, ticketID: ticketID)],
+                unassignedTicketIDs: [], supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "accepted-elsewhere-seed"), connection: connection
+            )
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: projectID, phaseID: destinationPhase, expectedRevision: 0,
+                goalUpserts: [.init(
+                    id: destinationGoal, title: "Destination", outcome: "Moved scope",
+                    doneCriteria: ["Ticket is Accepted"], sortOrder: 0
+                )],
+                assignments: [], unassignedTicketIDs: [], supersededGoalIDs: [],
+                auditEventID: .init(rawValue: "accepted-elsewhere-seed"), connection: connection
+            )
+        }
+        try await saveApproveAndApply(
+            fixture, proposalID: "proposal-move-elsewhere", operations: [
+                .moveBacklogTicket(
+                    ticketID: ticketID, fromPhaseID: sourcePhase, toPhaseID: destinationPhase
+                ),
+                .reassignTicketToGoal(
+                    ticketID: ticketID, phaseID: destinationPhase,
+                    fromGoalID: sourceGoal, toGoalID: destinationGoal
+                ),
+            ]
+        )
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"), reason: "Accept moved scope elsewhere"
+        ) { connection in
+            let revision = try XCTUnwrap(connection.scalarInt(
+                "SELECT revision FROM phase_plans WHERE project_id='proposal-project' AND phase_id='phase-destination'"
+            ))
+            _ = try DeliveryPlanningPolicy.finalizePlan(
+                projectID: projectID, phaseID: destinationPhase,
+                expectedRevision: revision, connection: connection
+            )
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: ticketID, to: .inProgress, connection: connection
+            )
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: ticketID, to: .needsReview, connection: connection
+            )
+            try DeliveryPlanningPolicy.transitionTicket(
+                projectID: projectID, ticketID: ticketID, to: .accepted,
+                ticketTaskPlanRevision: 2, connection: connection
+            )
+        }
+        return (
+            fixture,
+            .init(phaseID: sourcePhase, goalID: sourceGoal, ticketID: ticketID)
+        )
+    }
+
+    private func saveApproveAndApply(
+        _ fixture: Fixture,
+        proposalID: String,
+        operations: [PlanChangeOperation]
+    ) async throws {
+        let saved = await fixture.dispatcher.dispatch(envelope(
+            fixture, requestID: UUID(), command: .savePlanChangeProposal(
+                proposalID: proposalID, expectedPreviousVersion: nil,
+                rationale: "Exercise the exact approved proposal path.", operations: operations
+            )
+        ))
+        XCTAssertNil(saved.error)
+        let records = try await PlanChangeProposalQuery.load(
+            from: fixture.store, projectID: fixture.registration.projectID
+        )
+        let version = try XCTUnwrap(
+            records.first(where: { $0.id.rawValue == proposalID })?.versions.first
+        )
+        let decisionID = "decision-\(proposalID)"
+        let decision = await fixture.dispatcher.dispatch(envelope(
+            fixture, requestID: UUID(), command: .decidePlanChangeProposal(
+                proposalID: proposalID, version: 1, baselineDigest: version.baselineDigest,
+                decisionID: decisionID, disposition: .approved
+            )
+        ), origin: .ownerApp)
+        XCTAssertNil(decision.error)
+        let applied = await fixture.dispatcher.dispatch(envelope(
+            fixture, requestID: UUID(), command: .applyPlanChangeProposal(
+                proposalID: proposalID, version: 1, baselineDigest: version.baselineDigest,
+                decisionID: decisionID, applicationID: "application-\(proposalID)"
+            )
+        ), origin: .ownerApp)
+        XCTAssertNil(applied.error)
     }
 
     private func makeCarryValidationFixture(persistedCycle: Bool) async throws -> Fixture {

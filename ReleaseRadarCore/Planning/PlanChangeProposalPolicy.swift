@@ -338,7 +338,17 @@ enum PlanChangeProposalPolicy {
                 JOIN tickets t ON t.project_id=o.project_id AND t.id=o.ticket_id
                 JOIN delivery_goals g ON g.project_id=o.project_id AND g.phase_id=o.phase_id AND g.id=o.goal_id
                 WHERE o.project_id=? AND o.phase_id=? AND o.goal_id=? AND o.ticket_id=?
-                  AND (t.lane='accepted' OR g.lifecycle='accepted')
+                  AND (
+                    g.lifecycle='accepted'
+                    OR (
+                      t.lane='accepted'
+                      AND EXISTS (
+                        SELECT 1 FROM delivery_goal_ticket_assignments a
+                        WHERE a.project_id=o.project_id AND a.phase_id=o.phase_id
+                          AND a.goal_id=o.goal_id AND a.ticket_id=o.ticket_id
+                      )
+                    )
+                  )
                 """,
                 bindings: [.text(projectID.rawValue), .text(key.phaseID.rawValue), .text(key.goalID.rawValue), .text(key.ticketID.rawValue)]
             ) == 1
@@ -650,6 +660,25 @@ enum PlanChangeProposalPolicy {
                     guard carriedTicketIDs == successorTicketIDs else {
                         throw PlanChangeProposalError.invalidOperation("Every carried retirement obligation must name all and only the retirement's required successors.")
                     }
+                }
+                let persistedCarryTicketIDs = Set(try connection.rows(
+                    """
+                    SELECT descendant_ticket_id FROM delivery_goal_obligation_lineage
+                    WHERE project_id=? AND source_phase_id=? AND source_goal_id=?
+                      AND source_ticket_id=?
+                    """,
+                    bindings: [
+                        .text(projectID.rawValue), .text(key.phaseID.rawValue),
+                        .text(key.goalID.rawValue), .text(key.ticketID.rawValue),
+                    ]
+                ).compactMap { row -> TicketID? in
+                    guard case let .text(ticketID)? = row["descendant_ticket_id"] else { return nil }
+                    return .init(rawValue: ticketID)
+                })
+                if !persistedCarryTicketIDs.isEmpty,
+                   persistedCarryTicketIDs != successorTicketIDs
+                {
+                    throw PlanChangeProposalError.invalidOperation("Existing carried scope does not match the retirement's required successors.")
                 }
             }
         }
