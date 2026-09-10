@@ -439,7 +439,7 @@ struct RemovedProjectView: View {
     let activity: ProjectActivityProjection
     @State private var selectedFilter: HistoryFilter = .all
     @State private var selectedEventID: HistoryEventIdentity?
-    @State private var viewportEventID: HistoryEventIdentity?
+    @State private var viewportOffset: Double?
     @State private var historyFocus: NavigationFocus? = .filterSummary
 
     var body: some View {
@@ -470,7 +470,7 @@ struct RemovedProjectView: View {
                 showsFreshness: false,
                 selectedFilter: $selectedFilter,
                 selectedEventID: $selectedEventID,
-                viewportEventID: $viewportEventID,
+                viewportOffset: $viewportOffset,
                 requestedFocus: historyFocus,
                 focusChanged: { historyFocus = $0 }
             )

@@ -420,13 +420,13 @@ final class NavigationHistoryTests: XCTestCase {
             route: .activity(projectID),
             historyFilter: .audit,
             selectedHistoryEventID: eventID,
-            historyViewportEventID: eventID,
+            historyViewportOffset: 347.25,
             focus: .historyDetail(eventID)
         ))
 
         XCTAssertEqual(history.current.historyFilter, .audit)
         XCTAssertEqual(history.current.selectedHistoryEventID, eventID)
-        XCTAssertEqual(history.current.historyViewportEventID, eventID)
+        XCTAssertEqual(history.current.historyViewportOffset, 347.25)
         XCTAssertEqual(history.current.focus, .historyDetail(eventID))
     }
 
@@ -497,7 +497,7 @@ final class NavigationHistoryTests: XCTestCase {
         })
         model.setHistoryFilter(.audit, projectID: projectID)
         model.selectHistoryEvent(item.identity, projectID: projectID)
-        model.setHistoryViewportEventID(legacyItem.identity, projectID: projectID)
+        model.setHistoryViewportOffset(347.25, projectID: projectID)
         model.setNavigationFocus(.historyDetail(item.identity))
         await model.openHistoryEntity(item)
 
@@ -511,7 +511,7 @@ final class NavigationHistoryTests: XCTestCase {
         XCTAssertEqual(model.selection, .activity(projectID))
         XCTAssertEqual(model.historyFilter(for: projectID), .audit)
         XCTAssertEqual(model.selectedHistoryEventID(for: projectID), item.identity)
-        XCTAssertEqual(model.historyViewportEventID(for: projectID), legacyItem.identity)
+        XCTAssertEqual(model.historyViewportOffset(for: projectID), 347.25)
         XCTAssertEqual(model.navigationFocus, .historyDetail(item.identity))
         XCTAssertNil(model.navigationRecoveryMessage)
 

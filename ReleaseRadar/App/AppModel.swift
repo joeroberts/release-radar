@@ -110,7 +110,7 @@ final class AppModel {
     private var allPhaseBoardFilters: [Data: DeliveryGoalFilter] = [:]
     private var historyFilters: [Data: HistoryFilter] = [:]
     private var selectedHistoryEventIDs: [Data: HistoryEventIdentity] = [:]
-    private var historyViewportEventIDs: [Data: HistoryEventIdentity] = [:]
+    private var historyViewportOffsets: [Data: Double] = [:]
     private var deliveryGoalReloadRequired: Set<Data> = []
     private var performingReviewActionProjectIDs: Set<ProjectID> = []
     private var alertRulesFailureState: AlertRulesFailureState?
@@ -366,8 +366,8 @@ final class AppModel {
         let selectedHistoryEventID = projectID.flatMap { projectID in
             if case .activity = route { selectedHistoryEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
         }
-        let historyViewportEventID = projectID.flatMap { projectID in
-            if case .activity = route { historyViewportEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
+        let historyViewportOffset = projectID.flatMap { projectID in
+            if case .activity = route { historyViewportOffsets[Data(projectID.rawValue.utf8)] } else { nil }
         }
         let selectedNavigationTicketID: TicketID? = if case .activity = route {
             nil
@@ -382,7 +382,7 @@ final class AppModel {
             selectedTicketID: selectedNavigationTicketID,
             historyFilter: historyFilter,
             selectedHistoryEventID: selectedHistoryEventID,
-            historyViewportEventID: historyViewportEventID,
+            historyViewportOffset: historyViewportOffset,
             focus: navigationFocus
         )
     }
@@ -403,8 +403,8 @@ final class AppModel {
         let selectedHistoryEventID = projectID.flatMap { projectID in
             if case .activity = route { selectedHistoryEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
         }
-        let historyViewportEventID = projectID.flatMap { projectID in
-            if case .activity = route { historyViewportEventIDs[Data(projectID.rawValue.utf8)] } else { nil }
+        let historyViewportOffset = projectID.flatMap { projectID in
+            if case .activity = route { historyViewportOffsets[Data(projectID.rawValue.utf8)] } else { nil }
         }
         let selectedNavigationTicketID: TicketID? = if case .activity = route {
             nil
@@ -420,7 +420,7 @@ final class AppModel {
             selectedTicketID: selectedNavigationTicketID,
             historyFilter: historyFilter,
             selectedHistoryEventID: selectedHistoryEventID,
-            historyViewportEventID: historyViewportEventID,
+            historyViewportOffset: historyViewportOffset,
             focus: focus
         )
     }
@@ -524,11 +524,10 @@ final class AppModel {
                     recovery.append("The exact History event is unavailable; no replacement event was selected.")
                 }
             }
-            if let viewportID = entry.historyViewportEventID,
-               projectActivities[projectID]?.items.contains(where: { $0.identity == viewportID }) == true {
-                historyViewportEventIDs[key] = viewportID
+            if let viewportOffset = entry.historyViewportOffset {
+                historyViewportOffsets[key] = max(0, viewportOffset)
             } else {
-                historyViewportEventIDs.removeValue(forKey: key)
+                historyViewportOffsets.removeValue(forKey: key)
             }
         }
         let ticketIsAvailable = entry.selectedTicketID.map { ticketID in
@@ -998,14 +997,14 @@ final class AppModel {
         selectedHistoryEventIDs[Data(projectID.rawValue.utf8)]
     }
 
-    func historyViewportEventID(for projectID: ProjectID) -> HistoryEventIdentity? {
-        historyViewportEventIDs[Data(projectID.rawValue.utf8)]
+    func historyViewportOffset(for projectID: ProjectID) -> Double? {
+        historyViewportOffsets[Data(projectID.rawValue.utf8)]
     }
 
-    func setHistoryViewportEventID(_ eventID: HistoryEventIdentity?, projectID: ProjectID) {
+    func setHistoryViewportOffset(_ offset: Double?, projectID: ProjectID) {
         let key = Data(projectID.rawValue.utf8)
-        if let eventID { historyViewportEventIDs[key] = eventID }
-        else { historyViewportEventIDs.removeValue(forKey: key) }
+        if let offset { historyViewportOffsets[key] = max(0, offset) }
+        else { historyViewportOffsets.removeValue(forKey: key) }
         captureCurrentNavigationContext()
     }
 

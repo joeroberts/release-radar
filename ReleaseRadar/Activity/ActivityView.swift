@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ReleaseRadarCore
 import RekonDesignSystem
@@ -13,7 +14,7 @@ struct HistoryView: View {
     let showsFreshness: Bool
     @Binding var selectedFilter: HistoryFilter
     @Binding var selectedEventID: HistoryEventIdentity?
-    @Binding var viewportEventID: HistoryEventIdentity?
+    @Binding var viewportOffset: Double?
     var requestedFocus: NavigationFocus?
     var focusChanged: (NavigationFocus?) -> Void
     var openEntity: ((ProjectActivityItem) -> Void)?
@@ -33,7 +34,7 @@ struct HistoryView: View {
         showsFreshness: Bool = true,
         selectedFilter: Binding<HistoryFilter> = .constant(.all),
         selectedEventID: Binding<HistoryEventIdentity?> = .constant(nil),
-        viewportEventID: Binding<HistoryEventIdentity?> = .constant(nil),
+        viewportOffset: Binding<Double?> = .constant(nil),
         requestedFocus: NavigationFocus? = nil,
         focusChanged: @escaping (NavigationFocus?) -> Void = { _ in },
         openEntity: ((ProjectActivityItem) -> Void)? = nil
@@ -44,7 +45,7 @@ struct HistoryView: View {
         self.showsFreshness = showsFreshness
         _selectedFilter = selectedFilter
         _selectedEventID = selectedEventID
-        _viewportEventID = viewportEventID
+        _viewportOffset = viewportOffset
         self.requestedFocus = requestedFocus
         self.focusChanged = focusChanged
         self.openEntity = openEntity
@@ -57,7 +58,7 @@ struct HistoryView: View {
         showsFreshness: Bool = true,
         selectedFilter: Binding<HistoryFilter> = .constant(.all),
         selectedEventID: Binding<HistoryEventIdentity?> = .constant(nil),
-        viewportEventID: Binding<HistoryEventIdentity?> = .constant(nil),
+        viewportOffset: Binding<Double?> = .constant(nil),
         requestedFocus: NavigationFocus? = nil,
         focusChanged: @escaping (NavigationFocus?) -> Void = { _ in },
         openEntity: ((ProjectActivityItem) -> Void)? = nil
@@ -68,7 +69,7 @@ struct HistoryView: View {
         self.showsFreshness = showsFreshness
         _selectedFilter = selectedFilter
         _selectedEventID = selectedEventID
-        _viewportEventID = viewportEventID
+        _viewportOffset = viewportOffset
         self.requestedFocus = requestedFocus
         self.focusChanged = focusChanged
         self.openEntity = openEntity
@@ -85,8 +86,13 @@ struct HistoryView: View {
                 }
                 .padding(.bottom, 24)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
+                .background(
+                    HistoryScrollOffsetBridge(
+                        offset: $viewportOffset,
+                        restoreToken: requestedFocus
+                    )
+                )
             }
-            .scrollPosition(id: $viewportEventID, anchor: .top)
         }
         .background(RekonTheme.background)
         .accessibilityElement(children: .contain)
@@ -445,6 +451,133 @@ struct HistoryView: View {
             accessibilityFilterFocused = true
         default:
             break
+        }
+    }
+}
+
+private struct HistoryScrollOffsetBridge: NSViewRepresentable {
+    @Binding var offset: Double?
+    let restoreToken: NavigationFocus?
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(offset: $offset, restoreToken: restoreToken)
+    }
+
+    func makeNSView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.onHierarchyOrLayoutChange = { [weak coordinator = context.coordinator] view in
+            coordinator?.attach(to: view.enclosingScrollView)
+            coordinator?.restoreIfPossible()
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: ProbeView, context: Context) {
+        context.coordinator.update(offset: $offset, restoreToken: restoreToken)
+        context.coordinator.attach(to: nsView.enclosingScrollView)
+        context.coordinator.restoreIfPossible()
+    }
+
+    static func dismantleNSView(_ nsView: ProbeView, coordinator: Coordinator) {
+        coordinator.detach()
+        nsView.onHierarchyOrLayoutChange = nil
+    }
+
+    final class ProbeView: NSView {
+        var onHierarchyOrLayoutChange: ((ProbeView) -> Void)?
+
+        override func viewDidMoveToSuperview() {
+            super.viewDidMoveToSuperview()
+            onHierarchyOrLayoutChange?(self)
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            onHierarchyOrLayoutChange?(self)
+        }
+
+        override func layout() {
+            super.layout()
+            onHierarchyOrLayoutChange?(self)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        private var offset: Binding<Double?>
+        private var restoreToken: NavigationFocus?
+        private weak var scrollView: NSScrollView?
+        private weak var clipView: NSClipView?
+        private var pendingRestoreOffset: Double?
+        private var isRestoring = false
+
+        init(offset: Binding<Double?>, restoreToken: NavigationFocus?) {
+            self.offset = offset
+            self.restoreToken = restoreToken
+            pendingRestoreOffset = offset.wrappedValue
+        }
+
+        func update(offset: Binding<Double?>, restoreToken: NavigationFocus?) {
+            self.offset = offset
+            guard self.restoreToken != restoreToken else { return }
+            self.restoreToken = restoreToken
+            pendingRestoreOffset = offset.wrappedValue
+        }
+
+        func attach(to scrollView: NSScrollView?) {
+            guard let scrollView, self.scrollView !== scrollView else { return }
+            detach()
+            self.scrollView = scrollView
+            clipView = scrollView.contentView
+            scrollView.contentView.postsBoundsChangedNotifications = true
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(boundsDidChange),
+                name: NSView.boundsDidChangeNotification,
+                object: scrollView.contentView
+            )
+            pendingRestoreOffset = offset.wrappedValue
+        }
+
+        func detach() {
+            if let clipView {
+                NotificationCenter.default.removeObserver(
+                    self,
+                    name: NSView.boundsDidChangeNotification,
+                    object: clipView
+                )
+            }
+            scrollView = nil
+            clipView = nil
+        }
+
+        func restoreIfPossible() {
+            guard let requestedOffset = pendingRestoreOffset,
+                  let scrollView,
+                  let clipView,
+                  let documentView = scrollView.documentView else { return }
+            let maximumOffset = max(0, documentView.bounds.height - clipView.bounds.height)
+            guard requestedOffset == 0 || maximumOffset > 0 else { return }
+            let boundedOffset = min(max(0, CGFloat(requestedOffset)), maximumOffset)
+            pendingRestoreOffset = nil
+            isRestoring = true
+            clipView.scroll(to: NSPoint(x: clipView.bounds.origin.x, y: boundedOffset))
+            scrollView.reflectScrolledClipView(clipView)
+            isRestoring = false
+        }
+
+        @objc private func boundsDidChange(_ notification: Notification) {
+            if pendingRestoreOffset != nil {
+                restoreIfPossible()
+                return
+            }
+            guard !isRestoring, let clipView else { return }
+            publish(offset: clipView.bounds.origin.y)
+        }
+
+        private func publish(offset newOffset: CGFloat) {
+            let value = Double(max(0, newOffset))
+            guard self.offset.wrappedValue.map({ abs($0 - value) > 0.5 }) ?? true else { return }
+            self.offset.wrappedValue = value
         }
     }
 }

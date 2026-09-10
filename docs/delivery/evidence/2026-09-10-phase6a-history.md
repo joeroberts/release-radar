@@ -8,7 +8,9 @@
 - Scope: local source, synthetic stores, isolated native XCTest hosts, canonical
   evidence and local commits. No push, pull request, merge, installation,
   owner-application data, catalog acceptance, owner bridge, notification,
-  credential or external-service mutation was authorized or performed.
+  credential or external-service mutation was authorized. No owner-application
+  interaction was knowingly performed; the nonterminal R4 verification deviation
+  and remaining service/Keychain uncertainty are recorded below.
 
 ## Delivered behavior
 
@@ -30,9 +32,11 @@ state, acceptance or attention.
 
 Removal, re-add and full backup recovery retain the original event identity and
 facts without transferring authority to the replacement registration. Exact
-ticket and nonactive-phase navigation uses shared typed navigation history. Back
-restores the selected event, filter, bounded viewport and actual keyboard or
-accessibility focus. Removed-project History keeps its own mutable browsing state
+ticket and nonactive-phase navigation uses shared typed navigation history. The
+pending R4 correction records and restores the actual vertical History scroll
+offset, including positions below the final timeline row, together with the
+selected event, filter and keyboard or accessibility focus. Removed-project History
+keeps its own mutable browsing state
 while exposing no action that can reopen or mutate the removed registration.
 Missing targets, including legacy audit rows without recorded identity, present an
 accessible recovery state instead of substituting a current ticket or registration.
@@ -46,9 +50,9 @@ future observer or service.
 
 ## Direct verification
 
-Every final build/test run used `ReleaseRadar.xcodeproj`, scheme `ReleaseRadar`,
-serial macOS execution, signing disabled and a sanitized environment rooted at
-`/private/tmp/release-radar-phase6a.eJzQ2M`.
+The completed pre-R4 build/test runs used `ReleaseRadar.xcodeproj`, scheme
+`ReleaseRadar`, serial macOS execution, signing disabled and a sanitized environment
+rooted at `/private/tmp/release-radar-phase6a.eJzQ2M`.
 
 - `history-final-focused-3.xcresult` passed 20/20 final focused persistence,
   projection, navigation, removal/re-add, recovery, notification, route-rendering
@@ -95,11 +99,47 @@ unrecorded observation times unknown.
 - At wide and compact widths, the corrected native journey scrolled to the exact
   event, selected it, displayed all four recorded-detail lines, opened its
   nonactive ticket and returned through Back with the exact Audit filter, selected
-  identity, viewport and `history-open-entity` accessibility focus. It then removed
-  the synthetic project, changed the removed History filter, selected different
-  rows at both widths, restored the full detail and verified that no Open action
-  existed. The installed owner application remained PID 60590 and was never
+  identity, row-relative viewport and `history-open-entity` accessibility focus. It
+  then removed the synthetic project, changed the removed History filter, selected
+  different rows at both widths, restored the full detail and verified that no Open
+  action existed. The installed owner application remained PID 60590 and was never
   selected or controlled.
+
+### Pending R4 actual-viewport correction
+
+The same independent reviewer found that the row-relative viewport assertion above
+did not cover the inspector below the final timeline row. In its compact scenario,
+Back returned to approximately 0.63 rather than the absolute bottom and left Open
+offscreen. The pending local candidate replaces the row identity with the enclosing
+`NSScrollView`'s real vertical offset through a narrow `NSViewRepresentable` bridge;
+SwiftUI and `AppModel` remain the source of truth, while the coordinator only
+observes and restores the native scroll view.
+
+One nonterminal native R4 run (`history-native-r4-root-v1.xcresult`) exercised the
+new behavior before candidate preparation. At wide width, the real accessibility
+scroll value returned from 0.345270 to 0.345037 with Open visible and focused. At
+compact width, it returned from absolute bottom 1.0 to 1.0 with the full inspector,
+Open visible and `history-open-entity` focused. The run nevertheless failed 1/1
+because its first assertion compared the raw offset before activating Open (2404.5)
+with the navigation-captured/restored offset after AppKit's 6-point focus visibility
+adjustment (2410.5). The candidate now compares the restored model value with the
+offset captured at navigation time while retaining direct before/after accessibility
+viewport and focus assertions. R4 remains pending one fresh independent focused and
+native verification pass.
+
+After that observation, verification departed from the authorized sanitized inert
+XCTest-host path. An unsanitized build-for-testing succeeded and re-signed the
+scratch products; two subsequent unsanitized Xcode launches were interrupted before
+XCTest materialized (0 tests executed in each) while their scratch hosts were blocked
+in macOS sandbox initialization. A direct `xctest` invocation ran two model tests
+with 2 passes, but that result is excluded from approval evidence; later direct
+native attempts produced one skip and one pre-window crash, not a passing native
+result. Those attempts also left two symlinks inside the scratch test-bundle
+Frameworks directory. The scratch products are therefore treated as contaminated
+and retained unchanged. The observed test-host paths were scratch products, and no
+owner/default application interaction was knowingly performed, but no claim of zero
+service or Keychain effects is made. The independent reviewer owns the remaining
+verification from freshly built products using the approved isolated path.
 
 ## Native visual evidence
 
@@ -126,6 +166,10 @@ invented immutable observation-change timeline. Actor and thread attribution is
 labelled by provenance and is not promoted to verified independent review. The
 native journey exercised reload and retained-store recovery tests exercised store
 reopen; a full owner-app process restart was neither performed nor claimed.
+
+The R4 candidate has only diff-level validation from its writer after the
+verification reservation was revoked. Its product-completion status depends on the
+independent reviewer's fresh focused and native results described above.
 
 The current portable archive v1 is unchanged. Future complete portable formats
 must represent supported History facts and provenance or reject unsupported export.
