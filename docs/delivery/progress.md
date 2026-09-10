@@ -270,3 +270,11 @@ explicit reconciliation of detached debt after destination acceptance, debt-free
 superseded goals, and split coverage against pre-existing lineage. The original
 writer owns these bounded corrections; successful recovery/native properties
 remain closed. No additional review layer or full-suite restart is authorized.
+
+
+The remaining four cases are corrected in writer commit
+`34b26519b7e981d29aa914393051b991cc1b1ffa`, integrated at
+`dcb360b932ff31b472ea3d3d7699b838dc1640f2`. Targeted RED reproduced the cases;
+corrected journeys passed 3/3 and affected compatibility passed 4/4. Integrated
+documentation validation passed with unchanged artifact IDs/checksum policy.
+The existing reviewer is performing the bounded recheck; approval remains pending.
