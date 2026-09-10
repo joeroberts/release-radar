@@ -86,9 +86,8 @@ direct evidence, then independent review before the first publication request.
 
 All native test hosts require explicit serialized reservation here. The writer explicitly released the reservation after confirming all
 task-owned build/XCTest/native processes stopped. Reviewer released the reservation without launching a host. The writer completed corrections and explicitly released after stopped-process
-confirmation. Reviewer released after its native host exited. Original writer now holds the
-exclusive synthetic/native reservation for R4; reviewer work is paused until
-the exact corrected candidate returns. Before launch inspect the established inert synthetic XCTest
+confirmation. Reviewer released after its native host exited. The writer reservation is revoked. No task currently holds a launch reservation;
+the same reviewer is preparing the exact sanitized configuration for fresh products. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
@@ -114,5 +113,15 @@ symlinks added inside its temporary test bundle. The orchestrator revoked its
 native reservation and paused launches, requested exact outcomes and narrow
 stopped-process confirmation, and informed the parent. No owner effects or zero
 owner effects are inferred. Artifacts remain retained; no cleanup is authorized.
-Only the established sanitized inert-host path may resume after the discrepancy
-is understood. R4 remains unreviewed and publication is not authorized.
+Writer confirmed its task-owned processes stopped. The unsanitized scratch build
+was re-signed; two launches executed zero tests, and direct-xctest results are
+excluded. Service/Keychain effects are not established. Old products and their two
+added symlinks remain retained and excluded from further verification.
+
+Local R4 candidate `d4b5df33c5808a31e3922c82a73f45e948092118` is integrated,
+with the accidental unrelated test edit removed and scoped diff checks passing.
+The same independent reviewer will perform the remaining focused/native pass
+using fresh DerivedData, sanitized environment, unsigned products and the inert
+XCTest startup after its concrete invocation is confirmed. No duplicate writer
+runtime pass or owner repair/cleanup is authorized. R4 remains unreviewed and
+publication is not authorized.
