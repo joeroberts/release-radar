@@ -26,6 +26,8 @@ event. Completion rechecks required goal acceptance, current obligation coverage
 superseded debt, unfinished nonretired phase tickets and a genuinely delivered
 outcome in the same audited transaction. Legacy Accepted work and exact carried
 descendant delivery are supported; empty and all-dropped scope remain ineligible.
+Fully resolved, explicitly dropped goal scope does not itself require goal
+acceptance when other Accepted work proves actual delivery.
 
 Completed phases are read-only across direct planning, tickets, tasks, goals,
 reviews/completions, blockers, dependencies, references, managed evidence,
@@ -37,7 +39,10 @@ include lifecycle state so decisions cannot silently cross a lifecycle change.
 Removal and full backup/recovery retain current lifecycle and immutable events.
 Older-backup reconciliation preserves newer lifecycle history without replaying
 it over the restored live snapshot, and registration rotation preserves facts
-without transferring old decision authority.
+without transferring old decision authority. Removed Project activity reads the
+retained rows by exact removal identity and exposes current state plus exact
+phase/revision/from-to/action/reason/audit/registration/baseline transition facts;
+the historical path has no mutation or reauthorization capability.
 
 The packaged external tools expose one read-only lifecycle query containing
 current state, history and completion assessments. No external lifecycle mutation
@@ -94,6 +99,21 @@ macOS execution, signing disabled and a sanitized environment rooted at
 - The packaged-tool schema check passed 1/1 in `phase5e-contracts-1.xcresult`;
   its paired reference test was superseded by the corrected green contract run.
   `git diff --check` also passed before candidate preparation.
+- Independent review found two Required gaps in the prepared candidate. The
+  focused mixed delivered/fully-dropped regression failed both eligibility
+  assertions in `phase5e-review-r1-red-1.xcresult`. The retained-history
+  regression first encountered a test-only async-autoclosure compile error in
+  `phase5e-review-r2-red-1.xcresult`; after that harness correction,
+  `phase5e-review-r2-red-2.xcresult` directly failed because the expected
+  retained current-lifecycle activity item was absent.
+- `phase5e-review-green-2.xcresult` passed 3/3 after the bounded corrections:
+  mixed delivered plus fully dropped scope is eligible, all-dropped scope still
+  fails phase-level nonvacuity, and the removed-project activity path returns
+  exact retained lifecycle facts while rejecting an old-registration owner
+  transition without changing history. The first green attempt,
+  `phase5e-review-green-1.xcresult`, was compile-blocked by a local `compactMap`
+  inference ambiguity; adding the explicit optional result type was the only
+  correction before the passing rerun.
 
 The installed owner application remained PID 60590 throughout native testing and
 was never selected, controlled, terminated or connected to. All stores were

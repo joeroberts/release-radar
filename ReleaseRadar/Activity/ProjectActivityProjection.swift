@@ -24,6 +24,27 @@ struct RuntimeStateLanguage: Equatable, Sendable {
     }
 }
 
+struct RetainedPhaseLifecycleActivity: Equatable, Sendable {
+    enum Kind: Equatable, Sendable {
+        case current
+        case transition
+    }
+
+    let kind: Kind
+    let removalID: ProjectRemovalID
+    let historicalProjectID: ProjectID
+    let phaseID: PhaseID
+    let phaseName: String
+    let lifecycle: PhaseLifecycle
+    let revision: Int64
+    let previousLifecycle: PhaseLifecycle?
+    let action: PhaseLifecycleAction?
+    let reason: String?
+    let auditEventID: AuditEventID?
+    let registration: ProjectRegistration?
+    let planningBaselineDigest: String?
+}
+
 struct ProjectActivityItem: Equatable, Identifiable, Sendable {
     let id: String
     let source: ActivitySource
@@ -39,6 +60,7 @@ struct ProjectActivityItem: Equatable, Identifiable, Sendable {
     var deliveryGoalID: DeliveryGoalID? = nil
     var originatingThreadID: String? = nil
     var assignmentEvents: [DeliveryGoalAssignmentEventRecord] = []
+    var retainedPhaseLifecycle: RetainedPhaseLifecycleActivity? = nil
 
     var freshnessText: String? {
         observedAt.map { "Last seen \($0.formatted(date: .abbreviated, time: .shortened))" }
@@ -298,6 +320,100 @@ struct ProjectActivityProjection: Equatable, Sendable {
             let registrationID = try removal.activityText("registration_id")
             let formatter = ISO8601DateFormatter()
 
+            func lifecycle(_ row: [String: SQLiteValue], column: String) throws -> PhaseLifecycle {
+                let value = try row.activityText(column)
+                guard let lifecycle = PhaseLifecycle(rawValue: value) else {
+                    throw ProjectActivityProjectionError.invalidColumn(column)
+                }
+                return lifecycle
+            }
+            func action(_ row: [String: SQLiteValue]) throws -> PhaseLifecycleAction {
+                let value = try row.activityText("action")
+                guard let action = PhaseLifecycleAction(rawValue: value) else {
+                    throw ProjectActivityProjectionError.invalidColumn("action")
+                }
+                return action
+            }
+
+            let retainedLifecycleRows = try connection.activityRows(
+                "SELECT * FROM retained_phase_lifecycles WHERE removal_id = ? ORDER BY phase_id",
+                bindings: [.text(removalID.rawValue)]
+            )
+            let phaseNames = try Dictionary(uniqueKeysWithValues: retainedLifecycleRows.map {
+                (PhaseID(rawValue: try $0.activityText("phase_id")), try $0.activityText("phase_name"))
+            })
+            let retainedLifecycleItems = try retainedLifecycleRows.map { row in
+                let historicalProjectID = ProjectID(rawValue: try row.activityText("historical_project_id"))
+                guard historicalProjectID == projectID else {
+                    throw ProjectActivityProjectionError.invalidColumn("historical_project_id")
+                }
+                let phaseID = PhaseID(rawValue: try row.activityText("phase_id"))
+                let phaseName = try row.activityText("phase_name")
+                let current = try lifecycle(row, column: "lifecycle")
+                let revision = try row.activityInteger("revision")
+                let activity = RetainedPhaseLifecycleActivity(
+                    kind: .current, removalID: removalID,
+                    historicalProjectID: historicalProjectID, phaseID: phaseID,
+                    phaseName: phaseName, lifecycle: current, revision: revision,
+                    previousLifecycle: nil, action: nil, reason: nil,
+                    auditEventID: nil, registration: nil,
+                    planningBaselineDigest: row.activityOptionalText("completion_baseline_digest")
+                )
+                return ProjectActivityItem(
+                    id: "phase-lifecycle-current-\(phaseID.rawValue)", source: .audit,
+                    title: "Phase lifecycle · \(phaseName)",
+                    detail: "Current · \(current.displayName) · revision \(revision)",
+                    observedAt: row.activityOptionalText("updated_at").flatMap(formatter.date(from:)),
+                    ticketID: nil, deliveryLane: nil, runtimeState: nil,
+                    notificationState: nil, notificationStatusText: nil,
+                    phaseID: phaseID, retainedPhaseLifecycle: activity
+                )
+            }
+            let retainedLifecycleEvents = try connection.activityRows(
+                "SELECT * FROM retained_phase_lifecycle_events WHERE removal_id = ? ORDER BY phase_id, revision",
+                bindings: [.text(removalID.rawValue)]
+            ).map { row -> ProjectActivityItem in
+                let historicalProjectID = ProjectID(rawValue: try row.activityText("historical_project_id"))
+                guard historicalProjectID == projectID else {
+                    throw ProjectActivityProjectionError.invalidColumn("historical_project_id")
+                }
+                let phaseID = PhaseID(rawValue: try row.activityText("phase_id"))
+                guard let phaseName = phaseNames[phaseID] else {
+                    throw ProjectActivityProjectionError.invalidColumn("phase_id")
+                }
+                let previous = try lifecycle(row, column: "previous_lifecycle")
+                let current = try lifecycle(row, column: "current_lifecycle")
+                let transitionAction = try action(row)
+                let revision = try row.activityInteger("revision")
+                let reason = try row.activityText("reason")
+                let auditEventID = AuditEventID(rawValue: try row.activityText("audit_event_id"))
+                let registration = ProjectRegistration(
+                    projectID: historicalProjectID,
+                    registrationID: try row.activityText("registration_id"),
+                    requestGeneration: try row.activityInteger("request_generation")
+                )
+                let activity = RetainedPhaseLifecycleActivity(
+                    kind: .transition, removalID: removalID,
+                    historicalProjectID: historicalProjectID, phaseID: phaseID,
+                    phaseName: phaseName, lifecycle: current, revision: revision,
+                    previousLifecycle: previous, action: transitionAction, reason: reason,
+                    auditEventID: auditEventID, registration: registration,
+                    planningBaselineDigest: row.activityOptionalText("planning_baseline_digest")
+                )
+                return ProjectActivityItem(
+                    id: "phase-lifecycle-event-\(phaseID.rawValue)-\(revision)", source: .audit,
+                    title: "Phase lifecycle transition · \(phaseName)",
+                    detail: "\(previous.displayName) → \(current.displayName) · \(transitionAction.displayName) · revision \(revision) · \(reason)",
+                    observedAt: row.activityOptionalText("created_at").flatMap(formatter.date(from:)),
+                    ticketID: nil, deliveryLane: nil, runtimeState: nil,
+                    notificationState: nil, notificationStatusText: nil,
+                    phaseID: phaseID, retainedPhaseLifecycle: activity
+                )
+            }
+            let retainedLifecycleAuditIDs = Set(retainedLifecycleEvents.compactMap {
+                $0.retainedPhaseLifecycle?.auditEventID
+            })
+
             var assignmentsByAudit: [AuditEventID: [DeliveryGoalAssignmentEventRecord]] = [:]
             for row in try connection.activityRows(
                 "SELECT * FROM retained_delivery_goal_assignment_events WHERE removal_id = ? ORDER BY revision, ticket_id",
@@ -324,8 +440,9 @@ struct ProjectActivityProjection: Equatable, Sendable {
                 ORDER BY created_at DESC
                 """,
                 bindings: [.text(projectID.rawValue), .text(registrationID)]
-            ).map { row in
+            ).compactMap { row -> ProjectActivityItem? in
                 let auditID = AuditEventID(rawValue: try row.activityText("id"))
+                if retainedLifecycleAuditIDs.contains(auditID) { return nil }
                 let entityType = row.activityOptionalText("entity_type").flatMap(AuditEntityType.init(rawValue:))
                 let entityID = row.activityOptionalText("entity_id")
                 let assignments = assignmentsByAudit[auditID] ?? []
@@ -346,6 +463,9 @@ struct ProjectActivityProjection: Equatable, Sendable {
                     originatingThreadID: row.activityOptionalText("thread_id"), assignmentEvents: assignments
                 )
             }
+
+            items += retainedLifecycleItems
+            items += retainedLifecycleEvents
 
             items += try connection.activityRows(
                 "SELECT * FROM retained_project_activity_events WHERE removal_id = ?",

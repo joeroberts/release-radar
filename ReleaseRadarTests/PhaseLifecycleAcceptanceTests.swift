@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import ReleaseRadarCore
+@testable import ReleaseRadar
 
 final class PhaseLifecycleAcceptanceTests: XCTestCase {
     func testSchemaTwentyThreeBackfillsExistingPhasesWithoutInventingHistory() async throws {
@@ -388,8 +389,35 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         }
         XCTAssertEqual(
             dropped.blockers.map(\.kind),
-            [.goalCoverageUnresolved, .noDeliveredOutcome]
+            [.noDeliveredOutcome]
         )
+    }
+
+    func testCompletionAllowsFullyDroppedGoalAlongsideAcceptedDelivery() async throws {
+        let fixture = try await makeFixture()
+        try await fixture.store.transact(
+            actor: .init(id: "fixture"), reason: "Seed delivered and explicitly removed scope",
+            auditEventID: .init(rawValue: "phase-lifecycle-mixed-scope-audit")
+        ) { connection in
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,accepted_at,created_at,updated_at) VALUES ('lifecycle-project','phase-a','delivered-goal','Delivered goal','Delivered outcome','accepted',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,activated_at,created_at,updated_at) VALUES ('lifecycle-project','phase-a','dropped-goal','Dropped goal','Removed outcome','active',1,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('delivered-ticket','lifecycle-project','phase-a','Delivered work','accepted'),('dropped-ticket','lifecycle-project','phase-a','Removed work','backlog')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('lifecycle-project','phase-a','delivered-goal','delivered-ticket','Delivered scope','current','2026-09-10T00:00:00Z'),('lifecycle-project','phase-a','dropped-goal','dropped-ticket','Removed scope','current','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('lifecycle-project','phase-a','delivered-goal','delivered-ticket'),('lifecycle-project','phase-a','dropped-goal','dropped-ticket')")
+            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('lifecycle-project','dropped-ticket','withdrawn','Scope no longer applies','phase-a','backlog','phase-lifecycle-mixed-scope-audit','2026-09-10T00:01:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligation_drops (project_id,phase_id,goal_id,ticket_id,reason,audit_event_id,created_at) VALUES ('lifecycle-project','phase-a','dropped-goal','dropped-ticket','Owner intentionally removed this scope','phase-lifecycle-mixed-scope-audit','2026-09-10T00:01:00Z')")
+        }
+
+        let assessment = try await fixture.store.read {
+            try PhaseLifecyclePolicy.assessCompletion(
+                projectID: fixture.registration.projectID,
+                phaseID: .init(rawValue: "phase-a"),
+                connection: $0
+            )
+        }
+
+        XCTAssertTrue(assessment.isEligible)
+        XCTAssertTrue(assessment.blockers.isEmpty)
     }
 
     func testCompletedPhaseBlocksDeliveryWritersButAllowsBrowsingAndOpenWorkReferences() async throws {
@@ -652,7 +680,7 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         XCTAssertNil(moved.error)
         let manager = ProjectRemovalManager(store: fixture.store)
         let preview = try await manager.preview(projectID: fixture.registration.projectID)
-        _ = try await manager.apply(preview)
+        let removed = try await manager.apply(preview)
         let retained = try await fixture.store.read { connection in
             (
                 try connection.scalarText("SELECT lifecycle FROM retained_phase_lifecycles WHERE historical_project_id='lifecycle-project' AND phase_id='phase-a'"),
@@ -663,6 +691,58 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(retained.0, "in_delivery")
         XCTAssertEqual(retained.1, 1)
         XCTAssertEqual(retained.2, 1)
+
+        let history = try await ProjectActivityProjection.loadRemoved(
+            from: fixture.store,
+            removalID: removed.id
+        )
+        let current = try XCTUnwrap(history.items.first {
+            $0.id == "phase-lifecycle-current-phase-a"
+        })
+        XCTAssertEqual(current.phaseID?.rawValue, "phase-a")
+        XCTAssertEqual(current.title, "Phase lifecycle · Phase A")
+        XCTAssertEqual(current.detail, "Current · In delivery · revision 1")
+        XCTAssertEqual(current.retainedPhaseLifecycle?.kind, .current)
+        XCTAssertEqual(current.retainedPhaseLifecycle?.removalID, removed.id)
+        XCTAssertEqual(current.retainedPhaseLifecycle?.historicalProjectID, fixture.registration.projectID)
+        XCTAssertEqual(current.retainedPhaseLifecycle?.lifecycle, .inDelivery)
+        XCTAssertEqual(current.retainedPhaseLifecycle?.revision, 1)
+        let event = try XCTUnwrap(history.items.first {
+            $0.id == "phase-lifecycle-event-phase-a-1"
+        })
+        XCTAssertEqual(event.phaseID?.rawValue, "phase-a")
+        XCTAssertEqual(event.title, "Phase lifecycle transition · Phase A")
+        XCTAssertEqual(
+            event.detail,
+            "Unassessed → In delivery · Begin delivery · revision 1 · Exercise owner phase lifecycle"
+        )
+        XCTAssertEqual(event.retainedPhaseLifecycle?.kind, .transition)
+        XCTAssertEqual(event.retainedPhaseLifecycle?.previousLifecycle, .unassessed)
+        XCTAssertEqual(event.retainedPhaseLifecycle?.lifecycle, .inDelivery)
+        XCTAssertEqual(event.retainedPhaseLifecycle?.action, .beginDelivery)
+        XCTAssertEqual(event.retainedPhaseLifecycle?.reason, "Exercise owner phase lifecycle")
+        XCTAssertEqual(event.retainedPhaseLifecycle?.auditEventID, moved.auditEventID)
+        XCTAssertEqual(event.retainedPhaseLifecycle?.registration, fixture.registration)
+        XCTAssertNil(event.retainedPhaseLifecycle?.planningBaselineDigest)
+
+        let rejected = await fixture.dispatcher.dispatch(
+            envelope(
+                fixture,
+                requestID: UUID(),
+                command: .transitionPhaseLifecycle(
+                    projectID: fixture.registration.projectID.rawValue,
+                    phaseID: "phase-a", expectedRevision: 1,
+                    action: .moveToUpcoming, planningBaselineDigest: nil
+                )
+            ),
+            origin: .ownerApp
+        )
+        XCTAssertEqual(rejected.error, .unauthorizedProjectRoot)
+        let historyAfterRejectedMutation = try await ProjectActivityProjection.loadRemoved(
+            from: fixture.store,
+            removalID: removed.id
+        )
+        XCTAssertEqual(historyAfterRejectedMutation, history)
     }
 
     private struct Fixture {

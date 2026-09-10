@@ -70,6 +70,13 @@ public enum PhaseLifecyclePolicy {
                 }
                 continue
             }
+            // Explicitly dropped obligations are resolved removed scope. They do
+            // not require accepting a goal whose outcome is no longer part of
+            // delivery; phase-level nonvacuity still requires another delivered
+            // outcome before completion can succeed.
+            if coverage.isResolved, !coverage.hasDeliveredOutcome {
+                continue
+            }
             if lifecycle != .accepted {
                 blockers.append(.init(
                     kind: .goalNotAccepted,
