@@ -288,3 +288,36 @@ future compatibility design must either preserve all supported lifecycle facts o
 fail complete export explicitly. This records the Phase 5E portability requirement
 only: portable archive v1, the current exporter/importer implementation and their
 accepted fixtures are unchanged by this slice.
+
+## Phase 6A event-time History boundary — 2026-09-10
+
+New local audit rows capture immutable event-time facts in the same app-owned
+transaction as the delivery mutation: exact project and registration identity,
+available ticket/phase identity and name, lane or transition values, request
+generation and ticket outcome. A transaction failure rolls back both the delivery
+change and its historical facts. Existing audit rows are not backfilled from
+current state; absent facts remain unknown. Occurrence, observation and database
+recording times are separate fields where the source supplies them.
+
+History projects local audits, retained/imported history, latest persisted
+observations, notification delivery, review and completion records through stable
+source identities. Projection and browsing are read-only and project scoped.
+Observation snapshots do not become a fabricated change log, asserted actor/thread
+labels do not become verified independent provenance, and notification outcomes do
+not imply acceptance. Duplicate source identities and exact command replay retain
+their existing deduplication authority.
+
+Removal retains the historical source identity and captured facts while removing
+operational access. Re-adding a project creates a new registration and cannot make
+old history actionable. Full application backup/recovery preserves the additive
+records and legacy unknowns; it does not replay decisions, notifications or audit
+events. Opening a historical entity requires its exact retained identity. Missing
+or legacy identities fail to an explicit recovery state rather than selecting a
+current replacement.
+
+This amendment establishes the local History contract only. It does not change
+portable archive v1, implement a Phase 7 package, create a generic event bus, grant
+observer mutation authority, or make repository documents, copied SQLite files or
+external services delivery authorities. Any future portable format that claims
+complete history must represent the supported event facts and provenance or reject
+the export explicitly.

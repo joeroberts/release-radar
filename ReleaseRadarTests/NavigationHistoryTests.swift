@@ -1,6 +1,6 @@
 import XCTest
 @testable import ReleaseRadar
-import ReleaseRadarCore
+@testable import ReleaseRadarCore
 
 final class NavigationHistoryTests: XCTestCase {
     func testNavigationIdentityAllowsLifecycleGenerationAdvanceButRejectsReaddedRegistration() {
@@ -404,6 +404,127 @@ final class NavigationHistoryTests: XCTestCase {
         XCTAssertEqual(history.current.filter, .goal(.init(rawValue: "goal-a")))
         XCTAssertEqual(history.current.selectedTicketID?.rawValue, "A-1")
         XCTAssertEqual(history.current.focus, .ticket(.init(rawValue: "A-1")))
+    }
+
+    func testEntryCarriesExactHistoryFilterSelectionAndFocusContext() {
+        let projectID = ProjectID(rawValue: "project-a")
+        let eventID = HistoryEventIdentity(
+            projectID: projectID,
+            registrationID: "registration-a",
+            source: .audit,
+            sourceID: "audit-a"
+        )
+        var history = NavigationHistory(initial: .projects)
+
+        history.navigate(to: .init(
+            route: .activity(projectID),
+            historyFilter: .audit,
+            selectedHistoryEventID: eventID,
+            focus: .historyEvent(eventID)
+        ))
+
+        XCTAssertEqual(history.current.historyFilter, .audit)
+        XCTAssertEqual(history.current.selectedHistoryEventID, eventID)
+        XCTAssertEqual(history.current.focus, .historyEvent(eventID))
+    }
+
+    @MainActor
+    func testHistoryEntityNavigationAndBackRestoreExactNonactiveEventContext() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-HistoryEntityNavigation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let phaseID = PhaseID(rawValue: "history-nonactive-phase")
+        let ticketID = TicketID(rawValue: "HISTORY-NONACTIVE-1")
+        try await store.transact(actor: .init(id: "history-navigation-fixture"), reason: "Register History fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'history-navigation-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: projectID,
+                phaseID: phaseID,
+                name: "History nonactive phase",
+                mode: .governed,
+                connection: connection
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, 'Open this retained event target', 'needs_review')",
+                bindings: [.text(ticketID.rawValue), .text(projectID.rawValue), .text(phaseID.rawValue)]
+            )
+        }
+        try await store.transact(
+            actor: .init(id: "history-navigation-fixture", threadID: "history-navigation-thread"),
+            reason: "Record exact nonactive History target",
+            auditEventID: .init(rawValue: "history-target-event"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: ticketID.rawValue)
+        ) { _ in }
+        try await store.transact(
+            actor: .init(id: "legacy-fixture"),
+            reason: "Legacy event without immutable facts",
+            auditEventID: .init(rawValue: "history-legacy-event"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: ticketID.rawValue)
+        ) { _ in }
+        await store.close()
+        let legacy = try SQLiteConnection(url: directory.appendingPathComponent("store.sqlite"))
+        try legacy.execute("UPDATE audit_events SET event_facts_recorded = 0 WHERE id = 'history-legacy-event'")
+        legacy.close()
+
+        let reopenedStore = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let model = AppModel(store: reopenedStore, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+
+        await model.navigate(to: .activity(projectID))
+        let legacyItem = try XCTUnwrap(model.activity(for: projectID)?.items.first {
+            $0.identity.sourceID == "history-legacy-event"
+        })
+        XCTAssertNil(legacyItem.eventFacts)
+        await model.openHistoryEntity(legacyItem)
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.navigationFocus, .recovery)
+        XCTAssertEqual(
+            model.navigationRecoveryMessage,
+            "The event target identity was not recorded; current project state was not substituted for the past."
+        )
+
+        let item = try XCTUnwrap(model.activity(for: projectID)?.items.first {
+            $0.identity.sourceID == "history-target-event"
+        })
+        model.setHistoryFilter(.audit, projectID: projectID)
+        model.selectHistoryEvent(item.identity, projectID: projectID)
+        await model.openHistoryEntity(item)
+
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertEqual(model.viewedBoard(for: projectID)?.phaseID, phaseID)
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        XCTAssertEqual(model.navigationFocus, .ticket(ticketID))
+
+        await model.goBack()
+
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), item.identity)
+        XCTAssertEqual(model.navigationFocus, .historyEvent(item.identity))
+        XCTAssertNil(model.navigationRecoveryMessage)
+
+        try await reopenedStore.transact(actor: .init(id: "history-navigation-fixture"), reason: "Remove exact synthetic target") { connection in
+            try connection.execute(
+                "DELETE FROM tickets WHERE project_id = ? AND id = ?",
+                bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+            )
+        }
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        await model.openHistoryEntity(item)
+
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.navigationFocus, .recovery)
+        XCTAssertEqual(
+            model.navigationRecoveryMessage,
+            "The exact event target is unavailable; no replacement entity was opened."
+        )
     }
 
     func testFilterAndFocusUpdatesReplaceCurrentEntryWithoutCreatingSteps() {

@@ -23,7 +23,7 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
         }
 
         let connection = try SQLiteConnection(url: databaseURL)
-        XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 23)
+        XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_reference_link_sets"), 0)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_reference_links"), 0)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_reference_versions"), 0)

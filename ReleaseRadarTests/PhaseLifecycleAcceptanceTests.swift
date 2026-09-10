@@ -32,7 +32,7 @@ final class PhaseLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(facts.1, 0)
         XCTAssertEqual(facts.2, 0)
         XCTAssertEqual(facts.3, 0)
-        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), 23)
+        XCTAssertEqual(try SQLiteConnection(url: databaseURL).scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
     }
 
     func testLifecycleDecisionsRequireOwnerExactRegistrationAndReplayWithOneHistoryEvent() async throws {

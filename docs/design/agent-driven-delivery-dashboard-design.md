@@ -522,3 +522,35 @@ that discrepancy was corrected rather than accepted as a design deviation. The
 fresh journey retained exact reason accessibility focus after every save/reload
 at wide and compact widths. No design deviation is recorded for the delivered
 Phase 5E surface.
+
+## Phase 6A truthful event-time History — 2026-09-10
+
+History is one project-scoped, read-only timeline with filters for All, Audit,
+Observations, Notifications, Reviews and Completions. Each row identifies its
+source and event time; selecting a row opens event detail without replacing the
+recorded facts with the ticket's current state. Where recording and observation
+times differ, detail names them separately. Legacy audit rows whose event-time
+facts were never recorded remain explicitly unknown.
+
+At wide widths the timeline and selected-event inspector remain side by side. At
+compact widths the inspector stacks below the full-width timeline and remains
+keyboard reachable. Opening an exact retained ticket or phase uses the shared
+typed navigation history; Back returns to the same History filter and event.
+Unavailable or legacy targets present an accessible recovery explanation instead
+of redirecting to a replacement registration or current entity. Empty History,
+no matches for a filter, failed reads and incomplete observation sources use
+distinct states.
+
+Contextual Help explains provenance, event/recording/observation time, unknown
+legacy facts, current context, attention versus acceptance, and that copied
+actions are not dispatched actions. It describes only implemented behavior.
+
+The delivered surface follows the approved History references' dark Rekon
+palette, source chips, timeline rhythm and wide/compact composition. It uses the
+established detailed inspector rather than the mockup's flatter grouped cards so
+exact provenance, recorded facts, recovery and navigation remain together. The
+compact sidebar remains an explicit app control rather than automatically
+collapsing at a width threshold. Observation availability is reported from the
+implemented source and never replaced by the mockup's aspirational freshness
+copy. These are recorded implementation differences, not new authority or
+future-source behavior.
