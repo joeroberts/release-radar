@@ -85,7 +85,7 @@ catalog/index metadata. Ceiling Astra High, no subagents. Actual requested model
 and effort were set at dispatch; runtime settings are not independently exposed.
 
 Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra High)
-is complete with no blocking owner choice. Its bounded search identity,
+is complete and archived with no blocking owner choice. Its bounded search identity,
 SQLite-backed saved preference, recovery and shared Help recommendations are
 preserved in the [6E brief](task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md).
 No 6E writer is released before reviewed 6D integration.
