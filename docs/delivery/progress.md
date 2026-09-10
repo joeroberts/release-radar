@@ -153,9 +153,12 @@ restored for this Required correction to the same outcome. Sidebar correction `d
 assertion in the existing guarded fixture. Source/test build passed, but raw native assertion failed on token 02: Goals
 selected passed; Needs Review reported `AXButton`, selected=true, value=nil,
 focused=false. Conditional add-traits alone did not clear unselected semantics.
-Same writer owns the minimal explicit-unselected correction with unchanged raw
-assertions. Reviewer stopped host/build and released the reservation. No native
-host is active; other properties remain terminal.
+Explicit unselected-trait correction `da3c0d5b3fc838d8dd232c3c07ad6bede83c7bef`
+is integrated at `4c751867b8d6e4f42e1a5edaa3df19e66718c679`; build passed and
+raw assertions are unchanged. Reviewer owns the sole token-03 full sanitized
+unsigned native run, monitoring the raw assertion. Orchestrator is sole CUA/marker
+controller after verified PID/window readiness because restored reviewer CUA is
+unavailable. No new test mode or reviewer. Other properties remain terminal.
 Writer media closeout is paused; other source behavior is not reopened. Root and reviewer directly read fresh native result
 `/private/tmp/release-radar-phase6b-review-01a08cde.L147PW/results/phase6b-native-review-run.xcresult`:
 1/1, zero failures/skips, 160.321 seconds. Full sanitized unsigned arm64 build,
