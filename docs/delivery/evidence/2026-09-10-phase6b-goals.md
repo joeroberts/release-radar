@@ -14,10 +14,14 @@
 
 Goals is a workspace route with explicitly separate Delivery and Execution
 domains. Delivery discovers phase-owned formal outcomes across active projects,
-including terminal goals and unassigned work, while preserving project, phase
-and registration identity. Its detail reports criteria, membership, carried
-obligation coverage, structural readiness and owner acceptance as separate
-facts. Superseded or dropped scope does not become delivered credit.
+including terminal goals, phase-placed work without a Delivery Goal and
+project-level work that is not yet placed, while preserving project, phase and
+registration identity. Unplaced work opens Project Plan; placed work without a
+goal opens the all-phase board. Delivery detail reports criteria, membership,
+formal state, phase lifecycle, carried-obligation coverage, structural readiness
+and explicit owner acceptance as separate facts. Superseded or dropped scope does
+not become delivered credit. Stored-name collisions receive stable identity cues
+without exposing internal identifiers on every row.
 
 Execution discovers every persisted goal observation for active projects,
 including completed and unlinked observations. Exact thread/goal identity, exact
@@ -31,14 +35,19 @@ distinct empty/filter-zero/unavailable states and contextual Help. Associated
 work opens the existing all-phase board using an explicit typed Delivery Goal or
 Execution Goal filter; **All goals** clears it while retaining the selected
 ticket. Associated work includes stored nonactive phases and keeps their phase
-identity. Browsing performs no delivery, lifecycle, lane, acceptance or attention
-mutation.
+identity. An Execution filter shows its ticket only while that exact persisted
+thread/goal observation and link remain current; removal or replacement produces
+explicit recovery rather than ticket-only substitution. Browsing performs no
+delivery, lifecycle, lane, acceptance or attention mutation.
 
 Navigation history stores the Goals domain, project and state filters, exact
 selection, actual viewport and keyboard/accessibility focus. Back and Forward
 restore that context after board navigation. If the exact project registration
 has been replaced or removed, recovery returns to Projects, focuses the recovery
-message and explicitly refuses substitution.
+message and explicitly refuses substitution. Initial and filtered detail is shown
+only after the exact displayed selection has been reconciled into model and
+history state; the view has no first-row fallback that can bypass registration
+identity.
 
 ## Direct verification
 
@@ -84,6 +93,13 @@ SourcePackages checkout at RekonDesignSystem revision
   discovery, byte-distinct same-ID Delivery Goals across projects, workspace
   routing, typed Execution Goal board filtering, navigation-entry state,
   Back restoration and the associated-work navigation-order regression.
+- `phase6b-review-v26-source.xcresult` passed the expanded focused Goals suite
+  11/11 in 2.293 seconds after independent-review corrections. The added
+  scenarios cover project-level unplaced-work discovery and Project Plan
+  routing, exact initial/filter selection and registration history, rejection
+  of a removed exact Execution Goal link despite the ticket remaining, separate
+  Delivery/phase/readiness/coverage/owner-acceptance facts, and collision-only
+  byte-stable identity cues.
 
 The passing native result emitted a benign teardown warning after the temporary
 fixture directory was unlinked while SQLite still held a vnode. The test and all

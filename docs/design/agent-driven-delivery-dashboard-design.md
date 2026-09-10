@@ -559,9 +559,11 @@ future-source behavior.
 
 Goals is a workspace-level, read-only destination with an explicit domain control:
 **Delivery** presents formal phase-owned outcomes, while **Execution** presents
-persisted Codex observations. Delivery detail keeps criteria, membership,
-carried-obligation coverage, structural readiness and owner acceptance distinct;
-terminal outcomes and work without a Delivery Goal remain discoverable. Execution
+persisted Codex observations. Delivery detail keeps criteria, membership, the
+formal Delivery Goal state, phase lifecycle, carried-obligation coverage,
+structural readiness and explicit owner acceptance distinct; terminal outcomes,
+phase-placed work without a Delivery Goal and project-level work that is not yet
+placed remain discoverable. Execution
 detail identifies its exact thread/goal source, link state, observation time,
 freshness and availability. Completed and unlinked persisted observations remain
 useful without implying live visibility, formal acceptance or new attention.
@@ -569,12 +571,19 @@ useful without implying live visibility, formal acceptance or new attention.
 Project and domain-specific state filters narrow the workspace list without
 hiding source availability. Associated work opens the existing all-phase Phase
 Board with an explicit typed Delivery Goal or Execution Goal filter, where **All
-goals** clears that filter. Goals does not reproduce the mockup's embedded work
+goals** clears that filter; project-level unplaced work opens Project Plan instead.
+An Execution filter remains valid only while its exact persisted observation and
+ticket link remain current. Goals does not reproduce the mockup's embedded work
 lanes: the established board remains the only five-lane presentation and labels
 each ticket's stored phase. Back/Forward restores the Goals domain, project and
 state filters, selected exact goal, actual scroll position and keyboard/
 accessibility focus. A missing or replaced registration produces an accessible
 recovery explanation rather than selecting another project or goal.
+
+The project picker and Delivery rows use stable identity cues only when stored
+names collide. Initial and filtered detail is rendered only for the exact selection
+recorded in the model and navigation history; it never substitutes a visually
+convenient first row for a missing selection.
 
 The delivered surface retains the mockup's workspace route, cross-project list,
 source treatment and wide list/detail rhythm while adding the required formal

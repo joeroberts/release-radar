@@ -80,13 +80,13 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
         let sharedGoal = DeliveryGoalID(rawValue: "rr10-sample-refinement")
         try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Add colliding project-scoped identities") { connection in
             try connection.execute(
-                "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, 'Second project', 0)",
+                "INSERT INTO projects (id, name, first_dashboard_opened) VALUES (?, 'Rekon Pursuit', 0)",
                 bindings: [.text(secondProject.rawValue)]
             )
             try DeliveryPlanningPolicy.upsertPhase(
                 projectID: secondProject,
                 phaseID: secondPhase,
-                name: "Second phase",
+                name: "Post-MVP refinement",
                 mode: .governed,
                 connection: connection
             )
@@ -95,7 +95,7 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
                 bindings: [.text(secondProject.rawValue), .text(secondPhase.rawValue)]
             )
             try connection.execute(
-                "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES (?, ?, ?, 'Same ID in another phase', 'Second phase outcome', 'draft', 0, '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
+                "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at) VALUES (?, ?, ?, 'Post-MVP refinement', 'Second phase outcome', 'draft', 0, '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
                 bindings: [.text(secondProject.rawValue), .text(secondPhase.rawValue), .text(sharedGoal.rawValue)]
             )
             try connection.execute(
@@ -110,6 +110,145 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
         XCTAssertEqual(matches.count, 2)
         XCTAssertEqual(Set(matches.map(\.id)).count, 2)
         XCTAssertEqual(Set(matches.map { $0.project.id.rawValue }), [DashboardSampleData.projectID.rawValue, secondProject.rawValue])
+        let projectChoices = workspaceGoalsProjectChoices(matches.map(\.project))
+        XCTAssertEqual(Set(projectChoices.map(\.label)).count, 2)
+        XCTAssertTrue(projectChoices.allSatisfy { $0.label.contains("ID bytes") })
+        XCTAssertEqual(Set(matches.compactMap { workspaceDeliveryIdentityCue(for: $0, among: matches) }).count, 2)
+    }
+
+    @MainActor
+    func testUnplacedWorkIsDiscoveredAndOpensTheProjectPlan() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceUnplacedGoals-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Record unplaced Goals work") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'workspace-unplaced-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try DeliveryPlanningPolicy.upsertUnassignedTicket(
+                projectID: DashboardSampleData.projectID,
+                ticketID: .init(rawValue: "UNPLACED-GOALS"),
+                outcome: "Retain project-level work without inventing a phase or goal",
+                connection: connection
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let item = try XCTUnwrap(model.dashboard?.workspaceGoals.unassignedDeliveryWork.first {
+            $0.tickets.contains(where: { $0.id.rawValue == "UNPLACED-GOALS" })
+        })
+
+        await model.navigate(to: .goals)
+        await model.openWorkspaceUnassignedWork(item)
+
+        XCTAssertEqual(model.selection, .projectPlan(DashboardSampleData.projectID))
+        XCTAssertEqual(model.selectedTicketID.rawValue, "UNPLACED-GOALS")
+    }
+
+    @MainActor
+    func testInitialAndFilteredGoalsReconcileDisplayedSelectionAndRegistration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalSelection-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Register displayed Goals identity") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'workspace-selection-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+
+        await model.navigate(to: .goals)
+        let initialDeliveryID = try XCTUnwrap(model.selectedWorkspaceDeliveryGoalID)
+        XCTAssertEqual(model.navigationFocus, .workspaceGoal(initialDeliveryID))
+        XCTAssertEqual(model.navigationHistory.current.workspaceGoals?.selectedDeliveryID, initialDeliveryID)
+        XCTAssertEqual(model.navigationHistory.current.registration?.registrationID, "workspace-selection-registration")
+
+        model.setWorkspaceGoalsDomain(.execution)
+        let executionID = try XCTUnwrap(model.selectedWorkspaceExecutionGoalID)
+        XCTAssertEqual(model.navigationFocus, .workspaceGoal(executionID))
+        XCTAssertEqual(model.navigationHistory.current.workspaceGoals?.selectedExecutionID, executionID)
+        XCTAssertEqual(model.navigationHistory.current.registration?.registrationID, "workspace-selection-registration")
+
+        model.setWorkspaceGoalsExecutionStatus("No stored match")
+        XCTAssertNil(model.selectedWorkspaceExecutionGoalID)
+        XCTAssertEqual(model.navigationFocus, .workspaceGoalsFilter)
+        model.setWorkspaceGoalsExecutionStatus(nil)
+        XCTAssertNotNil(model.selectedWorkspaceExecutionGoalID)
+        XCTAssertEqual(model.navigationFocus, model.selectedWorkspaceExecutionGoalID.map(NavigationFocus.workspaceGoal))
+    }
+
+    @MainActor
+    func testRemovedExactExecutionLinkCannotKeepShowingItsTicket() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalRemovedLink-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Register exact execution-link recovery") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'workspace-link-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let goal = try XCTUnwrap(model.dashboard?.workspaceGoals.execution.first { $0.link.ticketID != nil })
+        let ticketID = try XCTUnwrap(goal.link.ticketID)
+
+        await model.navigate(to: .goals)
+        model.setWorkspaceGoalsDomain(.execution)
+        model.selectWorkspaceExecutionGoal(goal.id)
+        await model.openWorkspaceExecutionGoal(goal)
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Remove exact execution link") { connection in
+            try connection.execute(
+                "DELETE FROM ticket_goal_links WHERE project_id = ? AND ticket_id = ? AND thread_id = ? AND goal_id = ?",
+                bindings: [
+                    .text(goal.project.id.rawValue), .text(ticketID.rawValue),
+                    .text(goal.threadID), .text(goal.goalID),
+                ]
+            )
+        }
+
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        let filter = model.allPhaseBoardFilter(projectID: goal.project.id)
+        XCTAssertTrue(model.viewedAllPhaseBoard(for: goal.project.id)?.filtered(by: filter).lanes.flatMap(\.cards).isEmpty == true)
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains("exact Execution Goal link") == true)
+        XCTAssertEqual(model.navigationFocus, .recovery)
+    }
+
+    func testDeliveryFactsKeepFormalStatePhaseLifecycleAndAcceptanceDistinct() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalFacts-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let dashboard = try await DashboardProjection.load(from: store)
+        let goal = try XCTUnwrap(dashboard.workspaceGoals.delivery.first)
+        let facts = workspaceDeliveryGoalFacts(goal)
+
+        XCTAssertEqual(facts.formalState, "Formal Delivery Goal state: \(goal.goal.lifecycle.displayName)")
+        XCTAssertEqual(facts.phaseLifecycle, "Phase lifecycle: \(goal.phaseLifecycle?.lifecycle.displayName ?? "Unavailable")")
+        XCTAssertTrue(facts.structuralReadiness.hasPrefix("Structural readiness:"))
+        XCTAssertTrue(facts.coverage.hasPrefix("Carried-obligation coverage:"))
+        XCTAssertEqual(
+            facts.ownerAcceptance,
+            goal.goal.lifecycle == .accepted
+                ? "Owner acceptance: Recorded"
+                : "Owner acceptance: Not recorded"
+        )
     }
 
     func testGoalsNavigationEntryCarriesDomainFiltersSelectionViewportAndFocus() {

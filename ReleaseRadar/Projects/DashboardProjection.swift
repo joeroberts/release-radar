@@ -429,8 +429,16 @@ struct DashboardProjection: Equatable, Sendable {
             }
 
             let workspaceGoals = try WorkspaceGoalsProjection.load(
-                connection: connection, projects: projects, boards: boards
+                connection: connection, projects: projects, boards: boards, projectPlans: projectPlans
             )
+            for project in projects {
+                guard var board = allPhaseBoards[project.id] else { continue }
+                board.executionGoalLinks = workspaceGoals.execution.compactMap { goal in
+                    guard goal.project.id.rawValue.utf8.elementsEqual(project.id.rawValue.utf8) else { return nil }
+                    return goal.boardFilter
+                }
+                allPhaseBoards[project.id] = board
+            }
             return DashboardProjection(
                 projects: projects, archivedProjects: archivedProjects,
                 removedProjects: removedProjects, boards: boards,
@@ -776,8 +784,7 @@ struct PhaseBoardProjection: Equatable, Sendable {
                 switch filter {
                 case .all: true
                 case let .goal(id): card.deliveryGoal?.id == Data(id.rawValue.utf8)
-                case let .execution(identity):
-                    card.id.rawValue.utf8.elementsEqual(identity.ticketID.rawValue.utf8)
+                case .execution: false
                 case .unassigned: lane.lane != .accepted && card.deliveryGoal == nil
                 }
             })
@@ -811,11 +818,16 @@ struct AllPhaseBoardProjection: Equatable, Sendable {
     let deliveryGoals: [DeliveryGoalSummaryProjection]
     let lanes: [DashboardLaneProjection]
     let details: [TicketID: TicketDetailProjection]
+    var executionGoalLinks: [ExecutionGoalBoardFilter] = []
 
     func lane(_ lane: TicketLane) -> DashboardLaneProjection? { lanes.first { $0.lane == lane } }
     func detail(for ticketID: TicketID) -> TicketDetailProjection? { details[ticketID] }
     var filterableDeliveryGoals: [DeliveryGoalSummaryProjection] {
         deliveryGoals.filter { $0.lifecycle != .superseded }
+    }
+
+    func hasExactExecutionGoalLink(_ identity: ExecutionGoalBoardFilter) -> Bool {
+        executionGoalLinks.contains(identity)
     }
 
     func filtered(by filter: DeliveryGoalFilter) -> AllPhaseBoardProjection {
@@ -825,7 +837,8 @@ struct AllPhaseBoardProjection: Equatable, Sendable {
                 case .all: true
                 case let .goal(id): card.deliveryGoal?.id == Data(id.rawValue.utf8)
                 case let .execution(identity):
-                    card.id.rawValue.utf8.elementsEqual(identity.ticketID.rawValue.utf8)
+                    hasExactExecutionGoalLink(identity)
+                        && card.id.rawValue.utf8.elementsEqual(identity.ticketID.rawValue.utf8)
                 case .unassigned: card.deliveryGoal == nil
                 }
             })

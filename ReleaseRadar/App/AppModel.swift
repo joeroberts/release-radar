@@ -335,7 +335,13 @@ final class AppModel {
         }
         selection = resolvedRoute
         guard generation == navigationGeneration else { return }
-        navigationFocus = .route(resolvedRoute)
+        if resolvedRoute == .goals, let goalID = reconcileWorkspaceGoalsSelection() {
+            navigationFocus = .workspaceGoal(goalID)
+        } else if resolvedRoute == .goals {
+            navigationFocus = .workspaceGoalsFilter
+        } else {
+            navigationFocus = .route(resolvedRoute)
+        }
         navigationHistory.navigate(to: historyEntry(for: resolvedRoute, focus: navigationFocus))
     }
 
@@ -535,7 +541,7 @@ final class AppModel {
             workspaceGoalsViewportOffset = goalsState.viewportOffset.map { max(0, $0) }
 
             if let selected = goalsState.selectedDeliveryID,
-               dashboard?.workspaceGoals.delivery.contains(where: { $0.id == selected }) == true {
+               filteredWorkspaceDeliveryGoals().contains(where: { $0.id == selected }) {
                 selectedWorkspaceDeliveryGoalID = selected
             } else {
                 selectedWorkspaceDeliveryGoalID = nil
@@ -544,7 +550,7 @@ final class AppModel {
                 }
             }
             if let selected = goalsState.selectedExecutionID,
-               dashboard?.workspaceGoals.execution.contains(where: { $0.id == selected }) == true {
+               filteredWorkspaceExecutionGoals().contains(where: { $0.id == selected }) {
                 selectedWorkspaceExecutionGoalID = selected
             } else {
                 selectedWorkspaceExecutionGoalID = nil
@@ -570,6 +576,13 @@ final class AppModel {
             } else {
                 historyViewportOffsets.removeValue(forKey: key)
             }
+        }
+        if let projectID = restoredProjectID,
+           case .phaseBoard = route,
+           entry.showsAllPhases,
+           case let .execution(identity) = entry.filter ?? .all,
+           dashboard?.allPhaseBoard(for: projectID)?.hasExactExecutionGoalLink(identity) != true {
+            recovery.append("The exact Execution Goal link is unavailable or was replaced; its ticket was not substituted.")
         }
         let ticketIsAvailable = entry.selectedTicketID.map { ticketID in
             guard let projectID = restoredProjectID else { return false }
@@ -1076,32 +1089,81 @@ final class AppModel {
 
     func setWorkspaceGoalsDomain(_ domain: WorkspaceGoalsDomain) {
         workspaceGoalsDomain = domain
-        navigationFocus = .workspaceGoalsFilter
+        navigationFocus = reconcileWorkspaceGoalsSelection().map(NavigationFocus.workspaceGoal)
+            ?? .workspaceGoalsFilter
         captureCurrentNavigationContext()
     }
 
     func setWorkspaceGoalsProjectID(_ projectID: ProjectID?) {
         workspaceGoalsProjectID = projectID
-        navigationFocus = .workspaceGoalsFilter
+        navigationFocus = reconcileWorkspaceGoalsSelection().map(NavigationFocus.workspaceGoal)
+            ?? .workspaceGoalsFilter
         captureCurrentNavigationContext()
     }
 
     func setWorkspaceGoalsDeliveryLifecycle(_ lifecycle: DeliveryGoalLifecycle?) {
         workspaceGoalsDeliveryLifecycle = lifecycle
-        navigationFocus = .workspaceGoalsFilter
+        navigationFocus = reconcileWorkspaceGoalsSelection().map(NavigationFocus.workspaceGoal)
+            ?? .workspaceGoalsFilter
         captureCurrentNavigationContext()
     }
 
     func setWorkspaceGoalsExecutionStatus(_ status: String?) {
         workspaceGoalsExecutionStatus = status
-        navigationFocus = .workspaceGoalsFilter
+        navigationFocus = reconcileWorkspaceGoalsSelection().map(NavigationFocus.workspaceGoal)
+            ?? .workspaceGoalsFilter
         captureCurrentNavigationContext()
     }
 
     func setWorkspaceGoalsExecutionScope(_ scope: WorkspaceExecutionScope) {
         workspaceGoalsExecutionScope = scope
-        navigationFocus = .workspaceGoalsFilter
+        navigationFocus = reconcileWorkspaceGoalsSelection().map(NavigationFocus.workspaceGoal)
+            ?? .workspaceGoalsFilter
         captureCurrentNavigationContext()
+    }
+
+    private func reconcileWorkspaceGoalsSelection() -> Data? {
+        switch workspaceGoalsDomain {
+        case .delivery:
+            let goals = filteredWorkspaceDeliveryGoals()
+            let selected = selectedWorkspaceDeliveryGoalID.flatMap { selected in
+                goals.first(where: { $0.id == selected })?.id
+            } ?? goals.first?.id
+            selectedWorkspaceDeliveryGoalID = selected
+            return selected
+        case .execution:
+            let goals = filteredWorkspaceExecutionGoals()
+            let selected = selectedWorkspaceExecutionGoalID.flatMap { selected in
+                goals.first(where: { $0.id == selected })?.id
+            } ?? goals.first?.id
+            selectedWorkspaceExecutionGoalID = selected
+            return selected
+        }
+    }
+
+    private func filteredWorkspaceDeliveryGoals() -> [WorkspaceDeliveryGoalProjection] {
+        guard let goals = dashboard?.workspaceGoals.delivery else { return [] }
+        return goals.filter { goal in
+            (workspaceGoalsProjectID == nil || workspaceGoalsProjectID.map {
+                $0.rawValue.utf8.elementsEqual(goal.project.id.rawValue.utf8)
+            } == true)
+                && (workspaceGoalsDeliveryLifecycle == nil
+                    || goal.goal.lifecycle == workspaceGoalsDeliveryLifecycle)
+        }
+    }
+
+    private func filteredWorkspaceExecutionGoals() -> [WorkspaceExecutionGoalProjection] {
+        guard let goals = dashboard?.workspaceGoals.execution else { return [] }
+        return goals.filter { goal in
+            let projectMatches = workspaceGoalsProjectID == nil || workspaceGoalsProjectID.map {
+                $0.rawValue.utf8.elementsEqual(goal.project.id.rawValue.utf8)
+            } == true
+            let statusMatches = workspaceGoalsExecutionStatus == nil
+                || goal.status == workspaceGoalsExecutionStatus
+            let linkMatches = workspaceGoalsExecutionScope == .all
+                || (workspaceGoalsExecutionScope == .linked) == (goal.link.ticketID != nil)
+            return projectMatches && statusMatches && linkMatches
+        }
     }
 
     func selectWorkspaceDeliveryGoal(_ id: Data?) {
@@ -1131,9 +1193,13 @@ final class AppModel {
     }
 
     func openWorkspaceUnassignedWork(_ item: WorkspaceUnassignedDeliveryWorkProjection) async {
-        await navigate(to: .phaseBoard(item.project.id))
-        viewAllPhases(projectID: item.project.id)
-        setAllPhaseBoardFilter(.unassigned, projectID: item.project.id)
+        if item.phaseID == nil {
+            await navigate(to: .projectPlan(item.project.id))
+        } else {
+            await navigate(to: .phaseBoard(item.project.id))
+            viewAllPhases(projectID: item.project.id)
+            setAllPhaseBoardFilter(.unassigned, projectID: item.project.id)
+        }
         if let ticketID = item.tickets.first?.id {
             selectTicket(ticketID)
         }
@@ -2546,6 +2612,10 @@ final class AppModel {
     }
 
     private func publish(_ prepared: PreparedProjectProjections) {
+        let previousGoalsSelection: Data? = switch workspaceGoalsDomain {
+        case .delivery: selectedWorkspaceDeliveryGoalID
+        case .execution: selectedWorkspaceExecutionGoalID
+        }
         dashboard = prepared.dashboard
         reviewInboxes = prepared.reviewInboxes
         dependencyGraphs = prepared.dependencyGraphs
@@ -2565,6 +2635,32 @@ final class AppModel {
         }
         if let ticketID = prepared.unavailableSelectedTicketID {
             navigationRecovery.append("The previously selected ticket \(ticketID.rawValue) is unavailable; no other ticket was selected.")
+        }
+        if selection == .goals {
+            let selectedIsAvailable = previousGoalsSelection.map { selected in
+                switch workspaceGoalsDomain {
+                case .delivery: filteredWorkspaceDeliveryGoals().contains(where: { $0.id == selected })
+                case .execution: filteredWorkspaceExecutionGoals().contains(where: { $0.id == selected })
+                }
+            }
+            if previousGoalsSelection != nil, selectedIsAvailable == false {
+                switch workspaceGoalsDomain {
+                case .delivery:
+                    selectedWorkspaceDeliveryGoalID = nil
+                    navigationRecovery.append("The exact Delivery Goal is unavailable; no replacement goal was selected.")
+                case .execution:
+                    selectedWorkspaceExecutionGoalID = nil
+                    navigationRecovery.append("The exact Execution Goal observation is unavailable; no replacement observation was selected.")
+                }
+            } else if previousGoalsSelection == nil, let selected = reconcileWorkspaceGoalsSelection() {
+                navigationFocus = .workspaceGoal(selected)
+            }
+        }
+        if case let .phaseBoard(projectID) = selection,
+           allPhaseBoardProjectIDs.contains(Data(projectID.rawValue.utf8)),
+           case let .execution(identity) = allPhaseBoardFilters[Data(projectID.rawValue.utf8)] ?? .all,
+           prepared.dashboard.allPhaseBoard(for: projectID)?.hasExactExecutionGoalLink(identity) != true {
+            navigationRecovery.append("The exact Execution Goal link is unavailable or was replaced; its ticket was not substituted.")
         }
         if !navigationRecovery.isEmpty {
             navigationRecoveryMessage = navigationRecovery.joined(separator: " ")
