@@ -819,6 +819,52 @@ final class DocumentationObservationTests: XCTestCase {
     }
 
     @MainActor
+    func testCatalogUnacceptedRejectsDiagnosticForAnotherRepository() throws {
+        let accepted = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        var otherCatalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: accepted.canonicalCatalog) as? [String: Any]
+        )
+        otherCatalog["repositoryID"] = "53aa863c-678f-46bd-8c67-128b43f31853"
+        let other = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            JSONSerialization.data(withJSONObject: otherCatalog)
+        )
+        let projectID = ProjectID(rawValue: "catalog-other-repository")
+        let rootID = ProjectRootID(rawValue: "catalog-other-repository-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: accepted
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/catalog-other-repository",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogUnaccepted,
+                validationError: nil
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(snapshot: other, status: .passed, error: nil),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+        let capability = try XCTUnwrap(RecognizedPluginCapability.known.last)
+
+        let compatibility = DocumentationObservationPayload(
+            snapshot,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+
+        XCTAssertEqual(compatibility.state, .incompatible)
+        XCTAssertEqual(compatibility.issue, .repositoryIdentityMismatch)
+    }
+
+    @MainActor
     func testFailedRepositoryDiagnosticRetainsOnlyRecognizedBoundedErrorCode() throws {
         let catalog = try RepositoryDocumentValidator().decodeCatalogSnapshot(
             Data(Self.nativePickerAcceptedCatalog.utf8)

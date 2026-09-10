@@ -118,10 +118,22 @@ extension DocumentationObservationPayload {
             switch reason {
             case .rootUnavailable, .staleRoot:
                 return .unavailable(reason.rawValue)
-            case .bindingMissing, .catalogUnaccepted:
+            case .bindingMissing:
                 return diagnostic.status == .passed
                     ? .pendingAcceptance(identity)
                     : .invalid(diagnostic.error?.code ?? reason.rawValue)
+            case .catalogUnaccepted:
+                guard diagnostic.status == .passed else {
+                    return .invalid(diagnostic.error?.code ?? reason.rawValue)
+                }
+                guard let binding = snapshot.binding,
+                      let rootID = snapshot.rootID,
+                      binding.projectID == snapshot.projectID,
+                      binding.rootID == rootID,
+                      binding.repositoryID == identity.repositoryID else {
+                    return .identityMismatch
+                }
+                return .pendingAcceptance(identity)
             default:
                 return .invalid(reason.rawValue)
             }

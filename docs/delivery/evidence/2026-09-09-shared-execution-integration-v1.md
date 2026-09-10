@@ -75,6 +75,17 @@ rendering portion repeated all nine states at 620 and 1100 points with no
 accessibility or screenshot assertion failure. Independent re-review of this
 correction candidate remains required.
 
+That re-review found one residual interval-mismatch case within the same
+identity boundary: a valid unaccepted catalog diagnostic from another
+repository could still appear pending. `review-catalog-identity-red.xcresult`
+reproduced it. The bounded correction requires the diagnostic repository to
+match the captured project/root binding while still allowing a same-repository
+version or digest change to remain pending. Both boundary cases passed `2/2` in
+`review-catalog-identity-green.xcresult`; the containing observation suite then
+passed `9`, skipped the same `2` picker cases, and failed `0` in
+`review-catalog-identity-affected.xcresult`. Final same-reviewer confirmation
+remains required.
+
 ## Visual comparison
 
 The synthetic native views were compared with the approved Goals compact and
