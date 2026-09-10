@@ -476,6 +476,31 @@ public actor ProjectRemovalManager {
                 """,
                 bindings: [removal, project]
             )
+            try connection.execute(
+                "INSERT INTO retained_ticket_retirements SELECT ?, retirements.project_id, retirements.ticket_id, tickets.outcome, retirements.disposition, retirements.reason, retirements.last_phase_id, retirements.last_lane, retirements.audit_event_id, retirements.retired_at FROM ticket_retirements retirements JOIN tickets ON tickets.project_id=retirements.project_id AND tickets.id=retirements.ticket_id WHERE retirements.project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_ticket_successor_links SELECT ?, project_id, original_ticket_id, successor_ticket_id, relation, sort_order, audit_event_id, created_at FROM ticket_successor_links WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_delivery_goal_obligations SELECT ?, project_id, phase_id, goal_id, ticket_id, scope, assessment, created_at FROM delivery_goal_obligations WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_delivery_goal_obligation_lineage SELECT ?, project_id, source_phase_id, source_goal_id, source_ticket_id, descendant_phase_id, descendant_goal_id, descendant_ticket_id, reason, audit_event_id, created_at FROM delivery_goal_obligation_lineage WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_delivery_goal_obligation_drops SELECT ?, project_id, phase_id, goal_id, ticket_id, reason, audit_event_id, created_at FROM delivery_goal_obligation_drops WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute("DELETE FROM delivery_goal_obligation_lineage WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM delivery_goal_obligation_drops WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM ticket_successor_links WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM ticket_retirements WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM delivery_goal_obligations WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM delivery_goal_assignment_events WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM delivery_goal_ticket_assignments WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM delivery_goal_done_criteria WHERE project_id = ?", bindings: [project])

@@ -5,6 +5,41 @@ import XCTest
 
 @MainActor
 final class ProjectRemovalAcceptanceTests: XCTestCase {
+    func testRemovalRetainsSuccessorAndCarryForwardHistory() async throws {
+        let fixture = try Fixture(testCase: self)
+        try await fixture.seedCompleteProject()
+        try await fixture.store.transact(
+            actor: .init(id: "phase5d-fixture"), reason: "Seed successor history",
+            auditScope: .init(projectID: fixture.projectID, entityType: .ticket, entityID: "ticket-one")
+        ) { connection in
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('ticket-successor','project-one','phase-one','Deliver successor','backlog')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('project-one','phase-one','delivery-goal-one','ticket-one','Deliver','current','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('project-one','phase-one','delivery-goal-one','ticket-successor','Deliver successor','current','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('project-one','ticket-one','replaced','Scope replaced','phase-one','in_progress','assignment-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_successor_links (project_id,original_ticket_id,successor_ticket_id,relation,sort_order,audit_event_id,created_at) VALUES ('project-one','ticket-one','ticket-successor','replacement',0,'assignment-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligation_lineage (project_id,source_phase_id,source_goal_id,source_ticket_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id,reason,audit_event_id,created_at) VALUES ('project-one','phase-one','delivery-goal-one','ticket-one','phase-one','delivery-goal-one','ticket-successor','Carry scope','assignment-audit','2026-09-10T00:00:00Z')")
+        }
+
+        let manager = ProjectRemovalManager(store: fixture.store)
+        let removed = try await manager.apply(try await manager.preview(projectID: fixture.projectID))
+        let counts = try await fixture.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_ticket_retirements WHERE removal_id=?", bindings: [.text(removed.id.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_ticket_successor_links WHERE removal_id=?", bindings: [.text(removed.id.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_delivery_goal_obligations WHERE removal_id=?", bindings: [.text(removed.id.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_delivery_goal_obligation_lineage WHERE removal_id=?", bindings: [.text(removed.id.rawValue)]),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_retirements WHERE project_id='project-one'"),
+                try connection.scalarText("SELECT outcome FROM retained_ticket_retirements WHERE removal_id=? AND ticket_id='ticket-one'", bindings: [.text(removed.id.rawValue)])
+            )
+        }
+        XCTAssertEqual(counts.0, 1)
+        XCTAssertEqual(counts.1, 1)
+        XCTAssertEqual(counts.2, 2)
+        XCTAssertEqual(counts.3, 1)
+        XCTAssertEqual(counts.4, 0)
+        XCTAssertEqual(counts.5, "Deliver")
+    }
+
     func testRemovalCountsUnassignedTicketsAndRetainsTheirAuditIdentity() async throws {
         let fixture = try Fixture(testCase: self)
         try await fixture.seedCompleteProject()
@@ -69,6 +104,8 @@ final class ProjectRemovalAcceptanceTests: XCTestCase {
             "ticket_goal_links", "review_items", "completion_records", "notification_events",
             "notification_occurrences", "delivery_goals", "delivery_goal_done_criteria",
             "delivery_goal_ticket_assignments", "delivery_goal_assignment_events",
+            "delivery_goal_obligations", "delivery_goal_obligation_lineage",
+            "delivery_goal_obligation_drops", "ticket_retirements", "ticket_successor_links",
             "ticket_task_plans", "ticket_tasks",
         ]
         try await fixture.store.read { connection in

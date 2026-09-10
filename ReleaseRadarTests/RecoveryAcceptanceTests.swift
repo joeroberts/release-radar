@@ -172,6 +172,18 @@ final class RecoveryAcceptanceTests: XCTestCase {
             )
             try connection.execute("UPDATE notification_occurrences SET generation = 7 WHERE subject_key = 'project-one|subject-one'")
         }
+        try await originalStore.transact(
+            actor: .init(id: "phase5d-fixture"), reason: "Record newer successor history",
+            auditEventID: .init(rawValue: "phase5d-recovery-audit"),
+            auditScope: .init(projectID: .init(rawValue: "project-one"), entityType: .ticket, entityID: "ticket-one")
+        ) { connection in
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('ticket-successor','project-one','phase-project-one','Replacement scope','backlog')")
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('project-one','phase-project-one','goal-one','Goal','Deliver','draft',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('project-one','phase-project-one','goal-one','ticket-one','Original scope','current','2026-09-10T00:00:00Z'),('project-one','phase-project-one','goal-one','ticket-successor','Replacement scope','current','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('project-one','ticket-one','replaced','Replace scope','phase-project-one','accepted','phase5d-recovery-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_successor_links (project_id,original_ticket_id,successor_ticket_id,relation,sort_order,audit_event_id,created_at) VALUES ('project-one','ticket-one','ticket-successor','replacement',0,'phase5d-recovery-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligation_lineage (project_id,source_phase_id,source_goal_id,source_ticket_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id,reason,audit_event_id,created_at) VALUES ('project-one','phase-project-one','goal-one','ticket-one','phase-project-one','goal-one','ticket-successor','Carry scope','phase5d-recovery-audit','2026-09-10T00:00:00Z')")
+        }
         let recovery = ApplicationRecoveryManager(store: originalStore, databaseURL: databaseURL)
         let preview = try await recovery.previewRestore(packageURL: packageURL)
         XCTAssertTrue(preview.newerHistoryReconciliationAvailable)
@@ -184,6 +196,18 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let occurrenceGeneration = try await firstRestore.store.read { try $0.scalarInt("SELECT generation FROM notification_occurrences WHERE subject_key = 'project-one|subject-one'") }
         XCTAssertEqual(firstNotificationState, "sent")
         XCTAssertEqual(occurrenceGeneration, 7)
+        let retainedSuccessorFacts = try await firstRestore.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_ticket_retirements"),
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_ticket_successor_links"),
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_delivery_goal_obligations"),
+                try connection.scalarInt("SELECT COUNT(*) FROM retained_delivery_goal_obligation_lineage")
+            )
+        }
+        XCTAssertEqual(retainedSuccessorFacts.0, 1)
+        XCTAssertEqual(retainedSuccessorFacts.1, 1)
+        XCTAssertEqual(retainedSuccessorFacts.2, 2)
+        XCTAssertEqual(retainedSuccessorFacts.3, 1)
 
         let dispatcher = AgentCommandDispatcher(
             store: firstRestore.store,

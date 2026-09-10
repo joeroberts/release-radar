@@ -233,6 +233,13 @@ enum PlanChangeProposalPolicy {
         var ticketDependencyIDs = Set<Data>()
         var placements = Set<Data>()
         var assignments = Set<Data>()
+        var retirements = Set<Data>()
+        var moves = Set<Data>()
+        var reassignments = Set<Data>()
+        var supersessions = Set<Data>()
+        var dependencyReconciliations = Set<Data>()
+        var obligationResolutions = Set<DeliveryGoalObligationKey>()
+        var carriedDescendants = Set<DeliveryGoalObligationKey>()
         var goalCountsByPhase: [Data: Int] = [:]
         let proposedPhases = Set(operations.compactMap { operation -> Data? in
             guard case let .addPhase(id, _) = operation else { return nil }
@@ -242,6 +249,10 @@ enum PlanChangeProposalPolicy {
             guard case let .addUnassignedTicket(id, _) = operation else { return nil }
             return Data(id.rawValue.utf8)
         })
+        let proposedTaskTickets = Set(operations.compactMap { operation -> Data? in
+            guard case let .addPendingTicketTasks(ticketID, _) = operation else { return nil }
+            return Data(ticketID.rawValue.utf8)
+        })
         let proposedGoalPhases = operations.reduce(into: [Data: Data]()) { values, operation in
             guard case let .addDeliveryGoal(phaseID, goal) = operation else { return }
             values[Data(goal.id.rawValue.utf8)] = Data(phaseID.rawValue.utf8)
@@ -250,6 +261,16 @@ enum PlanChangeProposalPolicy {
             guard case let .placeTicket(ticketID, phaseID) = operation else { return }
             values[Data(ticketID.rawValue.utf8)] = Data(phaseID.rawValue.utf8)
         }
+        let proposedAssignments = Set(operations.compactMap { operation -> DeliveryGoalObligationKey? in
+            switch operation {
+            case let .assignTicketToGoal(ticketID, phaseID, goalID):
+                return .init(phaseID: phaseID, goalID: goalID, ticketID: ticketID)
+            case let .reassignTicketToGoal(ticketID, phaseID, _, toGoalID):
+                return .init(phaseID: phaseID, goalID: toGoalID, ticketID: ticketID)
+            default:
+                return nil
+            }
+        })
 
         func requireText(_ value: String, label: String, maximum: Int = 4_096) throws {
             guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -271,6 +292,39 @@ enum PlanChangeProposalPolicy {
                 "SELECT COUNT(*) FROM tickets WHERE project_id = ? AND id = ?",
                 bindings: [.text(projectID.rawValue), .text(id.rawValue)]
             ) == 1
+        }
+        func baselineTicketExists(_ id: TicketID) throws -> Bool {
+            try connection.scalarInt(
+                "SELECT COUNT(*) FROM tickets WHERE project_id=? AND id=?",
+                bindings: [.text(projectID.rawValue), .text(id.rawValue)]
+            ) == 1
+        }
+        func goalExists(_ phaseID: PhaseID, _ goalID: DeliveryGoalID, actionable: Bool = false) throws -> Bool {
+            if proposedGoalPhases[Data(goalID.rawValue.utf8)] == Data(phaseID.rawValue.utf8) { return true }
+            let lifecycle = actionable ? " AND lifecycle NOT IN ('accepted','superseded')" : ""
+            return try connection.scalarInt(
+                "SELECT COUNT(*) FROM delivery_goals WHERE project_id=? AND phase_id=? AND id=?\(lifecycle)",
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue), .text(goalID.rawValue)]
+            ) == 1
+        }
+        func obligationExists(_ key: DeliveryGoalObligationKey) throws -> Bool {
+            if proposedAssignments.contains(key) { return true }
+            return try connection.scalarInt(
+                "SELECT COUNT(*) FROM delivery_goal_obligations WHERE project_id=? AND phase_id=? AND goal_id=? AND ticket_id=?",
+                bindings: [.text(projectID.rawValue), .text(key.phaseID.rawValue), .text(key.goalID.rawValue), .text(key.ticketID.rawValue)]
+            ) == 1
+        }
+        func obligationIsAlreadyResolved(_ key: DeliveryGoalObligationKey) throws -> Bool {
+            let bindings: [SQLiteValue] = [.text(projectID.rawValue), .text(key.phaseID.rawValue), .text(key.goalID.rawValue), .text(key.ticketID.rawValue)]
+            let dropped = try connection.scalarInt(
+                "SELECT COUNT(*) FROM delivery_goal_obligation_drops WHERE project_id=? AND phase_id=? AND goal_id=? AND ticket_id=?",
+                bindings: bindings
+            ) == 1
+            let carried = try connection.scalarInt(
+                "SELECT COUNT(*) FROM delivery_goal_obligation_lineage WHERE project_id=? AND source_phase_id=? AND source_goal_id=? AND source_ticket_id=?",
+                bindings: bindings
+            ) ?? 0
+            return dropped || carried > 0
         }
         func requireEligibleExistingSubject(_ id: TicketID) throws {
             if proposedTickets.contains(Data(id.rawValue.utf8)) { return }
@@ -415,7 +469,175 @@ enum PlanChangeProposalPolicy {
                 }
                 try requireEligibleExistingSubject(ticketID)
                 try requireText(id.rawValue, label: "Ticket dependency ID", maximum: 256)
+            case let .retireTicket(ticketID, disposition, reason, successorTicketIDs):
+                let ticketKey = Data(ticketID.rawValue.utf8)
+                guard retirements.insert(ticketKey).inserted, try baselineTicketExists(ticketID),
+                      try connection.scalarInt(
+                        "SELECT COUNT(*) FROM ticket_retirements WHERE project_id=? AND ticket_id=?",
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                      ) == 0,
+                      try connection.scalarText(
+                        "SELECT lane FROM tickets WHERE project_id=? AND id=?",
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                      ) != TicketLane.accepted.rawValue else {
+                    throw PlanChangeProposalError.invalidOperation("Retirement must name an available ticket.")
+                }
+                try requireText(reason, label: "Retirement reason")
+                let expectedSuccessorCount: Bool
+                switch disposition {
+                case .withdrawn: expectedSuccessorCount = successorTicketIDs.isEmpty
+                case .replaced: expectedSuccessorCount = successorTicketIDs.count == 1
+                case .split: expectedSuccessorCount = successorTicketIDs.count >= 2
+                }
+                guard expectedSuccessorCount, Set(successorTicketIDs).count == successorTicketIDs.count else {
+                    throw PlanChangeProposalError.invalidOperation("Retirement successors must match the selected disposition and name distinct available tickets.")
+                }
+                for successorTicketID in successorTicketIDs {
+                    guard proposedTickets.contains(Data(successorTicketID.rawValue.utf8)),
+                          proposedTaskTickets.contains(Data(successorTicketID.rawValue.utf8)),
+                          successorTicketID != ticketID,
+                          try !baselineTicketExists(successorTicketID) else {
+                        throw PlanChangeProposalError.invalidOperation("Every successor must be a new ticket with new pending tasks created in this same proposal.")
+                    }
+                }
+            case let .moveBacklogTicket(ticketID, fromPhaseID, toPhaseID):
+                guard moves.insert(Data(ticketID.rawValue.utf8)).inserted,
+                      try ticketExists(ticketID), try phaseExists(fromPhaseID), try phaseExists(toPhaseID),
+                      fromPhaseID != toPhaseID,
+                      try connection.scalarInt(
+                        "SELECT COUNT(*) FROM tickets WHERE project_id=? AND id=? AND phase_id=? AND lane='backlog'",
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue), .text(fromPhaseID.rawValue)]
+                      ) == 1 else {
+                    throw PlanChangeProposalError.invalidOperation("A Backlog move must name one available ticket and two distinct available phases.")
+                }
+            case let .reassignTicketToGoal(ticketID, phaseID, fromGoalID, toGoalID):
+                guard reassignments.insert(Data(ticketID.rawValue.utf8)).inserted,
+                      try ticketExists(ticketID), try phaseExists(phaseID), fromGoalID != toGoalID,
+                      try goalExists(phaseID, toGoalID, actionable: true),
+                      try connection.scalarInt(
+                        "SELECT COUNT(*) FROM delivery_goal_ticket_assignments WHERE project_id=? AND ticket_id=? AND goal_id=?",
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue), .text(fromGoalID.rawValue)]
+                      ) == 1 else {
+                    throw PlanChangeProposalError.invalidOperation("Goal reassignment must name an available ticket, phase, and distinct goals.")
+                }
+            case let .supersedeDeliveryGoal(phaseID, goalID):
+                guard supersessions.insert(Data(goalID.rawValue.utf8)).inserted,
+                      try phaseExists(phaseID), try goalExists(phaseID, goalID, actionable: true) else {
+                    throw PlanChangeProposalError.invalidOperation("Goal supersession must name an available phase.")
+                }
+                try requireText(goalID.rawValue, label: "Goal ID", maximum: 256)
+            case let .carryGoalObligation(source, descendants, reason):
+                try requireText(reason, label: "Carry reason")
+                guard !descendants.isEmpty, Set(descendants).count == descendants.count,
+                      !descendants.contains(source), obligationResolutions.insert(source).inserted,
+                      try obligationExists(source), try !obligationIsAlreadyResolved(source) else {
+                    throw PlanChangeProposalError.invalidOperation("A carry must name distinct descendant obligations.")
+                }
+                for descendant in descendants {
+                    guard carriedDescendants.insert(descendant).inserted,
+                          try obligationExists(descendant),
+                          try connection.scalarInt(
+                            "SELECT COUNT(*) FROM delivery_goal_obligation_lineage WHERE project_id=? AND descendant_phase_id=? AND descendant_goal_id=? AND descendant_ticket_id=?",
+                            bindings: [
+                                .text(projectID.rawValue), .text(descendant.phaseID.rawValue),
+                                .text(descendant.goalID.rawValue), .text(descendant.ticketID.rawValue),
+                            ]
+                          ) == 0 else {
+                        throw PlanChangeProposalError.invalidOperation("Every carry descendant must be an available obligation used by exactly one source.")
+                    }
+                }
+            case let .dropGoalObligation(_, reason):
+                try requireText(reason, label: "Drop reason")
+                if case let .dropGoalObligation(obligation, _) = operation {
+                    guard obligationResolutions.insert(obligation).inserted,
+                          try obligationExists(obligation), try !obligationIsAlreadyResolved(obligation) else {
+                        throw PlanChangeProposalError.invalidOperation("A drop must name one outstanding obligation exactly once.")
+                    }
+                }
+            case let .retargetTicketDependency(id, ticketID, fromDependsOnTicketID, toDependsOnTicketID):
+                guard dependencyReconciliations.insert(Data(id.rawValue.utf8)).inserted,
+                      try ticketExists(ticketID), try ticketExists(fromDependsOnTicketID),
+                      try ticketExists(toDependsOnTicketID), fromDependsOnTicketID != toDependsOnTicketID else {
+                    throw PlanChangeProposalError.invalidOperation("Dependency retargeting must name available tickets and a changed target.")
+                }
+                guard try connection.scalarInt(
+                    "SELECT COUNT(*) FROM ticket_dependencies WHERE project_id=? AND id=? AND ticket_id=? AND depends_on_ticket_id=?",
+                    bindings: [.text(projectID.rawValue), .text(id.rawValue), .text(ticketID.rawValue), .text(fromDependsOnTicketID.rawValue)]
+                ) == 1 else {
+                    throw PlanChangeProposalError.invalidOperation("Dependency retargeting must match the exact current dependency.")
+                }
+                try requireText(id.rawValue, label: "Ticket dependency ID", maximum: 256)
+            case let .removeTicketDependency(id, ticketID, dependsOnTicketID):
+                guard dependencyReconciliations.insert(Data(id.rawValue.utf8)).inserted,
+                      try ticketExists(ticketID), try ticketExists(dependsOnTicketID) else {
+                    throw PlanChangeProposalError.invalidOperation("Dependency removal must name available tickets.")
+                }
+                guard try connection.scalarInt(
+                    "SELECT COUNT(*) FROM ticket_dependencies WHERE project_id=? AND id=? AND ticket_id=? AND depends_on_ticket_id=?",
+                    bindings: [.text(projectID.rawValue), .text(id.rawValue), .text(ticketID.rawValue), .text(dependsOnTicketID.rawValue)]
+                ) == 1 else {
+                    throw PlanChangeProposalError.invalidOperation("Dependency removal must match the exact current dependency.")
+                }
+                try requireText(id.rawValue, label: "Ticket dependency ID", maximum: 256)
             }
+        }
+
+        // Every retired ticket's retained scope must be explicitly carried or
+        // dropped in the same approved package. Successor creation alone never
+        // resolves a Delivery Goal obligation.
+        for ticketKey in retirements {
+            let ticketID = String(decoding: ticketKey, as: UTF8.self)
+            let rows = try connection.rows(
+                "SELECT phase_id,goal_id FROM delivery_goal_obligations WHERE project_id=? AND ticket_id=?",
+                bindings: [.text(projectID.rawValue), .text(ticketID)], maximum: 4096
+            )
+            for row in rows {
+                guard case let .text(phaseID)? = row["phase_id"], case let .text(goalID)? = row["goal_id"] else {
+                    throw PlanChangeProposalError.invalidStoredProposal
+                }
+                let key = DeliveryGoalObligationKey(
+                    phaseID: .init(rawValue: phaseID), goalID: .init(rawValue: goalID),
+                    ticketID: .init(rawValue: ticketID)
+                )
+                let alreadyResolved = try obligationIsAlreadyResolved(key)
+                guard obligationResolutions.contains(key) || alreadyResolved else {
+                    throw PlanChangeProposalError.invalidOperation("Retirement must explicitly carry or drop every outstanding Delivery Goal obligation.")
+                }
+            }
+        }
+
+        // Reject proposed carry cycles against both persisted and proposed
+        // lineage before any graph mutation begins.
+        var edges: [DeliveryGoalObligationKey: Set<DeliveryGoalObligationKey>] = [:]
+        for row in try connection.rows(
+            "SELECT source_phase_id,source_goal_id,source_ticket_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id FROM delivery_goal_obligation_lineage WHERE project_id=?",
+            bindings: [.text(projectID.rawValue)], maximum: 20_000
+        ) {
+            guard case let .text(sp)? = row["source_phase_id"], case let .text(sg)? = row["source_goal_id"],
+                  case let .text(st)? = row["source_ticket_id"], case let .text(dp)? = row["descendant_phase_id"],
+                  case let .text(dg)? = row["descendant_goal_id"], case let .text(dt)? = row["descendant_ticket_id"] else {
+                throw PlanChangeProposalError.invalidStoredProposal
+            }
+            edges[.init(phaseID: .init(rawValue: sp), goalID: .init(rawValue: sg), ticketID: .init(rawValue: st)), default: []]
+                .insert(.init(phaseID: .init(rawValue: dp), goalID: .init(rawValue: dg), ticketID: .init(rawValue: dt)))
+        }
+        for operation in operations {
+            guard case let .carryGoalObligation(source, descendants, _) = operation else { continue }
+            edges[source, default: []].formUnion(descendants)
+        }
+        func hasCycle(_ node: DeliveryGoalObligationKey, _ visiting: inout Set<DeliveryGoalObligationKey>, _ visited: inout Set<DeliveryGoalObligationKey>) -> Bool {
+            if visiting.contains(node) { return true }
+            if visited.contains(node) { return false }
+            visiting.insert(node)
+            for child in edges[node] ?? [] where hasCycle(child, &visiting, &visited) { return true }
+            visiting.remove(node)
+            visited.insert(node)
+            return false
+        }
+        var visiting = Set<DeliveryGoalObligationKey>()
+        var visited = Set<DeliveryGoalObligationKey>()
+        for node in edges.keys where hasCycle(node, &visiting, &visited) {
+            throw PlanChangeProposalError.invalidOperation("Delivery Goal obligation carry lineage cannot contain a cycle.")
         }
     }
 
@@ -489,6 +711,22 @@ enum PlanChangeProposalPolicy {
                 Before: absent
                 After: \(ticketID.rawValue) depends on \(dependsOnTicketID.rawValue)
                 """))
+            case let .retireTicket(ticketID, disposition, reason, successors):
+                ticketItems.append(.init(summary: "Retire ticket \(ticketID.rawValue) as \(disposition.rawValue)\nBefore: active\nAfter: retained original; successors: \(successors.map(\.rawValue).joined(separator: ", "))\nReason: \(reason)"))
+            case let .moveBacklogTicket(ticketID, fromPhaseID, toPhaseID):
+                ticketItems.append(.init(summary: "Move Backlog ticket \(ticketID.rawValue)\nBefore: \(fromPhaseID.rawValue)\nAfter: \(toPhaseID.rawValue)"))
+            case let .reassignTicketToGoal(ticketID, phaseID, fromGoalID, toGoalID):
+                assignmentItems.append(.init(summary: "Reassign ticket \(ticketID.rawValue) in \(phaseID.rawValue)\nBefore: \(fromGoalID.rawValue)\nAfter: \(toGoalID.rawValue)"))
+            case let .supersedeDeliveryGoal(phaseID, goalID):
+                goalItems.append(.init(summary: "Supersede goal \(goalID.rawValue) in \(phaseID.rawValue)\nBefore: actionable\nAfter: superseded"))
+            case let .carryGoalObligation(source, descendants, reason):
+                assignmentItems.append(.init(summary: "Carry obligation \(source.ticketID.rawValue)\nBefore: \(source.goalID.rawValue) in \(source.phaseID.rawValue)\nAfter: \(descendants.map { $0.ticketID.rawValue }.joined(separator: ", "))\nReason: \(reason)"))
+            case let .dropGoalObligation(obligation, reason):
+                assignmentItems.append(.init(summary: "Drop obligation \(obligation.ticketID.rawValue) from \(obligation.goalID.rawValue)\nBefore: required\nAfter: explicitly dropped\nReason: \(reason)"))
+            case let .retargetTicketDependency(id, ticketID, fromDependsOnTicketID, toDependsOnTicketID):
+                dependencyItems.append(.init(summary: "Retarget ticket dependency \(id.rawValue) for \(ticketID.rawValue)\nBefore: \(fromDependsOnTicketID.rawValue)\nAfter: \(toDependsOnTicketID.rawValue)"))
+            case let .removeTicketDependency(id, ticketID, dependsOnTicketID):
+                dependencyItems.append(.init(summary: "Remove ticket dependency \(id.rawValue) for \(ticketID.rawValue)\nBefore: \(dependsOnTicketID.rawValue)\nAfter: absent"))
             }
         }
         var groups: [PlanChangeDiffGroup] = []
@@ -561,6 +799,31 @@ enum PlanChangeProposalPolicy {
             )
         }
         for operation in operations {
+            guard case let .moveBacklogTicket(ticketID, _, toPhaseID) = operation else { continue }
+            guard let outcome = try connection.scalarText(
+                "SELECT outcome FROM tickets WHERE project_id=? AND id=?",
+                bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+            ) else { throw PlanChangeProposalError.invalidStoredProposal }
+            try DeliveryPlanningPolicy.upsertTicket(
+                projectID: projectID, ticketID: ticketID, phaseID: toPhaseID,
+                outcome: outcome, lane: .backlog, auditEventID: auditEventID,
+                connection: connection
+            )
+        }
+        for operation in operations {
+            guard case let .reassignTicketToGoal(ticketID, phaseID, _, toGoalID) = operation else { continue }
+            let revision = try connection.scalarInt(
+                "SELECT revision FROM phase_plans WHERE project_id=? AND phase_id=?",
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+            ) ?? 0
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: projectID, phaseID: phaseID, expectedRevision: revision,
+                goalUpserts: [], assignments: [.init(goalID: toGoalID, ticketID: ticketID)],
+                unassignedTicketIDs: [], supersededGoalIDs: [], auditEventID: auditEventID,
+                connection: connection
+            )
+        }
+        for operation in operations {
             guard case let .addPendingTicketTasks(ticketID, tasks) = operation else { continue }
             let current = try connection.scalarInt(
                 "SELECT revision FROM ticket_task_plans WHERE project_id = ? AND ticket_id = ?",
@@ -573,6 +836,131 @@ enum PlanChangeProposalPolicy {
             )
         }
         for operation in operations {
+            guard case let .retireTicket(ticketID, disposition, reason, successorTicketIDs) = operation else { continue }
+            guard let ticket = try connection.row(
+                "SELECT phase_id,lane FROM tickets WHERE project_id=? AND id=?",
+                bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+            ) else {
+                throw PlanChangeProposalError.invalidOperation("Retirement must name an available ticket.")
+            }
+            let phaseID: String?
+            if case let .text(value)? = ticket["phase_id"] { phaseID = value } else { phaseID = nil }
+            let lane: String?
+            if case let .text(value)? = ticket["lane"] { lane = value } else { lane = nil }
+            guard lane != TicketLane.accepted.rawValue else {
+                throw PlanChangeProposalError.invalidOperation("Accepted tickets are immutable. Create separate follow-up work.")
+            }
+            if let phaseID, lane != nil,
+               let previousGoal = try connection.scalarText(
+                    "SELECT goal_id FROM delivery_goal_ticket_assignments WHERE project_id=? AND ticket_id=?",
+                    bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+               ) {
+                let revision = (try connection.scalarInt(
+                    "SELECT revision FROM phase_plans WHERE project_id=? AND phase_id=?",
+                    bindings: [.text(projectID.rawValue), .text(phaseID)]
+                ) ?? 0) + 1
+                try connection.execute(
+                    "DELETE FROM delivery_goal_ticket_assignments WHERE project_id=? AND ticket_id=?",
+                    bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                )
+                try connection.execute(
+                    """
+                    INSERT INTO delivery_goal_assignment_events (
+                        audit_event_id,project_id,phase_id,ticket_id,previous_goal_id,
+                        current_goal_id,revision,action
+                    ) VALUES (?,?,?,?,?,NULL,?,'unassigned')
+                    """,
+                    bindings: [
+                        .text(auditEventID.rawValue), .text(projectID.rawValue), .text(phaseID),
+                        .text(ticketID.rawValue), .text(previousGoal), .integer(revision),
+                    ]
+                )
+                try connection.execute(
+                    "UPDATE phase_plans SET state='draft',revision=?,ready_revision=NULL,finalized_at=NULL,updated_at=? WHERE project_id=? AND phase_id=?",
+                    bindings: [.integer(revision), .text(timestamp()), .text(projectID.rawValue), .text(phaseID)]
+                )
+            }
+            try connection.execute(
+                """
+                INSERT INTO ticket_retirements (
+                    project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at
+                ) VALUES (?,?,?,?,?,?,?,?)
+                """,
+                bindings: [
+                    .text(projectID.rawValue), .text(ticketID.rawValue), .text(disposition.rawValue),
+                    .text(reason), phaseID.map(SQLiteValue.text) ?? .null,
+                    lane.map(SQLiteValue.text) ?? .null, .text(auditEventID.rawValue), .text(timestamp()),
+                ]
+            )
+            let relation = disposition == .replaced ? "replacement" : disposition.rawValue
+            for (index, successorTicketID) in successorTicketIDs.enumerated() {
+                try connection.execute(
+                    """
+                    INSERT INTO ticket_successor_links (
+                        project_id,original_ticket_id,successor_ticket_id,relation,
+                        sort_order,audit_event_id,created_at
+                    ) VALUES (?,?,?,?,?,?,?)
+                    """,
+                    bindings: [
+                        .text(projectID.rawValue), .text(ticketID.rawValue),
+                        .text(successorTicketID.rawValue), .text(relation), .integer(Int64(index)),
+                        .text(auditEventID.rawValue), .text(timestamp()),
+                    ]
+                )
+            }
+        }
+        for operation in operations {
+            guard case let .supersedeDeliveryGoal(phaseID, goalID) = operation else { continue }
+            let revision = try connection.scalarInt(
+                "SELECT revision FROM phase_plans WHERE project_id=? AND phase_id=?",
+                bindings: [.text(projectID.rawValue), .text(phaseID.rawValue)]
+            ) ?? 0
+            _ = try DeliveryPlanningPolicy.applyRevision(
+                projectID: projectID, phaseID: phaseID, expectedRevision: revision,
+                goalUpserts: [], assignments: [], unassignedTicketIDs: [],
+                supersededGoalIDs: [goalID], auditEventID: auditEventID,
+                connection: connection
+            )
+        }
+        for operation in operations {
+            switch operation {
+            case let .carryGoalObligation(source, descendants, reason):
+                for descendant in descendants {
+                    try connection.execute(
+                        """
+                        INSERT INTO delivery_goal_obligation_lineage (
+                            project_id,source_phase_id,source_goal_id,source_ticket_id,
+                            descendant_phase_id,descendant_goal_id,descendant_ticket_id,
+                            reason,audit_event_id,created_at
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+                        """,
+                        bindings: [
+                            .text(projectID.rawValue), .text(source.phaseID.rawValue),
+                            .text(source.goalID.rawValue), .text(source.ticketID.rawValue),
+                            .text(descendant.phaseID.rawValue), .text(descendant.goalID.rawValue),
+                            .text(descendant.ticketID.rawValue), .text(reason),
+                            .text(auditEventID.rawValue), .text(timestamp()),
+                        ]
+                    )
+                }
+            case let .dropGoalObligation(obligation, reason):
+                try connection.execute(
+                    """
+                    INSERT INTO delivery_goal_obligation_drops (
+                        project_id,phase_id,goal_id,ticket_id,reason,audit_event_id,created_at
+                    ) VALUES (?,?,?,?,?,?,?)
+                    """,
+                    bindings: [
+                        .text(projectID.rawValue), .text(obligation.phaseID.rawValue),
+                        .text(obligation.goalID.rawValue), .text(obligation.ticketID.rawValue),
+                        .text(reason), .text(auditEventID.rawValue), .text(timestamp()),
+                    ]
+                )
+            default:
+                break
+            }
+        }
+        for operation in operations {
             switch operation {
             case let .addPhaseDependency(id, phaseID, dependsOnPhaseID):
                 try connection.execute(
@@ -583,6 +971,22 @@ enum PlanChangeProposalPolicy {
                 try connection.execute(
                     "INSERT INTO ticket_dependencies (id, project_id, ticket_id, depends_on_ticket_id) VALUES (?, ?, ?, ?)",
                     bindings: [.text(id.rawValue), .text(projectID.rawValue), .text(ticketID.rawValue), .text(dependsOnTicketID.rawValue)]
+                )
+            case let .retargetTicketDependency(id, ticketID, fromDependsOnTicketID, toDependsOnTicketID):
+                try connection.execute(
+                    "UPDATE ticket_dependencies SET depends_on_ticket_id=? WHERE project_id=? AND id=? AND ticket_id=? AND depends_on_ticket_id=?",
+                    bindings: [
+                        .text(toDependsOnTicketID.rawValue), .text(projectID.rawValue), .text(id.rawValue),
+                        .text(ticketID.rawValue), .text(fromDependsOnTicketID.rawValue),
+                    ]
+                )
+            case let .removeTicketDependency(id, ticketID, dependsOnTicketID):
+                try connection.execute(
+                    "DELETE FROM ticket_dependencies WHERE project_id=? AND id=? AND ticket_id=? AND depends_on_ticket_id=?",
+                    bindings: [
+                        .text(projectID.rawValue), .text(id.rawValue), .text(ticketID.rawValue),
+                        .text(dependsOnTicketID.rawValue),
+                    ]
                 )
             default:
                 break
@@ -602,6 +1006,19 @@ enum PlanChangeProposalPolicy {
                  let .assignTicketToGoal(ticketID, _, _):
                 [ticketID]
             case let .addTicketDependency(_, ticketID, dependsOnTicketID):
+                [ticketID, dependsOnTicketID]
+            case let .retireTicket(ticketID, _, _, successorTicketIDs):
+                [ticketID] + successorTicketIDs
+            case let .moveBacklogTicket(ticketID, _, _),
+                 let .reassignTicketToGoal(ticketID, _, _, _):
+                [ticketID]
+            case let .carryGoalObligation(source, descendants, _):
+                [source.ticketID] + descendants.map(\.ticketID)
+            case let .dropGoalObligation(obligation, _):
+                [obligation.ticketID]
+            case let .retargetTicketDependency(_, ticketID, fromDependsOnTicketID, toDependsOnTicketID):
+                [ticketID, fromDependsOnTicketID, toDependsOnTicketID]
+            case let .removeTicketDependency(_, ticketID, dependsOnTicketID):
                 [ticketID, dependsOnTicketID]
             default:
                 []
@@ -849,7 +1266,12 @@ enum PlanningBaseline {
             ("goals", "SELECT * FROM delivery_goals WHERE project_id=? ORDER BY phase_id COLLATE BINARY,id COLLATE BINARY", [project]),
             ("goal_criteria", "SELECT * FROM delivery_goal_done_criteria WHERE project_id=? ORDER BY phase_id COLLATE BINARY,goal_id COLLATE BINARY,sort_order", [project]),
             ("goal_assignments", "SELECT * FROM delivery_goal_ticket_assignments WHERE project_id=? ORDER BY phase_id COLLATE BINARY,ticket_id COLLATE BINARY", [project]),
+            ("goal_obligations", "SELECT * FROM delivery_goal_obligations WHERE project_id=? ORDER BY phase_id COLLATE BINARY,goal_id COLLATE BINARY,ticket_id COLLATE BINARY", [project]),
+            ("goal_obligation_lineage", "SELECT * FROM delivery_goal_obligation_lineage WHERE project_id=? ORDER BY source_phase_id COLLATE BINARY,source_goal_id COLLATE BINARY,source_ticket_id COLLATE BINARY,descendant_phase_id COLLATE BINARY,descendant_goal_id COLLATE BINARY,descendant_ticket_id COLLATE BINARY", [project]),
+            ("goal_obligation_drops", "SELECT * FROM delivery_goal_obligation_drops WHERE project_id=? ORDER BY phase_id COLLATE BINARY,goal_id COLLATE BINARY,ticket_id COLLATE BINARY", [project]),
             ("tickets", "SELECT * FROM tickets WHERE project_id=? ORDER BY id COLLATE BINARY", [project]),
+            ("ticket_retirements", "SELECT * FROM ticket_retirements WHERE project_id=? ORDER BY ticket_id COLLATE BINARY", [project]),
+            ("ticket_successors", "SELECT * FROM ticket_successor_links WHERE project_id=? ORDER BY original_ticket_id COLLATE BINARY,sort_order,successor_ticket_id COLLATE BINARY", [project]),
             ("task_plans", "SELECT * FROM ticket_task_plans WHERE project_id=? ORDER BY ticket_id COLLATE BINARY", [project]),
             ("tasks", "SELECT * FROM ticket_tasks WHERE project_id=? ORDER BY ticket_id COLLATE BINARY,id COLLATE BINARY", [project]),
             ("phase_dependencies", "SELECT * FROM phase_dependencies WHERE project_id=? ORDER BY id COLLATE BINARY", [project]),
@@ -857,6 +1279,9 @@ enum PlanningBaseline {
             ("reference_sets", "SELECT * FROM ticket_reference_link_sets WHERE project_id=? ORDER BY ticket_id COLLATE BINARY", [project]),
             ("reference_links", "SELECT * FROM ticket_reference_links WHERE project_id=? ORDER BY ticket_id COLLATE BINARY,id COLLATE BINARY", [project]),
             ("reference_versions", "SELECT * FROM ticket_reference_versions WHERE project_id=? ORDER BY ticket_id COLLATE BINARY,link_id COLLATE BINARY,version", [project]),
+            ("evidence", "SELECT * FROM evidence WHERE project_id=? ORDER BY ticket_id COLLATE BINARY,id COLLATE BINARY", [project]),
+            ("ticket_threads", "SELECT * FROM thread_links WHERE project_id=? ORDER BY ticket_id COLLATE BINARY,thread_id COLLATE BINARY", [project]),
+            ("ticket_goal_links", "SELECT * FROM ticket_goal_links WHERE project_id=? ORDER BY ticket_id COLLATE BINARY,thread_id COLLATE BINARY,goal_id COLLATE BINARY", [project]),
             ("documentation_binding", "SELECT * FROM project_documentation_bindings WHERE project_id=?", [project]),
             ("recovery_authority", "SELECT * FROM application_recovery_state WHERE singleton_id=1", []),
         ]
