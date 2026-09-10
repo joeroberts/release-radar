@@ -1,8 +1,9 @@
+import Foundation
 import ReleaseRadarCore
 
 extension ProjectRegistration {
     func hasSameNavigationIdentity(as other: ProjectRegistration) -> Bool {
-        projectID == other.projectID
+        projectID.rawValue.utf8.elementsEqual(other.projectID.rawValue.utf8)
             && registrationID.utf8.elementsEqual(other.registrationID.utf8)
     }
 }
@@ -18,6 +19,19 @@ enum NavigationFocus: Hashable, Sendable {
     case recordedImpact(rowID: String)
     case filterSummary
     case recovery
+    case workspaceGoal(Data)
+    case workspaceGoalsFilter
+}
+
+struct WorkspaceGoalsNavigationState: Equatable, Sendable {
+    var domain: WorkspaceGoalsDomain
+    var projectID: ProjectID?
+    var deliveryLifecycle: DeliveryGoalLifecycle?
+    var executionStatus: String?
+    var executionScope: WorkspaceExecutionScope
+    var selectedDeliveryID: Data?
+    var selectedExecutionID: Data?
+    var viewportOffset: Double?
 }
 
 struct NavigationHistoryEntry: Equatable, Sendable {
@@ -30,6 +44,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
     var historyFilter: HistoryFilter?
     var selectedHistoryEventID: HistoryEventIdentity?
     var historyViewportOffset: Double?
+    var workspaceGoals: WorkspaceGoalsNavigationState?
     var focus: NavigationFocus?
 
     init(
@@ -42,6 +57,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         historyFilter: HistoryFilter? = nil,
         selectedHistoryEventID: HistoryEventIdentity? = nil,
         historyViewportOffset: Double? = nil,
+        workspaceGoals: WorkspaceGoalsNavigationState? = nil,
         focus: NavigationFocus? = nil
     ) {
         self.route = route
@@ -53,6 +69,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         self.historyFilter = historyFilter
         self.selectedHistoryEventID = selectedHistoryEventID
         self.historyViewportOffset = historyViewportOffset
+        self.workspaceGoals = workspaceGoals
         self.focus = focus
     }
 }
@@ -88,6 +105,7 @@ struct NavigationHistory: Equatable, Sendable {
         historyFilter: HistoryFilter? = nil,
         selectedHistoryEventID: HistoryEventIdentity? = nil,
         historyViewportOffset: Double? = nil,
+        workspaceGoals: WorkspaceGoalsNavigationState? = nil,
         focus: NavigationFocus? = nil
     ) {
         navigate(to: .init(
@@ -100,6 +118,7 @@ struct NavigationHistory: Equatable, Sendable {
             historyFilter: historyFilter,
             selectedHistoryEventID: selectedHistoryEventID,
             historyViewportOffset: historyViewportOffset,
+            workspaceGoals: workspaceGoals,
             focus: focus
         ))
     }
@@ -113,6 +132,7 @@ struct NavigationHistory: Equatable, Sendable {
         historyFilter: HistoryFilter? = nil,
         selectedHistoryEventID: HistoryEventIdentity? = nil,
         historyViewportOffset: Double? = nil,
+        workspaceGoals: WorkspaceGoalsNavigationState? = nil,
         focus: NavigationFocus? = nil
     ) {
         entries[index].registration = registration ?? entries[index].registration
@@ -123,6 +143,7 @@ struct NavigationHistory: Equatable, Sendable {
         entries[index].historyFilter = historyFilter
         entries[index].selectedHistoryEventID = selectedHistoryEventID
         entries[index].historyViewportOffset = historyViewportOffset
+        entries[index].workspaceGoals = workspaceGoals
         entries[index].focus = focus
     }
 

@@ -702,15 +702,35 @@ struct TicketDeliveryGoalProjection: Equatable, Sendable, Identifiable {
     }
 }
 
+struct ExecutionGoalBoardFilter: Hashable, Sendable {
+    let threadID: String
+    let goalID: String
+    let ticketID: TicketID
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.threadID.utf8.elementsEqual(rhs.threadID.utf8)
+            && lhs.goalID.utf8.elementsEqual(rhs.goalID.utf8)
+            && lhs.ticketID.rawValue.utf8.elementsEqual(rhs.ticketID.rawValue.utf8)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(Data(threadID.utf8))
+        hasher.combine(Data(goalID.utf8))
+        hasher.combine(Data(ticketID.rawValue.utf8))
+    }
+}
+
 enum DeliveryGoalFilter: Hashable, Sendable {
     case all
     case goal(DeliveryGoalID)
+    case execution(ExecutionGoalBoardFilter)
     case unassigned
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs, rhs) {
         case (.all, .all), (.unassigned, .unassigned): true
         case let (.goal(a), .goal(b)): a.rawValue.utf8.elementsEqual(b.rawValue.utf8)
+        case let (.execution(a), .execution(b)): a == b
         default: false
         }
     }
@@ -719,7 +739,8 @@ enum DeliveryGoalFilter: Hashable, Sendable {
         switch self {
         case .all: hasher.combine(0)
         case let .goal(id): hasher.combine(1); hasher.combine(Data(id.rawValue.utf8))
-        case .unassigned: hasher.combine(2)
+        case let .execution(identity): hasher.combine(2); hasher.combine(identity)
+        case .unassigned: hasher.combine(3)
         }
     }
 }
@@ -755,6 +776,8 @@ struct PhaseBoardProjection: Equatable, Sendable {
                 switch filter {
                 case .all: true
                 case let .goal(id): card.deliveryGoal?.id == Data(id.rawValue.utf8)
+                case let .execution(identity):
+                    card.id.rawValue.utf8.elementsEqual(identity.ticketID.rawValue.utf8)
                 case .unassigned: lane.lane != .accepted && card.deliveryGoal == nil
                 }
             })
@@ -801,6 +824,8 @@ struct AllPhaseBoardProjection: Equatable, Sendable {
                 switch filter {
                 case .all: true
                 case let .goal(id): card.deliveryGoal?.id == Data(id.rawValue.utf8)
+                case let .execution(identity):
+                    card.id.rawValue.utf8.elementsEqual(identity.ticketID.rawValue.utf8)
                 case .unassigned: card.deliveryGoal == nil
                 }
             })
