@@ -495,3 +495,19 @@ with their task/evidence history. Uncovered, carried, explicitly dropped and del
 are distinct states; no sixth board lane or automatic acceptance. Existing native
 Plan/board/detail counts and exact Back/Forward focus must agree with canonical
 coverage, including compact layouts and recoverable stale/unknown states.
+
+## Phase 5E explicit phase lifecycle — 2026-09-10
+
+Project Plan phase controls display persisted Unassessed / Upcoming / In delivery /
+Completed separately from readiness and active/view context. Show exact phase,
+current state, intended transition, reason and completion blockers. Complete and
+Reopen are deliberate owner actions with visible pending, stale, failure and
+committed-refresh states. Multiple In-delivery phases remain visible; selecting or
+browsing a phase changes no lifecycle. Completed history remains accessible and
+new work explains the explicit reopen/new-phase requirement. Replace count-derived
+"delivery complete" wording with neutral readiness wording.
+
+Reuse existing Plan cards, RDS controls and five-lane board design, with compact
+stacking and real keyboard/accessibility focus restoration. Do not add another
+lifecycle lane, broad History surface or phase-ordering policy. The [Phase 5E brief](../delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
+sets migration, guard and native acceptance boundaries under the approved policy.

@@ -159,3 +159,20 @@ dependency eligibility. Carried/already-delivered coverage can be structurally r
 without local upcoming members; uncovered/unassessed debt cannot. Acceptance remains
 non-vacuous, requires actual Accepted work and explicit owner action. Phase5E alone
 adds full phase lifecycle and consumes these facts without inferring completion.
+
+## Phase 5E lifecycle and completion — 2026-09-10
+
+Phase lifecycle is separately persisted in schema 23 with revisioned owner decision
+history. Existing and new phases default Unassessed without inferred decisions.
+Lifecycle decisions do not change active/view context, structural readiness,
+Delivery Goal acceptance or ticket lanes. Explicit reopening targets In delivery
+or Upcoming; it never reopens Accepted tickets/goals or un-retires originals.
+
+Completion atomically composes D coverage with Accepted remaining required goals
+and all nonretired phase work. Uncovered/unassessed or incomplete carried work
+blocks; superseded debt remains counted, debt-free superseded goals do not block.
+Fully explicitly dropped scope remains removed, not accepted; empty/all-dropped
+phases cannot complete without actual delivered outcome. Legacy no-goal phases may
+qualify through actual Accepted work. Cross-phase carry uses exact descendants.
+Dependency eligibility retains D semantics without requiring explicit Completed.
+Ready plus zero upcoming work is a readiness summary, never inferred lifecycle.

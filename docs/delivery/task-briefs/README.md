@@ -57,6 +57,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-09-shared-integration](2026-09-09-shared-integration) — leaf; Proposed shared integration implementation plan; source delivery requires separate authorization
 - [delivery.task-briefs.2026-09-10-phase5c-proposals](2026-09-10-phase5c-proposals) — leaf; Phase 5C saved proposals, explicit approval and atomic application
 - [delivery.task-briefs.2026-09-10-phase5d-successors](2026-09-10-phase5d-successors) — leaf; Phase 5D retained successors and carried goal obligations
+- [delivery.task-briefs.2026-09-10-phase5e-lifecycle](2026-09-10-phase5e-lifecycle) — leaf; Phase 5E explicit phase lifecycle and guarded completion
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -559,6 +560,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-phase5d-successors-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md](2026-09-10-phase5d-successors/phase5d-successors-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-10-phase5e-lifecycle
+
+- Path: [docs/delivery/task-briefs/2026-09-10-phase5e-lifecycle](2026-09-10-phase5e-lifecycle)
+- Purpose: Phase 5E explicit phase lifecycle and guarded completion
+- Allowed contents: Reviewed task briefs
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: none
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-phase5e-lifecycle-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md](2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md) | document | controlling &#40;delivery.phase5e-lifecycle&#41; | active | none | none |
 
 ### Children
 

@@ -247,3 +247,19 @@ remain unapproved; no installation, adoption, runtime pilot or owner-state chang
 is authorized. Phase 5E full lifecycle is next eligible under the approved sequence,
 after parent-coordinated authorization and baseline/ownership handoff. Eligibility
 alone does not release a writer.
+
+
+## Active Phase 5E local handoff
+
+Parent explicitly authorized Phase 5E full lifecycle from exact D closeout
+`9bd11ca4a9ed26b4e67fd4c0baa79274c0290f6d` and handed source ownership back.
+The [Phase 5E brief](task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
+preserves the selected lifecycle, guarded completion and explicit reopen policy.
+Fresh read-only chief task `01a08a76-9040-75a2-9e8d-9b367e08903e` (Astra High)
+completed contract guidance with no new owner choice, files or runtime actions.
+The handoff incorporates owner authority, D coverage composition, all-writer
+admission and live recovery preservation. Orchestration uses
+`codex/phase5e-orchestrator`; one fresh Sol High writer and one independent Astra
+High reviewer are the authorized delivery profiles, ceiling Astra High.
+Shared+C/D/E publication, installation, app-state/catalog acceptance and cleanup
+remain excluded. The documented D startup limitation remains retained.

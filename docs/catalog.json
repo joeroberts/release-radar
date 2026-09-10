@@ -657,6 +657,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase5e-lifecycle",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5e-lifecycle",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 5E explicit phase lifecycle and guarded completion",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5620,6 +5635,22 @@
       "supersedes": [],
       "applicationSensitivity": [
         "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5e-lifecycle-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.phase5e-lifecycle",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase5e-lifecycle",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"

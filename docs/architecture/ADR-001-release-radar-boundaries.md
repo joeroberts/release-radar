@@ -262,3 +262,17 @@ remain immutable. Retirement grants no external-run cancellation authority. Reti
 work is protected across affected writers and association rehoming. Only validated
 owner-approved proposal application grants narrow detachment/drop exceptions;
 ordinary caller fields and revisions cannot assert that authority.
+
+## Phase 5E explicit lifecycle authority — 2026-09-10
+
+The owner authorized independent Unassessed / Upcoming / In delivery / Completed
+phase lifecycle, multiple In-delivery phases, explicit guarded completion and
+explicit reopening. Narrow typed owner-app decisions require exact registration,
+lifecycle revision, reason and relevant planning baseline; external agents may
+read but cannot assert this decision authority. Origin is checked before replay.
+Completed-phase delivery writes reject at store-owned admission boundaries until
+explicit reopening, including proposal apply and old/new association ownership.
+Read-only references to Completed work, observations and identity-preserving
+recovery remain distinct from new delivery work. Accepted ticket/goal and retired
+history is preserved. The [Phase 5E brief](../delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
+defines the bounded schema, authority, writer, recovery and native contract.
