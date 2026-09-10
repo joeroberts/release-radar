@@ -53,6 +53,10 @@ final class AppModel {
     var isSidebarCompact = false
     var dashboard: DashboardProjection?
     var selectedTicketID = TicketID(rawValue: "VD2-08")
+    var workspaceGoalsDomain: WorkspaceGoalsDomain = .delivery
+    var workspaceGoalsProjectID: ProjectID?
+    var selectedWorkspaceDeliveryGoalID: Data?
+    var selectedWorkspaceExecutionGoalID: Data?
     private(set) var navigationHistory = NavigationHistory(initial: .projects)
     private(set) var navigationRecoveryMessage: String?
     private(set) var navigationFocus: NavigationFocus? = .route(.projects)

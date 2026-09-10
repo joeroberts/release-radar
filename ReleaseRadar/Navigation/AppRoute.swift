@@ -2,6 +2,7 @@ import ReleaseRadarCore
 
 enum AppRoute: Hashable, Sendable {
     case projects
+    case goals
     case needsReview
     case notifications
     case settings
@@ -17,6 +18,7 @@ enum AppRoute: Hashable, Sendable {
 
     static let primaryRoutes: [AppRoute] = [
         .projects,
+        .goals,
         .needsReview,
         .notifications,
         .settings,
@@ -35,6 +37,7 @@ enum AppRoute: Hashable, Sendable {
     var title: String {
         switch self {
         case .projects: "Projects"
+        case .goals: "Goals"
         case .needsReview: "Needs Review"
         case .notifications: "Notifications"
         case .settings: "Settings"
@@ -53,6 +56,7 @@ enum AppRoute: Hashable, Sendable {
     var systemImage: String {
         switch self {
         case .projects: "folder"
+        case .goals: "target"
         case .needsReview: "checkmark.bubble"
         case .notifications: "bell"
         case .settings: "gearshape"
@@ -79,7 +83,7 @@ enum AppRoute: Hashable, Sendable {
              let .referenceSource(projectID, _, _, _),
              let .recordedImpacts(projectID, _, _):
             projectID
-        case .projects, .needsReview, .notifications, .settings, .removedProject:
+        case .projects, .goals, .needsReview, .notifications, .settings, .removedProject:
             nil
         }
     }

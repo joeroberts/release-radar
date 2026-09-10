@@ -3232,12 +3232,14 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(routes.map(\.title), [
             "Projects",
+            "Goals",
             "Needs Review",
             "Notifications",
             "Settings",
         ])
         XCTAssertEqual(routes.map(\.systemImage), [
             "folder",
+            "target",
             "checkmark.bubble",
             "bell",
             "gearshape",

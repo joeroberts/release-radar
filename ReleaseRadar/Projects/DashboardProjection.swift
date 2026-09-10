@@ -23,6 +23,7 @@ struct DashboardProjection: Equatable, Sendable {
     let boards: [PhaseBoardKey: PhaseBoardProjection]
     let projectPlans: [ProjectID: ProjectPlanProjection]
     let allPhaseBoards: [ProjectID: AllPhaseBoardProjection]
+    let workspaceGoals: WorkspaceGoalsProjection
 
     init(
         projects: [ProjectDashboardProjection],
@@ -30,7 +31,8 @@ struct DashboardProjection: Equatable, Sendable {
         removedProjects: [RemovedProjectRecord] = [],
         boards: [PhaseBoardKey: PhaseBoardProjection],
         projectPlans: [ProjectID: ProjectPlanProjection] = [:],
-        allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:]
+        allPhaseBoards: [ProjectID: AllPhaseBoardProjection] = [:],
+        workspaceGoals: WorkspaceGoalsProjection = .empty
     ) {
         self.projects = projects
         self.archivedProjects = archivedProjects
@@ -38,6 +40,7 @@ struct DashboardProjection: Equatable, Sendable {
         self.boards = boards
         self.projectPlans = projectPlans
         self.allPhaseBoards = allPhaseBoards
+        self.workspaceGoals = workspaceGoals
     }
 
     func board(for projectID: ProjectID) -> PhaseBoardProjection? {
@@ -425,10 +428,14 @@ struct DashboardProjection: Equatable, Sendable {
                 )
             }
 
+            let workspaceGoals = try WorkspaceGoalsProjection.load(
+                connection: connection, projects: projects, boards: boards
+            )
             return DashboardProjection(
                 projects: projects, archivedProjects: archivedProjects,
                 removedProjects: removedProjects, boards: boards,
-                projectPlans: projectPlans, allPhaseBoards: allPhaseBoards
+                projectPlans: projectPlans, allPhaseBoards: allPhaseBoards,
+                workspaceGoals: workspaceGoals
             )
         }
     }
@@ -509,7 +516,8 @@ struct DashboardProjection: Equatable, Sendable {
             projects: projects,
             archivedProjects: archivedProjects,
             removedProjects: removedProjects,
-            boards: boards, projectPlans: projectPlans, allPhaseBoards: allPhaseBoards
+            boards: boards, projectPlans: projectPlans, allPhaseBoards: allPhaseBoards,
+            workspaceGoals: workspaceGoals
         )
     }
 }

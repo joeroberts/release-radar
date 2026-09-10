@@ -247,6 +247,22 @@ struct SidebarView: View {
                         await model.reloadAfterOnboarding()
                     }
                 )
+            case .goals:
+                WorkspaceGoalsView(
+                    goals: dashboard.workspaceGoals,
+                    openDeliveryGoal: { item in
+                        model.viewAllPhases(projectID: item.project.id)
+                        model.setAllPhaseBoardFilter(.goal(item.goal.goalID), projectID: item.project.id)
+                        if let ticketID = item.goal.ticketIDs.first {
+                            model.selectTicket(ticketID)
+                        }
+                        Task { await model.navigate(to: .phaseBoard(item.project.id)) }
+                    },
+                    domain: Binding(get: { model.workspaceGoalsDomain }, set: { model.workspaceGoalsDomain = $0 }),
+                    projectID: Binding(get: { model.workspaceGoalsProjectID }, set: { model.workspaceGoalsProjectID = $0 }),
+                    selectedDeliveryID: Binding(get: { model.selectedWorkspaceDeliveryGoalID }, set: { model.selectedWorkspaceDeliveryGoalID = $0 }),
+                    selectedExecutionID: Binding(get: { model.selectedWorkspaceExecutionGoalID }, set: { model.selectedWorkspaceExecutionGoalID = $0 })
+                )
             case .needsReview:
                 if let inbox = model.reviewInbox(for: model.currentProjectID) {
                     NeedsReviewView(
@@ -688,6 +704,7 @@ private extension AppRoute {
     var accessibilityID: String {
         switch self {
         case .projects: "projects"
+        case .goals: "goals"
         case .needsReview: "needs-review"
         case .notifications: "notifications"
         case .settings: "settings"
