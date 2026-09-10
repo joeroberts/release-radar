@@ -221,3 +221,22 @@ committed handoff `19306fbaa14d7c9db467e8503df211a71651f502`, with Astra High
 ceiling for a named issue and one fresh independent Astra High risk review.
 Runtime settings are not independently exposed. All inherited
 shared+C/D publication remains unapproved; E full lifecycle follows D.
+
+
+Phase 5D source candidate `fe4d9f111e89933c03a86d5004331af29039482f` is
+integrated locally, with [canonical evidence](evidence/2026-09-10-phase5d-successors.md)
+and three retained captures. Direct checks cover schema/atomic proposals,
+retired-writer and graph rejection, dependency eligibility, removal/recovery,
+and native owner approval, same-store restoration and application. The final
+marker-free native regression passed 1/1; external native verification confirmed
+compact Back automatically reveals and focuses the retained original. Earlier
+failures and their targeted corrections remain distinguished in the evidence;
+no full-suite green claim is made. Independent Astra High review is pending.
+The writer's clean named branch is preserved and all test hosts are stopped.
+
+During external verification, selecting the development app before the test host
+was ready unintentionally started a plain DerivedData process. It displayed a
+schema-19 mismatch, received no clicks and was terminated; zero incidental startup
+effects are not claimed. The installed owner app was not controlled. See the
+evidence for exact process attribution and retained temporary outputs. No cleanup,
+publication, installation, application readback or catalog acceptance occurred.

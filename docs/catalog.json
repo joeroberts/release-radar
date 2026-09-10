@@ -5565,6 +5565,66 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5d-successors-compact-row",
+      "path": "docs/delivery/evidence/2026-09-10-phase5d-successors-compact-row.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5d-successors-wide-detail",
+      "path": "docs/delivery/evidence/2026-09-10-phase5d-successors-wide-detail.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5d-successors-wide-row",
+      "path": "docs/delivery/evidence/2026-09-10-phase5d-successors-wide-row.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5d-successors",
+      "path": "docs/delivery/evidence/2026-09-10-phase5d-successors.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
