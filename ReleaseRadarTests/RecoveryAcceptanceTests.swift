@@ -209,6 +209,27 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(restoredEvent.eventFacts?.phaseName, "Phase")
         XCTAssertEqual(restoredEvent.eventFacts?.currentLane, .accepted)
         XCTAssertEqual(restoredEvent.threadAttribution, .asserted)
+        let displacedRemovalID = try await firstRestore.store.read { connection in
+            try XCTUnwrap(connection.scalarText(
+                "SELECT removal_id FROM removed_projects WHERE historical_project_id='project-one' AND registration_id='old-registration'"
+            ))
+        }
+        let displacedHistory = try await ProjectActivityProjection.loadRemoved(
+            from: firstRestore.store,
+            removalID: .init(rawValue: displacedRemovalID)
+        )
+        let afterBackupEvent = try XCTUnwrap(
+            displacedHistory.items.first { $0.identity.sourceID == "phase5d-recovery-audit" }
+        )
+        XCTAssertEqual(afterBackupEvent.identity.registrationID, "old-registration")
+        XCTAssertEqual(afterBackupEvent.provenance, .localAudit)
+        XCTAssertNotNil(afterBackupEvent.occurredAt)
+        XCTAssertNotNil(afterBackupEvent.recordedAt)
+        XCTAssertNil(afterBackupEvent.observedAt)
+        XCTAssertEqual(afterBackupEvent.eventFacts?.projectName, "project-one")
+        XCTAssertEqual(afterBackupEvent.eventFacts?.ticketID?.rawValue, "ticket-one")
+        XCTAssertEqual(afterBackupEvent.eventFacts?.phaseName, "Phase")
+        XCTAssertEqual(afterBackupEvent.eventFacts?.currentLane, .accepted)
         let firstNotificationState = try await notificationState(in: firstRestore.store)
         let occurrenceGeneration = try await firstRestore.store.read { try $0.scalarInt("SELECT generation FROM notification_occurrences WHERE subject_key = 'project-one|subject-one'") }
         XCTAssertEqual(firstNotificationState, "sent")
@@ -468,6 +489,18 @@ final class RecoveryAcceptanceTests: XCTestCase {
 
         let finalSendCount = await transport.sendCount()
         XCTAssertEqual(finalSendCount, 1)
+        let displacedRemovalID = try await result.store.read { connection in
+            try XCTUnwrap(connection.scalarText(
+                "SELECT removal_id FROM removed_projects WHERE historical_project_id='project-one' AND registration_id='registration-one'"
+            ))
+        }
+        let displacedHistory = try await ProjectActivityProjection.loadRemoved(
+            from: result.store,
+            removalID: .init(rawValue: displacedRemovalID)
+        )
+        let displacedObservation = try XCTUnwrap(displacedHistory.items.first { $0.source == .runtime })
+        XCTAssertEqual(displacedObservation.identity.sourceID, "thread-one|goal-one")
+        XCTAssertEqual(displacedObservation.observedAt, Date(timeIntervalSince1970: 2))
         let restoredStatus = try await result.store.read {
             try $0.scalarText("SELECT status FROM observed_goals WHERE id = 'goal-one'")
         }

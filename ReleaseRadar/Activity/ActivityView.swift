@@ -13,13 +13,18 @@ struct HistoryView: View {
     let showsFreshness: Bool
     @Binding var selectedFilter: HistoryFilter
     @Binding var selectedEventID: HistoryEventIdentity?
+    @Binding var viewportEventID: HistoryEventIdentity?
     var requestedFocus: NavigationFocus?
     var focusChanged: (NavigationFocus?) -> Void
-    var openEntity: (ProjectActivityItem) -> Void
+    var openEntity: ((ProjectActivityItem) -> Void)?
 
     @State private var showsHelp = false
     @FocusState private var focusedEventID: HistoryEventIdentity?
+    @FocusState private var focusedDetailEventID: HistoryEventIdentity?
+    @FocusState private var filterFocused: Bool
     @AccessibilityFocusState private var accessibilityFocusedEventID: HistoryEventIdentity?
+    @AccessibilityFocusState private var accessibilityFocusedDetailEventID: HistoryEventIdentity?
+    @AccessibilityFocusState private var accessibilityFilterFocused: Bool
 
     init(
         activity: ProjectActivityProjection,
@@ -28,9 +33,10 @@ struct HistoryView: View {
         showsFreshness: Bool = true,
         selectedFilter: Binding<HistoryFilter> = .constant(.all),
         selectedEventID: Binding<HistoryEventIdentity?> = .constant(nil),
+        viewportEventID: Binding<HistoryEventIdentity?> = .constant(nil),
         requestedFocus: NavigationFocus? = nil,
         focusChanged: @escaping (NavigationFocus?) -> Void = { _ in },
-        openEntity: @escaping (ProjectActivityItem) -> Void = { _ in }
+        openEntity: ((ProjectActivityItem) -> Void)? = nil
     ) {
         state = .loaded(activity)
         self.projectName = projectName
@@ -38,6 +44,7 @@ struct HistoryView: View {
         self.showsFreshness = showsFreshness
         _selectedFilter = selectedFilter
         _selectedEventID = selectedEventID
+        _viewportEventID = viewportEventID
         self.requestedFocus = requestedFocus
         self.focusChanged = focusChanged
         self.openEntity = openEntity
@@ -50,9 +57,10 @@ struct HistoryView: View {
         showsFreshness: Bool = true,
         selectedFilter: Binding<HistoryFilter> = .constant(.all),
         selectedEventID: Binding<HistoryEventIdentity?> = .constant(nil),
+        viewportEventID: Binding<HistoryEventIdentity?> = .constant(nil),
         requestedFocus: NavigationFocus? = nil,
         focusChanged: @escaping (NavigationFocus?) -> Void = { _ in },
-        openEntity: @escaping (ProjectActivityItem) -> Void = { _ in }
+        openEntity: ((ProjectActivityItem) -> Void)? = nil
     ) {
         self.state = state
         self.projectName = projectName
@@ -60,6 +68,7 @@ struct HistoryView: View {
         self.showsFreshness = showsFreshness
         _selectedFilter = selectedFilter
         _selectedEventID = selectedEventID
+        _viewportEventID = viewportEventID
         self.requestedFocus = requestedFocus
         self.focusChanged = focusChanged
         self.openEntity = openEntity
@@ -67,30 +76,57 @@ struct HistoryView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        header
-                        sourceStatus
-                        filterControl
-                        historyContent(width: geometry.size.width)
-                    }
-                    .padding(.bottom, 24)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    header
+                    sourceStatus
+                    filterControl
+                    historyContent(width: geometry.size.width)
                 }
-                .onChange(of: selectedEventID, initial: true) { _, identity in
-                    guard let identity else { return }
-                    proxy.scrollTo(scrollID(identity), anchor: .center)
-                    applyRequestedFocus()
-                }
+                .padding(.bottom, 24)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
+            .scrollPosition(id: $viewportEventID, anchor: .top)
         }
         .background(RekonTheme.background)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("content-history")
         .sheet(isPresented: $showsHelp) { HistoryHelpView() }
-        .onChange(of: requestedFocus) { _, _ in applyRequestedFocus() }
-        .task { applyRequestedFocus() }
+        .task(id: requestedFocus) {
+            await Task.yield()
+            applyRequestedFocus()
+        }
+        .onChange(of: selectedFilter) { _, filter in
+            guard let selectedEventID,
+                  case let .loaded(activity) = state,
+                  let item = activity.items.first(where: { $0.identity == selectedEventID }),
+                  !filter.includes(item.source) else { return }
+            self.selectedEventID = nil
+        }
+        .onChange(of: focusedEventID) { _, identity in
+            if let identity,
+               requestedFocus != .historyDetail(identity) {
+                focusChanged(.historyEvent(identity))
+            }
+        }
+        .onChange(of: accessibilityFocusedEventID) { _, identity in
+            if let identity,
+               requestedFocus != .historyDetail(identity) {
+                focusChanged(.historyEvent(identity))
+            }
+        }
+        .onChange(of: focusedDetailEventID) { _, identity in
+            if let identity { focusChanged(.historyDetail(identity)) }
+        }
+        .onChange(of: accessibilityFocusedDetailEventID) { _, identity in
+            if let identity { focusChanged(.historyDetail(identity)) }
+        }
+        .onChange(of: filterFocused) { _, focused in
+            if focused { focusChanged(.filterSummary) }
+        }
+        .onChange(of: accessibilityFilterFocused) { _, focused in
+            if focused { focusChanged(.filterSummary) }
+        }
     }
 
     private var header: some View {
@@ -143,7 +179,8 @@ struct HistoryView: View {
         .pickerStyle(.menu)
         .frame(minWidth: 170, alignment: .leading)
         .accessibilityIdentifier("history-filter")
-        .onChange(of: selectedFilter) { _, _ in focusChanged(.filterSummary) }
+        .focused($filterFocused)
+        .accessibilityFocused($accessibilityFilterFocused)
     }
 
     @ViewBuilder
@@ -184,6 +221,7 @@ struct HistoryView: View {
         LazyVStack(alignment: .leading, spacing: 10) {
             ForEach(items) { item in eventRow(item) }
         }
+        .scrollTargetLayout()
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(items.count) History events, newest first")
     }
@@ -236,7 +274,7 @@ struct HistoryView: View {
         .focusable()
         .focused($focusedEventID, equals: item.identity)
         .accessibilityFocused($accessibilityFocusedEventID, equals: item.identity)
-        .id(scrollID(item.identity))
+        .id(item.identity)
         .accessibilityIdentifier("history-event-\(item.identity.source.rawValue)-\(item.identity.sourceID)")
         .accessibilityLabel(eventAccessibilityLabel(item, selected: selected))
         .accessibilityHint("Select to inspect exact provenance and event-time facts")
@@ -279,6 +317,13 @@ struct HistoryView: View {
                 .textCase(.uppercase)
                 .accessibilityAddTraits(.isHeader)
             Text(item.title).font(.title3.weight(.semibold))
+            detailSection("Recorded detail") {
+                Text(item.detail)
+                    .font(.subheadline)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("history-detail-record")
+            }
             detailSection("Source") {
                 detailRow("Provenance", item.provenance.title)
                 detailRow("Source ID", item.identity.sourceID)
@@ -309,9 +354,20 @@ struct HistoryView: View {
             if item.source != .audit, let lane = item.deliveryLane {
                 detailSection("Current context") { detailRow("Current delivery lane", lane.dashboardTitle) }
             }
-            if item.eventFacts?.ticketID != nil || (item.source != .audit && item.ticketID != nil) {
-                Button("Open recorded ticket", systemImage: "arrow.right.circle") { openEntity(item) }
+            if openEntity != nil,
+               item.eventFacts?.ticketID != nil || (item.source != .audit && item.ticketID != nil) {
+                Button("Open recorded ticket", systemImage: "arrow.right.circle") {
+                    focusedEventID = nil
+                    accessibilityFocusedEventID = nil
+                    focusedDetailEventID = item.identity
+                    accessibilityFocusedDetailEventID = item.identity
+                    focusChanged(.historyDetail(item.identity))
+                    openEntity?(item)
+                }
                     .buttonStyle(RekonPrimaryButtonStyle())
+                    .focusable()
+                    .focused($focusedDetailEventID, equals: item.identity)
+                    .accessibilityFocused($accessibilityFocusedDetailEventID, equals: item.identity)
                     .accessibilityIdentifier("history-open-entity")
             }
         }
@@ -366,15 +422,30 @@ struct HistoryView: View {
             .compactMap { $0 }.joined(separator: ", ")
     }
 
-    private func scrollID(_ identity: HistoryEventIdentity) -> String {
-        "history-scroll-\(identity.projectID.rawValue)-\(identity.registrationID ?? "unknown")-\(identity.source.rawValue)-\(identity.sourceID)"
-    }
-
     private func applyRequestedFocus() {
-        guard case let .historyEvent(identity)? = requestedFocus else { return }
-        selectedEventID = identity
-        focusedEventID = identity
-        accessibilityFocusedEventID = identity
+        switch requestedFocus {
+        case let .historyEvent(identity):
+            if selectedEventID != identity { selectedEventID = identity }
+            focusedDetailEventID = nil
+            accessibilityFocusedDetailEventID = nil
+            focusedEventID = identity
+            accessibilityFocusedEventID = identity
+        case let .historyDetail(identity):
+            if selectedEventID != identity { selectedEventID = identity }
+            focusedEventID = nil
+            accessibilityFocusedEventID = nil
+            focusedDetailEventID = identity
+            accessibilityFocusedDetailEventID = identity
+        case .filterSummary:
+            focusedEventID = nil
+            accessibilityFocusedEventID = nil
+            focusedDetailEventID = nil
+            accessibilityFocusedDetailEventID = nil
+            filterFocused = true
+            accessibilityFilterFocused = true
+        default:
+            break
+        }
     }
 }
 

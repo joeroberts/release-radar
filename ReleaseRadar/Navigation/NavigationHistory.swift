@@ -11,6 +11,7 @@ enum NavigationFocus: Hashable, Sendable {
     case route(AppRoute)
     case ticket(TicketID)
     case historyEvent(HistoryEventIdentity)
+    case historyDetail(HistoryEventIdentity)
     case planChangeProposal(proposalID: String, version: Int64, ticketID: TicketID?)
     case referenceSource(linkID: String, version: Int64)
     case recordedImpacts
@@ -28,6 +29,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
     var selectedTicketID: TicketID?
     var historyFilter: HistoryFilter?
     var selectedHistoryEventID: HistoryEventIdentity?
+    var historyViewportEventID: HistoryEventIdentity?
     var focus: NavigationFocus?
 
     init(
@@ -39,6 +41,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         selectedTicketID: TicketID? = nil,
         historyFilter: HistoryFilter? = nil,
         selectedHistoryEventID: HistoryEventIdentity? = nil,
+        historyViewportEventID: HistoryEventIdentity? = nil,
         focus: NavigationFocus? = nil
     ) {
         self.route = route
@@ -49,6 +52,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         self.selectedTicketID = selectedTicketID
         self.historyFilter = historyFilter
         self.selectedHistoryEventID = selectedHistoryEventID
+        self.historyViewportEventID = historyViewportEventID
         self.focus = focus
     }
 }
@@ -83,6 +87,7 @@ struct NavigationHistory: Equatable, Sendable {
         selectedTicketID: TicketID? = nil,
         historyFilter: HistoryFilter? = nil,
         selectedHistoryEventID: HistoryEventIdentity? = nil,
+        historyViewportEventID: HistoryEventIdentity? = nil,
         focus: NavigationFocus? = nil
     ) {
         navigate(to: .init(
@@ -94,6 +99,7 @@ struct NavigationHistory: Equatable, Sendable {
             selectedTicketID: selectedTicketID,
             historyFilter: historyFilter,
             selectedHistoryEventID: selectedHistoryEventID,
+            historyViewportEventID: historyViewportEventID,
             focus: focus
         ))
     }
@@ -106,6 +112,7 @@ struct NavigationHistory: Equatable, Sendable {
         selectedTicketID: TicketID?,
         historyFilter: HistoryFilter? = nil,
         selectedHistoryEventID: HistoryEventIdentity? = nil,
+        historyViewportEventID: HistoryEventIdentity? = nil,
         focus: NavigationFocus? = nil
     ) {
         entries[index].registration = registration ?? entries[index].registration
@@ -115,6 +122,7 @@ struct NavigationHistory: Equatable, Sendable {
         entries[index].selectedTicketID = selectedTicketID
         entries[index].historyFilter = historyFilter
         entries[index].selectedHistoryEventID = selectedHistoryEventID
+        entries[index].historyViewportEventID = historyViewportEventID
         entries[index].focus = focus
     }
 
