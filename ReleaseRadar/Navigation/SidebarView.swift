@@ -186,6 +186,7 @@ struct SidebarView: View {
         .padding(.horizontal, 8)
         .accessibilityLabel(route.title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityRemoveTraits(isSelected ? [] : .isSelected)
         .accessibilityIdentifier("sidebar-\(route.accessibilityID)")
         .focused($navigationControlFocus, equals: .route(route))
         .accessibilityFocused($accessibilityNavigationControlFocus, equals: .route(route))
