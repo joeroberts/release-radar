@@ -129,3 +129,12 @@ using fresh DerivedData, sanitized environment, unsigned products and the inert
 XCTest startup after its concrete invocation is confirmed. No duplicate writer
 runtime pass or owner repair/cleanup is authorized. R4 remains unreviewed and
 publication is not authorized.
+
+Fresh reviewer result confirmed actual wide and compact viewport/focus restoration.
+Its 3-selector run passed both model tests but failed one native assertion that
+incorrectly required raw offset to increase during focus/layout. Same reviewer
+classified that direction as no product invariant. Test-only candidate
+`fbbf138b00b0ff9e0b0de3ec33b269984288d30b` removes that comparison while retaining
+actual AX, captured/restored offset and focus checks. Reviewer holds the sole
+reservation for only the affected native rerun using its verified isolated build
+root, fresh session and result; the two model tests and six prior findings are terminal.
