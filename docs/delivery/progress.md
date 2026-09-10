@@ -168,4 +168,16 @@ reservation released. The optional isolated fixture teardown vnode-unlinked
 warning is recorded without a product-corruption claim or additional work.
 Existing canonical evidence/PNGs will be finalized after the sidebar accessibility
 correction and directly affected verification. No extra reviewer or cleanup.
-Phase 6B approval remains pending only that issue.
+Token 03 passed the raw sidebar assertions, but the controller's compact checkpoint
+expired during context compaction. No compact/recovery completion markers were
+fabricated. The interrupted run recorded failures and did not finalize its
+xcresult bundle; it is not a full-method pass. The reviewer stopped its test host
+and xcodebuild. During the termination race, a subsequent root CUA read launched
+the plain fresh product as PID 14029; root stopped that process immediately and
+verified it exited. The separate installed app was not operated. Effects from
+the unintended plain launch are not established; no zero-effects claim, repair
+or cleanup is authorized. All CUA interaction is stopped. Final independent
+reviewer approved exact `4c751867b8d6e4f42e1a5edaa3df19e66718c679` with no
+Required findings remaining, combining direct raw sidebar verification with the
+earlier terminal journey for unchanged properties. No rerun is required. Writer
+is completing canonical documentation/media closeout before the local endpoint.
