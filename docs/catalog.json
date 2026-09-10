@@ -672,6 +672,22 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase6a-history",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6a-history",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 6A truthful event-time History and attention",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-phase6a-history-brief-2026-09-10",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5680,6 +5696,51 @@
       "supersedes": [],
       "applicationSensitivity": [
         "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5-shared-history-2026-09-10",
+      "path": "docs/delivery/archive/2026-09-10-phase5-shared-delivery-history.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6-plan-2026-09-10",
+      "path": "docs/delivery/plans/2026-09-10-phase6-outcomes-tasks-history.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.plans",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6a-history-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase6a-history",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"
