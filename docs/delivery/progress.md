@@ -195,6 +195,10 @@ records additive planning, saved versions, explicit approval and atomic apply.
 Read-only Astra High chief task `01a088a9-bdc4-74c1-889a-6ee00d7cafb4` completed
 contract assessment; findings are incorporated, no new owner choice is outstanding.
 The chief task is archived with no files or processes created.
-The local orchestrator branch is `codex/phase5c-orchestrator`. Fresh writer dispatch
-follows the committed handoff. Inherited shared commits remain local-only: no C
+The local orchestrator branch is `codex/phase5c-orchestrator`. Fresh Sol High writer `01a088b0-1bb5-7392-89fc-96fa11b714c5` starts from
+committed handoff `746c6e3ed93c6f2b9122d53d219d6ec97f7d529e`, with Astra High
+ceiling for a named unresolved problem. This profile covers approval authority,
+atomic graph changes, recovery and native behavior; one fresh Astra High reviewer
+will cover those risks independently. Actual runtime settings are not separately
+exposed. Inherited shared commits remain local-only: no C
 push/PR until the owner resolves shared publication authorization; merge is separate.
