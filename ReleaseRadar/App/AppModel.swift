@@ -909,6 +909,9 @@ final class AppModel {
         allPhaseBoardProjectIDs.removeAll()
         boardFilters.removeAll()
         allPhaseBoardFilters.removeAll()
+        historyFilters.removeAll()
+        selectedHistoryEventIDs.removeAll()
+        historyViewportOffsets.removeAll()
         navigationHistory.reset()
         navigationRecoveryMessage = nil
         navigationFocus = .route(.projects)

@@ -143,6 +143,31 @@ The reviewer observed actual wide viewport and compact absolute-bottom restorati
 the full inspector and visible Open action with restored focus. The isolated host
 exited. This closes the outstanding R4 runtime verification.
 
+### PR 44 reset-boundary correction
+
+Review of PR 44 found that application preference reset and recovered-store
+adoption cleared board and navigation state but retained the in-memory History
+filter, selected event and viewport dictionaries. A reused project ID could
+therefore reopen with History context from the prior preference session or retired
+store registration. Two focused `NavigationHistoryTests` cover the real
+`AppModel.resetApplicationPreferences` and `AppModel.adoptRecovery` boundaries,
+including reopening History for the same project ID after a fresh recovered
+registration.
+
+The independent expected-red run of test-only candidate `12ddb97` executed both
+selectors. Their preconditions passed, then each test failed only the six intended
+post-reset assertions: Audit remained instead of All events, the stale event identity
+remained selected and offset 412.75 remained, both immediately and after reopening.
+The recovery case also demonstrated that an event identity from the retired
+registration survived adoption of the fresh registration. The 12 assertion failures
+are recorded in
+`/private/tmp/release-radar-phase6a-reset-review-01a08c37-12ddb97/red.log`.
+
+The bounded correction adds the three missing dictionary resets to
+`clearEphemeralViewState`. Normal Back and Forward navigation outside reset and
+recovery continues to preserve History context. Final focused verification and
+independent review remain pending on this correction candidate.
+
 Before the fresh reviewer runs, writer verification departed from the authorized
 sanitized inert XCTest-host path. An unsanitized build-for-testing succeeded and re-signed the
 scratch products; two subsequent unsanitized Xcode launches were interrupted before
@@ -195,5 +220,7 @@ No cleanup was authorized or performed. Result bundles, logs, isolated home/tmp,
 DerivedData, marker outputs, attachment exports and synthetic stores remain under
 `/private/tmp/release-radar-phase6a.eJzQ2M`,
 `/private/tmp/release-radar-phase6a-attachments.iOBzDG` and
-`/private/tmp/release-radar-phase6a-r4-review-01a08c37.MJLXYm`. The two PNGs above are
-the verified canonical repository copies.
+`/private/tmp/release-radar-phase6a-r4-review-01a08c37.MJLXYm`. The PR 44
+expected-red output remains under
+`/private/tmp/release-radar-phase6a-reset-review-01a08c37-12ddb97`. The two PNGs
+above are the verified canonical repository copies.
