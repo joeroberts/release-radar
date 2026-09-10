@@ -150,11 +150,12 @@ retained CUA reports Needs Review selected; exact AX attribute semantics are bei
 clarified before the narrow correction. Same reviewer was briefly archived and
 restored for this Required correction to the same outcome. Sidebar correction `d38896f24b2d18de7ce1f981f2c8e28716aa9b2d` is integrated at
 `5de1e2fd00a1c227fbd568f81afbbe48e0f35770`: one selected trait plus a raw AX
-assertion in the existing guarded fixture. Source/test build passed. Same reviewer holds the sole affected native reservation
-for token `phase6b-goals-review-01a08cde-20260910-02`, retained clean reviewer
-DerivedData and new sidebar-build/sidebar-run results. Full sanitized unsigned
-arm64 configuration applies; only raw sidebar semantics and the containing
-established native journey are checked. Other properties remain terminal.
+assertion in the existing guarded fixture. Source/test build passed, but raw native assertion failed on token 02: Goals
+selected passed; Needs Review reported `AXButton`, selected=true, value=nil,
+focused=false. Conditional add-traits alone did not clear unselected semantics.
+Same writer owns the minimal explicit-unselected correction with unchanged raw
+assertions. Reviewer stopped host/build and released the reservation. No native
+host is active; other properties remain terminal.
 Writer media closeout is paused; other source behavior is not reopened. Root and reviewer directly read fresh native result
 `/private/tmp/release-radar-phase6b-review-01a08cde.L147PW/results/phase6b-native-review-run.xcresult`:
 1/1, zero failures/skips, 160.321 seconds. Full sanitized unsigned arm64 build,
