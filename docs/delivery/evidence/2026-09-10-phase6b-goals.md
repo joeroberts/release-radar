@@ -59,6 +59,19 @@ SourcePackages checkout at RekonDesignSystem revision
   exact Back/Forward model, viewport and accessibility-focus restoration; and
   replaced-registration recovery. Active phase and ticket lane remained
   unchanged.
+- The final run used the copied
+  `phase6b-native-phase6b-goals-writer-20260910-05.xctestrun` with unique session
+  token `phase6b-goals-writer-20260910-05`. That runfile points to the fresh
+  `native-DerivedData/Build/Products/Debug/ReleaseRadar.app`, its embedded
+  `ReleaseRadarTests.xctest`, and the same fresh product directory's agent tools,
+  bridge, core framework, documentation tool, lifecycle helper and wrong-agent
+  fixture. Its command used `env -i` with explicit `PATH` and `TMPDIR`, plus
+  disabled signing. It did not include the identity, explicit developer-directory
+  or architecture flags used in some preparation commands, so no broader native
+  command configuration is claimed. Every final completion marker carried the
+  same unique `-05` token and the passing test first asserted those markers were
+  absent; the one-time enable marker was consumed on startup. No marker from an
+  earlier session was reused.
 - Earlier native run 03 failed eight assertions, directly exposing premature
   board-state mutation, lost outgoing Goals history and incorrect recovery
   focus. Run 05 was stopped once the remaining synthetic pre-scroll expectation
