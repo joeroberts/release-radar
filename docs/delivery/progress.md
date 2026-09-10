@@ -143,13 +143,19 @@ coordination and is temporary; it remains retained with no cleanup authorization
 
 ## Phase 6B independent approval
 
-Same reviewer approved exact `bcf1c3fcd65f55261271429dd1d6d91bf5c6cfae` with no
-Required findings. Root and reviewer directly read fresh native result
+Same reviewer initially approved exact `bcf1c3fcd65f55261271429dd1d6d91bf5c6cfae`,
+then retracted that disposition for one concrete sidebar accessibility addendum.
+All non-sidebar properties remain terminal. Goals is visually selected while
+retained CUA reports Needs Review selected; exact AX attribute semantics are being
+clarified before the narrow correction. Same reviewer was briefly archived and
+restored for this Required correction to the same outcome. No native reservation
+is active. Writer media closeout is paused; other source behavior is not reopened. Root and reviewer directly read fresh native result
 `/private/tmp/release-radar-phase6b-review-01a08cde.L147PW/results/phase6b-native-review-run.xcresult`:
 1/1, zero failures/skips, 160.321 seconds. Full sanitized unsigned arm64 build,
 actual both-domain wide/compact filters, Back/Forward viewport/focus, Help and
 replaced-registration recovery passed. Host 11765 and xcodebuild stopped;
 reservation released. The optional isolated fixture teardown vnode-unlinked
 warning is recorded without a product-corruption claim or additional work.
-Writer is closing existing canonical evidence/PNGs from corrected reviewer
-captures; no product changes or reruns. Final source approval is terminal.
+Existing canonical evidence/PNGs will be finalized after the sidebar accessibility
+correction and directly affected verification. No extra reviewer or cleanup.
+Phase 6B approval remains pending only that issue.
