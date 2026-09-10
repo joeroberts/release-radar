@@ -290,3 +290,36 @@ A/B are merged; shared execution V1 and C/D/E are complete locally. Parent recei
 the local closeout for next sequencing and publication decisions. Shared+C/D/E
 push, PR, merge, installation, owner-state/catalog acceptance and cleanup remain
 unapproved. No further product writer is released by eligibility alone.
+
+## Authorized publication — 2026-09-10
+
+The owner explicitly authorized pushing and opening separate sequential PRs for
+shared execution and Phase 5C–5E. This supersedes the earlier local-only push/PR
+restrictions above, only for this publication endpoint. The Phase 5 orchestrator
+is the sole publication/integration owner. No PR merge, installation, consumer
+adoption, owner application/catalog mutation or evidence cleanup is authorized.
+
+The following PRs are open in order. Heads below identify the initial publication
+commits; the Phase 5E branch also carries this subsequent publication-ledger
+closeout. Each branch preserves its reviewed endpoint without rewriting history.
+
+| Slice | PR | Head branch / initial commit | Base branch |
+| --- | --- | --- | --- |
+| Shared execution | [#40](https://github.com/joeroberts/release-radar/pull/40) | `codex/publish-shared-execution` / `bda726c2f00c5b52efa376d39f90e431a3f7f35b` | `codex/release-radar-mvp` |
+| Phase 5C | [#41](https://github.com/joeroberts/release-radar/pull/41) | `codex/publish-phase5c` / `4e9eb8c0883362751f2fb6e230e40d5d0b3ff82c` | `codex/publish-shared-execution` |
+| Phase 5D | [#42](https://github.com/joeroberts/release-radar/pull/42) | `codex/publish-phase5d` / `3f06cb6e290c3e3911e7c993656191fdb0541ed5` | `codex/publish-phase5c` |
+| Phase 5E | [#43](https://github.com/joeroberts/release-radar/pull/43) | `codex/publish-phase5e` / `c0223b84f6a37a11d92927e7727e26e4cdb181a3` | `codex/publish-phase5d` |
+
+The shared publication merge incorporated current remote target `de523882` and
+resolved only older ledger text in favor of already verified delivery facts.
+That ancestry was merged forward through C/D/E. All four publication trees
+matched their preserved endpoints (`28d323a`, `dcfc709`, `9bd11ca`, `489c6e3`)
+exactly before this ledger-only update. No product code changed and terminal
+source reviews/tests were not repeated. Repository documentation validation and
+diff checks passed; GitHub reported all four PRs open and mergeable at readback.
+Mergeability is not approval or a CI-pass claim. Merge in stack order only after
+separate owner authorization, updating later PR bases as needed.
+
+Temporary PR body files remain in `/private/tmp/release-radar-publication/`;
+the published descriptions and this ledger are their durable counterparts.
+Existing verification outputs remain retained. No cleanup occurred.
