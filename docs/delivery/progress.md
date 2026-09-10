@@ -35,6 +35,12 @@ ceiling Astra High) verified exact handoff
 `6bcd31ed4a6fcc9b9c88c1e074e5f24a93787e7f` and owns source in worktree `7e93`,
 branch `codex/phase6a-history`. Its source/tests/affected product documentation
 assignment is exclusive; orchestrator retains ledger/catalog/index ownership.
+Writer candidate `f41da3e422a09e4ea92ebb5abc5d0a463abdf170` is integrated locally
+for fresh independent review. Direct xcresult readback confirms focused 20/20 and
+native 1/1, zero failures/skips; [canonical evidence](evidence/2026-09-10-phase6a-history.md)
+retains runtime checks, limitations and screenshots. A broader Task 11A readiness
+prerequisite failure remains separately reported; no full-suite green claim.
+The writer checkout is clean; source writes are paused for review.
 
 ## Authorization and ownership
 
@@ -64,8 +70,8 @@ checker. Candidate documentation validation and diff checks passed; independent 
 review passed with no findings. Next: complete the active History slice, preserve its local candidate and
 direct evidence, then independent review before the first publication request.
 
-All native test hosts require explicit serialized reservation here. History writer `01a08be3-987c-79a1-aa61-10520c4e8c97` holds the exclusive
-synthetic XCTest/native-host reservation until explicit stopped-process handback. Before launch inspect the established inert synthetic XCTest
+All native test hosts require explicit serialized reservation here. The writer explicitly released the reservation after confirming all
+task-owned build/XCTest/native processes stopped. No reservation is currently held. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
@@ -74,5 +80,6 @@ canonical inventory was `bindingMissing`, `isComplete:false` for
 `project-fffdc0e0b15b9b86`; local checks cannot establish managed-current status.
 Prior credential/startup/external-scan incidents and non-green broad-suite limits
 remain in the historical record and linked evidence. No repair is inferred.
-All prior temporary output remains retained; no cleanup occurred. This planning
-work has created only repository documentation, with no temporary deliverables.
+All prior temporary output remains retained; no cleanup occurred. Writer raw outputs remain under `/private/tmp/release-radar-phase6a.eJzQ2M`
+and `/private/tmp/release-radar-phase6a-attachments.iOBzDG`; canonical evidence
+and both screenshots are preserved in the repository. No cleanup occurred.
