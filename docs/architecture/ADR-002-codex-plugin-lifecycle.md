@@ -135,8 +135,8 @@ home with `getpwuid_r(geteuid())`, never `$HOME`, and combines it with one stric
 SemVer component from the targeted CLI version to construct only
 `~/.codex/plugins/cache/release-radar/release-radar/<version>`. It walks fixed
 components through descriptor-relative no-follow opens, verifies each file is
-stable and regular across the complete read, and reads exactly the three
-declared plugin files to compute the normalized digest. Only an internal test
+stable and regular across the complete read, and reads exactly the recognized legacy or current
+declared plugin-file inventory to compute the normalized digest. Only an internal test
 seam accepts a derived home. It never writes Codex state, reads Codex
 configuration, enumerates other plugins, or returns, logs, or persists a home
 or cache path.
@@ -249,3 +249,18 @@ The detailed product, state, UX, security, and acceptance contract is
   Mach service, same-core test executable, synthetic runtime tracer, or custom
   process framework: duplicates established boundaries and makes the proof
   larger than the product behavior being evaluated.
+
+### 2026-09-09 shared-execution source amendment
+
+The local source candidate bundles plugin `0.1.8`, adding
+`skills/shared-execution/SKILL.md` to the three-file legacy inventory. Capability
+recognition requires an exact manifest-version and normalized-package-digest pair
+in `RecognizedPluginCapability.known`; version ordering never implies support.
+The recognized `0.1.7` pair remains supported by lifecycle inspection and advertises
+no shared-execution standard. Only the recognized `0.1.8` pair advertises standard
+`1`. A changed or unknown pair cannot claim that capability.
+
+This additive capability registry does not replace verified lifecycle receipts or
+owner installation intent. The existing fixed official-CLI lifecycle authority,
+modified-install protection and exact inventory checks continue to apply. Source
+verification does not authorize installation, consumer adoption or a runtime pilot.

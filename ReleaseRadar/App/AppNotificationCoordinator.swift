@@ -99,6 +99,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     private(set) var notificationCoordinator: AppNotificationCoordinator
     private(set) var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
     let codexPluginShippedVersion: String
+    let codexPluginShippedCapability: RecognizedPluginCapability?
     private(set) var recoveryStartupError: String?
     private(set) var recoveryResumedAtLaunch = false
     private let codexPluginPackage: CodexPluginPackage?
@@ -130,6 +131,10 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         {
             codexPluginPackage = package
             codexPluginShippedVersion = package.version
+            codexPluginShippedCapability = RecognizedPluginCapability.recognize(
+                manifestVersion: package.version,
+                normalizedPackageDigest: package.digest
+            )
             codexPluginCoordinator = CodexPluginLifecycleCoordinator(
                 manager: CodexPluginLifecycleClient(),
                 store: CodexPluginLifecycleStore(store: store),
@@ -139,6 +144,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         } else {
             codexPluginPackage = nil
             codexPluginShippedVersion = "Unknown"
+            codexPluginShippedCapability = nil
             codexPluginCoordinator = nil
         }
     }

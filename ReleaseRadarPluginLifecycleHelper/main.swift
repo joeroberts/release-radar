@@ -862,7 +862,8 @@ private final class OutputCapture: @unchecked Sendable {
 
 private enum PluginDigester {
     struct Package { let version: String; let digest: String }
-    private static let files = [".codex-plugin/plugin.json", ".mcp.json", "skills/release-radar/SKILL.md"]
+    private static let legacyFiles = [".codex-plugin/plugin.json", ".mcp.json", "skills/release-radar/SKILL.md"]
+    private static let files = legacyFiles + ["skills/shared-execution/SKILL.md"]
 
     static func marketplacePackage(at root: URL) throws -> Package {
         let plugin = root.appendingPathComponent("plugins/release-radar", isDirectory: true)
@@ -893,7 +894,14 @@ private enum PluginDigester {
             guard values.isRegularFile == true else { throw LifecycleError.integrityInvalid }
             inventory.append(String(url.path.dropFirst(root.path.count + 1)))
         }
-        guard inventory.sorted() == files.sorted() else { throw LifecycleError.integrityInvalid }
+        let packageFiles: [String]
+        if inventory.sorted() == files.sorted() {
+            packageFiles = files
+        } else if inventory.sorted() == legacyFiles.sorted() {
+            packageFiles = legacyFiles
+        } else {
+            throw LifecycleError.integrityInvalid
+        }
         let manifestData = try stableFile(root.appendingPathComponent(".codex-plugin/plugin.json"))
         guard let manifest = try? JSONSerialization.jsonObject(with: manifestData) as? [String: Any],
               manifest["name"] as? String == "release-radar", let version = manifest["version"] as? String,
@@ -907,7 +915,7 @@ private enum PluginDigester {
             throw LifecycleError.integrityInvalid
         }
         var hasher = SHA256()
-        for relative in files.sorted(by: { $0.utf8.lexicographicallyPrecedes($1.utf8) }) {
+        for relative in packageFiles.sorted(by: { $0.utf8.lexicographicallyPrecedes($1.utf8) }) {
             let data = try stableFile(root.appendingPathComponent(relative))
             hasher.update(data: Data(relative.utf8)); hasher.update(data: Data([0]))
             var count = UInt64(data.count).bigEndian

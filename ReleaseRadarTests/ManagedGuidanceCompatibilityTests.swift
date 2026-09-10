@@ -71,7 +71,7 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
 
     func testBundledCandidateAndUpgradePromptNameV2() throws {
         let package = try CodexPluginPackage(rootURL: Self.repository.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace"))
-        XCTAssertEqual(package.version, "0.1.7")
+        XCTAssertEqual(package.version, "0.1.8")
         let prompt = CodexPromptHandoff.prompt(for: .outdated(installed: 1, current: 2), projectRoot: URL(fileURLWithPath: "/Synthetic/Managed"))
         XCTAssertTrue(prompt.contains("guidance v2"))
         XCTAssertTrue(prompt.contains("existing handoff evidence ID"))

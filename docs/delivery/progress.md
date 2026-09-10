@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B source and independent review are complete; PR #39 awaits owner merge approval.** The owner selected
+**Phase 5A is merged; Phase 5B is merged; shared integration local source delivery is complete.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -44,8 +44,10 @@ the non-first historical row and Forward to its ticket. The broad run remains
 non-green: 700 passed, 13 failed, 3 skipped; baseline attribution and isolated
 relocation passes remain documented in the evidence. Both bounded writer/reviewer
 tasks are complete and archived, with results preserved and no running hosts.
-[PR #39](https://github.com/joeroberts/release-radar/pull/39) is open against
-`codex/release-radar-mvp`; its merge awaits separate owner approval.
+The owner explicitly approved [PR #39](https://github.com/joeroberts/release-radar/pull/39).
+It merged into `codex/release-radar-mvp` at `de523882c8a696eb8c00e8a56141ee3419ea4bdd`
+on 2026-09-09 at 23:40:57 UTC, with the approved head and successful reported check.
+No installation or application-state action occurred.
 
 Revision-specific document references
 remain authorized follow-on scope. Proposal/apply and history-preserving withdrawal/successor
@@ -64,19 +66,26 @@ only the plan's all-source-after-B sequence. The parent owns that fresh assignme
 No shared remote, merge, installation or app-state authority is inferred.
 
 Parent-owned shared writer `01a087e0-4e89-72b3-8f34-2e998315047b`
-(Sol High) works separately from sequencing amendment `22b82305` on branch
-`codex/shared-execution-integration-v1-ae3f`. Diagnose checkpoint `64025a6`
-passed 31 focused tests; package/capability checkpoint `6a90c74` is clean and
-passed its skill/capability and 20 lifecycle tests. The one managed-guidance
-docs-only fixture broken-link baseline limitation is retained, without repair. Phase 5B retains
-AppModel, ProjectDocumentationRenderingTests, DocumentationCallbackTests, the
-agent-tool main and B UI/contract/metadata paths. After confirming no B changes,
-the existing packaged release-radar skill and CodexPluginLifecycleAcceptanceTests
-were released to the shared writer along with its disjoint diagnostic/package
-paths. Reviewed B descendant `e8ab4a5` was handed to the parent/shared writer with B
-source overlap ownership released for the parent-owned shared assignment. Final
-combined package verification and shared source review remain outstanding. Build/test/native hosts
-remain serialized by reservation. No shared integration becomes a B dependency.
+(Sol High) completed local candidate `dd486f04459f9ceae7e4e2163d0274402fba78ee`
+on `codex/shared-execution-integration-v1-ae3f`, including reviewed B source
+`e8ab4a5`. The [shared evidence](evidence/2026-09-09-shared-execution-integration-v1.md)
+records package/diagnose, compatibility observation and native Overview delivery.
+The affected suite passed 101 tests with 2 intentional folder-picker skips; the
+real service-registration test was excluded as unauthorized. Separate guidance
+checks reported pending artifact registration and the known disposable-fixture
+assertion failure. Catalog integration resolves the former; the latter remains
+a reported baseline limitation. The writer yielded a clean checkout with no hosts
+running for serialized metadata/contracts integration and fresh independent review.
+Independent Astra High reviewer `01a08889-1c24-7d90-9c46-a5846b96c125` passed
+exact corrected source `0c4c08969c7dd7d869a69acf3d5b0e40e6e89bba`, closing all
+four Required findings. Direct correction checks passed 20 with 2 expected picker
+skips; the final repository-identity boundary passed 2/2 and its containing suite
+passed 9 with the same 2 skips, no failures. The local source endpoint is complete.
+The clean branch is preserved; all writer/reviewer hosts are stopped. The completed
+reviewer is archived; writer archival waits parent confirmation of preservation. Metadata
+closeout is local only. Source ownership may hand back for coordinated Phase 5C
+work from this preserved baseline; no shared push, PR, merge, installation,
+adoption, runtime pilot or app synchronization is authorized.
 
 ## Current authorization and ownership
 
@@ -141,9 +150,9 @@ and the full lifecycle policy are approved for the later lifecycle slice.
 The Mac is available for isolated native verification. Other-Mac hands-on owner
 testing and private versioned DMG preparation wait until September 11 or later;
 packaging and target architectures/macOS versions remain unselected and unstarted.
-Next eligible action is the separate owner merge decision for Phase 5B PR #39.
-Phase 5C source dispatch must also respect shared ownership of AppModel and
-observation/UI paths until a coordinated handback; no overlapping writer is released.
+Phase 5B delivery is complete through its owner-approved merge.
+Phase 5C may proceed after the parent coordinates the preserved local shared
+baseline and hands source ownership back; no overlapping writer is released here.
 Approved proposal, successor/carry-forward and lifecycle slices follow in the
 recorded sequence. Later merges still require separate owner approval.
 

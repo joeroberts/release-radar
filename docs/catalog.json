@@ -612,6 +612,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-09-shared-integration",
+      "path": "docs/delivery/task-briefs/2026-09-09-shared-integration",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Proposed shared integration implementation plan; source delivery requires separate authorization",
+      "allowedContents": [
+        "Proposed implementation plan"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5193,9 +5208,8 @@
       "artifactID": "rr-phase5b-reference-impacts-brief-2026-09-09",
       "path": "docs/delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.phase5b-reference-impacts",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-09-phase5b-reference-impacts",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5343,6 +5357,97 @@
     {
       "artifactID": "rr-phase5b-reference-source-wide",
       "path": "docs/delivery/evidence/phase5b-reference-source-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-integration-v1-design-2026-09-09",
+      "path": "docs/design/shared-execution-integration-v1-design.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance",
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-integration-implementation-plan-2026-09-09",
+      "path": "docs/delivery/task-briefs/2026-09-09-shared-integration/implementation-plan.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-09-shared-integration",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-09-shared-execution-integration-v1",
+      "path": "docs/delivery/evidence/2026-09-09-shared-execution-integration-v1.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-v1-compatibility-compact",
+      "path": "docs/delivery/evidence/shared-execution-v1-compatibility-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-v1-overview-compact",
+      "path": "docs/delivery/evidence/shared-execution-v1-overview-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-shared-execution-v1-overview-wide",
+      "path": "docs/delivery/evidence/shared-execution-v1-overview-wide.png",
       "kind": "verificationEvidence",
       "lifecycle": "completed",
       "authorityLevel": "nonAuthoritative",

@@ -15,6 +15,7 @@ struct ProjectOverviewView: View {
     let selectActivePhase: (PhaseID) async -> Void
     let reloadActivePhase: () async -> Void
     let reauthorizeActivePhase: (URL) async -> Void
+    var refreshDocumentation: () async -> Void = {}
     var repositoryRecovery: RepositoryRecoveryModel? = nil
     var onRepositoryRelocated: () async -> Void = {}
     var loadProjectSettings: (() async throws -> ProjectSettingsSnapshot)? = nil
@@ -88,6 +89,10 @@ struct ProjectOverviewView: View {
                 }
                 guidanceCard
                 documentationSetupControls
+                SharedExecutionCompatibilityView(
+                    documentationStatus: documentationStatus,
+                    refresh: refreshDocumentation
+                )
                 if loadProjectHealth != nil {
                     ProjectHealthView(
                         snapshot: health,

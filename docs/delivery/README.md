@@ -56,6 +56,7 @@
 | rr-phase4-navigation-evidence-2026-09-08 | [docs/delivery/evidence/2026-09-08-phase4-navigation.md](evidence/2026-09-08-phase4-navigation.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-09-phase5a-recorded-planning | [docs/delivery/evidence/2026-09-09-phase5a-recorded-planning.md](evidence/2026-09-09-phase5a-recorded-planning.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-09-phase5b-reference-impacts | [docs/delivery/evidence/2026-09-09-phase5b-reference-impacts.md](evidence/2026-09-09-phase5b-reference-impacts.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-09-shared-execution-integration-v1 | [docs/delivery/evidence/2026-09-09-shared-execution-integration-v1.md](evidence/2026-09-09-shared-execution-integration-v1.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
@@ -148,6 +149,9 @@
 | 3dae8a2b-fa2a-4472-a09b-ad00971e947e | [docs/delivery/evidence/rr10-onboarding-failure.png](evidence/rr10-onboarding-failure.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 199a56ed-2513-436b-ad69-36e4d45eef7c | [docs/delivery/evidence/rr10-projects-overview-board-detail.png](evidence/rr10-projects-overview-board-detail.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | dfa76052-348a-42ae-ae62-4044c29a40b7 | [docs/delivery/evidence/rr10-settings.png](evidence/rr10-settings.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-shared-execution-v1-compatibility-compact | [docs/delivery/evidence/shared-execution-v1-compatibility-compact.png](evidence/shared-execution-v1-compatibility-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-shared-execution-v1-overview-compact | [docs/delivery/evidence/shared-execution-v1-overview-compact.png](evidence/shared-execution-v1-overview-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-shared-execution-v1-overview-wide | [docs/delivery/evidence/shared-execution-v1-overview-wide.png](evidence/shared-execution-v1-overview-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 
 ### Children
 

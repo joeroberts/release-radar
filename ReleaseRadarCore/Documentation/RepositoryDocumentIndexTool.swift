@@ -39,11 +39,21 @@ public struct RepositoryDocumentIndexError: Error, Equatable, LocalizedError {
 /// a separate opt-in action; checking and preparing candidates never write.
 public struct RepositoryDocumentIndexTool {
     private let limits: RepositoryDocumentContract.Limits
+    private let afterRead: ((String) -> Void)?
     private let beforeReplace: ((String) throws -> Void)?
     private let beforeCleanup: ((String) -> Void)?
 
     public init(limits: RepositoryDocumentContract.Limits = .init()) {
         self.limits = limits
+        afterRead = nil
+        beforeReplace = nil
+        beforeCleanup = nil
+    }
+
+    // Scheduling seam for real validation-interval changes, without replacing I/O.
+    init(afterRead: @escaping (String) -> Void) {
+        limits = .init()
+        self.afterRead = afterRead
         beforeReplace = nil
         beforeCleanup = nil
     }
@@ -51,27 +61,75 @@ public struct RepositoryDocumentIndexTool {
     // Scheduling seam for real late I/O failures, without substituting any I/O.
     init(beforeReplace: @escaping (String) throws -> Void, beforeCleanup: ((String) -> Void)? = nil) {
         limits = .init()
+        afterRead = nil
         self.beforeReplace = beforeReplace
         self.beforeCleanup = beforeCleanup
     }
 
     public func check(authorizedRoot: URL) throws {
-        let (_, changes) = try prepare(authorizedRoot)
+        let (_, _, changes) = try prepare(authorizedRoot)
         guard changes.isEmpty else { throw RepositoryDocumentIndexError(code: .staleIndex, paths: changes.keys.sorted()) }
+    }
+
+    public func diagnose(authorizedRoot: URL, toolVersion: String? = nil,
+                         toolBuild: String? = nil) -> RepositoryDocumentDiagnostic {
+        do {
+            let (_, snapshot, changes) = try prepare(authorizedRoot)
+            guard changes.isEmpty else {
+                return .init(
+                    snapshot: snapshot,
+                    status: .failed,
+                    error: .init(code: RepositoryDocumentIndexError.Code.staleIndex.rawValue, paths: changes.keys.sorted()),
+                    toolVersion: toolVersion,
+                    toolBuild: toolBuild
+                )
+            }
+            return .init(
+                snapshot: snapshot,
+                status: .passed,
+                error: nil,
+                toolVersion: toolVersion,
+                toolBuild: toolBuild
+            )
+        } catch let failure as RepositoryDocumentError {
+            return .init(
+                snapshot: nil,
+                status: .failed,
+                error: .init(code: failure.code.rawValue, paths: failure.artifactPath.map { [$0] } ?? []),
+                toolVersion: toolVersion,
+                toolBuild: toolBuild
+            )
+        } catch let failure as RepositoryDocumentIndexError {
+            return .init(
+                snapshot: nil,
+                status: .failed,
+                error: .init(code: failure.code.rawValue, paths: failure.paths.sorted()),
+                toolVersion: toolVersion,
+                toolBuild: toolBuild
+            )
+        } catch {
+            return .init(
+                snapshot: nil,
+                status: .failed,
+                error: .init(code: RepositoryDocumentError.Code.readFailed.rawValue, paths: []),
+                toolVersion: toolVersion,
+                toolBuild: toolBuild
+            )
+        }
     }
 
     /// Returns only the sorted paths actually changed, not every visited index.
     @discardableResult
     public func write(authorizedRoot: URL) throws -> [String] {
-        let (reader, changes) = try prepare(authorizedRoot)
+        let (reader, _, changes) = try prepare(authorizedRoot)
         try RepositoryDocumentIndexWriter.replace(changes, reader: reader, beforeReplace: beforeReplace, beforeCleanup: beforeCleanup)
         return changes.keys.sorted()
     }
 
-    private func prepare(_ root: URL) throws -> (RepositoryDocumentReader, [String: Data]) {
-        let reader = try RepositoryDocumentReader(rootURL: root, limits: limits, afterRead: nil)
+    private func prepare(_ root: URL) throws -> (RepositoryDocumentReader, RepositoryDocumentSnapshot, [String: Data]) {
+        let reader = try RepositoryDocumentReader(rootURL: root, limits: limits, afterRead: afterRead)
         var changes: [String: Data] = [:]
-        _ = try RepositoryDocumentValidator(limits: limits).validateCurrent(reader: reader) { catalog in
+        let snapshot = try RepositoryDocumentValidator(limits: limits).validateCurrent(reader: reader) { catalog in
             let renderer = RepositoryDocumentIndexRenderer(catalog: catalog)
             for collection in catalog.collections.sorted(by: { $0.path < $1.path }) where collection.indexArtifactID != nil {
                 let path = collection.path + "/README.md"
@@ -81,7 +139,7 @@ public struct RepositoryDocumentIndexTool {
             }
             return changes
         }
-        return (reader, changes)
+        return (reader, snapshot, changes)
     }
 
     private static func replacingManagedBytes(_ original: Data, section: String, path: String) throws -> Data {

@@ -320,3 +320,21 @@ Never relink automatically or present current bytes as an unavailable historical
 revision. Link retirement retains history and does not require the source to remain
 readable. New/revised links still require full managed authorization; no operation
 implicitly binds or accepts a catalog. See the [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md).
+
+### 2026-09-09 read-only diagnostic source amendment
+
+The local source candidate adds `diagnose --root <exact-root> --format json` to
+`ReleaseRadarDocumentationTool`. Existing `check`, `write` and help behavior is
+preserved. The diagnostic envelope uses format
+`com.rekonlabs.release-radar.documentation-check-result`, schema version `1`,
+and `checker.contractVersion` `1`. It reports checker tool version/build and
+supported catalog versions, target repository/catalog identity, passed or failed
+status and a structured error. Unavailable optional values are explicit JSON nulls;
+unknown or unstable identity is never invented.
+
+Diagnosis uses the existing bounded, exact-root documentation checks and performs
+no acceptance, binding, evidence relocation or persistence mutation. The shared
+compatibility observation consumes this result through existing authorization and
+generation boundaries. A passed diagnostic is not owner adoption, content approval,
+an execution attestation or catalog acceptance. Guidance v3 remains separately
+reserved; installation, consumer changes and runtime pilot remain unauthorized.

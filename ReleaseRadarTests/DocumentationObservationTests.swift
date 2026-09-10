@@ -441,6 +441,20 @@ final class DocumentationObservationTests: XCTestCase {
     @MainActor
     func testSharedObservationRefreshesManagedGuidanceAndEvidenceWithoutPersistenceWrites() async throws {
         let root = try managedFixture()
+        let agentsURL = root.appendingPathComponent("AGENTS.md")
+        let existingAgents = try String(contentsOf: agentsURL, encoding: .utf8)
+        try Data((existingAgents + "\n\n" + SharedExecutionDeclarationInspector.managedBlock + "\n").utf8)
+            .write(to: agentsURL)
+        for (path, title) in [("docs/README.md", "# Documentation"), ("docs/plans/README.md", "# Plans")] {
+            let markedIndex = """
+            \(title)
+            \(RepositoryDocumentContract.managedIndexStart)
+            \(RepositoryDocumentContract.managedIndexEnd)
+
+            """
+            try Data(markedIndex.utf8).write(to: root.appendingPathComponent(path))
+        }
+        try RepositoryDocumentIndexTool().write(authorizedRoot: root)
         let database = root.deletingLastPathComponent()
             .appendingPathComponent("ReleaseRadar-ObservationDB-\(UUID().uuidString).sqlite")
         addTeardownBlock { try? FileManager.default.removeItem(at: database) }
@@ -489,8 +503,24 @@ final class DocumentationObservationTests: XCTestCase {
         XCTAssertEqual(current.rootID, rootID)
         XCTAssertEqual(current.rootPath, root.path)
         XCTAssertEqual(current.binding, binding)
+        XCTAssertEqual(current.sharedExecutionDeclaration, .exact(version: 1))
+        XCTAssertEqual(current.repositoryDiagnostic?.status, .passed)
+        XCTAssertEqual(current.repositoryDiagnostic?.target.repositoryID, binding.repositoryID)
         XCTAssertEqual(current.documentationState, .managed(hasAuditedHandoff: false, catalogVersion: 1, catalogDigest: binding.acceptedCatalogDigest))
         XCTAssertTrue(try XCTUnwrap(current.evidence.first?.managedDocument).isAvailable)
+        let capability = try XCTUnwrap(RecognizedPluginCapability.recognize(
+            manifestVersion: "0.1.8",
+            normalizedPackageDigest: "ecc221b2ca91ac8913e73555b6ed310bce63d7f1ac9462d05b025478173d5a40"
+        ))
+        let compatibility = DocumentationObservationPayload(
+            current,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+        XCTAssertEqual(compatibility.state, .compatibleV1)
+        XCTAssertEqual(compatibility.directResults.count, 2)
+        XCTAssertEqual(compatibility.directResults[0].runner, "Release Radar repository checker contract v1")
+        XCTAssertEqual(compatibility.directResults[0].scope, root.path)
+        XCTAssertEqual(compatibility.directResults[1].directResult, "recognized capability installed")
 
         let evidenceFile = root.appendingPathComponent("docs/plans/evidence.md")
         let original = try Data(contentsOf: evidenceFile)
@@ -643,6 +673,233 @@ final class DocumentationObservationTests: XCTestCase {
 
         coordinator.remove(projectID: projectID)
         XCTAssertNil(coordinator.status(for: projectID))
+    }
+
+    @MainActor
+    func testCompatibilityObservationRefreshesForPluginChangeAndRootReplacement() async throws {
+        let projectID = ProjectID(rawValue: "shared-execution-project")
+        let gate = SequencedDocumentationObservationGate()
+        let coordinator = DocumentationObservationCoordinator { requestedProjectID in
+            await gate.load(projectID: requestedProjectID)
+        }
+
+        let first = Task { await coordinator.refresh(projectID: projectID) }
+        await gate.waitUntilCallCount(1)
+        await gate.release(call: 1, with: .fixture(
+            projectID: projectID,
+            compatibilityState: .compatibleV1
+        ))
+        let firstObservation = await first.value
+        XCTAssertEqual(firstObservation?.sharedExecutionCompatibility.state, .compatibleV1)
+
+        let pluginChanged = Task {
+            await coordinator.refresh(projectID: projectID, withdrawCurrent: false)
+        }
+        await gate.waitUntilCallCount(2)
+        await gate.release(call: 2, with: .fixture(
+            projectID: projectID,
+            compatibilityState: .incompatible
+        ))
+        let changed = await pluginChanged.value
+        XCTAssertEqual(changed?.generation, 2)
+        XCTAssertEqual(changed?.sharedExecutionCompatibility.state, .incompatible)
+
+        coordinator.invalidate(projectID: projectID)
+        let replacedRoot = Task { await coordinator.refresh(projectID: projectID) }
+        await gate.waitUntilCallCount(3)
+        await gate.release(call: 3, with: .fixture(
+            projectID: projectID,
+            checkedAt: 3,
+            rootPath: "/synthetic/replacement",
+            compatibilityState: .rootUnknown
+        ))
+        let replacement = await replacedRoot.value
+        XCTAssertEqual(replacement?.generation, 3)
+        XCTAssertEqual(replacement?.identity.rootPath, "/synthetic/replacement")
+        XCTAssertEqual(replacement?.sharedExecutionCompatibility.state, .rootUnknown)
+
+        coordinator.remove(projectID: projectID)
+        XCTAssertNil(coordinator.status(for: projectID))
+    }
+
+    @MainActor
+    func testManagedCompatibilityRejectsDiagnosticIdentityFromALaterCatalog() throws {
+        let accepted = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        var changedCatalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: accepted.canonicalCatalog) as? [String: Any]
+        )
+        changedCatalog["repositoryID"] = "d911c9b9-8f5e-4776-a70f-bf9ae09f2341"
+        let changed = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            JSONSerialization.data(withJSONObject: changedCatalog)
+        )
+        let projectID = ProjectID(rawValue: "managed-identity-race")
+        let rootID = ProjectRootID(rawValue: "managed-identity-race-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: accepted
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/managed-identity-race",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managed(
+                hasAuditedHandoff: true,
+                catalogVersion: accepted.version,
+                catalogDigest: accepted.digest
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(snapshot: changed, status: .passed, error: nil),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+        let capability = try XCTUnwrap(RecognizedPluginCapability.known.last)
+
+        let compatibility = DocumentationObservationPayload(
+            snapshot,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+
+        XCTAssertEqual(compatibility.state, .incompatible)
+        XCTAssertEqual(compatibility.issue, .repositoryIdentityMismatch)
+    }
+
+    @MainActor
+    func testCatalogUnacceptedMapsTheActualChangedCatalogToPendingAcceptance() throws {
+        let accepted = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        var changedCatalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: accepted.canonicalCatalog) as? [String: Any]
+        )
+        var collections = try XCTUnwrap(changedCatalog["collections"] as? [[String: Any]])
+        collections[0]["purpose"] = "Changed but still valid synthetic documentation"
+        changedCatalog["collections"] = collections
+        let changed = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            JSONSerialization.data(withJSONObject: changedCatalog)
+        )
+        XCTAssertEqual(changed.catalog.repositoryID, accepted.catalog.repositoryID)
+        XCTAssertNotEqual(changed.digest, accepted.digest)
+        let projectID = ProjectID(rawValue: "catalog-pending")
+        let rootID = ProjectRootID(rawValue: "catalog-pending-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: accepted
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/catalog-pending",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogUnaccepted,
+                validationError: nil
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(snapshot: changed, status: .passed, error: nil),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+        let capability = try XCTUnwrap(RecognizedPluginCapability.known.last)
+
+        let compatibility = DocumentationObservationPayload(
+            snapshot,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+
+        XCTAssertEqual(compatibility.state, .pendingCatalogAcceptance)
+        XCTAssertNil(compatibility.issue)
+    }
+
+    @MainActor
+    func testCatalogUnacceptedRejectsDiagnosticForAnotherRepository() throws {
+        let accepted = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        var otherCatalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: accepted.canonicalCatalog) as? [String: Any]
+        )
+        otherCatalog["repositoryID"] = "53aa863c-678f-46bd-8c67-128b43f31853"
+        let other = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            JSONSerialization.data(withJSONObject: otherCatalog)
+        )
+        let projectID = ProjectID(rawValue: "catalog-other-repository")
+        let rootID = ProjectRootID(rawValue: "catalog-other-repository-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: accepted
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/catalog-other-repository",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogUnaccepted,
+                validationError: nil
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(snapshot: other, status: .passed, error: nil),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+        let capability = try XCTUnwrap(RecognizedPluginCapability.known.last)
+
+        let compatibility = DocumentationObservationPayload(
+            snapshot,
+            pluginObservation: .clean(installed: capability, shipped: capability)
+        ).sharedExecutionCompatibility
+
+        XCTAssertEqual(compatibility.state, .incompatible)
+        XCTAssertEqual(compatibility.issue, .repositoryIdentityMismatch)
+    }
+
+    @MainActor
+    func testFailedRepositoryDiagnosticRetainsOnlyRecognizedBoundedErrorCode() throws {
+        let catalog = try RepositoryDocumentValidator().decodeCatalogSnapshot(
+            Data(Self.nativePickerAcceptedCatalog.utf8)
+        )
+        let projectID = ProjectID(rawValue: "bounded-diagnostic")
+        let rootID = ProjectRootID(rawValue: "bounded-diagnostic-root")
+        let binding = try ProjectDocumentationBinding(
+            projectID: projectID,
+            rootID: rootID,
+            acceptedSnapshot: catalog
+        )
+        let snapshot = ProjectDocumentationSnapshot(
+            projectID: projectID,
+            registration: nil,
+            rootID: rootID,
+            rootPath: "/synthetic/bounded-diagnostic",
+            binding: binding,
+            checkedAt: Date(timeIntervalSince1970: 1),
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogInvalid,
+                validationError: .checksumMismatch
+            ),
+            evidence: [],
+            repositoryDiagnostic: .init(
+                snapshot: catalog,
+                status: .failed,
+                error: .init(code: "checksumMismatch", paths: ["docs/README.md"])
+            ),
+            sharedExecutionDeclaration: .exact(version: 1)
+        )
+
+        let result = DocumentationObservationPayload(snapshot).sharedExecutionCompatibility
+
+        XCTAssertEqual(result.directResults.first?.directResult, "failed (checksumMismatch)")
     }
 }
 
@@ -819,7 +1076,7 @@ private actor DocumentationObservationGate {
     }
 }
 
-private actor SequencedDocumentationObservationGate {
+actor SequencedDocumentationObservationGate {
     private var calls = 0
     private var waiters: [(count: Int, continuation: CheckedContinuation<Void, Never>)] = []
     private var loads: [Int: CheckedContinuation<DocumentationObservationPayload, Never>] = [:]
@@ -841,16 +1098,23 @@ private actor SequencedDocumentationObservationGate {
     func release(call: Int, with payload: DocumentationObservationPayload) {
         loads.removeValue(forKey: call)?.resume(returning: payload)
     }
+
+    func count() -> Int { calls }
 }
 
-private extension DocumentationObservationPayload {
-    static func fixture(projectID: ProjectID, checkedAt: TimeInterval = 1_700_000_000) -> Self {
+extension DocumentationObservationPayload {
+    static func fixture(
+        projectID: ProjectID,
+        checkedAt: TimeInterval = 1_700_000_000,
+        rootPath: String = "/synthetic/freshness",
+        compatibilityState: SharedExecutionCompatibilityState = .unknown
+    ) -> Self {
         .init(
             identity: .init(
                 projectID: projectID,
                 registration: .init(projectID: projectID, registrationID: "registration", requestGeneration: 3),
                 rootID: .init(rawValue: "root"),
-                rootPath: "/synthetic/freshness",
+                rootPath: rootPath,
                 binding: nil
             ),
             checkedAt: Date(timeIntervalSince1970: checkedAt),
@@ -859,7 +1123,11 @@ private extension DocumentationObservationPayload {
                 catalogVersion: 1,
                 catalogDigest: String(repeating: "a", count: 64)
             ),
-            evidence: []
+            evidence: [],
+            sharedExecutionCompatibility: .init(
+                state: compatibilityState,
+                directResults: []
+            )
         )
     }
 }

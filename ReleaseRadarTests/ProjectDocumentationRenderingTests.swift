@@ -187,7 +187,13 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
                     reloadActivePhase: {},
                     reauthorizeActivePhase: { _ in }
                 )
-                try await render(view, name: "m5-overview-\(name)-\(Int(width))", width: width, expected: ProjectGuidancePresentation(documentationState: state))
+                try await render(
+                    view,
+                    name: "m5-overview-\(name)-\(Int(width))",
+                    width: width,
+                    expected: ProjectGuidancePresentation(documentationState: state),
+                    expectedText: ["Shared execution", "Checking compatibility", "Refresh compatibility"]
+                )
             }
         }
     }
@@ -743,6 +749,151 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         }
     }
 
+    func testSharedExecutionCompatibilityPresentationCoversEveryReviewedState() {
+        let expectedTitles: [(SharedExecutionCompatibilityState, String)] = [
+            (.notDeclared, "Not declared"),
+            (.compatibleV1, "Compatible with V1"),
+            (.compatibleOlder, "Compatible with an older standard"),
+            (.updateAvailable, "Compatible update available"),
+            (.pendingCatalogAcceptance, "Pending catalog acceptance"),
+            (.incompatible, "Incompatible"),
+            (.unavailable, "Compatibility unavailable"),
+            (.rootUnknown, "Repository root unknown"),
+            (.unknown, "Compatibility unknown"),
+        ]
+
+        for (state, title) in expectedTitles {
+            let presentation = SharedExecutionCompatibilityPresentation(state: state)
+            XCTAssertEqual(presentation.status, title)
+            XCTAssertFalse(presentation.detail.isEmpty)
+            XCTAssertFalse(presentation.recovery.isEmpty)
+        }
+
+        let mismatchCopy: [(SharedExecutionCompatibilityIssue, String, String)] = [
+            (.declarationDuplicate, "declared more than once", "Keep one exact V1 block"),
+            (.declarationModified, "does not match the V1 block", "Restore the exact V1 declaration"),
+            (.unsupportedDeclaredStandard, "declared standard is not supported", "Adopt a supported standard"),
+            (.installedCapabilityUnsupported, "installed exact plugin capability does not support", "Use the separate owner-controlled plugin flow"),
+            (.repositoryIdentityMismatch, "diagnosis does not match the accepted repository", "Recheck the exact root and accepted catalog"),
+            (.checkerFailed, "repository checker failed", "Inspect the checker direct result"),
+        ]
+        for (issue, detail, recovery) in mismatchCopy {
+            let presentation = SharedExecutionCompatibilityPresentation(result: .init(
+                state: .incompatible,
+                directResults: [],
+                issue: issue
+            ))
+            XCTAssertTrue(presentation.detail.contains(detail))
+            XCTAssertTrue(presentation.recovery.contains(recovery))
+        }
+    }
+
+    func testSharedExecutionCompatibilityRendersAllStatesAndDirectResultsAtWideAndCompactWidths() async throws {
+        let result = SharedExecutionDirectResult(
+            check: "documentation",
+            runner: "ReleaseRadarDocumentationTool contract v1",
+            scope: "/Synthetic/SharedExecution/docs",
+            source: "local observation; Git source unknown",
+            applicability: .unknown,
+            status: .passed,
+            directResult: "passed",
+            limitation: "This observation does not establish owner acceptance."
+        )
+        let states: [SharedExecutionCompatibilityState] = [
+            .notDeclared, .compatibleV1, .compatibleOlder, .updateAvailable,
+            .pendingCatalogAcceptance, .incompatible, .unavailable, .rootUnknown, .unknown,
+        ]
+        for width in [1100.0, 620.0] {
+            for state in states {
+                let presentation = SharedExecutionCompatibilityPresentation(state: state)
+                let directResults = state == .compatibleV1 ? [result] : []
+                try await render(
+                    ScrollView {
+                        SharedExecutionCompatibilityView(
+                            documentationStatus: compatibilityStatus(
+                                state: state,
+                                directResults: directResults
+                            ),
+                            refresh: {}
+                        )
+                        .padding(24)
+                    },
+                    name: "shared-execution-\(state.rawValue)-\(Int(width))",
+                    width: width,
+                    expected: nil,
+                    expectedText: [
+                        "Shared execution", presentation.status, presentation.detail,
+                        presentation.recovery, "Refresh compatibility",
+                    ] + (directResults.isEmpty ? [] : [
+                        "Direct results", "Check", "documentation", "Runner",
+                        "Scope", "Source", "Applicability", "unknown", "Status",
+                        "passed", "Direct result", "Limitation",
+                        "This observation does not establish owner acceptance.",
+                    ]),
+                    absentText: ["Install plugin", "Adopt standard", "Accept catalog"],
+                    absentButtonTitles: ["Install plugin", "Adopt standard", "Accept catalog"]
+                )
+            }
+        }
+    }
+
+    func testSharedExecutionCompatibilityRefreshIsAccessibleAndReadOnly() async throws {
+        var refreshCount = 0
+        try await render(
+            SharedExecutionCompatibilityView(
+                documentationStatus: compatibilityStatus(state: .unavailable),
+                refresh: { refreshCount += 1 }
+            )
+            .padding(24),
+            name: "shared-execution-refresh",
+            width: 620,
+            expected: nil,
+            expectedText: ["Shared execution", "Compatibility unavailable"],
+            absentText: ["Install plugin", "Adopt standard", "Accept catalog"],
+            absentButtonTitles: ["Install plugin", "Adopt standard", "Accept catalog"],
+            focusIdentifiers: ["shared-execution-refresh"],
+            pressIdentifiers: ["shared-execution-refresh"],
+            minimumElementSizes: ["shared-execution-refresh": .init(width: 44, height: 24)]
+        )
+        XCTAssertEqual(refreshCount, 1)
+    }
+
+    func testSharedExecutionCompatibilityCheckingDisablesRefresh() async throws {
+        try await render(
+            SharedExecutionCompatibilityView(
+                documentationStatus: .checking(identity: nil, generation: 1),
+                refresh: { XCTFail("Checking must disable duplicate refresh") }
+            )
+            .padding(24),
+            name: "shared-execution-checking",
+            width: 620,
+            expected: nil,
+            expectedText: ["Shared execution", "Checking compatibility", "Refresh compatibility"],
+            disabledIdentifiers: ["shared-execution-refresh"]
+        )
+    }
+
+    private func compatibilityStatus(
+        state: SharedExecutionCompatibilityState,
+        directResults: [SharedExecutionDirectResult] = []
+    ) -> DocumentationObservationStatus {
+        let projectID = ProjectID(rawValue: "shared-execution-rendering")
+        return .observed(.init(
+            identity: .init(
+                projectID: projectID,
+                registration: nil,
+                rootID: .init(rawValue: "shared-execution-rendering-root"),
+                rootPath: "/Synthetic/SharedExecution",
+                binding: nil
+            ),
+            generation: 1,
+            checkedAt: Date(timeIntervalSince1970: 1_788_000_000),
+            documentationState: .legacy(.unavailable),
+            evidence: [],
+            sharedExecutionCompatibility: .init(state: state, directResults: directResults)
+        ))
+    }
+
     private var states: [(String, ProjectDocumentationState)] {
         [
             ("v1-update", .legacy(.outdated(installed: 1, current: 2))),
@@ -772,6 +923,9 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         expected: ProjectGuidancePresentation?,
         expectedText: [String] = [],
         absentText: [String] = [],
+        absentButtonTitles: [String] = [],
+        focusIdentifiers: [String] = [],
+        disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
         pressTitles: [String] = [],
         minimumElementSizes: [String: CGSize] = [:]
@@ -827,6 +981,40 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         let initialActual = accessibilityText(try XCTUnwrap(ownWindow))
+        for title in absentButtonTitles {
+            XCTAssertNil(
+                accessibilityButton(try XCTUnwrap(ownWindow), title: title),
+                "Unexpected accessibility button titled \(title)"
+            )
+        }
+        for focusIdentifier in focusIdentifiers {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: focusIdentifier),
+                "Missing accessibility element \(focusIdentifier)"
+            )
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                .success
+            )
+            var value: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(element, kAXFocusedAttribute as CFString, &value),
+                .success
+            )
+            XCTAssertEqual(value as? Bool, true, "\(focusIdentifier) did not retain focus")
+        }
+        for disabledIdentifier in disabledIdentifiers {
+            let element = try XCTUnwrap(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: disabledIdentifier),
+                "Missing accessibility element \(disabledIdentifier)"
+            )
+            var value: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &value),
+                .success
+            )
+            XCTAssertEqual(value as? Bool, false, "\(disabledIdentifier) must be disabled")
+        }
         for pressIdentifier in pressIdentifiers {
             let button = try XCTUnwrap(accessibilityElement(try XCTUnwrap(ownWindow), identifier: pressIdentifier))
             XCTAssertEqual(AXUIElementPerformAction(button, kAXPressAction as CFString), .success)

@@ -232,8 +232,8 @@ approval from this Phase 5 batch remains outstanding.
 First placement avoids transferring existing phase-owned obligations. Current
 Backlog moves remove assignments and are not an implementation of carry-forward.
 The read-only chief architect confirmed these boundaries against current source.
-Shared execution integration remains proposed and non-gating; no dispatch or
-implementation is authorized here. No Phase 6+, runtime/hooks, installation or
+Shared execution integration remains non-gating for Phase 5; its separately
+authorized local source candidate is recorded in the 2026-09-09 amendment below. No Phase 6+, runtime/hooks, installation or
 owner/application-state mutation is included. Source, tests, affected documents,
 scoped commits, pushes, PRs and necessary fresh peer tasks are authorized; each
 merge still requires separate owner approval. Current ownership and evidence stay
@@ -293,6 +293,28 @@ links/proposals/successors or historical acceptance; unresolved historical cover
 requires reconciliation. Define complete future portable representation without
 implementing export/import or changing v1 silently. One appropriate independent
 review per material candidate covers its actual risks; no additional review layers.
+
+### Shared execution local source candidate — 2026-09-09
+
+The owner subsequently authorized the reviewed shared design and local source
+implementation, including disjoint parallel work and later integration of reviewed
+Phase 5B source. Candidate `dd486f04459f9ceae7e4e2163d0274402fba78ee` implements
+the packaged V1 skill/exact capability registry, additive read-only diagnose,
+root-bound compatibility observation and Project Overview presentation. The
+[design](../../design/shared-execution-integration-v1-design.md) and
+[evidence](../evidence/2026-09-09-shared-execution-integration-v1.md) distinguish
+source delivery from installed behavior. Direct affected checks report 101 passed,
+2 environment-gated skips and no failures. Metadata integration and the same
+independent reviewer’s correction recheck are complete at source
+`0c4c08969c7dd7d869a69acf3d5b0e40e6e89bba`, with all four Required findings
+closed; the evidence records focused correction results. This completes the
+authorized local source endpoint.
+
+This authorization does not establish consumer adoption, application catalog
+acceptance, plugin installation or a runtime pilot. The original assessment below
+remains historical proposal context; its unselected runtime and execution-engine
+ideas remain proposals. Shared source ownership must be coordinated before a
+Phase 5C writer touches overlapping observation/UI files.
 
 ### Shared execution integration assessment — proposed, non-gating — 2026-09-08
 
