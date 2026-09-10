@@ -2075,6 +2075,39 @@ final class AppRouteTests: XCTestCase {
         return nil
     }
 
+    private struct AccessibilityRouteState: CustomStringConvertible {
+        let role: String?
+        let selected: Bool?
+        let value: String?
+        let focused: Bool?
+
+        var isSelected: Bool {
+            if let selected { return selected }
+            return role == kAXButtonRole && value?.caseInsensitiveCompare("selected") == .orderedSame
+        }
+
+        var description: String {
+            "role=\(role ?? "nil"), selected=\(selected.map(String.init) ?? "nil"), "
+                + "value=\(value ?? "nil"), focused=\(focused.map(String.init) ?? "nil")"
+        }
+    }
+
+    private func accessibilityRouteState(_ root: AXUIElement, identifier: String) -> AccessibilityRouteState? {
+        guard let element = accessibilityElement(root, identifier: identifier) else { return nil }
+        func attribute(_ name: String) -> CFTypeRef? {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success else { return nil }
+            return value
+        }
+        let rawValue = attribute(kAXValueAttribute)
+        return .init(
+            role: attribute(kAXRoleAttribute) as? String,
+            selected: (attribute(kAXSelectedAttribute) as? NSNumber)?.boolValue,
+            value: (rawValue as? String) ?? (rawValue as? NSNumber)?.stringValue,
+            focused: (attribute(kAXFocusedAttribute) as? NSNumber)?.boolValue
+        )
+    }
+
     private func accessibilityFocusedIdentifier(_ application: AXUIElement) -> String? {
         var focusedValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(
@@ -5224,6 +5257,10 @@ final class AppRouteTests: XCTestCase {
         XCTAssertTrue(window.isVisible)
         let nativeApplication = AXUIElementCreateApplication(getpid())
         let nativeWindow = try XCTUnwrap(accessibilityWindow(nativeApplication, title: window.title))
+        let goalsRouteState = try XCTUnwrap(accessibilityRouteState(nativeWindow, identifier: "sidebar-goals"))
+        let needsReviewRouteState = try XCTUnwrap(accessibilityRouteState(nativeWindow, identifier: "sidebar-needs-review"))
+        XCTAssertTrue(goalsRouteState.isSelected, goalsRouteState.description)
+        XCTAssertFalse(needsReviewRouteState.isSelected, needsReviewRouteState.description)
         XCTAssertTrue(accessibilityText(nativeWindow).contains("No persisted goals match these filters"))
         XCTAssertTrue(accessibilityText(nativeWindow).contains("Codex desktop observation unavailable"))
         print("PHASE6B GOALS FILTER-ZERO READY: activate Show All Projects · All states, switch to Delivery, open Nonactive delivery outcome, verify the all-phase typed filter, clear to All goals, Back, then switch to Execution; select Unlinked execution goal 12 with Completed + Unlinked observations, open and close Help, and write the empty and wide markers")
