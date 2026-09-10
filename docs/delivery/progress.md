@@ -228,7 +228,8 @@ External verification confirmed compact Back reveals and focuses the retained
 original without assistance. No full-suite or full-process-restart claim is made.
 The named writer branch `codex/phase5d-successors` preserves the passed source;
 `codex/phase5d-orchestrator` owns catalog/ledger integration. All test hosts are
-stopped; bounded writer/reviewer archival is pending final handoff.
+stopped; both bounded writer and reviewer tasks are complete and archived after
+source/evidence preservation and final handoff.
 
 All durable evidence and selected images are catalogued in the repository.
 Documentation validation passed on integrated source; application readback,
