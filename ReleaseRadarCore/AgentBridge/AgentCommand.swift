@@ -266,6 +266,15 @@ public struct PersistedAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sen
 }
 
 extension AgentCommand {
+    var isPlanChangeProposalCommand: Bool {
+        switch self {
+        case .savePlanChangeProposal, .decidePlanChangeProposal, .applyPlanChangeProposal:
+            true
+        default:
+            false
+        }
+    }
+
     var requiresPlanChangeOwnerAuthority: Bool {
         switch self {
         case .decidePlanChangeProposal, .applyPlanChangeProposal:

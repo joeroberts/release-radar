@@ -914,7 +914,15 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     private func makePlanChangeProposalRenderScenario() async throws -> PlanChangeProposalRenderScenario {
-        let fixture = try await makeRR9OwnerFixture()
+        let fixture = try await makeRR9OwnerFixture(
+            temporaryRoot: URL(fileURLWithPath: "/Users/Shared", isDirectory: true),
+            preserveDirectory: true
+        )
+        let documents = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs", isDirectory: true)
+        try FileManager.default.copyItem(at: documents, to: fixture.projectRoot.appendingPathComponent("docs"))
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("AGENTS.md"))
         let registration = ProjectRegistration(
             projectID: fixture.projectID,
             registrationID: "proposal-render-registration",
@@ -925,37 +933,57 @@ final class AppRouteTests: XCTestCase {
                 "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, 1, 'complete')",
                 bindings: [.text(fixture.projectID.rawValue), .text(registration.registrationID)]
             )
-            try connection.execute(
-                "INSERT INTO ticket_reference_link_sets (project_id,ticket_id,revision,created_at,updated_at) VALUES (?, 'ROAD-1', 1, '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
-                bindings: [.text(fixture.projectID.rawValue)]
-            )
-            try connection.execute(
-                "INSERT INTO ticket_reference_links (project_id,ticket_id,id,kind,repository_id,artifact_id,current_version,relationship,created_at,updated_at) VALUES (?, 'ROAD-1', 'proposal-requirement', 'requirement', '00000000-0000-4000-8000-000000000001', 'phase5c-requirement', 1, 'current', '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
-                bindings: [.text(fixture.projectID.rawValue)]
-            )
-            try connection.execute(
-                "INSERT INTO ticket_reference_versions (project_id,ticket_id,link_id,version,content_digest,source_local_id,locator,catalog_version,catalog_digest,observed_path,observed_lifecycle,observed_authority,created_at) VALUES (?, 'ROAD-1', 'proposal-requirement', 1, ?, NULL, NULL, 1, ?, 'docs/missing-proposal-source.md', 'active', 'controlling', '2026-09-10T00:00:00Z')",
-                bindings: [
-                    .text(fixture.projectID.rawValue),
-                    .text(String(repeating: "a", count: 64)),
-                    .text(String(repeating: "b", count: 64)),
-                ]
-            )
         }
         let dispatcher = AgentCommandDispatcher(
             store: fixture.store,
             projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
                 .init(registration: registration, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
-            ])
+            ]),
+            bookmarkStore: fixture.bookmarks
         )
+        let snapshot = try RepositoryDocumentValidator().validateCurrent(authorizedRoot: fixture.projectRoot)
+        let target = DocumentationTarget(
+            projectID: fixture.projectID.rawValue,
+            rootID: "rr9-owner-root",
+            repositoryID: snapshot.catalog.repositoryID.lowercased(),
+            catalogVersion: snapshot.version,
+            catalogDigest: snapshot.digest
+        )
+        func envelope(_ command: AgentCommand, reason: String) -> AgentCommandEnvelope {
+            .init(
+                version: 1,
+                requestID: UUID(),
+                projectRoot: fixture.projectRoot.path,
+                expectedRegistration: registration,
+                reason: reason,
+                command: command
+            )
+        }
+        let bound = await dispatcher.dispatch(envelope(
+            .bindDocumentationRepository(target: target),
+            reason: "Bind proposal render documentation"
+        ))
+        XCTAssertNil(bound.error)
+        let artifact = try XCTUnwrap(snapshot.catalog.artifacts.first { $0.artifactID == "current" })
+        let source = fixture.projectRoot.appendingPathComponent(artifact.path)
+        let linked = await dispatcher.dispatch(envelope(
+            .upsertTicketReference(
+                target: target,
+                ticketID: "ROAD-1",
+                linkID: "proposal-requirement",
+                kind: .requirement,
+                artifactID: artifact.artifactID,
+                sourceLocalID: nil,
+                locator: nil,
+                expectedContentDigest: documentationDigest(try Data(contentsOf: source)),
+                expectedLinkSetRevision: 0
+            ),
+            reason: "Record proposal render requirement"
+        ))
+        XCTAssertNil(linked.error)
         let proposalID = PlanChangeProposalID(rawValue: "proposal-render")
-        let save = await dispatcher.dispatch(.init(
-            version: 1,
-            requestID: UUID(),
-            projectRoot: fixture.projectRoot.path,
-            expectedRegistration: registration,
-            reason: "Save proposal render fixture",
-            command: .savePlanChangeProposal(
+        let save = await dispatcher.dispatch(envelope(
+            .savePlanChangeProposal(
                 proposalID: proposalID.rawValue,
                 expectedPreviousVersion: nil,
                 rationale: "Show a bounded proposal with grouped changes and deliberate owner actions.",
@@ -972,7 +1000,8 @@ final class AppRouteTests: XCTestCase {
                         )]
                     )
                 ]
-            )
+            ),
+            reason: "Save proposal render fixture"
         ))
         XCTAssertNil(save.error)
         let dashboard = try await DashboardProjection.load(from: fixture.store)
@@ -4688,13 +4717,17 @@ final class AppRouteTests: XCTestCase {
     private func makeRR9OwnerFixture(
         hasBookmark: Bool = true,
         blockAuthorization: Bool = false,
-        hasActivePointer: Bool = true
+        hasActivePointer: Bool = true,
+        temporaryRoot: URL = FileManager.default.temporaryDirectory,
+        preserveDirectory: Bool = false
     ) async throws -> RR9OwnerFixture {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = temporaryRoot
             .appendingPathComponent("ReleaseRadar-RR9Owner-\(UUID().uuidString)", isDirectory: true)
         let projectRoot = directory.appendingPathComponent("project", isDirectory: true)
         try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        if !preserveDirectory {
+            addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        }
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         let bookmarks = RR9RouteBookmarkStore(blocksAccess: blockAuthorization)
         let bookmark = try bookmarks.makeBookmark(for: projectRoot)
