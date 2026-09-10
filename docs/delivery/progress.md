@@ -148,8 +148,11 @@ then retracted that disposition for one concrete sidebar accessibility addendum.
 All non-sidebar properties remain terminal. Goals is visually selected while
 retained CUA reports Needs Review selected; exact AX attribute semantics are being
 clarified before the narrow correction. Same reviewer was briefly archived and
-restored for this Required correction to the same outcome. No native reservation
-is active. Writer media closeout is paused; other source behavior is not reopened. Root and reviewer directly read fresh native result
+restored for this Required correction to the same outcome. Sidebar correction `d38896f24b2d18de7ce1f981f2c8e28716aa9b2d` is integrated at
+`5de1e2fd00a1c227fbd568f81afbbe48e0f35770`: one selected trait plus a raw AX
+assertion in the existing guarded fixture. Source/test build passed; actual native
+semantics remain pending same-reviewer verification and concrete reservation.
+Writer media closeout is paused; other source behavior is not reopened. Root and reviewer directly read fresh native result
 `/private/tmp/release-radar-phase6b-review-01a08cde.L147PW/results/phase6b-native-review-run.xcresult`:
 1/1, zero failures/skips, 160.321 seconds. Full sanitized unsigned arm64 build,
 actual both-domain wide/compact filters, Back/Forward viewport/focus, Help and
