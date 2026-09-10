@@ -231,7 +231,10 @@ and native owner approval, same-store restoration and application. The final
 marker-free native regression passed 1/1; external native verification confirmed
 compact Back automatically reveals and focuses the retained original. Earlier
 failures and their targeted corrections remain distinguished in the evidence;
-no full-suite green claim is made. Independent Astra High review is pending.
+no full-suite green claim is made. Fresh independent Astra High reviewer
+`01a08a3e-c94b-7a42-96ad-66456baf971d` is reviewing source `fe4d9f1` from
+integrated baseline `a2fbc52`; it covers the existing architecture/data/security
+and native UX/QA risks. Runtime settings are not independently exposed.
 The writer's clean named branch is preserved and all test hosts are stopped.
 
 During external verification, selecting the development app before the test host
