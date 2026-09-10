@@ -3221,14 +3221,14 @@ final class AppRouteTests: XCTestCase {
             "Project Plan",
             "Phase Board",
             "Dependencies",
-            "Activity",
+            "History",
         ])
         XCTAssertEqual(routes.map(\.systemImage), [
             "rectangle.grid.1x2",
             "list.bullet.rectangle.portrait",
             "rectangle.split.3x1",
             "arrow.triangle.branch",
-            "clock.arrow.circlepath",
+            "clock",
         ])
     }
 
@@ -5038,6 +5038,107 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(compactPhases.filter { $0.lifecycle.lifecycle == .inDelivery }.count, 3)
         XCTAssertEqual(model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.currentPhaseID)
         try taskCapture(hosting, name: "phase5e-lifecycle-live-journey-final")
+    }
+
+    @MainActor
+    func testLiveHistoryJourneyUsesNativeWideAndCompactControlsAndRestoresExactContext() async throws {
+        let enableMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M/phase6a-native-01a08be3-v3-enabled")
+        guard FileManager.default.fileExists(atPath: enableMarker.path) else {
+            throw XCTSkip("The external controller must create the fresh Phase 6A enable marker.")
+        }
+        try FileManager.default.removeItem(at: enableMarker)
+        let wideMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M/phase6a-native-01a08be3-v3-wide-complete")
+        let compactMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase6a.eJzQ2M/phase6a-native-01a08be3-v3-compact-complete")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: wideMarker.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: compactMarker.path))
+
+        let fixture = try await makeRR9CaptureModel(scenario: .phaseLifecycle)
+        let model = fixture.model
+        let projectID = RR9ActivePhaseCaptureFixture.primaryProjectID
+        let ticketID = TicketID(rawValue: "RR9-HISTORY")
+        try await fixture.store.transact(
+            actor: .init(id: "phase6a-native-fixture", threadID: "phase6a-asserted-thread"),
+            reason: "Open the nonactive History ticket",
+            auditEventID: .init(rawValue: "phase6a-native-history-target"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: ticketID.rawValue)
+        ) { _ in }
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        await model.navigate(to: .activity(projectID))
+        model.setHistoryFilter(.audit, projectID: projectID)
+
+        let items = try XCTUnwrap(model.activity(for: projectID)?.filtered(by: .audit).items)
+        XCTAssertGreaterThanOrEqual(items.count, 2)
+        let first = try XCTUnwrap(items.first)
+        let last = try XCTUnwrap(items.last)
+        let target = try XCTUnwrap(items.first { $0.identity.sourceID == "phase6a-native-history-target" })
+        model.selectHistoryEvent(target.identity, projectID: projectID)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 940),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 6A History — isolated native interaction 01a08be3-v3"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.frame = .init(x: 0, y: 0, width: 1_500, height: 940)
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(window.isVisible)
+
+        let nativeApplication = AXUIElementCreateApplication(getpid())
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(nativeApplication, title: window.title))
+        let wideAccessibilityText = accessibilityText(nativeWindow)
+        XCTAssertTrue(wideAccessibilityText.contains("Event source"))
+        XCTAssertTrue(wideAccessibilityText.contains("EVENT DETAIL"))
+        for item in [first, last] {
+            let candidate = await scrollToAccessibilityElement(
+                nativeWindow,
+                identifier: "history-event-\(item.source.rawValue)-\(item.identity.sourceID)"
+            )
+            let element = try XCTUnwrap(candidate)
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                .success
+            )
+        }
+        try taskCapture(hosting, name: "phase6a-history-wide-before-external")
+        print("PHASE6A HISTORY WIDE READY: use native History filter and rows; open RR9-HISTORY in nonactive phase; Back to the exact Audit filter and selected event; inspect Help")
+
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: wideMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: wideMarker.path))
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
+        XCTAssertEqual(model.navigationFocus, .historyEvent(target.identity))
+        XCTAssertNil(model.navigationRecoveryMessage)
+
+        window.setContentSize(NSSize(width: 760, height: 900))
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        try taskCapture(hosting, name: "phase6a-history-compact-before-external")
+        print("PHASE6A HISTORY COMPACT READY: verify stacked detail; keyboard/AX reach first and last events; reopen RR9-HISTORY and Back to the exact Audit event")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactMarker.path))
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), target.identity)
+        XCTAssertEqual(model.navigationFocus, .historyEvent(target.identity))
+        XCTAssertNil(model.navigationRecoveryMessage)
+        try taskCapture(hosting, name: "phase6a-history-compact-final")
     }
 
     @MainActor

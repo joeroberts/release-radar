@@ -160,6 +160,12 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let originalStore = DeliveryStore(databaseURL: databaseURL)
         try await seedProject(in: originalStore, id: "project-one", registrationID: "old-registration", ticketID: "ticket-one")
         try await seedNotification(in: originalStore, state: "queued", generation: 1)
+        try await originalStore.transact(
+            actor: .init(id: "history-backup-fixture", threadID: "history-backup-thread", threadAttribution: .asserted),
+            reason: "Record event-time facts before backup",
+            auditEventID: .init(rawValue: "history-before-backup"),
+            auditScope: .init(projectID: .init(rawValue: "project-one"), entityType: .ticket, entityID: "ticket-one")
+        ) { _ in }
         let originalRegistration = try await ProjectLifecycleManager(store: originalStore)
             .snapshot(projectID: .init(rawValue: "project-one")).registration
         let packageURL = databaseURL.deletingLastPathComponent().appendingPathComponent("old.release-radar-backup", isDirectory: true)
@@ -192,6 +198,17 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let firstRegistration = try await ProjectLifecycleManager(store: firstRestore.store)
             .snapshot(projectID: .init(rawValue: "project-one")).registration
         XCTAssertNotEqual(firstRegistration, originalRegistration)
+        let restoredHistory = try await ProjectActivityProjection.load(
+            from: firstRestore.store,
+            projectID: .init(rawValue: "project-one")
+        )
+        let restoredEvent = try XCTUnwrap(restoredHistory.items.first { $0.identity.sourceID == "history-before-backup" })
+        XCTAssertEqual(restoredEvent.identity.registrationID, "old-registration")
+        XCTAssertEqual(restoredEvent.eventFacts?.projectName, "project-one")
+        XCTAssertEqual(restoredEvent.eventFacts?.ticketID?.rawValue, "ticket-one")
+        XCTAssertEqual(restoredEvent.eventFacts?.phaseName, "Phase")
+        XCTAssertEqual(restoredEvent.eventFacts?.currentLane, .accepted)
+        XCTAssertEqual(restoredEvent.threadAttribution, .asserted)
         let firstNotificationState = try await notificationState(in: firstRestore.store)
         let occurrenceGeneration = try await firstRestore.store.read { try $0.scalarInt("SELECT generation FROM notification_occurrences WHERE subject_key = 'project-one|subject-one'") }
         XCTAssertEqual(firstNotificationState, "sent")

@@ -44,7 +44,7 @@ enum AppRoute: Hashable, Sendable {
         case .removedProject: "Removed Project"
         case .phaseBoard: "Phase Board"
         case .dependencies: "Dependencies"
-        case .activity: "Activity"
+        case .activity: "History"
         case .referenceSource: "Reference source"
         case .recordedImpacts: "Recorded impacts"
         }
@@ -62,7 +62,7 @@ enum AppRoute: Hashable, Sendable {
         case .removedProject: "clock.badge.xmark"
         case .phaseBoard: "rectangle.split.3x1"
         case .dependencies: "arrow.triangle.branch"
-        case .activity: "clock.arrow.circlepath"
+        case .activity: "clock"
         case .referenceSource: "doc.text.magnifyingglass"
         case .recordedImpacts: "arrow.triangle.branch"
         }

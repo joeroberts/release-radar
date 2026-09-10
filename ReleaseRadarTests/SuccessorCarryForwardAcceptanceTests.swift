@@ -32,7 +32,7 @@ final class SuccessorCarryForwardAcceptanceTests: XCTestCase {
         }
         let verifier = try SQLiteConnection(url: databaseURL, immutableReadOnly: true)
 
-        XCTAssertEqual(try verifier.scalarInt("PRAGMA user_version"), 23)
+        XCTAssertEqual(try verifier.scalarInt("PRAGMA user_version"), StoreMigrations.currentVersion)
         XCTAssertEqual(facts.0, [
             ["phase_id": .text("phase-1"), "goal_id": .text("goal-1"), "ticket_id": .text("ticket-active"), "assessment": .text("current")],
             ["phase_id": .text("phase-2"), "goal_id": .text("goal-2"), "ticket_id": .text("ticket-blocked"), "assessment": .text("unassessed")],

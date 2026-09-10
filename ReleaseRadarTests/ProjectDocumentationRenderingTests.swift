@@ -33,8 +33,16 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         )
         let activity = ProjectActivityProjection(projectID: projectID, items: [
             .init(
-                id: "retained-audit", source: .audit, title: "Project change",
+                id: "retained-audit",
+                identity: .init(
+                    projectID: projectID,
+                    registrationID: registration.registrationID,
+                    source: .audit,
+                    sourceID: "retained-audit"
+                ),
+                source: .audit, provenance: .retainedSource, title: "Project change",
                 detail: "Retained attributed history", observedAt: record.removedAt,
+                occurredAt: record.removedAt, recordedAt: record.removedAt, eventFacts: nil,
                 ticketID: nil, deliveryLane: nil, runtimeState: nil,
                 notificationState: nil, notificationStatusText: nil,
                 originatingThreadID: "thread-removal-rendering"
@@ -321,7 +329,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             ("overview", .projectOverview(projectID), "Overview"),
             ("phase-board", .phaseBoard(projectID), "Phase Board"),
             ("dependencies", .dependencies(projectID), "Dependencies"),
-            ("activity", .activity(projectID), "Activity"),
+            ("activity", .activity(projectID), "History"),
         ]
 
         for width in [1100.0, 620.0] {

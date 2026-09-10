@@ -405,6 +405,26 @@ final class StoreAcceptanceTests: XCTestCase {
             }
         }
         let legacy = try SQLiteConnection(url: url)
+        // The seed uses today's writer, but the downgraded fixture represents a
+        // version-18 database where event-time audit facts did not exist.
+        try legacy.execute("""
+            UPDATE audit_events SET
+                event_facts_recorded = 0,
+                event_provenance = NULL,
+                event_occurred_at = NULL,
+                event_recorded_at = NULL,
+                event_project_name = NULL,
+                event_registration_id = NULL,
+                event_request_generation = NULL,
+                event_ticket_id = NULL,
+                event_phase_id = NULL,
+                event_phase_name = NULL,
+                event_ticket_outcome = NULL,
+                event_previous_lane = NULL,
+                event_current_lane = NULL,
+                event_previous_phase_id = NULL,
+                event_current_phase_id = NULL
+            """)
         let tables = [
             "projects", "project_registrations", "phases", "tickets", "evidence", "delivery_goals",
             "delivery_goal_ticket_assignments", "delivery_goal_assignment_events", "ticket_task_plans",

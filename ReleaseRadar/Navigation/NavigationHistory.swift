@@ -10,6 +10,7 @@ extension ProjectRegistration {
 enum NavigationFocus: Hashable, Sendable {
     case route(AppRoute)
     case ticket(TicketID)
+    case historyEvent(HistoryEventIdentity)
     case planChangeProposal(proposalID: String, version: Int64, ticketID: TicketID?)
     case referenceSource(linkID: String, version: Int64)
     case recordedImpacts
@@ -25,6 +26,8 @@ struct NavigationHistoryEntry: Equatable, Sendable {
     var showsAllPhases: Bool
     var filter: DeliveryGoalFilter?
     var selectedTicketID: TicketID?
+    var historyFilter: HistoryFilter?
+    var selectedHistoryEventID: HistoryEventIdentity?
     var focus: NavigationFocus?
 
     init(
@@ -34,6 +37,8 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         showsAllPhases: Bool = false,
         filter: DeliveryGoalFilter? = nil,
         selectedTicketID: TicketID? = nil,
+        historyFilter: HistoryFilter? = nil,
+        selectedHistoryEventID: HistoryEventIdentity? = nil,
         focus: NavigationFocus? = nil
     ) {
         self.route = route
@@ -42,6 +47,8 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         self.showsAllPhases = showsAllPhases
         self.filter = filter
         self.selectedTicketID = selectedTicketID
+        self.historyFilter = historyFilter
+        self.selectedHistoryEventID = selectedHistoryEventID
         self.focus = focus
     }
 }
@@ -74,6 +81,8 @@ struct NavigationHistory: Equatable, Sendable {
         showsAllPhases: Bool = false,
         filter: DeliveryGoalFilter? = nil,
         selectedTicketID: TicketID? = nil,
+        historyFilter: HistoryFilter? = nil,
+        selectedHistoryEventID: HistoryEventIdentity? = nil,
         focus: NavigationFocus? = nil
     ) {
         navigate(to: .init(
@@ -83,6 +92,8 @@ struct NavigationHistory: Equatable, Sendable {
             showsAllPhases: showsAllPhases,
             filter: filter,
             selectedTicketID: selectedTicketID,
+            historyFilter: historyFilter,
+            selectedHistoryEventID: selectedHistoryEventID,
             focus: focus
         ))
     }
@@ -93,6 +104,8 @@ struct NavigationHistory: Equatable, Sendable {
         showsAllPhases: Bool = false,
         filter: DeliveryGoalFilter? = nil,
         selectedTicketID: TicketID?,
+        historyFilter: HistoryFilter? = nil,
+        selectedHistoryEventID: HistoryEventIdentity? = nil,
         focus: NavigationFocus? = nil
     ) {
         entries[index].registration = registration ?? entries[index].registration
@@ -100,6 +113,8 @@ struct NavigationHistory: Equatable, Sendable {
         entries[index].showsAllPhases = showsAllPhases
         entries[index].filter = filter
         entries[index].selectedTicketID = selectedTicketID
+        entries[index].historyFilter = historyFilter
+        entries[index].selectedHistoryEventID = selectedHistoryEventID
         entries[index].focus = focus
     }
 
