@@ -20,6 +20,8 @@ public struct AgentQueryDispatcher: Sendable {
                 projectID = project; rootID = root; extraIdentities = [ticket]
             case let .recordedImpacts(project, root, repository, artifact):
                 projectID = project; rootID = root; extraIdentities = [repository, artifact]
+            case let .planChangeProposals(project):
+                projectID = project; rootID = nil; extraIdentities = []
             }
             for identity in [projectID, rootID].compactMap({ $0 }) + extraIdentities {
                 guard !identity.isEmpty, identity.utf8.count <= 256, !identity.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else { throw DocumentationOperationError.invalidRequest }
@@ -65,6 +67,26 @@ public struct AgentQueryDispatcher: Sendable {
                     }
                     return result
                 }
+            case let .planChangeProposals(assertedProjectID):
+                guard let project = await PersistedAuthorizedProjectRegistry(store: store)
+                    .resolve(projectRoot: envelope.projectRoot),
+                      Data(project.projectID.rawValue.utf8) == Data(assertedProjectID.utf8) else {
+                    return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+                }
+                let proposals = try await PlanChangeProposalQuery.load(
+                    from: store,
+                    projectID: project.projectID
+                )
+                let result = AgentCommandResult(
+                    entityIDs: proposals.map(\.id.rawValue),
+                    auditEventID: nil,
+                    error: nil,
+                    planChangeProposals: proposals
+                )
+                guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
+                    throw DocumentationOperationError.inventoryTooLarge
+                }
+                return result
             }
             let captured = try await store.documentationRead { c in
                 let context = try DocumentationRootContext.read(c, path: envelope.projectRoot, projectID: projectID, rootID: rootID, schemaVersion: store.schemaVersionForDocumentation)

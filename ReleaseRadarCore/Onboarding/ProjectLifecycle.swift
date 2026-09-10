@@ -520,6 +520,60 @@ public actor ProjectRemovalManager {
             try connection.execute("DELETE FROM ticket_reference_versions WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM ticket_reference_links WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM ticket_reference_link_sets WHERE project_id = ?", bindings: [project])
+            try connection.execute(
+                """
+                INSERT INTO retained_plan_change_proposals (
+                    removal_id, historical_project_id, proposal_id, current_version,
+                    created_at, updated_at
+                )
+                SELECT ?, project_id, id, current_version, created_at, updated_at
+                FROM plan_change_proposals WHERE project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                """
+                INSERT INTO retained_plan_change_proposal_versions (
+                    removal_id, historical_project_id, proposal_id, version,
+                    registration_id, request_generation, baseline_digest, baseline_data,
+                    operations_data, diff_data, source_impacts_data, rationale, created_at
+                )
+                SELECT ?, project_id, proposal_id, version, registration_id,
+                       request_generation, baseline_digest, baseline_data, operations_data,
+                       diff_data, source_impacts_data, rationale, created_at
+                FROM plan_change_proposal_versions WHERE project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                """
+                INSERT INTO retained_plan_change_proposal_decisions (
+                    removal_id, historical_project_id, proposal_id, version, id,
+                    disposition, baseline_digest, registration_id, request_generation,
+                    actor_id, created_at
+                )
+                SELECT ?, project_id, proposal_id, version, id, disposition,
+                       baseline_digest, registration_id, request_generation, actor_id, created_at
+                FROM plan_change_proposal_decisions WHERE project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                """
+                INSERT INTO retained_plan_change_proposal_applications (
+                    removal_id, historical_project_id, proposal_id, version, id,
+                    decision_id, audit_event_id, applied_at
+                )
+                SELECT ?, project_id, proposal_id, version, id, decision_id,
+                       audit_event_id, applied_at
+                FROM plan_change_proposal_applications WHERE project_id = ?
+                """,
+                bindings: [removal, project]
+            )
+            try connection.execute("DELETE FROM plan_change_proposal_applications WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM plan_change_proposal_decisions WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM plan_change_proposal_versions WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM plan_change_proposals WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM ticket_tasks WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM ticket_task_plans WHERE project_id = ?", bindings: [project])
         }

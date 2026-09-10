@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 20
+    static let currentVersion: Int64 = 21
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -96,6 +96,9 @@ enum StoreMigrations {
             }
             if version < 20 {
                 try connection.executeScript(schemaVersion20)
+            }
+            if version < 21 {
+                try connection.executeScript(schemaVersion21)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -607,6 +610,41 @@ enum StoreMigrations {
             "catalog_digest", "observed_path", "observed_lifecycle",
             "observed_authority", "created_at",
         ]),
+        (21, "plan_change_proposals", [
+            "project_id", "id", "current_version", "created_at", "updated_at",
+        ]),
+        (21, "plan_change_proposal_versions", [
+            "project_id", "proposal_id", "version", "registration_id",
+            "request_generation", "baseline_digest", "baseline_data",
+            "operations_data", "diff_data", "source_impacts_data", "rationale", "created_at",
+        ]),
+        (21, "plan_change_proposal_decisions", [
+            "project_id", "proposal_id", "version", "id", "disposition",
+            "baseline_digest", "registration_id", "request_generation", "actor_id",
+            "created_at",
+        ]),
+        (21, "plan_change_proposal_applications", [
+            "project_id", "proposal_id", "version", "id", "decision_id",
+            "audit_event_id", "applied_at",
+        ]),
+        (21, "retained_plan_change_proposals", [
+            "removal_id", "historical_project_id", "proposal_id", "current_version",
+            "created_at", "updated_at",
+        ]),
+        (21, "retained_plan_change_proposal_versions", [
+            "removal_id", "historical_project_id", "proposal_id", "version",
+            "registration_id", "request_generation", "baseline_digest", "baseline_data",
+            "operations_data", "diff_data", "source_impacts_data", "rationale", "created_at",
+        ]),
+        (21, "retained_plan_change_proposal_decisions", [
+            "removal_id", "historical_project_id", "proposal_id", "version", "id",
+            "disposition", "baseline_digest", "registration_id", "request_generation",
+            "actor_id", "created_at",
+        ]),
+        (21, "retained_plan_change_proposal_applications", [
+            "removal_id", "historical_project_id", "proposal_id", "version", "id",
+            "decision_id", "audit_event_id", "applied_at",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -679,6 +717,20 @@ enum StoreMigrations {
         (20, "trigger", "ticket_reference_links_reject_identity_update"),
         (20, "trigger", "ticket_reference_links_reject_delete"),
         (20, "trigger", "ticket_reference_link_sets_reject_delete"),
+        (21, "trigger", "plan_change_proposal_versions_reject_update"),
+        (21, "trigger", "plan_change_proposal_versions_reject_delete"),
+        (21, "trigger", "plan_change_proposal_decisions_reject_update"),
+        (21, "trigger", "plan_change_proposal_decisions_reject_delete"),
+        (21, "trigger", "plan_change_proposal_applications_reject_update"),
+        (21, "trigger", "plan_change_proposal_applications_reject_delete"),
+        (21, "trigger", "retained_plan_change_proposals_reject_update"),
+        (21, "trigger", "retained_plan_change_proposals_reject_delete"),
+        (21, "trigger", "retained_plan_change_proposal_versions_reject_update"),
+        (21, "trigger", "retained_plan_change_proposal_versions_reject_delete"),
+        (21, "trigger", "retained_plan_change_proposal_decisions_reject_update"),
+        (21, "trigger", "retained_plan_change_proposal_decisions_reject_delete"),
+        (21, "trigger", "retained_plan_change_proposal_applications_reject_update"),
+        (21, "trigger", "retained_plan_change_proposal_applications_reject_delete"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -996,6 +1048,85 @@ enum StoreMigrations {
     END
     """
 
+    private static let planChangeProposalVersionsRejectUpdateTrigger = """
+    CREATE TRIGGER plan_change_proposal_versions_reject_update
+    BEFORE UPDATE ON plan_change_proposal_versions
+    BEGIN
+        SELECT RAISE(ABORT, 'plan change proposal versions are immutable');
+    END
+    """
+
+    private static let planChangeProposalVersionsRejectDeleteTrigger = """
+    CREATE TRIGGER plan_change_proposal_versions_reject_delete
+    BEFORE DELETE ON plan_change_proposal_versions
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'plan change proposal versions cannot be deleted');
+    END
+    """
+
+    private static let planChangeProposalDecisionsRejectUpdateTrigger = """
+    CREATE TRIGGER plan_change_proposal_decisions_reject_update
+    BEFORE UPDATE ON plan_change_proposal_decisions
+    BEGIN
+        SELECT RAISE(ABORT, 'plan change proposal decisions are immutable');
+    END
+    """
+
+    private static let planChangeProposalDecisionsRejectDeleteTrigger = """
+    CREATE TRIGGER plan_change_proposal_decisions_reject_delete
+    BEFORE DELETE ON plan_change_proposal_decisions
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'plan change proposal decisions cannot be deleted');
+    END
+    """
+
+    private static let planChangeProposalApplicationsRejectUpdateTrigger = """
+    CREATE TRIGGER plan_change_proposal_applications_reject_update
+    BEFORE UPDATE ON plan_change_proposal_applications
+    BEGIN
+        SELECT RAISE(ABORT, 'plan change proposal applications are immutable');
+    END
+    """
+
+    private static let planChangeProposalApplicationsRejectDeleteTrigger = """
+    CREATE TRIGGER plan_change_proposal_applications_reject_delete
+    BEFORE DELETE ON plan_change_proposal_applications
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'plan change proposal applications cannot be deleted');
+    END
+    """
+
+    private static func immutableRetainedTrigger(
+        table: String,
+        action: String
+    ) -> String {
+        """
+        CREATE TRIGGER \(table)_reject_\(action)
+        BEFORE \(action.uppercased()) ON \(table)
+        BEGIN
+            SELECT RAISE(ABORT, 'retained plan change proposal history is immutable');
+        END
+        """
+    }
+
     private static let criticalTriggers: [(version: Int64, name: String, sql: String)] = [
         (1, "reject_phase_dependency_cycle_insert", phaseDependencyCycleInsertTrigger),
         (1, "reject_phase_dependency_cycle_update", phaseDependencyCycleUpdateTrigger),
@@ -1016,6 +1147,20 @@ enum StoreMigrations {
         (20, "ticket_reference_links_reject_identity_update", ticketReferenceLinksRejectIdentityUpdateTrigger),
         (20, "ticket_reference_links_reject_delete", ticketReferenceLinksRejectDeleteTrigger),
         (20, "ticket_reference_link_sets_reject_delete", ticketReferenceLinkSetsRejectDeleteTrigger),
+        (21, "plan_change_proposal_versions_reject_update", planChangeProposalVersionsRejectUpdateTrigger),
+        (21, "plan_change_proposal_versions_reject_delete", planChangeProposalVersionsRejectDeleteTrigger),
+        (21, "plan_change_proposal_decisions_reject_update", planChangeProposalDecisionsRejectUpdateTrigger),
+        (21, "plan_change_proposal_decisions_reject_delete", planChangeProposalDecisionsRejectDeleteTrigger),
+        (21, "plan_change_proposal_applications_reject_update", planChangeProposalApplicationsRejectUpdateTrigger),
+        (21, "plan_change_proposal_applications_reject_delete", planChangeProposalApplicationsRejectDeleteTrigger),
+        (21, "retained_plan_change_proposals_reject_update", immutableRetainedTrigger(table: "retained_plan_change_proposals", action: "update")),
+        (21, "retained_plan_change_proposals_reject_delete", immutableRetainedTrigger(table: "retained_plan_change_proposals", action: "delete")),
+        (21, "retained_plan_change_proposal_versions_reject_update", immutableRetainedTrigger(table: "retained_plan_change_proposal_versions", action: "update")),
+        (21, "retained_plan_change_proposal_versions_reject_delete", immutableRetainedTrigger(table: "retained_plan_change_proposal_versions", action: "delete")),
+        (21, "retained_plan_change_proposal_decisions_reject_update", immutableRetainedTrigger(table: "retained_plan_change_proposal_decisions", action: "update")),
+        (21, "retained_plan_change_proposal_decisions_reject_delete", immutableRetainedTrigger(table: "retained_plan_change_proposal_decisions", action: "delete")),
+        (21, "retained_plan_change_proposal_applications_reject_update", immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "update")),
+        (21, "retained_plan_change_proposal_applications_reject_delete", immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "delete")),
     ]
 
     private static let criticalIndexes: [(
@@ -1135,6 +1280,18 @@ enum StoreMigrations {
         (20, "ticket_reference_versions", "project_id,ticket_id,link_id", "ticket_reference_links", "project_id,ticket_id,id", "NO ACTION"),
         (20, "retained_ticket_reference_links", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
         (20, "retained_ticket_reference_versions", "removal_id,historical_project_id,ticket_id,link_id", "retained_ticket_reference_links", "removal_id,historical_project_id,ticket_id,link_id", "NO ACTION"),
+        (21, "plan_change_proposals", "project_id", "projects", "id", "CASCADE"),
+        (21, "plan_change_proposal_versions", "project_id,proposal_id", "plan_change_proposals", "project_id,id", "NO ACTION"),
+        (21, "plan_change_proposal_decisions", "project_id,proposal_id,version", "plan_change_proposal_versions", "project_id,proposal_id,version", "NO ACTION"),
+        (21, "plan_change_proposal_applications", "project_id,proposal_id,version", "plan_change_proposal_versions", "project_id,proposal_id,version", "NO ACTION"),
+        (21, "plan_change_proposal_applications", "project_id,proposal_id,version,decision_id", "plan_change_proposal_decisions", "project_id,proposal_id,version,id", "NO ACTION"),
+        (21, "plan_change_proposal_applications", "audit_event_id", "audit_events", "id", "NO ACTION"),
+        (21, "retained_plan_change_proposals", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (21, "retained_plan_change_proposal_versions", "removal_id,historical_project_id,proposal_id", "retained_plan_change_proposals", "removal_id,historical_project_id,proposal_id", "NO ACTION"),
+        (21, "retained_plan_change_proposal_decisions", "removal_id,historical_project_id,proposal_id,version", "retained_plan_change_proposal_versions", "removal_id,historical_project_id,proposal_id,version", "NO ACTION"),
+        (21, "retained_plan_change_proposal_applications", "removal_id,historical_project_id,proposal_id,version", "retained_plan_change_proposal_versions", "removal_id,historical_project_id,proposal_id,version", "NO ACTION"),
+        (21, "retained_plan_change_proposal_applications", "removal_id,historical_project_id,proposal_id,version,decision_id", "retained_plan_change_proposal_decisions", "removal_id,historical_project_id,proposal_id,version,id", "NO ACTION"),
+        (21, "retained_plan_change_proposal_applications", "audit_event_id", "audit_events", "id", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -2058,5 +2215,155 @@ enum StoreMigrations {
     \(ticketReferenceLinksRejectIdentityUpdateTrigger);
     \(ticketReferenceLinksRejectDeleteTrigger);
     \(ticketReferenceLinkSetsRejectDeleteTrigger);
+    """
+
+    // Proposal history starts empty. No existing plan edits or audits imply a
+    // proposal, decision, approval, or application.
+    private static let schemaVersion21 = """
+    CREATE TABLE plan_change_proposals (
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        id TEXT NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 256),
+        current_version INTEGER NOT NULL CHECK (current_version > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, id)
+    );
+
+    CREATE TABLE plan_change_proposal_versions (
+        project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL CHECK (version > 0),
+        registration_id TEXT NOT NULL CHECK (length(CAST(registration_id AS BLOB)) BETWEEN 1 AND 128),
+        request_generation INTEGER NOT NULL CHECK (request_generation > 0),
+        baseline_digest TEXT NOT NULL CHECK (length(baseline_digest) = 64 AND baseline_digest NOT GLOB '*[^0-9a-f]*'),
+        baseline_data BLOB NOT NULL CHECK (length(baseline_data) > 0),
+        operations_data BLOB NOT NULL CHECK (length(operations_data) > 0),
+        diff_data BLOB NOT NULL CHECK (length(diff_data) > 0),
+        source_impacts_data BLOB NOT NULL CHECK (length(source_impacts_data) > 0),
+        rationale TEXT NOT NULL CHECK (length(CAST(rationale AS BLOB)) BETWEEN 1 AND 4096),
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, proposal_id, version),
+        FOREIGN KEY(project_id, proposal_id)
+            REFERENCES plan_change_proposals(project_id, id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE plan_change_proposal_decisions (
+        project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        id TEXT NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 256),
+        disposition TEXT NOT NULL CHECK (disposition IN ('approved', 'rejected')),
+        baseline_digest TEXT NOT NULL CHECK (length(baseline_digest) = 64 AND baseline_digest NOT GLOB '*[^0-9a-f]*'),
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL CHECK (request_generation > 0),
+        actor_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, proposal_id, version),
+        UNIQUE(project_id, proposal_id, version, id),
+        FOREIGN KEY(project_id, proposal_id, version)
+            REFERENCES plan_change_proposal_versions(project_id, proposal_id, version) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE plan_change_proposal_applications (
+        project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        id TEXT NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 256),
+        decision_id TEXT NOT NULL,
+        audit_event_id TEXT NOT NULL,
+        applied_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, proposal_id, version),
+        UNIQUE(id),
+        FOREIGN KEY(project_id, proposal_id, version)
+            REFERENCES plan_change_proposal_versions(project_id, proposal_id, version) ON DELETE NO ACTION,
+        FOREIGN KEY(project_id, proposal_id, version, decision_id)
+            REFERENCES plan_change_proposal_decisions(project_id, proposal_id, version, id) ON DELETE NO ACTION,
+        FOREIGN KEY(audit_event_id) REFERENCES audit_events(id) ON DELETE NO ACTION
+            DEFERRABLE INITIALLY DEFERRED
+    );
+
+    CREATE TABLE retained_plan_change_proposals (
+        removal_id TEXT NOT NULL REFERENCES removed_projects(removal_id) ON DELETE NO ACTION,
+        historical_project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        current_version INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, proposal_id)
+    );
+
+    CREATE TABLE retained_plan_change_proposal_versions (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL,
+        baseline_digest TEXT NOT NULL,
+        baseline_data BLOB NOT NULL,
+        operations_data BLOB NOT NULL,
+        diff_data BLOB NOT NULL,
+        source_impacts_data BLOB NOT NULL,
+        rationale TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, proposal_id, version),
+        FOREIGN KEY(removal_id, historical_project_id, proposal_id)
+            REFERENCES retained_plan_change_proposals(removal_id, historical_project_id, proposal_id)
+            ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_plan_change_proposal_decisions (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        id TEXT NOT NULL,
+        disposition TEXT NOT NULL,
+        baseline_digest TEXT NOT NULL,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL,
+        actor_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, proposal_id, version),
+        UNIQUE(removal_id, historical_project_id, proposal_id, version, id),
+        FOREIGN KEY(removal_id, historical_project_id, proposal_id, version)
+            REFERENCES retained_plan_change_proposal_versions(removal_id, historical_project_id, proposal_id, version)
+            ON DELETE NO ACTION
+    );
+
+    CREATE TABLE retained_plan_change_proposal_applications (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        proposal_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        id TEXT NOT NULL,
+        decision_id TEXT NOT NULL,
+        audit_event_id TEXT NOT NULL REFERENCES audit_events(id) ON DELETE NO ACTION
+            DEFERRABLE INITIALLY DEFERRED,
+        applied_at TEXT NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, proposal_id, version),
+        UNIQUE(removal_id, id),
+        FOREIGN KEY(removal_id, historical_project_id, proposal_id, version)
+            REFERENCES retained_plan_change_proposal_versions(removal_id, historical_project_id, proposal_id, version)
+            ON DELETE NO ACTION,
+        FOREIGN KEY(removal_id, historical_project_id, proposal_id, version, decision_id)
+            REFERENCES retained_plan_change_proposal_decisions(removal_id, historical_project_id, proposal_id, version, id)
+            ON DELETE NO ACTION
+    );
+
+    \(planChangeProposalVersionsRejectUpdateTrigger);
+    \(planChangeProposalVersionsRejectDeleteTrigger);
+    \(planChangeProposalDecisionsRejectUpdateTrigger);
+    \(planChangeProposalDecisionsRejectDeleteTrigger);
+    \(planChangeProposalApplicationsRejectUpdateTrigger);
+    \(planChangeProposalApplicationsRejectDeleteTrigger);
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposals", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposals", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposal_versions", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposal_versions", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposal_decisions", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposal_decisions", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_plan_change_proposal_applications", action: "delete"));
     """
 }

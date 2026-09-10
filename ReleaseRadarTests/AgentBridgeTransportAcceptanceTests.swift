@@ -828,12 +828,64 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         }
     }
 
+    func testPlanChangeProposalToolParsesEveryBoundedOperationBeforeTransport() throws {
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let operations: [[String: Any]] = [
+            ["kind": "addPhase", "id": "phase-next", "name": "Next"],
+            ["kind": "addDeliveryGoal", "phaseID": "phase-next", "goal": [
+                "id": "goal-next", "title": "Ship next", "outcome": "The next slice is usable",
+                "doneCriteria": ["Acceptance passes"], "sortOrder": 0,
+            ]],
+            ["kind": "addUnassignedTicket", "id": "ticket-next", "outcome": "Deliver next"],
+            ["kind": "addPendingTicketTasks", "ticketID": "ticket-next", "tasks": [[
+                "id": "task-next", "label": "T1", "title": "Implement next", "sortOrder": 0,
+            ]]],
+            ["kind": "placeTicket", "ticketID": "ticket-next", "phaseID": "phase-next"],
+            ["kind": "assignTicketToGoal", "ticketID": "ticket-next", "phaseID": "phase-next", "goalID": "goal-next"],
+            ["kind": "addPhaseDependency", "id": "phase-edge", "phaseID": "phase-next", "dependsOnPhaseID": "phase-current"],
+            ["kind": "addTicketDependency", "id": "ticket-edge", "ticketID": "ticket-next", "dependsOnTicketID": "ticket-current"],
+        ]
+        let base: [String: Any] = [
+            "version": 1,
+            "requestID": UUID().uuidString,
+            "projectRoot": "/phase5c-parser-only",
+            // This final invalid envelope field keeps the parser test completely
+            // local: every valid operation must be accepted before this guard.
+            "reason": NSNull(),
+            "proposalID": "proposal-next",
+            "expectedPreviousVersion": NSNull(),
+            "rationale": "Add the next bounded work package.",
+            "operations": operations,
+        ]
+        let parsed = try Self.runToolSession(
+            helper,
+            tool: "release_radar_save_plan_change_proposal",
+            arguments: base
+        ).call
+        XCTAssertEqual(jsonRPCErrorCode(parsed), -32602)
+        XCTAssertTrue(
+            ((parsed["error"] as? [String: Any])?["message"] as? String ?? "").contains("Missing string argument: reason")
+        )
+
+        var unsupported = operations
+        unsupported[0]["lane"] = "accepted"
+        let rejected = try Self.runToolSession(
+            helper,
+            tool: "release_radar_save_plan_change_proposal",
+            arguments: base.merging(["operations": unsupported]) { _, new in new }
+        ).call
+        XCTAssertEqual(jsonRPCErrorCode(rejected), -32602)
+        XCTAssertTrue(
+            ((rejected["error"] as? [String: Any])?["message"] as? String ?? "").contains("exact fields")
+        )
+    }
+
     func testDeliveryGoalToolsExposeOnlyExternalLifecycleAndBoundedSchemas() throws {
         let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
         let session = try Self.runToolSession(helper, tool: "release_radar_finalize_phase_plan", arguments: ["version": true])
         let result = try XCTUnwrap(session.list["result"] as? [String: Any])
         let tools = try XCTUnwrap(result["tools"] as? [[String: Any]])
-        XCTAssertEqual(tools.count, 30)
+        XCTAssertEqual(tools.count, 32)
         for name in ["apply_phase_plan_revision", "finalize_phase_plan", "transition_delivery_goal"] {
             let tool = tools.first { $0["name"] as? String == "release_radar_" + name }
             XCTAssertNotNil(tool, name)
@@ -1393,7 +1445,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 30,
+              tools.count == 32,
               hasTicketTaskToolSchemas(tools),
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
               let transitionSchema = transition["inputSchema"] as? [String: Any],
