@@ -49,9 +49,12 @@ observation timestamps. The original writer owns bounded corrections plus focuse
 regressions. Test-only fresh-session support is committed at `229ad8703cb7a6096fc6eb9928f697f087969f4d`.
 Correction candidate `501dac0898a58d96b3e9b9712f8af030b089e501` is integrated at
 `4cdffaafaee61c4ce027a8e81506c2f60725418d`. Direct final correction readback confirms
-10/10 affected tests and 1/1 corrected native journey, zero failures/skips. Same
-reviewer is rechecking all Required corrections and independently verifying native
-UX; no publication or completion claim is made pending that verdict.
+10/10 affected tests and 1/1 corrected native journey, zero failures/skips. Same reviewer independently closed R1/R2/R3/R5/R6/R7. Only R4 remains: compact
+Back restores Open focus but returns to an earlier viewport with Open offscreen.
+Independent native 1/1 pass asserted row identity, not actual viewport, so does
+not close that finding. Original writer is explicitly escalated to Astra High
+within its ceiling for this single SwiftUI viewport correction; no new reviewer
+or broader suite. Source/publication completion remains pending R4.
 
 ## Authorization and ownership
 
@@ -83,8 +86,9 @@ direct evidence, then independent review before the first publication request.
 
 All native test hosts require explicit serialized reservation here. The writer explicitly released the reservation after confirming all
 task-owned build/XCTest/native processes stopped. Reviewer released the reservation without launching a host. The writer completed corrections and explicitly released after stopped-process
-confirmation. Same reviewer now holds exclusive synthetic/native reservation;
-writer source/tests are paused for correction verification. Before launch inspect the established inert synthetic XCTest
+confirmation. Reviewer released after its native host exited. Original writer now holds the
+exclusive synthetic/native reservation for R4; reviewer work is paused until
+the exact corrected candidate returns. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
@@ -96,3 +100,8 @@ remain in the historical record and linked evidence. No repair is inferred.
 All prior temporary output remains retained; no cleanup occurred. Writer raw outputs remain under `/private/tmp/release-radar-phase6a.eJzQ2M`
 and `/private/tmp/release-radar-phase6a-attachments.iOBzDG`; canonical evidence
 and both screenshots are preserved in the repository. No cleanup occurred.
+
+Independent reviewer raw output remains under
+`/private/tmp/release-radar-phase6a-review-01a08c37.09_u6p48/`; the observed compact
+viewport failure is in its CUA before/after output, not the preinteraction test
+attachments. No canonical image is claimed to show that failure.
