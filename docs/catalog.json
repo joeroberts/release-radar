@@ -5644,13 +5644,42 @@
       "artifactID": "rr-phase5e-lifecycle-brief-2026-09-10",
       "path": "docs/delivery/task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.phase5e-lifecycle",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-10-phase5e-lifecycle",
       "supersedes": [],
       "applicationSensitivity": [
         "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5e-lifecycle",
+      "path": "docs/delivery/evidence/2026-09-10-phase5e-lifecycle.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5e-lifecycle-native",
+      "path": "docs/delivery/evidence/phase5e-lifecycle-native.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
       ],
       "checksum": {
         "policy": "notApplicable"

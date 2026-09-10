@@ -64,6 +64,7 @@
 | rr-2026-09-10-phase5d-successors-wide-detail | [docs/delivery/evidence/2026-09-10-phase5d-successors-wide-detail.png](evidence/2026-09-10-phase5d-successors-wide-detail.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase5d-successors-wide-row | [docs/delivery/evidence/2026-09-10-phase5d-successors-wide-row.png](evidence/2026-09-10-phase5d-successors-wide-row.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase5d-successors | [docs/delivery/evidence/2026-09-10-phase5d-successors.md](evidence/2026-09-10-phase5d-successors.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-10-phase5e-lifecycle | [docs/delivery/evidence/2026-09-10-phase5e-lifecycle.md](evidence/2026-09-10-phase5e-lifecycle.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
@@ -121,6 +122,7 @@
 | rr-phase5b-reference-source-incomplete | [docs/delivery/evidence/phase5b-reference-source-incomplete.png](evidence/phase5b-reference-source-incomplete.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase5b-reference-source-unavailable | [docs/delivery/evidence/phase5b-reference-source-unavailable.png](evidence/phase5b-reference-source-unavailable.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase5b-reference-source-wide | [docs/delivery/evidence/phase5b-reference-source-wide.png](evidence/phase5b-reference-source-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase5e-lifecycle-native | [docs/delivery/evidence/phase5e-lifecycle-native.png](evidence/phase5e-lifecycle-native.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | 94fa2ee5-a1e3-43a6-800e-78d94446f16b | [docs/delivery/evidence/rr-r10-task10-board-compact.png](evidence/rr-r10-task10-board-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | a21d7257-8f90-479a-a76b-0d69dfc04eca | [docs/delivery/evidence/rr-r10-task10-board-wide.png](evidence/rr-r10-task10-board-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | b76d1e50-d364-4dbf-b1aa-c31f675be7c7 | [docs/delivery/evidence/rr-r10-task10-filtered-wide.png](evidence/rr-r10-task10-filtered-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |

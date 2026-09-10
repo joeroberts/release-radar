@@ -249,23 +249,44 @@ after parent-coordinated authorization and baseline/ownership handoff. Eligibili
 alone does not release a writer.
 
 
-## Active Phase 5E local handoff
+## Phase 5E local completion
 
-Parent explicitly authorized Phase 5E full lifecycle from exact D closeout
-`9bd11ca4a9ed26b4e67fd4c0baa79274c0290f6d` and handed source ownership back.
-The [Phase 5E brief](task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
-preserves the selected lifecycle, guarded completion and explicit reopen policy.
-Fresh read-only chief task `01a08a76-9040-75a2-9e8d-9b367e08903e` (Astra High)
-completed contract guidance with no new owner choice, files or runtime actions;
-the completed consultation is archived.
-The handoff incorporates owner authority, D coverage composition, all-writer
-admission and live recovery preservation. Orchestration uses
-`codex/phase5e-orchestrator`; one fresh Sol High writer and one independent Astra
-High reviewer are the authorized delivery profiles, ceiling Astra High.
-Fresh writer `01a08a7d-c80d-7530-9791-94689a1456e3` is active from committed
-handoff `2bee505a255b1d4dc32d9e3d377bcce015acbcdf`, requested Sol High, with
-source/tests/evidence ownership in its isolated worktree. Actual runtime settings
-are not independently exposed. Each native or test run requires a separate
-sanitized-host reservation; no run has been released at this handoff.
-Shared+C/D/E publication, installation, app-state/catalog acceptance and cleanup
-remain excluded. The documented D startup limitation remains retained.
+Phase 5E delivers the approved explicit lifecycle from handoff `2bee505`.
+Writer `01a08a7d-c80d-7530-9791-94689a1456e3` (requested Sol High) preserved
+candidate `068c8ddad6a9f4d555839f1f6896cf394a7f81df` on
+`codex/phase5e-lifecycle`; final evidence-only HEAD is
+`c924d79699fd4a8c880969f14801600dc6d55a84`. Fresh independent Astra High reviewer
+`01a08af7-8419-7b51-9443-c1d7f410ab3d` returned READY on that exact candidate.
+Both Required findings are closed: mixed delivered/fully dropped completion and
+exact-removal retained lifecycle readback, including timestamp/chronology.
+The read-only chief consultation is complete and archived. Actual runtime model
+settings are not independently exposed; no orchestrator subagents were used.
+
+The [brief](task-briefs/2026-09-10-phase5e-lifecycle/phase5e-lifecycle-brief.md)
+and [canonical evidence](evidence/2026-09-10-phase5e-lifecycle.md) retain scope
+and verification. Final lifecycle/schema checks passed 12/12; affected correction
+checks passed 3/3 and the timestamp residual passed 1/1. The isolated native v2
+journey passed 1/1 with external wide/compact controls, explicit reopening and
+completion, reload, reason focus, three In-delivery phases and unchanged active
+phase. Native v1 exposed a false recovery banner; its bounded correction passed
+regression and native verification. Full process restart was not verified.
+
+Source and canonical evidence/PNG are integrated locally. Catalog and indexes
+record completed evidence and brief disposition; application binding, catalog
+acceptance and readback remain unauthorized, so no application synchronization
+claim is made. Orchestrator branch `codex/phase5e-orchestrator` preserves the
+integrated source and delivery metadata. Documentation validation passed. Both
+bounded writer and reviewer are complete and archived after terminal handback;
+all task-owned command, test and native-host processes are stopped.
+
+Temporary bundles/logs/markers/exports remain under
+`/private/tmp/release-radar-phase5e-writer/` and synthetic roots under
+`/Users/Shared/` and XCTest temporary locations as detailed in the evidence.
+Pre-correction native-v1 fixture teardown removed its own live-store temporary
+root; that cleanup was removed, and no orchestrator cleanup occurred. No plain
+E app launch occurred; installed owner app 60590 remained untouched.
+
+A/B are merged; shared execution V1 and C/D/E are complete locally. Parent receives
+the local closeout for next sequencing and publication decisions. Shared+C/D/E
+push, PR, merge, installation, owner-state/catalog acceptance and cleanup remain
+unapproved. No further product writer is released by eligibility alone.
