@@ -52,9 +52,12 @@ replacement drops exact Execution links, and collision cues omit Execution and
 unassigned-work row domains. Final bounded correction `dd5625d1cc96997fcf137cebefdeac97dea6a333` is integrated
 at `bcf1c3fcd65f55261271429dd1d6d91bf5c6cfae`; direct readback confirms all 13
 Goals source tests pass, zero failures/skips, and documentation check passes.
-Writer is clean/quiescent. Same reviewer checks only these leftovers and outstanding
-corrected native QA; prior completed checks remain terminal. No native reservation
-is active until its concrete configuration is returned.
+Writer is clean/quiescent. Same reviewer passed the two source leftovers; no source findings remain. It now
+holds the sole native reservation for exact `bcf1c3f` in fresh
+`/private/tmp/release-radar-phase6b-review-01a08cde.L147PW`, token
+`phase6b-goals-review-01a08cde-20260910-01`. Full sanitized identity/Developer,
+arm64 serial/offline unsigned build and fresh copied-xctestrun with absolute new
+product paths are required. Writer is quiescent; prior checks remain terminal.
 6B is not complete.
 
 A same-project cross-phase duplicate-goal hypothesis was withdrawn because the
