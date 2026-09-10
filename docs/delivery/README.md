@@ -72,6 +72,9 @@
 | rr-phase6b-goals-registration-recovery | [docs/delivery/evidence/2026-09-10-phase6b-goals-registration-recovery.png](evidence/2026-09-10-phase6b-goals-registration-recovery.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-phase6b-goals-wide | [docs/delivery/evidence/2026-09-10-phase6b-goals-wide.png](evidence/2026-09-10-phase6b-goals-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase6b-goals | [docs/delivery/evidence/2026-09-10-phase6b-goals.md](evidence/2026-09-10-phase6b-goals.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6c-evidence-compact | [docs/delivery/evidence/2026-09-10-phase6c-evidence-compact.png](evidence/2026-09-10-phase6c-evidence-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6c-evidence-wide | [docs/delivery/evidence/2026-09-10-phase6c-evidence-wide.png](evidence/2026-09-10-phase6c-evidence-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-10-phase6c-evidence | [docs/delivery/evidence/2026-09-10-phase6c-evidence.md](evidence/2026-09-10-phase6c-evidence.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |

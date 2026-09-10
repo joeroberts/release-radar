@@ -144,3 +144,22 @@ coordination and is temporary; it remains retained with no cleanup authorization
 Temporary PR body files remain in `/tmp/release-radar-phase6-publication/`
 (`phase6a-pr.md`, `phase6b-pr.md`); the published PR descriptions are canonical.
 No cleanup authorization was requested or granted during publication.
+
+## Phase 6C candidate review
+
+Writer candidate `9baf37b92dab2756c1d31fe05cb313d3ce837463` is integrated locally
+with [canonical evidence](evidence/2026-09-10-phase6c-evidence.md) and inspected
+wide/compact native screenshots. The writer's initially reported full hash did
+not resolve; direct Git readback established the candidate above. Source is
+frozen, writer quiescent and reservation released. Direct result readback confirms
+integrated native route/Help test 1/1, zero failures/skips; root controlled only
+verified PID 30450/tokenized window, stopped CUA, then wrote completion before
+host exit. Final compact capture visibly contains the panel. Prior focused
+acceptance, applicability, recovery and transport evidence is recorded canonically.
+Independent candidate review remains required. Publication correction/merges take
+priority; no 6C source or coordination branch is published.
+
+Owner additionally requires an actual CodeRabbit review on PR #45 after #44 is
+merged and #45 retargeted to `codex/release-radar-mvp`. Root is authorized to post
+`@coderabbitai review`, assess findings, fix Required defects with affected checks,
+and merge #45 afterward. A skipped success status is not that requested review.
