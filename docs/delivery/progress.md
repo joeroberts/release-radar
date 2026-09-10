@@ -29,6 +29,12 @@ Astra High), and independent reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
 (Astra High) are complete and archived. Their files/results are preserved and
 task-owned processes stopped. No native reservation is active.
 
+Fresh 6B writer `01a08c9d-e36f-7a92-abba-69ade43678af` is dispatched with actual
+Terra Medium tool settings, ceiling Astra High, from committed controlling
+handoff `c374a155589f2b9077787718c209008929bb1744`. It exclusively owns Goals
+source/tests/affected design/evidence; no launches are authorized until a concrete
+sanitized unsigned inert-host reservation. Setup/baseline confirmation is pending.
+
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
