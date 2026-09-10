@@ -3775,6 +3775,7 @@ final class AppRouteTests: XCTestCase {
             ("empty-phase", .emptyPhase),
             ("no-active-pointer", .noActivePointer),
             ("cross-phase-detail", .crossPhaseDetail),
+            ("phase-lifecycle", .phaseLifecycle),
         ]
         for (argument, scenario) in recognized {
             XCTAssertEqual(
@@ -3896,6 +3897,7 @@ final class AppRouteTests: XCTestCase {
             project: project, phaseID: phases[0].id, phaseName: phases[0].name,
             phasePlan: .init(state: .draft, revision: 0, readyRevision: nil, upcomingCount: 0,
                              coveredUpcomingCount: 0, unassignedUpcomingCount: 0),
+            phaseLifecycle: nil, completionAssessment: nil,
             deliveryGoals: goals, lanes: [], details: [:]
         )
         var viewedPhaseID: PhaseID?
@@ -4918,6 +4920,131 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testPhaseLifecycleCaptureShowsConcurrentDeliveryCompletedHistoryAndOwnerTransition() async throws {
+        let fixture = try await makeRR9CaptureModel(scenario: .phaseLifecycle)
+        let model = fixture.model
+        XCTAssertEqual(model.selection, .projectPlan(RR9ActivePhaseCaptureFixture.primaryProjectID))
+        XCTAssertEqual(
+            model.currentProject?.activePhaseID,
+            RR9ActivePhaseCaptureFixture.currentPhaseID
+        )
+        let phases = try XCTUnwrap(
+            model.dashboard?.plan(for: RR9ActivePhaseCaptureFixture.primaryProjectID)?.phases
+        )
+        XCTAssertEqual(phases.filter { $0.lifecycle.lifecycle == .inDelivery }.count, 2)
+        XCTAssertEqual(
+            phases.first(where: { $0.id.rawValue == "phase-history" })?.lifecycle.lifecycle,
+            .completed
+        )
+        let empty = try XCTUnwrap(phases.first(where: { $0.id == RR9ActivePhaseCaptureFixture.emptyPhaseID }))
+        let result = await model.transitionPhaseLifecycle(
+            projectID: RR9ActivePhaseCaptureFixture.primaryProjectID,
+            phaseID: empty.id,
+            expectedRevision: empty.lifecycle.revision,
+            action: .moveToUpcoming,
+            planningBaselineDigest: nil,
+            reason: "Owner schedules the empty synthetic phase"
+        )
+        XCTAssertNil(result.error)
+        await model.reloadPhaseLifecycle()
+        XCTAssertEqual(
+            model.dashboard?.plan(for: RR9ActivePhaseCaptureFixture.primaryProjectID)?
+                .phases.first(where: { $0.id == empty.id })?.lifecycle.lifecycle,
+            .upcoming
+        )
+        XCTAssertEqual(model.selectedTicketID, RR9ActivePhaseCaptureFixture.crossPhaseSourceTicketID)
+        XCTAssertNil(model.navigationRecoveryMessage)
+        XCTAssertEqual(model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.currentPhaseID)
+    }
+
+    @MainActor
+    func testLivePhaseLifecycleJourneyUsesNativeControlsReloadsAndPreservesActivePhase() async throws {
+        let enableMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5e-writer/phase5e-live-01a08a7d-v2-enabled")
+        guard FileManager.default.fileExists(atPath: enableMarker.path) else {
+            throw XCTSkip("The external controller must create the fresh Phase 5E enable marker.")
+        }
+        let wideMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5e-writer/phase5e-live-01a08a7d-v2-wide-complete")
+        let compactMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5e-writer/phase5e-live-01a08a7d-v2-compact-complete")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: wideMarker.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: compactMarker.path))
+
+        let fixture = try await makeRR9CaptureModel(scenario: .phaseLifecycle)
+        let model = fixture.model
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 940),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 5E lifecycle — isolated native interaction 01a08a7d-v2"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.frame = .init(x: 0, y: 0, width: 1_500, height: 940)
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(window.isVisible)
+        print("PHASE5E WIDE READY: verify exact state and blockers; move Empty to Upcoming; reopen History in delivery; complete History again; verify reason focus and reload")
+
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: wideMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: wideMarker.path))
+        let widePhases = try XCTUnwrap(
+            model.dashboard?.plan(for: RR9ActivePhaseCaptureFixture.primaryProjectID)?.phases
+        )
+        XCTAssertEqual(
+            widePhases.first(where: { $0.id == RR9ActivePhaseCaptureFixture.emptyPhaseID })?.lifecycle.lifecycle,
+            .upcoming
+        )
+        let persistedHistory = try await fixture.store.read {
+            try PhaseLifecyclePolicy.current(
+                projectID: RR9ActivePhaseCaptureFixture.primaryProjectID,
+                phaseID: .init(rawValue: "phase-history"), connection: $0
+            )
+        }
+        XCTAssertEqual(
+            widePhases.first(where: { $0.id.rawValue == "phase-history" })?.lifecycle,
+            persistedHistory
+        )
+        XCTAssertEqual(
+            widePhases.first(where: { $0.id.rawValue == "phase-history" })?.lifecycle.lifecycle,
+            .completed
+        )
+        XCTAssertEqual(
+            widePhases.first(where: { $0.id.rawValue == "phase-history" })?.lifecycle.revision,
+            3
+        )
+        XCTAssertEqual(model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.currentPhaseID)
+
+        window.setContentSize(NSSize(width: 760, height: 940))
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        print("PHASE5E COMPACT READY: verify the Completed guard and responsive layout; begin delivery for Empty; verify reason focus and persisted reload")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactMarker.path))
+        let compactPhases = try XCTUnwrap(
+            model.dashboard?.plan(for: RR9ActivePhaseCaptureFixture.primaryProjectID)?.phases
+        )
+        XCTAssertEqual(
+            compactPhases.first(where: { $0.id == RR9ActivePhaseCaptureFixture.emptyPhaseID })?.lifecycle.lifecycle,
+            .inDelivery
+        )
+        XCTAssertEqual(compactPhases.filter { $0.lifecycle.lifecycle == .inDelivery }.count, 3)
+        XCTAssertEqual(model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.currentPhaseID)
+        try taskCapture(hosting, name: "phase5e-lifecycle-live-journey-final")
+    }
+
+    @MainActor
     func testRR9DebugFixtureScenariosExposeDeterministicRoutesStatusesAndOneShotRecovery() async throws {
         let noAlternative = try await makeRR9CaptureModel(scenario: .noAlternative)
         XCTAssertEqual(noAlternative.model.selection, .projectOverview(RR9ActivePhaseCaptureFixture.soleProjectID))
@@ -5125,7 +5252,6 @@ final class AppRouteTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-RR9Capture-\(scenario.rawValue)-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         let model = AppModel(
             store: store,

@@ -29,6 +29,13 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
 }
 
 public enum AgentCommand: Codable, Equatable, Sendable {
+    case transitionPhaseLifecycle(
+        projectID: String,
+        phaseID: String,
+        expectedRevision: Int64,
+        action: PhaseLifecycleAction,
+        planningBaselineDigest: String?
+    )
     case savePlanChangeProposal(proposalID: String, expectedPreviousVersion: Int64?, rationale: String, operations: [PlanChangeOperation])
     case decidePlanChangeProposal(
         proposalID: String,
@@ -88,6 +95,14 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case dependencyCycle(String)
     case requestIDReused
     case staleProjectRegistration
+    case phaseLifecycleOwnerAuthorityRequired
+    case phaseLifecycleNotFound(PhaseID)
+    case phaseLifecycleRevisionConflict(expected: Int64, current: Int64)
+    case invalidPhaseLifecycleTransition(from: PhaseLifecycle, action: PhaseLifecycleAction)
+    case phaseLifecyclePlanningBaselineRequired
+    case phaseLifecyclePlanningBaselineConflict
+    case phaseCompletionBlocked([PhaseCompletionBlocker])
+    case completedPhaseReadOnly(PhaseID)
     case appUnavailable
     case documentation(DocumentationOperationError)
     case ticketTaskPlanNotFound
@@ -143,8 +158,12 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let planChangeProposalDecisionID: String?
     public let planChangeProposalApplicationID: String?
     public let planChangeProposals: [PlanChangeProposalRecord]?
+    public let phaseLifecycle: PhaseLifecycleRecord?
+    public let phaseLifecycles: [PhaseLifecycleRecord]?
+    public let phaseLifecycleEvents: [PhaseLifecycleEventRecord]?
+    public let phaseCompletionAssessments: [PhaseCompletionAssessment]?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
@@ -158,6 +177,10 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
         self.planChangeProposalDecisionID = planChangeProposalDecisionID
         self.planChangeProposalApplicationID = planChangeProposalApplicationID
         self.planChangeProposals = planChangeProposals
+        self.phaseLifecycle = phaseLifecycle
+        self.phaseLifecycles = phaseLifecycles
+        self.phaseLifecycleEvents = phaseLifecycleEvents
+        self.phaseCompletionAssessments = phaseCompletionAssessments
     }
 }
 
@@ -202,7 +225,7 @@ public struct InMemoryAuthorizedProjectRegistry: AuthorizedProjectRegistry, Send
     public func resolve(projectRoot: String) async -> AuthorizedProject? {
         let supplied = AuthorizedProject.canonicalize(URL(fileURLWithPath: projectRoot))
         return projects.first { project in
-            project.authorizedRoots.contains(supplied)
+            project.authorizedRoots.contains { $0.path == supplied.path }
         }
     }
 }
@@ -266,6 +289,11 @@ public struct PersistedAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sen
 }
 
 extension AgentCommand {
+    var requiresPhaseLifecycleOwnerAuthority: Bool {
+        if case .transitionPhaseLifecycle = self { return true }
+        return false
+    }
+
     var isPlanChangeProposalCommand: Bool {
         switch self {
         case .savePlanChangeProposal, .decidePlanChangeProposal, .applyPlanChangeProposal:

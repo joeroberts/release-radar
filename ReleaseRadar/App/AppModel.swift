@@ -1634,6 +1634,52 @@ final class AppModel {
         )
     }
 
+    func transitionPhaseLifecycle(
+        projectID: ProjectID,
+        phaseID: PhaseID,
+        expectedRevision: Int64,
+        action: PhaseLifecycleAction,
+        planningBaselineDigest: String?,
+        reason: String
+    ) async -> AgentCommandResult {
+        guard let expectedRegistration = dashboard?.projects
+            .first(where: { $0.id == projectID })?.registration else {
+            return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+        }
+        let requestID = requestIDGenerator()
+        do {
+            let store = self.store
+            return try await projectOnboarding.withAuthorizedProject(projectID: projectID) { project in
+                await AgentCommandDispatcher(
+                    store: store,
+                    projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                ).dispatch(
+                    AgentCommandEnvelope(
+                        version: AgentCommandDispatcher.commandEnvelopeVersion,
+                        requestID: requestID,
+                        projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
+                        reason: reason,
+                        command: .transitionPhaseLifecycle(
+                            projectID: projectID.rawValue,
+                            phaseID: phaseID.rawValue,
+                            expectedRevision: expectedRevision,
+                            action: action,
+                            planningBaselineDigest: planningBaselineDigest
+                        )
+                    ),
+                    origin: .ownerApp
+                )
+            }
+        } catch {
+            return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+        }
+    }
+
+    func reloadPhaseLifecycle() async {
+        _ = await reloadProjectProjections()
+    }
+
     private func dispatchOwnerPlanChange(
         projectID: ProjectID,
         requestID: UUID,
@@ -1744,7 +1790,7 @@ final class AppModel {
             )
             return
         case .happy, .noAlternative, .authorizationFailure, .savedRefresh,
-             .emptyPhase, .noActivePointer, .crossPhaseDetail, nil:
+             .emptyPhase, .noActivePointer, .crossPhaseDetail, .phaseLifecycle, nil:
             break
         }
 #endif
@@ -2118,7 +2164,9 @@ final class AppModel {
                         $0.key.projectID == project.id && $0.value.detail(for: self.selectedTicketID) != nil
                     }
                 } else if selection == .projectPlan(project.id) {
-                    selectedTicketExists = plan?.detail(for: self.selectedTicketID) != nil
+                    selectedTicketExists = plan?.detail(for: self.selectedTicketID) != nil || dashboard.boards.contains {
+                        $0.key.projectID == project.id && $0.value.detail(for: self.selectedTicketID) != nil
+                    }
                 } else if selection == .phaseBoard(project.id),
                           allPhaseBoardProjectIDs.contains(Data(project.id.rawValue.utf8)) {
                     selectedTicketExists = allPhaseBoard?.detail(for: self.selectedTicketID) != nil
@@ -2428,6 +2476,8 @@ final class AppModel {
         case .crossPhaseDetail:
             selectedTicketID = RR9ActivePhaseCaptureFixture.crossPhaseSourceTicketID
             selection = .phaseBoard(projectID)
+        case .phaseLifecycle:
+            selection = .projectPlan(projectID)
         case .happy, .busy, .noAlternative, .mutationFailure, .unavailable,
              .authorizationFailure, .savedRefresh, .noActivePointer:
             selection = .projectOverview(projectID)

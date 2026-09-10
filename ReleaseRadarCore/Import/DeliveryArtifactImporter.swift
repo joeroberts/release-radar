@@ -143,6 +143,7 @@ public enum RekonImportError: Error, LocalizedError, Equatable, Sendable {
     case invalidPath(String)
     case targetProjectMismatch
     case projectNotFound
+    case completedPhaseReadOnly(PhaseID)
     case documentation(DocumentationOperationError)
 
     public var errorDescription: String? {
@@ -157,6 +158,8 @@ public enum RekonImportError: Error, LocalizedError, Equatable, Sendable {
         case .targetProjectMismatch: "The import preview belongs to a different project"
         case let .documentation(error): "Managed documentation import is unavailable (\(error.rawValue)); inspect and accept the exact bound catalog before importing"
         case .projectNotFound: "The target project or authorized root is not persisted"
+        case let .completedPhaseReadOnly(phaseID):
+            "Phase \(phaseID.rawValue) is Completed and read-only. Reopen it before importing revised delivery records."
         }
     }
 }

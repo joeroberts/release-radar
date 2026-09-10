@@ -34,6 +34,7 @@ public enum DeliveryStoreAvailability: Equatable, Sendable {
 public enum AuditEntityType: String, Equatable, Sendable {
     case project
     case phase
+    case phaseLifecycle = "phase_lifecycle"
     case phasePlan = "phase_plan"
     case deliveryGoal = "delivery_goal"
     case ticketTaskPlan = "ticket_task_plan"

@@ -3,6 +3,18 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class AgentBridgeAcceptanceTests: XCTestCase {
+    func testInMemoryRegistryAcceptsEquivalentDirectoryRepresentationButRejectsDifferentRoot() async {
+        let root = URL(fileURLWithPath: "/Users/Shared/release-radar-authorized-root", isDirectory: true)
+        let registry = InMemoryAuthorizedProjectRegistry(projects: [
+            .init(projectID: .init(rawValue: "project"), canonicalRoot: root, authorizedRoots: [root]),
+        ])
+
+        let equivalent = await registry.resolve(projectRoot: root.path)
+        let different = await registry.resolve(projectRoot: root.path + "-different")
+        XCTAssertNotNil(equivalent)
+        XCTAssertNil(different)
+    }
+
     private final class StoreQueueGate: @unchecked Sendable {
         let entered = DispatchSemaphore(value: 0)
         let release = DispatchSemaphore(value: 0)

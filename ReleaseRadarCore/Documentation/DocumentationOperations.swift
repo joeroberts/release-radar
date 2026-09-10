@@ -60,6 +60,7 @@ public enum AgentQuery: Codable, Equatable, Sendable {
     case ticketReferences(projectID: String, rootID: String, ticketID: String)
     case recordedImpacts(projectID: String, rootID: String, repositoryID: String, artifactID: String)
     case planChangeProposals(projectID: String)
+    case phaseLifecycles(projectID: String)
 }
 
 public struct DocumentationBindingMetadata: Codable, Equatable, Sendable {

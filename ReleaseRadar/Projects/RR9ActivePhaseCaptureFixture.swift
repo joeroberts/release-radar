@@ -13,6 +13,7 @@ enum RR9ActivePhaseCaptureScenario: String, Sendable {
     case emptyPhase = "empty-phase"
     case noActivePointer = "no-active-pointer"
     case crossPhaseDetail = "cross-phase-detail"
+    case phaseLifecycle = "phase-lifecycle"
 }
 
 enum RR9ActivePhaseCaptureError: Error, LocalizedError {
@@ -63,7 +64,7 @@ enum RR9ActivePhaseCaptureFixture {
             savedRefreshProjectID
         case .noActivePointer:
             noPointerProjectID
-        case .busy, .mutationFailure, .unavailable, .crossPhaseDetail:
+        case .busy, .mutationFailure, .unavailable, .crossPhaseDetail, .phaseLifecycle:
             primaryProjectID
         }
     }
@@ -202,6 +203,45 @@ enum RR9ActivePhaseCaptureFixture {
                 "INSERT INTO phase_dependencies (id, project_id, phase_id, depends_on_phase_id) VALUES ('rr9-capture-phase-dependency', ?, ?, ?)",
                 bindings: [.text(primaryProjectID.rawValue), .text(roadmapPhaseID.rawValue), .text(currentPhaseID.rawValue)]
             )
+
+            if scenario == .phaseLifecycle {
+                let registration = ProjectRegistration(
+                    projectID: primaryProjectID,
+                    registrationID: "phase5e-native-registration",
+                    requestGeneration: 1
+                )
+                try connection.execute(
+                    "INSERT INTO project_registrations (project_id,registration_id,request_generation,setup_state) VALUES (?,?,1,'complete')",
+                    bindings: [.text(primaryProjectID.rawValue), .text(registration.registrationID)]
+                )
+                _ = try PhaseLifecyclePolicy.transition(
+                    projectID: primaryProjectID, phaseID: currentPhaseID, expectedRevision: 0,
+                    action: .beginDelivery, planningBaselineDigest: nil,
+                    reason: "Synthetic current delivery phase", registration: registration,
+                    origin: .ownerApp, auditEventID: auditEventID, connection: connection
+                )
+                _ = try PhaseLifecyclePolicy.transition(
+                    projectID: primaryProjectID, phaseID: roadmapPhaseID, expectedRevision: 0,
+                    action: .beginDelivery, planningBaselineDigest: nil,
+                    reason: "Synthetic concurrent delivery phase", registration: registration,
+                    origin: .ownerApp, auditEventID: auditEventID, connection: connection
+                )
+                try connection.execute(
+                    "UPDATE delivery_goals SET lifecycle='accepted',accepted_at='2026-09-10T00:00:00Z' WHERE project_id=? AND phase_id='phase-history'",
+                    bindings: [.text(primaryProjectID.rawValue)]
+                )
+                let assessment = try PhaseLifecyclePolicy.assessCompletion(
+                    projectID: primaryProjectID, phaseID: .init(rawValue: "phase-history"),
+                    connection: connection
+                )
+                _ = try PhaseLifecyclePolicy.transition(
+                    projectID: primaryProjectID, phaseID: .init(rawValue: "phase-history"),
+                    expectedRevision: 0, action: .complete,
+                    planningBaselineDigest: assessment.planningBaselineDigest,
+                    reason: "Synthetic completed delivery phase", registration: registration,
+                    origin: .ownerApp, auditEventID: auditEventID, connection: connection
+                )
+            }
 
             try insertPhase(happyCurrentPhaseID, projectID: happyProjectID, name: "Current", connection: connection)
             try insertPhase(happyTargetPhaseID, projectID: happyProjectID, name: "Roadmap delivery", connection: connection)

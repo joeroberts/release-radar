@@ -3,6 +3,41 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class RekonImportAcceptanceTests: XCTestCase {
+    func testImportRefusesToReviseACompletedPhaseBeforeWritingAnyArtifactFacts() async throws {
+        let fixture = try RekonImportFixture(testCase: self)
+        let store = DeliveryStore(databaseURL: fixture.databaseURL)
+        try await fixture.seedProject(in: store)
+        let projectID = fixture.projectID
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed completed import owner") { connection in
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: projectID,
+                phaseID: .init(rawValue: "phase-main"),
+                name: "Main delivery",
+                mode: .legacyUnassessedImport,
+                connection: connection
+            )
+            try connection.execute("UPDATE phase_lifecycles SET lifecycle='completed',revision=1,completion_baseline_digest='fixture-baseline',completed_at='2026-09-10T00:00:00Z' WHERE project_id='project-import' AND phase_id='phase-main'")
+        }
+        let importer = RekonArtifactImporter(store: store, project: fixture.authorizedProject)
+
+        do {
+            try await importer.apply(try importer.preview(fixture.root), to: fixture.projectID)
+            XCTFail("Import must not revise a Completed phase.")
+        } catch {
+            XCTAssertEqual(error as? RekonImportError, .completedPhaseReadOnly(.init(rawValue: "phase-main")))
+        }
+        let facts = try await store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM tickets WHERE project_id='project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM review_items WHERE project_id='project-import'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM evidence WHERE project_id='project-import'")
+            )
+        }
+        XCTAssertEqual(facts.0, 0)
+        XCTAssertEqual(facts.1, 0)
+        XCTAssertEqual(facts.2, 0)
+    }
+
     func testSourceAcceptedImportRemainsBacklogWhenATaskPlanAppearsAfterInsertion() async throws {
         let fixture = try RekonImportFixture(testCase: self)
         let store = DeliveryStore(databaseURL: fixture.databaseURL)
@@ -650,7 +685,7 @@ private final class RekonImportFixture {
     }
 
     init(testCase: XCTestCase) throws {
-        root = FileManager.default.temporaryDirectory
+        root = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
             .appendingPathComponent("RekonImportTests-\(UUID().uuidString)", isDirectory: true)
         databaseURL = root.appendingPathComponent("release-radar.sqlite")
         artifactURL = root.appendingPathComponent("docs/delivery/dashboard-status.json")
@@ -669,7 +704,7 @@ private final class RekonImportFixture {
         try Self.copy("rekon-import-handoff", extension: "md", from: bundle, to: handoffURL)
         try Self.copy("rekon-import-ledger", extension: "md", from: bundle, to: root.appendingPathComponent("docs/delivery/delivery-ledger.md"))
         try Self.copy("rekon-import-arbitrary", extension: "md", from: bundle, to: root.appendingPathComponent("README.md"))
-        testCase.addTeardownBlock { [root] in try? FileManager.default.removeItem(at: root) }
+        _ = testCase // The task's isolated synthetic root is retained as acceptance evidence.
     }
 
     func seedProject(in store: DeliveryStore) async throws {

@@ -48,6 +48,16 @@ public actor AgentCommandDispatcher {
         if let error = validate(envelope) {
             return .init(entityIDs: [], auditEventID: nil, error: error)
         }
+        // Phase lifecycle is an owner decision and must be rejected before any
+        // durable receipt can be consulted or replayed.
+        if envelope.command.requiresPhaseLifecycleOwnerAuthority,
+           case .externalAgent = origin {
+            return .init(entityIDs: [], auditEventID: nil, error: .phaseLifecycleOwnerAuthorityRequired)
+        }
+        if envelope.command.requiresPhaseLifecycleOwnerAuthority,
+           envelope.expectedRegistration == nil {
+            return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+        }
         // Owner acceptance must be authorized before consulting durable receipts.
         if case .transitionDeliveryGoal(_, _, _, _, .accepted) = envelope.command,
            case .externalAgent = origin {
@@ -158,7 +168,8 @@ public actor AgentCommandDispatcher {
                                   audit["entity_id"] == .text(auditScope.entityID)
                             else { throw DispatchControl.requestIDReused }
                         }
-                        if envelope.command.requiresPlanChangeOwnerAuthority {
+                        if envelope.command.requiresPlanChangeOwnerAuthority
+                            || envelope.command.requiresPhaseLifecycleOwnerAuthority {
                             guard priorResult.error == nil, let priorAuditID = priorResult.auditEventID,
                                   let audit = try connection.row(
                                     "SELECT actor_id,project_id,entity_type,entity_id FROM audit_events WHERE id=?",
@@ -177,8 +188,17 @@ public actor AgentCommandDispatcher {
                         projectID: project.projectID,
                         connection: connection
                     )
-                    let revision = try Self.apply(envelope.command, project: project, origin: origin, auditEventID: auditEventID, connection: connection)
-                    let result = Self.resultForCommand(envelope.command, auditEventID: auditEventID, revision: revision)
+                    let revision = try Self.apply(
+                        envelope.command, project: project, origin: origin,
+                        reason: envelope.reason, auditEventID: auditEventID, connection: connection
+                    )
+                    let lifecycle = try Self.phaseLifecycleResult(
+                        for: envelope.command, projectID: project.projectID, connection: connection
+                    )
+                    let result = Self.resultForCommand(
+                        envelope.command, auditEventID: auditEventID,
+                        revision: revision, phaseLifecycle: lifecycle
+                    )
                     let resultData = try JSONEncoder().encode(result)
                     try connection.execute(
                         "INSERT INTO agent_command_requests (request_id, request_body, result_data, created_at, registration_project_id, registration_id, request_generation) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -286,6 +306,13 @@ public actor AgentCommandDispatcher {
         }
         let commandFieldsAreValid: Bool
         switch envelope.command {
+        case let .transitionPhaseLifecycle(projectID, phaseID, revision, action, baselineDigest):
+            commandFieldsAreValid = valid(projectID, maximum: 256) && !projectID.contains("\0")
+                && valid(phaseID, maximum: 256) && !phaseID.contains("\0")
+                && revision >= 0
+                && (action == .complete
+                    ? baselineDigest.map(Self.validDigest) == true
+                    : baselineDigest == nil)
         case let .savePlanChangeProposal(proposalID, expectedPreviousVersion, rationale, operations):
             commandFieldsAreValid = valid(proposalID, maximum: 256) && !proposalID.contains("\0")
                 && expectedPreviousVersion.map { $0 > 0 } != false
@@ -517,8 +544,18 @@ public actor AgentCommandDispatcher {
         return try encoder.encode(body)
     }
 
-    private static func resultForCommand(_ command: AgentCommand, auditEventID: AuditEventID, revision: Int64?) -> AgentCommandResult {
+    private static func resultForCommand(
+        _ command: AgentCommand,
+        auditEventID: AuditEventID,
+        revision: Int64?,
+        phaseLifecycle: PhaseLifecycleRecord?
+    ) -> AgentCommandResult {
         switch command {
+        case let .transitionPhaseLifecycle(_, phaseID, _, _, _):
+            return .init(
+                entityIDs: [phaseID], auditEventID: auditEventID, error: nil,
+                phaseLifecycle: phaseLifecycle
+            )
         case let .savePlanChangeProposal(proposalID, _, _, _):
             return .init(
                 entityIDs: [proposalID],
@@ -581,6 +618,7 @@ public actor AgentCommandDispatcher {
 
     private static func auditScope(for command: AgentCommand, projectID: ProjectID) -> AuditScope {
         let entity: (AuditEntityType, String) = switch command {
+        case let .transitionPhaseLifecycle(_, phaseID, _, _, _): (.phaseLifecycle, phaseID)
         case let .savePlanChangeProposal(proposalID, _, _, _),
              let .decidePlanChangeProposal(proposalID, _, _, _, _),
              let .applyPlanChangeProposal(proposalID, _, _, _, _):
@@ -612,11 +650,29 @@ public actor AgentCommandDispatcher {
         _ command: AgentCommand,
         project: AuthorizedProject,
         origin: AgentCommandOrigin,
+        reason: String,
         auditEventID: AuditEventID,
         connection: SQLiteConnection
     ) throws -> Int64? {
         let projectID = project.projectID
         switch command {
+        case let .transitionPhaseLifecycle(assertedProjectID, phaseID, expectedRevision, action, planningBaselineDigest):
+            guard Data(assertedProjectID.utf8) == Data(projectID.rawValue.utf8) else {
+                throw CommandValidation.crossProject("The phase lifecycle belongs to another project.")
+            }
+            let record = try PhaseLifecyclePolicy.transition(
+                projectID: projectID,
+                phaseID: .init(rawValue: phaseID),
+                expectedRevision: expectedRevision,
+                action: action,
+                planningBaselineDigest: planningBaselineDigest,
+                reason: reason,
+                registration: project.registration,
+                origin: origin,
+                auditEventID: auditEventID,
+                connection: connection
+            )
+            return record.revision
         case let .savePlanChangeProposal(proposalID, expectedPreviousVersion, rationale, operations):
             return try PlanChangeProposalPolicy.saveVersion(
                 projectID: projectID,
@@ -764,6 +820,8 @@ public actor AgentCommandDispatcher {
             if kind == .ticket {
                 try requireActionableTicket(subjectID, projectID: projectID, connection: connection)
                 try requireActionableTicket(dependsOnID, projectID: projectID, connection: connection)
+                try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                    projectID: projectID, ticketID: .init(rawValue: subjectID), connection: connection)
                 if let existing = try connection.row(
                     "SELECT ticket_id,depends_on_ticket_id FROM ticket_dependencies WHERE project_id=? AND id=?",
                     bindings: [.text(projectID.rawValue), .text(id)]
@@ -774,6 +832,20 @@ public actor AgentCommandDispatcher {
                         }
                         try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
                     }
+                    if case let .text(oldSubjectID)? = existing["ticket_id"] {
+                        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                            projectID: projectID, ticketID: .init(rawValue: oldSubjectID), connection: connection)
+                    }
+                }
+            } else {
+                try PhaseLifecyclePolicy.requireOpen(
+                    projectID: projectID, phaseID: .init(rawValue: subjectID), connection: connection)
+                if let oldSubjectID = try connection.scalarText(
+                    "SELECT phase_id FROM phase_dependencies WHERE project_id=? AND id=?",
+                    bindings: [.text(projectID.rawValue), .text(id)]
+                ) {
+                    try PhaseLifecyclePolicy.requireOpen(
+                        projectID: projectID, phaseID: .init(rawValue: oldSubjectID), connection: connection)
                 }
             }
             let dependencyTable = kind == .ticket ? "ticket_dependencies" : "phase_dependencies"
@@ -787,6 +859,8 @@ public actor AgentCommandDispatcher {
         case let .recordBlocker(id, ticketID, summary):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+            try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             try requireExistingAssociationOwnerActionable(id, table: "blockers", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "blockers", projectID: projectID, connection: connection)
             try connection.execute(
@@ -806,6 +880,8 @@ public actor AgentCommandDispatcher {
             if let ticketID {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
                 try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+                try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                    projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             }
             try requireExistingAssociationOwnerActionable(id, table: "evidence", projectID: projectID, connection: connection)
             let resolvedPath = try authorizedEvidencePath(path, project: project)
@@ -818,6 +894,8 @@ public actor AgentCommandDispatcher {
         case let .linkThread(id, ticketID, threadID):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+            try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             try requireExistingAssociationOwnerActionable(id, table: "thread_links", projectID: projectID, connection: connection)
             try requireProjectEntity(threadID, table: "observed_threads", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "thread_links", projectID: projectID, connection: connection)
@@ -828,6 +906,8 @@ public actor AgentCommandDispatcher {
         case let .linkGoal(id, ticketID, goalID):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+            try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             try requireProjectEntity(goalID, table: "observed_goals", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "ticket_goal_links", projectID: projectID, connection: connection)
             if let existingTicketID = try connection.scalarText(
@@ -868,6 +948,8 @@ public actor AgentCommandDispatcher {
             if let ticketID {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
                 try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+                try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                    projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
                 try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
                     projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             }
@@ -895,6 +977,8 @@ public actor AgentCommandDispatcher {
         case let .recordCompletion(id, ticketID, summary):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
             try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+            try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+                projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             try requireExistingAssociationOwnerActionable(id, table: "completion_records", projectID: projectID, connection: connection)
             try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
                 projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
@@ -927,6 +1011,21 @@ public actor AgentCommandDispatcher {
             try MeaningfulDeliveryEvent.deactivate(projectID: projectID, kind: .importNeedsReview, subjectID: reviewItemID, connection: connection)
         }
         return nil
+    }
+
+    private static func phaseLifecycleResult(
+        for command: AgentCommand,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws -> PhaseLifecycleRecord? {
+        guard case let .transitionPhaseLifecycle(_, phaseID, _, _, _) = command else {
+            return nil
+        }
+        return try PhaseLifecyclePolicy.current(
+            projectID: projectID,
+            phaseID: .init(rawValue: phaseID),
+            connection: connection
+        )
     }
 
     private static func updateNeedsReviewOccurrence(
@@ -1013,6 +1112,8 @@ public actor AgentCommandDispatcher {
             bindings: [.text(projectID.rawValue), .text(id)]
         ) else { return }
         try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+        try PhaseLifecyclePolicy.requireTicketPhaseOpen(
+            projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
     }
 
     private static func authorizedEvidencePath(_ path: String, project: AuthorizedProject) throws -> String {
@@ -1061,6 +1162,8 @@ public actor AgentCommandDispatcher {
         connection: SQLiteConnection
     ) throws {
         try requireProjectEntity(id, table: "review_items", projectID: projectID, connection: connection)
+        try requireExistingAssociationOwnerActionable(
+            id, table: "review_items", projectID: projectID, connection: connection)
         let kind = try connection.scalarText(
             "SELECT kind FROM review_items WHERE id = ? AND project_id = ?",
             bindings: [.text(id), .text(projectID.rawValue)]
@@ -1095,6 +1198,22 @@ public actor AgentCommandDispatcher {
     }
 
     private static func map(_ error: Error, command: AgentCommand) -> AgentCommandError {
+        if let error = error as? PhaseLifecyclePolicyError {
+            switch error {
+            case let .notFound(phaseID): return .phaseLifecycleNotFound(phaseID)
+            case let .revisionConflict(expected, current):
+                return .phaseLifecycleRevisionConflict(expected: expected, current: current)
+            case let .invalidTransition(from, action):
+                return .invalidPhaseLifecycleTransition(from: from, action: action)
+            case .ownerAuthorityRequired: return .phaseLifecycleOwnerAuthorityRequired
+            case .registrationRequired: return .staleProjectRegistration
+            case .planningBaselineRequired: return .phaseLifecyclePlanningBaselineRequired
+            case .planningBaselineConflict: return .phaseLifecyclePlanningBaselineConflict
+            case let .completionBlocked(blockers): return .phaseCompletionBlocked(blockers)
+            case let .completedPhaseReadOnly(phaseID): return .completedPhaseReadOnly(phaseID)
+            case .invalidStoredLifecycle: return .internalFailure(error.localizedDescription)
+            }
+        }
         if let error = error as? PlanChangeProposalError {
             switch error {
             case .registrationRequired: return .planChangeProposalRegistrationRequired

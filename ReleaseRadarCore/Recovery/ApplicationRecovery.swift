@@ -280,7 +280,11 @@ public actor ApplicationRecoveryManager {
                 guard currentTargets == preview.displacedTargets else {
                     throw ApplicationRecoveryError.stalePreview
                 }
-                try Self.prepareRestoredStore(at: stagingURL, operationID: operationID)
+                try Self.prepareRestoredStore(
+                    at: stagingURL,
+                    operationID: operationID,
+                    registrationsRetainedFromCurrentSnapshot: currentTargets.map(\.registration)
+                )
                 try Self.reconcileNewerFacts(from: currentSnapshotURL, into: stagingURL)
                 historyReconciled = true
             } else {
@@ -452,13 +456,21 @@ public actor ApplicationRecoveryManager {
         return (manifest, databaseURL)
     }
 
-    private static func prepareRestoredStore(at databaseURL: URL, operationID: UUID) throws {
+    private static func prepareRestoredStore(
+        at databaseURL: URL,
+        operationID: UUID,
+        registrationsRetainedFromCurrentSnapshot: [ProjectRegistration] = []
+    ) throws {
         let connection = try SQLiteConnection(url: databaseURL, createIfMissing: false)
         defer { connection.close() }
         try connection.execute("BEGIN IMMEDIATE TRANSACTION")
         do {
             let now = ISO8601DateFormatter().string(from: Date())
-            try retainProposalHistoryBeforeAuthorityRotation(connection: connection, removedAt: now)
+            try retainProposalHistoryBeforeAuthorityRotation(
+                connection: connection,
+                removedAt: now,
+                excluding: Set(registrationsRetainedFromCurrentSnapshot.map(registrationKey))
+            )
             try connection.execute(
                 "UPDATE notification_events SET state = 'suppressed', completed_at = ?, failure_code = 'recovery_restored_pending' WHERE state = 'queued'",
                 bindings: [.text(now)]
@@ -488,7 +500,8 @@ public actor ApplicationRecoveryManager {
 
     private static func retainProposalHistoryBeforeAuthorityRotation(
         connection: SQLiteConnection,
-        removedAt: String
+        removedAt: String,
+        excluding registrations: Set<String> = []
     ) throws {
         let rows = try connection.rows(
             """
@@ -501,6 +514,7 @@ public actor ApplicationRecoveryManager {
             )
                OR EXISTS (SELECT 1 FROM ticket_retirements WHERE project_id = projects.id)
                OR EXISTS (SELECT 1 FROM delivery_goal_obligations WHERE project_id = projects.id)
+               OR EXISTS (SELECT 1 FROM phase_lifecycle_events WHERE project_id = projects.id)
             ORDER BY projects.id
             """
         )
@@ -512,6 +526,13 @@ public actor ApplicationRecoveryManager {
                   case let .integer(generation)? = row["request_generation"] else {
                 throw ApplicationRecoveryError.invalidBackup("proposal history ownership is invalid")
             }
+            let lifecycleRetainedFromCurrentSnapshot = registrations.contains(registrationKey(
+                .init(
+                    projectID: .init(rawValue: projectID),
+                    registrationID: registrationID,
+                    requestGeneration: generation
+                )
+            ))
             let removalID = UUID().uuidString.lowercased()
             let project = SQLiteValue.text(projectID)
             let removal = SQLiteValue.text(removalID)
@@ -540,6 +561,16 @@ public actor ApplicationRecoveryManager {
                 "INSERT INTO project_removal_authorizations (project_id, registration_id, removal_id) VALUES (?, ?, ?)",
                 bindings: [project, .text(registrationID), removal]
             )
+            if !lifecycleRetainedFromCurrentSnapshot {
+                try connection.execute(
+                    "INSERT INTO retained_phase_lifecycles SELECT ?, lifecycles.project_id, lifecycles.phase_id, phases.name, lifecycles.lifecycle, lifecycles.revision, lifecycles.completion_baseline_digest, lifecycles.created_at, lifecycles.updated_at, lifecycles.completed_at FROM phase_lifecycles lifecycles JOIN phases ON phases.project_id=lifecycles.project_id AND phases.id=lifecycles.phase_id WHERE lifecycles.project_id=?",
+                    bindings: [removal, project]
+                )
+                try connection.execute(
+                    "INSERT INTO retained_phase_lifecycle_events SELECT ?, project_id, phase_id, revision, previous_lifecycle, current_lifecycle, action, reason, audit_event_id, registration_id, request_generation, planning_baseline_digest, created_at FROM phase_lifecycle_events WHERE project_id=?",
+                    bindings: [removal, project]
+                )
+            }
             try connection.execute(
                 "INSERT INTO retained_plan_change_proposals SELECT ?, project_id, id, current_version, created_at, updated_at FROM plan_change_proposals WHERE project_id = ?",
                 bindings: [removal, project]
@@ -584,6 +615,10 @@ public actor ApplicationRecoveryManager {
         }
     }
 
+    private static func registrationKey(_ registration: ProjectRegistration) -> String {
+        "\(registration.projectID.rawValue)\u{1F}\(registration.registrationID)\u{1F}\(registration.requestGeneration)"
+    }
+
     private static func markRecovery(operationID: UUID, kind: String, connection: SQLiteConnection) throws {
         try connection.execute(
             """
@@ -620,6 +655,10 @@ public actor ApplicationRecoveryManager {
                 SELECT * FROM current_state.retained_delivery_goal_obligation_lineage;
             INSERT OR IGNORE INTO retained_delivery_goal_obligation_drops
                 SELECT * FROM current_state.retained_delivery_goal_obligation_drops;
+            INSERT OR IGNORE INTO retained_phase_lifecycles
+                SELECT * FROM current_state.retained_phase_lifecycles;
+            INSERT OR IGNORE INTO retained_phase_lifecycle_events
+                SELECT * FROM current_state.retained_phase_lifecycle_events;
             INSERT OR IGNORE INTO retained_project_activity_events
                 SELECT * FROM current_state.retained_project_activity_events;
             INSERT OR IGNORE INTO retained_delivery_goal_assignment_events
@@ -742,6 +781,33 @@ public actor ApplicationRecoveryManager {
             JOIN removed_projects removed
               ON removed.historical_project_id = assignments.project_id
              AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_phase_lifecycles
+            SELECT removed.removal_id, lifecycles.project_id, lifecycles.phase_id,
+                phases.name, lifecycles.lifecycle, lifecycles.revision,
+                lifecycles.completion_baseline_digest, lifecycles.created_at,
+                lifecycles.updated_at, lifecycles.completed_at
+            FROM current_state.phase_lifecycles lifecycles
+            JOIN current_state.phases phases
+              ON phases.project_id=lifecycles.project_id AND phases.id=lifecycles.phase_id
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id=lifecycles.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id=lifecycles.project_id
+             AND removed.registration_id=registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_phase_lifecycle_events
+            SELECT removed.removal_id, events.project_id, events.phase_id, events.revision,
+                events.previous_lifecycle, events.current_lifecycle, events.action,
+                events.reason, events.audit_event_id, events.registration_id,
+                events.request_generation, events.planning_baseline_digest,
+                events.created_at
+            FROM current_state.phase_lifecycle_events events
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id=events.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id=events.project_id
+             AND removed.registration_id=registrations.registration_id;
 
             INSERT OR IGNORE INTO retained_ticket_retirements
             SELECT removed.removal_id, retirements.project_id, retirements.ticket_id,

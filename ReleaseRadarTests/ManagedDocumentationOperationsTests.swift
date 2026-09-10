@@ -4,6 +4,36 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    func testManagedEvidenceWriterRejectsCompletedTicketAssociation() async throws {
+        let fixture = try await makeFixture()
+        let documentation = try target(fixture.root)
+        let binding = await fixture.dispatcher.dispatch(
+            envelope(fixture.root, .bindDocumentationRepository(target: documentation))
+        )
+        XCTAssertNil(binding.error)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed completed evidence owner") { connection in
+            try connection.execute("INSERT INTO phases (id,project_id,name) VALUES ('phase','p','Completed phase')")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('ticket','p','phase','Delivered','accepted')")
+            try connection.execute("UPDATE phase_lifecycles SET lifecycle='completed',revision=1,completion_baseline_digest='fixture-baseline',completed_at='2026-09-10T00:00:00Z' WHERE project_id='p' AND phase_id='phase'")
+        }
+
+        let result = await fixture.dispatcher.dispatch(envelope(
+            fixture.root,
+            .addManagedEvidence(
+                target: documentation,
+                id: "blocked-managed-evidence",
+                ticketID: "ticket",
+                artifactID: "current"
+            )
+        ))
+
+        XCTAssertEqual(result.error, .completedPhaseReadOnly(.init(rawValue: "phase")))
+        let count = try await fixture.store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM evidence WHERE id='blocked-managed-evidence'")
+        }
+        XCTAssertEqual(count, 0)
+    }
+
     func testProjectDocumentationPreviewKeepsSecurityScopeOpenForCatalogReadAndReleasesIt() async throws {
         let fixture = try await makeFixture()
         let registration = ProjectRegistration(

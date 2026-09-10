@@ -23,13 +23,45 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
         }
 
         let connection = try SQLiteConnection(url: databaseURL)
-        XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 20)
+        XCTAssertEqual(try connection.scalarInt("PRAGMA user_version"), 23)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_reference_link_sets"), 0)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_reference_links"), 0)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM ticket_reference_versions"), 0)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM retained_ticket_reference_links"), 0)
         XCTAssertEqual(try connection.scalarInt("SELECT COUNT(*) FROM retained_ticket_reference_versions"), 0)
         XCTAssertNil(try connection.row("PRAGMA foreign_key_check"))
+    }
+
+    func testReferenceWriterRejectsCompletedTicketBeforeReadingOrWritingSource() async throws {
+        let fixture = try await makeReferenceFixture()
+        let target = try documentationTarget(fixture.root)
+        let binding = await fixture.dispatcher.dispatch(
+            envelope(fixture.root, .bindDocumentationRepository(target: target))
+        )
+        XCTAssertNil(binding.error)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Complete reference owner") { connection in
+            try connection.execute("UPDATE phase_lifecycles SET lifecycle='completed',revision=1,completion_baseline_digest='fixture-baseline',completed_at='2026-09-10T00:00:00Z' WHERE project_id='p' AND phase_id='phase'")
+        }
+        let result = await fixture.dispatcher.dispatch(envelope(
+            fixture.root,
+            .upsertTicketReference(
+                target: target,
+                ticketID: "placed",
+                linkID: "blocked-reference",
+                kind: .requirement,
+                artifactID: "current",
+                sourceLocalID: "REQ-BLOCKED",
+                locator: "Must reopen",
+                expectedContentDigest: try sourceDigest(fixture.root),
+                expectedLinkSetRevision: 0
+            )
+        ))
+
+        XCTAssertEqual(result.error, .completedPhaseReadOnly(.init(rawValue: "phase")))
+        let count = try await fixture.store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM ticket_reference_links WHERE project_id='p'")
+        }
+        XCTAssertEqual(count, 0)
     }
 
     func testTypedReferenceCommandsCaptureExactBytesRevisePlaceReplayAndRetireWithoutSource() async throws {
@@ -687,10 +719,9 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
     }
 
     private func makeReferenceFixture() async throws -> (store: DeliveryStore, root: URL, dispatcher: AgentCommandDispatcher) {
-        let directory = FileManager.default.temporaryDirectory
+        let directory = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
             .appendingPathComponent("release-radar-reference-fixture-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let root = directory.appendingPathComponent("repository")
         let source = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("Fixtures/RepositoryDocuments/valid")
@@ -766,8 +797,18 @@ final class TicketReferenceAcceptanceTests: XCTestCase {
     }
 
     private func envelope(_ root: URL, _ command: AgentCommand, requestID: UUID = UUID()) -> AgentCommandEnvelope {
-        .init(version: 1, requestID: requestID, projectRoot: root.path,
-              reason: "Authorized reference operation", command: command)
+        .init(
+            version: 1,
+            requestID: requestID,
+            projectRoot: root.path,
+            expectedRegistration: .init(
+                projectID: .init(rawValue: "p"),
+                registrationID: "reference-registration",
+                requestGeneration: 1
+            ),
+            reason: "Authorized reference operation",
+            command: command
+        )
     }
 
 }
