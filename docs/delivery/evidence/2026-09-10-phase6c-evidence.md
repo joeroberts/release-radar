@@ -80,7 +80,12 @@ The append-order column refines the same unshipped schema-25 migration and its
 retained tables. Earlier synthetic schema-25 candidate stores are not upgrade
 inputs; no installed or owner store was changed. The UI and native test are
 unchanged, so the existing native evidence remains applicable. The correction
-delta is subject to the same independent review before final acceptance.
+delta `a5dac63970d9d02ff76adac7f3d4bcd5423706b1`, integrated at
+`2335873892299310a811cb2b8cb0d8a139d10ef6`, passed the same independent Astra High
+review by task `01a08d84-9063-7af2-bfb6-bd4c23328d8b`. All four Required findings
+are resolved with no remaining findings. The reviewer directly read back the
+17/17 result and confirmed the retention/recovery paths; no repeated execution
+was needed. This closes local source verification, not installed acceptance.
 
 ## Native visual and accessibility evidence
 

@@ -65,21 +65,22 @@ bounded Astra High escalation) completed source and native evidence in worktree
 root verified the visible compact panel and Help, and the independent reviewer
 reported no visual findings. Four Required applicability/provenance findings were
 corrected with 17/17 affected tests passing. The same independent Astra High
-reviewer `01a08d84-9063-7af2-bfb6-bd4c23328d8b` is checking that bounded delta;
-6C approval remains pending. Writer processes are stopped and its build/test
-reservation is released. Evidence and retained scratch are described in the
+reviewer `01a08d84-9063-7af2-bfb6-bd4c23328d8b` approved that bounded delta with
+no remaining findings. Phase 6C is complete locally. Writer and reviewer are
+quiescent, their commits and evidence preserved, and their build/test reservation
+is released. Evidence and retained scratch are described in the
 [canonical record](evidence/2026-09-10-phase6c-evidence.md).
 
 Fresh read-only chief consultation `01a08d93-8aa5-7611-a33e-e8fdb960d52c`
 (Astra High) is assessing the existing 6D adoption contracts from the integrated
-6C candidate. It does not release dependent implementation before 6C approval.
+6C candidate. Its recommendations will refine the bounded 6D brief before writer dispatch.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
 workspace search/saved views and contextual Help. Next eligible source slice is
-6D generic task adoption after 6C correction approval and a committed bounded brief.
+6D generic task adoption after a committed bounded brief.
 Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
 Publication state:
 
