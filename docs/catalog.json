@@ -627,6 +627,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase5c-proposals",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5c-proposals",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 5C saved proposals, explicit approval and atomic application",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5455,6 +5470,22 @@
       "supersedes": [],
       "applicationSensitivity": [
         "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5c-proposals-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.phase5c-proposals",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase5c-proposals",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
       ],
       "checksum": {
         "policy": "notApplicable"

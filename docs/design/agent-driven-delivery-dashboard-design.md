@@ -457,3 +457,14 @@ commands. Wide/compact and recovery journeys must be verified against the Phase
 Board/Dependencies visual language. The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
 sets the complete bounded acceptance criteria; it does not adopt later proposal
 or lifecycle surfaces.
+
+## Phase 5C proposal workflow — 2026-09-10
+
+Project Plan exposes saved proposal versions with rationale, derived before/after
+diff, recorded source impacts and disposition. Owner-app Approve and Apply are
+separate explicit actions under the approved proposal contract; they do not grant
+execution or publication authority. Stale state offers refresh and renewed review,
+never silent approval transfer. Preserve exact proposal/version focus and existing
+source/impact navigation, and withdraw actionable content when identity or access
+changes. Use the current Plan/RDS layout and compact stacking; no new broad History
+or Goals surface is included.

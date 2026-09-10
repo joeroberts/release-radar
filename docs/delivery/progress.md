@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B is merged; shared integration local source delivery is complete.** The owner selected
+**Phase 5A is merged; Phase 5B is merged; Phase 5C local delivery is starting from reviewed shared source.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -82,7 +82,7 @@ four Required findings. Direct correction checks passed 20 with 2 expected picke
 skips; the final repository-identity boundary passed 2/2 and its containing suite
 passed 9 with the same 2 skips, no failures. The local source endpoint is complete.
 The clean branch is preserved; all writer/reviewer hosts are stopped. The completed
-reviewer is archived; writer archival waits parent confirmation of preservation. Metadata
+reviewer and writer are archived after parent verification of the preserved branch. Metadata
 closeout is local only. Source ownership may hand back for coordinated Phase 5C
 work from this preserved baseline; no shared push, PR, merge, installation,
 adoption, runtime pilot or app synchronization is authorized.
@@ -185,3 +185,16 @@ authorization. Canonical checkout and unrelated files remain preserved.
 [Historical Phase 3 record](archive/2026-09-08-phase3-delivery-history.md) and
 [Historical C7 record](archive/2026-09-07-c7-delivery-history.md) retain closed coordination,
 prior checks and temporary-output reports.
+
+## Active Phase 5C local handoff
+
+The parent released overlapping source ownership and authorized Phase 5C local
+implementation/checks/review from preserved shared closeout `28d323a`. The
+[Phase 5C brief](task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
+records additive planning, saved versions, explicit approval and atomic apply.
+Read-only Astra High chief task `01a088a9-bdc4-74c1-889a-6ee00d7cafb4` completed
+contract assessment; findings are incorporated, no new owner choice is outstanding.
+The chief task is archived with no files or processes created.
+The local orchestrator branch is `codex/phase5c-orchestrator`. Fresh writer dispatch
+follows the committed handoff. Inherited shared commits remain local-only: no C
+push/PR until the owner resolves shared publication authorization; merge is separate.
