@@ -517,8 +517,13 @@ struct DashboardProjection: Equatable, Sendable {
             let details = board.details.mapValues { detail in
                 detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
             }
-            return AllPhaseBoardProjection(project: project, deliveryGoals: board.deliveryGoals,
-                                           lanes: board.lanes, details: details)
+            return AllPhaseBoardProjection(
+                project: project,
+                deliveryGoals: board.deliveryGoals,
+                lanes: board.lanes,
+                details: details,
+                executionGoalLinks: board.executionGoalLinks
+            )
         }
         return .init(
             projects: projects,
