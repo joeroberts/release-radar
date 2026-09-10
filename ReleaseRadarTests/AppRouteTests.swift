@@ -2744,16 +2744,12 @@ final class AppRouteTests: XCTestCase {
         }
         await gate.waitUntilCallCount(2)
         let pluginRefresh = Task { await model.loadCodexPluginStatus() }
-        try await Task.sleep(for: .milliseconds(100))
-        let callsAfterPluginChange = await gate.count()
-        XCTAssertEqual(callsAfterPluginChange, 3)
-        if callsAfterPluginChange >= 3 {
-            await gate.release(call: 3, with: .fixture(
-                projectID: DashboardSampleData.projectID,
-                checkedAt: 3,
-                compatibilityState: .incompatible
-            ))
-        }
+        await gate.waitUntilCallCount(3)
+        await gate.release(call: 3, with: .fixture(
+            projectID: DashboardSampleData.projectID,
+            checkedAt: 3,
+            compatibilityState: .incompatible
+        ))
         await gate.release(call: 2, with: .fixture(
             projectID: DashboardSampleData.projectID,
             checkedAt: 2,
