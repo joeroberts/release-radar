@@ -532,6 +532,94 @@ final class NavigationHistoryTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testPreferenceResetClearsHistoryViewStateBeforeReopeningSameProject() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-HistoryPreferenceReset-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let staleEvent = HistoryEventIdentity(
+            projectID: projectID,
+            registrationID: "history-preference-reset-registration",
+            source: .audit,
+            sourceID: "history-preference-reset-event"
+        )
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .activity(projectID))
+        model.setHistoryFilter(.audit, projectID: projectID)
+        model.selectHistoryEvent(staleEvent, projectID: projectID)
+        model.setHistoryViewportOffset(412.75, projectID: projectID)
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), staleEvent)
+        XCTAssertEqual(model.historyViewportOffset(for: projectID), 412.75)
+
+        await model.resetApplicationPreferences()
+
+        XCTAssertEqual(model.historyFilter(for: projectID), .all)
+        XCTAssertNil(model.selectedHistoryEventID(for: projectID))
+        XCTAssertNil(model.historyViewportOffset(for: projectID))
+        await model.navigate(to: .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .all)
+        XCTAssertNil(model.selectedHistoryEventID(for: projectID))
+        XCTAssertNil(model.historyViewportOffset(for: projectID))
+    }
+
+    @MainActor
+    func testAdoptingRecoveryClearsHistoryViewStateBeforeReopeningSameProject() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-HistoryRecoveryReset-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let originalStore = DeliveryStore(databaseURL: directory.appendingPathComponent("original.sqlite"))
+        let replacementStore = DeliveryStore(databaseURL: directory.appendingPathComponent("replacement.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: originalStore)
+        try await DashboardSampleData.seedIfNeeded(in: replacementStore)
+        let projectID = DashboardSampleData.projectID
+        try await replacementStore.transact(
+            actor: .init(id: "history-recovery-reset-fixture"),
+            reason: "Register the recovered project generation"
+        ) { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'history-recovered-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        let staleEvent = HistoryEventIdentity(
+            projectID: projectID,
+            registrationID: "history-retired-registration",
+            source: .audit,
+            sourceID: "history-retired-event"
+        )
+        let model = AppModel(store: originalStore, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .activity(projectID))
+        model.setHistoryFilter(.audit, projectID: projectID)
+        model.selectHistoryEvent(staleEvent, projectID: projectID)
+        model.setHistoryViewportOffset(412.75, projectID: projectID)
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID), staleEvent)
+        XCTAssertEqual(model.historyViewportOffset(for: projectID), 412.75)
+
+        try await model.adoptRecovery(.init(
+            store: replacementStore,
+            operationID: UUID(),
+            requiresFreshServiceGraph: true,
+            newerHistoryWasReconciled: false
+        ))
+
+        XCTAssertEqual(model.historyFilter(for: projectID), .all)
+        XCTAssertNil(model.selectedHistoryEventID(for: projectID))
+        XCTAssertNil(model.historyViewportOffset(for: projectID))
+        await model.navigate(to: .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .all)
+        XCTAssertNil(model.selectedHistoryEventID(for: projectID))
+        XCTAssertNil(model.historyViewportOffset(for: projectID))
+    }
+
     func testFilterAndFocusUpdatesReplaceCurrentEntryWithoutCreatingSteps() {
         let projectID = ProjectID(rawValue: "project-a")
         var history = NavigationHistory(initial: .projects)
