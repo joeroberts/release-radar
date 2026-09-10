@@ -208,73 +208,41 @@ path, after coordinated baseline/ownership handoff. Publication is separately
 blocked: inherited shared/C commits remain local-only until explicit owner
 authorization for their remote endpoint; every merge is separately approved.
 
-## Active Phase 5D local handoff
+## Phase 5D local completion and next boundary
 
-Parent authorized Phase5D from exact local closeout `dcfc709`, releasing overlapping
-source ownership. The [Phase5D brief](task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md)
-incorporates read-only Astra High chief consultation `01a08988-2e67-72f2-b682-3ac707e5a37f`:
-all assignment-loss paths, explicit goal-owned obligations, successor history,
-readiness/dependency gates and retention. No new owner choice is outstanding. The completed chief is archived; it created
-no files or processes.
-Orchestration is local `codex/phase5d-orchestrator`; fresh Sol High writer `01a0898e-8240-72e0-962d-7091504b5d72` starts from
-committed handoff `19306fbaa14d7c9db467e8503df211a71651f502`, with Astra High
-ceiling for a named issue and one fresh independent Astra High risk review.
-Runtime settings are not independently exposed. All inherited
-shared+C/D publication remains unapproved; E full lifecycle follows D.
+Phase 5D completed the [successor/carry-forward slice](task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md)
+from committed handoff `19306fb`. Original writer
+`01a0898e-8240-72e0-962d-7091504b5d72` (Sol High) delivered source
+`fe4d9f1` and bounded corrections `cdaadc33` and
+`34b26519b7e981d29aa914393051b991cc1b1ffa`; final source is integrated at
+`dcb360b932ff31b472ea3d3d7699b838dc1640f2`. Independent Astra High reviewer
+`01a08a3e-c94b-7a42-96ad-66456baf971d` returned PASS, closing all six Required
+findings and their correction interactions. Requested settings are not independently
+exposed. The prior read-only chief consultation is complete and archived.
 
+The [canonical evidence](evidence/2026-09-10-phase5d-successors.md) records
+schema/atomic proposals, obligation and dependency gates, retired-write rejection,
+recovery and native owner workflow. Final targeted corrections passed 3/3 and
+affected compatibility 4/4; corrected native preview/retained journeys passed 2/2.
+External verification confirmed compact Back reveals and focuses the retained
+original without assistance. No full-suite or full-process-restart claim is made.
+The named writer branch `codex/phase5d-successors` preserves the passed source;
+`codex/phase5d-orchestrator` owns catalog/ledger integration. All test hosts are
+stopped; bounded writer/reviewer archival is pending final handoff.
 
-Phase 5D source candidate `fe4d9f111e89933c03a86d5004331af29039482f` is
-integrated locally, with [canonical evidence](evidence/2026-09-10-phase5d-successors.md)
-and three retained captures. Direct checks cover schema/atomic proposals,
-retired-writer and graph rejection, dependency eligibility, removal/recovery,
-and native owner approval, same-store restoration and application. The final
-marker-free native regression passed 1/1; external native verification confirmed
-compact Back automatically reveals and focuses the retained original. Earlier
-failures and their targeted corrections remain distinguished in the evidence;
-no full-suite green claim is made. Fresh independent Astra High reviewer
-`01a08a3e-c94b-7a42-96ad-66456baf971d` is reviewing source `fe4d9f1` from
-integrated baseline `a2fbc52`; it covers the existing architecture/data/security
-and native UX/QA risks. Runtime settings are not independently exposed.
-The writer's clean named branch is preserved and all test hosts are stopped.
+All durable evidence and selected images are catalogued in the repository.
+Documentation validation passed on integrated source; application readback,
+binding and catalog acceptance remain unauthorized, so no managed-current or
+application synchronization claim is made. Temporary outputs and markers remain
+under `/private/tmp/release-radar-phase5d-writer/`; no cleanup occurred.
 
-During external verification, selecting the development app before the test host
-was ready unintentionally started a plain DerivedData process. It displayed a
-schema-19 mismatch, received no clicks and was terminated; zero incidental startup
-effects are not claimed. The installed owner app was not controlled. See the
-evidence for exact process attribution and retained temporary outputs. No cleanup,
-publication, installation, application readback or catalog acceptance occurred.
+External controller selection once started plain DerivedData process 41579 before
+the test host was ready. It showed a schema-19 mismatch, received no clicks and was
+terminated. Zero incidental startup effects are not claimed; installed owner app
+60590 was not controlled. The canonical evidence retains the exact distinction.
 
-
-Independent review returned **Changes required** on `fe4d9f1`: preserve live
-recovery facts; prevent detached debt and terminal-credit reuse; include
-superseded obligations, remaining work and valid legacy cases in phase gates;
-require complete split-child coverage; show exact frozen before/after facts.
-All six are Required under the existing brief and assigned to the original writer.
-The same reviewer will recheck only affected corrections. Source delivery is not
-complete or approved; publication and application-state boundaries are unchanged.
-
-
-The writer delivered bounded corrections at `cdaadc33bea53d0c449b576b171b37c791604a3a`,
-integrated as `1737fac5f7ce90914265cd049311ed54e821a395`. The existing reviewer
-is rechecking R1–R6. Direct correction checks passed six cases in launch 38,
-the corrected reassignment case in 40, two native journeys in 41 and three
-affected compatibility cases in 42. Updated canonical captures visibly show
-last placement. Integrated documentation validation passed; stable artifact
-identities and checksum policies remain unchanged. Independent correction
-review is pending; no completion or publication is claimed.
-
-
-Correction recheck closed live recovery, automatic historical delivery credit and
-frozen preview findings. Four Required cases remain: phase-level non-vacuity,
-explicit reconciliation of detached debt after destination acceptance, debt-free
-superseded goals, and split coverage against pre-existing lineage. The original
-writer owns these bounded corrections; successful recovery/native properties
-remain closed. No additional review layer or full-suite restart is authorized.
-
-
-The remaining four cases are corrected in writer commit
-`34b26519b7e981d29aa914393051b991cc1b1ffa`, integrated at
-`dcb360b932ff31b472ea3d3d7699b838dc1640f2`. Targeted RED reproduced the cases;
-corrected journeys passed 3/3 and affected compatibility passed 4/4. Integrated
-documentation validation passed with unchanged artifact IDs/checksum policy.
-The existing reviewer is performing the bounded recheck; approval remains pending.
+Parent authorization was local only. Inherited shared+C/D push, PR and merge
+remain unapproved; no installation, adoption, runtime pilot or owner-state change
+is authorized. Phase 5E full lifecycle is next eligible under the approved sequence,
+after parent-coordinated authorization and baseline/ownership handoff. Eligibility
+alone does not release a writer.

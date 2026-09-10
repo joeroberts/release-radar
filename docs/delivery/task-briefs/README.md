@@ -558,7 +558,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase5d-successors-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md](2026-09-10-phase5d-successors/phase5d-successors-brief.md) | document | controlling &#40;delivery.phase5d-successors&#41; | active | none | none |
+| rr-phase5d-successors-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase5d-successors/phase5d-successors-brief.md](2026-09-10-phase5d-successors/phase5d-successors-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
