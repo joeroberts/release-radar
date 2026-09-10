@@ -216,6 +216,8 @@ incorporates read-only Astra High chief consultation `01a08988-2e67-72f2-b682-3a
 all assignment-loss paths, explicit goal-owned obligations, successor history,
 readiness/dependency gates and retention. No new owner choice is outstanding. The completed chief is archived; it created
 no files or processes.
-Orchestration is local `codex/phase5d-orchestrator`; fresh Sol High writer follows
-the committed handoff, with one independent Astra High risk review. All inherited
+Orchestration is local `codex/phase5d-orchestrator`; fresh Sol High writer `01a0898e-8240-72e0-962d-7091504b5d72` starts from
+committed handoff `19306fbaa14d7c9db467e8503df211a71651f502`, with Astra High
+ceiling for a named issue and one fresh independent Astra High risk review.
+Runtime settings are not independently exposed. All inherited
 shared+C/D publication remains unapproved; E full lifecycle follows D.
