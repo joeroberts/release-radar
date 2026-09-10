@@ -252,3 +252,13 @@ require complete split-child coverage; show exact frozen before/after facts.
 All six are Required under the existing brief and assigned to the original writer.
 The same reviewer will recheck only affected corrections. Source delivery is not
 complete or approved; publication and application-state boundaries are unchanged.
+
+
+The writer delivered bounded corrections at `cdaadc33bea53d0c449b576b171b37c791604a3a`,
+integrated as `1737fac5f7ce90914265cd049311ed54e821a395`. The existing reviewer
+is rechecking R1–R6. Direct correction checks passed six cases in launch 38,
+the corrected reassignment case in 40, two native journeys in 41 and three
+affected compatibility cases in 42. Updated canonical captures visibly show
+last placement. Integrated documentation validation passed; stable artifact
+identities and checksum policies remain unchanged. Independent correction
+review is pending; no completion or publication is claimed.
