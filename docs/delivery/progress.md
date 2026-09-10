@@ -51,10 +51,12 @@ fixture were stopped; observed commands retained sanitized unsigned settings.
 Native runs then identified and corrected a legal multi-goal project selector
 crash, wide detail visibility and navigation-state failures. A proposed stale-row
 viewport workaround was discarded; the final check captures a visibly actionable
-control's actual departure context. Final session provenance clarification is
-pending because result 06 references a runfile named 05 and its command omits some
-previously assigned identity/Developer/destination fields while retaining env-i
-and unsigned flags. No repeat run is authorized for this clarification. All scratch
+control's actual departure context. Documentation-only `5c37dff1304a873cfc84a357f44ad477b09132dd` clarifies final
+provenance: session token 05 was unique with initially absent completion markers;
+result filename 06 is independent. Fresh native product paths and the actual
+minimal env-i/unsigned command are recorded without claiming omitted identity,
+Developer or architecture flags. Reviewer uses the full assigned configuration;
+no writer rerun is needed for this clarification. All scratch
 remains under `/private/tmp/release-radar-phase6b.PTQwNy`; no cleanup occurred.
 
 ## Authorization and next eligible work
