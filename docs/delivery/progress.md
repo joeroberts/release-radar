@@ -41,10 +41,14 @@ It is not integrated or slice-complete.
 The writer broadened a focused test selector to AppRouteTests, then attempted a
 static native fixture that restarted/crashed without a usable pass. Those observed
 commands retained sanitized unsigned settings. Conflicting process reporting was
-resolved to task-owned quiescence. Visible native launches remain paused pending concrete real Goals AppRootView
-fixture/copied-runfile setup. Specifically named non-native Goals identity/navigation
-regressions may run red/green with the same sanitized unsigned serial configuration;
-class-wide native selectors remain prohibited. Source work remains authorized.
+resolved to task-owned quiescence. Six exact Goals source tests now pass, including exact Execution associated-work
+filtering. The writer holds the sole native reservation for
+`testLiveWorkspaceGoalsJourneyUsesNativeWideAndCompactControlsAndRestoresExactContext`,
+session `phase6b-goals-writer-20260910-01`, in fresh `native-DerivedData` under its
+scratch root. The known sanitized unsigned serial/offline build-for-testing and
+fresh copied-xctestrun setup apply; actual PID/window must match before CUA.
+The fixture verifies both domains, actual viewport/focus, Clear and registration
+recovery. No broad native selectors or fallback is authorized.
 No unrelated retained-row failure repair. Temporary results remain under
 `/private/tmp/release-radar-phase6b.PTQwNy`; no cleanup occurred.
 
