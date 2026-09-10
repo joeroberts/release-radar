@@ -236,3 +236,20 @@ source documents without transferring capabilities. This amendment does not chan
 v1, implement export/import, or implement later proposals/successors/lifecycle.
 The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
 contains the bounded delivery contract and verification.
+
+## Phase 5C proposal authority — 2026-09-10
+
+Saved immutable plan-change versions, explicit owner-app decisions and separate
+atomic application are distinct persisted facts. Approval binds exact version,
+complete planning baseline and current registration; it neither executes work nor
+approves external writes. Stale state requires a new preview/version and approval.
+The initial operation set is additive planning and first placement, preserving
+started/Accepted history and existing obligations. Successor/carry-forward and full
+phase lifecycle remain later slices. Retained approval history never survives
+registration rotation as live application authority.
+The [Phase 5C brief](../delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
+defines the bounded operation set, baseline, recovery and native acceptance contract.
+The packaged agent interface exposes `release_radar_save_plan_change_proposal` and
+the read-only `release_radar_plan_change_proposals` query. It intentionally exposes
+no decision or application tool: those operations remain trusted owner-app actions
+and the dispatcher rejects external-origin attempts before replay lookup.

@@ -129,3 +129,18 @@ needed for withdrawal/replacement/splitting and transfers. Phase 5A adds first
 placement only; current assignment-event history and Backlog assignment removal
 are not claimed as an implementation of outstanding obligations. Preserve started
 assignment and immutable Accepted protections until that contract is implemented.
+
+## Phase 5C additive proposal amendment — 2026-09-10
+
+An approved proposal may atomically add a phase, phase-owned Draft goals and done
+criteria, first-place an unassigned ticket into Backlog, make its initial goal
+assignment and add new dependency edges. It reuses the existing planning policies,
+revision increments and readiness invalidation inside the proposal application
+transaction. Approval itself changes none of these records.
+
+This slice cannot replace a phase or goal identity, transfer or remove an existing
+goal assignment, supersede a goal, retarget/remove a dependency, start work or
+change goal/phase lifecycle. Existing ticket subjects must still be unassigned or
+Backlog and satisfy the existing unstarted protections. Those limits preserve the
+outstanding carry-forward contract for Phase 5D rather than treating an additive
+proposal as reconciliation.

@@ -627,6 +627,21 @@
       ],
       "isLeaf": true,
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase5c-proposals",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5c-proposals",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 5C saved proposals, explicit approval and atomic application",
+      "allowedContents": [
+        "Reviewed task briefs"
+      ],
+      "prohibitedContents": [
+        "Temporary build output",
+        "Owner data and credentials"
+      ],
+      "isLeaf": true,
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5448,6 +5463,66 @@
     {
       "artifactID": "rr-shared-execution-v1-overview-wide",
       "path": "docs/delivery/evidence/shared-execution-v1-overview-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase5c-proposals-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase5c-proposals",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5c-proposals-compact",
+      "path": "docs/delivery/evidence/2026-09-10-phase5c-proposals-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5c-proposals-wide",
+      "path": "docs/delivery/evidence/2026-09-10-phase5c-proposals-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase5c-proposals",
+      "path": "docs/delivery/evidence/2026-09-10-phase5c-proposals.md",
       "kind": "verificationEvidence",
       "lifecycle": "completed",
       "authorityLevel": "nonAuthoritative",

@@ -457,3 +457,32 @@ commands. Wide/compact and recovery journeys must be verified against the Phase
 Board/Dependencies visual language. The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
 sets the complete bounded acceptance criteria; it does not adopt later proposal
 or lifecycle surfaces.
+
+## Phase 5C proposal workflow — 2026-09-10
+
+Project Plan exposes saved proposal versions with rationale, derived before/after
+diff, recorded source impacts and disposition. Owner-app Approve and Apply are
+separate explicit actions under the approved proposal contract; they do not grant
+execution or publication authority. Stale state offers refresh and renewed review,
+never silent approval transfer. Preserve exact proposal/version focus and existing
+source/impact navigation, and withdraw actionable content when identity or access
+changes. Use the current Plan/RDS layout and compact stacking; no new broad History
+or Goals surface is included.
+
+The proposal list precedes recorded phases in the existing scrolling Plan column.
+Selecting a proposal opens its exact version in the existing inspector: the version
+picker, rationale, baseline identity, grouped additions and recorded source impacts
+remain together. Awaiting versions offer Reject and Approve; an approved current
+version offers a separate Apply control; unapplied current versions offer Refresh.
+Applied, rejected and historical versions remain inspectable but cannot silently
+become actionable. At compact widths the inspector stacks below the same list so
+the complete detail and recovery state remain scrollable rather than being clipped.
+Back/Forward restores the exact proposal/version and, when present, its source-impact
+ticket with real keyboard and accessibility focus.
+
+Source-impact rows identify the exact recorded ticket/link/version and observed
+source facts. Opening one reuses the existing revision-specific source route. A
+missing or changed current source remains an explicit unavailable/changed state;
+the UI never substitutes current prose for the recorded version. The
+[Phase 5C brief](../delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
+contains the bounded delivery contract and verification.

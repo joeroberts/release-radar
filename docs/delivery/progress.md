@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B is merged; shared integration local source delivery is complete.** The owner selected
+**Phase 5A is merged; Phase 5B is merged; Phase 5C local source delivery and independent review are complete.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -82,7 +82,7 @@ four Required findings. Direct correction checks passed 20 with 2 expected picke
 skips; the final repository-identity boundary passed 2/2 and its containing suite
 passed 9 with the same 2 skips, no failures. The local source endpoint is complete.
 The clean branch is preserved; all writer/reviewer hosts are stopped. The completed
-reviewer is archived; writer archival waits parent confirmation of preservation. Metadata
+reviewer and writer are archived after parent verification of the preserved branch. Metadata
 closeout is local only. Source ownership may hand back for coordinated Phase 5C
 work from this preserved baseline; no shared push, PR, merge, installation,
 adoption, runtime pilot or app synchronization is authorized.
@@ -185,3 +185,25 @@ authorization. Canonical checkout and unrelated files remain preserved.
 [Historical Phase 3 record](archive/2026-09-08-phase3-delivery-history.md) and
 [Historical C7 record](archive/2026-09-07-c7-delivery-history.md) retain closed coordination,
 prior checks and temporary-output reports.
+
+## Phase 5C local completion and next boundary
+
+Phase 5C completed the [approved proposal slice](task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
+from preserved shared closeout `28d323a`. Writer `01a088b0-1bb5-7392-89fc-96fa11b714c5`
+(Sol High) delivered packaged save/read, owner-only decisions/apply, complete
+baselines/diffs, atomic changes, retention/recovery and native Plan workflow.
+Independent Astra High reviewer `01a08946-bb22-7182-aecb-fb77b4fa6a57` passed
+`c685f0447661c397664f7bd5d4727790a6bc6cd0`, closing all four Required findings
+after writer correction `521de88`. The [canonical evidence](evidence/2026-09-10-phase5c-proposals.md)
+records direct results, native source/recovery limitations and retained temporary
+fixtures. Correction regressions passed 5/5; the affected run passed 18/19 with
+its sole obsolete native fixture corrected in an exact 1/1 rerun. No full-suite
+green claim is made.
+
+The clean named source branch `codex/phase5c-proposals` and local orchestrator
+branch `codex/phase5c-orchestrator` preserve the outcome. Both bounded peers are
+stopped and archived after branch and canonical-evidence preservation. No owner-app changes occurred.
+The next approved slice is Phase 5D successor/carry-forward through this proposal
+path, after coordinated baseline/ownership handoff. Publication is separately
+blocked: inherited shared/C commits remain local-only until explicit owner
+authorization for their remote endpoint; every merge is separately approved.

@@ -1,7 +1,53 @@
 import XCTest
 @testable import ReleaseRadarCore
 
+func removeVersionTwentyOneProposalSchema(_ connection: SQLiteConnection) throws {
+    for table in [
+        "plan_change_proposal_applications",
+        "plan_change_proposal_decisions",
+        "plan_change_proposal_versions",
+        "plan_change_proposals",
+        "retained_plan_change_proposal_applications",
+        "retained_plan_change_proposal_decisions",
+        "retained_plan_change_proposal_versions",
+        "retained_plan_change_proposals",
+    ] {
+        XCTAssertEqual(
+            try connection.scalarInt("SELECT COUNT(*) FROM \(table)"),
+            0,
+            "Synthetic legacy fixtures must not discard proposal history"
+        )
+    }
+    try connection.execute("PRAGMA foreign_keys = OFF")
+    defer { try? connection.execute("PRAGMA foreign_keys = ON") }
+    try connection.executeScript("""
+    DROP TRIGGER IF EXISTS plan_change_proposal_versions_reject_update;
+    DROP TRIGGER IF EXISTS plan_change_proposal_versions_reject_delete;
+    DROP TRIGGER IF EXISTS plan_change_proposal_decisions_reject_update;
+    DROP TRIGGER IF EXISTS plan_change_proposal_decisions_reject_delete;
+    DROP TRIGGER IF EXISTS plan_change_proposal_applications_reject_update;
+    DROP TRIGGER IF EXISTS plan_change_proposal_applications_reject_delete;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposals_reject_update;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposals_reject_delete;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposal_versions_reject_update;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposal_versions_reject_delete;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposal_decisions_reject_update;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposal_decisions_reject_delete;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposal_applications_reject_update;
+    DROP TRIGGER IF EXISTS retained_plan_change_proposal_applications_reject_delete;
+    DROP TABLE IF EXISTS plan_change_proposal_applications;
+    DROP TABLE IF EXISTS plan_change_proposal_decisions;
+    DROP TABLE IF EXISTS plan_change_proposal_versions;
+    DROP TABLE IF EXISTS plan_change_proposals;
+    DROP TABLE IF EXISTS retained_plan_change_proposal_applications;
+    DROP TABLE IF EXISTS retained_plan_change_proposal_decisions;
+    DROP TABLE IF EXISTS retained_plan_change_proposal_versions;
+    DROP TABLE IF EXISTS retained_plan_change_proposals;
+    """)
+}
+
 func removeVersionTwentyReferenceSchema(_ connection: SQLiteConnection) throws {
+    try removeVersionTwentyOneProposalSchema(connection)
     for table in [
         "ticket_reference_versions",
         "ticket_reference_links",

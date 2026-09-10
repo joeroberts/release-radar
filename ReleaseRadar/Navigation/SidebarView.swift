@@ -367,6 +367,33 @@ struct SidebarView: View {
                                 )
                             }
                         },
+                        decideProposal: { proposalID, version, digest, disposition in
+                            await model.decidePlanChangeProposal(
+                                projectID: projectID,
+                                proposalID: proposalID,
+                                version: version,
+                                baselineDigest: digest,
+                                disposition: disposition
+                            )
+                        },
+                        applyProposal: { proposalID, version, digest, decisionID in
+                            await model.applyPlanChangeProposal(
+                                projectID: projectID,
+                                proposalID: proposalID,
+                                version: version,
+                                baselineDigest: digest,
+                                decisionID: decisionID
+                            )
+                        },
+                        refreshProposal: { proposalID, previousVersion, rationale, operations in
+                            await model.refreshPlanChangeProposal(
+                                projectID: projectID,
+                                proposalID: proposalID,
+                                previousVersion: previousVersion,
+                                rationale: rationale,
+                                operations: operations
+                            )
+                        },
                         referenceContextIdentity: model.referenceQueryIdentity(projectID: projectID),
                         requestedFocus: model.navigationFocus,
                         focusChanged: { model.setNavigationFocus($0) }

@@ -314,7 +314,8 @@ struct DashboardProjection: Equatable, Sendable {
                 }
                 projectPlans[projectID] = ProjectPlanProjection(
                     project: project, phases: phasePlans, unassignedTickets: unassignedCards,
-                    unassignedDetails: unassignedDetails
+                    unassignedDetails: unassignedDetails,
+                    proposals: try PlanChangeProposalQuery.load(from: connection, projectID: projectID)
                 )
                 let projectBoards = phases.compactMap { boards[PhaseBoardKey(projectID: projectID, phaseID: $0.id)] }
                 let allLanes = TicketLane.allCases.map { lane in
@@ -393,7 +394,8 @@ struct DashboardProjection: Equatable, Sendable {
                 detail.replacingEvidence(readbacks.filter { $0.evidence.ticketID == detail.id }.map(EvidenceProjection.init))
             }
             return ProjectPlanProjection(project: project, phases: plan.phases,
-                                         unassignedTickets: plan.unassignedTickets, unassignedDetails: details)
+                                         unassignedTickets: plan.unassignedTickets, unassignedDetails: details,
+                                         proposals: plan.proposals)
         }
         let allPhaseBoards = allPhaseBoards.mapValues { board in
             guard board.project.id == projectID, let project else { return board }
@@ -474,6 +476,21 @@ struct ProjectPlanProjection: Equatable, Sendable {
     let phases: [ProjectPlanPhaseProjection]
     let unassignedTickets: [TicketCardProjection]
     let unassignedDetails: [TicketID: TicketDetailProjection]
+    let proposals: [PlanChangeProposalRecord]
+
+    init(
+        project: ProjectDashboardProjection,
+        phases: [ProjectPlanPhaseProjection],
+        unassignedTickets: [TicketCardProjection],
+        unassignedDetails: [TicketID: TicketDetailProjection],
+        proposals: [PlanChangeProposalRecord] = []
+    ) {
+        self.project = project
+        self.phases = phases
+        self.unassignedTickets = unassignedTickets
+        self.unassignedDetails = unassignedDetails
+        self.proposals = proposals
+    }
 
     var recordedTicketCount: Int { phases.reduce(0) { $0 + $1.ticketCount } + unassignedTickets.count }
     func detail(for ticketID: TicketID) -> TicketDetailProjection? { unassignedDetails[ticketID] }

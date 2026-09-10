@@ -458,6 +458,7 @@ public actor ApplicationRecoveryManager {
         try connection.execute("BEGIN IMMEDIATE TRANSACTION")
         do {
             let now = ISO8601DateFormatter().string(from: Date())
+            try retainProposalHistoryBeforeAuthorityRotation(connection: connection, removedAt: now)
             try connection.execute(
                 "UPDATE notification_events SET state = 'suppressed', completed_at = ?, failure_code = 'recovery_restored_pending' WHERE state = 'queued'",
                 bindings: [.text(now)]
@@ -482,6 +483,82 @@ public actor ApplicationRecoveryManager {
         } catch {
             try? connection.execute("ROLLBACK")
             throw error
+        }
+    }
+
+    private static func retainProposalHistoryBeforeAuthorityRotation(
+        connection: SQLiteConnection,
+        removedAt: String
+    ) throws {
+        let rows = try connection.rows(
+            """
+            SELECT projects.id, projects.name, projects.lifecycle,
+                   registrations.registration_id, registrations.request_generation
+            FROM projects
+            JOIN project_registrations registrations ON registrations.project_id = projects.id
+            WHERE EXISTS (
+                SELECT 1 FROM plan_change_proposals proposals WHERE proposals.project_id = projects.id
+            )
+            ORDER BY projects.id
+            """
+        )
+        for row in rows {
+            guard case let .text(projectID)? = row["id"],
+                  case let .text(projectName)? = row["name"],
+                  case let .text(lifecycle)? = row["lifecycle"],
+                  case let .text(registrationID)? = row["registration_id"],
+                  case let .integer(generation)? = row["request_generation"] else {
+                throw ApplicationRecoveryError.invalidBackup("proposal history ownership is invalid")
+            }
+            let removalID = UUID().uuidString.lowercased()
+            let project = SQLiteValue.text(projectID)
+            let removal = SQLiteValue.text(removalID)
+            func count(_ table: String) throws -> Int64 {
+                try connection.scalarInt(
+                    "SELECT COUNT(*) FROM \(table) WHERE project_id = ?",
+                    bindings: [project]
+                ) ?? 0
+            }
+            try connection.execute(
+                """
+                INSERT INTO removed_projects (
+                    removal_id, historical_project_id, project_name, original_lifecycle,
+                    registration_id, request_generation, removed_at, phase_count,
+                    ticket_count, evidence_count, history_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                bindings: [
+                    removal, project, .text(projectName), .text(lifecycle),
+                    .text(registrationID), .integer(generation), .text(removedAt),
+                    .integer(try count("phases")), .integer(try count("tickets")),
+                    .integer(try count("evidence")), .integer(try count("audit_events")),
+                ]
+            )
+            try connection.execute(
+                "INSERT INTO project_removal_authorizations (project_id, registration_id, removal_id) VALUES (?, ?, ?)",
+                bindings: [project, .text(registrationID), removal]
+            )
+            try connection.execute(
+                "INSERT INTO retained_plan_change_proposals SELECT ?, project_id, id, current_version, created_at, updated_at FROM plan_change_proposals WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_plan_change_proposal_versions SELECT ?, project_id, proposal_id, version, registration_id, request_generation, baseline_digest, baseline_data, operations_data, diff_data, source_impacts_data, rationale, created_at FROM plan_change_proposal_versions WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_plan_change_proposal_decisions SELECT ?, project_id, proposal_id, version, id, disposition, baseline_digest, registration_id, request_generation, actor_id, created_at FROM plan_change_proposal_decisions WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute(
+                "INSERT INTO retained_plan_change_proposal_applications SELECT ?, project_id, proposal_id, version, id, decision_id, audit_event_id, applied_at FROM plan_change_proposal_applications WHERE project_id = ?",
+                bindings: [removal, project]
+            )
+            try connection.execute("DELETE FROM plan_change_proposal_applications WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM plan_change_proposal_decisions WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM plan_change_proposal_versions WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM plan_change_proposals WHERE project_id = ?", bindings: [project])
+            try connection.execute("DELETE FROM project_removal_authorizations WHERE project_id = ?", bindings: [project])
         }
     }
 
@@ -519,6 +596,14 @@ public actor ApplicationRecoveryManager {
                 SELECT * FROM current_state.retained_ticket_reference_links;
             INSERT OR IGNORE INTO retained_ticket_reference_versions
                 SELECT * FROM current_state.retained_ticket_reference_versions;
+            INSERT OR IGNORE INTO retained_plan_change_proposals
+                SELECT * FROM current_state.retained_plan_change_proposals;
+            INSERT OR IGNORE INTO retained_plan_change_proposal_versions
+                SELECT * FROM current_state.retained_plan_change_proposal_versions;
+            INSERT OR IGNORE INTO retained_plan_change_proposal_decisions
+                SELECT * FROM current_state.retained_plan_change_proposal_decisions;
+            INSERT OR IGNORE INTO retained_plan_change_proposal_applications
+                SELECT * FROM current_state.retained_plan_change_proposal_applications;
             INSERT OR IGNORE INTO audit_events
                 SELECT * FROM current_state.audit_events
                 WHERE historical_project_id IS NOT NULL AND project_id IS NULL;
@@ -662,6 +747,67 @@ public actor ApplicationRecoveryManager {
               ON registrations.project_id = versions.project_id
             JOIN removed_projects removed
               ON removed.historical_project_id = versions.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_plan_change_proposals (
+                removal_id, historical_project_id, proposal_id, current_version,
+                created_at, updated_at
+            )
+            SELECT removed.removal_id, proposals.project_id, proposals.id,
+                proposals.current_version, proposals.created_at, proposals.updated_at
+            FROM current_state.plan_change_proposals proposals
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = proposals.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = proposals.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_plan_change_proposal_versions (
+                removal_id, historical_project_id, proposal_id, version,
+                registration_id, request_generation, baseline_digest, baseline_data,
+                operations_data, diff_data, source_impacts_data, rationale, created_at
+            )
+            SELECT removed.removal_id, versions.project_id, versions.proposal_id,
+                versions.version, versions.registration_id, versions.request_generation,
+                versions.baseline_digest, versions.baseline_data, versions.operations_data,
+                versions.diff_data, versions.source_impacts_data, versions.rationale,
+                versions.created_at
+            FROM current_state.plan_change_proposal_versions versions
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = versions.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = versions.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_plan_change_proposal_decisions (
+                removal_id, historical_project_id, proposal_id, version, id,
+                disposition, baseline_digest, registration_id, request_generation,
+                actor_id, created_at
+            )
+            SELECT removed.removal_id, decisions.project_id, decisions.proposal_id,
+                decisions.version, decisions.id, decisions.disposition,
+                decisions.baseline_digest, decisions.registration_id,
+                decisions.request_generation, decisions.actor_id, decisions.created_at
+            FROM current_state.plan_change_proposal_decisions decisions
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = decisions.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = decisions.project_id
+             AND removed.registration_id = registrations.registration_id;
+
+            INSERT OR IGNORE INTO retained_plan_change_proposal_applications (
+                removal_id, historical_project_id, proposal_id, version, id,
+                decision_id, audit_event_id, applied_at
+            )
+            SELECT removed.removal_id, applications.project_id,
+                applications.proposal_id, applications.version, applications.id,
+                applications.decision_id, applications.audit_event_id,
+                applications.applied_at
+            FROM current_state.plan_change_proposal_applications applications
+            JOIN current_state.project_registrations registrations
+              ON registrations.project_id = applications.project_id
+            JOIN removed_projects removed
+              ON removed.historical_project_id = applications.project_id
              AND removed.registration_id = registrations.registration_id;
 
             INSERT INTO observed_threads (id, project_id, status, last_observed_at)

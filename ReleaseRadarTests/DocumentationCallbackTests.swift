@@ -59,7 +59,8 @@ final class DocumentationCallbackTests: XCTestCase {
         let names = Set(tools.compactMap { $0["name"] as? String })
         let expected: Set<String> = [
             "release_radar_inventory_evidence", "release_radar_ticket_references",
-            "release_radar_recorded_impacts", "release_radar_bind_documentation_repository",
+            "release_radar_recorded_impacts", "release_radar_plan_change_proposals",
+            "release_radar_save_plan_change_proposal", "release_radar_bind_documentation_repository",
             "release_radar_accept_documentation_catalog", "release_radar_add_managed_evidence",
             "release_radar_adopt_managed_evidence", "release_radar_relocate_legacy_evidence",
             "release_radar_upsert_ticket_reference", "release_radar_retire_ticket_reference",
@@ -68,13 +69,23 @@ final class DocumentationCallbackTests: XCTestCase {
         XCTAssertTrue(names.contains("release_radar_add_evidence"))
         XCTAssertTrue(names.contains("release_radar_revise_ticket_task_plan"))
         XCTAssertTrue(names.contains("release_radar_complete_ticket_task"))
-        XCTAssertEqual(names.count, 30)
+        XCTAssertEqual(names.count, 32)
         let inventory = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_inventory_evidence" })
         XCTAssertEqual((inventory["inputSchema"] as? [String: Any])?["required"] as? [String], ["version", "projectRoot"])
         let upsert = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_upsert_ticket_reference" })
         XCTAssertEqual(
             (upsert["inputSchema"] as? [String: Any])?["required"] as? [String],
             ["version", "requestID", "projectRoot", "reason", "target", "ticketID", "linkID", "kind", "artifactID", "expectedContentDigest", "expectedLinkSetRevision"]
+        )
+        let proposals = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_plan_change_proposals" })
+        XCTAssertEqual(
+            (proposals["inputSchema"] as? [String: Any])?["required"] as? [String],
+            ["version", "projectRoot", "projectID"]
+        )
+        let save = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_save_plan_change_proposal" })
+        XCTAssertEqual(
+            (save["inputSchema"] as? [String: Any])?["required"] as? [String],
+            ["version", "requestID", "projectRoot", "reason", "proposalID", "expectedPreviousVersion", "rationale", "operations"]
         )
     }
     private func send(_ callback: AgentBridgeAppCallback, data: Data) async throws -> AgentCommandResult {

@@ -15,38 +15,59 @@ struct ProjectPlanView: View {
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
     var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
+    var decideProposal: ((PlanChangeProposalID, Int64, String, PlanChangeDecisionDisposition) async -> AgentCommandResult)? = nil
+    var applyProposal: ((PlanChangeProposalID, Int64, String, String) async -> AgentCommandResult)? = nil
+    var refreshProposal: ((PlanChangeProposalID, Int64, String, [PlanChangeOperation]) async -> AgentCommandResult)? = nil
     var referenceContextIdentity: String? = nil
     var requestedFocus: NavigationFocus? = nil
     var focusChanged: (NavigationFocus?) -> Void = { _ in }
+    @State private var selectedProposalID: Data?
+    @State private var selectedProposalVersion: Int64?
+    @State private var proposalActionFailure: FailureStatePresentation?
+    @State private var proposalNeedsRefresh = false
+    @State private var isPerformingProposalAction = false
+    @FocusState private var focusedProposal: ProposalFocus?
+    @AccessibilityFocusState private var accessibilityFocusedProposal: ProposalFocus?
     @FocusState private var focusedTicketID: TicketID?
     @AccessibilityFocusState private var accessibilityFocusedTicketID: TicketID?
 
     var body: some View {
         GeometryReader { geometry in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    header
-                    if !ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width) {
-                        HStack(alignment: .top, spacing: 18) {
-                            planContent.frame(maxWidth: .infinity, alignment: .topLeading)
-                            RekonSeparator(.vertical)
-                            inspector.frame(width: 340, alignment: .top).frame(minHeight: 500, alignment: .top)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        header
+                        if !ProjectPlanLayout.usesStackedInspector(forWidth: geometry.size.width) {
+                            HStack(alignment: .top, spacing: 18) {
+                                planContent.frame(maxWidth: .infinity, alignment: .topLeading)
+                                RekonSeparator(.vertical)
+                                inspector.frame(width: 340, alignment: .top).frame(minHeight: 500, alignment: .top)
+                            }
+                        } else {
+                            planContent
+                            RekonSeparator()
+                            inspector.frame(minHeight: 420, alignment: .top)
                         }
-                    } else {
-                        planContent
-                        RekonSeparator()
-                        inspector.frame(minHeight: 420, alignment: .top)
                     }
+                    .padding(24)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .padding(24)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .onChange(of: proposalScrollTargetID(forWidth: geometry.size.width), initial: true) { _, targetID in
+                    guard let targetID else { return }
+                    proxy.scrollTo(targetID, anchor: .center)
+                    applyRequestedFocus()
+                }
             }
         }
         .background(RekonTheme.background)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("project-plan")
+        .onChange(of: plan.proposals) { _, _ in reconcileProposalSelection() }
         .onChange(of: requestedFocus) { _, _ in applyRequestedFocus() }
-        .task { applyRequestedFocus() }
+        .task {
+            reconcileProposalSelection()
+            applyRequestedFocus()
+        }
     }
 
     private var header: some View {
@@ -78,6 +99,23 @@ struct ProjectPlanView: View {
 
     private var planContent: some View {
         VStack(alignment: .leading, spacing: 16) {
+            sectionHeading("Plan-change proposals", count: plan.proposals.count)
+            Text("Review a saved version before deciding. Approval never changes the plan; Apply is a separate deliberate action.")
+                .font(.caption)
+                .foregroundStyle(RekonTheme.secondaryText)
+            if plan.proposals.isEmpty {
+                Text("No saved proposals")
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .padding(.vertical, 8)
+            } else {
+                LazyVStack(spacing: 8) {
+                    ForEach(plan.proposals) { proposal in
+                        proposalRow(proposal)
+                    }
+                }
+            }
+
+            RekonSeparator()
             sectionHeading("Recorded phases", count: plan.phases.count)
             if plan.phases.isEmpty {
                 ContentUnavailableView("No phases recorded", systemImage: "list.bullet.rectangle")
@@ -99,6 +137,8 @@ struct ProjectPlanView: View {
                     ForEach(plan.unassignedTickets) { card in
                         TicketCardView(card: card, presentation: .fullOutcome,
                                        isSelected: selectedTicketID == card.id) {
+                            selectedProposalID = nil
+                            selectedProposalVersion = nil
                             selectedTicketID = card.id
                             focusChanged(.ticket(card.id))
                         }
@@ -114,6 +154,59 @@ struct ProjectPlanView: View {
                 }
             }
         }
+    }
+
+    private func proposalRow(_ proposal: PlanChangeProposalRecord) -> some View {
+        let current = proposal.versions.first { $0.version == proposal.currentVersion }
+        let proposalKey = Data(proposal.id.rawValue.utf8)
+        let selected = selectedProposalID == proposalKey
+        return Button {
+            selectedProposalID = proposalKey
+            selectedProposalVersion = proposal.currentVersion
+            proposalActionFailure = nil
+            proposalNeedsRefresh = false
+            focusedProposal = .proposal(proposalKey)
+            accessibilityFocusedProposal = .proposal(proposalKey)
+            focusChanged(.planChangeProposal(
+                proposalID: proposal.id.rawValue,
+                version: proposal.currentVersion,
+                ticketID: nil
+            ))
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "doc.badge.clock")
+                    .foregroundStyle(RekonTheme.accent)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(proposal.id.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                    Text("Version \(proposal.currentVersion) · \(proposalState(current))")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                    if let rationale = current?.rationale {
+                        Text(rationale)
+                            .font(.caption)
+                            .foregroundStyle(RekonTheme.secondaryText)
+                            .lineLimit(2)
+                    }
+                }
+                Spacer()
+                Image(systemName: selected ? "checkmark.circle.fill" : "chevron.right")
+                    .foregroundStyle(selected ? RekonTheme.accent : RekonTheme.secondaryText)
+            }
+            .padding(12)
+            .background(selected ? RekonTheme.elevatedSurface : RekonTheme.surface,
+                        in: RoundedRectangle(cornerRadius: 10))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(selected ? RekonTheme.accent : RekonTheme.border, lineWidth: RekonBorder.hairline)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .focusable()
+        .focused($focusedProposal, equals: .proposal(proposalKey))
+        .accessibilityFocused($accessibilityFocusedProposal, equals: .proposal(proposalKey))
+        .accessibilityIdentifier("plan-change-proposal-\(proposal.id.rawValue)")
     }
 
     private func phaseCard(_ phase: ProjectPlanPhaseProjection) -> some View {
@@ -166,7 +259,9 @@ struct ProjectPlanView: View {
     }
 
     @ViewBuilder private var inspector: some View {
-        if let detail = plan.detail(for: selectedTicketID) ?? plan.unassignedDetails.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first {
+        if let selection = selectedProposal {
+            proposalInspector(proposal: selection.proposal, version: selection.version)
+        } else if let detail = plan.detail(for: selectedTicketID) ?? plan.unassignedDetails.values.sorted(by: { $0.id.rawValue < $1.id.rawValue }).first {
             TicketDetailView(
                 detail: detail,
                 documentationStatus: documentationStatus,
@@ -185,6 +280,236 @@ struct ProjectPlanView: View {
         }
     }
 
+    private var selectedProposal: (proposal: PlanChangeProposalRecord, version: PlanChangeProposalVersionRecord)? {
+        guard let selectedProposalID,
+              let proposal = plan.proposals.first(where: { Data($0.id.rawValue.utf8) == selectedProposalID }),
+              let version = proposal.versions.first(where: { $0.version == (selectedProposalVersion ?? proposal.currentVersion) }) else {
+            return nil
+        }
+        return (proposal, version)
+    }
+
+    private func proposalInspector(
+        proposal: PlanChangeProposalRecord,
+        version: PlanChangeProposalVersionRecord
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(proposal.id.rawValue)
+                    .font(RekonTypography.sectionTitle)
+                Text("Version \(version.version) of \(proposal.currentVersion)")
+                    .font(.subheadline)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                Text("Baseline \(version.baselineDigest.prefix(12))")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(RekonTheme.secondaryText)
+            }
+
+            proposalVersionPicker(proposal)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Rationale").font(.headline)
+                Text(version.rationale).font(.subheadline)
+            }
+
+            ForEach(version.diff.groups, id: \.kind) { group in
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(group.kind.displayName)
+                        .font(.headline)
+                    ForEach(Array(group.items.enumerated()), id: \.offset) { _, item in
+                        Label(item.summary, systemImage: "plus.circle")
+                            .font(.caption)
+                            .foregroundStyle(RekonTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Recorded source impacts").font(.headline)
+                if version.sourceImpacts.isEmpty {
+                    Text("No linked requirement or decision versions were recorded for affected tickets.")
+                        .font(.caption)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                } else {
+                    ForEach(version.sourceImpacts) { impact in
+                        Button {
+                            openReferenceSource?(impact.ticketID, impact.linkID, impact.version)
+                            focusChanged(.planChangeProposal(
+                                proposalID: proposal.id.rawValue,
+                                version: version.version,
+                                ticketID: impact.ticketID
+                            ))
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(impact.ticketID.rawValue) · \(impact.artifactID)")
+                                    .font(.caption.weight(.medium))
+                                Text("Recorded v\(impact.version) · \(impact.observedLifecycle.rawValue) · \(impact.observedAuthority.rawValue)")
+                                    .font(.caption2)
+                                    .foregroundStyle(RekonTheme.secondaryText)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .focusable()
+                        .focused($focusedProposal, equals: .sourceImpact(impact.id))
+                        .accessibilityFocused($accessibilityFocusedProposal, equals: .sourceImpact(impact.id))
+                        .accessibilityLabel("Recorded source impact for \(impact.ticketID.rawValue)")
+                        .accessibilityValue("\(impact.artifactID), recorded version \(impact.version), \(impact.observedLifecycle.rawValue), \(impact.observedAuthority.rawValue)")
+                        .accessibilityIdentifier("proposal-source-impact-\(impact.id)")
+                        .id("proposal-source-impact-scroll-\(impact.id)")
+                        .onAppear {
+                            guard requestedFocus == .planChangeProposal(
+                                proposalID: proposal.id.rawValue,
+                                version: version.version,
+                                ticketID: impact.ticketID
+                            ) else { return }
+                            focusedProposal = .sourceImpact(impact.id)
+                            accessibilityFocusedProposal = .sourceImpact(impact.id)
+                        }
+                    }
+                }
+            }
+
+            proposalStateView(version)
+
+            if let proposalActionFailure {
+                FailureStateView(presentation: proposalActionFailure, style: .inline)
+            }
+
+            proposalActions(proposal: proposal, version: version)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(RekonTheme.surface, in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(RekonTheme.border, lineWidth: RekonBorder.hairline)
+        }
+    }
+
+    private func proposalVersionPicker(_ proposal: PlanChangeProposalRecord) -> some View {
+        Picker("Proposal version", selection: Binding(
+            get: { selectedProposalVersion ?? proposal.currentVersion },
+            set: { version in
+                selectedProposalVersion = version
+                proposalActionFailure = nil
+                proposalNeedsRefresh = false
+                focusChanged(.planChangeProposal(
+                    proposalID: proposal.id.rawValue,
+                    version: version,
+                    ticketID: nil
+                ))
+            }
+        )) {
+            ForEach(proposal.versions) { version in
+                Text("Version \(version.version)").tag(version.version)
+            }
+        }
+        .accessibilityIdentifier("plan-change-proposal-version")
+    }
+
+    @ViewBuilder
+    private func proposalStateView(_ version: PlanChangeProposalVersionRecord) -> some View {
+        if let application = version.application {
+            Label("Applied · \(application.appliedAt.formatted(date: .abbreviated, time: .shortened))", systemImage: "checkmark.seal.fill")
+                .foregroundStyle(RekonTheme.success)
+        } else if let decision = version.decision {
+            Label(
+                decision.disposition == .approved ? "Approved" : "Rejected",
+                systemImage: decision.disposition == .approved ? "checkmark.circle.fill" : "xmark.circle.fill"
+            )
+            .foregroundStyle(decision.disposition == .approved ? RekonTheme.success : RekonTheme.danger)
+        } else {
+            Label("Awaiting owner decision", systemImage: "person.crop.circle.badge.questionmark")
+                .foregroundStyle(RekonTheme.warning)
+        }
+    }
+
+    @ViewBuilder
+    private func proposalActions(
+        proposal: PlanChangeProposalRecord,
+        version: PlanChangeProposalVersionRecord
+    ) -> some View {
+        let isCurrent = version.version == proposal.currentVersion
+        if version.application == nil, version.decision == nil, isCurrent, !proposalNeedsRefresh,
+           let decideProposal {
+            HStack(spacing: 10) {
+                Button("Reject") {
+                    performProposalAction {
+                        await decideProposal(proposal.id, version.version, version.baselineDigest, .rejected)
+                    }
+                }
+                .buttonStyle(RekonSecondaryButtonStyle())
+                .accessibilityIdentifier("reject-plan-change-proposal")
+                Button("Approve") {
+                    performProposalAction {
+                        await decideProposal(proposal.id, version.version, version.baselineDigest, .approved)
+                    }
+                }
+                .buttonStyle(RekonPrimaryButtonStyle())
+                .accessibilityIdentifier("approve-plan-change-proposal")
+            }
+            .disabled(isPerformingProposalAction)
+        }
+        if version.application == nil,
+           version.decision?.disposition == .approved,
+           isCurrent, !proposalNeedsRefresh,
+           let applyProposal,
+           let decisionID = version.decision?.id {
+            Button("Apply approved version") {
+                performProposalAction {
+                    await applyProposal(proposal.id, version.version, version.baselineDigest, decisionID)
+                }
+            }
+            .buttonStyle(RekonPrimaryButtonStyle())
+            .disabled(isPerformingProposalAction)
+            .accessibilityIdentifier("apply-plan-change-proposal")
+        }
+        if version.application == nil, isCurrent, let refreshProposal {
+            Button("Refresh proposal") {
+                performProposalAction(
+                    {
+                        await refreshProposal(proposal.id, version.version, version.rationale, version.operations)
+                    },
+                    onSuccess: { result in
+                        guard let refreshedVersion = result.planChangeProposalVersion else { return }
+                        selectedProposalID = Data(proposal.id.rawValue.utf8)
+                        selectedProposalVersion = refreshedVersion
+                        proposalNeedsRefresh = false
+                        focusChanged(.planChangeProposal(
+                            proposalID: proposal.id.rawValue,
+                            version: refreshedVersion,
+                            ticketID: nil
+                        ))
+                    }
+                )
+            }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .disabled(isPerformingProposalAction)
+            .accessibilityIdentifier("refresh-plan-change-proposal")
+        }
+    }
+
+    private func performProposalAction(
+        _ action: @escaping () async -> AgentCommandResult,
+        onSuccess: @escaping (AgentCommandResult) -> Void = { _ in }
+    ) {
+        guard !isPerformingProposalAction else { return }
+        isPerformingProposalAction = true
+        proposalActionFailure = nil
+        Task { @MainActor in
+            let result = await action()
+            isPerformingProposalAction = false
+            if let error = result.error {
+                proposalActionFailure = FailureStatePresentation(agentError: error)
+                if case .planChangeProposalStale = error { proposalNeedsRefresh = true }
+            } else {
+                onSuccess(result)
+            }
+        }
+    }
+
     private func readinessSummary(_ readiness: PhasePlanProjection) -> String {
         let state = switch readiness.state {
         case .legacyUnassessed: "Legacy unassessed"
@@ -195,9 +520,96 @@ struct ProjectPlanView: View {
     }
 
     private func applyRequestedFocus() {
-        guard case let .ticket(ticketID) = requestedFocus,
-              plan.detail(for: ticketID) != nil else { return }
-        focusedTicketID = ticketID
-        accessibilityFocusedTicketID = ticketID
+        switch requestedFocus {
+        case let .ticket(ticketID):
+            guard plan.detail(for: ticketID) != nil else { return }
+            selectedProposalID = nil
+            selectedProposalVersion = nil
+            focusedProposal = nil
+            accessibilityFocusedProposal = nil
+            focusedTicketID = ticketID
+            accessibilityFocusedTicketID = ticketID
+        case let .planChangeProposal(proposalID, version, ticketID):
+            guard let proposal = plan.proposals.first(where: {
+                Data($0.id.rawValue.utf8) == Data(proposalID.utf8)
+            }), let selectedVersion = proposal.versions.first(where: { $0.version == version }) else { return }
+            selectedProposalID = Data(proposalID.utf8)
+            selectedProposalVersion = version
+            proposalActionFailure = nil
+            proposalNeedsRefresh = false
+            let impactID = ticketID.flatMap { selectedTicketID in
+                selectedVersion.sourceImpacts.first(where: { $0.ticketID == selectedTicketID })?.id
+            }
+            if let impactID {
+                focusedProposal = .sourceImpact(impactID)
+                accessibilityFocusedProposal = .sourceImpact(impactID)
+            } else {
+                let proposalKey = Data(proposalID.utf8)
+                focusedProposal = .proposal(proposalKey)
+                accessibilityFocusedProposal = .proposal(proposalKey)
+            }
+        default:
+            break
+        }
+    }
+
+    private func reconcileProposalSelection() {
+        if let selectedProposalID,
+           let proposal = plan.proposals.first(where: { Data($0.id.rawValue.utf8) == selectedProposalID }),
+           proposal.versions.contains(where: { $0.version == selectedProposalVersion }) {
+            return
+        }
+        guard let proposal = plan.proposals.first,
+              let version = proposal.versions.first(where: { $0.version == proposal.currentVersion }) else {
+            selectedProposalID = nil
+            selectedProposalVersion = nil
+            return
+        }
+        selectedProposalID = Data(proposal.id.rawValue.utf8)
+        selectedProposalVersion = version.version
+        proposalActionFailure = nil
+        proposalNeedsRefresh = false
+    }
+
+    private func proposalState(_ version: PlanChangeProposalVersionRecord?) -> String {
+        guard let version else { return "Unavailable" }
+        if version.application != nil { return "Applied" }
+        switch version.decision?.disposition {
+        case .approved: return "Approved"
+        case .rejected: return "Rejected"
+        case nil: return "Awaiting decision"
+        }
+    }
+
+    private func proposalScrollTargetID(forWidth width: CGFloat) -> String? {
+        guard ProjectPlanLayout.usesStackedInspector(forWidth: width) else { return nil }
+        guard case let .planChangeProposal(proposalID, version, ticketID)? = requestedFocus,
+              let ticketID,
+              selectedProposalID == Data(proposalID.utf8),
+              selectedProposalVersion == version,
+              let proposal = plan.proposals.first(where: { $0.id.rawValue == proposalID }),
+              let selectedVersion = proposal.versions.first(where: { $0.version == version }),
+              let impact = selectedVersion.sourceImpacts.first(where: { $0.ticketID == ticketID }) else {
+            return nil
+        }
+        return "proposal-source-impact-scroll-\(impact.id)"
+    }
+}
+
+private enum ProposalFocus: Hashable {
+    case proposal(Data)
+    case sourceImpact(String)
+}
+
+private extension PlanChangeDiffKind {
+    var displayName: String {
+        switch self {
+        case .phases: "Phases"
+        case .goals: "Delivery Goals"
+        case .tickets: "Tickets"
+        case .tasks: "Tasks"
+        case .assignments: "Assignments"
+        case .dependencies: "Dependencies"
+        }
     }
 }

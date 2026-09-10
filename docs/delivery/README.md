@@ -57,6 +57,9 @@
 | rr-2026-09-09-phase5a-recorded-planning | [docs/delivery/evidence/2026-09-09-phase5a-recorded-planning.md](evidence/2026-09-09-phase5a-recorded-planning.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-09-phase5b-reference-impacts | [docs/delivery/evidence/2026-09-09-phase5b-reference-impacts.md](evidence/2026-09-09-phase5b-reference-impacts.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-09-shared-execution-integration-v1 | [docs/delivery/evidence/2026-09-09-shared-execution-integration-v1.md](evidence/2026-09-09-shared-execution-integration-v1.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-10-phase5c-proposals-compact | [docs/delivery/evidence/2026-09-10-phase5c-proposals-compact.png](evidence/2026-09-10-phase5c-proposals-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-10-phase5c-proposals-wide | [docs/delivery/evidence/2026-09-10-phase5c-proposals-wide.png](evidence/2026-09-10-phase5c-proposals-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-10-phase5c-proposals | [docs/delivery/evidence/2026-09-10-phase5c-proposals.md](evidence/2026-09-10-phase5c-proposals.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
