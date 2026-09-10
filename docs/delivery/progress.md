@@ -243,3 +243,12 @@ schema-19 mismatch, received no clicks and was terminated; zero incidental start
 effects are not claimed. The installed owner app was not controlled. See the
 evidence for exact process attribution and retained temporary outputs. No cleanup,
 publication, installation, application readback or catalog acceptance occurred.
+
+
+Independent review returned **Changes required** on `fe4d9f1`: preserve live
+recovery facts; prevent detached debt and terminal-credit reuse; include
+superseded obligations, remaining work and valid legacy cases in phase gates;
+require complete split-child coverage; show exact frozen before/after facts.
+All six are Required under the existing brief and assigned to the original writer.
+The same reviewer will recheck only affected corrections. Source delivery is not
+complete or approved; publication and application-state boundaries are unchanged.
