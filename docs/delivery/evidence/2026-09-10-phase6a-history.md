@@ -33,11 +33,11 @@ state, acceptance or attention.
 Removal, re-add and full backup recovery retain the original event identity and
 facts without transferring authority to the replacement registration. Exact
 ticket and nonactive-phase navigation uses shared typed navigation history. The
-pending R4 correction records and restores the actual vertical History scroll
+verified R4 correction records and restores the actual vertical History scroll
 offset, including positions below the final timeline row, together with the
 selected event, filter and keyboard or accessibility focus. Removed-project History
-keeps its own mutable browsing state
-while exposing no action that can reopen or mutate the removed registration.
+keeps its own mutable browsing state while exposing no action that can reopen or
+mutate the removed registration.
 Missing targets, including legacy audit rows without recorded identity, present an
 accessible recovery state instead of substituting a current ticket or registration.
 
@@ -105,12 +105,12 @@ unrecorded observation times unknown.
   action existed. The installed owner application remained PID 60590 and was never
   selected or controlled.
 
-### Pending R4 actual-viewport correction
+### Verified R4 actual-viewport correction
 
 The same independent reviewer found that the row-relative viewport assertion above
 did not cover the inspector below the final timeline row. In its compact scenario,
 Back returned to approximately 0.63 rather than the absolute bottom and left Open
-offscreen. The pending local candidate replaces the row identity with the enclosing
+offscreen. The final source candidate replaces the row identity with the enclosing
 `NSScrollView`'s real vertical offset through a narrow `NSViewRepresentable` bridge;
 SwiftUI and `AppModel` remain the source of truth, while the coordinator only
 observes and restores the native scroll view.
@@ -130,13 +130,21 @@ The independent reviewer's fresh sanitized run of candidate `d4b5df3` executed
 3 tests: 2 passed and the native test failed only its assumption that the captured
 compact offset could not decrease. Focus/layout reduced that offset by 12 points
 while the actual scrollbar remained at 1.0; wide viewport restoration, compact
-bottom, full inspector/Open visibility and focus checks passed. This candidate
-removes the directional comparison and retains the captured/restored offset
-equality, actual before/after viewport and Open focus assertions. R4 remains
-pending the reviewer's rerun of only the affected native test.
+bottom, full inspector/Open visibility and focus checks passed. Final source
+candidate `fbbf138b00b0ff9e0b0de3ec33b269984288d30b` removes the directional
+comparison and retains the captured/restored offset equality, actual before/after
+viewport and Open focus assertions.
 
-After that observation, verification departed from the authorized sanitized inert
-XCTest-host path. An unsanitized build-for-testing succeeded and re-signed the
+The same reviewer's affected native rerun on that final source candidate passed
+1/1 with zero failures or skips. The orchestrator confirmed the result by direct
+readback of
+`/private/tmp/release-radar-phase6a-r4-review-01a08c37.MJLXYm/r4-review-v2.xcresult`.
+The reviewer observed actual wide viewport and compact absolute-bottom restoration,
+the full inspector and visible Open action with restored focus. The isolated host
+exited. This closes the outstanding R4 runtime verification.
+
+Before the fresh reviewer runs, writer verification departed from the authorized
+sanitized inert XCTest-host path. An unsanitized build-for-testing succeeded and re-signed the
 scratch products; two subsequent unsanitized Xcode launches were interrupted before
 XCTest materialized (0 tests executed in each) while their scratch hosts were blocked
 in macOS sandbox initialization. A direct `xctest` invocation ran two model tests
@@ -146,7 +154,7 @@ result. Those attempts also left two symlinks inside the scratch test-bundle
 Frameworks directory. The scratch products are therefore treated as contaminated
 and retained unchanged. The observed test-host paths were scratch products, and no
 owner/default application interaction was knowingly performed, but no claim of zero
-service or Keychain effects is made. The independent reviewer owns the remaining
+service or Keychain effects is made. The independent reviewer performed the final
 verification from freshly built products using the approved isolated path.
 
 ## Native visual evidence
@@ -175,9 +183,8 @@ labelled by provenance and is not promoted to verified independent review. The
 native journey exercised reload and retained-store recovery tests exercised store
 reopen; a full owner-app process restart was neither performed nor claimed.
 
-The R4 candidate has only diff-level validation from its writer after the
-verification reservation was revoked. Its product-completion status depends on the
-independent reviewer's fresh focused and native results described above.
+The writer performed only diff-level validation after its verification reservation
+was revoked; the fresh independent results above supply final R4 runtime evidence.
 
 The current portable archive v1 is unchanged. Future complete portable formats
 must represent supported History facts and provenance or reject unsupported export.
@@ -186,6 +193,7 @@ must represent supported History facts and provenance or reject unsupported expo
 
 No cleanup was authorized or performed. Result bundles, logs, isolated home/tmp,
 DerivedData, marker outputs, attachment exports and synthetic stores remain under
-`/private/tmp/release-radar-phase6a.eJzQ2M` and
-`/private/tmp/release-radar-phase6a-attachments.iOBzDG`. The two PNGs above are
+`/private/tmp/release-radar-phase6a.eJzQ2M`,
+`/private/tmp/release-radar-phase6a-attachments.iOBzDG` and
+`/private/tmp/release-radar-phase6a-r4-review-01a08c37.MJLXYm`. The two PNGs above are
 the verified canonical repository copies.
