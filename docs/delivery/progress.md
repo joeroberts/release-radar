@@ -54,7 +54,9 @@ recommendations are preserved in the
 [6C brief](task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md): explicit
 recorded target, immutable observations, exact applicability, typed replay and
 existing removal/backup recovery extensions. This is consultation, not candidate
-review. The fresh Sol High writer will start from the committed brief handoff;
+review. Fresh Sol High writer `01a08d1c-cecc-7670-817a-7c5a1e3f3d69` is active in
+worktree `df09`, assigned `codex/phase6c-evidence` from exact handoff
+`84a7a8f42461166a0f4fba28bd8bce76083eb692`;
 one independent Astra High reviewer covers the actual contracts, security,
 recovery and native QA. Ceiling remains Astra High; no subagents.
 
