@@ -580,11 +580,6 @@ public actor ApplicationRecoveryManager {
             try connection.execute("DELETE FROM plan_change_proposal_decisions WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposal_versions WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM plan_change_proposals WHERE project_id = ?", bindings: [project])
-            try connection.execute("DELETE FROM delivery_goal_obligation_lineage WHERE project_id = ?", bindings: [project])
-            try connection.execute("DELETE FROM delivery_goal_obligation_drops WHERE project_id = ?", bindings: [project])
-            try connection.execute("DELETE FROM ticket_successor_links WHERE project_id = ?", bindings: [project])
-            try connection.execute("DELETE FROM ticket_retirements WHERE project_id = ?", bindings: [project])
-            try connection.execute("DELETE FROM delivery_goal_obligations WHERE project_id = ?", bindings: [project])
             try connection.execute("DELETE FROM project_removal_authorizations WHERE project_id = ?", bindings: [project])
         }
     }

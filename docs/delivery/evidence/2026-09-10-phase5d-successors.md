@@ -95,10 +95,74 @@ performed solely to manufacture an attachment.
 Marker-free regression result bundle:
 `/private/tmp/release-radar-phase5d-writer/35-native-successor-automated-green.xcresult`.
 
+## Independent-review corrections
+
+A fresh independent Astra High review of the integrated candidate identified six
+required correctness and presentation gaps. The bounded correction preserves
+the approved Phase 5D scope and changes these behaviors:
+
+- recovery now rotates proposal authority without deleting live retirement,
+  successor, obligation, carry, or drop facts from the restored project;
+- an Accepted ticket counts as delivered only for its exact current Delivery
+  Goal assignment, so a later reassignment cannot retroactively satisfy the
+  abandoned goal;
+- superseded unresolved obligations and every nonretired unfinished ticket,
+  including unassigned work, remain phase prerequisites, while a completed
+  legacy phase with no Delivery Goals is not blocked merely by the empty goal
+  set;
+- carry/drop admission rejects Accepted ticket or goal scope, carry descendants
+  must be current nonterminal obligations, and every replacement/split carry
+  names all and only the retirement's required successors;
+- saved proposal previews freeze the original placement and obligation scope and
+  identify each carry destination ticket, goal, and phase; and
+- retained rows show their frozen last phase and lane at wide and compact widths.
+
+Correction verification used the same isolated, no-signing XCTest environment:
+
+- Launch 36 stopped at a Swift 6 test-fixture Sendable compile error and supplied
+  no behavioral evidence. Launch 37 then established the intended RED state:
+  three tests failed because detached Accepted scope was still delivered,
+  terminal obligation changes were admitted, and an incomplete split carry was
+  admitted.
+- Launch 38 passed six of seven focused cases: exact coverage, terminal and split
+  admission, complete split application plus exact saved preview, older-backup
+  restoration with live retired projection/write rejection, and
+  superseded/unassigned/legacy phase prerequisites. Its remaining case stopped
+  on a fixture audit-event identity collision. Launch 39 confirmed the store
+  authorizer rejected a direct fixture audit insert. The fixture was corrected
+  to use a second ordinary audited `DeliveryStore` transaction; no production
+  authorization behavior changed.
+- Launch 40 passed the corrected reassignment journey 1/1. It exercised an actual
+  Backlog reassignment followed by normal ticket transitions to Accepted and
+  verified the abandoned goal remained uncovered while the exact current goal
+  became delivered and acceptance-eligible.
+- Launch 41 passed both native journeys 2/2 (`8.507` seconds; suite `8.509`
+  seconds). After scrolling the native approval sheet, its accessibility tree
+  exposed the frozen `phase-roadmap Backlog` source placement,
+  `Roadmap backlog one.` scope, and exact
+  `ROAD-1-NEXT`/`road-goal-1`/`phase-roadmap` destination before the actual AX
+  Approve action. Actual Apply, successor/original navigation, retained detail,
+  and compact Activity/Back focus also passed. The separately captured retained
+  row visibly includes `Last placement: phase-roadmap · Backlog` at both wide
+  and compact widths.
+- Launch 42 passed 3/3 directly affected compatibility cases: partial split
+  coverage remains unresolved until every exact current child is delivered,
+  a complete carried successor still permits source-plan refinalization and
+  dependent work, and the combined replacement/move/reassignment/supersession
+  package remains atomic under the tightened Backlog admission rule.
+
+Correction result bundles are retained at:
+
+- `/private/tmp/release-radar-phase5d-writer/37-required-coverage-red.xcresult`
+- `/private/tmp/release-radar-phase5d-writer/38-required-store-green.xcresult`
+- `/private/tmp/release-radar-phase5d-writer/40-reassignment-green.xcresult`
+- `/private/tmp/release-radar-phase5d-writer/41-native-preview-corrections.xcresult`
+- `/private/tmp/release-radar-phase5d-writer/42-coverage-compatibility.xcresult`
+
 ## Visual evidence
 
-The launch 23 native captures show the retained-original presentation at wide
-and compact sizes:
+The canonical captures were refreshed from launch 41 and show the corrected
+retained-original presentation at wide and compact sizes:
 
 - [Wide retained-original row](2026-09-10-phase5d-successors-wide-row.png)
 - [Wide retained task and evidence detail](2026-09-10-phase5d-successors-wide-detail.png)
@@ -111,9 +175,10 @@ responsive stacked-inspector vocabulary. The Phase 5D-specific retired-original
 and obligation-coverage content is a necessary extension of those references;
 it does not change their navigation hierarchy or active-board treatment.
 
-The compact capture proves responsive retained-row rendering, not launch 34's
-corrected automatic scroll. The latter is intentionally recorded only by the
-external observation and passing host assertions above.
+The wide and compact row captures visibly include the frozen last placement.
+The compact capture proves responsive retained-row rendering; launch 41 also
+reran the automatic Activity/Back restoration assertion without manual scroll
+or focus recovery.
 
 ## External-controller deviation
 
@@ -129,6 +194,6 @@ controlled or terminated.
 
 No temporary output or marker was deleted. Result bundles, synthetic stores,
 attachments, marker files, isolated home/tmp directories, and the launch 34
-attachment-export manifest remain under
+and launch 41 attachment-export manifests remain under
 `/private/tmp/release-radar-phase5d-writer/`. The three selected screenshots
 above are the canonical repository copies; temporary originals are retained.

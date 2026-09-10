@@ -30,7 +30,9 @@ enum PlanChangeProposalPolicy {
 
         let baseline = try PlanningBaseline.capture(projectID: projectID, connection: connection)
         let baselineDigest = SHA256.hash(data: baseline).map { String(format: "%02x", $0) }.joined()
-        let diff = deriveDiff(operations)
+        let diff = try deriveDiff(
+            operations, projectID: projectID, connection: connection
+        )
         let sourceImpacts = try captureSourceImpacts(
             for: operations,
             projectID: projectID,
@@ -233,13 +235,14 @@ enum PlanChangeProposalPolicy {
         var ticketDependencyIDs = Set<Data>()
         var placements = Set<Data>()
         var assignments = Set<Data>()
-        var retirements = Set<Data>()
+        var retirements: [Data: Set<TicketID>] = [:]
         var moves = Set<Data>()
         var reassignments = Set<Data>()
         var supersessions = Set<Data>()
         var dependencyReconciliations = Set<Data>()
         var obligationResolutions = Set<DeliveryGoalObligationKey>()
         var carriedDescendants = Set<DeliveryGoalObligationKey>()
+        var proposedCarryDescendants: [DeliveryGoalObligationKey: Set<DeliveryGoalObligationKey>] = [:]
         var goalCountsByPhase: [Data: Int] = [:]
         let proposedPhases = Set(operations.compactMap { operation -> Data? in
             guard case let .addPhase(id, _) = operation else { return nil }
@@ -325,6 +328,37 @@ enum PlanChangeProposalPolicy {
                 bindings: bindings
             ) ?? 0
             return dropped || carried > 0
+        }
+        func obligationHasAcceptedScope(_ key: DeliveryGoalObligationKey) throws -> Bool {
+            guard !proposedAssignments.contains(key) else { return false }
+            return try connection.scalarInt(
+                """
+                SELECT COUNT(*)
+                FROM delivery_goal_obligations o
+                JOIN tickets t ON t.project_id=o.project_id AND t.id=o.ticket_id
+                JOIN delivery_goals g ON g.project_id=o.project_id AND g.phase_id=o.phase_id AND g.id=o.goal_id
+                WHERE o.project_id=? AND o.phase_id=? AND o.goal_id=? AND o.ticket_id=?
+                  AND (t.lane='accepted' OR g.lifecycle='accepted')
+                """,
+                bindings: [.text(projectID.rawValue), .text(key.phaseID.rawValue), .text(key.goalID.rawValue), .text(key.ticketID.rawValue)]
+            ) == 1
+        }
+        func obligationIsEligibleDescendant(_ key: DeliveryGoalObligationKey) throws -> Bool {
+            if proposedAssignments.contains(key) { return true }
+            return try connection.scalarInt(
+                """
+                SELECT COUNT(*)
+                FROM delivery_goal_obligations o
+                JOIN delivery_goal_ticket_assignments a
+                  ON a.project_id=o.project_id AND a.phase_id=o.phase_id
+                 AND a.goal_id=o.goal_id AND a.ticket_id=o.ticket_id
+                JOIN tickets t ON t.project_id=o.project_id AND t.id=o.ticket_id
+                JOIN delivery_goals g ON g.project_id=o.project_id AND g.phase_id=o.phase_id AND g.id=o.goal_id
+                WHERE o.project_id=? AND o.phase_id=? AND o.goal_id=? AND o.ticket_id=?
+                  AND t.lane<>'accepted' AND g.lifecycle NOT IN ('accepted','superseded')
+                """,
+                bindings: [.text(projectID.rawValue), .text(key.phaseID.rawValue), .text(key.goalID.rawValue), .text(key.ticketID.rawValue)]
+            ) == 1
         }
         func requireEligibleExistingSubject(_ id: TicketID) throws {
             if proposedTickets.contains(Data(id.rawValue.utf8)) { return }
@@ -471,7 +505,7 @@ enum PlanChangeProposalPolicy {
                 try requireText(id.rawValue, label: "Ticket dependency ID", maximum: 256)
             case let .retireTicket(ticketID, disposition, reason, successorTicketIDs):
                 let ticketKey = Data(ticketID.rawValue.utf8)
-                guard retirements.insert(ticketKey).inserted, try baselineTicketExists(ticketID),
+                guard retirements[ticketKey] == nil, try baselineTicketExists(ticketID),
                       try connection.scalarInt(
                         "SELECT COUNT(*) FROM ticket_retirements WHERE project_id=? AND ticket_id=?",
                         bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
@@ -500,6 +534,7 @@ enum PlanChangeProposalPolicy {
                         throw PlanChangeProposalError.invalidOperation("Every successor must be a new ticket with new pending tasks created in this same proposal.")
                     }
                 }
+                retirements[ticketKey] = Set(successorTicketIDs)
             case let .moveBacklogTicket(ticketID, fromPhaseID, toPhaseID):
                 guard moves.insert(Data(ticketID.rawValue.utf8)).inserted,
                       try ticketExists(ticketID), try phaseExists(fromPhaseID), try phaseExists(toPhaseID),
@@ -514,6 +549,10 @@ enum PlanChangeProposalPolicy {
                 guard reassignments.insert(Data(ticketID.rawValue.utf8)).inserted,
                       try ticketExists(ticketID), try phaseExists(phaseID), fromGoalID != toGoalID,
                       try goalExists(phaseID, toGoalID, actionable: true),
+                      try connection.scalarInt(
+                        "SELECT COUNT(*) FROM tickets WHERE project_id=? AND id=? AND lane='backlog'",
+                        bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+                      ) == 1,
                       try connection.scalarInt(
                         "SELECT COUNT(*) FROM delivery_goal_ticket_assignments WHERE project_id=? AND ticket_id=? AND goal_id=?",
                         bindings: [.text(projectID.rawValue), .text(ticketID.rawValue), .text(fromGoalID.rawValue)]
@@ -530,12 +569,13 @@ enum PlanChangeProposalPolicy {
                 try requireText(reason, label: "Carry reason")
                 guard !descendants.isEmpty, Set(descendants).count == descendants.count,
                       !descendants.contains(source), obligationResolutions.insert(source).inserted,
-                      try obligationExists(source), try !obligationIsAlreadyResolved(source) else {
+                      try obligationExists(source), try !obligationIsAlreadyResolved(source),
+                      try !obligationHasAcceptedScope(source) else {
                     throw PlanChangeProposalError.invalidOperation("A carry must name distinct descendant obligations.")
                 }
                 for descendant in descendants {
                     guard carriedDescendants.insert(descendant).inserted,
-                          try obligationExists(descendant),
+                          try obligationExists(descendant), try obligationIsEligibleDescendant(descendant),
                           try connection.scalarInt(
                             "SELECT COUNT(*) FROM delivery_goal_obligation_lineage WHERE project_id=? AND descendant_phase_id=? AND descendant_goal_id=? AND descendant_ticket_id=?",
                             bindings: [
@@ -546,11 +586,13 @@ enum PlanChangeProposalPolicy {
                         throw PlanChangeProposalError.invalidOperation("Every carry descendant must be an available obligation used by exactly one source.")
                     }
                 }
+                proposedCarryDescendants[source] = Set(descendants)
             case let .dropGoalObligation(_, reason):
                 try requireText(reason, label: "Drop reason")
                 if case let .dropGoalObligation(obligation, _) = operation {
                     guard obligationResolutions.insert(obligation).inserted,
-                          try obligationExists(obligation), try !obligationIsAlreadyResolved(obligation) else {
+                          try obligationExists(obligation), try !obligationIsAlreadyResolved(obligation),
+                          try !obligationHasAcceptedScope(obligation) else {
                         throw PlanChangeProposalError.invalidOperation("A drop must name one outstanding obligation exactly once.")
                     }
                 }
@@ -585,7 +627,7 @@ enum PlanChangeProposalPolicy {
         // Every retired ticket's retained scope must be explicitly carried or
         // dropped in the same approved package. Successor creation alone never
         // resolves a Delivery Goal obligation.
-        for ticketKey in retirements {
+        for (ticketKey, successorTicketIDs) in retirements {
             let ticketID = String(decoding: ticketKey, as: UTF8.self)
             let rows = try connection.rows(
                 "SELECT phase_id,goal_id FROM delivery_goal_obligations WHERE project_id=? AND ticket_id=?",
@@ -602,6 +644,12 @@ enum PlanChangeProposalPolicy {
                 let alreadyResolved = try obligationIsAlreadyResolved(key)
                 guard obligationResolutions.contains(key) || alreadyResolved else {
                     throw PlanChangeProposalError.invalidOperation("Retirement must explicitly carry or drop every outstanding Delivery Goal obligation.")
+                }
+                if let descendants = proposedCarryDescendants[key] {
+                    let carriedTicketIDs = Set(descendants.map(\.ticketID))
+                    guard carriedTicketIDs == successorTicketIDs else {
+                        throw PlanChangeProposalError.invalidOperation("Every carried retirement obligation must name all and only the retirement's required successors.")
+                    }
                 }
             }
         }
@@ -641,13 +689,43 @@ enum PlanChangeProposalPolicy {
         }
     }
 
-    private static func deriveDiff(_ operations: [PlanChangeOperation]) -> PlanChangeDiff {
+    private static func deriveDiff(
+        _ operations: [PlanChangeOperation],
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws -> PlanChangeDiff {
         var phaseItems: [PlanChangeDiffItem] = []
         var goalItems: [PlanChangeDiffItem] = []
         var ticketItems: [PlanChangeDiffItem] = []
         var taskItems: [PlanChangeDiffItem] = []
         var assignmentItems: [PlanChangeDiffItem] = []
         var dependencyItems: [PlanChangeDiffItem] = []
+        func laneName(_ rawValue: String) -> String {
+            switch TicketLane(rawValue: rawValue) {
+            case .backlog: "Backlog"
+            case .inProgress: "In progress"
+            case .needsReview: "Needs review"
+            case .blocked: "Blocked"
+            case .accepted: "Accepted"
+            case nil: rawValue
+            }
+        }
+        func currentPlacement(_ ticketID: TicketID) throws -> String {
+            guard let row = try connection.row(
+                "SELECT phase_id,lane FROM tickets WHERE project_id=? AND id=?",
+                bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+            ) else { throw PlanChangeProposalError.invalidStoredProposal }
+            guard case let .text(phaseID)? = row["phase_id"],
+                  case let .text(lane)? = row["lane"] else { return "unassigned" }
+            return "\(phaseID) \(laneName(lane))"
+        }
+        func obligationScope(_ key: DeliveryGoalObligationKey) throws -> String {
+            guard let scope = try connection.scalarText(
+                "SELECT scope FROM delivery_goal_obligations WHERE project_id=? AND phase_id=? AND goal_id=? AND ticket_id=?",
+                bindings: [.text(projectID.rawValue), .text(key.phaseID.rawValue), .text(key.goalID.rawValue), .text(key.ticketID.rawValue)]
+            ) else { throw PlanChangeProposalError.invalidStoredProposal }
+            return scope
+        }
         for operation in operations {
             switch operation {
             case let .addPhase(id, name):
@@ -712,7 +790,7 @@ enum PlanChangeProposalPolicy {
                 After: \(ticketID.rawValue) depends on \(dependsOnTicketID.rawValue)
                 """))
             case let .retireTicket(ticketID, disposition, reason, successors):
-                ticketItems.append(.init(summary: "Retire ticket \(ticketID.rawValue) as \(disposition.rawValue)\nBefore: active\nAfter: retained original; successors: \(successors.map(\.rawValue).joined(separator: ", "))\nReason: \(reason)"))
+                ticketItems.append(.init(summary: "Retire ticket \(ticketID.rawValue) as \(disposition.rawValue)\nBefore: \(try currentPlacement(ticketID))\nAfter: retained original; successors: \(successors.map(\.rawValue).joined(separator: ", "))\nReason: \(reason)"))
             case let .moveBacklogTicket(ticketID, fromPhaseID, toPhaseID):
                 ticketItems.append(.init(summary: "Move Backlog ticket \(ticketID.rawValue)\nBefore: \(fromPhaseID.rawValue)\nAfter: \(toPhaseID.rawValue)"))
             case let .reassignTicketToGoal(ticketID, phaseID, fromGoalID, toGoalID):
@@ -720,9 +798,12 @@ enum PlanChangeProposalPolicy {
             case let .supersedeDeliveryGoal(phaseID, goalID):
                 goalItems.append(.init(summary: "Supersede goal \(goalID.rawValue) in \(phaseID.rawValue)\nBefore: actionable\nAfter: superseded"))
             case let .carryGoalObligation(source, descendants, reason):
-                assignmentItems.append(.init(summary: "Carry obligation \(source.ticketID.rawValue)\nBefore: \(source.goalID.rawValue) in \(source.phaseID.rawValue)\nAfter: \(descendants.map { $0.ticketID.rawValue }.joined(separator: ", "))\nReason: \(reason)"))
+                let destinations = descendants.map {
+                    "\($0.ticketID.rawValue) → \($0.goalID.rawValue) in \($0.phaseID.rawValue)"
+                }.joined(separator: "; ")
+                assignmentItems.append(.init(summary: "Carry obligation \(source.ticketID.rawValue)\nBefore: \(source.goalID.rawValue) in \(source.phaseID.rawValue)\nOriginal scope: \(try obligationScope(source))\nAfter: \(destinations)\nReason: \(reason)"))
             case let .dropGoalObligation(obligation, reason):
-                assignmentItems.append(.init(summary: "Drop obligation \(obligation.ticketID.rawValue) from \(obligation.goalID.rawValue)\nBefore: required\nAfter: explicitly dropped\nReason: \(reason)"))
+                assignmentItems.append(.init(summary: "Drop obligation \(obligation.ticketID.rawValue) from \(obligation.goalID.rawValue)\nBefore: \(try obligationScope(obligation)) in \(obligation.phaseID.rawValue)\nAfter: explicitly dropped\nReason: \(reason)"))
             case let .retargetTicketDependency(id, ticketID, fromDependsOnTicketID, toDependsOnTicketID):
                 dependencyItems.append(.init(summary: "Retarget ticket dependency \(id.rawValue) for \(ticketID.rawValue)\nBefore: \(fromDependsOnTicketID.rawValue)\nAfter: \(toDependsOnTicketID.rawValue)"))
             case let .removeTicketDependency(id, ticketID, dependsOnTicketID):

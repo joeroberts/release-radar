@@ -264,6 +264,71 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(repeatedRemovalCount, 3)
     }
 
+    func testRestoreRotatesProposalAuthorityWithoutReactivatingRetiredPlanningFacts() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let projectID = ProjectID(rawValue: "project-one")
+        try await seedProject(in: store, id: projectID.rawValue, registrationID: "registration-one", ticketID: "original")
+        try await store.transact(
+            actor: .init(id: "fixture"), reason: "Seed backed-up successor planning facts",
+            auditEventID: .init(rawValue: "successor-recovery-audit"),
+            auditScope: .init(projectID: projectID, entityType: .ticket, entityID: "original")
+        ) { connection in
+            try connection.execute("UPDATE tickets SET lane='backlog' WHERE project_id='project-one' AND id='original'")
+            try connection.execute("INSERT INTO tickets (id,project_id,phase_id,outcome,lane) VALUES ('successor','project-one','phase-project-one','Successor scope','backlog')")
+            try connection.execute("INSERT INTO delivery_goals (project_id,phase_id,id,title,outcome,lifecycle,sort_order,created_at,updated_at) VALUES ('project-one','phase-project-one','goal','Goal','Deliver retained scope','draft',0,'2026-09-10T00:00:00Z','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id,phase_id,goal_id,sort_order,criterion) VALUES ('project-one','phase-project-one','goal',0,'Successor is accepted')")
+            try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES ('project-one','phase-project-one','goal','successor')")
+            try connection.execute("INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('project-one','phase-project-one','goal','original','Original scope','current','2026-09-10T00:00:00Z'),('project-one','phase-project-one','goal','successor','Successor scope','current','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_retirements (project_id,ticket_id,disposition,reason,last_phase_id,last_lane,audit_event_id,retired_at) VALUES ('project-one','original','replaced','Replaced by successor','phase-project-one','backlog','successor-recovery-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO ticket_successor_links (project_id,original_ticket_id,successor_ticket_id,relation,sort_order,audit_event_id,created_at) VALUES ('project-one','original','successor','replacement',0,'successor-recovery-audit','2026-09-10T00:00:00Z')")
+            try connection.execute("INSERT INTO delivery_goal_obligation_lineage (project_id,source_phase_id,source_goal_id,source_ticket_id,descendant_phase_id,descendant_goal_id,descendant_ticket_id,reason,audit_event_id,created_at) VALUES ('project-one','phase-project-one','goal','original','phase-project-one','goal','successor','Carry original scope','successor-recovery-audit','2026-09-10T00:00:00Z')")
+        }
+        let packageURL = databaseURL.deletingLastPathComponent()
+            .appendingPathComponent("successor.release-radar-backup", isDirectory: true)
+        let backup = ApplicationBackupManager(store: store, databaseURL: databaseURL)
+        _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
+
+        let recovery = ApplicationRecoveryManager(store: store, databaseURL: databaseURL)
+        let restored = try await recovery.restore(try await recovery.previewRestore(packageURL: packageURL))
+        let facts = try await restored.store.read { connection in
+            (
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_retirements WHERE project_id='project-one' AND ticket_id='original'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM ticket_successor_links WHERE project_id='project-one' AND original_ticket_id='original'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_obligations WHERE project_id='project-one'"),
+                try connection.scalarInt("SELECT COUNT(*) FROM delivery_goal_obligation_lineage WHERE project_id='project-one'"),
+                try DeliveryGoalCoveragePolicy.assess(
+                    projectID: projectID, phaseID: .init(rawValue: "phase-project-one"),
+                    goalID: .init(rawValue: "goal"), connection: connection
+                )
+            )
+        }
+        XCTAssertEqual(facts.0, 1)
+        XCTAssertEqual(facts.1, 1)
+        XCTAssertEqual(facts.2, 2)
+        XCTAssertEqual(facts.3, 1)
+        XCTAssertFalse(facts.4.isResolved)
+        XCTAssertEqual(facts.4.obligations.first(where: { $0.key.ticketID.rawValue == "original" })?.state, .carried)
+        XCTAssertEqual(facts.4.obligations.first(where: { $0.key.ticketID.rawValue == "successor" })?.state, .required)
+
+        let dashboard = try await DashboardProjection.load(
+            from: restored.store, evidenceReadbacks: [projectID: []]
+        )
+        XCTAssertEqual(dashboard.plan(for: projectID)?.retiredTickets.map(\.id.rawValue), ["original"])
+        do {
+            _ = try await restored.store.transact(actor: .init(id: "fixture"), reason: "Reject restored original mutation") { connection in
+                try TicketTaskPlanningPolicy.revisePlan(
+                    projectID: projectID, ticketID: .init(rawValue: "original"), expectedRevision: nil,
+                    additions: [.init(id: .init(rawValue: "late"), label: "Late", title: "Must reject", sortOrder: 0)],
+                    definitionRevisions: [], supersededTaskIDs: [], connection: connection
+                )
+            }
+            XCTFail("A restored retired original must remain immutable.")
+        } catch let error as TicketTaskPlanningPolicyError {
+            XCTAssertEqual(error, .invalidTicketTaskMutation(.retiredTicket))
+        }
+    }
+
     func testRestorePreservesTheCurrentBlockedObservationWithoutSendingItAgain() async throws {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)

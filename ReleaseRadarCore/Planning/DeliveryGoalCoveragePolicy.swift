@@ -101,7 +101,7 @@ public enum DeliveryGoalCoveragePolicy {
             if node.dropReason != nil { return .dropped }
             if !(descendants[obligationKey] ?? []).isEmpty { return .carried }
             if node.assessment == "unassessed" { return .unassessed }
-            if node.lane == TicketLane.accepted.rawValue { return .delivered }
+            if node.isCurrent, node.lane == TicketLane.accepted.rawValue { return .delivered }
             if node.isCurrent { return .required }
             return .uncovered
         }
