@@ -6,7 +6,7 @@ Phase 4 source delivery is complete through owner-approved PRs #36/#37. Its
 [brief](task-briefs/2026-09-08-phase4-navigation/phase4-navigation-brief.md) and
 [verification](evidence/2026-09-08-phase4-navigation.md) retain scope and evidence.
 
-**Phase 5A is merged; Phase 5B is merged; Phase 5C local delivery is starting from reviewed shared source.** The owner selected
+**Phase 5A is merged; Phase 5B is merged; Phase 5C local source delivery and independent review are complete.** The owner selected
 Overview landing, Project Plan, a shared phase/all-phase board, identity-preserving
 unassigned placement, multiple In-delivery phases, revision-specific authoritative
 document links and carrying goal obligations forward. The exact
@@ -186,38 +186,24 @@ authorization. Canonical checkout and unrelated files remain preserved.
 [Historical C7 record](archive/2026-09-07-c7-delivery-history.md) retain closed coordination,
 prior checks and temporary-output reports.
 
-## Active Phase 5C local handoff
+## Phase 5C local completion and next boundary
 
-The parent released overlapping source ownership and authorized Phase 5C local
-implementation/checks/review from preserved shared closeout `28d323a`. The
-[Phase 5C brief](task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
-records additive planning, saved versions, explicit approval and atomic apply.
-Read-only Astra High chief task `01a088a9-bdc4-74c1-889a-6ee00d7cafb4` completed
-contract assessment; findings are incorporated, no new owner choice is outstanding.
-The chief task is archived with no files or processes created.
-The local orchestrator branch is `codex/phase5c-orchestrator`. Fresh Sol High writer `01a088b0-1bb5-7392-89fc-96fa11b714c5` starts from
-committed handoff `746c6e3ed93c6f2b9122d53d219d6ec97f7d529e`, with Astra High
-ceiling for a named unresolved problem. This profile covers approval authority,
-atomic graph changes, recovery and native behavior; one fresh Astra High reviewer
-will cover those risks independently. Actual runtime settings are not separately
-exposed. Inherited shared commits remain local-only: no C
-push/PR until the owner resolves shared publication authorization; merge is separate.
+Phase 5C completed the [approved proposal slice](task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
+from preserved shared closeout `28d323a`. Writer `01a088b0-1bb5-7392-89fc-96fa11b714c5`
+(Sol High) delivered packaged save/read, owner-only decisions/apply, complete
+baselines/diffs, atomic changes, retention/recovery and native Plan workflow.
+Independent Astra High reviewer `01a08946-bb22-7182-aecb-fb77b4fa6a57` passed
+`c685f0447661c397664f7bd5d4727790a6bc6cd0`, closing all four Required findings
+after writer correction `521de88`. The [canonical evidence](evidence/2026-09-10-phase5c-proposals.md)
+records direct results, native source/recovery limitations and retained temporary
+fixtures. Correction regressions passed 5/5; the affected run passed 18/19 with
+its sole obsolete native fixture corrected in an exact 1/1 rerun. No full-suite
+green claim is made.
 
-Phase 5C writer committed local candidate `661b86c` (superseding source-only
-`f9f2841`) with canonical [evidence](evidence/2026-09-10-phase5c-proposals.md) and
-wide/compact captures. Packaged agent save/read entry points are now included;
-approval and apply remain trusted owner-app actions. Targeted results were
-78 passed / 1 synthetic migration fixture failure; its exact corrected rerun passed.
-Packaged save/query and schema checks passed, and the corrected inert parser test
-passed 1/1. External focus/history verification passed; its missing source fixture
-proves recovery navigation, not successful source resolution. Writer is clean and
-stopped, retained for required corrections. Fresh independent review remains
-pending; this is not a Phase 5C completion claim or publication authorization.
-
-Fresh independent Astra High reviewer `01a08946-bb22-7182-aecb-fb77b4fa6a57`
-requested four Required corrections at `01add74`: actual source-content/access
-revalidation, complete owner-visible definitions and changes, current baseline
-rejection before decision writes, and same-read external query authorization.
-The same Sol High writer is active for these bounded corrections; direct behavior
-regressions and the same reviewer’s recheck remain required. No review pass or
-publication authorization is claimed. Reviewer created no files or processes.
+The clean named source branch `codex/phase5c-proposals` and local orchestrator
+branch `codex/phase5c-orchestrator` preserve the outcome. Both bounded peers are
+stopped; archival follows this durable closeout. No owner-app changes occurred.
+The next approved slice is Phase 5D successor/carry-forward through this proposal
+path, after coordinated baseline/ownership handoff. Publication is separately
+blocked: inherited shared/C commits remain local-only until explicit owner
+authorization for their remote endpoint; every merge is separately approved.

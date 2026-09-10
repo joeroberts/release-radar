@@ -537,7 +537,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase5c-proposals-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md](2026-09-10-phase5c-proposals/phase5c-proposals-brief.md) | document | controlling &#40;delivery.phase5c-proposals&#41; | active | none | none |
+| rr-phase5c-proposals-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md](2026-09-10-phase5c-proposals/phase5c-proposals-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

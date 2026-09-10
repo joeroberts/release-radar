@@ -5479,9 +5479,8 @@
       "artifactID": "rr-phase5c-proposals-brief-2026-09-10",
       "path": "docs/delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.phase5c-proposals",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-10-phase5c-proposals",
       "supersedes": [],
       "applicationSensitivity": [
