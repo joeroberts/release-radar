@@ -4,6 +4,7 @@ public enum InvalidTicketTaskMutationReason: Equatable, Sendable {
     case ticketNotFound
     case unassignedTicket
     case acceptedTicket
+    case retiredTicket
     case emptyOperationSet
     case invalidCreationOperations
     case operationLimitExceeded(actual: Int, maximum: Int)
@@ -345,6 +346,12 @@ public enum TicketTaskPlanningPolicy {
         ticketID: TicketID,
         connection: SQLiteConnection
     ) throws {
+        guard try connection.scalarInt(
+            "SELECT COUNT(*) FROM ticket_retirements WHERE project_id=? AND ticket_id=?",
+            bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+        ) == 0 else {
+            throw invalid(.retiredTicket)
+        }
         guard let row = try connection.row(
             "SELECT lane FROM tickets WHERE project_id = ? AND id = ?",
             bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]

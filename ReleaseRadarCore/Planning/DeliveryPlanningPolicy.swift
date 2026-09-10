@@ -53,6 +53,7 @@ public enum DeliveryPlanningPolicy {
         try validateID(projectID.rawValue)
         try validateID(ticketID.rawValue)
         try validateText(outcome)
+        try requireNotRetired(projectID, ticketID, connection)
         guard try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id=?", bindings: [.text(projectID.rawValue)]) == 1 else {
             throw invalid("The project does not exist. Refresh the project.")
         }
@@ -79,6 +80,7 @@ public enum DeliveryPlanningPolicy {
         try validateID(projectID.rawValue)
         try validateID(ticketID.rawValue)
         try validateID(phaseID.rawValue)
+        try requireNotRetired(projectID, ticketID, connection)
         guard try connection.scalarInt("SELECT COUNT(*) FROM phases WHERE project_id=? AND id=?", bindings: identity(projectID, phaseID)) == 1 else {
             throw invalid("The destination phase does not belong to this project.")
         }
@@ -135,6 +137,7 @@ public enum DeliveryPlanningPolicy {
         try validateID(ticketID.rawValue)
         try validateID(phaseID.rawValue)
         try validateText(outcome)
+        try requireNotRetired(projectID, ticketID, connection)
         guard lane != .accepted else {
             throw invalid("Accepted tickets must use the exact-revision ticket transition.")
         }
@@ -185,6 +188,7 @@ public enum DeliveryPlanningPolicy {
         projectID: ProjectID, ticketID: TicketID, to lane: TicketLane,
         ticketTaskPlanRevision: Int64? = nil, connection: SQLiteConnection
     ) throws {
+        try requireNotRetired(projectID, ticketID, connection)
         let ticket = try requireTicket(projectID, ticketID, connection)
         guard ticket["phase_id"] != .null, ticket["lane"] != .null else {
             throw invalid("Place this ticket into a phase Backlog before executing delivery work.")
@@ -225,6 +229,7 @@ public enum DeliveryPlanningPolicy {
     public static func assertCanRecordReviewOrCompletion(
         projectID: ProjectID, ticketID: TicketID, connection: SQLiteConnection
     ) throws {
+        try requireNotRetired(projectID, ticketID, connection)
         let ticket = try requireTicket(projectID, ticketID, connection)
         guard ticket["phase_id"] != .null, ticket["lane"] != .null else {
             throw invalid("Place this ticket into a phase Backlog before recording review or completion.")
@@ -308,12 +313,26 @@ public enum DeliveryPlanningPolicy {
               ON t.project_id=d.project_id AND t.id=d.depends_on_ticket_id
             WHERE d.project_id=? AND d.ticket_id=? AND t.lane<>'accepted'
             """, bindings: [.text(project.rawValue), .text(ticket.rawValue)]) ?? 0
-        let phaseDependencies = try db.scalarInt("""
-            SELECT COUNT(*) FROM phase_dependencies d JOIN tickets t
-              ON t.project_id=d.project_id AND t.phase_id=d.depends_on_phase_id
-            WHERE d.project_id=? AND d.phase_id=? AND t.lane<>'accepted'
-            """, bindings: identity(project, phase)) ?? 0
-        guard ticketDependencies == 0, phaseDependencies == 0 else {
+        let prerequisitePhaseIDs = try db.rows(
+            "SELECT depends_on_phase_id FROM phase_dependencies WHERE project_id=? AND phase_id=? ORDER BY depends_on_phase_id",
+            bindings: identity(project, phase)
+        ).compactMap { text($0["depends_on_phase_id"]) }
+        var unresolvedPhasePrerequisites = false
+        for prerequisitePhaseID in prerequisitePhaseIDs {
+            let goals = try loadGoals(
+                projectID: project, phaseID: .init(rawValue: prerequisitePhaseID), connection: db
+            ).filter { $0.lifecycle != .superseded }
+            let hasUnresolvedGoal = try goals.contains(where: {
+                try !DeliveryGoalCoveragePolicy.assess(
+                    projectID: project, phaseID: $0.phaseID, goalID: $0.id, connection: db
+                ).isAcceptanceEligible
+            })
+            if goals.isEmpty || hasUnresolvedGoal {
+                unresolvedPhasePrerequisites = true
+                break
+            }
+        }
+        guard ticketDependencies == 0, !unresolvedPhasePrerequisites else {
             throw invalid("Accept every prerequisite ticket and all tickets in prerequisite phases before starting or resuming work.")
         }
     }
@@ -424,7 +443,7 @@ public enum DeliveryPlanningPolicy {
         let goals = try loadGoals(projectID: projectID, phaseID: phaseID, connection: connection)
         let assignments = try loadAssignments(projectID: projectID, phaseID: phaseID, connection: connection)
         let tickets = try connection.rows(
-            "SELECT id,lane,plan_legacy_continuation FROM tickets WHERE project_id=? AND phase_id=? ORDER BY id",
+            "SELECT id,lane,plan_legacy_continuation FROM tickets WHERE project_id=? AND phase_id=? AND NOT EXISTS (SELECT 1 FROM ticket_retirements WHERE ticket_retirements.project_id=tickets.project_id AND ticket_retirements.ticket_id=tickets.id) ORDER BY id",
             bindings: identity(projectID, phaseID))
         let upcoming = tickets.filter { text($0["lane"]) != TicketLane.accepted.rawValue }
         var incomplete: [DeliveryGoalID] = []
@@ -434,14 +453,16 @@ public enum DeliveryPlanningPolicy {
         var adoptedTickets: [TicketID] = []
         let goalsByID = Dictionary(uniqueKeysWithValues: goals.map { (identityKey($0.id.rawValue), $0) })
         let assignmentsByTicket = Dictionary(grouping: assignments, by: { identityKey($0.ticketID.rawValue) })
-        let assignmentsByGoal = Dictionary(grouping: assignments, by: { identityKey($0.goalID.rawValue) })
 
         for goal in goals where goal.lifecycle != .superseded {
+            let coverage = try DeliveryGoalCoveragePolicy.assess(
+                projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection
+            )
             let criteria = try loadCriteria(
                 projectID: projectID, phaseID: phaseID, goalID: goal.id, connection: connection)
             if blank(goal.title) || blank(goal.outcome) || criteria.isEmpty
                 || criteria.contains(where: { blank($0.text) })
-                || assignmentsByGoal[identityKey(goal.id.rawValue), default: []].isEmpty
+                || !coverage.isReadyCovered
             {
                 incomplete.append(goal.id)
             }
@@ -478,7 +499,7 @@ public enum DeliveryPlanningPolicy {
                 conflicting.append(id)
             }
         }
-        guard !upcoming.isEmpty, goals.contains(where: { $0.lifecycle != .superseded }),
+        guard goals.contains(where: { $0.lifecycle != .superseded }),
             incomplete.isEmpty, unassigned.isEmpty, conflicting.isEmpty
         else {
             throw DeliveryPlanningPolicyError.phasePlanIncomplete(
@@ -520,28 +541,29 @@ public enum DeliveryPlanningPolicy {
         if lifecycle == .accepted {
             guard case .ownerApp = origin else { throw DeliveryPlanningPolicyError.ownerAcceptanceRequired }
         }
-        let tickets = try connection.rows(
-            """
-            SELECT t.id,t.lane FROM delivery_goal_ticket_assignments a
-            JOIN tickets t ON t.project_id=a.project_id AND t.phase_id=a.phase_id AND t.id=a.ticket_id
-            WHERE a.project_id=? AND a.phase_id=? AND a.goal_id=? ORDER BY t.id
-            """, bindings: identity(projectID, phaseID) + [.text(goalID.rawValue)])
-        guard !tickets.isEmpty, tickets.allSatisfy({ text($0["lane"]) == TicketLane.accepted.rawValue }) else {
+        let coverage = try DeliveryGoalCoveragePolicy.assess(
+            projectID: projectID, phaseID: phaseID, goalID: goalID, connection: connection
+        )
+        guard coverage.isAcceptanceEligible else {
             throw invalid(
-                "Every assigned ticket must be Accepted before requesting or recording Delivery Goal acceptance.")
+                "Every required obligation leaf must be Accepted before requesting or recording Delivery Goal acceptance.")
         }
         // Evidence availability is canonical store state; neither prose nor paths
         // create new evidence requirements. Ticket task gates run at ticket acceptance.
-        let unavailable = try connection.rows(
-            """
-            SELECT DISTINCT a.ticket_id FROM delivery_goal_ticket_assignments a
-            JOIN evidence e ON e.project_id=a.project_id AND e.ticket_id=a.ticket_id
-            WHERE a.project_id=? AND a.phase_id=? AND a.goal_id=? AND e.is_available=0
-            ORDER BY a.ticket_id
-            """, bindings: identity(projectID, phaseID) + [.text(goalID.rawValue)])
-        guard unavailable.isEmpty else {
+        var unavailableTicketIDs: [TicketID] = []
+        for obligation in coverage.obligations where obligation.state == .delivered {
+            let unavailableCount = try connection.scalarInt(
+                "SELECT COUNT(*) FROM evidence WHERE project_id=? AND ticket_id=? AND is_available=0",
+                bindings: [.text(projectID.rawValue), .text(obligation.key.ticketID.rawValue)]
+            ) ?? 0
+            if unavailableCount > 0 {
+                unavailableTicketIDs.append(obligation.key.ticketID)
+            }
+        }
+        guard unavailableTicketIDs.isEmpty else {
             throw DeliveryPlanningPolicyError.goalAcceptanceEvidenceUnavailable(
-                try unavailable.map { .init(rawValue: try requiredText($0, "ticket_id")) })
+                unavailableTicketIDs.sorted { $0.rawValue < $1.rawValue }
+            )
         }
         try writeLifecycle(projectID, goalID, lifecycle, operationTimestamp(), connection)
         return try requireGoal(projectID, phaseID, goalID, connection)
@@ -633,6 +655,7 @@ public enum DeliveryPlanningPolicy {
         _ project: ProjectID, _ phase: PhaseID, _ ticket: TicketID, _ goal: DeliveryGoalRecord?, _ revision: Int64,
         _ audit: AuditEventID, _ db: SQLiteConnection
     ) throws {
+        try requireNotRetired(project, ticket, db)
         try validateID(ticket.rawValue)
         guard
             let row = try db.row(
@@ -666,6 +689,21 @@ public enum DeliveryPlanningPolicy {
             try db.execute(
                 "INSERT INTO delivery_goal_ticket_assignments (project_id,phase_id,goal_id,ticket_id) VALUES (?,?,?,?)",
                 bindings: identity(project, phase) + [.text(current), .text(ticket.rawValue)])
+            try db.execute(
+                """
+                INSERT INTO delivery_goal_obligations (
+                    project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at
+                )
+                SELECT project_id,phase_id,?,id,outcome,'current',?
+                FROM tickets WHERE project_id=? AND phase_id=? AND id=?
+                ON CONFLICT(project_id,phase_id,goal_id,ticket_id)
+                DO UPDATE SET assessment='current'
+                """,
+                bindings: [
+                    .text(current), .text(operationTimestamp()), .text(project.rawValue),
+                    .text(phase.rawValue), .text(ticket.rawValue),
+                ]
+            )
         }
         let action = previous == nil ? "assigned" : (current == nil ? "unassigned" : "reassigned")
         try db.execute(
@@ -678,6 +716,20 @@ public enum DeliveryPlanningPolicy {
                 .text(ticket.rawValue), previous.map(SQLiteValue.text) ?? .null, current.map(SQLiteValue.text) ?? .null,
                 .integer(revision), .text(action),
             ])
+    }
+
+    static func requireNotRetired(
+        _ projectID: ProjectID,
+        _ ticketID: TicketID,
+        _ connection: SQLiteConnection
+    ) throws {
+        let retired = try connection.scalarInt(
+            "SELECT COUNT(*) FROM ticket_retirements WHERE project_id=? AND ticket_id=?",
+            bindings: [.text(projectID.rawValue), .text(ticketID.rawValue)]
+        ) ?? 0
+        guard retired == 0 else {
+            throw invalid("Retired tickets are retained read-only. Create or select an active successor.")
+        }
     }
 
     private static func writeGoal(

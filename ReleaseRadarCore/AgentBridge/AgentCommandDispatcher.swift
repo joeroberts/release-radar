@@ -331,6 +331,28 @@ public actor AgentCommandDispatcher {
                         valid(id.rawValue, maximum: 256) && !id.rawValue.contains("\0")
                             && valid(ticketID.rawValue, maximum: 256) && !ticketID.rawValue.contains("\0")
                             && valid(dependsOnTicketID.rawValue, maximum: 256) && !dependsOnTicketID.rawValue.contains("\0")
+                    case let .retireTicket(ticketID, _, reason, successorTicketIDs):
+                        valid(ticketID.rawValue, maximum: 256) && !ticketID.rawValue.contains("\0")
+                            && valid(reason) && !reason.contains("\0")
+                            && successorTicketIDs.allSatisfy { valid($0.rawValue, maximum: 256) && !$0.rawValue.contains("\0") }
+                    case let .moveBacklogTicket(ticketID, fromPhaseID, toPhaseID):
+                        [ticketID.rawValue, fromPhaseID.rawValue, toPhaseID.rawValue].allSatisfy { valid($0, maximum: 256) && !$0.contains("\0") }
+                    case let .reassignTicketToGoal(ticketID, phaseID, fromGoalID, toGoalID):
+                        [ticketID.rawValue, phaseID.rawValue, fromGoalID.rawValue, toGoalID.rawValue].allSatisfy { valid($0, maximum: 256) && !$0.contains("\0") }
+                    case let .supersedeDeliveryGoal(phaseID, goalID):
+                        [phaseID.rawValue, goalID.rawValue].allSatisfy { valid($0, maximum: 256) && !$0.contains("\0") }
+                    case let .carryGoalObligation(source, descendants, reason):
+                        valid(source.phaseID.rawValue, maximum: 256) && valid(source.goalID.rawValue, maximum: 256)
+                            && valid(source.ticketID.rawValue, maximum: 256) && !descendants.isEmpty
+                            && descendants.allSatisfy { valid($0.phaseID.rawValue, maximum: 256) && valid($0.goalID.rawValue, maximum: 256) && valid($0.ticketID.rawValue, maximum: 256) }
+                            && valid(reason) && !reason.contains("\0")
+                    case let .dropGoalObligation(obligation, reason):
+                        valid(obligation.phaseID.rawValue, maximum: 256) && valid(obligation.goalID.rawValue, maximum: 256)
+                            && valid(obligation.ticketID.rawValue, maximum: 256) && valid(reason) && !reason.contains("\0")
+                    case let .retargetTicketDependency(id, ticketID, fromDependsOnTicketID, toDependsOnTicketID):
+                        [id.rawValue, ticketID.rawValue, fromDependsOnTicketID.rawValue, toDependsOnTicketID.rawValue].allSatisfy { valid($0, maximum: 256) && !$0.contains("\0") }
+                    case let .removeTicketDependency(id, ticketID, dependsOnTicketID):
+                        [id.rawValue, ticketID.rawValue, dependsOnTicketID.rawValue].allSatisfy { valid($0, maximum: 256) && !$0.contains("\0") }
                     }
                 }
         case let .decidePlanChangeProposal(proposalID, version, baselineDigest, decisionID, _):
@@ -739,6 +761,21 @@ public actor AgentCommandDispatcher {
             let table = kind == .ticket ? "tickets" : "phases"
             try requireProjectEntity(subjectID, table: table, projectID: projectID, connection: connection)
             try requireProjectEntity(dependsOnID, table: table, projectID: projectID, connection: connection)
+            if kind == .ticket {
+                try requireActionableTicket(subjectID, projectID: projectID, connection: connection)
+                try requireActionableTicket(dependsOnID, projectID: projectID, connection: connection)
+                if let existing = try connection.row(
+                    "SELECT ticket_id,depends_on_ticket_id FROM ticket_dependencies WHERE project_id=? AND id=?",
+                    bindings: [.text(projectID.rawValue), .text(id)]
+                ) {
+                    for column in ["ticket_id", "depends_on_ticket_id"] {
+                        guard case let .text(ticketID)? = existing[column] else {
+                            throw CommandValidation.invalidReference("Ticket dependency \(id) is invalid")
+                        }
+                        try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+                    }
+                }
+            }
             let dependencyTable = kind == .ticket ? "ticket_dependencies" : "phase_dependencies"
             let subjectColumn = kind == .ticket ? "ticket_id" : "phase_id"
             let dependencyColumn = kind == .ticket ? "depends_on_ticket_id" : "depends_on_phase_id"
@@ -749,6 +786,8 @@ public actor AgentCommandDispatcher {
             )
         case let .recordBlocker(id, ticketID, summary):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+            try requireExistingAssociationOwnerActionable(id, table: "blockers", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "blockers", projectID: projectID, connection: connection)
             try connection.execute(
                 "INSERT INTO blockers (id, project_id, ticket_id, summary, resolved_at) VALUES (?, ?, ?, ?, NULL) ON CONFLICT(id) DO UPDATE SET ticket_id = excluded.ticket_id, summary = excluded.summary, resolved_at = NULL",
@@ -756,6 +795,9 @@ public actor AgentCommandDispatcher {
             )
         case let .resolveBlocker(blockerID):
             try requireProjectEntity(blockerID, table: "blockers", projectID: projectID, connection: connection)
+            try requireExistingAssociationOwnerActionable(
+                blockerID, table: "blockers", projectID: projectID, connection: connection
+            )
             try connection.execute(
                 "UPDATE blockers SET resolved_at = ? WHERE id = ? AND project_id = ?",
                 bindings: [.text(ISO8601DateFormatter().string(from: Date())), .text(blockerID), .text(projectID.rawValue)]
@@ -763,7 +805,9 @@ public actor AgentCommandDispatcher {
         case let .addEvidence(id, ticketID, path):
             if let ticketID {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+                try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
             }
+            try requireExistingAssociationOwnerActionable(id, table: "evidence", projectID: projectID, connection: connection)
             let resolvedPath = try authorizedEvidencePath(path, project: project)
             try rejectCataloguedLegacyPath(resolvedPath, project: project)
             try requireWritableID(id, table: "evidence", projectID: projectID, connection: connection)
@@ -773,6 +817,8 @@ public actor AgentCommandDispatcher {
             )
         case let .linkThread(id, ticketID, threadID):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+            try requireExistingAssociationOwnerActionable(id, table: "thread_links", projectID: projectID, connection: connection)
             try requireProjectEntity(threadID, table: "observed_threads", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "thread_links", projectID: projectID, connection: connection)
             try connection.execute(
@@ -781,6 +827,7 @@ public actor AgentCommandDispatcher {
             )
         case let .linkGoal(id, ticketID, goalID):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
             try requireProjectEntity(goalID, table: "observed_goals", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "ticket_goal_links", projectID: projectID, connection: connection)
             if let existingTicketID = try connection.scalarText(
@@ -820,9 +867,11 @@ public actor AgentCommandDispatcher {
         case let .requestReview(id, ticketID, kind, summary):
             if let ticketID {
                 try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+                try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
                 try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
                     projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             }
+            try requireExistingAssociationOwnerActionable(id, table: "review_items", projectID: projectID, connection: connection)
             try requireWritableID(id, table: "review_items", projectID: projectID, connection: connection)
             try requireAgentWritableReview(id: id, kind: kind, projectID: projectID, connection: connection)
             let previousStatus = try connection.scalarText(
@@ -845,6 +894,8 @@ public actor AgentCommandDispatcher {
             }
         case let .recordCompletion(id, ticketID, summary):
             try requireProjectEntity(ticketID, table: "tickets", projectID: projectID, connection: connection)
+            try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
+            try requireExistingAssociationOwnerActionable(id, table: "completion_records", projectID: projectID, connection: connection)
             try DeliveryPlanningPolicy.assertCanRecordReviewOrCompletion(
                 projectID: projectID, ticketID: .init(rawValue: ticketID), connection: connection)
             try requireWritableID(id, table: "completion_records", projectID: projectID, connection: connection)
@@ -934,6 +985,34 @@ public actor AgentCommandDispatcher {
         guard existingProject == projectID.rawValue else {
             throw CommandValidation.crossProject("\(table) record \(id) belongs to another project")
         }
+    }
+
+    private static func requireActionableTicket(
+        _ ticketID: String,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        guard try connection.scalarInt(
+            "SELECT COUNT(*) FROM ticket_retirements WHERE project_id=? AND ticket_id=?",
+            bindings: [.text(projectID.rawValue), .text(ticketID)]
+        ) == 0 else {
+            throw CommandValidation.invalidReference(
+                "Retired ticket \(ticketID) is retained read-only; use an active successor."
+            )
+        }
+    }
+
+    private static func requireExistingAssociationOwnerActionable(
+        _ id: String,
+        table: String,
+        projectID: ProjectID,
+        connection: SQLiteConnection
+    ) throws {
+        guard let ticketID = try connection.scalarText(
+            "SELECT ticket_id FROM \(table) WHERE project_id=? AND id=?",
+            bindings: [.text(projectID.rawValue), .text(id)]
+        ) else { return }
+        try requireActionableTicket(ticketID, projectID: projectID, connection: connection)
     }
 
     private static func authorizedEvidencePath(_ path: String, project: AuthorizedProject) throws -> String {
@@ -1076,6 +1155,7 @@ public actor AgentCommandDispatcher {
             case .notFound: return .ticketReferenceNotFound
             case .identityImmutable: return .ticketReferenceIdentityImmutable
             case .ticketAccepted: return .ticketReferenceTicketAccepted
+            case .ticketRetired: return .invalidPlanMutation("Retired tickets retain references read-only. Use an active successor.")
             case .sourceNotAuthoritative: return .ticketReferenceSourceNotAuthoritative
             }
         }

@@ -196,6 +196,12 @@ struct TicketReferenceCommandDispatcher: Sendable {
         if ticket["lane"] == .text(TicketLane.accepted.rawValue) {
             throw TicketReferenceMutationError.ticketAccepted
         }
+        guard try connection.scalarInt(
+            "SELECT COUNT(*) FROM ticket_retirements WHERE project_id=? AND ticket_id=?",
+            bindings: [.text(context.projectID), .text(ids.ticketID)]
+        ) == 0 else {
+            throw TicketReferenceMutationError.ticketRetired
+        }
         let currentRevision = try connection.scalarInt(
             "SELECT revision FROM ticket_reference_link_sets WHERE project_id = ? AND ticket_id = ?",
             bindings: [.text(context.projectID), .text(ids.ticketID)]
@@ -324,6 +330,7 @@ struct TicketReferenceCommandDispatcher: Sendable {
         case .notFound: .ticketReferenceNotFound
         case .identityImmutable: .ticketReferenceIdentityImmutable
         case .ticketAccepted: .ticketReferenceTicketAccepted
+        case .ticketRetired: .invalidPlanMutation("Retired tickets retain references read-only. Use an active successor.")
         case .sourceNotAuthoritative: .ticketReferenceSourceNotAuthoritative
         }
     }
