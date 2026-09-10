@@ -131,14 +131,14 @@ struct AllPhaseBoardView: View {
 
     private var goalPicker: some View {
         HStack(spacing: 12) {
-            Text("Delivery Goal").font(RekonTypography.controlLabel)
+            Text(filterDomainLabel).font(RekonTypography.controlLabel)
             RekonPicker(
                 selection: Binding(
                     get: { goalOptions.first(where: { $0.value == filter })?.selection ?? "All goals" },
                     set: { selection in if let option = goalOptions.first(where: { $0.selection == selection }) { filter = option.value } }
                 ),
                 options: goalOptions.map(\.selection),
-                accessibilityLabel: "Delivery Goal",
+                accessibilityLabel: filterDomainLabel,
                 accessibilityIdentifier: "all-phase-delivery-goal-filter"
             )
             .frame(minWidth: 260, idealWidth: 420, maxWidth: 520).frame(height: 42)
@@ -153,7 +153,25 @@ struct AllPhaseBoardView: View {
         candidates += board.filterableDeliveryGoals.map {
             ("\($0.title) · \($0.goalID.rawValue)", $0.goalID.rawValue, .goal($0.goalID))
         }
+        if case let .goal(id) = filter,
+           !board.filterableDeliveryGoals.contains(where: {
+               hasSameUTF8Identity($0.goalID.rawValue, id.rawValue)
+           }) {
+            candidates.append(("Unavailable Delivery Goal · \(id.rawValue)", id.rawValue, .goal(id)))
+        }
+        if case let .execution(identity) = filter {
+            candidates.append((
+                "Execution Goal \(identity.goalID) · Thread \(identity.threadID)",
+                "\(identity.threadID)\u{0}\(identity.goalID)",
+                filter
+            ))
+        }
         return ByteStablePickerOption.disambiguating(candidates)
+    }
+
+    private var filterDomainLabel: String {
+        if case .execution = filter { return "Execution Goal" }
+        return "Delivery Goal"
     }
 
     private var filterSummary: String {
@@ -161,6 +179,7 @@ struct AllPhaseBoardView: View {
         case .all: "All goals"
         case .unassigned: "No Delivery Goal"
         case let .goal(id): "Delivery Goal \(id.rawValue)"
+        case let .execution(identity): "Execution Goal \(identity.goalID) · Thread \(identity.threadID)"
         }
         return "\(title): \(filtered.lanes.reduce(0) { $0 + $1.count }) tickets"
     }

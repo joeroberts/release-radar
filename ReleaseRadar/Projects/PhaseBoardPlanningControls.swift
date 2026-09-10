@@ -206,6 +206,13 @@ struct PhaseBoardPlanningControls: View {
                 value: .goal(id)
             ))
         }
+        if case let .execution(identity) = filter {
+            candidates.append((
+                label: "Execution Goal \(identity.goalID) · Thread \(identity.threadID)",
+                byteIdentity: "\(identity.threadID)\u{0}\(identity.goalID)",
+                value: filter
+            ))
+        }
         return ByteStablePickerOption.disambiguating(candidates)
     }
 
@@ -217,6 +224,8 @@ struct PhaseBoardPlanningControls: View {
             return "Unassigned"
         case let .goal(id):
             return "Unavailable Delivery Goal · \(id.rawValue)"
+        case let .execution(identity):
+            return "Execution Goal \(identity.goalID) · Thread \(identity.threadID)"
         }
     }
 

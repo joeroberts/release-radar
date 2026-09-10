@@ -3232,12 +3232,14 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(routes.map(\.title), [
             "Projects",
+            "Goals",
             "Needs Review",
             "Notifications",
             "Settings",
         ])
         XCTAssertEqual(routes.map(\.systemImage), [
             "folder",
+            "target",
             "checkmark.bubble",
             "bell",
             "gearshape",
@@ -5077,6 +5079,256 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(compactPhases.filter { $0.lifecycle.lifecycle == .inDelivery }.count, 3)
         XCTAssertEqual(model.currentProject?.activePhaseID, RR9ActivePhaseCaptureFixture.currentPhaseID)
         try taskCapture(hosting, name: "phase5e-lifecycle-live-journey-final")
+    }
+
+    @MainActor
+    func testLiveWorkspaceGoalsJourneyUsesNativeWideAndCompactControlsAndRestoresExactContext() async throws {
+        guard let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6B_NATIVE_SESSION"] else {
+            throw XCTSkip("The external controller must supply a unique Phase 6B native session.")
+        }
+        guard !sessionID.isEmpty,
+              sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+            XCTFail("The Phase 6B native session must contain only letters, numbers, hyphens and underscores.")
+            return
+        }
+        let markerRoot = URL(fileURLWithPath: "/private/tmp/release-radar-phase6b.PTQwNy", isDirectory: true)
+        let enableMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-enabled")
+        guard FileManager.default.fileExists(atPath: enableMarker.path) else {
+            throw XCTSkip("The external controller must create the fresh Phase 6B enable marker.")
+        }
+        try FileManager.default.removeItem(at: enableMarker)
+        let emptyMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-empty-complete")
+        let wideMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-wide-complete")
+        let compactSelectionMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-compact-selection-complete")
+        let compactOpenAllowedMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-compact-open-allowed")
+        let compactBoardMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-compact-board-ready")
+        let compactClearAllowedMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-compact-clear-allowed")
+        let compactMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-compact-complete")
+        let recoveryMarker = markerRoot.appendingPathComponent("phase6b-native-\(sessionID)-recovery-complete")
+        for marker in [
+            emptyMarker, wideMarker, compactSelectionMarker, compactOpenAllowedMarker,
+            compactBoardMarker, compactClearAllowedMarker, compactMarker, recoveryMarker,
+        ] {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path))
+        }
+
+        let fixtureDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-Phase6BGoals-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: fixtureDirectory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: fixtureDirectory) }
+        let store = DeliveryStore(databaseURL: fixtureDirectory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let nonactivePhaseID = PhaseID(rawValue: "phase6b-goals-nonactive")
+        let deliveryGoalID = DeliveryGoalID(rawValue: "phase6b-goals-delivery")
+        try await store.transact(actor: .init(id: "phase6b-native-fixture"), reason: "Create isolated Goals native fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'phase6b-goals-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: projectID,
+                phaseID: nonactivePhaseID,
+                name: "Goals nonactive phase",
+                mode: .governed,
+                connection: connection
+            )
+            for index in 0..<14 {
+                let suffix = String(format: "%02d", index)
+                let ticketID = "GOALS-LINK-\(suffix)"
+                let threadID = "phase6b-linked-thread-\(suffix)"
+                let goalID = "phase6b-linked-goal-\(suffix)"
+                try connection.execute(
+                    "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, ?, 'backlog')",
+                    bindings: [.text(ticketID), .text(projectID.rawValue), .text(nonactivePhaseID.rawValue), .text("Linked nonactive work \(suffix)")]
+                )
+                try connection.execute(
+                    "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES (?, ?, 'completed', '2026-09-10T12:00:00Z')",
+                    bindings: [.text(threadID), .text(projectID.rawValue)]
+                )
+                try connection.execute(
+                    "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES (?, ?, ?, 'Completed', ?, '2026-09-10T12:00:00Z')",
+                    bindings: [.text(goalID), .text(projectID.rawValue), .text(threadID), .text("Linked execution goal \(suffix)")]
+                )
+                try connection.execute(
+                    "INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES (?, ?, ?, ?)",
+                    bindings: [.text("phase6b-thread-link-\(suffix)"), .text(projectID.rawValue), .text(ticketID), .text(threadID)]
+                )
+                try connection.execute(
+                    "INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES (?, ?, ?, ?, ?)",
+                    bindings: [.text("phase6b-goal-link-\(suffix)"), .text(projectID.rawValue), .text(ticketID), .text(threadID), .text(goalID)]
+                )
+            }
+            try connection.execute(
+                "INSERT INTO delivery_goals (project_id, phase_id, id, title, outcome, lifecycle, sort_order, created_at, updated_at, activated_at) VALUES (?, ?, ?, 'Nonactive delivery outcome', 'Deliver work from a stored nonactive phase.', 'active', 0, '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
+                bindings: [.text(projectID.rawValue), .text(nonactivePhaseID.rawValue), .text(deliveryGoalID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES (?, ?, ?, 0, 'Nonactive linked work is inspectable')",
+                bindings: [.text(projectID.rawValue), .text(nonactivePhaseID.rawValue), .text(deliveryGoalID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES (?, ?, ?, 'GOALS-LINK-00')",
+                bindings: [.text(projectID.rawValue), .text(nonactivePhaseID.rawValue), .text(deliveryGoalID.rawValue)]
+            )
+            for index in 0..<14 {
+                let suffix = String(format: "%02d", index)
+                let threadID = "phase6b-unlinked-thread-\(suffix)"
+                try connection.execute(
+                    "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES (?, ?, 'completed', '2026-09-10T11:00:00Z')",
+                    bindings: [.text(threadID), .text(projectID.rawValue)]
+                )
+                try connection.execute(
+                    "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES (?, ?, ?, 'Completed', ?, '2026-09-10T11:00:00Z')",
+                    bindings: [.text("phase6b-unlinked-goal-\(suffix)"), .text(projectID.rawValue), .text(threadID), .text("Unlinked execution goal \(suffix)")]
+                )
+            }
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .goals)
+        model.setWorkspaceGoalsDomain(.execution)
+        model.setWorkspaceGoalsExecutionStatus("No stored match")
+        let linkedTarget = try XCTUnwrap(model.dashboard?.workspaceGoals.execution.first {
+            $0.goalID == "phase6b-linked-goal-12"
+        })
+        let unlinkedTarget = try XCTUnwrap(model.dashboard?.workspaceGoals.execution.first {
+            $0.goalID == "phase6b-unlinked-goal-12"
+        })
+        let activePhaseBefore = model.currentProject?.activePhaseID
+        let laneBefore = model.dashboard?.allPhaseBoard(for: projectID)?.lanes.first {
+            $0.cards.contains { $0.id.rawValue.utf8.elementsEqual("GOALS-LINK-12".utf8) }
+        }?.lane
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 940),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 6B Goals — isolated native interaction \(sessionID)"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.frame = .init(x: 0, y: 0, width: 1_500, height: 940)
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(window.isVisible)
+        let nativeApplication = AXUIElementCreateApplication(getpid())
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(nativeApplication, title: window.title))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("No persisted goals match these filters"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("Codex desktop observation unavailable"))
+        print("PHASE6B GOALS FILTER-ZERO READY: activate Show All Projects · All states, switch to Delivery, open Nonactive delivery outcome, verify the all-phase typed filter, clear to All goals, Back, then switch to Execution; select Unlinked execution goal 12 with Completed + Unlinked observations, open and close Help, and write the empty and wide markers")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: emptyMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: emptyMarker.path))
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: wideMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: wideMarker.path))
+        XCTAssertEqual(model.selection, .goals)
+        XCTAssertEqual(model.workspaceGoalsDomain, .execution)
+        XCTAssertEqual(model.workspaceGoalsExecutionStatus, "Completed")
+        XCTAssertEqual(model.workspaceGoalsExecutionScope, .unlinked)
+        XCTAssertEqual(model.selectedWorkspaceExecutionGoalID, unlinkedTarget.id)
+        XCTAssertEqual(model.navigationFocus, .workspaceGoal(unlinkedTarget.id))
+        XCTAssertNotNil(model.workspaceGoalsViewportOffset)
+        XCTAssertEqual(model.currentProject?.activePhaseID, activePhaseBefore)
+        try taskCapture(hosting, name: "phase6b-goals-wide-return")
+
+        window.setContentSize(NSSize(width: 760, height: 900))
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        print("PHASE6B GOALS COMPACT READY: choose Linked work, select Linked execution goal 12, scroll until View associated work is visibly actionable while retaining the goal focus, then write compact-selection-complete and wait for compact-open-allowed before activating it; on the board verify the explicit Execution Goal filter and GOALS-LINK-12, then write compact-board-ready and wait for compact-clear-allowed; choose All goals, use Back, and write compact-complete")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactSelectionMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactSelectionMarker.path))
+        let compactViewport = try XCTUnwrap(model.workspaceGoalsViewportOffset)
+        let compactScrollValue = try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow))
+        XCTAssertGreaterThan(compactScrollValue, 0.05)
+        XCTAssertEqual(model.workspaceGoalsExecutionScope, .linked)
+        XCTAssertEqual(model.selectedWorkspaceExecutionGoalID, linkedTarget.id)
+        XCTAssertEqual(model.navigationFocus, .workspaceGoal(linkedTarget.id))
+        try Data().write(to: compactOpenAllowedMarker, options: .atomic)
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactBoardMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactBoardMarker.path))
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertEqual(
+            model.allPhaseBoardFilter(projectID: projectID),
+            .execution(.init(
+                threadID: linkedTarget.threadID,
+                goalID: linkedTarget.goalID,
+                ticketID: .init(rawValue: "GOALS-LINK-12")
+            ))
+        )
+        XCTAssertEqual(
+            model.viewedAllPhaseBoard(for: projectID)?.filtered(by: model.allPhaseBoardFilter(projectID: projectID))
+                .lanes.flatMap(\.cards).map(\.id.rawValue),
+            ["GOALS-LINK-12"]
+        )
+        try Data().write(to: compactClearAllowedMarker, options: .atomic)
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactMarker.path))
+        XCTAssertEqual(model.selection, .goals)
+        XCTAssertEqual(model.workspaceGoalsExecutionScope, .linked)
+        XCTAssertEqual(model.selectedWorkspaceExecutionGoalID, linkedTarget.id)
+        XCTAssertEqual(try XCTUnwrap(model.workspaceGoalsViewportOffset), compactViewport, accuracy: 1)
+        XCTAssertEqual(try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow)), compactScrollValue, accuracy: 0.01)
+        XCTAssertEqual(model.navigationFocus, .workspaceGoal(linkedTarget.id))
+        XCTAssertEqual(model.currentProject?.activePhaseID, activePhaseBefore)
+        XCTAssertEqual(model.dashboard?.allPhaseBoard(for: projectID)?.lanes.first {
+            $0.cards.contains { $0.id.rawValue.utf8.elementsEqual("GOALS-LINK-12".utf8) }
+        }?.lane, laneBefore)
+        try taskCapture(hosting, name: "phase6b-goals-compact-return")
+
+        await model.goForward()
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertNotNil(model.viewedAllPhaseBoard(for: projectID))
+        XCTAssertEqual(model.allPhaseBoardFilter(projectID: projectID), .all)
+        XCTAssertEqual(model.selectedTicketID.rawValue, "GOALS-LINK-12")
+        await model.goBack()
+        try await Task.sleep(for: .milliseconds(350))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertEqual(model.selection, .goals)
+        XCTAssertEqual(try XCTUnwrap(model.workspaceGoalsViewportOffset), compactViewport, accuracy: 1)
+        XCTAssertEqual(try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow)), compactScrollValue, accuracy: 0.01)
+        XCTAssertEqual(accessibilityFocusedIdentifier(nativeApplication), "workspace-goal-\(linkedTarget.id.base64EncodedString())")
+
+        await model.navigate(to: .phaseBoard(projectID))
+        try await store.transact(actor: .init(id: "phase6b-native-fixture"), reason: "Replace isolated Goals registration") { connection in
+            try connection.execute(
+                "UPDATE project_registrations SET registration_id = 'phase6b-replaced-registration', request_generation = 2 WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        await model.reloadDashboardAfterCommittedAgentCommand()
+        await model.goBack()
+        try await Task.sleep(for: .milliseconds(350))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertEqual(model.selection, .projects)
+        XCTAssertEqual(model.navigationFocus, .recovery)
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains("different registration was not substituted") == true)
+        XCTAssertTrue(accessibilityText(nativeWindow).contains("different registration was not substituted"))
+        print("PHASE6B GOALS RECOVERY READY: verify the accessible replaced-registration recovery and write recovery-complete")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: recoveryMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: recoveryMarker.path))
+        try taskCapture(hosting, name: "phase6b-goals-registration-recovery")
     }
 
     @MainActor

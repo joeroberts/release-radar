@@ -247,6 +247,33 @@ struct SidebarView: View {
                         await model.reloadAfterOnboarding()
                     }
                 )
+            case .goals:
+                WorkspaceGoalsView(
+                    goals: dashboard.workspaceGoals,
+                    freshness: model.codexSnapshot.freshness,
+                    openDeliveryGoal: { item in
+                        Task { await model.openWorkspaceDeliveryGoal(item) }
+                    },
+                    openUnassignedWork: { item in
+                        Task { await model.openWorkspaceUnassignedWork(item) }
+                    },
+                    openExecutionGoal: { item in
+                        Task { await model.openWorkspaceExecutionGoal(item) }
+                    },
+                    domain: Binding(get: { model.workspaceGoalsDomain }, set: { model.setWorkspaceGoalsDomain($0) }),
+                    projectID: Binding(get: { model.workspaceGoalsProjectID }, set: { model.setWorkspaceGoalsProjectID($0) }),
+                    deliveryLifecycle: Binding(get: { model.workspaceGoalsDeliveryLifecycle }, set: { model.setWorkspaceGoalsDeliveryLifecycle($0) }),
+                    executionStatus: Binding(get: { model.workspaceGoalsExecutionStatus }, set: { model.setWorkspaceGoalsExecutionStatus($0) }),
+                    executionScope: Binding(get: { model.workspaceGoalsExecutionScope }, set: { model.setWorkspaceGoalsExecutionScope($0) }),
+                    selectedDeliveryID: Binding(get: { model.selectedWorkspaceDeliveryGoalID }, set: { model.selectWorkspaceDeliveryGoal($0) }),
+                    selectedExecutionID: Binding(get: { model.selectedWorkspaceExecutionGoalID }, set: { model.selectWorkspaceExecutionGoal($0) }),
+                    viewportOffset: Binding(
+                        get: { model.workspaceGoalsViewportOffset },
+                        set: { if model.selection == .goals { model.setWorkspaceGoalsViewportOffset($0) } }
+                    ),
+                    requestedFocus: model.navigationFocus,
+                    focusChanged: { if model.selection == .goals { model.setNavigationFocus($0) } }
+                )
             case .needsReview:
                 if let inbox = model.reviewInbox(for: model.currentProjectID) {
                     NeedsReviewView(
@@ -688,6 +715,7 @@ private extension AppRoute {
     var accessibilityID: String {
         switch self {
         case .projects: "projects"
+        case .goals: "goals"
         case .needsReview: "needs-review"
         case .notifications: "notifications"
         case .settings: "settings"

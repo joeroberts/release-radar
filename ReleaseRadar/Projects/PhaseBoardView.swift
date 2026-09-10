@@ -82,6 +82,7 @@ struct PhaseBoardView: View {
         case .all: "All goals"
         case .unassigned: "Unassigned upcoming tickets"
         case let .goal(id): "Delivery Goal \(id.rawValue)"
+        case let .execution(identity): "Execution Goal \(identity.goalID) · Thread \(identity.threadID)"
         }
         return "\(name): \(filteredBoard.lanes.reduce(0) { $0 + $1.count }) tickets"
             + (selectionOutsideFilter ? ". Prior selection is outside the current filter." : "")
