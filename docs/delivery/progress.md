@@ -47,8 +47,11 @@ History controls; observation identity across retention; actual viewport/focus
 restoration; full reason detail; retained lifecycle fact preservation; and honest
 observation timestamps. The original writer owns bounded corrections plus focused
 regressions. Test-only fresh-session support is committed at `229ad8703cb7a6096fc6eb9928f697f087969f4d`.
-Same reviewer will recheck corrections and independently verify native UX; no
-publication or completion claim is made for the current candidate.
+Correction candidate `501dac0898a58d96b3e9b9712f8af030b089e501` is integrated at
+`4cdffaafaee61c4ce027a8e81506c2f60725418d`. Direct final correction readback confirms
+10/10 affected tests and 1/1 corrected native journey, zero failures/skips. Same
+reviewer is rechecking all Required corrections and independently verifying native
+UX; no publication or completion claim is made pending that verdict.
 
 ## Authorization and ownership
 
@@ -79,9 +82,9 @@ review passed with no findings. Next: complete the active History slice, preserv
 direct evidence, then independent review before the first publication request.
 
 All native test hosts require explicit serialized reservation here. The writer explicitly released the reservation after confirming all
-task-owned build/XCTest/native processes stopped. Reviewer released the reservation without launching a host. The original writer
-now holds the exclusive reservation for Required corrections; it must stop and
-release before the same reviewer resumes native QA. Before launch inspect the established inert synthetic XCTest
+task-owned build/XCTest/native processes stopped. Reviewer released the reservation without launching a host. The writer completed corrections and explicitly released after stopped-process
+confirmation. Same reviewer now holds exclusive synthetic/native reservation;
+writer source/tests are paused for correction verification. Before launch inspect the established inert synthetic XCTest
 startup; use sanitized `env -i` and unique retained output. Verify host PID before
 external CUA attaches. Never launch a plain DerivedData or installed owner app.
 
