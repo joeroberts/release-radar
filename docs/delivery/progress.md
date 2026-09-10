@@ -47,8 +47,11 @@ filtering. The writer holds the sole native reservation for
 session `phase6b-goals-writer-20260910-01`, in fresh `native-DerivedData` under its
 scratch root. The known sanitized unsigned serial/offline build-for-testing and
 fresh copied-xctestrun setup apply; actual PID/window must match before CUA.
-The fixture verifies both domains, actual viewport/focus, Clear and registration
-recovery. No broad native selectors or fallback is authorized.
+Native checks corrected a multi-goal project selector crash and wide detail
+visibility, then verified both domains and exact filters. Session 03 exposed actual
+compact Back viewport/focus, Forward focus and recovery-focus failures; the same
+writer owns bounded navigation corrections and an affected fresh-session rerun.
+Native acceptance remains non-green. No broad selectors or fallback is authorized.
 No unrelated retained-row failure repair. Temporary results remain under
 `/private/tmp/release-radar-phase6b.PTQwNy`; no cleanup occurred.
 
