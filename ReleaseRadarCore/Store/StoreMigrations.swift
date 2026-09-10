@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 24
+    static let currentVersion: Int64 = 25
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -108,6 +108,9 @@ enum StoreMigrations {
             }
             if version < 24 {
                 try connection.executeScript(schemaVersion24)
+            }
+            if version < 25 {
+                try connection.executeScript(schemaVersion25)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -716,6 +719,28 @@ enum StoreMigrations {
             "previous_lifecycle", "current_lifecycle", "action", "reason", "audit_event_id",
             "registration_id", "request_generation", "planning_baseline_digest", "created_at",
         ]),
+        (25, "ticket_delivery_evidence_sets", [
+            "project_id", "ticket_id", "revision", "current_target_version", "created_at", "updated_at",
+        ]),
+        (25, "ticket_delivery_evidence_targets", [
+            "project_id", "ticket_id", "version", "repository_id", "root_id", "revision_data",
+            "expectations_data", "registration_id", "request_generation", "recorded_at",
+        ]),
+        (25, "ticket_delivery_evidence_observations", [
+            "project_id", "ticket_id", "id", "target_version", "fact_data", "source_data",
+            "source_availability", "outcome", "observed_at", "recorded_at",
+            "attachment_evidence_id", "supersedes_observation_id",
+        ]),
+        (25, "retained_ticket_delivery_evidence_targets", [
+            "removal_id", "historical_project_id", "ticket_id", "version", "repository_id",
+            "root_id", "revision_data", "expectations_data", "registration_id",
+            "request_generation", "recorded_at", "evidence_revision", "current_target_version",
+        ]),
+        (25, "retained_ticket_delivery_evidence_observations", [
+            "removal_id", "historical_project_id", "ticket_id", "id", "target_version",
+            "fact_data", "source_data", "source_availability", "outcome", "observed_at",
+            "recorded_at", "attachment_evidence_id", "supersedes_observation_id",
+        ]),
     ]
 
     private static let addedColumns: [(version: Int64, table: String, name: String)] = [
@@ -834,6 +859,15 @@ enum StoreMigrations {
         (23, "trigger", "retained_phase_lifecycles_reject_delete"),
         (23, "trigger", "retained_phase_lifecycle_events_reject_update"),
         (23, "trigger", "retained_phase_lifecycle_events_reject_delete"),
+        (25, "trigger", "ticket_delivery_evidence_sets_reject_delete"),
+        (25, "trigger", "ticket_delivery_evidence_targets_reject_update"),
+        (25, "trigger", "ticket_delivery_evidence_targets_reject_delete"),
+        (25, "trigger", "ticket_delivery_evidence_observations_reject_update"),
+        (25, "trigger", "ticket_delivery_evidence_observations_reject_delete"),
+        (25, "trigger", "retained_ticket_delivery_evidence_targets_reject_update"),
+        (25, "trigger", "retained_ticket_delivery_evidence_targets_reject_delete"),
+        (25, "trigger", "retained_ticket_delivery_evidence_observations_reject_update"),
+        (25, "trigger", "retained_ticket_delivery_evidence_observations_reject_delete"),
     ]
 
     private static let phaseDependencyCycleInsertTrigger = """
@@ -1151,6 +1185,40 @@ enum StoreMigrations {
     END
     """
 
+    private static func deliveryEvidenceImmutableTrigger(table: String, action: String) -> String {
+        let name = "\(table)_reject_\(action)"
+        let event = action.uppercased()
+        let removalCondition = action == "delete" ? """
+        WHEN NOT EXISTS (
+            SELECT 1 FROM project_removal_authorizations
+            JOIN project_registrations USING (project_id)
+            WHERE project_removal_authorizations.project_id = OLD.project_id
+              AND project_removal_authorizations.registration_id = project_registrations.registration_id
+        )
+        """ : ""
+        return """
+        CREATE TRIGGER \(name)
+        BEFORE \(event) ON \(table)
+        \(removalCondition)BEGIN
+            SELECT RAISE(ABORT, 'delivery evidence records are immutable');
+        END
+        """
+    }
+
+    private static let deliveryEvidenceSetsRejectDeleteTrigger = """
+    CREATE TRIGGER ticket_delivery_evidence_sets_reject_delete
+    BEFORE DELETE ON ticket_delivery_evidence_sets
+    WHEN NOT EXISTS (
+        SELECT 1 FROM project_removal_authorizations
+        JOIN project_registrations USING (project_id)
+        WHERE project_removal_authorizations.project_id = OLD.project_id
+          AND project_removal_authorizations.registration_id = project_registrations.registration_id
+    )
+    BEGIN
+        SELECT RAISE(ABORT, 'delivery evidence sets cannot be deleted');
+    END
+    """
+
     private static let planChangeProposalVersionsRejectUpdateTrigger = """
     CREATE TRIGGER plan_change_proposal_versions_reject_update
     BEFORE UPDATE ON plan_change_proposal_versions
@@ -1319,6 +1387,15 @@ enum StoreMigrations {
         (23, "retained_phase_lifecycles_reject_delete", immutableRetainedTrigger(table: "retained_phase_lifecycles", action: "delete")),
         (23, "retained_phase_lifecycle_events_reject_update", immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "update")),
         (23, "retained_phase_lifecycle_events_reject_delete", immutableRetainedTrigger(table: "retained_phase_lifecycle_events", action: "delete")),
+        (25, "ticket_delivery_evidence_sets_reject_delete", deliveryEvidenceSetsRejectDeleteTrigger),
+        (25, "ticket_delivery_evidence_targets_reject_update", deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_targets", action: "update")),
+        (25, "ticket_delivery_evidence_targets_reject_delete", deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_targets", action: "delete")),
+        (25, "ticket_delivery_evidence_observations_reject_update", deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_observations", action: "update")),
+        (25, "ticket_delivery_evidence_observations_reject_delete", deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_observations", action: "delete")),
+        (25, "retained_ticket_delivery_evidence_targets_reject_update", immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_targets", action: "update")),
+        (25, "retained_ticket_delivery_evidence_targets_reject_delete", immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_targets", action: "delete")),
+        (25, "retained_ticket_delivery_evidence_observations_reject_update", immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "update")),
+        (25, "retained_ticket_delivery_evidence_observations_reject_delete", immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "delete")),
     ]
 
     private static let criticalIndexes: [(
@@ -1473,6 +1550,11 @@ enum StoreMigrations {
         (23, "phase_lifecycle_events", "audit_event_id", "audit_events", "id", "NO ACTION"),
         (23, "retained_phase_lifecycles", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
         (23, "retained_phase_lifecycle_events", "removal_id,historical_project_id,phase_id", "retained_phase_lifecycles", "removal_id,historical_project_id,phase_id", "NO ACTION"),
+        (25, "ticket_delivery_evidence_sets", "project_id,ticket_id", "tickets", "project_id,id", "NO ACTION"),
+        (25, "ticket_delivery_evidence_targets", "project_id,ticket_id", "ticket_delivery_evidence_sets", "project_id,ticket_id", "NO ACTION"),
+        (25, "ticket_delivery_evidence_observations", "project_id,ticket_id,target_version", "ticket_delivery_evidence_targets", "project_id,ticket_id,version", "NO ACTION"),
+        (25, "retained_ticket_delivery_evidence_targets", "removal_id", "removed_projects", "removal_id", "NO ACTION"),
+        (25, "retained_ticket_delivery_evidence_observations", "removal_id,historical_project_id,ticket_id,target_version", "retained_ticket_delivery_evidence_targets", "removal_id,historical_project_id,ticket_id,version", "NO ACTION"),
     ]
     private static let schemaVersionThreeAuditRepair = """
     ALTER TABLE audit_events ADD COLUMN thread_attribution TEXT NOT NULL DEFAULT 'none'
@@ -2906,5 +2988,103 @@ enum StoreMigrations {
         CHECK (event_current_lane IS NULL OR event_current_lane IN ('backlog', 'in_progress', 'needs_review', 'blocked', 'accepted'));
     ALTER TABLE audit_events ADD COLUMN event_previous_phase_id TEXT;
     ALTER TABLE audit_events ADD COLUMN event_current_phase_id TEXT;
+    """
+
+    // Delivery evidence starts empty. Legacy path and managed-document evidence
+    // remain in their existing table with unknown revision provenance.
+    private static let schemaVersion25 = """
+    CREATE TABLE ticket_delivery_evidence_sets (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision > 0),
+        current_target_version INTEGER NOT NULL CHECK (current_target_version > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id),
+        FOREIGN KEY(project_id, ticket_id) REFERENCES tickets(project_id, id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE ticket_delivery_evidence_targets (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        version INTEGER NOT NULL CHECK (version > 0),
+        repository_id TEXT NOT NULL CHECK (length(repository_id) = 36 AND repository_id = lower(repository_id)),
+        root_id TEXT NOT NULL CHECK (length(CAST(root_id AS BLOB)) BETWEEN 1 AND 256),
+        revision_data BLOB NOT NULL,
+        expectations_data BLOB NOT NULL,
+        registration_id TEXT NOT NULL CHECK (length(CAST(registration_id AS BLOB)) BETWEEN 1 AND 128),
+        request_generation INTEGER NOT NULL CHECK (request_generation > 0),
+        recorded_at TEXT NOT NULL,
+        PRIMARY KEY(project_id, ticket_id, version),
+        FOREIGN KEY(project_id, ticket_id)
+            REFERENCES ticket_delivery_evidence_sets(project_id, ticket_id) ON DELETE NO ACTION
+    );
+
+    CREATE TABLE ticket_delivery_evidence_observations (
+        project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        id TEXT NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 256),
+        target_version INTEGER NOT NULL CHECK (target_version > 0),
+        fact_data BLOB NOT NULL,
+        source_data BLOB NOT NULL,
+        source_availability TEXT NOT NULL CHECK (source_availability IN ('available', 'unavailable', 'unknown')),
+        outcome TEXT NOT NULL CHECK (outcome IN ('observed', 'passed', 'failed', 'skipped', 'unknown')),
+        observed_at TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        attachment_evidence_id TEXT,
+        supersedes_observation_id TEXT,
+        PRIMARY KEY(project_id, ticket_id, id),
+        FOREIGN KEY(project_id, ticket_id, target_version)
+            REFERENCES ticket_delivery_evidence_targets(project_id, ticket_id, version) ON DELETE NO ACTION,
+        CHECK (supersedes_observation_id IS NULL OR supersedes_observation_id <> id)
+    );
+
+    CREATE TABLE retained_ticket_delivery_evidence_targets (
+        removal_id TEXT NOT NULL REFERENCES removed_projects(removal_id) ON DELETE NO ACTION,
+        historical_project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        repository_id TEXT NOT NULL,
+        root_id TEXT NOT NULL,
+        revision_data BLOB NOT NULL,
+        expectations_data BLOB NOT NULL,
+        registration_id TEXT NOT NULL,
+        request_generation INTEGER NOT NULL,
+        recorded_at TEXT NOT NULL,
+        evidence_revision INTEGER NOT NULL,
+        current_target_version INTEGER NOT NULL,
+        PRIMARY KEY(removal_id, historical_project_id, ticket_id, version)
+    );
+
+    CREATE TABLE retained_ticket_delivery_evidence_observations (
+        removal_id TEXT NOT NULL,
+        historical_project_id TEXT NOT NULL,
+        ticket_id TEXT NOT NULL,
+        id TEXT NOT NULL,
+        target_version INTEGER NOT NULL,
+        fact_data BLOB NOT NULL,
+        source_data BLOB NOT NULL,
+        source_availability TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        observed_at TEXT NOT NULL,
+        recorded_at TEXT NOT NULL,
+        attachment_evidence_id TEXT,
+        supersedes_observation_id TEXT,
+        PRIMARY KEY(removal_id, historical_project_id, ticket_id, id),
+        FOREIGN KEY(removal_id, historical_project_id, ticket_id, target_version)
+            REFERENCES retained_ticket_delivery_evidence_targets(
+                removal_id, historical_project_id, ticket_id, version
+            ) ON DELETE NO ACTION
+    );
+
+    \(deliveryEvidenceSetsRejectDeleteTrigger);
+    \(deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_targets", action: "update"));
+    \(deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_targets", action: "delete"));
+    \(deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_observations", action: "update"));
+    \(deliveryEvidenceImmutableTrigger(table: "ticket_delivery_evidence_observations", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_targets", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_targets", action: "delete"));
+    \(immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "update"));
+    \(immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "delete"));
     """
 }

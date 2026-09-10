@@ -67,6 +67,25 @@ public actor AgentCommandDispatcher {
            case .externalAgent = origin {
             return .init(entityIDs: [], auditEventID: nil, error: .planChangeProposalOwnerAuthorityRequired)
         }
+        if envelope.command.isDeliveryEvidenceMutation {
+            guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
+            }
+            guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+            }
+            guard let body = try? canonicalRequestBody(envelope) else {
+                return .init(entityIDs: [], auditEventID: nil, error: .invalidDeliveryEvidence("Evidence request could not be encoded"))
+            }
+            return await DeliveryEvidenceCommandDispatcher(store: store, bookmarkStore: bookmarkStore)
+                .dispatch(
+                    envelope,
+                    requestBody: body,
+                    origin: origin,
+                    admissionDeadline: admissionDeadline,
+                    expectedRegistration: project.registration
+                )
+        }
         if envelope.command.isTicketReferenceMutation {
             guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
@@ -417,6 +436,8 @@ public actor AgentCommandDispatcher {
             commandFieldsAreValid = valid(projectID, maximum: 256) && valid(rootID, maximum: 256)
                 && valid(ticketID, maximum: 256) && valid(linkID, maximum: 256)
                 && version > 0 && revision >= 0
+        case .recordDeliveryEvidenceTarget, .appendDeliveryEvidenceObservation:
+            commandFieldsAreValid = (try? envelope.command.validateDeliveryEvidence()) != nil
         case let .upsertPhase(phaseID, name):
             commandFieldsAreValid = valid(phaseID, maximum: 256) && valid(name)
         case let .upsertUnassignedTicket(ticketID, outcome):
@@ -589,6 +610,12 @@ public actor AgentCommandDispatcher {
              let .retireTicketReference(_, _, ticketID, linkID, _, _):
             return .init(entityIDs: [ticketID, linkID], auditEventID: auditEventID, error: nil,
                          ticketReferenceLinkSetRevision: revision)
+        case let .recordDeliveryEvidenceTarget(_, ticketID, _, _, _),
+             let .appendDeliveryEvidenceObservation(_, ticketID, _, _):
+            return .init(
+                entityIDs: [ticketID], auditEventID: auditEventID, error: nil,
+                deliveryEvidenceRevision: revision
+            )
         case let .upsertPhase(phaseID, _):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil)
         case let .upsertUnassignedTicket(ticketID, _):
@@ -628,6 +655,8 @@ public actor AgentCommandDispatcher {
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence: (.project, projectID.rawValue)
         case let .upsertTicketReference(_, _, linkID, _, _, _, _, _, _),
              let .retireTicketReference(_, _, _, linkID, _, _): (.ticketReference, linkID)
+        case let .recordDeliveryEvidenceTarget(_, ticketID, _, _, _),
+             let .appendDeliveryEvidenceObservation(_, ticketID, _, _): (.ticket, ticketID)
         case let .upsertPhase(phaseID, _): (.phase, phaseID)
         case let .setActivePhase(phaseID): (.phase, phaseID)
         case let .upsertUnassignedTicket(ticketID, _), let .placeUnassignedTicket(ticketID, _, _), let .upsertTicket(ticketID, _, _, _), let .transitionTicket(ticketID, _, _): (.ticket, ticketID)
@@ -744,7 +773,8 @@ public actor AgentCommandDispatcher {
                 expectedRevision: expectedRevision, connection: connection
             ).revision
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence,
-             .upsertTicketReference, .retireTicketReference:
+             .upsertTicketReference, .retireTicketReference,
+             .recordDeliveryEvidenceTarget, .appendDeliveryEvidenceObservation:
             throw DocumentationOperationError.invalidRequest
         case let .upsertPhase(phaseID, name):
             try requireWritableID(phaseID, table: "phases", projectID: projectID, connection: connection)

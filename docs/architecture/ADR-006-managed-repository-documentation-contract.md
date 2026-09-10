@@ -353,3 +353,18 @@ compatibility observation consumes this result through existing authorization an
 generation boundaries. A passed diagnostic is not owner adoption, content approval,
 an execution attestation or catalog acceptance. Guidance v3 remains separately
 reserved; installation, consumer changes and runtime pilot remain unauthorized.
+
+### 2026-09-10 delivery-evidence read amendment
+
+A document-category delivery observation records the accepted repository and
+catalog identity, stable artifact ID, exact revision and content digest. Ticket
+evidence refresh may resolve that artifact through the same accepted snapshot,
+descriptor-relative reader and authorized-root context used by the managed
+documentation contract. A changed digest or catalog identity makes the recorded
+observation stale; a missing or unreadable source is reported unavailable.
+
+This resolution is read-only. It does not accept a catalog transition, update the
+stored observation, execute a check, contact an external provider, or mutate audit,
+command-request, ticket, phase or acceptance state. A legacy observation without
+the required identity remains unknown rather than acquiring provenance from the
+current catalog.

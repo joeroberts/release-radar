@@ -30,6 +30,8 @@ public struct AgentQueryDispatcher: Sendable {
                 projectID = project; rootID = root; extraIdentities = []
             case let .ticketReferences(project, root, ticket):
                 projectID = project; rootID = root; extraIdentities = [ticket]
+            case let .ticketDeliveryEvidence(project, root, ticket):
+                projectID = project; rootID = root; extraIdentities = [ticket]
             case let .recordedImpacts(project, root, repository, artifact):
                 projectID = project; rootID = root; extraIdentities = [repository, artifact]
             case let .planChangeProposals(project):
@@ -55,6 +57,31 @@ public struct AgentQueryDispatcher: Sendable {
                     try capture.context.verifyAuthorization(resolved)
                     let result = AgentCommandResult(entityIDs: [ticket], auditEventID: nil, error: nil,
                                                     ticketReferences: capture.resolve())
+                    try await store.documentationRead { try capture.context.verifyPersisted($0) }
+                    guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
+                        throw DocumentationOperationError.inventoryTooLarge
+                    }
+                    return result
+                }
+            case let .ticketDeliveryEvidence(project, root, ticket):
+                let capture = try await store.documentationRead { connection in
+                    let context = try DocumentationRootContext.read(
+                        connection,
+                        path: envelope.projectRoot,
+                        projectID: project,
+                        rootID: root,
+                        schemaVersion: store.schemaVersionForDocumentation
+                    )
+                    return try DeliveryEvidenceCapture(connection, context: context, ticketID: ticket)
+                }
+                return try await bookmarkStore.withSecurityScopedAccess(bookmark: capture.context.bookmark) { resolved in
+                    try capture.context.verifyAuthorization(resolved)
+                    let result = AgentCommandResult(
+                        entityIDs: [ticket],
+                        auditEventID: nil,
+                        error: nil,
+                        deliveryEvidence: capture.resolve()
+                    )
                     try await store.documentationRead { try capture.context.verifyPersisted($0) }
                     guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
                         throw DocumentationOperationError.inventoryTooLarge
@@ -212,6 +239,8 @@ public struct AgentQueryDispatcher: Sendable {
             }
         } catch TicketReferenceMutationError.notFound {
             return .init(entityIDs: [], auditEventID: nil, error: .ticketReferenceNotFound)
+        } catch DeliveryEvidenceMutationError.notFound {
+            return .init(entityIDs: [], auditEventID: nil, error: .deliveryEvidenceNotFound)
         } catch let error as DocumentationOperationError { return .init(entityIDs: [], auditEventID: nil, error: .documentation(error)) }
         catch { return .init(entityIDs: [], auditEventID: nil, error: .documentation(DocumentationCatalogContext.map(error))) }
     }

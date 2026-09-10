@@ -5928,6 +5928,260 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testPhase6CIntegratedTicketEvidenceJourneyIsResponsiveAndOpensHelp() async throws {
+        let nativeSession: (id: String, ready: URL, complete: URL)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6C_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else {
+                XCTFail("The Phase 6C native session must contain only letters, numbers, hyphens and underscores.")
+                return
+            }
+            let markerRoot = URL(
+                fileURLWithPath: "/private/tmp/release-radar-phase6c.7kHIve",
+                isDirectory: true
+            )
+            let enable = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-enabled")
+            let ready = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-compact-ready")
+            let complete = markerRoot.appendingPathComponent("phase6c-native-\(sessionID)-compact-complete")
+            guard FileManager.default.fileExists(atPath: enable.path) else {
+                throw XCTSkip("The external controller must create the fresh Phase 6C enable marker.")
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: ready.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: complete.path))
+            try FileManager.default.removeItem(at: enable)
+            nativeSession = (sessionID, ready, complete)
+        } else {
+            nativeSession = nil
+        }
+
+        // Repository document validation intentionally rejects symlinked root
+        // ancestors; macOS's default test temporary directory traverses /var.
+        let fixture = try await makeTask10PlanningFixture(
+            temporaryRoot: URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+        )
+        let documents = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/RepositoryDocuments/valid/docs", isDirectory: true)
+        try FileManager.default.copyItem(
+            at: documents,
+            to: fixture.projectRoot.appendingPathComponent("docs", isDirectory: true)
+        )
+        try Data(RepositoryDocumentContract.managedGuidanceBlock.utf8)
+            .write(to: fixture.projectRoot.appendingPathComponent("AGENTS.md"))
+        let documentSnapshot = try RepositoryDocumentValidator()
+            .validateCurrent(authorizedRoot: fixture.projectRoot)
+        let target = DocumentationTarget(
+            projectID: fixture.projectID.rawValue,
+            rootID: "rr9-owner-root",
+            repositoryID: documentSnapshot.catalog.repositoryID.lowercased(),
+            catalogVersion: documentSnapshot.version,
+            catalogDigest: documentSnapshot.digest
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed Phase 6C route registration") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'phase6c-route-registration', 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+        }
+        let registrationTuple = try await fixture.store.read { connection in
+            (
+                try connection.scalarText("SELECT registration_id FROM project_registrations WHERE project_id=?", bindings: [.text(fixture.projectID.rawValue)]),
+                try connection.scalarInt("SELECT request_generation FROM project_registrations WHERE project_id=?", bindings: [.text(fixture.projectID.rawValue)])
+            )
+        }
+        let registration = ProjectRegistration(
+            projectID: fixture.projectID,
+            registrationID: try XCTUnwrap(registrationTuple.0),
+            requestGeneration: try XCTUnwrap(registrationTuple.1)
+        )
+        let dispatcher = AgentCommandDispatcher(
+            store: fixture.store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(registration: registration, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot]),
+            ]),
+            bookmarkStore: fixture.bookmarks
+        )
+        func envelope(_ command: AgentCommand) -> AgentCommandEnvelope {
+            .init(
+                version: 1,
+                requestID: UUID(),
+                projectRoot: fixture.projectRoot.path,
+                assertedThreadID: "phase6c-integrated-route",
+                expectedRegistration: registration,
+                reason: "Seed integrated Phase 6C evidence journey",
+                command: command
+            )
+        }
+        let bound = await dispatcher.dispatch(envelope(.bindDocumentationRepository(target: target)))
+        XCTAssertNil(bound.error)
+        let revision = DeliveryEvidenceRevision(
+            commitSHA: String(repeating: "a", count: 40),
+            checkoutState: .dirty,
+            dirtySnapshotID: "route-snapshot"
+        )
+        let recorded = await dispatcher.dispatch(envelope(.recordDeliveryEvidenceTarget(
+            target: target,
+            ticketID: "ROAD-1",
+            revision: revision,
+            expectations: [
+                .init(category: .build, scope: "unit"),
+                .init(category: .installation, scope: nil),
+                .init(category: .document, scope: nil),
+            ],
+            expectedEvidenceRevision: 0
+        )))
+        XCTAssertNil(recorded.error)
+        let currentArtifact = try XCTUnwrap(
+            documentSnapshot.catalog.artifacts.first(where: { $0.artifactID == "current" })
+        )
+        let currentBytes = try Data(contentsOf: fixture.projectRoot.appendingPathComponent(currentArtifact.path))
+        let observations: [DeliveryEvidenceObservation] = [
+            .init(
+                id: "route-build", targetVersion: 1,
+                fact: .build(.init(repositoryID: target.repositoryID, revision: revision, buildID: "build-route-42", scope: "unit")),
+                source: .init(kind: .localObservation, label: "Integrated focused test"),
+                sourceAvailability: .available, outcome: .passed,
+                observedAt: "2026-09-10T18:10:00Z", recordedAt: "2026-09-10T18:11:00Z"
+            ),
+            .init(
+                id: "route-installation", targetVersion: 1,
+                fact: .installation(.init(repositoryID: nil, revision: nil, installationID: nil, buildID: nil, context: "Local application")),
+                source: .init(kind: .recordedClaim, label: "Installation identity unavailable"),
+                sourceAvailability: .unknown, outcome: .unknown,
+                observedAt: "2026-09-10T18:12:00Z", recordedAt: "2026-09-10T18:13:00Z"
+            ),
+            .init(
+                id: "route-document", targetVersion: 1,
+                fact: .document(.init(
+                    repositoryID: target.repositoryID,
+                    revision: revision,
+                    artifactID: currentArtifact.artifactID,
+                    contentDigest: documentationDigest(currentBytes),
+                    catalogVersion: documentSnapshot.version,
+                    catalogDigest: documentSnapshot.digest
+                )),
+                source: .init(kind: .managedDocument, label: currentArtifact.artifactID),
+                sourceAvailability: .available, outcome: .observed,
+                observedAt: "2026-09-10T18:14:00Z", recordedAt: "2026-09-10T18:15:00Z"
+            ),
+        ]
+        for (offset, observation) in observations.enumerated() {
+            let result = await dispatcher.dispatch(envelope(.appendDeliveryEvidenceObservation(
+                target: target,
+                ticketID: "ROAD-1",
+                observation: observation,
+                expectedEvidenceRevision: Int64(offset + 1)
+            )))
+            XCTAssertNil(result.error)
+        }
+
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true,
+            deliveryEvidenceBookmarkStore: fixture.bookmarks
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .phaseBoard(fixture.projectID))
+        model.viewPhase(projectID: fixture.projectID, phaseID: fixture.roadmapPhaseID)
+        model.selectTicket(.init(rawValue: "ROAD-1"))
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: .init(x: 30, y: 30, width: 1_500, height: 940),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.animationBehavior = .none
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = nativeSession.map {
+            "Phase 6C evidence — native session \($0.id)"
+        } ?? "Phase 6C evidence — integrated application journey"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.frame = .init(x: 0, y: 0, width: 1_500, height: 940)
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(600))
+        hosting.layoutSubtreeIfNeeded()
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "phase-board"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-inspector"))
+        let widePanel = await scrollToAccessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence")
+        XCTAssertNotNil(widePanel)
+        var wideText = accessibilityText(nativeWindow)
+        for expected in ["Recorded target", "Dirty snapshot route-snapshot", "build-route-42", "Unknown installation identity", "Owner acceptance: Not accepted"] {
+            XCTAssertTrue(wideText.contains(expected), "Wide integrated evidence omitted: \(expected)")
+        }
+        try taskCapture(hosting, name: "phase6c-integrated-evidence-wide")
+
+        func textAttribute(_ element: AXUIElement, _ attribute: String) -> String? {
+            var value: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+                return nil
+            }
+            return value as? String
+        }
+        let buttons = accessibilityElements(nativeWindow, role: kAXButtonRole)
+        guard let help = buttons.first(where: { element in
+            textAttribute(element, kAXTitleAttribute) == "Help"
+                || textAttribute(element, kAXDescriptionAttribute) == "Help"
+        }) else {
+            let diagnostics = buttons.map { element in
+                "title=\(textAttribute(element, kAXTitleAttribute) ?? "nil"), "
+                    + "description=\(textAttribute(element, kAXDescriptionAttribute) ?? "nil"), "
+                    + "identifier=\(textAttribute(element, kAXIdentifierAttribute) ?? "nil")"
+            }.joined(separator: " | ")
+            XCTFail("Help AXButton unavailable. Candidates: \(diagnostics)")
+            return
+        }
+        _ = AXUIElementPerformAction(help, "AXScrollToVisible" as CFString)
+        XCTAssertEqual(AXUIElementSetAttributeValue(help, kAXFocusedAttribute as CFString, kCFBooleanTrue), .success)
+        var isFocused: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(help, kAXFocusedAttribute as CFString, &isFocused), .success)
+        XCTAssertEqual((isFocused as? NSNumber)?.boolValue, true)
+        XCTAssertEqual(AXUIElementPerformAction(help, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertTrue(accessibilityText(application).contains("Recorded is not live"))
+        let done = try XCTUnwrap(accessibilityElement(application, identifier: "delivery-evidence-help-done"))
+        XCTAssertEqual(AXUIElementPerformAction(done, kAXPressAction as CFString), .success)
+        try await Task.sleep(for: .milliseconds(150))
+
+        window.setContentSize(.init(width: 760, height: 940))
+        hosting.frame = window.contentView?.bounds ?? hosting.frame
+        try await Task.sleep(for: .milliseconds(500))
+        hosting.layoutSubtreeIfNeeded()
+        if let nativeSession {
+            try Data().write(to: nativeSession.ready, options: .atomic)
+            print("PHASE6C EVIDENCE COMPACT READY: scroll the mounted ticket inspector until Delivery Evidence is visibly readable, then write the matching compact-complete marker")
+            for _ in 0..<900 where !FileManager.default.fileExists(atPath: nativeSession.complete.path) {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+            XCTAssertTrue(FileManager.default.fileExists(atPath: nativeSession.complete.path))
+        }
+        let compactPanelCandidate: AXUIElement? = if nativeSession == nil {
+            await scrollToAccessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence")
+        } else {
+            accessibilityElement(nativeWindow, identifier: "ticket-delivery-evidence")
+        }
+        XCTAssertNotNil(compactPanelCandidate)
+        wideText = accessibilityText(nativeWindow)
+        XCTAssertTrue(wideText.contains("Recorded target"))
+        XCTAssertTrue(wideText.contains("build-route-42"))
+        XCTAssertEqual(model.selection, .phaseBoard(fixture.projectID))
+        XCTAssertEqual(model.selectedTicketID.rawValue, "ROAD-1")
+        try taskCapture(hosting, name: "phase6c-integrated-evidence-compact")
+    }
+
+    @MainActor
     private func makeRR9OwnerFixture(
         hasBookmark: Bool = true,
         blockAuthorization: Bool = false,

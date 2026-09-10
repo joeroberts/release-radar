@@ -598,3 +598,39 @@ the list scrolls. The native captures for the [wide](../delivery/evidence/2026-0
 [compact](../delivery/evidence/2026-09-10-phase6b-goals-compact.png) and
 [registration recovery](../delivery/evidence/2026-09-10-phase6b-goals-registration-recovery.png)
 states record these responsive and recovery decisions.
+
+## Phase 6C revision-bound delivery evidence — 2026-09-10
+
+The existing ticket inspector includes a read-only Delivery evidence panel. Its
+recorded target names the exact repository, authorized root, registration
+generation, commit revision and checkout state; a dirty target also names its
+snapshot identity. Expected repository, commit, pull-request, check, document,
+build and installation categories remain distinct from recorded observations,
+their current applicability and owner acceptance.
+
+Each observation shows its typed recorded fact, result, source and separate
+observation/application recording times. Applicability is evaluated against the
+current recorded target rather than live HEAD. Exact matches are current;
+repository, revision, dirty-snapshot, pull-request merge and scoped-check
+differences are stale; omitted identity remains unknown. Older target versions
+and observations stay visible as history and are never rewritten into a claim
+about the latest target.
+
+Refreshing the inspector performs a bounded local read only. For a managed
+document observation it may compare the exact currently authorized artifact
+bytes and accepted catalog identity with the recorded digests. Changed bytes or
+catalog identity make that observation stale. An unavailable source is named as
+unavailable without executing a check, contacting a provider, mutating delivery
+state or inventing provenance.
+
+Contextual Help explicitly explains that recorded evidence is not live evidence,
+that applicability follows identity and that evidence is separate from owner
+acceptance. Loading, empty and recoverable failure states remain inside the
+ticket inspector. The delivered panel follows the established dark inspector
+card vocabulary and stays in the same scrollable hierarchy at wide and compact
+window sizes. The [wide integrated route](../delivery/evidence/2026-09-10-phase6c-evidence-wide.png)
+and [compact integrated route](../delivery/evidence/2026-09-10-phase6c-evidence-compact.png)
+captures record that hierarchy in the mounted application. At 760 points the
+compact Phase Board scroll exposes the stacked ticket inspector with its task row,
+Delivery evidence heading, Help control, target, expectation states and document
+observation readable without horizontal clipping. No approved mockup is replaced.
