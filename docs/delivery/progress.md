@@ -47,8 +47,11 @@ displayed versus recorded selection/registration, stale exact Execution-link
 validation, and distinct lifecycle/readiness/acceptance facts. Correction `f9ed6e9d2ba6de85ba502c3e5b8c7e2a89099442` is integrated at
 `877a950499d0d610e93660526508a116778c85e2`. Direct readback confirms all 11
 focused source tests pass, zero failures/skips; canonical documentation check passes.
-Same reviewer now checks that correction delta and prepares the affected native QA
-configuration; no launch reservation yet. Writer is quiescent pending review.
+Same reviewer found two bounded leftovers: documentation/evidence projection
+replacement drops exact Execution links, and collision cues omit Execution and
+unassigned-work row domains. Same writer owns focused corrections; other completed
+source checks remain terminal. Native QA remains pending a corrected candidate
+and concrete reservation. No native host is active.
 6B is not complete.
 
 A same-project cross-phase duplicate-goal hypothesis was withdrawn because the
