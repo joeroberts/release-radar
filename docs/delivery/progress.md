@@ -52,8 +52,9 @@ correction delta and native QA. 6B is not complete.
 A same-project cross-phase duplicate-goal hypothesis was withdrawn because the
 store primary key is project+goal and the retained fixture directly failed that
 constraint. A blanket raw registration/request-generation identity panel is
-Optional; exact identity scoping and meaningful target disambiguation remain in
-scope. Viewport correction must preserve coherent real departure context, not
+Optional. The narrowed same-name collision finding is Required: indistinguishable
+project choices or goal rows need a stable cue only where labels collide. Exact
+identity scoping and internal registration recovery remain required. Viewport correction must preserve coherent real departure context, not
 force selection visibility against deliberate user scrolling.
 
 During implementation, an overbroad route selector and failed static native
