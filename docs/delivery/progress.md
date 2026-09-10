@@ -67,8 +67,8 @@ reported no visual findings. Four Required applicability/provenance findings wer
 corrected with 17/17 affected tests passing. The same independent Astra High
 reviewer `01a08d84-9063-7af2-bfb6-bd4c23328d8b` approved that bounded delta with
 no remaining findings. Phase 6C is complete locally. Writer and reviewer are
-quiescent, their commits and evidence preserved, and their build/test reservation
-is released. Evidence and retained scratch are described in the
+quiescent and archived, their commits and evidence preserved, and their build/test
+reservation is released. Reviewed local endpoint is `codex/phase6c-reviewed`. Evidence and retained scratch are described in the
 [canonical record](evidence/2026-09-10-phase6c-evidence.md).
 
 Fresh read-only chief consultation `01a08d93-8aa5-7611-a33e-e8fdb960d52c`
