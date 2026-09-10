@@ -202,7 +202,7 @@ green claim is made.
 
 The clean named source branch `codex/phase5c-proposals` and local orchestrator
 branch `codex/phase5c-orchestrator` preserve the outcome. Both bounded peers are
-stopped; archival follows this durable closeout. No owner-app changes occurred.
+stopped and archived after branch and canonical-evidence preservation. No owner-app changes occurred.
 The next approved slice is Phase 5D successor/carry-forward through this proposal
 path, after coordinated baseline/ownership handoff. Publication is separately
 blocked: inherited shared/C commits remain local-only until explicit owner
