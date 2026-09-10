@@ -293,3 +293,16 @@ IDs/revisions/history and enters Backlog without completing tasks. Existing plac
 and Accepted ticket semantics remain unchanged. Migration and actual archive,
 removed-history and full-backup recovery must preserve new placement records;
 future portable representation must include them without an early exporter/importer.
+
+## Phase 5C additive proposal amendment — 2026-09-10
+
+A saved proposal may add pending task definitions to a new or eligible existing
+unassigned/Backlog ticket. The saved baseline includes task-plan presence and
+revision plus every task definition, completion and lifecycle fact. Apply rechecks
+that exact baseline and calls the existing task-plan revision policy inside the same
+transaction as the rest of the approved work package.
+
+Proposal operations cannot revise, replace, complete or supersede existing tasks,
+and cannot mutate started or Accepted tickets. Existing task IDs, completion,
+lifecycle and outstanding obligations are preserved; successor and carry-forward
+reconciliation remain Phase 5D.

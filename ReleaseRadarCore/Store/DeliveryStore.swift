@@ -46,6 +46,7 @@ public enum AuditEntityType: String, Equatable, Sendable {
     case reviewItem = "review_item"
     case completion
     case ticketReference = "ticket_reference"
+    case planChangeProposal = "plan_change_proposal"
 }
 
 public struct AuditScope: Equatable, Sendable {

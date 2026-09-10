@@ -291,6 +291,28 @@ struct FailureStatePresentation: Equatable, Sendable {
             self.init(title: "Reference action rejected",
                       detail: "Refresh the ticket and its accepted documentation catalog. Only active controlling artifacts can be linked, and Accepted ticket references are immutable.",
                       systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-reference-validation")
+        case let .planChangeProposalVersionConflict(_, current):
+            self.init(title: "Proposal changed",
+                      detail: "The current proposal version is \(current.map(String.init) ?? "unavailable"). Refresh the proposal before retrying. No planning state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-proposal-validation")
+        case .planChangeProposalRegistrationRequired, .planChangeProposalNotFound,
+             .invalidPlanChangeOperation:
+            self.init(title: "Proposal action rejected",
+                      detail: "Refresh the registered project and proposal before retrying. No planning state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-proposal-validation")
+        case .planChangeProposalOwnerAuthorityRequired:
+            self.init(title: "Owner action required",
+                      detail: "Approve, reject, and apply plan changes from Release Radar. External agents can only save proposals.",
+                      systemImage: "lock.trianglebadge.exclamationmark", tone: .error, accessibilityID: "failure-proposal-authority")
+        case .planChangeProposalStale:
+            self.init(title: "Proposal needs refresh",
+                      detail: "The planning baseline changed. Refresh the proposal, review the new version, and approve it again. No planning state changed.",
+                      systemImage: "arrow.clockwise", tone: .warning, accessibilityID: "failure-proposal-stale")
+        case .planChangeProposalDecisionConflict, .planChangeProposalDecisionNotApproved,
+             .planChangeProposalDecisionMismatch, .planChangeProposalAlreadyApplied:
+            self.init(title: "Proposal state changed",
+                      detail: "Refresh the proposal history before continuing. No planning state changed.",
+                      systemImage: "xmark.octagon", tone: .error, accessibilityID: "failure-proposal-state")
         case let .documentation(error):
             self.init(title: "Documentation action rejected",
                       detail: "Documentation operation failed (\(error.rawValue)). Inspect the project evidence inventory and retry the exact approved operation.",

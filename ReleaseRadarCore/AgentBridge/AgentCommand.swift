@@ -29,6 +29,21 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
 }
 
 public enum AgentCommand: Codable, Equatable, Sendable {
+    case savePlanChangeProposal(proposalID: String, expectedPreviousVersion: Int64?, rationale: String, operations: [PlanChangeOperation])
+    case decidePlanChangeProposal(
+        proposalID: String,
+        version: Int64,
+        baselineDigest: String,
+        decisionID: String,
+        disposition: PlanChangeDecisionDisposition
+    )
+    case applyPlanChangeProposal(
+        proposalID: String,
+        version: Int64,
+        baselineDigest: String,
+        decisionID: String,
+        applicationID: String
+    )
     case applyPhasePlanRevision(projectID: String, phaseID: String, expectedRevision: Int64, goalUpserts: [DeliveryGoalDraft]? = nil, assignments: [DeliveryGoalAssignment]? = nil, unassignedTicketIDs: [TicketID]? = nil, supersededGoalIDs: [DeliveryGoalID]? = nil)
     case finalizePhasePlan(projectID: String, phaseID: String, expectedRevision: Int64)
     case transitionDeliveryGoal(projectID: String, phaseID: String, goalID: String, expectedPlanRevision: Int64, lifecycle: DeliveryGoalLifecycle)
@@ -100,6 +115,16 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case ticketReferenceIdentityImmutable
     case ticketReferenceTicketAccepted
     case ticketReferenceSourceNotAuthoritative
+    case planChangeProposalRegistrationRequired
+    case planChangeProposalNotFound
+    case planChangeProposalVersionConflict(expected: Int64?, current: Int64?)
+    case invalidPlanChangeOperation(String)
+    case planChangeProposalOwnerAuthorityRequired
+    case planChangeProposalDecisionConflict
+    case planChangeProposalDecisionNotApproved
+    case planChangeProposalDecisionMismatch
+    case planChangeProposalAlreadyApplied
+    case planChangeProposalStale([PlanChangeBaselineCategory])
     case outcomeUnknown
     case internalFailure(String)
 }
@@ -114,8 +139,11 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let ticketReferenceLinkSetRevision: Int64?
     public let ticketReferences: TicketReferenceSet?
     public let recordedImpacts: RecordedImpacts?
+    public let planChangeProposalVersion: Int64?
+    public let planChangeProposalDecisionID: String?
+    public let planChangeProposalApplicationID: String?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
@@ -125,6 +153,9 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
         self.ticketReferenceLinkSetRevision = ticketReferenceLinkSetRevision
         self.ticketReferences = ticketReferences
         self.recordedImpacts = recordedImpacts
+        self.planChangeProposalVersion = planChangeProposalVersion
+        self.planChangeProposalDecisionID = planChangeProposalDecisionID
+        self.planChangeProposalApplicationID = planChangeProposalApplicationID
     }
 }
 
@@ -228,6 +259,17 @@ public struct PersistedAuthorizedProjectRegistry: AuthorizedProjectRegistry, Sen
                 canonicalRoot: canonicalRoot,
                 authorizedRoots: roots
             )
+        }
+    }
+}
+
+extension AgentCommand {
+    var requiresPlanChangeOwnerAuthority: Bool {
+        switch self {
+        case .decidePlanChangeProposal, .applyPlanChangeProposal:
+            true
+        default:
+            false
         }
     }
 }

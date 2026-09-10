@@ -321,6 +321,21 @@ revision. Link retirement retains history and does not require the source to rem
 readable. New/revised links still require full managed authorization; no operation
 implicitly binds or accepts a catalog. See the [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md).
 
+## Phase 5C proposal source-impact amendment — 2026-09-10
+
+Saving a proposal records the exact current reference-link versions for every
+affected existing ticket, including both ends of a proposed ticket dependency.
+Each impact retains ticket/link identity, repository/artifact identity, link
+version, source digest and observed path/lifecycle/authority. These are immutable
+proposal facts derived from the already accepted reference record; they do not
+accept a catalog, read a different source into history or authorize repository
+mutation.
+
+Native proposal detail opens an impact through the existing exact-version source
+route. That route retains the Phase 5B bounded reader, expected-digest and authority
+checks. Missing access, different current bytes or unavailable historical content
+remain explicit and never cause another version, source or ticket to be selected.
+
 ### 2026-09-09 read-only diagnostic source amendment
 
 The local source candidate adds `diagnose --root <exact-root> --format json` to

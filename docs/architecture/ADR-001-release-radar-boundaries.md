@@ -247,3 +247,5 @@ The initial operation set is additive planning and first placement, preserving
 started/Accepted history and existing obligations. Successor/carry-forward and full
 phase lifecycle remain later slices. Retained approval history never survives
 registration rotation as live application authority.
+The [Phase 5C brief](../delivery/task-briefs/2026-09-10-phase5c-proposals/phase5c-proposals-brief.md)
+defines the bounded operation set, baseline, recovery and native acceptance contract.

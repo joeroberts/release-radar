@@ -650,6 +650,338 @@ final class AppRouteTests: XCTestCase {
     }
 
     @MainActor
+    func testPlanChangeProposalProjectionOwnerWorkflowAndNavigationPreserveExactVersion() async throws {
+        let fixture = try await makeRR9OwnerFixture()
+        let registration = ProjectRegistration(
+            projectID: fixture.projectID,
+            registrationID: "proposal-registration",
+            requestGeneration: 1
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Register proposal UI fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue), .text(registration.registrationID)]
+            )
+        }
+        let dispatcher = AgentCommandDispatcher(
+            store: fixture.store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(registration: registration, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
+            ])
+        )
+        let save = await dispatcher.dispatch(.init(
+            version: AgentCommandDispatcher.commandEnvelopeVersion,
+            requestID: UUID(),
+            projectRoot: fixture.projectRoot.path,
+            expectedRegistration: registration,
+            reason: "Save native proposal fixture",
+            command: .savePlanChangeProposal(
+                proposalID: "proposal-native",
+                expectedPreviousVersion: nil,
+                rationale: "Add a pending verification task without starting the ticket.",
+                operations: [
+                    .addPendingTicketTasks(
+                        ticketID: .init(rawValue: "ROAD-1"),
+                        tasks: [.init(
+                            id: .init(rawValue: "proposal-task"),
+                            label: "Proposal task",
+                            title: "Verify the proposal workflow",
+                            sortOrder: 0
+                        )]
+                    )
+                ]
+            )
+        ))
+        XCTAssertNil(save.error)
+
+        let model = AppModel(
+            store: fixture.store,
+            projectOnboarding: fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        let projected = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID)?.proposals.first)
+        let version = try XCTUnwrap(projected.versions.first)
+        XCTAssertEqual(projected.id.rawValue, "proposal-native")
+        XCTAssertEqual(version.version, 1)
+
+        await model.navigate(to: .projectPlan(fixture.projectID))
+        model.setNavigationFocus(.planChangeProposal(
+            proposalID: projected.id.rawValue,
+            version: version.version,
+            ticketID: .init(rawValue: "ROAD-1")
+        ))
+        await model.navigate(to: .activity(fixture.projectID))
+        await model.goBack()
+        XCTAssertEqual(model.selection, .projectPlan(fixture.projectID))
+        XCTAssertEqual(model.navigationFocus, .planChangeProposal(
+            proposalID: "proposal-native",
+            version: 1,
+            ticketID: .init(rawValue: "ROAD-1")
+        ))
+
+        let refresh = await model.refreshPlanChangeProposal(
+            projectID: fixture.projectID,
+            proposalID: projected.id,
+            previousVersion: version.version,
+            rationale: version.rationale,
+            operations: version.operations
+        )
+        XCTAssertNil(refresh.error)
+        XCTAssertEqual(refresh.planChangeProposalVersion, 2)
+        let refreshedProposal = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID)?.proposals.first)
+        XCTAssertEqual(refreshedProposal.currentVersion, 2)
+        XCTAssertNil(refreshedProposal.versions.first(where: { $0.version == 1 })?.decision)
+        let refreshed = try XCTUnwrap(refreshedProposal.versions.first(where: { $0.version == 2 }))
+
+        let approval = await model.decidePlanChangeProposal(
+            projectID: fixture.projectID,
+            proposalID: projected.id,
+            version: refreshed.version,
+            baselineDigest: refreshed.baselineDigest,
+            disposition: .approved
+        )
+        XCTAssertNil(approval.error)
+        let taskCountAfterApproval = try await fixture.store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM ticket_tasks WHERE id = 'proposal-task'")
+        }
+        XCTAssertEqual(taskCountAfterApproval, 0)
+        let approved = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID)?.proposals.first?.versions.first)
+        XCTAssertEqual(approved.decision?.disposition, .approved)
+
+        let application = await model.applyPlanChangeProposal(
+            projectID: fixture.projectID,
+            proposalID: projected.id,
+            version: approved.version,
+            baselineDigest: approved.baselineDigest,
+            decisionID: try XCTUnwrap(approved.decision?.id)
+        )
+        XCTAssertNil(application.error)
+        let applied = try XCTUnwrap(model.dashboard?.plan(for: fixture.projectID)?.proposals.first?.versions.first)
+        XCTAssertNotNil(applied.application)
+        let appliedTaskState = try await fixture.store.read {
+            try $0.scalarText("SELECT completion || '|' || lifecycle FROM ticket_tasks WHERE id = 'proposal-task'")
+        }
+        XCTAssertEqual(appliedTaskState, "pending|active")
+    }
+
+    @MainActor
+    func testNativePlanChangeProposalRendersWideAndCompactWithExactVersionFocus() async throws {
+        let scenario = try await makePlanChangeProposalRenderScenario()
+        let plan = scenario.plan
+        let impact = scenario.impact
+        XCTAssertEqual(impact.ticketID, TicketID(rawValue: "ROAD-1"))
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 5C proposals — isolated native acceptance"
+        defer { window.close() }
+
+        for width in [1_500.0, 760.0] {
+            let hosting = NSHostingView(rootView: ProjectPlanView(
+                plan: plan,
+                selectedTicketID: .constant(.init(rawValue: "")),
+                openAllPhases: {},
+                openPhase: { _ in },
+                decideProposal: { _, _, _, _ in
+                    .init(entityIDs: [], auditEventID: nil, error: nil)
+                },
+                applyProposal: { _, _, _, _ in
+                    .init(entityIDs: [], auditEventID: nil, error: nil)
+                },
+                refreshProposal: { _, _, _, _ in
+                    .init(entityIDs: [], auditEventID: nil, error: nil, planChangeProposalVersion: 2)
+                },
+                requestedFocus: .planChangeProposal(
+                    proposalID: "proposal-render",
+                    version: 1,
+                    ticketID: .init(rawValue: "PROPOSED-1")
+                )
+            ).environment(\.colorScheme, .dark))
+            hosting.appearance = window.appearance
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: 900)
+            window.contentView = hosting
+            window.setContentSize(NSSize(width: width, height: 900))
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(200))
+            hosting.layoutSubtreeIfNeeded()
+            XCTAssertTrue(window.isVisible)
+            XCTAssertEqual(hosting.frame.width, width, accuracy: 1)
+            try taskCapture(hosting, name: "phase5c-proposal-\(Int(width))")
+        }
+    }
+
+    @MainActor
+    func testLivePlanChangeProposalJourneyRestoresExactSourceFocusWideAndCompact() async throws {
+        let enableMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5c-writer/23-live-focus-enabled")
+        guard FileManager.default.fileExists(atPath: enableMarker.path) else {
+            throw XCTSkip("Create the one-shot Phase 5C interaction marker to run this isolated native journey.")
+        }
+        let wideCompleteMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5c-writer/23-live-focus-wide-complete")
+        let compactCompleteMarker = URL(fileURLWithPath: "/private/tmp/release-radar-phase5c-writer/23-live-focus-compact-complete")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: wideCompleteMarker.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: compactCompleteMarker.path))
+
+        let scenario = try await makePlanChangeProposalRenderScenario()
+        let model = AppModel(
+            store: scenario.fixture.store,
+            projectOnboarding: scenario.fixture.onboarding,
+            externalServicesSuppressed: true
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .projectPlan(scenario.fixture.projectID))
+        let exactFocus = NavigationFocus.planChangeProposal(
+            proposalID: scenario.proposalID.rawValue,
+            version: 1,
+            ticketID: scenario.impact.ticketID
+        )
+        model.setNavigationFocus(exactFocus)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_500, height: 900),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "Phase 5C proposals — isolated native interaction"
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        defer {
+            window.close()
+            NSApp.setActivationPolicy(previousPolicy)
+        }
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        XCTAssertTrue(window.isVisible)
+        XCTAssertEqual(model.navigationFocus, exactFocus)
+        print("PHASE5C WIDE READY: verify initial source focus; select proposal/source; Back and Forward")
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: wideCompleteMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: wideCompleteMarker.path))
+        XCTAssertEqual(
+            model.selection,
+            .referenceSource(
+                projectID: scenario.fixture.projectID,
+                ticketID: scenario.impact.ticketID,
+                linkID: scenario.impact.linkID,
+                version: scenario.impact.version
+            )
+        )
+        await model.goBack()
+        XCTAssertEqual(model.selection, .projectPlan(scenario.fixture.projectID))
+        XCTAssertEqual(model.navigationFocus, exactFocus)
+        window.setContentSize(NSSize(width: 760, height: 900))
+        try await Task.sleep(for: .milliseconds(750))
+        hosting.layoutSubtreeIfNeeded()
+        print("PHASE5C COMPACT READY: verify initial source focus and scroll; select proposal/source; Back and Forward")
+
+        for _ in 0..<900 where !FileManager.default.fileExists(atPath: compactCompleteMarker.path) {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: compactCompleteMarker.path))
+        XCTAssertEqual(
+            model.selection,
+            .referenceSource(
+                projectID: scenario.fixture.projectID,
+                ticketID: scenario.impact.ticketID,
+                linkID: scenario.impact.linkID,
+                version: scenario.impact.version
+            )
+        )
+        XCTAssertEqual(
+            model.navigationFocus,
+            .referenceSource(linkID: scenario.impact.linkID, version: scenario.impact.version)
+        )
+        try taskCapture(hosting, name: "phase5c-proposal-live-journey-final")
+    }
+
+    @MainActor
+    private func makePlanChangeProposalRenderScenario() async throws -> PlanChangeProposalRenderScenario {
+        let fixture = try await makeRR9OwnerFixture()
+        let registration = ProjectRegistration(
+            projectID: fixture.projectID,
+            registrationID: "proposal-render-registration",
+            requestGeneration: 1
+        )
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Register proposal render fixture") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, 1, 'complete')",
+                bindings: [.text(fixture.projectID.rawValue), .text(registration.registrationID)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_reference_link_sets (project_id,ticket_id,revision,created_at,updated_at) VALUES (?, 'ROAD-1', 1, '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_reference_links (project_id,ticket_id,id,kind,repository_id,artifact_id,current_version,relationship,created_at,updated_at) VALUES (?, 'ROAD-1', 'proposal-requirement', 'requirement', '00000000-0000-4000-8000-000000000001', 'phase5c-requirement', 1, 'current', '2026-09-10T00:00:00Z', '2026-09-10T00:00:00Z')",
+                bindings: [.text(fixture.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_reference_versions (project_id,ticket_id,link_id,version,content_digest,source_local_id,locator,catalog_version,catalog_digest,observed_path,observed_lifecycle,observed_authority,created_at) VALUES (?, 'ROAD-1', 'proposal-requirement', 1, ?, NULL, NULL, 1, ?, 'docs/missing-proposal-source.md', 'active', 'controlling', '2026-09-10T00:00:00Z')",
+                bindings: [
+                    .text(fixture.projectID.rawValue),
+                    .text(String(repeating: "a", count: 64)),
+                    .text(String(repeating: "b", count: 64)),
+                ]
+            )
+        }
+        let dispatcher = AgentCommandDispatcher(
+            store: fixture.store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [
+                .init(registration: registration, canonicalRoot: fixture.projectRoot, authorizedRoots: [fixture.projectRoot])
+            ])
+        )
+        let proposalID = PlanChangeProposalID(rawValue: "proposal-render")
+        let save = await dispatcher.dispatch(.init(
+            version: 1,
+            requestID: UUID(),
+            projectRoot: fixture.projectRoot.path,
+            expectedRegistration: registration,
+            reason: "Save proposal render fixture",
+            command: .savePlanChangeProposal(
+                proposalID: proposalID.rawValue,
+                expectedPreviousVersion: nil,
+                rationale: "Show a bounded proposal with grouped changes and deliberate owner actions.",
+                operations: [
+                    .addPhase(id: .init(rawValue: "phase-proposed"), name: "Proposed phase"),
+                    .addUnassignedTicket(id: .init(rawValue: "PROPOSED-1"), outcome: "Deliver proposed work"),
+                    .addPendingTicketTasks(
+                        ticketID: .init(rawValue: "ROAD-1"),
+                        tasks: [.init(
+                            id: .init(rawValue: "proposal-render-task"),
+                            label: "Proposal render task",
+                            title: "Keep recorded requirement focus",
+                            sortOrder: 0
+                        )]
+                    )
+                ]
+            )
+        ))
+        XCTAssertNil(save.error)
+        let dashboard = try await DashboardProjection.load(from: fixture.store)
+        let plan = try XCTUnwrap(dashboard.plan(for: fixture.projectID))
+        let impact = try XCTUnwrap(plan.proposals.first?.versions.first?.sourceImpacts.first)
+        return .init(fixture: fixture, proposalID: proposalID, plan: plan, impact: impact)
+    }
+
+    @MainActor
     private func task10GoalState(_ store: DeliveryStore) async throws -> Task10GoalState {
         try await store.read { c in
             Task10GoalState(lifecycle: try c.scalarText("SELECT lifecycle FROM delivery_goals WHERE id='complete-goal'"),
@@ -4493,6 +4825,13 @@ private struct RR9OwnerFixture {
     let store: DeliveryStore
     let bookmarks: RR9RouteBookmarkStore
     let onboarding: FolderProjectOnboarding
+}
+
+private struct PlanChangeProposalRenderScenario {
+    let fixture: RR9OwnerFixture
+    let proposalID: PlanChangeProposalID
+    let plan: ProjectPlanProjection
+    let impact: PlanChangeRecordedSourceImpact
 }
 
 private enum Task4AOwnerPlanState: Equatable, Sendable {

@@ -53,6 +53,10 @@ public actor AgentCommandDispatcher {
            case .externalAgent = origin {
             return .init(entityIDs: [], auditEventID: nil, error: .ownerAcceptanceRequired)
         }
+        if envelope.command.requiresPlanChangeOwnerAuthority,
+           case .externalAgent = origin {
+            return .init(entityIDs: [], auditEventID: nil, error: .planChangeProposalOwnerAuthorityRequired)
+        }
         if envelope.command.isTicketReferenceMutation {
             guard let project = await projectRegistry.resolve(projectRoot: envelope.projectRoot) else {
                 return .init(entityIDs: [], auditEventID: nil, error: .unauthorizedProjectRoot)
@@ -149,6 +153,17 @@ public actor AgentCommandDispatcher {
                                   audit["entity_id"] == .text(auditScope.entityID)
                             else { throw DispatchControl.requestIDReused }
                         }
+                        if envelope.command.requiresPlanChangeOwnerAuthority {
+                            guard priorResult.error == nil, let priorAuditID = priorResult.auditEventID,
+                                  let audit = try connection.row(
+                                    "SELECT actor_id,project_id,entity_type,entity_id FROM audit_events WHERE id=?",
+                                    bindings: [.text(priorAuditID.rawValue)]),
+                                  audit["actor_id"] == .text(actor.id),
+                                  audit["project_id"] == .text(auditScope.projectID.rawValue),
+                                  audit["entity_type"] == .text(auditScope.entityType.rawValue),
+                                  audit["entity_id"] == .text(auditScope.entityID)
+                            else { throw DispatchControl.requestIDReused }
+                        }
                         throw DispatchControl.replay(priorResult)
                     }
 
@@ -213,6 +228,61 @@ public actor AgentCommandDispatcher {
         }
         let commandFieldsAreValid: Bool
         switch envelope.command {
+        case let .savePlanChangeProposal(proposalID, expectedPreviousVersion, rationale, operations):
+            commandFieldsAreValid = valid(proposalID, maximum: 256) && !proposalID.contains("\0")
+                && expectedPreviousVersion.map { $0 > 0 } != false
+                && valid(rationale) && !rationale.contains("\0")
+                && !operations.isEmpty && operations.count <= PlanChangeProposalPolicy.maximumOperations
+                && operations.allSatisfy { operation in
+                    switch operation {
+                    case let .addPhase(id, name):
+                        valid(id.rawValue, maximum: 256) && !id.rawValue.contains("\0")
+                            && valid(name) && !name.contains("\0")
+                    case let .addDeliveryGoal(phaseID, goal):
+                        valid(phaseID.rawValue, maximum: 256) && !phaseID.rawValue.contains("\0")
+                            && valid(goal.id.rawValue, maximum: 256) && !goal.id.rawValue.contains("\0")
+                            && valid(goal.title) && !goal.title.contains("\0")
+                            && valid(goal.outcome) && !goal.outcome.contains("\0")
+                            && !goal.doneCriteria.isEmpty
+                            && goal.doneCriteria.allSatisfy { valid($0) && !$0.contains("\0") }
+                            && goal.sortOrder >= 0
+                    case let .addUnassignedTicket(id, outcome):
+                        valid(id.rawValue, maximum: 256) && !id.rawValue.contains("\0")
+                            && valid(outcome) && !outcome.contains("\0")
+                    case let .addPendingTicketTasks(ticketID, tasks):
+                        valid(ticketID.rawValue, maximum: 256) && !ticketID.rawValue.contains("\0")
+                            && !tasks.isEmpty
+                            && tasks.allSatisfy {
+                                valid($0.id.rawValue, maximum: 256) && !$0.id.rawValue.contains("\0")
+                                    && valid($0.label, maximum: 256) && !$0.label.contains("\0")
+                                    && valid($0.title) && !$0.title.contains("\0") && $0.sortOrder >= 0
+                            }
+                    case let .placeTicket(ticketID, phaseID):
+                        valid(ticketID.rawValue, maximum: 256) && !ticketID.rawValue.contains("\0")
+                            && valid(phaseID.rawValue, maximum: 256) && !phaseID.rawValue.contains("\0")
+                    case let .assignTicketToGoal(ticketID, phaseID, goalID):
+                        valid(ticketID.rawValue, maximum: 256) && !ticketID.rawValue.contains("\0")
+                            && valid(phaseID.rawValue, maximum: 256) && !phaseID.rawValue.contains("\0")
+                            && valid(goalID.rawValue, maximum: 256) && !goalID.rawValue.contains("\0")
+                    case let .addPhaseDependency(id, phaseID, dependsOnPhaseID):
+                        valid(id.rawValue, maximum: 256) && !id.rawValue.contains("\0")
+                            && valid(phaseID.rawValue, maximum: 256) && !phaseID.rawValue.contains("\0")
+                            && valid(dependsOnPhaseID.rawValue, maximum: 256) && !dependsOnPhaseID.rawValue.contains("\0")
+                    case let .addTicketDependency(id, ticketID, dependsOnTicketID):
+                        valid(id.rawValue, maximum: 256) && !id.rawValue.contains("\0")
+                            && valid(ticketID.rawValue, maximum: 256) && !ticketID.rawValue.contains("\0")
+                            && valid(dependsOnTicketID.rawValue, maximum: 256) && !dependsOnTicketID.rawValue.contains("\0")
+                    }
+                }
+        case let .decidePlanChangeProposal(proposalID, version, baselineDigest, decisionID, _):
+            commandFieldsAreValid = valid(proposalID, maximum: 256) && !proposalID.contains("\0")
+                && version > 0 && valid(decisionID, maximum: 256) && !decisionID.contains("\0")
+                && Self.validDigest(baselineDigest)
+        case let .applyPlanChangeProposal(proposalID, version, baselineDigest, decisionID, applicationID):
+            commandFieldsAreValid = valid(proposalID, maximum: 256) && !proposalID.contains("\0")
+                && version > 0 && valid(decisionID, maximum: 256) && !decisionID.contains("\0")
+                && valid(applicationID, maximum: 256) && !applicationID.contains("\0")
+                && Self.validDigest(baselineDigest)
         case let .applyPhasePlanRevision(projectID, phaseID, revision, goals, assignments, unassigned, superseded):
             commandFieldsAreValid = valid(projectID, maximum: 256) && !projectID.contains("\0")
                 && valid(phaseID, maximum: 256) && !phaseID.contains("\0") && revision >= 0
@@ -323,6 +393,12 @@ public actor AgentCommandDispatcher {
         return nil
     }
 
+    private static func validDigest(_ value: String) -> Bool {
+        value.count == 64 && value.utf8.allSatisfy {
+            ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102)
+        }
+    }
+
     private func registrationScopeIsCurrent(
         _ envelope: AgentCommandEnvelope,
         project: AuthorizedProject,
@@ -362,6 +438,25 @@ public actor AgentCommandDispatcher {
 
     private static func resultForCommand(_ command: AgentCommand, auditEventID: AuditEventID, revision: Int64?) -> AgentCommandResult {
         switch command {
+        case let .savePlanChangeProposal(proposalID, _, _, _):
+            return .init(
+                entityIDs: [proposalID],
+                auditEventID: auditEventID,
+                error: nil,
+                planChangeProposalVersion: revision
+            )
+        case let .decidePlanChangeProposal(proposalID, version, _, decisionID, _):
+            return .init(
+                entityIDs: [proposalID], auditEventID: auditEventID, error: nil,
+                planChangeProposalVersion: version,
+                planChangeProposalDecisionID: decisionID
+            )
+        case let .applyPlanChangeProposal(proposalID, version, _, _, applicationID):
+            return .init(
+                entityIDs: [proposalID], auditEventID: auditEventID, error: nil,
+                planChangeProposalVersion: version,
+                planChangeProposalApplicationID: applicationID
+            )
         case let .applyPhasePlanRevision(_, phaseID, _, _, _, _, _), let .finalizePhasePlan(_, phaseID, _):
             return .init(entityIDs: [phaseID], auditEventID: auditEventID, error: nil, phasePlanRevision: revision)
         case let .transitionDeliveryGoal(_, _, goalID, _, _):
@@ -405,6 +500,10 @@ public actor AgentCommandDispatcher {
 
     private static func auditScope(for command: AgentCommand, projectID: ProjectID) -> AuditScope {
         let entity: (AuditEntityType, String) = switch command {
+        case let .savePlanChangeProposal(proposalID, _, _, _),
+             let .decidePlanChangeProposal(proposalID, _, _, _, _),
+             let .applyPlanChangeProposal(proposalID, _, _, _, _):
+            (.planChangeProposal, proposalID)
         case let .applyPhasePlanRevision(_, phaseID, _, _, _, _, _), let .finalizePhasePlan(_, phaseID, _): (.phasePlan, phaseID)
         case let .transitionDeliveryGoal(_, _, goalID, _, _): (.deliveryGoal, goalID)
         case .bindDocumentationRepository, .acceptDocumentationCatalog, .addManagedEvidence, .adoptManagedEvidence, .relocateLegacyEvidence: (.project, projectID.rawValue)
@@ -437,6 +536,42 @@ public actor AgentCommandDispatcher {
     ) throws -> Int64? {
         let projectID = project.projectID
         switch command {
+        case let .savePlanChangeProposal(proposalID, expectedPreviousVersion, rationale, operations):
+            return try PlanChangeProposalPolicy.saveVersion(
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID),
+                expectedPreviousVersion: expectedPreviousVersion,
+                rationale: rationale,
+                operations: operations,
+                registration: project.registration,
+                connection: connection
+            )
+        case let .decidePlanChangeProposal(proposalID, version, baselineDigest, decisionID, disposition):
+            try PlanChangeProposalPolicy.decide(
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID),
+                version: version,
+                baselineDigest: baselineDigest,
+                decisionID: decisionID,
+                disposition: disposition,
+                registration: project.registration,
+                actorID: "release-radar-owner",
+                connection: connection
+            )
+            return version
+        case let .applyPlanChangeProposal(proposalID, version, baselineDigest, decisionID, applicationID):
+            try PlanChangeProposalPolicy.applyApprovedVersion(
+                projectID: projectID,
+                proposalID: .init(rawValue: proposalID),
+                version: version,
+                baselineDigest: baselineDigest,
+                decisionID: decisionID,
+                applicationID: applicationID,
+                registration: project.registration,
+                auditEventID: auditEventID,
+                connection: connection
+            )
+            return version
         case let .applyPhasePlanRevision(assertedProjectID, phaseID, expectedRevision, goals, assignments, unassigned, superseded):
             guard Data(assertedProjectID.utf8) == Data(projectID.rawValue.utf8) else {
                 throw CommandValidation.crossProject("The phase plan belongs to another project.")
@@ -822,9 +957,27 @@ public actor AgentCommandDispatcher {
     }
 
     private static func map(_ error: Error, command: AgentCommand) -> AgentCommandError {
+        if let error = error as? PlanChangeProposalError {
+            switch error {
+            case .registrationRequired: return .planChangeProposalRegistrationRequired
+            case .notFound: return .planChangeProposalNotFound
+            case let .versionConflict(expected, current):
+                return .planChangeProposalVersionConflict(expected: expected, current: current)
+            case let .invalidOperation(message): return .invalidPlanChangeOperation(message)
+            case .ownerAuthorityRequired: return .planChangeProposalOwnerAuthorityRequired
+            case .decisionConflict: return .planChangeProposalDecisionConflict
+            case .decisionNotApproved: return .planChangeProposalDecisionNotApproved
+            case .decisionMismatch: return .planChangeProposalDecisionMismatch
+            case .alreadyApplied: return .planChangeProposalAlreadyApplied
+            case let .stale(categories): return .planChangeProposalStale(categories)
+            case .invalidStoredProposal: return .internalFailure(error.localizedDescription)
+            }
+        }
         // Preserve the existing Accepted-transition error contract. Only the
         // additive task commands expose these task-policy rejection categories.
         switch command {
+        case .savePlanChangeProposal, .decidePlanChangeProposal, .applyPlanChangeProposal:
+            break
         case .applyPhasePlanRevision, .finalizePhasePlan, .transitionDeliveryGoal:
             if let error = error as? DeliveryPlanningPolicyError {
                 switch error {

@@ -503,8 +503,45 @@ final class AppModel {
         if entry.selectedTicketID != nil, !ticketIsAvailable {
             recovery.append("The previously selected ticket is unavailable; no other ticket was selected.")
         }
-        navigationFocus = ticketIsAvailable ? entry.focus : (recovery.isEmpty ? entry.focus : .recovery)
+        var focusIsAvailable = true
+        if case let .planChangeProposal(proposalID, version, ticketID)? = entry.focus {
+            let proposalVersion = restoredProjectID
+                .flatMap { dashboard?.plan(for: $0)?.proposals.first(where: {
+                    Data($0.id.rawValue.utf8) == Data(proposalID.utf8)
+                }) }
+                .flatMap { proposal in
+                    proposal.versions.first(where: { $0.version == version })
+                }
+            focusIsAvailable = proposalVersion.map { versionRecord in
+                ticketID.map { Self.proposalVersion(versionRecord, references: $0) } ?? true
+            } ?? false
+            if !focusIsAvailable {
+                recovery.append("The exact proposal version or ticket focus is unavailable; no other proposal was substituted.")
+            }
+        }
+        navigationFocus = focusIsAvailable && (ticketIsAvailable || entry.selectedTicketID == nil)
+            ? entry.focus
+            : (recovery.isEmpty ? entry.focus : .recovery)
         navigationRecoveryMessage = recovery.isEmpty ? nil : recovery.joined(separator: " ")
+    }
+
+    private static func proposalVersion(
+        _ version: PlanChangeProposalVersionRecord,
+        references ticketID: TicketID
+    ) -> Bool {
+        if version.sourceImpacts.contains(where: { $0.ticketID == ticketID }) { return true }
+        return version.operations.contains { operation in
+            switch operation {
+            case let .addUnassignedTicket(id, _),
+                 let .addPendingTicketTasks(id, _),
+                 let .placeTicket(id, _),
+                 let .assignTicketToGoal(id, _, _),
+                 let .addTicketDependency(_, id, _):
+                id == ticketID
+            case .addPhase, .addDeliveryGoal, .addPhaseDependency:
+                false
+            }
+        }
     }
 
     func previewProjectLifecycle(
@@ -1515,6 +1552,107 @@ final class AppModel {
     func reloadDeliveryGoalAcceptance(projectID: ProjectID) async {
         guard !scopedIsPerformingReviewAction(for: projectID) else { return }
         _ = await reloadProjectProjections()
+    }
+
+    func decidePlanChangeProposal(
+        projectID: ProjectID,
+        proposalID: PlanChangeProposalID,
+        version: Int64,
+        baselineDigest: String,
+        disposition: PlanChangeDecisionDisposition
+    ) async -> AgentCommandResult {
+        let requestID = requestIDGenerator()
+        return await dispatchOwnerPlanChange(
+            projectID: projectID,
+            requestID: requestID,
+            reason: "Owner \(disposition.rawValue) plan-change proposal \(proposalID.rawValue) version \(version)",
+            command: .decidePlanChangeProposal(
+                proposalID: proposalID.rawValue,
+                version: version,
+                baselineDigest: baselineDigest,
+                decisionID: "decision-\(requestID.uuidString.lowercased())",
+                disposition: disposition
+            )
+        )
+    }
+
+    func applyPlanChangeProposal(
+        projectID: ProjectID,
+        proposalID: PlanChangeProposalID,
+        version: Int64,
+        baselineDigest: String,
+        decisionID: String
+    ) async -> AgentCommandResult {
+        let requestID = requestIDGenerator()
+        return await dispatchOwnerPlanChange(
+            projectID: projectID,
+            requestID: requestID,
+            reason: "Owner applied plan-change proposal \(proposalID.rawValue) version \(version)",
+            command: .applyPlanChangeProposal(
+                proposalID: proposalID.rawValue,
+                version: version,
+                baselineDigest: baselineDigest,
+                decisionID: decisionID,
+                applicationID: "application-\(requestID.uuidString.lowercased())"
+            )
+        )
+    }
+
+    func refreshPlanChangeProposal(
+        projectID: ProjectID,
+        proposalID: PlanChangeProposalID,
+        previousVersion: Int64,
+        rationale: String,
+        operations: [PlanChangeOperation]
+    ) async -> AgentCommandResult {
+        await dispatchOwnerPlanChange(
+            projectID: projectID,
+            requestID: requestIDGenerator(),
+            reason: "Owner refreshed plan-change proposal \(proposalID.rawValue) after version \(previousVersion)",
+            command: .savePlanChangeProposal(
+                proposalID: proposalID.rawValue,
+                expectedPreviousVersion: previousVersion,
+                rationale: rationale,
+                operations: operations
+            )
+        )
+    }
+
+    private func dispatchOwnerPlanChange(
+        projectID: ProjectID,
+        requestID: UUID,
+        reason: String,
+        command: AgentCommand
+    ) async -> AgentCommandResult {
+        guard let expectedRegistration = dashboard?.projects.first(where: { $0.id == projectID })?.registration else {
+            return .init(entityIDs: [], auditEventID: nil, error: .planChangeProposalRegistrationRequired)
+        }
+        do {
+            let store = self.store
+            let result = try await projectOnboarding.withAuthorizedProject(projectID: projectID) { project in
+                await AgentCommandDispatcher(
+                    store: store,
+                    projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [project])
+                ).dispatch(
+                    AgentCommandEnvelope(
+                        version: AgentCommandDispatcher.commandEnvelopeVersion,
+                        requestID: requestID,
+                        projectRoot: project.canonicalRoot.path,
+                        expectedRegistration: expectedRegistration,
+                        reason: reason,
+                        command: command
+                    ),
+                    origin: .ownerApp
+                )
+            }
+            _ = await reloadProjectProjections()
+            return result
+        } catch {
+            return .init(
+                entityIDs: [], auditEventID: nil,
+                error: .unauthorizedProjectRoot
+            )
+        }
     }
 
     func transitionTicket(
