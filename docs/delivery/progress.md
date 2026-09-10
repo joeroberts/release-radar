@@ -71,9 +71,14 @@ quiescent and archived, their commits and evidence preserved, and their build/te
 reservation is released. Reviewed local endpoint is `codex/phase6c-reviewed`. Evidence and retained scratch are described in the
 [canonical record](evidence/2026-09-10-phase6c-evidence.md).
 
-Fresh read-only chief consultation `01a08d93-8aa5-7611-a33e-e8fdb960d52c`
-(Astra High) is assessing the existing 6D adoption contracts from the integrated
-6C candidate. Its recommendations will refine the bounded 6D brief before writer dispatch.
+Read-only chief consultation `01a08d93-8aa5-7611-a33e-e8fdb960d52c`
+(Astra High) completed its assessment with no blocking owner choice. Its
+recommendations are preserved in the
+[6D brief](task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md): complete
+scoped inventory, guidance-driven exact approval/replay, existing task commands
+and native readback, 6C applicability and compatible guidance v3. This is a
+consultation, not independent candidate review. The brief is catalogued before
+writer dispatch.
 
 ## Authorization and next eligible work
 

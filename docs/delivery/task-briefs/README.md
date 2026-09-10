@@ -61,6 +61,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-10-phase6a-history](2026-09-10-phase6a-history) — leaf; Phase 6A truthful event-time History and attention
 - [delivery.task-briefs.2026-09-10-phase6b-goals](2026-09-10-phase6b-goals) — leaf; Phase 6B workspace Delivery and Execution Goals
 - [delivery.task-briefs.2026-09-10-phase6c-evidence](2026-09-10-phase6c-evidence) — leaf; Phase 6C revision-bound delivery evidence
+- [delivery.task-briefs.2026-09-10-phase6d-adoption](2026-09-10-phase6d-adoption) — leaf; Phase 6D generic task adoption
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -643,6 +644,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-phase6c-evidence-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md](2026-09-10-phase6c-evidence/phase6c-evidence-brief.md) | document | controlling &#40;delivery.phase6c-evidence&#41; | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-10-phase6d-adoption
+
+- Path: [docs/delivery/task-briefs/2026-09-10-phase6d-adoption](2026-09-10-phase6d-adoption)
+- Purpose: Phase 6D generic task adoption
+- Allowed contents: Task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-phase6d-adoption-brief-2026-09-10](2026-09-10-phase6d-adoption/phase6d-adoption-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-phase6d-adoption-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md](2026-09-10-phase6d-adoption/phase6d-adoption-brief.md) | document | controlling &#40;delivery.phase6d-adoption&#41; | active | none | none |
 
 ### Children
 
