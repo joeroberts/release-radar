@@ -83,8 +83,10 @@ macOS execution, signing disabled and a sanitized environment rooted at
 - `phase5e-native-2.xcresult` passed 1/1 in 107.299 seconds after the correction.
   External CUA selected only verified isolated host PID 60485 and the unique v2
   window. It exercised Empty to Upcoming then In delivery, History reopen then
-  recompletion, reload after each state, completion blockers, completed read-only/
-  reopen guidance and reason accessibility focus at wide and compact widths.
+  recompletion, reload after each state, completed read-only/reopen guidance and
+  reason accessibility focus at wide and compact widths. The visible completion-
+  blocker result had already been observed in v1 and remained unchanged, so it
+  was not separately repeated in v2.
   No false recovery banner or clipping appeared. Host readback confirmed History
   Completed revision 3, Empty In delivery revision 2, three concurrent In-delivery
   phases and the unchanged active phase. Reload was exercised; a full process
@@ -124,9 +126,12 @@ current exporter/importer.
 
 ## Temporary-output status
 
-No temporary output, marker or synthetic root was deleted. Result bundles, logs,
-attachment exports, isolated home/tmp/DerivedData, v1 and v2 marker files and all
-synthetic stores remain under `/private/tmp/release-radar-phase5e-writer`,
+No orchestrator cleanup was performed. The pre-correction v1 native fixture did
+remove its live-store XCTest temporary root during teardown, producing the vnode
+unlink warning that prompted removal of that teardown cleanup. All subsequent
+temporary outputs and roots were retained: result bundles, logs, attachment
+exports, isolated home/tmp/DerivedData, v1 and v2 marker files, and the remaining
+synthetic stores under `/private/tmp/release-radar-phase5e-writer`,
 `/Users/Shared/release-radar-reference-fixture-*`,
 `/Users/Shared/RekonImportTests-*` and XCTest temporary roots. The PNG above is
 the verified canonical repository copy; the exported original and manifest remain
