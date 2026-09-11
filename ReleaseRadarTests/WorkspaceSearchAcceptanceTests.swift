@@ -338,6 +338,38 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertEqual(projection.omittedDomains, [.history])
     }
 
+    func testFreshSearchSchemaRejectsNullSavedQueryIdentityAndEmptyPayloads() async throws {
+        let databaseURL = try makeDatabaseURL()
+        let store = DeliveryStore(databaseURL: databaseURL)
+        guard case .available = await store.availability else {
+            return XCTFail("Expected a fresh current store")
+        }
+        await store.close()
+        let connection = try SQLiteConnection(url: databaseURL)
+
+        XCTAssertThrowsError(try connection.execute(
+            "INSERT INTO workspace_search_preferences (singleton_id, payload_version, payload_data, updated_at) VALUES (1, 1, X'', '2026-09-10T12:00:00Z')"
+        ))
+        try connection.execute("DELETE FROM workspace_search_preferences")
+        XCTAssertThrowsError(try connection.execute(
+            "INSERT INTO workspace_saved_queries (id, name, payload_version, payload_data, created_at, updated_at) VALUES (NULL, 'Missing identity', 1, X'01', '2026-09-10T12:00:00Z', '2026-09-10T12:00:00Z')"
+        ))
+        try connection.execute("DELETE FROM workspace_saved_queries")
+        XCTAssertThrowsError(try connection.execute(
+            "INSERT INTO workspace_saved_queries (id, name, payload_version, payload_data, created_at, updated_at) VALUES ('empty-payload', 'Empty payload', 1, X'', '2026-09-10T12:00:00Z', '2026-09-10T12:00:00Z')"
+        ))
+        try connection.execute("DELETE FROM workspace_saved_queries")
+
+        try connection.execute(
+            "INSERT INTO workspace_search_preferences (singleton_id, payload_version, payload_data, updated_at) VALUES (1, 99, X'00', '2026-09-10T12:00:00Z')"
+        )
+        try connection.execute(
+            "INSERT INTO workspace_saved_queries (id, name, payload_version, payload_data, created_at, updated_at) VALUES ('opaque-future', 'Opaque future', 99, X'00', '2026-09-10T12:00:00Z', '2026-09-10T12:00:00Z')"
+        )
+        XCTAssertEqual(try connection.scalarInt("SELECT length(payload_data) FROM workspace_search_preferences"), 1)
+        XCTAssertEqual(try connection.scalarInt("SELECT length(payload_data) FROM workspace_saved_queries WHERE id = 'opaque-future'"), 1)
+    }
+
     private func makeDatabaseURL() throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-WorkspaceSearch-\(UUID().uuidString)", isDirectory: true)
