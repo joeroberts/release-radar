@@ -258,7 +258,7 @@ struct DeliveryEvidenceHelpView: View {
                 }
                 RekonCallout(tone: .information, systemImage: "person.crop.circle") {
                     Text("Evidence is not acceptance").font(.headline)
-                    Text("Expected categories, observations, applicability, source availability, results, and owner acceptance are separate. Reading or recording evidence does not change tasks, lanes, phase lifecycle, or owner acceptance.")
+                    Text(WorkspaceHelpContent.deliveryEvidenceBoundary)
                 }
                 HStack {
                     Spacer()

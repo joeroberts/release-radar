@@ -70,6 +70,11 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let databaseURL = try makeDatabaseURL()
         let store = DeliveryStore(databaseURL: databaseURL)
         try await seedProject(in: store, id: "project-one", registrationID: "registration-one")
+        _ = try await WorkspaceSearchPreferencesRepository(store: store).saveQuery(
+            id: "backup-search",
+            name: "Backup search",
+            definition: .init(text: "project-one", domains: [.project], sort: .title)
+        )
         try await store.transact(actor: .init(id: "fixture"), reason: "Seed supported backup state") { connection in
             try connection.execute(
                 "UPDATE codex_plugin_lifecycle SET intent = 'managedInstalled', managed_version = '1.2.3', managed_digest = 'known', verified_at = '2026-09-07T12:00:00Z' WHERE plugin_id = 'release-radar'"
@@ -105,6 +110,9 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertEqual(backupCounts, sourceCounts)
         let backedUpPlugin = try await CodexPluginLifecycleStore(store: backupStore).load()
         XCTAssertEqual(backedUpPlugin.intent, .managedInstalled)
+        let backedUpSearchIDs = try await WorkspaceSearchPreferencesRepository(store: backupStore)
+            .loadSavedQueries().map(\.id)
+        XCTAssertEqual(backedUpSearchIDs, ["backup-search"])
         let backedUpUnassigned = try await backupStore.read {
             try $0.row("SELECT phase_id,lane,outcome FROM tickets WHERE project_id='project-one' AND id='plan-only'")
         }
@@ -137,6 +145,11 @@ final class RecoveryAcceptanceTests: XCTestCase {
                 "UPDATE codex_plugin_lifecycle SET intent = 'managedInstalled', managed_version = '1.2.3', managed_digest = 'known', verified_at = '2026-09-07T12:00:00Z' WHERE plugin_id = 'release-radar'"
             )
         }
+        _ = try await WorkspaceSearchPreferencesRepository(store: store).saveQuery(
+            id: "tracking-reset-search",
+            name: "Tracking reset search",
+            definition: .init(text: "ticket", domains: [.ticket], sort: .title)
+        )
         let reset = ApplicationTrackingReset(store: store, databaseURL: databaseURL)
 
         let preview = try await reset.preview()
@@ -152,6 +165,9 @@ final class RecoveryAcceptanceTests: XCTestCase {
         XCTAssertTrue(rules[.pausedGoals])
         let pluginReceipt = try await CodexPluginLifecycleStore(store: result.store).load()
         XCTAssertEqual(pluginReceipt.intent, .managedInstalled)
+        let retainedSearchIDs = try await WorkspaceSearchPreferencesRepository(store: result.store)
+            .loadSavedQueries().map(\.id)
+        XCTAssertEqual(retainedSearchIDs, ["tracking-reset-search"])
         XCTAssertTrue(result.requiresFreshServiceGraph)
     }
 
@@ -168,6 +184,16 @@ final class RecoveryAcceptanceTests: XCTestCase {
         ) { _ in }
         let originalRegistration = try await ProjectLifecycleManager(store: originalStore)
             .snapshot(projectID: .init(rawValue: "project-one")).registration
+        let savedSearch = try await WorkspaceSearchPreferencesRepository(store: originalStore).saveQuery(
+            id: "restore-search",
+            name: "Restore search",
+            definition: .init(
+                text: "project-one",
+                scope: .registrations([.init(projectID: .init(rawValue: "project-one"), registrationID: "old-registration")]),
+                domains: [.project],
+                sort: .title
+            )
+        )
         let packageURL = databaseURL.deletingLastPathComponent().appendingPathComponent("old.release-radar-backup", isDirectory: true)
         let backup = ApplicationBackupManager(store: originalStore, databaseURL: databaseURL)
         _ = try await backup.createBackup(try await backup.previewBackup(destinationURL: packageURL))
@@ -198,6 +224,14 @@ final class RecoveryAcceptanceTests: XCTestCase {
         let firstRegistration = try await ProjectLifecycleManager(store: firstRestore.store)
             .snapshot(projectID: .init(rawValue: "project-one")).registration
         XCTAssertNotEqual(firstRegistration, originalRegistration)
+        let restoredSavedQueries = try await WorkspaceSearchPreferencesRepository(store: firstRestore.store).loadSavedQueries()
+        XCTAssertEqual(restoredSavedQueries.map(\.id), ["restore-search"])
+        do {
+            _ = try await WorkspaceSearchQuery.search(store: firstRestore.store, definition: savedSearch.definition)
+            XCTFail("Restore must require explicit saved-search reauthorization")
+        } catch let error as WorkspaceSearchError {
+            XCTAssertEqual(error, .authorizationRequired)
+        }
         let restoredHistory = try await ProjectActivityProjection.load(
             from: firstRestore.store,
             projectID: .init(rawValue: "project-one")

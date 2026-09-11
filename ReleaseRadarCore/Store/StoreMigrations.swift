@@ -1,7 +1,7 @@
 import Foundation
 
 enum StoreMigrations {
-    static let currentVersion: Int64 = 25
+    static let currentVersion: Int64 = 26
 
     static func requiresMigrationOrRepair(_ connection: SQLiteConnection) throws -> Bool {
         let version = try connection.scalarInt("PRAGMA user_version") ?? 0
@@ -111,6 +111,9 @@ enum StoreMigrations {
             }
             if version < 25 {
                 try connection.executeScript(schemaVersion25)
+            }
+            if version < 26 {
+                try connection.executeScript(schemaVersion26)
             }
             guard try connection.row("PRAGMA foreign_key_check") == nil else {
                 throw StoreError.unavailable(
@@ -740,6 +743,12 @@ enum StoreMigrations {
             "removal_id", "historical_project_id", "ticket_id", "id", "target_version",
             "fact_data", "source_data", "source_availability", "outcome", "observed_at",
             "recorded_at", "attachment_evidence_id", "supersedes_observation_id", "append_revision",
+        ]),
+        (26, "workspace_search_preferences", [
+            "singleton_id", "payload_version", "payload_data", "updated_at",
+        ]),
+        (26, "workspace_saved_queries", [
+            "id", "name", "payload_version", "payload_data", "created_at", "updated_at",
         ]),
     ]
 
@@ -3090,5 +3099,23 @@ enum StoreMigrations {
     \(immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_targets", action: "delete"));
     \(immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "update"));
     \(immutableRetainedTrigger(table: "retained_ticket_delivery_evidence_observations", action: "delete"));
+    """
+
+    private static let schemaVersion26 = """
+    CREATE TABLE workspace_search_preferences (
+        singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
+        payload_version INTEGER NOT NULL CHECK (payload_version > 0),
+        payload_data BLOB NOT NULL CHECK (length(payload_data) > 0),
+        updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE workspace_saved_queries (
+        id TEXT PRIMARY KEY NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 128),
+        name TEXT NOT NULL CHECK (length(CAST(name AS BLOB)) BETWEEN 1 AND 128),
+        payload_version INTEGER NOT NULL CHECK (payload_version > 0),
+        payload_data BLOB NOT NULL CHECK (length(payload_data) > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
     """
 }

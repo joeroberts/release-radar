@@ -76,6 +76,10 @@
 | rr-phase6c-evidence-wide | [docs/delivery/evidence/2026-09-10-phase6c-evidence-wide.png](evidence/2026-09-10-phase6c-evidence-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase6c-evidence | [docs/delivery/evidence/2026-09-10-phase6c-evidence.md](evidence/2026-09-10-phase6c-evidence.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase6d-adoption | [docs/delivery/evidence/2026-09-10-phase6d-adoption.md](evidence/2026-09-10-phase6d-adoption.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6e-help | [docs/delivery/evidence/2026-09-10-phase6e-help.png](evidence/2026-09-10-phase6e-help.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6e-search-compact | [docs/delivery/evidence/2026-09-10-phase6e-search-compact.png](evidence/2026-09-10-phase6e-search-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6e-search-wide | [docs/delivery/evidence/2026-09-10-phase6e-search-wide.png](evidence/2026-09-10-phase6e-search-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-2026-09-10-phase6e-search | [docs/delivery/evidence/2026-09-10-phase6e-search.md](evidence/2026-09-10-phase6e-search.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |

@@ -21,7 +21,9 @@ authority and dispatches no command.
 
 ## Dependencies and implementation choices
 
-Consume reviewed 6A–6D identities and contracts. Follow the
+Consume reviewed 6A–6D identities and contracts. The reviewed 6D endpoint is
+`1d69858f98f55af1ef504f4a43df1c601db879b9` on `codex/phase6d-reviewed`; it also
+includes merged PR #45 and its required Goals corrections. Follow the
 [whole-product plan](../../plans/2026-09-06-full-product-architecture-and-delivery-plan.md),
 [ADR-001](../../../architecture/ADR-001-release-radar-boundaries.md),
 [ADR-005](../../../architecture/ADR-005-ticket-task-work-plans.md),
