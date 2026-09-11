@@ -127,7 +127,7 @@ struct DocumentationCatalogContext {
         }
     }
     func managedSnapshot(target: DocumentationTarget? = nil) throws -> RepositoryDocumentSnapshot {
-        guard mode == .managedV2 else { throw DocumentationOperationError.guidanceUnavailable }
+        guard mode.isManaged else { throw DocumentationOperationError.guidanceUnavailable }
         guard let snapshot else { throw DocumentationOperationError.catalogInvalid }
         if let target {
             guard target.repositoryID == snapshot.catalog.repositoryID.lowercased(), target.catalogVersion == snapshot.version,

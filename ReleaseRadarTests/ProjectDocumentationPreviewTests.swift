@@ -5,7 +5,7 @@ import XCTest
 
 final class ProjectDocumentationPreviewTests: XCTestCase {
     func testCentralContractNamesOnlyCanonicalApplicationPaths() {
-        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 2)
+        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 3)
         XCTAssertEqual(RepositoryDocumentContract.rekonSeedVersion, 1)
         XCTAssertEqual([
             RepositoryDocumentContract.guidancePath,
@@ -20,7 +20,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
             RepositoryDocumentContract.planCollectionPath,
             RepositoryDocumentContract.archiveCollectionPath
         ], ["AGENTS.md", "docs/catalog.json", "docs/README.md", "docs/delivery/progress.md", "docs/delivery/dashboard-status.json", "docs/delivery/task-briefs", "docs/delivery/handoffs", "docs/delivery/reviews", "docs/delivery/evidence", "docs/delivery/plans", "docs/delivery/archive"])
-        XCTAssertEqual(RepositoryDocumentContract.guidanceStartMarker, "<!-- release-radar-guidance:v2:start -->")
+        XCTAssertEqual(RepositoryDocumentContract.guidanceStartMarker, "<!-- release-radar-guidance:v3:start -->")
         XCTAssertEqual(RepositoryDocumentContract.guidanceEndMarker, "<!-- release-radar-guidance:end -->")
         XCTAssertEqual(RepositoryDocumentContract.handoffEvidenceIDPrefix, "release-radar-handoff:v1:")
     }
@@ -29,7 +29,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         let root = try fixture()
         try FileManager.default.removeItem(at: root.appendingPathComponent("docs/catalog.json"))
         for audited in [false, true] {
-            let guidance: ProjectGuidanceState = .outdated(installed: 1, current: 2)
+            let guidance: ProjectGuidanceState = .outdated(installed: 1, current: 3)
             let state = ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: audited)
             XCTAssertEqual(state, .legacy(guidance))
             XCTAssertEqual(ProjectGuidancePresentation(documentationState: state), ProjectGuidancePresentation(state: guidance))
@@ -43,7 +43,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         for audited in [false, true] {
             let state = ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: audited)
             XCTAssertEqual(state, .stagedCatalog(hasAuditedHandoff: audited, preview: .valid(version: 1, digest: snapshot.digest)))
-            XCTAssertEqual(state.guidanceState, .outdated(installed: 1, current: 2))
+            XCTAssertEqual(state.guidanceState, .outdated(installed: 1, current: 3))
             let presentation = ProjectGuidancePresentation(documentationState: state)
             XCTAssertEqual(presentation.status, "Release Radar catalog staged · v1")
             XCTAssertTrue(presentation.detail.contains("read-only"))
@@ -79,8 +79,8 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
             }
             XCTAssertTrue(audited)
             XCTAssertEqual(error.code, expected)
-            XCTAssertEqual(state.guidanceState, .outdated(installed: 1, current: 2))
-            XCTAssertEqual(ProjectGuidanceInspection.inspect(rootURL: root, hasAuditedHandoff: true), .outdated(installed: 1, current: 2))
+            XCTAssertEqual(state.guidanceState, .outdated(installed: 1, current: 3))
+            XCTAssertEqual(ProjectGuidanceInspection.inspect(rootURL: root, hasAuditedHandoff: true), .outdated(installed: 1, current: 3))
             let presentation = ProjectGuidancePresentation(documentationState: state)
             XCTAssertEqual(presentation.status, "Release Radar staged catalog needs repair")
             XCTAssertTrue(presentation.detail.contains("retry"))
@@ -117,9 +117,9 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
             let preview = try await onboarding.inspect(folder: root)
             XCTAssertEqual(preview.recognizedArtifactPreview, expectedImport)
             XCTAssertEqual(try importer.preview(root), expectedImport)
-            XCTAssertEqual(preview.projectGuidanceState, .outdated(installed: 1, current: 2))
+            XCTAssertEqual(preview.projectGuidanceState, .outdated(installed: 1, current: 3))
             if catalog == nil {
-                XCTAssertEqual(preview.documentationState, .legacy(.outdated(installed: 1, current: 2)))
+                XCTAssertEqual(preview.documentationState, .legacy(.outdated(installed: 1, current: 3)))
             } else if catalog == validCatalog {
                 XCTAssertEqual(preview.documentationState, .stagedCatalog(hasAuditedHandoff: false, preview: .valid(version: 1, digest: snapshot.digest)))
             } else {
@@ -145,7 +145,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         try FileManager.default.createDirectory(at: plans, withIntermediateDirectories: true)
         try Data("Arbitrary historical content".utf8).write(to: plans.appendingPathComponent("delivery-ledger.md"))
         XCTAssertEqual(try importer.preview(root), before)
-        XCTAssertEqual(ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: true), .legacy(.outdated(installed: 1, current: 2)))
+        XCTAssertEqual(ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: true), .legacy(.outdated(installed: 1, current: 3)))
     }
 
     func testAuthorizedSavedProjectObservationPreservesAuditedHandoffAndEvidence() async throws {
@@ -161,7 +161,7 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
         let before = try await storeCounts(store)
         let observation = await onboarding.observeProjectGuidanceContext(projectID: projectID)
         XCTAssertEqual(observation.projectRoot, root)
-        XCTAssertEqual(observation.state, .outdated(installed: 1, current: 2))
+        XCTAssertEqual(observation.state, .outdated(installed: 1, current: 3))
         guard case .stagedCatalog(hasAuditedHandoff: true, preview: .valid) = observation.documentationState else {
             return XCTFail("Saved authorization must expose the staged catalog with its audited handoff")
         }
@@ -175,7 +175,8 @@ final class ProjectDocumentationPreviewTests: XCTestCase {
     }
 
     private func fixture() throws -> URL {
-        let parent = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-M2C-\(UUID().uuidString)", isDirectory: true).resolvingSymlinksInPath()
+        let parent = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+            .appendingPathComponent("ReleaseRadar-M2C-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: parent) }
         let root = parent.appendingPathComponent("repository", isDirectory: true)

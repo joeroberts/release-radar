@@ -314,3 +314,22 @@ new task execution or definition changes. Successor tasks use new identities and
 Active/Pending state; inherited evidence is provenance and supplies no completion
 credit. An approved successor proposal preserves original acceptance/history and
 does not stop external execution.
+
+## Phase 6D generic adoption amendment — 2026-09-10
+
+Generic adoption does not introduce another task model or mutation path. A
+complete typed inventory supplies the exact plan absence or revision and retains
+all task identities, including superseded history. One owner-visible
+reconciliation classifies each scoped non-Accepted ticket as atomic, non-atomic,
+already planned or blocked, and names every proposed addition, permitted
+definition revision and supersession while showing unchanged rows. Atomic tickets
+may continue to have no plan.
+
+Approved changes use `reviseTicketTaskPlan` and `completeTicketTask` with the
+existing optimistic revisions, lifecycle guards, atomic audit and durable receipt
+semantics. New plans start at revision 1 with Active/Pending rows. Omission is not
+deletion or supersession, completing all tasks moves no ticket, and evidence or
+delivery artifacts never imply completion. Evidence-backed prior completion is a
+separate explicit owner decision after a current Phase 6C applicability read.
+Exact replay is the only recovery for an uncertain request; reconstructing a
+similar request is a different command against a newly reconciled baseline.
