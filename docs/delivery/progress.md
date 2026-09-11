@@ -88,33 +88,32 @@ before fresh Sol High writer `01a08d97-f771-7de2-9384-e58d69a9178f` was dispatch
 from that baseline. It owns source/tests/affected docs; root owns this ledger and
 catalog/index metadata. Ceiling Astra High, no subagents. Actual requested model
 and effort were set at dispatch; runtime settings are not independently exposed.
-Writer candidate `0cd0a193e81d46264f1730ca0c5356504595898c` is integrated.
-It used bounded Astra High escalation for compact-native fixture diagnosis;
-4/4 adoption acceptance, focused compatibility and final guarded native 1/1
-passed. Root directly verified the visible compact Tasks/Help, stopped CUA before
-completion and read back the final result; host exit is confirmed. Writer is
-active again for the three bounded review corrections under the original Sol High
-profile, with the sole isolated test reservation. The
-[canonical evidence](evidence/2026-09-10-phase6d-adoption.md) and four images are
-catalogued. Independent Astra High reviewer `01a08dd9-47dd-7ea0-b208-810fe7514e32`
-reviewed the actual candidate and native images. Three Required P2 corrections
-remain: separate catalog/guidance version labels, explicit pre-implementation
-Planning/Delivery task classification and approved-catalog guidance, and durable
-reconciliation/envelope/receipt/ledger recording. The same writer now owns the product writer slot and is verifying the bounded corrections. No other blocking findings;
-correction review returns to the same independent reviewer.
+Phase 6D is complete locally. Initial candidate
+`0cd0a193e81d46264f1730ca0c5356504595898c` and correction
+`4f3a78ac8fba2d63401f1801f970282d1091f3f0` are integrated at
+`1f4f5ed45cdf0e04b2e4bec7251c0081a5c9fbcd`. Direct evidence includes 4/4 adoption
+acceptance, focused guidance/package compatibility, final guarded native 1/1,
+and 9/9 affected correction tests. Root verified the compact Tasks/Help in the
+exact isolated host, stopped CUA before completion and confirmed host exit.
+The [canonical evidence](evidence/2026-09-10-phase6d-adoption.md) and four images
+are catalogued. Independent Astra High reviewer
+`01a08dd9-47dd-7ea0-b208-810fe7514e32` approved all three bounded corrections:
+separate catalog/guidance version labels, pre-implementation approved-catalog
+instructions and durable reconciliation/replay recording. No Required findings
+remain. Writer and reviewer are quiescent; all reservations are released.
 
 Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra High)
 is complete and archived with no blocking owner choice. Its bounded search identity,
 SQLite-backed saved preference, recovery and shared Help recommendations are
 preserved in the [6E brief](task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md).
-No 6E writer is released before reviewed 6D integration.
+Reviewed 6D integration is complete; 6E is eligible for its authorized writer dispatch.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
-workspace search/saved views and contextual Help. Current source slice is
-6D generic task adoption under its committed brief; 6E follows its reviewed contracts.
+workspace search/saved views and contextual Help. Next source slice is
+6E workspace search, saved views and Help under its committed brief.
 Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
 Publication state:
 
