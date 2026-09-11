@@ -554,3 +554,47 @@ collapsing at a width threshold. Observation availability is reported from the
 implemented source and never replaced by the mockup's aspirational freshness
 copy. These are recorded implementation differences, not new authority or
 future-source behavior.
+
+## Phase 6B workspace Delivery and Execution Goals — 2026-09-10
+
+Goals is a workspace-level, read-only destination with an explicit domain control:
+**Delivery** presents formal phase-owned outcomes, while **Execution** presents
+persisted Codex observations. Delivery detail keeps criteria, membership, the
+formal Delivery Goal state, phase lifecycle, carried-obligation coverage,
+structural readiness and explicit owner acceptance distinct; terminal outcomes,
+phase-placed work without a Delivery Goal and project-level work that is not yet
+placed remain discoverable. Execution
+detail identifies its exact thread/goal source, link state, observation time,
+freshness and availability. Completed and unlinked persisted observations remain
+useful without implying live visibility, formal acceptance or new attention.
+
+Project and domain-specific state filters narrow the workspace list without
+hiding source availability. Associated work opens the existing all-phase Phase
+Board with an explicit typed Delivery Goal or Execution Goal filter, where **All
+goals** clears that filter; project-level unplaced work opens Project Plan instead.
+An Execution filter remains valid only while its exact persisted observation and
+ticket link remain current. Goals does not reproduce the mockup's embedded work
+lanes: the established board remains the only five-lane presentation and labels
+each ticket's stored phase. Back/Forward restores the Goals domain, project and
+state filters, selected exact goal, actual scroll position and keyboard/
+accessibility focus. A missing or replaced registration produces an accessible
+recovery explanation rather than selecting another project or goal.
+
+The project picker, Delivery rows, Execution rows and work-without-goal rows use
+stable identity cues only when their normally visible labels collide. Initial and
+filtered detail is rendered only for the exact selection recorded in the model and
+navigation history; it never substitutes a visually convenient first row for a
+missing selection. Documentation evidence refresh preserves current exact
+Execution observation/link identities and cannot invalidate an otherwise current
+board filter.
+
+The delivered surface retains the mockup's workspace route, cross-project list,
+source treatment and wide list/detail rhythm while adding the required formal
+Delivery domain. At compact widths, detail stacks beneath the list in one
+vertically scrollable surface rather than using a separate drill-in; this keeps
+the selected row, exact detail and associated-work action in the same recoverable
+context. At wide widths, detail remains aligned with the selected content while
+the list scrolls. The native captures for the [wide](../delivery/evidence/2026-09-10-phase6b-goals-wide.png),
+[compact](../delivery/evidence/2026-09-10-phase6b-goals-compact.png) and
+[registration recovery](../delivery/evidence/2026-09-10-phase6b-goals-registration-recovery.png)
+states record these responsive and recovery decisions.

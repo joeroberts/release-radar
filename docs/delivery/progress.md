@@ -27,14 +27,42 @@ Chief assessment/review `01a08bdb-88c4-7f72-a529-8bdb0fe72443` (Astra High),
 writer `01a08be3-987c-79a1-aa61-10520c4e8c97` (Sol High, bounded R4 escalation
 Astra High), and independent reviewer `01a08c37-7f64-73b1-affd-7ea5d571eaaf`
 (Astra High) are complete and archived. Their files/results are preserved and
-task-owned processes stopped. No native reservation is active.
+task-owned processes stopped. No 6A reservation remains active.
+
+Phase 6B Workspace Goals is complete locally. Independently approved source is
+`4c751867b8d6e4f42e1a5edaa3df19e66718c679`; documentation closeout
+`fb8a210f0afc604a5a5f7e7b377602a12353c2d2` is integrated. The
+[brief](task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md) and
+[canonical evidence](evidence/2026-09-10-phase6b-goals.md) preserve behavior,
+verification, screenshots and limitations. No Required review findings remain.
+Writer `01a08c9d-e36f-7a92-abba-69ade43678af` (Terra Medium, bounded escalation
+Sol High) and reviewer `01a08cde-c8c9-70d1-9ba1-1e4a566cb52b` (Sol High) are
+quiescent and archived. No native reservation remains.
+
+Verification combines 13/13 focused source tests, the independent full native
+journey passing 1/1 on `bcf1c3f`, and the final changed sidebar raw accessibility
+assertions passing on `4c751867`. The later full repeat expired at a controller
+checkpoint and did not finalize its result bundle; it is not a full-method pass.
+A CUA termination race launched plain fresh-product PID 14029; it was stopped
+immediately and exit verified. Incidental effects are not established. The
+canonical evidence records this limitation and retained scratch; no repair or
+cleanup is authorized. Unchanged properties retain their earlier terminal checks.
+
+Phase 6C architecture consultation `01a08d16-cc19-7143-b158-f175f88ef1a6`
+(Astra High, ceiling Astra High) is active read-only at `3eb5e47` to resolve the
+minimal revision-evidence contracts for the next writer. It owns no product,
+application state or ledger files. The task is consultation, not implementation
+review; a fresh independent reviewer will review the actual candidate.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
 workspace search/saved views and contextual Help. Next eligible source slice is
-6B Workspace Goals. Local source/tests/affected docs, scoped commits and necessary
+6C revision-bound delivery evidence; the writer awaits its committed bounded brief.
+The reviewed 6A publication endpoint is pinned locally at `codex/phase6a-reviewed`,
+`95cad491f096c83d1bfec9a5decb60b270f454a4`, and sent to the parent; no push occurred.
+Local source/tests/affected docs, scoped commits and necessary
 fresh bounded peer tasks are authorized. One product writer at a time; the
 orchestrator does not implement product or use subagents. Exact committed baselines
 and independent risk-appropriate review remain required.
@@ -82,3 +110,6 @@ listed in the canonical evidence, including writer roots and reviewer roots
 `/private/tmp/release-radar-phase6a-r4-review-01a08c37.MJLXYm`. Existing PNGs are
 accurately labelled initial native screenshots, not immediate after-Back captures.
 All scratch, including contaminated products/symlinks, remains; no cleanup occurred.
+
+An empty incidental scratch file `/tmp/phase6b-unused` was created during
+coordination and is temporary; it remains retained with no cleanup authorization.
