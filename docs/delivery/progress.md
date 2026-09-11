@@ -2,117 +2,84 @@
 
 ## Current outcome
 
-Phase 6 delivery follows the
-[controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md): History and
-attention, distinct Delivery and Execution Goals, revision-bound evidence,
-generic task adoption, workspace Search, saved views and shared Help.
-Phase 6A–6D are merged. Phase 6E's bounded PR corrections are directly verified
-and independently approved. PR #48 is published; authorized merge remains gated
-on a clear CodeRabbit disposition and required checks.
+Phase 6 is merged through the actual default branch at
+`5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`. The delivered scope follows the
+[Phase 6 controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md):
+History and attention, distinct Delivery and Execution Goals, revision-bound
+evidence, generic task adoption, workspace Search, saved views, and shared Help.
 
-| Slice | Current endpoint | Canonical evidence |
+| Slice | Merged endpoint | Canonical evidence |
 | --- | --- | --- |
 | 6A History | [PR #44](https://github.com/joeroberts/release-radar/pull/44), merge `4f917b0c76fa74ebf4e0f4615cbf7e7dd4ac8597` | [6A evidence](evidence/2026-09-10-phase6a-history.md) |
 | 6B Goals | [PR #45](https://github.com/joeroberts/release-radar/pull/45), merge `1e03d9ad8a36c7c7ec80525233df6a5e7c3217e8` | [6B evidence](evidence/2026-09-10-phase6b-goals.md) |
 | 6C Evidence | [PR #46](https://github.com/joeroberts/release-radar/pull/46), merge `fbb0ab5da811ad0db51f1441492aa8c5531e3ce3` | [6C evidence](evidence/2026-09-10-phase6c-evidence.md) |
 | 6D Adoption | [PR #47](https://github.com/joeroberts/release-radar/pull/47), merge `f0c9e42af4a5eb19d739979e7dfa33239a8e4a3a` | [6D evidence](evidence/2026-09-10-phase6d-adoption.md) |
-| 6E Search and Help | [PR #48](https://github.com/joeroberts/release-radar/pull/48), OPEN; final corrected source `97b90d2795b47b243ac580d0361ebb973972a307`, evidence `2b534ead2b31214fe54028fe980bfef45eb46ec6` | [6E evidence](evidence/2026-09-10-phase6e-search.md) |
+| 6E Search and Help | [PR #48](https://github.com/joeroberts/release-radar/pull/48), merge `5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a` | [6E evidence](evidence/2026-09-10-phase6e-search.md) |
 
-The owner explicitly waived the pending/rate-limited CodeRabbit wait for #46/#47
-and authorized their immediate merges using completed independent reviews and
-direct checks. They were merged in dependency order without bypass or force.
-This does not claim CodeRabbit approval. The actual default branch is
-`codex/release-radar-mvp`; 6E synchronized it without discarding local work.
-
-## Phase 6E completion and ownership
-
-The [6E brief](task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md)
-controls the delivered scope. Initial source `e7c92a25b61ce444b57b60a3a9e73159494b9398`
-and correction `8056ae7e4063f3171d0410f87453c0b4adc9cad1` precede the final source.
-Independent Astra High reviewer `01a08e2f-2be2-78d1-8bc0-ec72f17bc17d` approved
-all eight Required findings, including the final pending-search recovery boundary.
-
-Direct verification includes 10/10 correction regressions after an intended
-10-case RED, 8/8 affected integration cases, 1/1 focused native recovery controls,
-and the final recovery regression 1/1 after reproducing stale publication.
-Earlier all-domain, navigation, wide/compact and isolated live checks remain
-recorded in the canonical evidence. Root verified actual keyboard Search/save,
-exact-ticket Back/Forward, Help filtering and compact scrolling, then the corrected
-Help queries. Each CUA session stopped before host completion; its host exit was
-verified. No full-suite or installed-acceptance claim is made.
-
-Writer `01a08dee-d569-7350-af9f-0a89274103f0` used Sol High, with bounded Astra
-High escalation for authority/recovery and byte-identity corrections. The independent
-reviewer used Astra High. Requested settings were explicit; independent runtime
-settings readback was unavailable. No native/build reservation remains.
-The same independent reviewer approved final correction source
-`97b90d2795b47b243ac580d0361ebb973972a307` with no remaining Required findings.
-Root's final five affected navigation tests passed 5/5 and corrected compact live
-test passed 1/1. Exact registration labels were verified at recovery, rows, detail
-and actual Scope menu; menu evidence is accessibility text, not a screenshot.
-The writer and independent reviewer are stopped and archived; evidence-only
-closeout is committed as `2b534ead2b31214fe54028fe980bfef45eb46ec6`.
-Earlier bounded Phase 6 peers remain archived. Root owns all remaining launches.
-
-Orchestrator `01a08bd9-8fa1-74b3-bfa0-a5e657e70179` owns this ledger/catalog and
-local `codex/phase6-coordination`; parent is `01a07e75-b254-72a1-be2a-3e97ac23baeb`.
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
-preserves closed checkpoints, earlier peer identities and authorization history.
-[Historical Phase 5 record](archive/2026-09-10-phase5-shared-delivery-history.md) remains
-historical and non-authoritative. Current state is this ledger.
+preserves closed checkpoints, review history, and earlier task identities.
 
-## Authorization, limitations and next work
+## Owner acceptance candidate
 
-The local Phase 6 endpoint is reached. The owner now explicitly authorizes the
-Phase 6E push and PR, actual CodeRabbit review, bounded actionable corrections
-and merge once that actual review is clear and required checks pass. A pending,
-skipped or rate-limited check is not approval. Root remains the sole publication
-and integration owner. Installation, owner testing and later product work require
-separate explicit authorization.
-PR #48 is published from `codex/phase6e-reviewed` against the actual default.
-Actual CodeRabbit review `5174674187` completed on head `de87a66` at 03:21 UTC
-September 11. Five bounded corrections are resolved: post-navigation guards,
-distinguishable registration labels, nonempty payload constraints, non-null saved
-query IDs and the pending-search test's scheduling wait. The cleanup suggestion
-conflicts with required diagnostic retention; optional fixture-loop and broad SQL
-pushdown suggestions do not block. Independent review and the first live check
-identified same-route supersession and result selection clearing its projection.
-Both are corrected and verified in source `97b90d2`. Current direct checks
-and independent review are complete. CodeRabbit review `5174995891` on corrected
-head `dadeea2` completed with only the current-outcome wording finding; that wording
-is corrected here. Clear disposition remains the gate before authorized merge.
-Root stopped CUA before
-completion and confirmed final live host `82472` exited. No reservation remains.
+The prior `dist/ReleaseRadar-0.1.7-fb2ff3b.dmg` is stale: its embedded 0.1.7 app
+was signed September 7 and predates the September 8–11 delivery range. A fresh
+side-by-side owner candidate was built from the clean Phase 6 merged baseline:
 
-The writer disclosed that correction native attempts 02 and 03 used inherited
-environment commands contrary to the explicit clean-environment grants. They are
-failed diagnostics, with incidental effects unestablished. Launch privileges were
-withdrawn. Root directly ran the subsequent clean build and live check. See the
-canonical 6E evidence for the exact run distinctions; no repair or cleanup is authorized.
-No owner SQLite, credentials, catalog binding/acceptance, consumer adoption,
-notifications, external security scans, runtime/hooks, packaging or cleanup is
-included. Eligibility is not authorization; no next slice is dispatched.
+- DMG: `dist/ReleaseRadar-0.1.9-5e7b9b8.dmg`
+- Version/build: `0.1.9 (1)`
+- DMG SHA-256: `49aafc6ea49caff78539858ecabdca056188168d1a30580df34f647b23919454`
+- Main executable SHA-256: `721f86100acb5c7521f3f0275d9a9f82c13e2670f09cd5c7ab69db07928b537a`
+- CodeDirectory hash: `3239875711bc9957418f8c322f5d27cd904fafd7`
+- Signature: Apple Development team `2UA854NLX4`, Hardened Runtime enabled
 
-Application inventory/binding/acceptance/readback remain unauthorized. Last
-canonical inventory was `bindingMissing`, `isComplete:false` for
-`project-fffdc0e0b15b9b86`; local documentation checks do not establish managed
-application synchronization. The catalog transition remains unaccepted in the app.
+The DMG verifies, mounts read-only, contains `ReleaseRadar.app` and an
+`Applications` link, and its mounted app passes strict deep signature validation.
+The mounted executable and CodeResources are byte-identical to the verified build
+candidate. The build is not notarized, so it is an owner-only local acceptance
+artifact rather than a generally distributable release.
 
-Earlier 6A isolation violations and the 6B CUA termination-race launch remain
-recorded in their evidence/history. Incidental service/Keychain effects are not
-established; no repair or cleanup is authorized. Fresh later test hosts used
-sanitized unsigned isolated startup. The partial correction exact-rescope image
-is diagnostic only, and failed fixture runs are not represented as passing.
+The [owner acceptance guide](evidence/2026-09-11-phase6-owner-acceptance-guide.md)
+covers the complete merged range from Phase 3A/3B through Phase 6E, including
+install/migration preparation, a quick read-only pass, disposable-project mutation
+checks, optional destructive checks, and bug-report evidence.
 
-All durable deliverables are committed repository artifacts. Temporary builds,
-logs, xcresults, native stores, runfiles, markers and exported attachments remain
-under the per-slice roots listed in the evidence, including
-`/private/tmp/release-radar-phase6e-writer-01a08dee` and its root attachment exports.
-Temporary PR bodies `phase6a-pr.md` through `phase6e-pr.md` and
-`phase6e-review-response.md` remain under
-`/tmp/release-radar-phase6-publication/`; `/tmp/phase6b-unused` also remains.
-Diagnostic outputs remain retained; no manual cleanup was performed. An automatic
-native-fixture teardown was found during PR review and removed from the focused
-fixture because its SQLite store could still be open. Earlier fixture lifecycle
-is not a claim that every ephemeral test file was retained. Any further cleanup
-requires explicit authorization.
+Packaging verification is green, but product acceptance is not. A focused
+Phase 4–6 contract run executed 197 tests: 192 passed and 5 failed. Three failures
+reproduced individually. One is a material planning-policy regression: canonically
+equivalent but byte-distinct Delivery Goal IDs are both reported incomplete during
+proposal finalization and successor transfers, contrary to the established
+byte-exact identity contract. Two are stale migration fixtures that lower a
+schema-26 store's version without removing newer evidence tables. The remaining
+two are no-follow harness failures caused by XCTest resolving its temporary root
+through the macOS `/var` symlink. Signed plugin lifecycle transport tests passed
+14 of 14; the signed agent-bridge aggregate remains non-green because of stale
+tool-count/schema expectations, isolated-broker setup requirements, and one
+callback that reaches the newly enforced plan-incomplete behavior.
+
+## Authorization, limitations, and next work
+
+The current authorized endpoint is a local owner-acceptance branch, verified DMG,
+manual acceptance guide, repository records, and a scoped local commit. No push,
+PR, merge, installation, app launch, owner SQLite access, external publication, or
+cleanup is authorized for this acceptance task.
+
+Application inventory, catalog binding/acceptance, and managed readback remain
+unauthorized. The last recorded inventory was `bindingMissing`, `isComplete:false`
+for `project-fffdc0e0b15b9b86`; local documentation checks do not establish managed
+application synchronization. Owner acceptance has not yet been performed, and the
+0.1.9 candidate must not be recorded as accepted while the byte-exact identity
+regression remains unresolved. It may be used for bounded manual diagnosis after
+the backup precautions in the guide.
+
+Phase 7 planning is independently approved at
+`a0f22d965395248be6ec5928d2932d3a7ce5166d`, but Phase 7 implementation is not
+authorized and remains paused. The next eligible engineering action is an
+explicitly authorized bounded correction of the byte-exact planning regression
+and stale automated test fixtures/expectations, followed by focused retesting and
+a rebuilt candidate. Owner manual diagnosis may proceed in parallel, but normal
+upgrade/acceptance should wait. Phase 7 requires separate explicit authorization.
+
+The release staging bundle and repository `DerivedData` remain temporary build
+outputs. Earlier per-slice temporary diagnostics listed in the historical Phase 6
+record also remain. No cleanup was performed; any cleanup requires explicit owner
+authorization.

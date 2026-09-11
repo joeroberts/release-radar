@@ -6117,6 +6117,21 @@
       }
     },
     {
+      "artifactID": "rr-2026-09-11-phase6-owner-acceptance-guide",
+      "path": "docs/delivery/evidence/2026-09-11-phase6-owner-acceptance-guide.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-phase6e-search-wide",
       "path": "docs/delivery/evidence/2026-09-10-phase6e-search-wide.png",
       "kind": "verificationEvidence",
