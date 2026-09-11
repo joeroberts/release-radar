@@ -7,7 +7,7 @@ Phase 6 local source delivery is complete under the
 attention, distinct Delivery and Execution Goals, revision-bound evidence,
 generic task adoption, workspace Search, saved views and shared Help.
 All Required independent-review findings are resolved. Phase 6A–6D are merged;
-Phase 6E is complete locally and awaits separate publication authorization.
+Phase 6E is complete locally and owner-authorized for publication and conditional merge.
 
 | Slice | Current endpoint | Canonical evidence |
 | --- | --- | --- |
@@ -56,8 +56,12 @@ historical and non-authoritative. Current state is this ledger.
 
 ## Authorization, limitations and next work
 
-The local Phase 6 endpoint is reached. Phase 6E push/PR/merge, installation,
-owner testing and later product work require separate explicit authorization.
+The local Phase 6 endpoint is reached. The owner now explicitly authorizes the
+Phase 6E push and PR, actual CodeRabbit review, bounded actionable corrections
+and merge once that actual review is clear and required checks pass. A pending,
+skipped or rate-limited check is not approval. Root remains the sole publication
+and integration owner. Installation, owner testing and later product work require
+separate explicit authorization.
 No owner SQLite, credentials, catalog binding/acceptance, consumer adoption,
 notifications, external security scans, runtime/hooks, packaging or cleanup is
 included. Eligibility is not authorization; no next slice is dispatched.
