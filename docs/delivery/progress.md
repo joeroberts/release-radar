@@ -2,12 +2,12 @@
 
 ## Current outcome
 
-Phase 6 local source delivery is complete under the
+Phase 6 delivery follows the
 [controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md): History and
 attention, distinct Delivery and Execution Goals, revision-bound evidence,
 generic task adoption, workspace Search, saved views and shared Help.
-All Required independent-review findings are resolved. Phase 6A–6D are merged;
-Phase 6E is complete locally and owner-authorized for publication and conditional merge.
+Phase 6A–6D are merged. Phase 6E is published and undergoing bounded PR corrections
+under owner authorization for publication and conditional merge.
 
 | Slice | Current endpoint | Canonical evidence |
 | --- | --- | --- |
@@ -46,7 +46,9 @@ reviewer used Astra High. Requested settings were explicit; independent runtime
 settings readback was unavailable. No native/build reservation remains.
 The writer has resumed only for required PR #48 feedback at Sol High; the same
 independent reviewer remains archived until the correction delta is ready.
-Their completed local results are preserved. Earlier bounded Phase 6 peers remain archived.
+Their completed local results are preserved. The same reviewer has resumed for
+correction candidate `08e04f562d41fa761ab5150d43c48ef9602d336d`; earlier bounded
+Phase 6 peers remain archived. Root owns all remaining build and native launches.
 
 Orchestrator `01a08bd9-8fa1-74b3-bfa0-a5e657e70179` owns this ledger/catalog and
 local `codex/phase6-coordination`; parent is `01a07e75-b254-72a1-be2a-3e97ac23baeb`.
@@ -71,6 +73,20 @@ query IDs and the pending-search test's scheduling wait. The cleanup suggestion
 conflicts with required diagnostic retention; optional fixture-loop and broad SQL
 pushdown suggestions do not block. No merge is claimed; corrected source requires
 affected checks, the same independent review and clear CodeRabbit disposition.
+Candidate `08e04f5` passes the schema/loading checks and four affected navigation
+checks, but independent review found a remaining same-route supersession case.
+Root's clean live check also reproduced result selection clearing its projection,
+blocking detail inspection. Both are bounded active corrections; no final approval
+or native pass is claimed. Recovery and result-row registration labels were
+visibly readable in the compact shell; the actual Scope menu exposed distinct IDs
+through accessibility. Live host `81409` exited after root stopped CUA and completed
+the handshake. No build/native reservation remains at this checkpoint.
+
+The writer disclosed that correction native attempts 02 and 03 used inherited
+environment commands contrary to the explicit clean-environment grants. They are
+failed diagnostics, with incidental effects unestablished. Launch privileges were
+withdrawn. Root directly ran the subsequent clean build and live check. See the
+canonical 6E evidence for the exact run distinctions; no repair or cleanup is authorized.
 No owner SQLite, credentials, catalog binding/acceptance, consumer adoption,
 notifications, external security scans, runtime/hooks, packaging or cleanup is
 included. Eligibility is not authorization; no next slice is dispatched.
