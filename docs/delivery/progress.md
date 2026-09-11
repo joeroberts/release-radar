@@ -100,7 +100,9 @@ are catalogued. Independent Astra High reviewer
 `01a08dd9-47dd-7ea0-b208-810fe7514e32` approved all three bounded corrections:
 separate catalog/guidance version labels, pre-implementation approved-catalog
 instructions and durable reconciliation/replay recording. No Required findings
-remain. Writer and reviewer are quiescent; all reservations are released.
+remain. Writer and reviewer are quiescent and archived; all reservations are released.
+Reviewed local endpoint is `1d69858f98f55af1ef504f4a43df1c601db879b9` on
+`codex/phase6d-reviewed`.
 
 Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra High)
 is complete and archived with no blocking owner choice. Its bounded search identity,
