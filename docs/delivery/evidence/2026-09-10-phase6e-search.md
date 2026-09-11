@@ -136,7 +136,7 @@ language. Compact Search stacks detail beneath the exact selected row without
 horizontal clipping, and compact Help keeps cards and real actions readable in
 the vertical scroll. No approved mockup was replaced.
 
-## CodeRabbit correction candidate — native check pending
+## CodeRabbit correction candidate
 
 The correction candidate prevents superseded or failed Search navigation from
 publishing delivery-goal filters, viewed phases or ticket selection, and defers
@@ -163,14 +163,20 @@ Focused test-first evidence retained under the temporary diagnostic root is:
   `results-coderabbit-green-02.xcresult` passed all three superseded-navigation
   regressions plus the existing late-project-navigation regression 4/4.
   `git diff --check` also passes for the candidate.
+- After independent review exposed the same-destination variant and the live
+  journey exposed row-selection invalidation, root-controlled
+  `results-coderabbit-final-green-01.xcresult` passed the three corrected
+  same-destination regressions, the existing late-navigation regression and the
+  exact Search selection/same-value-text regression 5/5 with no failures or skips.
 
 The pre-existing `results-review-native-01.xcresult` path caused the first
 requested correction-native command to stop before test execution, so it is not
 new correction evidence. The fresh `results-coderabbit-native-01.xcresult` and
 `results-coderabbit-native-02.xcresult` each passed both recovery-button native
 identifier/text checks for `same-name-registration-a` and
-`same-name-registration-b`, then failed before capture when unrelated
-`SidebarView` launch work invalidated the fixture's later direct Search run.
+`same-name-registration-b`, then failed before capture at the fixture's later
+Search-projection unwrap. The cause of those two diagnostic failures was not
+established; a launch-invalidation hypothesis did not survive the second run.
 `results-coderabbit-native-03.xcresult` tried direct Search-view hosting but
 failed before Search because its native accessibility subtree did not expose an
 off-viewport recovery child. None of those three runs produced the requested
@@ -182,14 +188,10 @@ not accepted sanitized verification. No secret values were inspected. The
 earlier correction RED/GREEN runs and NATIVE01 used the established clean
 allowlist.
 
-The remaining native acceptance is explicitly pending. The bounded replacement
-reuses the established tokenized live journey in the actual 760-point app shell:
-inspect both recovery labels, choose all authorized projects, run the existing
-project-only same-name query, inspect both result labels and selected detail,
-then inspect both scope-menu labels. It will capture
+The bounded native replacement reused the established tokenized live journey in
+the actual 760-point app shell. It captured
 `phase6e-search-same-name-recovery-compact` before the pause and
-`phase6e-search-same-name-compact` after the verified journey. No label-
-readability claim is made until that inspection completes.
+`phase6e-search-same-name-compact` after the verified journey.
 
 The first clean build-for-testing attempt,
 `results-coderabbit-native-live-build-01.xcresult`, failed at compilation after
@@ -213,16 +215,33 @@ both rows before detail could be inspected. A same-value text-field write during
 the focus transition is the current source-path hypothesis, not a proven runtime
 cause; the model does unconditionally treat such a write as a new query. The
 follow-up candidate makes same-value Search text updates idempotent and adds a
-focused projection/selection preservation assertion. Detail-label native acceptance
-therefore remains pending a corrected build and run.
+focused projection/selection preservation assertion.
 
 Independent review of `08e04f5` also found that a route-only post-navigation guard
 could not distinguish a newer navigation to the same phase board or project plan.
 The follow-up candidate records the exact expected request generation and accepts
 post-navigation Search mutations only when that same request committed. The three
 focused regressions now supersede the older Search action with the same destination
-and preserve the newer filter, viewed phase and selected ticket. Root-owned direct
-execution of those corrected selectors is pending.
+and preserve the newer filter, viewed phase and selected ticket.
+
+The root-controlled corrected LIVE02 journey used the exact clean allowlist and
+the copied current-product runfile for candidate `97b90d2`. After the ready marker
+identified PID 82472 and the exact tokenized window, CUA confirmed both stale-
+scope recovery labels, chose all authorized projects and ran the existing project-
+only query. Both full wrapped result labels remained visible after selecting the
+first and then the second exact native row; selected detail updated respectively
+to `same-name-registration-a` and `same-name-registration-b` and was complete and
+readable after normal scrolling. The Scope menu exposed both exact full IDs through
+its actual native menu items. That menu result is AX-only because no menu-open
+screenshot was captured; its label uses the same reviewed `projectLabel` source as
+the other three presentation sites. The final screenshot visibly retained the two
+distinct wrapped row labels and the second registration's detail at compact width.
+
+CUA was stopped before the exact completion token was written. The host then
+asserted the two current registration identities and a selected result;
+`results-coderabbit-native-live-02.xcresult` passed 1/1 with no failures or skips,
+and PID 82472 was absent after exit. The result bundle contains both named compact
+attachments. No UI call occurred after host exit.
 
 ## Boundaries and retained outputs
 
@@ -243,6 +262,10 @@ For the pre-CodeRabbit Phase 6E outcome, independent Astra High reviewer
 11. All eight findings from that review were resolved. Its final source was
 `d1445dc033fca9056782c493ebd04184d58fbc67`, following correction
 `8056ae7e4063f3171d0410f87453c0b4adc9cad1` and initial candidate
-`e7c92a25b61ce444b57b60a3a9e73159494b9398`. Independent review and native
-acceptance of the subsequent CodeRabbit correction candidate remain pending;
-publication, installation and owner application-state acceptance are separate.
+`e7c92a25b61ce444b57b60a3a9e73159494b9398`. The independent Astra High reviewer
+then final-approved CodeRabbit correction source
+`97b90d2795b47b243ac580d0361ebb973972a307` after reading the 5/5 final direct
+result, the 1/1 corrected live result and both compact attachments; no Required
+finding remains. Four-site project-label acceptance is closed using the shared
+label source, native recovery/result/detail observations and actual menu AX.
+Publication, installation and owner application-state acceptance are separate.
