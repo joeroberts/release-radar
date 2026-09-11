@@ -197,11 +197,32 @@ an overbroad test-only `let` cleanup changed an older fixture's intentionally
 mutable native-window binding. That declaration was restored without production
 changes. The root-controlled replacement
 `results-coderabbit-native-live-build-02.xcresult` then completed the exact clean
-allowlisted, unsigned, offline arm64 build-for-testing successfully. The copied
+allowlisted, unsigned, offline arm64 build-for-testing of candidate `08e04f5`
+successfully. The copied
 format-2 runfile `phase6e-coderabbit-native-live-01.xctestrun` points only to that
 fresh product, resolves its test-root, host, bundle, dependent-product and
 profiling paths, and adds only native-session token
 `phase6e-coderabbit-same-name-01`. Root retains execution ownership.
+
+The root-controlled live journey on `08e04f5` visually confirmed that both
+same-name recovery actions, both result rows and both scope-menu choices displayed
+their full unique registration IDs readably at the 760-point compact width. The
+scope menu was inspected through its native accessibility items, but no menu-open
+screenshot was captured. Selecting either exact result row reproducibly cleared
+both rows before detail could be inspected. A same-value text-field write during
+the focus transition is the current source-path hypothesis, not a proven runtime
+cause; the model does unconditionally treat such a write as a new query. The
+follow-up candidate makes same-value Search text updates idempotent and adds a
+focused projection/selection preservation assertion. Detail-label native acceptance
+therefore remains pending a corrected build and run.
+
+Independent review of `08e04f5` also found that a route-only post-navigation guard
+could not distinguish a newer navigation to the same phase board or project plan.
+The follow-up candidate records the exact expected request generation and accepts
+post-navigation Search mutations only when that same request committed. The three
+focused regressions now supersede the older Search action with the same destination
+and preserve the newer filter, viewed phase and selected ticket. Root-owned direct
+execution of those corrected selectors is pending.
 
 ## Boundaries and retained outputs
 
