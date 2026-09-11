@@ -115,6 +115,12 @@ Search, saved views and Help; root retains ledger/catalog/index ownership.
 The profile addresses cross-component identity, persistence and recovery;
 ceiling Astra High, no subagents, never Ultra. Actual requested settings were
 set at dispatch; independent runtime settings readback is unavailable.
+The writer synchronized merged default `f0c9e42af4a5eb19d739979e7dfa33239a8e4a3a`
+through ordinary merge `a8c23789d7477638c34eade33c76028c2bd8d448`, preserving
+its uncommitted work without conflicts. Initial core search acceptance passed
+1/1 with zero failures/skips, directly read back from the isolated result bundle.
+Saved-query recovery, navigation, Help, native verification and independent
+review remain in progress; this is not Phase 6E completion.
 
 ## Authorization and next eligible work
 
