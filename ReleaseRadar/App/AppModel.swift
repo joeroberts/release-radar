@@ -351,13 +351,13 @@ final class AppModel {
             guard generation == navigationGeneration else { return }
             documentationObserver.invalidate(projectID: projectID)
         }
-        if let destinationProjectID = resolvedRoute.projectID,
-           destinationProjectID != previousProjectID {
-            selectedTicketID = TicketID(rawValue: "")
-        }
         if let projectID = resolvedRoute.projectID {
             _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
             guard generation == navigationGeneration else { return }
+        }
+        if let destinationProjectID = resolvedRoute.projectID,
+           destinationProjectID != previousProjectID {
+            selectedTicketID = TicketID(rawValue: "")
         }
         selection = resolvedRoute
         guard generation == navigationGeneration else { return }
@@ -1463,6 +1463,7 @@ final class AppModel {
                 Data($0.goalID.rawValue.utf8) == Data(goalID.utf8)
             }) == true else { return searchDestinationUnavailable("Delivery Goal") }
             await navigate(to: .phaseBoard(projectID))
+            guard selection == .phaseBoard(projectID) else { return }
             viewPhase(projectID: projectID, phaseID: phaseID)
             setBoardFilter(.goal(.init(rawValue: goalID)), projectID: projectID, phaseID: phaseID)
         case let .executionGoal(projectID, _, threadID, goalID):
@@ -1487,10 +1488,12 @@ final class AppModel {
         case let .ticket(projectID, _, ticketID, phaseID):
             if let phaseID, dashboard?.board(for: projectID, phaseID: phaseID)?.detail(for: ticketID) != nil {
                 await navigate(to: .phaseBoard(projectID))
+                guard selection == .phaseBoard(projectID) else { return }
                 viewPhase(projectID: projectID, phaseID: phaseID)
                 selectTicket(ticketID)
             } else if dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil {
                 await navigate(to: .projectPlan(projectID))
+                guard selection == .projectPlan(projectID) else { return }
                 selectTicket(ticketID)
             } else {
                 searchDestinationUnavailable("ticket")

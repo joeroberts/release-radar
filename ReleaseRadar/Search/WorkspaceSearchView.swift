@@ -108,7 +108,7 @@ struct WorkspaceSearchView: View {
             Divider()
             ForEach(model.availableWorkspaceSearchProjects, id: \.self) { project in
                 Toggle(
-                    "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active")",
+                    projectLabel(project),
                     isOn: Binding(
                         get: { model.workspaceSearchIncludes(project) },
                         set: { model.setWorkspaceSearchProject(project, enabled: $0) }
@@ -216,7 +216,7 @@ struct WorkspaceSearchView: View {
                         .buttonStyle(RekonSecondaryButtonStyle())
                         .accessibilityIdentifier("workspace-search-scope-all-recovery")
                     ForEach(model.availableWorkspaceSearchProjects, id: \.self) { project in
-                        Button("Use \(project.name) only · \(project.lifecycle == .archived ? "Archived" : "Active")") {
+                        Button("Use \(projectLabel(project)) only") {
                             model.setWorkspaceSearchProject(project, enabled: true)
                         }
                         .buttonStyle(RekonSecondaryButtonStyle())
@@ -281,7 +281,11 @@ struct WorkspaceSearchView: View {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(result.domain.title.uppercased()).font(RekonTypography.metadata).foregroundStyle(RekonTheme.accent)
                         Text(result.title).font(RekonTypography.compactTitle).lineLimit(2)
-                        Text("\(result.project.name) · \(result.detail)")
+                        Text(projectLabel(result.project))
+                            .font(RekonTypography.secondaryBody)
+                            .foregroundStyle(RekonTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(result.detail)
                             .font(RekonTypography.secondaryBody)
                             .foregroundStyle(RekonTheme.secondaryText)
                             .lineLimit(2)
@@ -310,8 +314,10 @@ struct WorkspaceSearchView: View {
                 Text(selected.domain.title.uppercased()).font(RekonTypography.metadata).foregroundStyle(RekonTheme.accent)
                 Text(selected.title).font(RekonTypography.screenTitle)
                 Text(selected.detail).font(RekonTypography.body)
-                Text("Project: \(selected.project.name) · \(selected.project.lifecycle == .archived ? "Archived" : "Active")")
-                    .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                Text("Project: \(projectLabel(selected.project))")
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
                 if selected.isRetired { Text("Retired record").foregroundStyle(RekonTheme.warning) }
                 Button("Open exact record") { Task { await model.openWorkspaceSearchResult(selected) } }
                     .buttonStyle(RekonPrimaryButtonStyle())
@@ -332,6 +338,10 @@ struct WorkspaceSearchView: View {
         case .allAuthorized: "All authorized projects"
         case let .registrations(registrations): "\(registrations.count) selected project\(registrations.count == 1 ? "" : "s")"
         }
+    }
+
+    private func projectLabel(_ project: WorkspaceSearchProjectIdentity) -> String {
+        "\(project.name) · \(project.lifecycle == .archived ? "Archived" : "Active") · Registration \(project.registrationID)"
     }
 
     private func applyRequestedFocus() {

@@ -25,8 +25,9 @@ accessible navigation actions.
 
 ## Direct verification
 
-All builds and tests used `ReleaseRadar.xcodeproj`, scheme `ReleaseRadar`, a
-sanitized environment, unsigned arm64 serial execution and the retained offline
+Except for the two explicitly identified native diagnostics below, builds and
+tests used `ReleaseRadar.xcodeproj`, scheme `ReleaseRadar`, a clean allowlisted
+environment, unsigned arm64 serial execution and the retained offline
 SourcePackages cache pinned to RekonDesignSystem revision
 `6d1fb9d341850ee1d13ba9391fada072534eb684`.
 
@@ -135,19 +136,92 @@ language. Compact Search stacks detail beneath the exact selected row without
 horizontal clipping, and compact Help keeps cards and real actions readable in
 the vertical scroll. No approved mockup was replaced.
 
+## CodeRabbit correction candidate — native check pending
+
+The correction candidate prevents superseded or failed Search navigation from
+publishing delivery-goal filters, viewed phases or ticket selection, and defers
+cross-project ticket clearing until the destination navigation commits. Search
+now presents a shared project label containing lifecycle and the full stable
+registration ID in scope choices, recovery choices, result rows and selected
+detail. Fresh schema 26 rejects zero-byte Search payload blobs and requires a
+non-null saved-query ID while preserving nonempty opaque future-version bytes.
+The pending-Search regression test now waits for the observable loading state
+with a bounded clock instead of assuming one scheduler yield.
+
+Focused test-first evidence retained under the temporary diagnostic root is:
+
+- `results-coderabbit-red-01.xcresult` established the delivery-goal and phase-
+  ticket stale-publication failures; its plan case was stopped after a faulty
+  fixture failed to release its gate. `results-coderabbit-red-04.xcresult`
+  subsequently established the plan-ticket stale-publication failure 1/1.
+- `results-coderabbit-red-03.xcresult` established the three intended fresh-
+  schema constraint failures; fixture cleanup was then limited to deleting the
+  invalid rows between assertions. `results-coderabbit-green-01.xcresult`
+  passed the deterministic loading-state case, delivery-goal case and schema
+  case, while its two ticket cases exposed premature selected-ticket clearing.
+- After moving that clearing to the successful commit boundary,
+  `results-coderabbit-green-02.xcresult` passed all three superseded-navigation
+  regressions plus the existing late-project-navigation regression 4/4.
+  `git diff --check` also passes for the candidate.
+
+The pre-existing `results-review-native-01.xcresult` path caused the first
+requested correction-native command to stop before test execution, so it is not
+new correction evidence. The fresh `results-coderabbit-native-01.xcresult` and
+`results-coderabbit-native-02.xcresult` each passed both recovery-button native
+identifier/text checks for `same-name-registration-a` and
+`same-name-registration-b`, then failed before capture when unrelated
+`SidebarView` launch work invalidated the fixture's later direct Search run.
+`results-coderabbit-native-03.xcresult` tried direct Search-view hosting but
+failed before Search because its native accessibility subtree did not expose an
+off-viewport recovery child. None of those three runs produced the requested
+compact screenshot, and none is claimed as a passing whole fixture.
+The NATIVE02 and NATIVE03 commands mistakenly inherited the process environment
+while removing selected credential and session variable names instead of using
+the authorized `env -i` allowlist. They remain failure diagnostics only and are
+not accepted sanitized verification. No secret values were inspected. The
+earlier correction RED/GREEN runs and NATIVE01 used the established clean
+allowlist.
+
+The remaining native acceptance is explicitly pending. The bounded replacement
+reuses the established tokenized live journey in the actual 760-point app shell:
+inspect both recovery labels, choose all authorized projects, run the existing
+project-only same-name query, inspect both result labels and selected detail,
+then inspect both scope-menu labels. It will capture
+`phase6e-search-same-name-recovery-compact` before the pause and
+`phase6e-search-same-name-compact` after the verified journey. No label-
+readability claim is made until that inspection completes.
+
+The first clean build-for-testing attempt,
+`results-coderabbit-native-live-build-01.xcresult`, failed at compilation after
+an overbroad test-only `let` cleanup changed an older fixture's intentionally
+mutable native-window binding. That declaration was restored without production
+changes. The root-controlled replacement
+`results-coderabbit-native-live-build-02.xcresult` then completed the exact clean
+allowlisted, unsigned, offline arm64 build-for-testing successfully. The copied
+format-2 runfile `phase6e-coderabbit-native-live-01.xctestrun` points only to that
+fresh product, resolves its test-root, host, bundle, dependent-product and
+profiling paths, and adds only native-session token
+`phase6e-coderabbit-same-name-01`. Root retains execution ownership.
+
 ## Boundaries and retained outputs
 
-No owner application store, owner repository content, credentials, provider,
-notification, network, installation, catalog acceptance, push, pull request or
-merge was used. Build products, result bundles, logs, exported automated
+No owner application store or repository content was intentionally accessed or
+mutated, and no credential was requested, retrieved or inspected. Because the
+two identified `env -u` diagnostics inherited an environment outside the
+authorized allowlist, incidental service or credential effects from those two
+failed launches are unestablished rather than claimed absent. No provider or
+notification mutation, installation, catalog acceptance, push, pull request or
+merge was performed. Build products, result bundles, logs, exported automated
 attachments, the copied xctestrun, native fixture stores and marker files remain
 temporary diagnostics under
 `/private/tmp/release-radar-phase6e-writer-01a08dee`. They are not controlling
 artifacts. No temporary output was deleted.
 
-Independent Astra High reviewer `01a08e2f-2be2-78d1-8bc0-ec72f17bc17d`
-approved the corrected outcome on September 11. All eight Required findings are
-resolved. Final source is `d1445dc033fca9056782c493ebd04184d58fbc67`, following
-correction `8056ae7e4063f3171d0410f87453c0b4adc9cad1` and initial candidate
-`e7c92a25b61ce444b57b60a3a9e73159494b9398`. This is local source completion;
+For the pre-CodeRabbit Phase 6E outcome, independent Astra High reviewer
+`01a08e2f-2be2-78d1-8bc0-ec72f17bc17d` approved the corrected source on September
+11. All eight findings from that review were resolved. Its final source was
+`d1445dc033fca9056782c493ebd04184d58fbc67`, following correction
+`8056ae7e4063f3171d0410f87453c0b4adc9cad1` and initial candidate
+`e7c92a25b61ce444b57b60a3a9e73159494b9398`. Independent review and native
+acceptance of the subsequent CodeRabbit correction candidate remain pending;
 publication, installation and owner application-state acceptance are separate.

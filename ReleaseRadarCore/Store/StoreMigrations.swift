@@ -3105,15 +3105,15 @@ enum StoreMigrations {
     CREATE TABLE workspace_search_preferences (
         singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
         payload_version INTEGER NOT NULL CHECK (payload_version > 0),
-        payload_data BLOB NOT NULL,
+        payload_data BLOB NOT NULL CHECK (length(payload_data) > 0),
         updated_at TEXT NOT NULL
     );
 
     CREATE TABLE workspace_saved_queries (
-        id TEXT PRIMARY KEY CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 128),
+        id TEXT PRIMARY KEY NOT NULL CHECK (length(CAST(id AS BLOB)) BETWEEN 1 AND 128),
         name TEXT NOT NULL CHECK (length(CAST(name AS BLOB)) BETWEEN 1 AND 128),
         payload_version INTEGER NOT NULL CHECK (payload_version > 0),
-        payload_data BLOB NOT NULL,
+        payload_data BLOB NOT NULL CHECK (length(payload_data) > 0),
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     );

@@ -275,7 +275,10 @@ final class NavigationHistoryTests: XCTestCase {
         await gate.waitUntilEntered()
         model.setWorkspaceSearchText("Old needle")
         let pending = Task { await model.runWorkspaceSearch() }
-        await Task.yield()
+        let loadingDeadline = ContinuousClock.now + .seconds(2)
+        while !model.workspaceSearchIsLoading, ContinuousClock.now < loadingDeadline {
+            await Task.yield()
+        }
         XCTAssertTrue(model.workspaceSearchIsLoading)
 
         model.setWorkspaceSearchText("New query")
@@ -684,7 +687,8 @@ final class NavigationHistoryTests: XCTestCase {
         await model.loadDashboard()
 
         let older = Task { await model.navigate(to: .phaseBoard(DashboardSampleData.projectID)) }
-        await loader.waitUntilBlockedNavigationEntered()
+        let enteredBlockedNavigation = await loader.waitUntilBlockedNavigationEntered()
+        XCTAssertTrue(enteredBlockedNavigation)
         await model.navigate(to: .settings)
         await loader.releaseBlockedNavigation()
         await older.value
@@ -694,6 +698,105 @@ final class NavigationHistoryTests: XCTestCase {
         XCTAssertFalse(model.navigationHistory.entries.dropLast().contains {
             $0.route == .phaseBoard(DashboardSampleData.projectID)
         })
+    }
+
+    @MainActor
+    func testSupersededDeliveryGoalSearchNavigationPreservesDestinationContext() async throws {
+        let fixture = try await makeSupersededSearchNavigationFixture()
+        let selectedTicketBefore = fixture.model.selectedTicketID
+        let result = WorkspaceSearchResult(
+            domain: .deliveryGoal,
+            project: fixture.project,
+            identity: .deliveryGoal(
+                projectID: fixture.project.projectID,
+                registrationID: fixture.project.registrationID,
+                phaseID: DashboardSampleData.phaseID,
+                goalID: "rr10-sample-refinement"
+            ),
+            title: "Post-MVP refinement",
+            detail: "Delivery goal"
+        )
+
+        let older = Task { await fixture.model.openWorkspaceSearchResult(result) }
+        let enteredBlockedNavigation = await fixture.loader.waitUntilBlockedNavigationEntered()
+        XCTAssertTrue(enteredBlockedNavigation)
+        await fixture.model.navigate(to: .settings)
+        await fixture.loader.releaseBlockedNavigation()
+        await older.value
+
+        XCTAssertEqual(fixture.model.selection, .settings)
+        XCTAssertEqual(fixture.model.selectedTicketID, selectedTicketBefore)
+        XCTAssertEqual(
+            fixture.model.boardFilter(
+                projectID: fixture.project.projectID,
+                phaseID: DashboardSampleData.phaseID
+            ),
+            .all
+        )
+    }
+
+    @MainActor
+    func testSupersededPhaseTicketSearchNavigationPreservesDestinationContext() async throws {
+        let fixture = try await makeSupersededSearchNavigationFixture()
+        let selectedTicketBefore = fixture.model.selectedTicketID
+        XCTAssertEqual(
+            fixture.model.viewedBoard(for: fixture.project.projectID)?.phaseID,
+            DashboardSampleData.phaseID
+        )
+        let result = WorkspaceSearchResult(
+            domain: .ticket,
+            project: fixture.project,
+            identity: .ticket(
+                projectID: fixture.project.projectID,
+                registrationID: fixture.project.registrationID,
+                ticketID: .init(rawValue: "SUPERSEDED-NAVIGATION"),
+                phaseID: .init(rawValue: "superseded-navigation-phase")
+            ),
+            title: "Superseded navigation target",
+            detail: "Ticket"
+        )
+
+        let older = Task { await fixture.model.openWorkspaceSearchResult(result) }
+        let enteredBlockedNavigation = await fixture.loader.waitUntilBlockedNavigationEntered()
+        XCTAssertTrue(enteredBlockedNavigation)
+        await fixture.model.navigate(to: .settings)
+        await fixture.loader.releaseBlockedNavigation()
+        await older.value
+
+        XCTAssertEqual(fixture.model.selection, .settings)
+        XCTAssertEqual(fixture.model.selectedTicketID, selectedTicketBefore)
+        XCTAssertEqual(
+            fixture.model.viewedBoard(for: fixture.project.projectID)?.phaseID,
+            DashboardSampleData.phaseID
+        )
+    }
+
+    @MainActor
+    func testSupersededPlanTicketSearchNavigationPreservesDestinationContext() async throws {
+        let fixture = try await makeSupersededSearchNavigationFixture()
+        let selectedTicketBefore = fixture.model.selectedTicketID
+        let result = WorkspaceSearchResult(
+            domain: .ticket,
+            project: fixture.project,
+            identity: .ticket(
+                projectID: fixture.project.projectID,
+                registrationID: fixture.project.registrationID,
+                ticketID: .init(rawValue: "SUPERSEDED-PLAN-NAVIGATION"),
+                phaseID: nil
+            ),
+            title: "SUPERSEDED-PLAN-NAVIGATION",
+            detail: "Ticket"
+        )
+
+        let older = Task { await fixture.model.openWorkspaceSearchResult(result) }
+        let enteredBlockedNavigation = await fixture.loader.waitUntilBlockedNavigationEntered()
+        XCTAssertTrue(enteredBlockedNavigation)
+        await fixture.model.navigate(to: .settings)
+        await fixture.loader.releaseBlockedNavigation()
+        await older.value
+
+        XCTAssertEqual(fixture.model.selection, .settings)
+        XCTAssertEqual(fixture.model.selectedTicketID, selectedTicketBefore)
     }
 
     @MainActor
@@ -1062,12 +1165,72 @@ final class NavigationHistoryTests: XCTestCase {
         await model.loadDashboard()
         return (model, firstProjectID)
     }
+
+    @MainActor
+    private func makeSupersededSearchNavigationFixture() async throws -> (
+        model: AppModel,
+        loader: BlockingNavigationObservationLoader,
+        project: WorkspaceSearchProjectIdentity
+    ) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SupersededSearchNavigation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed superseded Search navigation") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'superseded-search-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: DashboardSampleData.projectID,
+                phaseID: .init(rawValue: "superseded-navigation-phase"),
+                name: "Superseded navigation phase",
+                mode: .governed,
+                connection: connection
+            )
+            try DeliveryPlanningPolicy.upsertTicket(
+                projectID: DashboardSampleData.projectID,
+                ticketID: .init(rawValue: "SUPERSEDED-NAVIGATION"),
+                phaseID: .init(rawValue: "superseded-navigation-phase"),
+                outcome: "Must not replace newer navigation context",
+                lane: .backlog,
+                auditEventID: .init(rawValue: "superseded-navigation-audit"),
+                connection: connection
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES ('SUPERSEDED-PLAN-NAVIGATION', ?, NULL, 'Must not replace a newer plan route', NULL)",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+        let loader = BlockingNavigationObservationLoader(projectID: DashboardSampleData.projectID)
+        let observer = DocumentationObservationCoordinator { projectID in
+            await loader.load(projectID: projectID)
+        }
+        let model = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            seedSampleData: false,
+            documentationObserver: observer
+        )
+        await model.loadDashboard()
+        return (
+            model,
+            loader,
+            .init(
+                projectID: DashboardSampleData.projectID,
+                registrationID: "superseded-search-registration",
+                name: "Rekon Pursuit",
+                lifecycle: .active
+            )
+        )
+    }
 }
 
 private actor BlockingNavigationObservationLoader {
     private let projectID: ProjectID
     private var loadCount = 0
-    private var enteredContinuation: CheckedContinuation<Void, Never>?
+    private var blockedNavigationReleased = false
     private var releaseContinuation: CheckedContinuation<Void, Never>?
 
     init(projectID: ProjectID) {
@@ -1076,9 +1239,7 @@ private actor BlockingNavigationObservationLoader {
 
     func load(projectID: ProjectID) async -> DocumentationObservationPayload {
         loadCount += 1
-        if loadCount > 1 {
-            enteredContinuation?.resume()
-            enteredContinuation = nil
+        if loadCount > 1, !blockedNavigationReleased {
             await withCheckedContinuation { releaseContinuation = $0 }
         }
         return DocumentationObservationPayload(
@@ -1095,12 +1256,16 @@ private actor BlockingNavigationObservationLoader {
         )
     }
 
-    func waitUntilBlockedNavigationEntered() async {
-        guard loadCount < 2 else { return }
-        await withCheckedContinuation { enteredContinuation = $0 }
+    func waitUntilBlockedNavigationEntered() async -> Bool {
+        let deadline = ContinuousClock.now + .seconds(2)
+        while loadCount < 2, ContinuousClock.now < deadline {
+            await Task.yield()
+        }
+        return loadCount >= 2
     }
 
     func releaseBlockedNavigation() {
+        blockedNavigationReleased = true
         releaseContinuation?.resume()
         releaseContinuation = nil
     }

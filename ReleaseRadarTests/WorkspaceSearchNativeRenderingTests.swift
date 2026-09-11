@@ -11,7 +11,6 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SearchRecoveryNative-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
         let projectID = ProjectID(rawValue: "native-recovery-project")
         try await store.transact(actor: .init(id: "fixture"), reason: "Seed native Search recovery") { connection in
@@ -243,6 +242,94 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         let activePhaseAfter = try await activePhase(in: store, projectID: projectID)
         XCTAssertEqual(activePhaseAfter, activePhaseBefore)
         XCTAssertNil(model.dashboardError)
+    }
+
+    func testSameNameProjectRegistrationsRemainDistinctAcrossCompactSearchPresentation() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchRegistrationLabels-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let firstProjectID = ProjectID(rawValue: "same-name-project-a")
+        let secondProjectID = ProjectID(rawValue: "same-name-project-b")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed same-name Search projects") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Same name project'), (?, 'Same name project')",
+                bindings: [.text(firstProjectID.rawValue), .text(secondProjectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'same-name-registration-before', 1, 'complete'), (?, 'same-name-registration-b', 1, 'complete')",
+                bindings: [.text(firstProjectID.rawValue), .text(secondProjectID.rawValue)]
+            )
+        }
+        let repository = WorkspaceSearchPreferencesRepository(store: store)
+        let saved = try await repository.saveQuery(
+            id: "same-name-saved",
+            name: "Same-name recovery",
+            definition: .init(
+                text: "Same name project",
+                scope: .registrations([.init(
+                    projectID: firstProjectID,
+                    registrationID: "same-name-registration-before"
+                )]),
+                domains: [.project]
+            )
+        )
+        try await store.transact(actor: .init(id: "fixture"), reason: "Rotate same-name Search registration") { connection in
+            try connection.execute(
+                "UPDATE project_registrations SET registration_id = 'same-name-registration-a' WHERE project_id = ?",
+                bindings: [.text(firstProjectID.rawValue)]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+        await model.loadWorkspaceSavedQuery(.supported(saved))
+        XCTAssertTrue(model.workspaceSearchNeedsScopeReselection)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 760, height: 900),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        let token = ProcessInfo.processInfo.environment["RR_PHASE6E_NATIVE_SESSION"]
+        window.title = token.map { "Phase 6E same-name registration presentation — \($0)" }
+            ?? "Phase 6E same-name registration presentation"
+        defer { window.close() }
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.appearance = window.appearance
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        try await settle(hosting)
+
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        for registrationID in ["same-name-registration-a", "same-name-registration-b"] {
+            let recovery = try XCTUnwrap(accessibilityElement(
+                nativeWindow,
+                identifier: "workspace-search-scope-project-recovery-\(registrationID)"
+            ))
+            XCTAssertTrue(accessibilityText(recovery).contains(registrationID))
+        }
+        try capture(hosting, name: "phase6e-search-same-name-recovery-compact")
+        if let token {
+            print("PHASE6E SAME-NAME SEARCH READY: inspect both recovery labels, choose all authorized projects, run the existing project-only query, inspect both result labels and selected detail, then inspect both same-name scope-menu choices")
+            try await waitForExternalNativeJourney(token: token, window: window)
+            try await settle(hosting)
+            let results = try XCTUnwrap(model.workspaceSearchProjection?.results)
+            XCTAssertEqual(results.map(\.project.registrationID).sorted(), [
+                "same-name-registration-a",
+                "same-name-registration-b",
+            ])
+            XCTAssertNotNil(model.selectedWorkspaceSearchResultID)
+        }
+        try capture(hosting, name: "phase6e-search-same-name-compact")
     }
 
     private func activePhase(in store: DeliveryStore, projectID: ProjectID) async throws -> String? {
