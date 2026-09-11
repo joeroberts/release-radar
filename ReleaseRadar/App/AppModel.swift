@@ -648,10 +648,12 @@ final class AppModel {
             }
         }
         if case let .workspaceGoal(goalID)? = entry.focus {
-            focusIsAvailable = dashboard.map { dashboard in
-                dashboard.workspaceGoals.delivery.contains(where: { $0.id == goalID })
-                    || dashboard.workspaceGoals.execution.contains(where: { $0.id == goalID })
-            } ?? false
+            focusIsAvailable = switch workspaceGoalsDomain {
+            case .delivery:
+                filteredWorkspaceDeliveryGoals().contains(where: { $0.id == goalID })
+            case .execution:
+                filteredWorkspaceExecutionGoals().contains(where: { $0.id == goalID })
+            }
             if !focusIsAvailable,
                !recovery.contains(where: { $0.contains("exact Delivery Goal") || $0.contains("exact Execution Goal") }) {
                 recovery.append("The exact Goals focus is unavailable; no replacement goal was selected.")
@@ -973,6 +975,14 @@ final class AppModel {
     }
 
     private func clearEphemeralViewState() {
+        workspaceGoalsDomain = .delivery
+        workspaceGoalsProjectID = nil
+        workspaceGoalsDeliveryLifecycle = nil
+        workspaceGoalsExecutionStatus = nil
+        workspaceGoalsExecutionScope = .all
+        selectedWorkspaceDeliveryGoalID = nil
+        selectedWorkspaceExecutionGoalID = nil
+        workspaceGoalsViewportOffset = nil
         viewedPhaseIDs.removeAll()
         allPhaseBoardProjectIDs.removeAll()
         boardFilters.removeAll()

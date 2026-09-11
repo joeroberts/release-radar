@@ -434,7 +434,8 @@ struct DashboardProjection: Equatable, Sendable {
             for project in projects {
                 guard var board = allPhaseBoards[project.id] else { continue }
                 board.executionGoalLinks = workspaceGoals.execution.compactMap { goal in
-                    guard goal.project.id.rawValue.utf8.elementsEqual(project.id.rawValue.utf8) else { return nil }
+                    guard goal.project.id.rawValue.utf8.elementsEqual(project.id.rawValue.utf8),
+                          goal.link.phaseID != nil else { return nil }
                     return goal.boardFilter
                 }
                 allPhaseBoards[project.id] = board
