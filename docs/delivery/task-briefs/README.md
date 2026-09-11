@@ -705,7 +705,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase6-acceptance-corrections-brief-2026-09-11 | [docs/delivery/task-briefs/2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md](2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md) | document | controlling &#40;delivery.phase6-acceptance-corrections&#41; | active | none | none |
+| rr-phase6-acceptance-corrections-brief-2026-09-11 | [docs/delivery/task-briefs/2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md](2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

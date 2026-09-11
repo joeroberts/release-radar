@@ -74,3 +74,21 @@ cover the identity, migration, symlink and signed-service boundaries. Only Requi
 findings block. The endpoint is focused verification, a fresh DMG, updated canonical
 evidence, and scoped local commits. Push, PR, merge, installation and owner app or
 database state remain unauthorized.
+
+## Completion
+
+Completed on 2026-09-11 at correction source
+`acc740113d1e7e056b5e7f1b2e3a0e3e21f24c27`. The exact six focused regression
+tests passed with zero failures; the affected unsigned suites passed 114 of 114.
+After an initial signed Debug harness build omitted `get-task-allow` and stalled
+before loading XCTest, a normal signed Debug test host ran the service suites:
+Agent Bridge passed 16 of 16 and plugin lifecycle passed 14 of 14. BridgeAgent
+registration returned to absent and the pre-existing owner lifecycle helper kept
+the same process identity.
+
+Independent review of the exact correction commit reported no Required or Optional
+findings. Package commit `09caafe0108496297684089603aa04c0cfffe361`
+contains the verified `ReleaseRadar-0.1.9-acc7401.dmg`; the updated manual guide is
+committed separately. No push, PR, merge, installation, installed owner-app launch,
+owner SQLite access, or Phase 7 work occurred; XCTest launched only its isolated
+signed Debug host.

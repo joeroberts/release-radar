@@ -49,11 +49,13 @@ candidate:
   unsigned agent-bridge selection passed 11 of 13; its only two failures were the
   expected code-signing rejection when unsigned tests attempted to load a signed
   LaunchAgent.
-- A signed test bundle builds successfully, but the corrected signed service tests
-  have not yet run. They require explicit authorization to temporarily register
-  and unregister the test LaunchAgent services. The prior diagnostic baseline's
-  plugin lifecycle result was 14 of 14; that result is not attributed to this
-  rebuilt candidate.
+- The corrected signed Agent Bridge transport suite passes 16 of 16, including
+  test-owned registration, callback invalidation, ticket-task replay, unassigned
+  placement, current 37-tool schemas, and delivery-goal readiness. The BridgeAgent
+  was unregistered after the suite.
+- The rebuilt candidate's signed plugin lifecycle transport suite passes 14 of 14.
+  The pre-existing owner-managed lifecycle helper remained registered with the
+  same process identity after the suite.
 
 The exact correction commit received independent source review with no Required
 or Optional findings. The rebuilt Release bundle and every nested executable pass
@@ -61,9 +63,9 @@ strict signature, Hardened Runtime, and exact-entitlement verification. The DMG
 verifies, mounts read-only, and contains byte-identical executable and CodeResources
 copies of the staged app.
 
-Do not record this build as owner-accepted yet. The remaining automated acceptance
-gap is the authorized signed service run, followed by the manual owner checks in
-this guide. Phase 7 remains paused.
+The scoped automated correction acceptance is green. Do not record this build as
+owner-accepted until the manual owner checks in this guide are completed and the
+owner explicitly accepts it. Phase 7 remains paused.
 
 ## Time budget
 
@@ -427,6 +429,6 @@ boundary violation. Do not reset or repair live data; report the evidence first.
 Report each section as Pass, Fail, or Not exercised. A truthful empty, unavailable,
 stale, partial, or recovery state is a pass when its precondition is real and no
 identity is guessed. Passing checks do not themselves mark work Accepted, change a
-lane, complete a phase, or authorize Phase 7. A clean manual pass does not close
-the signed service-test gap recorded above and is not by itself authorization to
-accept or promote the build.
+lane, complete a phase, or authorize Phase 7. The automated corrections are green,
+but a clean manual pass is not by itself authorization to accept or promote the
+build.
