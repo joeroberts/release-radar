@@ -7,7 +7,8 @@ Phase 6 delivery follows the
 attention, distinct Delivery and Execution Goals, revision-bound evidence,
 generic task adoption, workspace Search, saved views and shared Help.
 Phase 6A–6D are merged. Phase 6E's bounded PR corrections are directly verified
-and independently approved, ready for the authorized corrected publication and review.
+and independently approved. PR #48 is published; authorized merge remains gated
+on a clear CodeRabbit disposition and required checks.
 
 | Slice | Current endpoint | Canonical evidence |
 | --- | --- | --- |
@@ -77,8 +78,10 @@ conflicts with required diagnostic retention; optional fixture-loop and broad SQ
 pushdown suggestions do not block. Independent review and the first live check
 identified same-route supersession and result selection clearing its projection.
 Both are corrected and verified in source `97b90d2`. Current direct checks
-and independent review are complete; corrected publication still requires actual
-clear CodeRabbit disposition before the authorized merge. Root stopped CUA before
+and independent review are complete. CodeRabbit review `5174995891` on corrected
+head `dadeea2` completed with only the current-outcome wording finding; that wording
+is corrected here. Clear disposition remains the gate before authorized merge.
+Root stopped CUA before
 completion and confirmed final live host `82472` exited. No reservation remains.
 
 The writer disclosed that correction native attempts 02 and 03 used inherited
