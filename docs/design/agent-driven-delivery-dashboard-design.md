@@ -634,3 +634,25 @@ captures record that hierarchy in the mounted application. At 760 points the
 compact Phase Board scroll exposes the stacked ticket inspector with its task row,
 Delivery evidence heading, Help control, target, expectation states and document
 observation readable without horizontal clipping. No approved mockup is replaced.
+
+## Phase 6D generic task adoption — 2026-09-10
+
+The existing Phase Board remains the native owner readback for adopted tasks. Its
+neutral card count still derives from active rows, while the selected ticket's
+Tasks card presents the complete titled rows and their completion state. Adoption
+adds a small contextual Help action inside that card; it does not add a proposal
+screen, inline task editor, progress fraction or automatic task action.
+
+Help explains the exact reconciliation and approval boundary, the atomic/non-
+atomic/already-planned/blocked classifications, the requirement for applicable
+Phase 6C evidence before an explicit prior completion, and exact-envelope replay
+after an uncertain result. The action is keyboard and accessibility reachable.
+No-plan and recoverable unavailable states remain in the same Tasks card.
+
+The delivered treatment follows the approved wide and compact Work Board's dark
+surface, bordered-card, compact-label and selected-ticket hierarchy. At wide and
+compact widths the existing board card, stacked inspector, Tasks rows and Help
+remain one coherent flow without changing the board's established responsive
+layout. Phase 6D captures record the mounted board/inspector and Help content;
+the approved Work Board mockups remain the visual reference rather than being
+replaced.

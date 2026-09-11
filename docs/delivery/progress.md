@@ -32,15 +32,20 @@ again. Reviewer observed the intended red result then 2/2 passing model tests on
 Evidence closeout `da52b47ada7ec3d1b5966adf956d48e5268ee00b` was pushed and
 PR #44 merged at `4f917b0c76fa74ebf4e0f4615cbf7e7dd4ac8597`.
 
-Phase 6B Workspace Goals is complete locally. Independently approved source is
+Phase 6B Workspace Goals is complete and merged in PR #45. Independently approved source is
 `4c751867b8d6e4f42e1a5edaa3df19e66718c679`; documentation closeout
 `fb8a210f0afc604a5a5f7e7b377602a12353c2d2` is integrated. The
 [brief](task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md) and
 [canonical evidence](evidence/2026-09-10-phase6b-goals.md) preserve behavior,
-verification, screenshots and limitations. No Required review findings remain.
+verification, screenshots and limitations. The subsequent four CodeRabbit Required corrections passed direct checks and the same independent review.
 Writer `01a08c9d-e36f-7a92-abba-69ade43678af` (Terra Medium, bounded escalation
 Sol High) and reviewer `01a08cde-c8c9-70d1-9ba1-1e4a566cb52b` (Sol High) are
-quiescent and archived. No native reservation remains.
+quiescent and archived again after completing the correction outcome.
+Correction source `b7be24065dec287b7cb0b00ea39413418eb54387`, evidence tip
+`d516a8b4c6c365001028d5a0113971697eff2ee2` and approval closeout
+`c7c36425dbee669bedbbb3f3ce328a91853d5d8c` are preserved and merged. Direct tests
+combine 17 passing cases with the corrected Settings fixture passing 1/1; all
+five new regression cases failed before the fixes. No Required findings remain.
 
 Verification combines 13/13 focused source tests, the independent full native
 journey passing 1/1 on `bcf1c3f`, and the final changed sidebar raw accessibility
@@ -67,20 +72,48 @@ reported no visual findings. Four Required applicability/provenance findings wer
 corrected with 17/17 affected tests passing. The same independent Astra High
 reviewer `01a08d84-9063-7af2-bfb6-bd4c23328d8b` approved that bounded delta with
 no remaining findings. Phase 6C is complete locally. Writer and reviewer are
-quiescent, their commits and evidence preserved, and their build/test reservation
-is released. Evidence and retained scratch are described in the
+quiescent and archived, their commits and evidence preserved, and their build/test
+reservation is released. Reviewed local endpoint is `codex/phase6c-reviewed`. Evidence and retained scratch are described in the
 [canonical record](evidence/2026-09-10-phase6c-evidence.md).
 
-Fresh read-only chief consultation `01a08d93-8aa5-7611-a33e-e8fdb960d52c`
-(Astra High) is assessing the existing 6D adoption contracts from the integrated
-6C candidate. Its recommendations will refine the bounded 6D brief before writer dispatch.
+Read-only chief consultation `01a08d93-8aa5-7611-a33e-e8fdb960d52c`
+(Astra High) completed its assessment with no blocking owner choice. Its
+recommendations are preserved in the
+[6D brief](task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md): complete
+scoped inventory, guidance-driven exact approval/replay, existing task commands
+and native readback, 6C applicability and compatible guidance v3. This is a
+consultation, not independent candidate review; the chief task is archived.
+The catalogued brief was committed at `0265a102ccf06b7507f279896399860b6e3a05e7`
+before fresh Sol High writer `01a08d97-f771-7de2-9384-e58d69a9178f` was dispatched
+from that baseline. It owns source/tests/affected docs; root owns this ledger and
+catalog/index metadata. Ceiling Astra High, no subagents. Actual requested model
+and effort were set at dispatch; runtime settings are not independently exposed.
+Phase 6D is complete locally. Initial candidate
+`0cd0a193e81d46264f1730ca0c5356504595898c` and correction
+`4f3a78ac8fba2d63401f1801f970282d1091f3f0` are integrated at
+`1f4f5ed45cdf0e04b2e4bec7251c0081a5c9fbcd`. Direct evidence includes 4/4 adoption
+acceptance, focused guidance/package compatibility, final guarded native 1/1,
+and 9/9 affected correction tests. Root verified the compact Tasks/Help in the
+exact isolated host, stopped CUA before completion and confirmed host exit.
+The [canonical evidence](evidence/2026-09-10-phase6d-adoption.md) and four images
+are catalogued. Independent Astra High reviewer
+`01a08dd9-47dd-7ea0-b208-810fe7514e32` approved all three bounded corrections:
+separate catalog/guidance version labels, pre-implementation approved-catalog
+instructions and durable reconciliation/replay recording. No Required findings
+remain. Writer and reviewer are quiescent; all reservations are released.
+
+Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra High)
+is complete and archived with no blocking owner choice. Its bounded search identity,
+SQLite-backed saved preference, recovery and shared Help recommendations are
+preserved in the [6E brief](task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md).
+Reviewed 6D integration is complete; 6E is eligible for its authorized writer dispatch.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
-workspace search/saved views and contextual Help. Next eligible source slice is
-6D generic task adoption after a committed bounded brief.
+workspace search/saved views and contextual Help. Next source slice is
+6E workspace search, saved views and Help under its committed brief.
 Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
 Publication state:
 
@@ -88,17 +121,21 @@ Publication state:
   MERGED, head `da52b47ada7ec3d1b5966adf956d48e5268ee00b`,
   base `codex/release-radar-mvp`, merge `4f917b0c76fa74ebf4e0f4615cbf7e7dd4ac8597`.
 - [PR #45](https://github.com/joeroberts/release-radar/pull/45):
-  `codex/phase6b-reviewed`, head `024a3b5d48517129e3309327ed9fed15cb3c6a38`,
-  OPEN, retargeted base `codex/release-radar-mvp`; follows merged #44.
+  MERGED at 00:42 UTC September 11, head
+  `c7c36425dbee669bedbbb3f3ce328a91853d5d8c`, base `codex/release-radar-mvp`,
+  merge `1e03d9ad8a36c7c7ec80525233df6a5e7c3217e8`; follows merged #44.
 
 No 6C implementation or coordination branch was pushed. PR #44's Required reset correction passed direct tests and independent review.
 The other four bot suggestions were assessed as non-blocking; event-time unknown
 provenance, existing failure recovery and direct migration checks are preserved.
-Root posted the owner-requested CodeRabbit review on #45 after retargeting.
-The bot [reported a review limit](https://github.com/joeroberts/release-radar/pull/45#issuecomment-5626551605)
-at 22:58 UTC; no actual review completed. Retry after approximately 23:58 UTC.
-Do not merge #45 before the requested actual review and disposition of any Required
-findings. Owner merge authorization persists; no new approval is needed.
+Root completed the owner-requested CodeRabbit review on #45 after #44 merged.
+Actual review `5173582848` completed at 00:12 UTC September 11. The four valid
+findings—Goals state reset, filtered focus recovery, missing-board execution
+links and same-focus viewport restoration—were corrected, directly tested and
+approved by the same independent reviewer. The SQL terminator report was absent
+from the actual source; the optional lane assertion was hardened. Root pushed
+the reviewed correction, merged #45 and verified the GitHub result, then integrated
+the merge locally. No 6C/6D implementation was included in publication.
 Local source/tests/affected docs, scoped commits and necessary
 fresh bounded peer tasks are authorized. One product writer at a time; the
 orchestrator does not implement product or use subagents. Exact committed baselines

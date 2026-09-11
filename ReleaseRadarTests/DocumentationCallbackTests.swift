@@ -58,7 +58,8 @@ final class DocumentationCallbackTests: XCTestCase {
         let tools = (response["result"] as! [String: Any])["tools"] as! [[String: Any]]
         let names = Set(tools.compactMap { $0["name"] as? String })
         let expected: Set<String> = [
-            "release_radar_inventory_evidence", "release_radar_ticket_references",
+            "release_radar_inventory_evidence", "release_radar_delivery_inventory",
+            "release_radar_ticket_references",
             "release_radar_recorded_impacts", "release_radar_plan_change_proposals",
             "release_radar_phase_lifecycles",
             "release_radar_save_plan_change_proposal", "release_radar_bind_documentation_repository",
@@ -70,10 +71,15 @@ final class DocumentationCallbackTests: XCTestCase {
         XCTAssertTrue(names.contains("release_radar_add_evidence"))
         XCTAssertTrue(names.contains("release_radar_revise_ticket_task_plan"))
         XCTAssertTrue(names.contains("release_radar_complete_ticket_task"))
-        XCTAssertEqual(names.count, 33)
+        XCTAssertEqual(names.count, 37)
         XCTAssertFalse(names.contains("release_radar_transition_phase_lifecycle"))
         let inventory = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_inventory_evidence" })
         XCTAssertEqual((inventory["inputSchema"] as? [String: Any])?["required"] as? [String], ["version", "projectRoot"])
+        let deliveryInventory = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_delivery_inventory" })
+        XCTAssertEqual(
+            (deliveryInventory["inputSchema"] as? [String: Any])?["required"] as? [String],
+            ["version", "projectRoot", "projectID", "rootID"]
+        )
         let upsert = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_upsert_ticket_reference" })
         XCTAssertEqual(
             (upsert["inputSchema"] as? [String: Any])?["required"] as? [String],

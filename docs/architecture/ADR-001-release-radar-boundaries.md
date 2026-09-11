@@ -362,3 +362,27 @@ including evidence recorded after an older backup when the recovery contract
 reconciles retained history, and rejects pre-recovery registrations. This local
 contract does not extend portable archive v1 or assign execution authority to
 repository prose, observers, agents or external providers.
+
+## Phase 6D generic task-adoption boundary — 2026-09-10
+
+The read-only agent surface exposes one bounded, project-scoped delivery
+inventory containing the exact registered root, all phases and lifecycle state,
+placed and unassigned tickets, retirement and Accepted restrictions, task-plan
+presence/revision, every active or superseded task row, and the derived active
+count. Capture and authorization are revalidated before the result is returned;
+an oversized, partial, stale-registration or unavailable read fails without
+presenting itself as complete and writes no delivery, audit or receipt state.
+
+Task adoption remains a guidance-driven use of the existing revisioned task
+commands. Owner approval applies to one exact reconciliation and does not give
+repository prose, tests, commits, evidence or an agent independent mutation
+authority. Exact command receipts remain the recovery mechanism: uncertain
+outcomes replay the original complete envelope, while a changed baseline requires
+a refreshed reconciliation. Phase 6C evidence can support an explicitly approved
+prior completion only when its exact ticket/task scope is currently applicable,
+available and successful; evidence never completes a task by itself.
+
+This amendment adds no task database, proposal engine, watcher or owner-state
+mutation. Adoption cannot change ticket lanes or outcomes, Delivery Goals, phase
+readiness, review or acceptance, and the existing Accepted, retired, Completed-
+phase and unassigned-execution guards continue to control the typed commands.

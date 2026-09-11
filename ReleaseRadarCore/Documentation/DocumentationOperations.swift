@@ -57,11 +57,77 @@ public struct AgentQueryEnvelope: Codable, Equatable, Sendable {
 }
 public enum AgentQuery: Codable, Equatable, Sendable {
     case inventoryEvidence(projectID: String?, rootID: String?)
+    case deliveryInventory(projectID: String, rootID: String)
     case ticketReferences(projectID: String, rootID: String, ticketID: String)
     case ticketDeliveryEvidence(projectID: String, rootID: String, ticketID: String)
     case recordedImpacts(projectID: String, rootID: String, repositoryID: String, artifactID: String)
     case planChangeProposals(projectID: String)
     case phaseLifecycles(projectID: String)
+}
+
+public enum TicketTaskAdoptionEligibility: String, Codable, Equatable, Sendable {
+    case eligible
+    case acceptedTicket = "accepted_ticket"
+    case retiredTicket = "retired_ticket"
+    case completedPhase = "completed_phase"
+    case unassignedTicket = "unassigned_ticket"
+}
+
+public struct DeliveryInventoryRegistration: Codable, Equatable, Sendable {
+    public let registrationID: String
+    public let requestGeneration: Int64
+}
+
+public struct DeliveryInventoryPhase: Codable, Equatable, Sendable {
+    public let phaseID: String
+    public let name: String
+    public let lifecycle: PhaseLifecycle
+    public let lifecycleRevision: Int64
+}
+
+public struct DeliveryInventoryTask: Codable, Equatable, Sendable {
+    public let taskID: String
+    public let label: String
+    public let title: String
+    public let sortOrder: Int
+    public let completion: TicketTaskCompletion
+    public let lifecycle: TicketTaskLifecycle
+    public let createdAt: String
+    public let updatedAt: String
+    public let completedAt: String?
+    public let supersededAt: String?
+}
+
+public struct DeliveryInventoryRetirement: Codable, Equatable, Sendable {
+    public let disposition: String
+    public let reason: String
+    public let lastPhaseID: String?
+    public let lastLane: TicketLane?
+    public let retiredAt: String
+}
+
+public struct DeliveryInventoryTicket: Codable, Equatable, Sendable {
+    public let ticketID: String
+    public let outcome: String
+    public let phaseID: String?
+    public let lane: TicketLane?
+    public let taskPlanRevision: Int64?
+    public let tasks: [DeliveryInventoryTask]
+    public let retirement: DeliveryInventoryRetirement?
+    public let definitionEligibility: TicketTaskAdoptionEligibility
+    public let completionEligibility: TicketTaskAdoptionEligibility
+}
+
+public struct DeliveryInventory: Codable, Equatable, Sendable {
+    public let projectID: String
+    public let projectName: String
+    public let rootID: String
+    public let rootPath: String
+    public let registration: DeliveryInventoryRegistration?
+    public let phases: [DeliveryInventoryPhase]
+    public let tickets: [DeliveryInventoryTicket]
+    public let activeTaskCount: Int
+    public let isComplete: Bool
 }
 
 public struct DocumentationBindingMetadata: Codable, Equatable, Sendable {
@@ -123,10 +189,11 @@ public struct EvidenceInventory: Codable, Equatable, Sendable {
     public let receipts: [PreservationFingerprint]
 }
 
-/// Managed v2 requires the exact shipped block; legacy classification remains compatible.
+/// Managed guidance requires an exact shipped block; legacy classification remains compatible.
 /// Unknown, duplicate and malformed managed declarations always fail closed.
 public enum RepositoryDocumentationMode: String, Codable, Sendable {
-    case legacy, managedV2, unavailable
+    case legacy, managedV2, managedV3, unavailable
+    var isManaged: Bool { self == .managedV2 || self == .managedV3 }
     public static func inspect(contents: String?) -> Self {
         guard let contents else { return .legacy }
         let lines = contents.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -140,7 +207,10 @@ public enum RepositoryDocumentationMode: String, Codable, Sendable {
         case "\(prefix)1\(suffix)": return .legacy
         case "\(prefix)2\(suffix)":
             let block = lines[markers[0]...markers[1]].joined(separator: "\n")
-            return block == RepositoryDocumentContract.managedGuidanceBlock ? .managedV2 : .unavailable
+            return block == RepositoryDocumentContract.managedGuidanceV2Block ? .managedV2 : .unavailable
+        case "\(prefix)3\(suffix)":
+            let block = lines[markers[0]...markers[1]].joined(separator: "\n")
+            return block == RepositoryDocumentContract.managedGuidanceBlock ? .managedV3 : .unavailable
         default: return .unavailable
         }
     }

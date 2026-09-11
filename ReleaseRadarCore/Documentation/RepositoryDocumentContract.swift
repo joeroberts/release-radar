@@ -6,7 +6,7 @@ public enum RepositoryDocumentContract {
     /// Versioned reader capability; catalog v1 and its canonical digest are unchanged.
     public static let discoveryExclusionVersion = 1
     public static let legacyGuidanceVersion = 1
-    public static let guidanceVersion = 2
+    public static let guidanceVersion = 3
     public static let rekonSeedVersion = 1
     public static let catalogPath = "docs/catalog.json"
     public static let rootIndexPath = "docs/README.md"
@@ -45,8 +45,8 @@ public enum RepositoryDocumentContract {
     \(guidanceEndMarker)
     """
 
-    public static let managedGuidanceBlock = """
-    \(guidanceStartMarker)
+    public static let managedGuidanceV2Block = """
+    \(guidanceStartPrefix)2\(guidanceStartSuffix)
     ## Release Radar tracking
 
     This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, or changing tracked delivery state, invoke the installed `release-radar` skill and follow it.
@@ -59,6 +59,27 @@ public enum RepositoryDocumentContract {
     - Release Radar is the only SQLite writer. Never edit that database or repair a managed evidence path directly. Use supported read-only inventory and typed, audited evidence operations with exact artifact IDs and request identities.
     - Managed operations require the exact authorized root and accepted repository ID, catalog version, and digest. Only explicit repository binding establishes a missing binding; only catalog acceptance advances an accepted snapshot. Treat a changed catalog as pending until Release Radar accepts its validated transition.
     - Run the repository documentation check and read back the resulting repository and application state before completion. Do not claim completion while catalog, indexes, lifecycle, authority, references, applicable checksums, evidence resolution, or application readback disagree. Preserve exact requests across uncertain outcomes.
+    - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state. Repository-local rules outside this block may narrow this contract but must not weaken or duplicate it.
+    \(guidanceEndMarker)
+    """
+
+    public static let managedGuidanceBlock = """
+    \(guidanceStartMarker)
+    ## Release Radar tracking
+
+    This repository is tracked by Release Radar. When initializing tracking, reporting delivery status, selecting the next eligible task, changing tracked delivery state, or adopting generic ticket tasks, invoke the installed `release-radar` skill and follow it.
+
+    - Read `\(catalogPath)` and begin documentation discovery at `\(rootIndexPath)`. Follow generated local indexes before broad search and load only task-relevant controlling artifacts.
+    - The catalog owns documentation identity, lifecycle, authority, and navigation. `\(progressPath)` remains the durable delivery source of truth; the catalog and indexes never authorize or infer ticket or phase state.
+    - Under owner authorization, update the catalog, collection/index metadata, active references, and applicable checksums in the same change as any durable add, move, rename, supersession, closeout, restoration, or deletion. Preserve stable artifact IDs and never reuse retired IDs.
+    - Keep only active operational detail in `\(progressPath)`; move closed detail to `\(archiveCollectionPath)/` and label it historical and non-authoritative. Place implementation plans in `\(planCollectionPath)/` and controlling task briefs in `\(taskBriefCollectionPath)/`.
+    - Add no new content under `docs/superpowers/` during transition and never recreate it after cutover.
+    - Release Radar is the only SQLite writer. Never edit that database or repair a managed evidence path directly. Use supported read-only inventory and typed, audited operations with exact project identity, request identity, expected revision, and task identity.
+    - Managed operations require the exact authorized root and accepted repository ID, catalog version, and digest. Only explicit repository binding establishes a missing binding; only catalog acceptance advances an accepted snapshot. Treat a changed catalog as pending until Release Radar accepts its validated transition.
+    - Before generic task adoption, require a complete `release_radar_delivery_inventory` result for the exact authorized project and root. Prepare one exact reconciliation for every scoped non-Accepted ticket, classifying it as atomic, non-atomic, already-planned, or blocked, with rationale, exact plan baseline, additions, definition revisions, supersessions, and unchanged rows. Owner approval must identify that exact reconciliation. General approval of code or a delivery task is not approval to mutate Release Radar state.
+    - Apply an approved reconciliation only through `release_radar_revise_ticket_task_plan` and `release_radar_complete_ticket_task`. Preserve the exact command envelope for replay after an uncertain outcome, chain subsequent operations from the returned `ticketTaskPlanRevision`, and stop for refreshed inventory and approval if the baseline changes. Omission never deletes a task; Accepted or retired tickets and completed phases are not mutable, and unassigned tickets may receive definitions but cannot complete tasks until placed.
+    - Prior completion is explicit only when an applicable Release Radar delivery-evidence target has an explicitly applicable, available, successful observation for the same ticket and task scope. A failed, stale, superseded, unavailable, unknown, or generic observation does not imply task completion. Keep uncertain work pending; runtime commands enforce normal authority, lifecycle, revision, and replay rules rather than conversational approval or evidence sufficiency.
+    - Run the repository documentation check and read back the resulting repository and application state before completion. Do not claim completion while catalog, indexes, lifecycle, authority, references, applicable checksums, evidence resolution, task history, or application readback disagree. Preserve exact requests across uncertain outcomes.
     - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state. Repository-local rules outside this block may narrow this contract but must not weaken or duplicate it.
     \(guidanceEndMarker)
     """

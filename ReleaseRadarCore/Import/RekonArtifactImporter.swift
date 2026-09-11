@@ -35,7 +35,7 @@ public struct RekonArtifactImporter: DeliveryArtifactImporter, Sendable {
             let reader = try RepositoryDocumentReader(rootURL: root, limits: .init(), afterRead: nil)
             let mode = try RepositoryDocumentationMode.read(reader)
             guard mode != .unavailable else { throw DocumentationOperationError.guidanceUnavailable }
-            documentationDigest = mode == .managedV2 ? try RepositoryDocumentValidator().validateCurrent(reader: reader).digest : nil
+            documentationDigest = mode.isManaged ? try RepositoryDocumentValidator().validateCurrent(reader: reader).digest : nil
             try reader.verifyStable()
         } catch { throw RekonImportError.documentation(DocumentationCatalogContext.map(error)) }
         let artifactURL = root.appendingPathComponent(RepositoryDocumentContract.rekonSeedPath).standardizedFileURL

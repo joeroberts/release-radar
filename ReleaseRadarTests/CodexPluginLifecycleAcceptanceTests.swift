@@ -47,13 +47,13 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.8")
+        XCTAssertEqual(package.version, "0.1.9")
         XCTAssertEqual(
             package.version,
             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         )
         XCTAssertEqual(package.relativeFiles, CodexPluginPackage.relativeFiles)
-        XCTAssertEqual(package.digest, "ecc221b2ca91ac8913e73555b6ed310bce63d7f1ac9462d05b025478173d5a40")
+        XCTAssertEqual(package.digest, "b01335654a5dedcf2055c9bfa3e074e478f75dd2b9e4171dd16c1f2a4427ef83")
     }
 
     func testBundledSkillDefinesOwnerAuthorizedAuditedRepositoryHandoff() throws {
@@ -65,7 +65,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         )
         let skill = try String(contentsOf: skillURL, encoding: .utf8)
         let fencedBlockStart = try XCTUnwrap(
-            skill.range(of: "```markdown\n<!-- release-radar-guidance:v2:start -->")
+            skill.range(of: "```markdown\n<!-- release-radar-guidance:v3:start -->")
         ).lowerBound
         let blockStart = skill.index(fencedBlockStart, offsetBy: "```markdown\n".count)
         let fencedBlockEnd = try XCTUnwrap(
@@ -88,7 +88,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("parent, child, or different folder"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("stop before writing any file or calling Release Radar"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("preserve every existing byte"))
-        XCTAssertTrue(skill.contains("release-radar-guidance:v2:start"))
+        XCTAssertTrue(skill.contains("release-radar-guidance:v3:start"))
         XCTAssertTrue(skill.contains("release-radar-guidance:end"))
         XCTAssertTrue(skill.contains("## Release Radar tracking"))
         XCTAssertTrue(skill.localizedCaseInsensitiveContains("append"))

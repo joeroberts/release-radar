@@ -368,3 +368,21 @@ stored observation, execute a check, contact an external provider, or mutate aud
 command-request, ticket, phase or acceptance state. A legacy observation without
 the required identity remains unknown rather than acquiring provenance from the
 current catalog.
+
+### 2026-09-10 guidance-v3 task-adoption amendment
+
+Managed guidance v3 adds the generic task-adoption workflow while leaving catalog
+schema v1, managed evidence identity and the `release-radar-handoff:v1:` audit
+identity unchanged. Exact shipped guidance v2 remains recognized as an outdated,
+narrowly upgradeable state. Exact v3 is current; modified, duplicated, malformed
+or newer managed declarations remain unavailable/recovery states and are never
+silently replaced.
+
+The packaged Release Radar skill uses the read-only complete delivery inventory,
+produces one exact owner-visible reconciliation, and then uses the existing task
+commands and receipts. It does not parse Markdown into runtime tasks or treat a
+catalog, ledger, implementation approval, commit, test or evidence record as
+approval to mutate task state. The product-owned onboarding and repair prompt can
+install the exact v3 block only through the existing explicit handoff workflow;
+this delivered source change does not upgrade owner repositories or installed
+plugins.

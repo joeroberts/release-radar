@@ -1806,6 +1806,30 @@ final class AppRouteTests: XCTestCase {
 
     @MainActor
     func testTaskPlanNativeBoardRendering() async throws {
+        let nativeSession: (id: String, ready: URL, complete: URL)?
+        if let sessionID = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6D_NATIVE_SESSION"] {
+            guard !sessionID.isEmpty,
+                  sessionID.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }),
+                  let markerRootPath = ProcessInfo.processInfo.environment["RELEASE_RADAR_PHASE6D_NATIVE_MARKER_ROOT"],
+                  markerRootPath.hasPrefix("/private/tmp/") else {
+                XCTFail("The Phase 6D native session requires a safe session ID and marker root.")
+                return
+            }
+            let markerRoot = URL(fileURLWithPath: markerRootPath, isDirectory: true).standardizedFileURL
+            let enable = markerRoot.appendingPathComponent("phase6d-native-\(sessionID)-enabled")
+            let ready = markerRoot.appendingPathComponent("phase6d-native-\(sessionID)-compact-ready")
+            let complete = markerRoot.appendingPathComponent("phase6d-native-\(sessionID)-compact-complete")
+            guard FileManager.default.fileExists(atPath: enable.path) else {
+                throw XCTSkip("The external controller must create the fresh Phase 6D enable marker.")
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: ready.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: complete.path))
+            try FileManager.default.removeItem(at: enable)
+            nativeSession = (sessionID, ready, complete)
+        } else {
+            nativeSession = nil
+        }
+
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-TaskUI-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -1867,6 +1891,76 @@ final class AppRouteTests: XCTestCase {
                 }
                 let board = try XCTUnwrap(model.dashboard?.board(for: projectID))
                 XCTAssertEqual(board.lane(.blocked)?.cards.first?.activeTaskCount, 16)
+                if !enhanced {
+                    let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+                    let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+                    let card = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "ticket-VD2-07c"))
+                    XCTAssertTrue(accessibilityText(card).contains("16 tasks"))
+                    XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "ticket-inspector"))
+                    XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "task-row-task-1"))
+                    if width == 760, let nativeSession {
+                        try Data().write(to: nativeSession.ready, options: .atomic)
+                        print(
+                            "PHASE6D ADOPTION COMPACT READY: pid \(ProcessInfo.processInfo.processIdentifier); "
+                                + "product \(Bundle.main.bundleURL.path); window \(window.title); "
+                                + "ready \(nativeSession.ready.path); complete \(nativeSession.complete.path). "
+                                + "Scroll until Tasks and Help are visibly readable without activating Help, "
+                                + "then write the complete marker."
+                        )
+                        for _ in 0..<900 where !FileManager.default.fileExists(atPath: nativeSession.complete.path) {
+                            try await Task.sleep(for: .milliseconds(200))
+                        }
+                        XCTAssertTrue(FileManager.default.fileExists(atPath: nativeSession.complete.path))
+                        hosting.layoutSubtreeIfNeeded()
+                    }
+                    if width == 760, case .none = nativeSession {
+                        try taskCapture(hosting, name: "phase6d-integrated-tasks-\(Int(width))")
+                        try taskCapture(hosting, name: "task5-loaded-\(Int(width))-standard")
+                        continue
+                    }
+                    let helpCandidate = await scrollToAccessibilityElement(
+                        nativeWindow,
+                        identifier: "task-adoption-help-button"
+                    )
+                    let help = try XCTUnwrap(helpCandidate)
+                    func accessibilityFrame(_ element: AXUIElement) throws -> CGRect {
+                        var positionValue: CFTypeRef?
+                        var sizeValue: CFTypeRef?
+                        XCTAssertEqual(AXUIElementCopyAttributeValue(
+                            element, kAXPositionAttribute as CFString, &positionValue
+                        ), .success)
+                        XCTAssertEqual(AXUIElementCopyAttributeValue(
+                            element, kAXSizeAttribute as CFString, &sizeValue
+                        ), .success)
+                        let position = try XCTUnwrap(positionValue)
+                        let size = try XCTUnwrap(sizeValue)
+                        var point = CGPoint.zero
+                        var dimensions = CGSize.zero
+                        XCTAssertTrue(AXValueGetValue(position as! AXValue, .cgPoint, &point))
+                        XCTAssertTrue(AXValueGetValue(size as! AXValue, .cgSize, &dimensions))
+                        return CGRect(origin: point, size: dimensions)
+                    }
+                    XCTAssertTrue(try accessibilityFrame(help).intersects(accessibilityFrame(nativeWindow)))
+                    XCTAssertEqual(AXUIElementPerformAction(help, kAXPressAction as CFString), .success)
+                    var helpText = ""
+                    for _ in 0..<20 {
+                        helpText = accessibilityText(application)
+                        if helpText.contains(TaskAdoptionHelpContent.title) { break }
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    XCTAssertTrue(helpText.contains(TaskAdoptionHelpContent.title))
+                    try taskCapture(hosting, name: "phase6d-integrated-tasks-\(Int(width))")
+                    let done = try XCTUnwrap(
+                        accessibilityElement(application, identifier: "task-adoption-help-done")
+                    )
+                    XCTAssertEqual(AXUIElementPerformAction(done, kAXPressAction as CFString), .success)
+                    for _ in 0..<20 {
+                        helpText = accessibilityText(application)
+                        if !helpText.contains(TaskAdoptionHelpContent.title) { break }
+                        try await Task.sleep(for: .milliseconds(100))
+                    }
+                    XCTAssertFalse(helpText.contains(TaskAdoptionHelpContent.title))
+                }
                 try taskCapture(hosting, name: "task5-loaded-\(Int(width))-\(enhanced ? "accessible" : "standard")")
             }
         }
@@ -2989,7 +3083,7 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(
             model.projectGuidanceState(for: attachmentRouteProjectID),
-            .outdated(installed: 0, current: 2)
+            .outdated(installed: 0, current: 3)
         )
         XCTAssertEqual(model.projectRoot(for: attachmentRouteProjectID), folder)
         XCTAssertEqual(try String(contentsOf: agentsURL, encoding: .utf8), outdated)
@@ -3000,7 +3094,7 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(
             model.projectGuidanceState(for: attachmentRouteProjectID),
-            .handoffIncomplete(version: 2)
+            .handoffIncomplete(version: 3)
         )
 
         let handoff = await AgentCommandDispatcher(
@@ -3028,7 +3122,7 @@ final class AppRouteTests: XCTestCase {
 
         await model.loadDashboard()
 
-        XCTAssertEqual(model.projectGuidanceState(for: attachmentRouteProjectID), .current(version: 2))
+        XCTAssertEqual(model.projectGuidanceState(for: attachmentRouteProjectID), .current(version: 3))
         XCTAssertEqual(try String(contentsOf: agentsURL, encoding: .utf8), current)
         XCTAssertEqual(bookmarks.accessStarts, bookmarks.accessStops)
     }

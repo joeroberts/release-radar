@@ -720,6 +720,38 @@
       "isLeaf": true,
       "firstRead": "rr-phase6c-evidence-brief-2026-09-10",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase6d-adoption",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6d-adoption",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 6D generic task adoption",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-phase6d-adoption-brief-2026-09-10",
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-10-phase6e-search",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6e-search",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Phase 6E workspace search, saved views and Help",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-phase6e-search-brief-2026-09-10",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -5950,6 +5982,113 @@
     {
       "artifactID": "rr-phase6c-evidence-compact",
       "path": "docs/delivery/evidence/2026-09-10-phase6c-evidence-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6d-adoption-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase6d-adoption",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      },
+      "authorityRole": "delivery.phase6d-adoption"
+    },
+    {
+      "artifactID": "rr-phase6e-search-brief-2026-09-10",
+      "path": "docs/delivery/task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "parentCollection": "delivery.task-briefs.2026-09-10-phase6e-search",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      },
+      "authorityRole": "delivery.phase6e-search"
+    },
+    {
+      "artifactID": "rr-2026-09-10-phase6d-adoption",
+      "path": "docs/delivery/evidence/2026-09-10-phase6d-adoption.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6d-adoption-help-compact",
+      "path": "docs/delivery/evidence/phase6d-adoption-help-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6d-adoption-help-wide",
+      "path": "docs/delivery/evidence/phase6d-adoption-help-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6d-adoption-tasks-compact",
+      "path": "docs/delivery/evidence/phase6d-adoption-tasks-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6d-adoption-tasks-wide",
+      "path": "docs/delivery/evidence/phase6d-adoption-tasks-wide.png",
       "kind": "verificationEvidence",
       "lifecycle": "completed",
       "authorityLevel": "nonAuthoritative",

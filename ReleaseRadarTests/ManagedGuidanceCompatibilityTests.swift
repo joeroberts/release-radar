@@ -15,27 +15,29 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
     }
 
     func testCurrentGuidanceBlockPathsAndStableHandoffIdentity() {
-        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 2)
-        XCTAssertEqual(RepositoryDocumentContract.managedGuidanceBlock, Self.v2)
+        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 3)
+        XCTAssertEqual(RepositoryDocumentContract.managedGuidanceV2Block, Self.v2)
         XCTAssertEqual(RepositoryDocumentContract.planCollectionPath, "docs/delivery/plans")
         XCTAssertEqual(RepositoryDocumentContract.handoffEvidenceIDPrefix, "release-radar-handoff:v1:")
-        XCTAssertEqual(ProjectGuidanceInspection.inspect(contents: Self.v2), .current(version: 2))
+        XCTAssertEqual(ProjectGuidanceInspection.inspect(contents: Self.v3), .current(version: 3))
     }
 
-    func testExactLegacyGuidanceIsUpgradeableAndModifiedOrFutureV2FailsClosed() {
-        XCTAssertEqual(ProjectGuidanceInspection.inspect(contents: Self.v1), .outdated(installed: 1, current: 2))
+    func testExactOlderGuidanceIsUpgradeableAndModifiedOrFutureGuidanceFailsClosed() {
+        XCTAssertEqual(ProjectGuidanceInspection.inspect(contents: Self.v1), .outdated(installed: 1, current: 3))
+        XCTAssertEqual(ProjectGuidanceInspection.inspect(contents: Self.v2), .outdated(installed: 2, current: 3))
         XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: Self.v1), .legacy)
         XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: Self.v2), .managedV2)
-        for content in [Self.v2.replacingOccurrences(of: "task-relevant", with: "all"), Self.v2.replacingOccurrences(of: "v2:start", with: "v3:start"), "<!-- release-radar-guidance:v2:start -->\n<!-- release-radar-guidance:end -->"] {
+        XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: Self.v3), .managedV3)
+        for content in [Self.v2.replacingOccurrences(of: "task-relevant", with: "all"), Self.v3.replacingOccurrences(of: "v3:start", with: "v4:start"), "<!-- release-radar-guidance:v3:start -->\n<!-- release-radar-guidance:end -->"] {
             XCTAssertEqual(ProjectGuidanceInspection.inspect(contents: content), .needsRepair)
             XCTAssertEqual(RepositoryDocumentationMode.inspect(contents: content), .unavailable)
         }
     }
 
-    func testReadableV2WithoutBindingIsManagedUnavailableRatherThanCurrent() throws {
+    func testReadableV3WithoutBindingIsManagedUnavailableRatherThanCurrent() throws {
         let root = try fixture()
         let state = ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: true)
-        XCTAssertEqual(state.guidanceState, .current(version: 2))
+        XCTAssertEqual(state.guidanceState, .current(version: 3))
         let presentation = ProjectGuidancePresentation(documentationState: state)
         XCTAssertEqual(presentation.status, "Release Radar managed documentation unavailable")
         XCTAssertTrue(presentation.detail.contains("bind"))
@@ -56,8 +58,11 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         }
         let before = try await counts(store)
         let observation = await onboarding.observeProjectGuidanceContext(projectID: project)
-        XCTAssertEqual(observation.state, .current(version: 2))
-        XCTAssertEqual(ProjectGuidancePresentation(documentationState: observation.documentationState).status, "Release Radar managed documentation current · v2")
+        XCTAssertEqual(observation.state, .current(version: 3))
+        let managedPresentation = ProjectGuidancePresentation(documentationState: observation.documentationState)
+        XCTAssertEqual(managedPresentation.status, "Release Radar managed documentation current · v3")
+        XCTAssertTrue(managedPresentation.detail.contains("Catalog v1"))
+        XCTAssertFalse(managedPresentation.detail.contains("Catalog v3"))
         let catalog = root.appendingPathComponent("docs/catalog.json")
         var changed = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: catalog)) as? [String: Any])
         changed["retiredArtifactIDs"] = ["retired-document", "newly-retired"]
@@ -69,11 +74,45 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         XCTAssertEqual(after, before)
     }
 
-    func testBundledCandidateAndUpgradePromptNameV2() throws {
+    func testGuidanceRecoveryPresentationNamesTheCurrentV3UpgradeTarget() {
+        let staged = ProjectGuidancePresentation(
+            documentationState: .stagedCatalog(
+                hasAuditedHandoff: false,
+                preview: .valid(version: 1, digest: "catalog")
+            )
+        )
+        XCTAssertTrue(staged.detail.contains("upgraded to v3"))
+        XCTAssertFalse(staged.detail.contains("upgraded to v2"))
+
+        let invalid = ProjectGuidancePresentation(
+            documentationState: .stagedCatalog(
+                hasAuditedHandoff: false,
+                preview: .invalid(.init(.malformedCatalog))
+            )
+        )
+        XCTAssertTrue(invalid.detail.contains("upgrading to v3"))
+        XCTAssertFalse(invalid.detail.contains("upgrading to v2"))
+
+        let unavailable = ProjectGuidancePresentation(
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogInvalid,
+                validationError: .malformedCatalog
+            )
+        )
+        XCTAssertTrue(unavailable.detail.contains("Guidance v3"))
+        XCTAssertFalse(unavailable.detail.contains("Guidance v2"))
+
+        let outdated = ProjectGuidancePresentation(state: .outdated(installed: 2, current: 3))
+        XCTAssertTrue(outdated.detail.contains("managed block to v3"))
+        XCTAssertFalse(outdated.detail.contains("managed block to v2"))
+    }
+
+    func testBundledCandidateAndUpgradePromptNameV3() throws {
         let package = try CodexPluginPackage(rootURL: Self.repository.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace"))
-        XCTAssertEqual(package.version, "0.1.8")
-        let prompt = CodexPromptHandoff.prompt(for: .outdated(installed: 1, current: 2), projectRoot: URL(fileURLWithPath: "/Synthetic/Managed"))
-        XCTAssertTrue(prompt.contains("guidance v2"))
+        XCTAssertEqual(package.version, "0.1.9")
+        let prompt = CodexPromptHandoff.prompt(for: .outdated(installed: 2, current: 3), projectRoot: URL(fileURLWithPath: "/Synthetic/Managed"))
+        XCTAssertTrue(prompt.contains("guidance v3"))
         XCTAssertTrue(prompt.contains("existing handoff evidence ID"))
     }
 
@@ -106,9 +145,9 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         }
     }
 
-    func testV2HandoffRequiresExistingCataloguedProgressBeforeWriting() throws {
+    func testV3HandoffRequiresExistingCataloguedProgressBeforeWriting() throws {
         let skill = try String(contentsOf: Self.repository.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md"), encoding: .utf8)
-        let prompt = CodexPromptHandoff.prompt(for: .outdated(installed: 1, current: 2), projectRoot: URL(fileURLWithPath: "/Synthetic/Managed"))
+        let prompt = CodexPromptHandoff.prompt(for: .outdated(installed: 2, current: 3), projectRoot: URL(fileURLWithPath: "/Synthetic/Managed"))
         XCTAssertTrue(skill.contains("existing catalogued `docs/delivery/progress.md`"))
         XCTAssertTrue(prompt.contains("existing catalogued docs/delivery/progress.md"))
         XCTAssertFalse(skill.contains("Release Radar audit: Pending"))
@@ -117,11 +156,11 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
     }
 
     func testNormalWorkflowChecksActualRepositoryWithAcceptedIndexTool() throws {
-        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 2)
+        XCTAssertEqual(RepositoryDocumentContract.guidanceVersion, 3)
         try RepositoryDocumentIndexTool().check(authorizedRoot: Self.repository)
     }
 
-    func testReadableV2ReportsEveryUnavailableCatalogWithoutMutation() throws {
+    func testReadableV3ReportsEveryUnavailableCatalogWithoutMutation() throws {
         for failure in ["missing", "malformed", "unsupported", "unsafe", "checksum"] {
             let root = try fixture()
             let catalog = root.appendingPathComponent("docs/catalog.json")
@@ -138,7 +177,7 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
             let state = ProjectGuidanceInspection.inspectDocumentation(rootURL: root, hasAuditedHandoff: false)
             guard case let .managedUnavailable(audited, reason, validation) = state else { return XCTFail("Expected unavailable: \(failure)") }
             XCTAssertFalse(audited); XCTAssertEqual(reason, .catalogInvalid); XCTAssertNotNil(validation)
-            XCTAssertEqual(state.guidanceState, .handoffIncomplete(version: 2))
+            XCTAssertEqual(state.guidanceState, .handoffIncomplete(version: 3))
             XCTAssertEqual(ProjectGuidancePresentation(documentationState: state).actionTitle, "Copy repair prompt")
             XCTAssertEqual(CodexPromptHandoff.kind(for: state), .repositoryRepair)
         }
@@ -182,12 +221,13 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
     }
 
     private func fixture() throws -> URL {
-        let parent = FileManager.default.temporaryDirectory.appendingPathComponent("ReleaseRadar-M5-\(UUID().uuidString)", isDirectory: true).resolvingSymlinksInPath()
+        let parent = URL(fileURLWithPath: "/Users/Shared", isDirectory: true)
+            .appendingPathComponent("ReleaseRadar-M5-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: parent) }
         let root = parent.appendingPathComponent("repository")
         try FileManager.default.copyItem(at: Self.repository.appendingPathComponent("ReleaseRadarTests/Fixtures/RepositoryDocuments/valid"), to: root)
-        try Data(Self.v2.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
+        try Data(Self.v3.utf8).write(to: root.appendingPathComponent("AGENTS.md"))
         return root
     }
 
@@ -226,6 +266,7 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
     - Preserve unrelated repository instructions, files, Codex configuration, and Release Radar state. Repository-local rules outside this block may narrow this contract but must not weaken or duplicate it.
     <!-- release-radar-guidance:end -->
     """
+    static let v3 = RepositoryDocumentContract.managedGuidanceBlock
 }
 
 private struct ManagedGuidanceBookmarks: ProjectBookmarkStoring {
