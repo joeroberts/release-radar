@@ -41,6 +41,8 @@ struct WorkspaceSearchNavigationState: Equatable, Sendable {
     var definition: WorkspaceSearchDefinition
     var selectedResultID: Data?
     var viewportOffset: Double?
+    var preferenceIsUnsupported: Bool
+    var needsScopeReselection: Bool
 }
 
 struct NavigationHistoryEntry: Equatable, Sendable {

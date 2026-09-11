@@ -47,6 +47,15 @@ SourcePackages cache pinned to RekonDesignSystem revision
   case verified the Search, Help, filter, detail and supported/unsupported saved-
   query accessibility identities at 1,500- and 760-point widths, captured four
   attachments and confirmed that active phase did not change.
+- `results-review-red-02.xcresult` then failed all ten added review-regression
+  cases with 36 expected assertions. Those failures reproduced the review's
+  required gaps: unsupported working-state preservation, explicit post-restore
+  scope choice, byte-exact authority, optional decision metadata, exact audit and
+  decision-link matching, destination-filter restoration, stale in-flight Search
+  invalidation and shared Help guidance.
+- `results-review-green-01.xcresult` passed those ten correction cases 10/10 with
+  no failures. `results-review-green-02.xcresult` passed eight affected existing
+  Search, navigation and recovery integration cases 8/8 with no failures.
 
 The three recovery checks directly confirmed that full backup contains saved
 queries, tracking reset retains them and restore preserves their bytes while
@@ -74,11 +83,39 @@ to Search.
 
 The same journey narrowed the real window and scrolled Search to expose its Open
 exact record action, then scrolled compact Help to its saved-query recovery and
-navigation actions. Supported and disabled newer-version saved controls, the
-recoverable working-query warning, filters and selected detail were visible. CUA
-was stopped before the exact completion token was written, and no UI call occurred
-after host exit. Host assertions confirmed active-phase preservation and no
-dashboard failure.
+navigation actions. Supported and disabled newer-version named-query controls,
+filters and selected detail were visible. The automated rendering captures also
+covered the recoverable newer-version working-query warning; the root-controlled
+live fixture did not show that warning in its initial state, so the live inspection
+does not claim it. CUA was stopped before the exact completion token was written,
+and no UI call occurred after host exit. Host assertions confirmed active-phase
+preservation and no dashboard failure.
+
+Correction-native verification used a second fresh unsigned build. The first
+automated attempt, `results-review-native-01.xcresult`, compiled and exercised the
+real Reset, all-authorized and exact-project accessibility actions successfully,
+but remained red because assigning an AX text-field value did not publish the
+SwiftUI Help binding. That synthetic input approach was removed. The fresh
+`results-review-native-build-02.xcresult` build-for-testing succeeded, and its
+copied format-2 runfile resolved every product, host, bundle and profiling path to
+that build while adding only the unique live-session token.
+
+The root-controlled LIVE02 journey then used real keyboard input in the exact
+tokenized PID and fresh product to filter Help for `source provenance retained
+observations`, `delivery evidence applicability` and `newer version reset working
+search`. Each query exposed the expected guidance and its real **Open History**,
+**Open Goals** or **Open Search** action. CUA stopped before exact-token completion
+and the host exited afterward. `results-review-native-live-02.xcresult` is retained
+honestly as red because four pre-pause assertions incorrectly expected off-viewport
+unfiltered Help cards in the 760-point accessibility tree; the live query evidence
+itself is terminal. Those four assertions were removed, and
+`results-review-native-green-03.xcresult` passed the final focused native fixture
+1/1 with no failures, including disabled-before-recovery controls, explicit Reset
+without replacing payload-version-99 bytes, both exact-scope choices and enabled
+controls after valid recovery. Its unsupported-reset attachment is a coherent
+post-reset UI capture. The exact-rescope attachment contains the verified native
+filter strip but leaves the rest of the frame blank, so it is retained only as a
+diagnostic attachment and is not presented as complete visual-screen evidence.
 
 The canonical images are unchanged copies of the inspected passing attachments:
 
@@ -101,5 +138,6 @@ temporary diagnostics under
 `/private/tmp/release-radar-phase6e-writer-01a08dee`. They are not controlling
 artifacts. No temporary output was deleted.
 
-Independent-review disposition and the final local candidate commit will be
-recorded after review.
+The initial independent review identified eight Required correction groups; the
+implementation and direct evidence above address all eight. Delta-review
+disposition and the final local correction commit will be recorded after review.

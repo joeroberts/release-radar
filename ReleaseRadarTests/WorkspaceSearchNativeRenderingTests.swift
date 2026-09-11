@@ -7,6 +7,128 @@ import XCTest
 
 @MainActor
 final class WorkspaceSearchNativeRenderingTests: XCTestCase {
+    func testSearchRecoveryControlsAndSharedHelpContentAreNativeAndActionable() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchRecoveryNative-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "native-recovery-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed native Search recovery") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES (?, 'Native recovery project')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'native-registration-before', 1, 'complete')", bindings: [.text(projectID.rawValue)])
+        }
+        let repository = WorkspaceSearchPreferencesRepository(store: store)
+        let saved = try await repository.saveQuery(
+            id: "native-restored-query",
+            name: "Restored native query",
+            definition: .init(
+                text: "Native recovery",
+                scope: .registrations([.init(projectID: projectID, registrationID: "native-registration-before")]),
+                domains: [.project]
+            )
+        )
+        try await store.transact(actor: .init(id: "fixture"), reason: "Rotate native Search recovery") { connection in
+            try connection.execute("UPDATE application_recovery_state SET incarnation_id = '22222222-2222-4222-8222-222222222222' WHERE singleton_id = 1")
+            try connection.execute("UPDATE project_registrations SET registration_id = 'native-registration-after' WHERE project_id = ?", bindings: [.text(projectID.rawValue)])
+            try connection.execute(
+                "INSERT INTO workspace_search_preferences (singleton_id, payload_version, payload_data, updated_at) VALUES (1, 99, ?, '2026-09-10T12:00:00Z') ON CONFLICT(singleton_id) DO UPDATE SET payload_version = 99, payload_data = excluded.payload_data, updated_at = excluded.updated_at",
+                bindings: [.blob(Data("future-working-query".utf8))]
+            )
+        }
+
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.loadWorkspaceSearchPreferences(runSearch: false)
+        await model.navigate(to: .search)
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 30, y: 30, width: 1_000, height: 760),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        let token = ProcessInfo.processInfo.environment["RR_PHASE6E_NATIVE_SESSION"]
+        window.title = token.map { "Phase 6E Search recovery — focused native acceptance — \($0)" }
+            ?? "Phase 6E Search recovery — focused native acceptance"
+        defer { window.close() }
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.appearance = window.appearance
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        try await settle(hosting)
+        var nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let runButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run"))
+        let saveButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save"))
+        XCTAssertEqual(accessibilityBool(runButton, kAXEnabledAttribute), false)
+        XCTAssertEqual(accessibilityBool(saveButton, kAXEnabledAttribute), false)
+        try press(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-reset-unsupported")))
+        try await settle(hosting)
+        nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        XCTAssertFalse(model.workspaceSearchPreferenceIsUnsupported)
+        XCTAssertEqual(
+            accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run")), kAXEnabledAttribute),
+            true
+        )
+        XCTAssertEqual(
+            accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save")), kAXEnabledAttribute),
+            true
+        )
+        let opaqueVersion = try await store.read {
+            try $0.scalarInt("SELECT payload_version FROM workspace_search_preferences WHERE singleton_id = 1")
+        }
+        XCTAssertEqual(opaqueVersion, 99)
+        try capture(hosting, name: "phase6e-search-unsupported-reset")
+
+        await model.loadWorkspaceSavedQuery(.supported(saved))
+        try await settle(hosting)
+        nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        XCTAssertTrue(model.workspaceSearchNeedsScopeReselection)
+        XCTAssertEqual(model.workspaceSearchDefinition.scope, saved.definition.scope)
+        XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run")), kAXEnabledAttribute), false)
+        XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save")), kAXEnabledAttribute), false)
+        try press(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-scope-all-recovery")))
+        try await settle(hosting)
+        XCTAssertEqual(model.workspaceSearchDefinition.scope, .allAuthorized)
+        XCTAssertFalse(model.workspaceSearchNeedsScopeReselection)
+
+        await model.loadWorkspaceSavedQuery(.supported(saved))
+        try await settle(hosting)
+        nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        try press(try XCTUnwrap(accessibilityElement(
+            nativeWindow,
+            identifier: "workspace-search-scope-project-recovery-native-registration-after"
+        )))
+        try await settle(hosting)
+        XCTAssertEqual(
+            model.workspaceSearchDefinition.scope,
+            .registrations([.init(projectID: projectID, registrationID: "native-registration-after")])
+        )
+        XCTAssertFalse(model.workspaceSearchNeedsScopeReselection)
+        XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run")), kAXEnabledAttribute), true)
+        XCTAssertEqual(accessibilityBool(try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save")), kAXEnabledAttribute), true)
+        try capture(hosting, name: "phase6e-search-exact-rescope")
+
+        await model.navigate(to: .help)
+        try await settle(hosting)
+        nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "help-search-field"))
+        XCTAssertTrue(accessibilityText(nativeWindow).contains(WorkspaceHelpContent.deliveryEvidenceBoundary))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "help-action-readiness-acceptance"))
+        try capture(hosting, name: "phase6e-help-recovery-guidance")
+        if let token {
+            print("PHASE6E HELP RECOVERY READY: use real keyboard input to verify the provenance, evidence applicability, and newer-version recovery queries and their exact actions")
+            try await waitForExternalNativeJourney(token: token, window: window)
+        }
+    }
+
     func testSearchSavedViewsAndHelpRenderWideAndCompact() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SearchNative-\(UUID().uuidString)", isDirectory: true)
@@ -186,6 +308,26 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
             return nil
         }
         return value as? String
+    }
+
+    private func accessibilityBool(_ element: AXUIElement, _ attribute: String) -> Bool? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+            return nil
+        }
+        return value as? Bool
+    }
+
+    private func press(_ element: AXUIElement) throws {
+        let result = AXUIElementPerformAction(element, kAXPressAction as CFString)
+        guard result == .success else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(result.rawValue))
+        }
+    }
+
+    private func settle<V: View>(_ hosting: NSHostingView<V>) async throws {
+        try await Task.sleep(for: .milliseconds(200))
+        hosting.layoutSubtreeIfNeeded()
     }
 
     private func accessibilityText(_ root: AXUIElement) -> String {

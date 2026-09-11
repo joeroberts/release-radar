@@ -153,7 +153,7 @@ struct HistoryView: View {
             if showsFreshness, let codexFailure = FailureStatePresentation(freshness: freshness) {
                 FailureStateView(presentation: codexFailure)
             }
-            Text("Audit, review, completion, observation, and notification records keep their own provenance. Observation rows are latest persisted snapshots, not an invented timeline.")
+            Text(WorkspaceHelpContent.historyProvenance)
                 .font(RekonTypography.metadata)
                 .foregroundStyle(RekonTheme.secondaryText)
                 .accessibilityIdentifier("history-source-guidance")

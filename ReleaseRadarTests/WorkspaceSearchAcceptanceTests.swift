@@ -135,6 +135,15 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
             sort: .title
         )
         let saved = try await repository.saveQuery(id: "saved-rotation", name: "Needle", definition: original)
+        let originalPayload = try await store.read { connection -> Data in
+            let row = try XCTUnwrap(try connection.row(
+                "SELECT payload_data FROM workspace_saved_queries WHERE id = 'saved-rotation'"
+            ))
+            guard case let .blob(payload)? = row["payload_data"] else {
+                throw StoreError.unavailable("Unexpected saved-query fixture shape")
+            }
+            return payload
+        }
 
         try await store.transact(actor: .init(id: "fixture"), reason: "Simulate recovery authority rotation") { connection in
             try connection.execute("UPDATE application_recovery_state SET incarnation_id = '22222222-2222-4222-8222-222222222222' WHERE singleton_id = 1")
@@ -148,6 +157,27 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
             XCTAssertEqual(error, .authorizationRequired)
         }
 
+        do {
+            _ = try await repository.saveQuery(
+                id: saved.id,
+                name: saved.name,
+                definition: saved.definition
+            )
+            XCTFail("Ordinary save must not stamp current authority onto an old rejected definition")
+        } catch let error as WorkspaceSearchError {
+            XCTAssertEqual(error, .authorizationRequired)
+        }
+        let rejectedPayload = try await store.read { connection -> Data in
+            let row = try XCTUnwrap(try connection.row(
+                "SELECT payload_data FROM workspace_saved_queries WHERE id = 'saved-rotation'"
+            ))
+            guard case let .blob(payload)? = row["payload_data"] else {
+                throw StoreError.unavailable("Unexpected saved-query fixture shape")
+            }
+            return payload
+        }
+        XCTAssertEqual(rejectedPayload, originalPayload)
+
         let reselected = WorkspaceSearchDefinition(
             text: saved.definition.text,
             scope: .registrations([.init(projectID: projectID, registrationID: "registration-after")]),
@@ -158,6 +188,110 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
         XCTAssertNotEqual(resaved.definition.authorityIncarnationID, saved.definition.authorityIncarnationID)
         let projection = try await WorkspaceSearchQuery.search(store: store, definition: resaved.definition)
         XCTAssertEqual(projection.results.count, 1)
+    }
+
+    func testAuthorityScopeRejectsCanonicallyEquivalentButByteDistinctIdentity() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let recordedProjectID = ProjectID(rawValue: "project-\u{00E9}")
+        let requestedProjectID = ProjectID(rawValue: "project-e\u{0301}")
+        try await seedProject(store, projectID: recordedProjectID, registrationID: "registration-\u{00E9}")
+
+        do {
+            _ = try await WorkspaceSearchQuery.search(
+                store: store,
+                definition: .init(
+                    text: "Needle",
+                    scope: .registrations([.init(
+                        projectID: requestedProjectID,
+                        registrationID: "registration-e\u{0301}"
+                    )]),
+                    domains: [.project]
+                )
+            )
+            XCTFail("Canonical Unicode equivalence must not authorize a byte-distinct registration")
+        } catch let error as WorkspaceSearchError {
+            XCTAssertEqual(error, .authorizationRequired)
+        }
+    }
+
+    func testDecisionSearchUsesOptionalMetadataFallbackAndMatchesExactLinkIdentity() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let selectedProjectID = ProjectID(rawValue: "project-z-selected")
+        let unselectedProjectID = ProjectID(rawValue: "project-a-unselected")
+        try await seedProject(store, projectID: selectedProjectID, registrationID: "registration-selected")
+        try await seedProject(store, projectID: unselectedProjectID, registrationID: "registration-unselected")
+        try await seedDecisionReference(
+            store,
+            projectID: unselectedProjectID,
+            ticketID: "ticket-unselected",
+            linkID: "unselected-link",
+            artifactID: "unselected-artifact",
+            observedPath: "docs/unselected.md"
+        )
+        try await seedDecisionReference(
+            store,
+            projectID: selectedProjectID,
+            ticketID: "ticket-selected",
+            linkID: "exact-link-identity",
+            artifactID: "recorded-artifact-identity",
+            observedPath: "docs/recorded-fallback.md"
+        )
+
+        let projection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(
+                text: "exact-link-identity",
+                scope: .registrations([.init(
+                    projectID: selectedProjectID,
+                    registrationID: "registration-selected"
+                )]),
+                domains: [.decisionReference]
+            )
+        )
+
+        let result = try XCTUnwrap(projection.results.first)
+        XCTAssertEqual(projection.results.count, 1)
+        XCTAssertTrue(projection.isComplete)
+        XCTAssertEqual(result.title, "recorded-artifact-identity")
+        XCTAssertEqual(result.detail, "ticket-selected · docs/recorded-fallback.md")
+        XCTAssertEqual(
+            result.identity,
+            .decisionReference(
+                projectID: selectedProjectID,
+                registrationID: "registration-selected",
+                ticketID: .init(rawValue: "ticket-selected"),
+                linkID: "exact-link-identity",
+                version: 1,
+                repositoryID: "11111111-1111-4111-8111-111111111111",
+                artifactID: "recorded-artifact-identity"
+            )
+        )
+    }
+
+    func testHistorySearchMatchesExactAuditIdentifier() async throws {
+        let store = DeliveryStore(databaseURL: try makeDatabaseURL())
+        let projectID = ProjectID(rawValue: "project-audit-id")
+        try await seedProject(store, projectID: projectID, registrationID: "registration-audit-id")
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Description without the requested identifier",
+            auditEventID: .init(rawValue: "exact-audit-identity"),
+            auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
+        ) { _ in }
+
+        let projection = try await WorkspaceSearchQuery.search(
+            store: store,
+            definition: .init(text: "exact-audit-identity", domains: [.history])
+        )
+
+        XCTAssertEqual(projection.results.map(\.identity), [
+            .history(
+                projectID: projectID,
+                registrationID: "registration-audit-id",
+                source: .audit,
+                sourceID: "exact-audit-identity"
+            ),
+        ])
     }
 
     func testTicketSearchIncludesRetiredRecordsAndSortsCollisionResultsDeterministically() async throws {
@@ -225,6 +359,43 @@ final class WorkspaceSearchAcceptanceTests: XCTestCase {
             try connection.execute(
                 "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, ?, 1, 'complete')",
                 bindings: [.text(projectID.rawValue), .text(registrationID)]
+            )
+        }
+    }
+
+    private func seedDecisionReference(
+        _ store: DeliveryStore,
+        projectID: ProjectID,
+        ticketID: String,
+        linkID: String,
+        artifactID: String,
+        observedPath: String
+    ) async throws {
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed decision reference") { connection in
+            let phaseID = "phase-\(ticketID)"
+            try connection.execute(
+                "INSERT INTO phases (id, project_id, name) VALUES (?, ?, 'Reference phase')",
+                bindings: [.text(phaseID), .text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, ?, 'Reference ticket', 'backlog')",
+                bindings: [.text(ticketID), .text(projectID.rawValue), .text(phaseID)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_reference_link_sets (project_id, ticket_id, revision, created_at, updated_at) VALUES (?, ?, 1, '2026-09-10T12:00:00Z', '2026-09-10T12:00:00Z')",
+                bindings: [.text(projectID.rawValue), .text(ticketID)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_reference_links (project_id, ticket_id, id, kind, repository_id, artifact_id, current_version, relationship, created_at, updated_at) VALUES (?, ?, ?, 'decision', '11111111-1111-4111-8111-111111111111', ?, 1, 'current', '2026-09-10T12:00:00Z', '2026-09-10T12:00:00Z')",
+                bindings: [.text(projectID.rawValue), .text(ticketID), .text(linkID), .text(artifactID)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_reference_versions (project_id, ticket_id, link_id, version, content_digest, source_local_id, locator, catalog_version, catalog_digest, observed_path, observed_lifecycle, observed_authority, created_at) VALUES (?, ?, ?, 1, ?, NULL, NULL, 1, ?, ?, 'active', 'controlling', '2026-09-10T12:00:00Z')",
+                bindings: [
+                    .text(projectID.rawValue), .text(ticketID), .text(linkID),
+                    .text(String(repeating: "a", count: 64)),
+                    .text(String(repeating: "b", count: 64)), .text(observedPath),
+                ]
             )
         }
     }
