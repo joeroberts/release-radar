@@ -1,8 +1,8 @@
 # Codex lifecycle helper restart
 
-Date: 2026-09-11. Status: owner-authorized bounded implementation in progress.
-The current delivery state remains in `docs/delivery/progress.md`; the parent
-delivery task owns that ledger.
+Date: 2026-09-11. Status: implementation and independent review complete;
+signed installed acceptance pending. The current delivery state remains in
+`docs/delivery/progress.md`.
 
 ## Shared execution context
 
@@ -35,9 +35,19 @@ delivery task owns that ledger.
   synthetic state at wide and compact widths to prove layout, accessibility,
   progress, success, and failure. The Xcode build and documentation tool check
   prove compilation and repository documentation consistency.
-- **Review:** One fresh independent reviewer covers the service lifecycle/security
-  boundary and the UI recovery behavior. Required findings block; Optional and Out
-  of scope findings do not expand this task.
+- **Review:** Reviewer task `01a092a5-95b6-7630-a9e9-8b77404f3d0f` approved exact
+  candidate `a60b1fd2f5c56d145bcbc634fd0e3f75a8765f26` with no remaining
+  Required, Optional, or Out-of-scope findings, then was archived.
+
+## Local closeout
+
+The candidate comprises feature commit `f4c34b3` and correction commit `a60b1fd`
+on `codex/restart-plugin-helper`. The author-produced focused run passed 54 of 54
+tests with no failures or skips; the reviewer read back that result. The app build
+passed, the repository documentation indexes match the catalog, and wide, compact,
+and progress renders were inspected. No package was created and no installed or
+live helper was exercised for this newer change. Signed installed acceptance needs
+separate owner authorization.
 
 ## Design and constraints
 
@@ -95,8 +105,8 @@ The run must confirm the installed plugin files and owner projects are unchanged
 The delivery owner uses Sol High on branch `codex/restart-plugin-helper` in the exact
 root above and owns the complete bounded implementation plus local commits. Astra
 High is the ceiling only for a named unresolved service-boundary problem; Ultra is
-prohibited. The parent task coordinates the independent reviewer and owns the
-progress ledger.
+prohibited. The parent task coordinated the independent reviewer and delegated the
+final progress-ledger closeout to this delivery task.
 
 Material risks are restarting the wrong service, accidentally mutating plugin/Codex
 state, racing another lifecycle operation, losing actionable permission recovery,

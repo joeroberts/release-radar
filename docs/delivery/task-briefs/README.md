@@ -706,7 +706,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-codex-helper-restart-brief-2026-09-11 | [docs/delivery/task-briefs/2026-09-11-codex-helper-restart/restart-helper-brief.md](2026-09-11-codex-helper-restart/restart-helper-brief.md) | document | controlling &#40;delivery.codex-helper-restart&#41; | active | none | none |
+| rr-codex-helper-restart-brief-2026-09-11 | [docs/delivery/task-briefs/2026-09-11-codex-helper-restart/restart-helper-brief.md](2026-09-11-codex-helper-restart/restart-helper-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

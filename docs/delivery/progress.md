@@ -45,6 +45,15 @@ disposable-project mutation checks, optional recovery checks and bug reporting.
 Guide and signed-test closeout are committed at
 `c9ca97f42d57ea6566bbc55c02f5271c09282d55`.
 
+Under later explicit owner authorization, acceptance task
+`01a091aa-e8bc-7d53-8005-dd59de3ee38b` completed an in-place installation of the
+`acc7401` 0.1.9 candidate. It verified `/Applications/ReleaseRadar.app` signature,
+version and executable identity against the candidate, and verified Pursuit startup
+without a schema banner. The original 0.1.7 application remains preserved for
+rollback. This bounded installation and startup check did not complete the full
+manual acceptance guide and grants no authority for another installation, app
+launch, or live helper restart.
+
 The initial diagnostic run was 192/197. Its byte-exact goal identity regression
 and fixture failures are corrected; six targeted tests and 114 affected tests pass.
 Independent review approved the correction source with no Required findings.
@@ -56,29 +65,48 @@ Debug attempts lacked the XCTest debug entitlement and stopped before test loadi
 they are not passing evidence. The normal signed Debug test host completed both
 suites. Retained results and limitations are recorded in the guide.
 
-Scoped automated correction and package verification are complete. Owner manual
-acceptance remains outstanding; these local correction/package commits are not
-published or merged into the remote default.
+Scoped automated correction and package verification are complete. The authorized
+in-place installation and startup check are complete, while full owner manual
+acceptance remains outstanding. The acceptance commits are local and unpublished.
+
+## Restart helper recovery
+
+The local `codex/restart-plugin-helper` candidate at
+`a60b1fd2f5c56d145bcbc634fd0e3f75a8765f26` adds the Settings **Restart helper**
+recovery action. It waits for asynchronous helper teardown before re-registering,
+refreshes status without an install/remove/reinstall command, and restores managed
+intent only after an exact clean match to the retained verified version and digest.
+
+The author-produced focused run passed 54 of 54 tests with no failures or skips;
+the app build and repository documentation check passed. Independent reviewer task
+`01a092a5-95b6-7630-a9e9-8b77404f3d0f` approved the corrected candidate with no
+remaining findings and is archived. Delivery-author task
+`01a09295-0d2a-7cf2-a7c5-08a8bfb20d8a` completed its local closeout and is pending
+archive after parent confirmation. No package, installation, or live helper
+verification was performed for this newer change.
 
 ## Authorization, limitations, and next work
 
-The current authorized endpoint is a local owner-acceptance branch, verified DMG,
-manual acceptance guide, repository records, and a scoped local commit. No push,
-PR, merge, installation, app launch, owner SQLite access, external publication, or
-cleanup is authorized for this acceptance task. The owner separately authorized
-the completed temporary signed test-service registration and teardown; that does
-not authorize installation or launching the owner application.
+The current authorized endpoint for Restart helper recovery is its local branch,
+repository records, focused checks, independent review, and scoped local commits.
+No push, PR, merge, DMG creation, further installation, app launch, owner SQLite
+access, live helper restart, external publication, or cleanup is authorized. The
+owner separately authorized the completed `acc7401` in-place installation/startup
+check and the earlier temporary signed test-service registration and teardown;
+neither authorization carries forward to this newer change.
 
 Application inventory, catalog binding/acceptance, and managed readback remain
 unauthorized. The last recorded inventory was `bindingMissing`, `isComplete:false`
 for `project-fffdc0e0b15b9b86`; local documentation checks do not establish managed
-application synchronization. Owner acceptance has not yet been performed. The corrected candidate is ready
-for the manual checks following the guide's backup precautions.
+application synchronization. The installed application reflects `acc7401` and
+predates the Restart helper candidate. Full owner manual acceptance remains
+outstanding.
 
 Phase 7 planning is independently approved at
 `a0f22d965395248be6ec5928d2932d3a7ce5166d`. Phase 7 implementation remains paused
-and requires separate explicit authorization. The next step is owner manual
-acceptance of the corrected Phase 6 candidate and recording any findings.
+and requires separate explicit authorization. The next step is an owner decision
+on integrating and packaging the approved local Restart helper candidate; any
+further installation or manual acceptance requires separate explicit authorization.
 
 The release staging bundle and repository `DerivedData` remain temporary build
 outputs. Earlier per-slice temporary diagnostics listed in the historical Phase 6

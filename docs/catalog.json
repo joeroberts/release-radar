@@ -6242,8 +6242,8 @@
       "artifactID": "rr-codex-helper-restart-brief-2026-09-11",
       "path": "docs/delivery/task-briefs/2026-09-11-codex-helper-restart/restart-helper-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-11-codex-helper-restart",
       "supersedes": [],
       "applicationSensitivity": [
@@ -6251,8 +6251,7 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.codex-helper-restart"
+      }
     }
   ]
 }
