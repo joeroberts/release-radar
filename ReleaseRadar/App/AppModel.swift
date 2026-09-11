@@ -991,6 +991,7 @@ final class AppModel {
     }
 
     func adoptRecovery(_ result: ApplicationRecoveryResult) async throws {
+        invalidateWorkspaceSearchRun()
         documentationServiceGeneration &+= 1
         projectionReloadGeneration &+= 1
         let retiredStore = store
@@ -1040,6 +1041,7 @@ final class AppModel {
     }
 
     private func clearEphemeralViewState() {
+        invalidateWorkspaceSearchRun()
         workspaceGoalsDomain = .delivery
         workspaceGoalsProjectID = nil
         workspaceGoalsDeliveryLifecycle = nil
