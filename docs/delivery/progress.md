@@ -91,7 +91,13 @@ passed. Root directly verified the visible compact Tasks/Help, stopped CUA befor
 completion and read back the final result; host exit is confirmed. Writer is
 quiescent and all reservations are released. The
 [canonical evidence](evidence/2026-09-10-phase6d-adoption.md) and four images are
-catalogued. Independent candidate review is next; no approval is yet claimed.
+catalogued. Independent Astra High reviewer `01a08dd9-47dd-7ea0-b208-810fe7514e32`
+reviewed the actual candidate and native images. Three Required P2 corrections
+remain: separate catalog/guidance version labels, explicit pre-implementation
+Planning/Delivery task classification and approved-catalog guidance, and durable
+reconciliation/envelope/receipt/ledger recording. The same writer is preparing
+these read-only while 6B owns the product writer slot. No other blocking findings;
+correction review returns to the same independent reviewer.
 
 Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra High)
 is complete and archived with no blocking owner choice. Its bounded search identity,
