@@ -214,6 +214,73 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
         XCTAssertEqual(remote.operations, [.status, .status])
     }
 
+    func testClientExplicitRestartRecoversAStaleEnabledHelperWithoutPluginMutation() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(
+                wireVersion: 1,
+                observedState: .needsRepair(.integrityInvalid),
+                error: nil
+            ),
+            .init(
+                wireVersion: 1,
+                observedState: .clean(version: "0.1.9", digest: "current"),
+                error: nil
+            ),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let staleReply = await client.status()
+        let reply = await client.restartHelper()
+
+        XCTAssertEqual(staleReply.observedState, .needsRepair(.integrityInvalid))
+        XCTAssertNil(staleReply.error)
+        XCTAssertEqual(
+            reply.observedState,
+            .clean(version: "0.1.9", digest: "current")
+        )
+        XCTAssertNil(reply.error)
+        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertEqual(remote.operations, [.status, .status])
+    }
+
+    func testClientRestartSurfacesApprovalRequirementWithoutCallingHelper() async {
+        let service = PluginLifecycleServiceStub(status: .requiresApproval)
+        let remote = PluginLifecycleRemoteStub(replies: [])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.restartHelper()
+
+        XCTAssertEqual(reply.error, .unauthorizedPeer)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertTrue(remote.operations.isEmpty)
+    }
+
+    func testClientRestartSurfacesRegistrationFailureWithoutCallingHelper() async {
+        let service = PluginLifecycleServiceStub(status: .notRegistered)
+        service.registerError = NSError(domain: "SMAppServiceErrorDomain", code: 1)
+        let remote = PluginLifecycleRemoteStub(replies: [])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.restartHelper()
+
+        XCTAssertEqual(reply.error, .unauthorizedPeer)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertTrue(remote.operations.isEmpty)
+    }
+
     func testRecoveryStatusIsReadOnlyAndNeverRegistersOrRebindsHelper() async {
         let disabledService = PluginLifecycleServiceStub(status: .notRegistered)
         let disabledRemote = PluginLifecycleRemoteStub(replies: [])
@@ -298,6 +365,7 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
 
 private final class PluginLifecycleServiceStub: PluginLifecycleServiceManaging {
     var status: SMAppService.Status
+    var registerError: Error?
     private(set) var registerCallCount = 0
     private(set) var unregisterCallCount = 0
 
@@ -307,6 +375,7 @@ private final class PluginLifecycleServiceStub: PluginLifecycleServiceManaging {
 
     func register() throws {
         registerCallCount += 1
+        if let registerError { throw registerError }
         status = .enabled
     }
 

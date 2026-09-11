@@ -43,6 +43,14 @@ enum WorkspaceHelpContent {
             destination: .settings
         ),
         .init(
+            id: "plugin-helper-restart",
+            title: "Restart the Codex lifecycle helper",
+            detail: "In Settings > Connections, use Restart helper when plugin status looks stale after replacing Release Radar. The action re-registers the helper and refreshes status; it does not reinstall or remove the plugin, Codex configuration stays intact, and projects remain unchanged. If macOS requests permission, allow the Release Radar helper in Login Items and retry. If it still fails, update or reinstall Release Radar before retrying.",
+            keywords: "plugin helper restart re-register stale status Login Items permission Codex",
+            actionTitle: "Open Settings",
+            destination: .settings
+        ),
+        .init(
             id: "active-viewed",
             title: "Active phase versus viewed phase",
             detail: "The active phase is shared delivery state. Choosing a phase to inspect changes only your view until you explicitly use the active-phase control.",

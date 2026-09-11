@@ -58,6 +58,7 @@ enum CodexPluginOperation: Equatable, Sendable {
     case update
     case remove
     case reinstall
+    case restartHelper
     case tryAgain
 
     var announcement: String {
@@ -67,6 +68,7 @@ enum CodexPluginOperation: Equatable, Sendable {
         case .update: "Updating plugin"
         case .remove: "Removing plugin"
         case .reinstall: "Reinstalling plugin"
+        case .restartHelper: "Restarting lifecycle helper"
         case .tryAgain: "Trying plugin status again"
         }
     }
@@ -116,6 +118,8 @@ struct CodexPluginSettingsPresentation: Equatable, Sendable {
     var actions: [CodexPluginLifecycleAction] {
         operation == nil ? CodexPluginLifecycleReducer.actions(for: state) : []
     }
+
+    var canRestartHelper: Bool { operation == nil }
 
     var systemImage: String {
         switch state {

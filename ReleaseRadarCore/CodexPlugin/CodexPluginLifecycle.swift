@@ -88,6 +88,7 @@ public protocol CodexPluginLifecycleManaging: Sendable {
     func install() async -> CodexPluginHelperReply
     func remove() async -> CodexPluginHelperReply
     func reinstall() async -> CodexPluginHelperReply
+    func restartHelper() async -> CodexPluginHelperReply
 }
 
 public extension CodexPluginLifecycleManaging {
@@ -189,6 +190,13 @@ public actor CodexPluginLifecycleCoordinator {
             operation: manager.reinstall,
             reason: "Reinstall Release Radar Codex plugin"
         )
+    }
+
+    public func restartHelper() async -> CodexPluginLifecycleResult {
+        guard let receipt = try? await store.load() else {
+            return .init(state: .failed(.malformedResult))
+        }
+        return await statusFrom(reply: await manager.restartHelper(), receipt: receipt)
     }
 
     public func remove() async -> CodexPluginLifecycleResult {

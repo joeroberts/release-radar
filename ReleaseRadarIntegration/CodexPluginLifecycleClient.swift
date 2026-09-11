@@ -49,6 +49,14 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
     func install() async -> CodexPluginHelperReply { await call(.install) }
     func remove() async -> CodexPluginHelperReply { await call(.remove) }
     func reinstall() async -> CodexPluginHelperReply { await call(.reinstall) }
+    func restartHelper() async -> CodexPluginHelperReply {
+        do {
+            try rebindService()
+            return validatedReply(await invoke(.status))
+        } catch {
+            return Self.failureReply(for: error)
+        }
+    }
 
     func unregister() {
         invalidateConnection()

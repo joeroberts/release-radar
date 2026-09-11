@@ -768,6 +768,22 @@
       "isLeaf": true,
       "firstRead": "rr-phase6-acceptance-corrections-brief-2026-09-11",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-11-codex-helper-restart",
+      "path": "docs/delivery/task-briefs/2026-09-11-codex-helper-restart",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Bounded Codex lifecycle helper restart and status recovery",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-codex-helper-restart-brief-2026-09-11",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -6221,6 +6237,22 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-codex-helper-restart-brief-2026-09-11",
+      "path": "docs/delivery/task-briefs/2026-09-11-codex-helper-restart/restart-helper-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "parentCollection": "delivery.task-briefs.2026-09-11-codex-helper-restart",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      },
+      "authorityRole": "delivery.codex-helper-restart"
     }
   ]
 }

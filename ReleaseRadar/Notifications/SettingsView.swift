@@ -236,7 +236,7 @@ struct SettingsView: View {
                         .accessibilityIdentifier("codex-plugin-result")
                 }
 
-                pluginActions(plugin.actions)
+                pluginActions(plugin.actions, canRestartHelper: plugin.canRestartHelper)
             }
 
             RekonSectionPanel {
@@ -312,17 +312,23 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private func pluginActions(_ actions: [CodexPluginLifecycleAction]) -> some View {
-        if !actions.isEmpty {
-            ViewThatFits(in: .horizontal) {
-                HStack { pluginActionButtons(actions) }
-                VStack(alignment: .leading) { pluginActionButtons(actions) }
+    private func pluginActions(
+        _ actions: [CodexPluginLifecycleAction],
+        canRestartHelper: Bool
+    ) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack { pluginActionButtons(actions, canRestartHelper: canRestartHelper) }
+            VStack(alignment: .leading) {
+                pluginActionButtons(actions, canRestartHelper: canRestartHelper)
             }
         }
     }
 
     @ViewBuilder
-    private func pluginActionButtons(_ actions: [CodexPluginLifecycleAction]) -> some View {
+    private func pluginActionButtons(
+        _ actions: [CodexPluginLifecycleAction],
+        canRestartHelper: Bool
+    ) -> some View {
         ForEach(actions, id: \.rawValue) { action in
             switch action {
             case .install:
@@ -349,6 +355,12 @@ struct SettingsView: View {
                     .accessibilityIdentifier("codex-plugin-retry")
             }
         }
+        Button("Restart helper") { Task { await model.restartCodexPluginHelper() } }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .disabled(!canRestartHelper)
+            .accessibilityIdentifier("codex-plugin-restart-helper")
+            .accessibilityLabel("Restart helper")
+            .accessibilityHint("Re-registers the helper and refreshes plugin status without reinstalling the plugin.")
     }
 
     private func cancelPluginConfirmation() {

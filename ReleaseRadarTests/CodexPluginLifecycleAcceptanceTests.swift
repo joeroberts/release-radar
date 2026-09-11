@@ -528,6 +528,44 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(operations, [.reinstall])
     }
 
+    func testRestartHelperRefreshesPresentationWithoutChangingReceiptOrAudit() async throws {
+        let (store, lifecycleStore) = try makeLifecycleStore(prefix: "RestartHelper")
+        let receipt = CodexPluginReceipt(
+            intent: .managedInstalled,
+            managedVersion: "0.1.9",
+            managedDigest: "current",
+            verifiedAt: Date(timeIntervalSince1970: 1)
+        )
+        try await lifecycleStore.recordVerified(
+            receipt,
+            reason: "Install Release Radar Codex plugin"
+        )
+        let auditCountBefore = try await auditCount(in: store)
+        let manager = ScriptedLifecycleManager(replies: [
+            .init(
+                wireVersion: 1,
+                observedState: .clean(version: "0.1.9", digest: "current"),
+                error: nil
+            ),
+        ])
+        let coordinator = CodexPluginLifecycleCoordinator(
+            manager: manager,
+            store: lifecycleStore,
+            shippedVersion: "0.1.9",
+            shippedDigest: "current"
+        )
+
+        let result = await coordinator.restartHelper()
+        let operations = await manager.operations()
+        let persistedReceipt = try await lifecycleStore.load()
+        let auditCountAfter = try await auditCount(in: store)
+
+        XCTAssertEqual(result, .init(state: .installed(version: "0.1.9")))
+        XCTAssertEqual(operations, [.restartHelper])
+        XCTAssertEqual(persistedReceipt, receipt)
+        XCTAssertEqual(auditCountAfter, auditCountBefore)
+    }
+
     func testUpdateReinstallAndRemoveAuditOnlyTheirVerifiedPostconditions() async throws {
         enum Change { case update, reinstall }
         let changes: [(Change, ScriptedLifecycleManager.Operation, String)] = [
@@ -786,7 +824,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
 }
 
 private actor ScriptedLifecycleManager: CodexPluginLifecycleManaging {
-    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall }
+    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall, restartHelper }
     private var replies: [CodexPluginHelperReply]
     private var calls: [Operation] = []
 
@@ -799,6 +837,7 @@ private actor ScriptedLifecycleManager: CodexPluginLifecycleManaging {
     func install() async -> CodexPluginHelperReply { next(.install) }
     func remove() async -> CodexPluginHelperReply { next(.remove) }
     func reinstall() async -> CodexPluginHelperReply { next(.reinstall) }
+    func restartHelper() async -> CodexPluginHelperReply { next(.restartHelper) }
     func operations() -> [Operation] { calls }
 
     private func next(_ operation: Operation) -> CodexPluginHelperReply {

@@ -3594,6 +3594,19 @@ final class AppModel {
         await applyCodexPluginResult(await codexPluginCoordinator.reinstall(), operation: .reinstall)
     }
 
+    func restartCodexPluginHelper() async {
+        guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
+        beginCodexPluginOperation(.restartHelper)
+        let result = await codexPluginCoordinator.restartHelper()
+        await applyCodexPluginResult(result, operation: .restartHelper)
+        guard case .failed = result.state else {
+            let message = "Lifecycle helper restarted. Plugin status refreshed."
+            codexPluginSettingsMessage = message
+            codexPluginAnnouncement = message
+            return
+        }
+    }
+
     private func beginCodexPluginOperation(_ operation: CodexPluginOperation) {
         codexPluginOperation = operation
         codexPluginSettingsMessage = nil

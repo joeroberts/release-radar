@@ -373,6 +373,41 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             ]
         )
 
+        let helperModel = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("helper.sqlite")),
+            codexPluginShippedVersion: "0.1.9",
+            externalServicesSuppressed: true,
+            seedSampleData: false
+        )
+        helperModel.codexPluginState = .installed(version: "0.1.9")
+        helperModel.codexPluginSettingsMessage = "Lifecycle helper restarted. Plugin status refreshed."
+        for width in [1100.0, 620.0] {
+            try await render(
+                SettingsView(model: helperModel),
+                name: "codex-helper-restart-success-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Release Radar Codex Plugin",
+                    "Installed",
+                    "Restart helper",
+                    "Lifecycle helper restarted. Plugin status refreshed.",
+                ],
+                minimumElementSizes: ["codex-plugin-restart-helper": .init(width: 44, height: 24)]
+            )
+        }
+
+        helperModel.codexPluginOperation = .restartHelper
+        try await render(
+            SettingsView(model: helperModel),
+            name: "codex-helper-restart-progress",
+            width: 620,
+            expected: nil,
+            expectedText: ["Restarting lifecycle helper", "Restart helper"],
+            disabledIdentifiers: ["codex-plugin-restart-helper"]
+        )
+        helperModel.codexPluginOperation = nil
+
         model.alertRules = try AlertRuleSnapshot(values: Dictionary(
             uniqueKeysWithValues: AlertRuleKind.allCases.map { ($0, true) }
         ))

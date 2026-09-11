@@ -8,7 +8,7 @@ final class WorkspaceHelpTests: XCTestCase {
         XCTAssertEqual(Set(topics.map(\.id)), [
             "setup-handoff", "recovery", "active-viewed", "planning-unplaced",
             "task-adoption", "proposal-approval", "readiness-acceptance",
-            "saved-query-recovery", "search-navigation",
+            "saved-query-recovery", "search-navigation", "plugin-helper-restart",
         ])
         XCTAssertTrue(topics.allSatisfy { !$0.title.isEmpty && !$0.detail.isEmpty })
         XCTAssertTrue(topics.allSatisfy { $0.destination != nil })
@@ -30,5 +30,11 @@ final class WorkspaceHelpTests: XCTestCase {
         XCTAssertEqual(newerVersion?.id, "saved-query-recovery")
         XCTAssertEqual(newerVersion?.destination, .search)
         XCTAssertTrue(newerVersion?.detail.contains("Reset to a new search") == true)
+
+        let helper = try? XCTUnwrap(WorkspaceHelpContent.filtered(by: "restart helper Login Items").first)
+        XCTAssertEqual(helper?.id, "plugin-helper-restart")
+        XCTAssertEqual(helper?.destination, .settings)
+        XCTAssertTrue(helper?.detail.contains("does not reinstall or remove the plugin") == true)
+        XCTAssertTrue(helper?.detail.contains("projects remain unchanged") == true)
     }
 }
