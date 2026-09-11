@@ -292,6 +292,54 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testAdoptingRecoveryInvalidatesPendingSearchBeforeClearingEphemeralState() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PendingRecoverySearch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed pending recovery Search") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('pending-recovery-project', 'Old recovery needle')")
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('pending-recovery-project', 'pending-recovery-registration', 1, 'complete')")
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("Old recovery needle")
+        let gate = BlockingStoreReadGate()
+        let blocker = Task {
+            try await store.read { _ in
+                gate.entered.signal()
+                gate.release.wait()
+            }
+        }
+        await gate.waitUntilEntered()
+        let pending = Task {
+            await model.runWorkspaceSearch(persist: false, captureNavigation: false)
+        }
+        while !model.workspaceSearchIsLoading { await Task.yield() }
+
+        let recovery = Task {
+            try await model.adoptRecovery(.init(
+                store: store,
+                operationID: UUID(),
+                requiresFreshServiceGraph: false,
+                newerHistoryWasReconciled: false
+            ))
+        }
+        while model.selection != .projects { await Task.yield() }
+        gate.release.signal()
+        try await blocker.value
+        try await recovery.value
+        await pending.value
+
+        XCTAssertEqual(model.workspaceSearchDefinition, .init())
+        XCTAssertNil(model.workspaceSearchProjection)
+        XCTAssertFalse(model.workspaceSearchIsLoading)
+        XCTAssertNil(model.workspaceSearchFailure)
+    }
+
+    @MainActor
     func testSearchAuditResultOverridesConflictingHistoryFilterAndForwardRestoresExactEvent() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SearchAuditNavigation-\(UUID().uuidString)", isDirectory: true)

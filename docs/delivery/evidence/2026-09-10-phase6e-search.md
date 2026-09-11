@@ -56,6 +56,13 @@ SourcePackages cache pinned to RekonDesignSystem revision
 - `results-review-green-01.xcresult` passed those ten correction cases 10/10 with
   no failures. `results-review-green-02.xcresult` passed eight affected existing
   Search, navigation and recovery integration cases 8/8 with no failures.
+- Delta review then identified one remaining recovery-clearing interleaving.
+  `results-review-recovery-red-03.xcresult` failed the focused case 1/1 with the
+  expected two assertions when an old pending Search republished its definition
+  and projection after recovery cleared ephemeral state. Generation invalidation
+  now occurs before recovery can suspend or transition stores and again whenever
+  ephemeral Search state is cleared. `results-review-recovery-green-04.xcresult`
+  passed that same case 1/1 with no failures.
 
 The three recovery checks directly confirmed that full backup contains saved
 queries, tracking reset retains them and restore preserves their bytes while
