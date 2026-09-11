@@ -198,6 +198,55 @@ sidebar assertions and the prior passing full native journey for unchanged
 properties. This documentation-only closeout is returned to the orchestrator for
 its owned catalog, index, progress-ledger and final documentation-check readback.
 
+## Pull-request review corrections
+
+CodeRabbit review `5173582848` identified four required Phase 6B corrections on
+pull-request head `024a3b5d48517129e3309327ed9fed15cb3c6a38`. The local correction
+source revision is `b7be24065dec287b7cb0b00ea39413418eb54387` on
+`codex/phase6b-reviewed`; push, merge, catalog/index maintenance and progress-ledger
+maintenance remain orchestrator-owned.
+
+- Goals history now validates restored focus against the active filtered domain,
+  rather than the unfiltered workspace projection.
+- Execution links whose persisted ticket has no phase placement are not
+  registered as available all-phase board filters, preserving the unavailable-link
+  recovery path.
+- The native Goals scroll bridge now distinguishes its own published position
+  from an externally requested offset, so Back/Forward restoration works even
+  when the focus token is unchanged.
+- Preference reset and recovery adoption now clear all eight Goals-specific
+  ephemeral fields.
+- The existing native route test now unwraps both lane snapshots, preventing a
+  pair of missing lanes from satisfying its lane-preservation assertion.
+
+The review's separate claim that the workspace-goal SQL ended its statement
+before `LIMIT` was not reproducible: the current query contains no intervening
+semicolon, so `WorkspaceGoalsProjection.swift` was left unchanged.
+
+The regression sequence used a fresh isolated unsigned arm64 XCTest product set
+under `/private/tmp/release-radar-phase6b-pr45-fixes-01a08c9d` with the pinned
+offline RekonDesignSystem checkout:
+
+- RED01 ran the complete `WorkspaceGoalsProjectionTests` class: 18 tests, 19
+  expected assertion failures across the four newly covered defects, zero
+  unexpected failures.
+- GREEN01 reran the same 18 tests: 17 passed; the sole failure showed that the
+  preference-reset test itself remained on Goals, where ordinary post-reload
+  reconciliation selected the first visible Delivery Goal. The test was corrected
+  to invoke Settings-owned reset from Settings; no product code changed for this
+  fixture correction.
+- GREEN02 reran that exact corrected test: 1/1 passed, zero failures. Together
+  with GREEN01, the changed focus, unavailable-link, native scroll and both reset
+  paths have direct passing regression coverage. No full native journey was
+  repeated because the changed viewport behavior is exercised through a real
+  `NSScrollView`, while the earlier full native Phase 6B journey remains terminal
+  evidence for unchanged properties.
+
+All correction test processes exited. The installed owner application remained
+running as pre-existing PID 60590 and was not controlled or mutated. No external
+service, application database, owner preference, catalog acceptance or remote Git
+state was changed.
+
 ## Temporary-output status
 
 No cleanup was authorized or performed. Result bundles, logs, marker files,
@@ -207,4 +256,7 @@ fresh `reviewer-captures.MMMqYi` export subdirectory. The reviewer's read-only
 source bundle remains under
 `/private/tmp/release-radar-phase6b-review-01a08cde.L147PW`. The three PNGs above
 were visually inspected after replacement and are the verified canonical
-repository copies.
+repository copies. The correction result bundles, logs, derived data, module
+caches and copied dependency checkout remain under
+`/private/tmp/release-radar-phase6b-pr45-fixes-01a08c9d`; no cleanup was
+authorized or performed.

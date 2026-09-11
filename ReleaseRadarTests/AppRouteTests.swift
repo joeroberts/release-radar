@@ -5324,9 +5324,9 @@ final class AppRouteTests: XCTestCase {
             $0.goalID == "phase6b-unlinked-goal-12"
         })
         let activePhaseBefore = model.currentProject?.activePhaseID
-        let laneBefore = model.dashboard?.allPhaseBoard(for: projectID)?.lanes.first {
+        let laneBefore = try XCTUnwrap(model.dashboard?.allPhaseBoard(for: projectID)?.lanes.first {
             $0.cards.contains { $0.id.rawValue.utf8.elementsEqual("GOALS-LINK-12".utf8) }
-        }?.lane
+        }?.lane)
 
         let previousPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
@@ -5421,9 +5421,9 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(accessibilityVerticalScrollValue(nativeWindow)), compactScrollValue, accuracy: 0.01)
         XCTAssertEqual(model.navigationFocus, .workspaceGoal(linkedTarget.id))
         XCTAssertEqual(model.currentProject?.activePhaseID, activePhaseBefore)
-        XCTAssertEqual(model.dashboard?.allPhaseBoard(for: projectID)?.lanes.first {
+        XCTAssertEqual(try XCTUnwrap(model.dashboard?.allPhaseBoard(for: projectID)?.lanes.first {
             $0.cards.contains { $0.id.rawValue.utf8.elementsEqual("GOALS-LINK-12".utf8) }
-        }?.lane, laneBefore)
+        }?.lane), laneBefore)
         try taskCapture(hosting, name: "phase6b-goals-compact-return")
 
         await model.goForward()

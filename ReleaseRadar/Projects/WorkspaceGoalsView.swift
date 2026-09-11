@@ -588,19 +588,24 @@ private struct WorkspaceGoalsScrollOffsetBridge: NSViewRepresentable {
         private weak var scrollView: NSScrollView?
         private weak var clipView: NSClipView?
         private var pendingRestoreOffset: Double?
+        private var observedOffset: Double?
         private var isRestoring = false
 
         init(offset: Binding<Double?>, restoreToken: NavigationFocus?) {
             self.offset = offset
             self.restoreToken = restoreToken
+            observedOffset = offset.wrappedValue
             pendingRestoreOffset = offset.wrappedValue
         }
 
         func update(offset: Binding<Double?>, restoreToken: NavigationFocus?) {
             self.offset = offset
-            guard self.restoreToken != restoreToken else { return }
+            let requestedOffset = offset.wrappedValue
+            let shouldRestore = self.restoreToken != restoreToken || observedOffset != requestedOffset
             self.restoreToken = restoreToken
-            pendingRestoreOffset = offset.wrappedValue
+            observedOffset = requestedOffset
+            guard shouldRestore else { return }
+            pendingRestoreOffset = requestedOffset
         }
 
         func attach(to scrollView: NSScrollView?) {
@@ -646,6 +651,7 @@ private struct WorkspaceGoalsScrollOffsetBridge: NSViewRepresentable {
             guard !isRestoring, let clipView else { return }
             let value = Double(max(0, clipView.bounds.origin.y))
             guard offset.wrappedValue.map({ abs($0 - value) > 0.5 }) ?? true else { return }
+            observedOffset = value
             offset.wrappedValue = value
         }
     }

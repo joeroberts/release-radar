@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import SwiftUI
 import XCTest
 @testable import ReleaseRadar
 @testable import ReleaseRadarCore
@@ -59,6 +61,48 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
             filter,
             .execution(.init(threadID: goal.threadID, goalID: "\(goal.goalID)\u{301}", ticketID: ticketID))
         )
+    }
+
+    func testExecutionGoalLinkedToUnplacedWorkIsNotRegisteredAsAnAvailableBoardFilter() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceUnplacedExecutionGoal-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let ticketID = TicketID(rawValue: "UNPLACED-EXECUTION-GOAL")
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Link an execution goal to unplaced work") { connection in
+            try connection.execute(
+                "INSERT INTO tickets (id, project_id, phase_id, outcome, lane) VALUES (?, ?, NULL, 'Unplaced execution work', NULL)",
+                bindings: [.text(ticketID.rawValue), .text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('unplaced-execution-thread', ?, 'completed', '2026-09-10T12:00:00Z')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('unplaced-execution-goal', ?, 'unplaced-execution-thread', 'Completed', 'Persisted link without a board card.', '2026-09-10T12:00:00Z')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO thread_links (id, project_id, ticket_id, thread_id) VALUES ('unplaced-execution-thread-link', ?, ?, 'unplaced-execution-thread')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue), .text(ticketID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO ticket_goal_links (id, project_id, ticket_id, thread_id, goal_id) VALUES ('unplaced-execution-goal-link', ?, ?, 'unplaced-execution-thread', 'unplaced-execution-goal')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue), .text(ticketID.rawValue)]
+            )
+        }
+
+        let dashboard = try await DashboardProjection.load(from: store)
+        let goal = try XCTUnwrap(dashboard.workspaceGoals.execution.first { $0.goalID == "unplaced-execution-goal" })
+        let filter = try XCTUnwrap(goal.boardFilter)
+        let board = try XCTUnwrap(dashboard.allPhaseBoard(for: DashboardSampleData.projectID))
+
+        XCTAssertEqual(goal.link, .linked(ticketID: ticketID, phaseID: nil, phaseName: nil))
+        XCTAssertFalse(board.hasExactExecutionGoalLink(filter))
+        XCTAssertTrue(board.filtered(by: .execution(filter)).lanes.flatMap(\.cards).isEmpty)
     }
 
     func testDocumentationReplacementPreservesExactExecutionGoalLinks() async throws {
@@ -397,6 +441,111 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
     }
 
     @MainActor
+    func testBackDoesNotRestoreFocusToExecutionGoalOutsideSavedFilter() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalsFilteredFocus-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Register filtered Goals navigation identity") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'workspace-filtered-focus-registration', 1, 'complete')",
+                bindings: [.text(DashboardSampleData.projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let goal = try XCTUnwrap(model.dashboard?.workspaceGoals.execution.first)
+
+        await model.navigate(to: .goals)
+        model.setWorkspaceGoalsDomain(.execution)
+        model.setWorkspaceGoalsProjectID(goal.project.id)
+        model.setWorkspaceGoalsExecutionStatus(goal.status)
+        model.selectWorkspaceExecutionGoal(goal.id)
+        model.setNavigationFocus(.workspaceGoal(goal.id))
+        await model.navigate(to: .projects)
+
+        try await store.transact(actor: .init(id: "workspace-goals-test"), reason: "Move the observed goal outside its saved status filter") { connection in
+            try connection.execute(
+                "UPDATE observed_goals SET status = 'Running' WHERE project_id = ? AND thread_id = ? AND id = ?",
+                bindings: [.text(goal.project.id.rawValue), .text(goal.threadID), .text(goal.goalID)]
+            )
+        }
+        await model.reloadDashboardAfterCommittedAgentCommand()
+
+        await model.goBack()
+
+        XCTAssertEqual(model.selection, .goals)
+        XCTAssertNil(model.selectedWorkspaceExecutionGoalID)
+        XCTAssertEqual(model.navigationFocus, .recovery)
+        XCTAssertTrue(model.navigationRecoveryMessage?.contains("exact Execution Goal observation") == true)
+    }
+
+    @MainActor
+    func testGoalsScrollRestoresChangedExternalOffsetWithSameFocus() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalsExternalScroll-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let goals = try XCTUnwrap(model.dashboard?.workspaceGoals)
+        let goal = try XCTUnwrap(goals.execution.first)
+        await model.navigate(to: .goals)
+        model.setWorkspaceGoalsDomain(.execution)
+        model.selectWorkspaceExecutionGoal(goal.id)
+        model.setNavigationFocus(.workspaceGoal(goal.id))
+        let stableFocus = try XCTUnwrap(model.navigationFocus)
+
+        let view = WorkspaceGoalsView(
+            goals: goals,
+            freshness: .init(state: .unavailable, lastObservedAt: nil, reason: "Synthetic test"),
+            openDeliveryGoal: { _ in },
+            openUnassignedWork: { _ in },
+            openExecutionGoal: { _ in },
+            domain: Binding(get: { model.workspaceGoalsDomain }, set: { model.setWorkspaceGoalsDomain($0) }),
+            projectID: Binding(get: { model.workspaceGoalsProjectID }, set: { model.setWorkspaceGoalsProjectID($0) }),
+            deliveryLifecycle: Binding(get: { model.workspaceGoalsDeliveryLifecycle }, set: { model.setWorkspaceGoalsDeliveryLifecycle($0) }),
+            executionStatus: Binding(get: { model.workspaceGoalsExecutionStatus }, set: { model.setWorkspaceGoalsExecutionStatus($0) }),
+            executionScope: Binding(get: { model.workspaceGoalsExecutionScope }, set: { model.setWorkspaceGoalsExecutionScope($0) }),
+            selectedDeliveryID: Binding(get: { model.selectedWorkspaceDeliveryGoalID }, set: { model.selectWorkspaceDeliveryGoal($0) }),
+            selectedExecutionID: Binding(get: { model.selectedWorkspaceExecutionGoalID }, set: { model.selectWorkspaceExecutionGoal($0) }),
+            viewportOffset: Binding(get: { model.workspaceGoalsViewportOffset }, set: { model.setWorkspaceGoalsViewportOffset($0) }),
+            requestedFocus: stableFocus,
+            focusChanged: { model.setNavigationFocus($0) }
+        )
+        let hosting = NSHostingView(rootView: view)
+        hosting.frame = NSRect(x: 0, y: 0, width: 760, height: 240)
+        let window = NSWindow(contentRect: hosting.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        window.orderFront(nil)
+        defer { window.close() }
+        try await Task.sleep(for: .milliseconds(100))
+        hosting.layoutSubtreeIfNeeded()
+
+        let scrollView = try XCTUnwrap(descendantScrollViews(in: hosting).max {
+            scrollableHeight($0) < scrollableHeight($1)
+        })
+        XCTAssertGreaterThan(scrollableHeight(scrollView), 160)
+        scrollView.contentView.scroll(to: NSPoint(x: 0, y: 60))
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+        NotificationCenter.default.post(name: NSView.boundsDidChangeNotification, object: scrollView.contentView)
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(try XCTUnwrap(model.workspaceGoalsViewportOffset), 60, accuracy: 1)
+
+        model.setWorkspaceGoalsViewportOffset(140)
+        try await Task.sleep(for: .milliseconds(100))
+        hosting.layoutSubtreeIfNeeded()
+
+        XCTAssertEqual(model.navigationFocus, stableFocus)
+        XCTAssertEqual(scrollView.contentView.bounds.origin.y, 140, accuracy: 1)
+    }
+
+    @MainActor
     func testOpeningAssociatedExecutionWorkPreservesGoalsHistoryContext() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-WorkspaceGoalsAssociatedWork-\(UUID().uuidString)", isDirectory: true)
@@ -440,5 +589,95 @@ final class WorkspaceGoalsProjectionTests: XCTestCase {
         XCTAssertEqual(model.selectedWorkspaceExecutionGoalID, goal.id)
         XCTAssertEqual(model.workspaceGoalsViewportOffset, 284.5)
         XCTAssertEqual(model.navigationFocus, .workspaceGoal(goal.id))
+    }
+
+    @MainActor
+    func testPreferenceResetClearsWorkspaceGoalsEphemeralState() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalsPreferenceReset-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        try await configureNonDefaultWorkspaceGoalsState(model)
+        await model.navigate(to: .settings)
+
+        await model.resetApplicationPreferences()
+
+        assertWorkspaceGoalsStateIsDefault(model)
+    }
+
+    @MainActor
+    func testRecoveryAdoptionClearsWorkspaceGoalsEphemeralState() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalsRecoveryReset-\(UUID().uuidString)", isDirectory: true)
+        let replacementDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-WorkspaceGoalsRecoveryReplacement-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: replacementDirectory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+            try? FileManager.default.removeItem(at: replacementDirectory)
+        }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let replacementStore = DeliveryStore(databaseURL: replacementDirectory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        try await DashboardSampleData.seedIfNeeded(in: replacementStore)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        try await configureNonDefaultWorkspaceGoalsState(model)
+
+        try await model.adoptRecovery(.init(
+            store: replacementStore,
+            operationID: UUID(),
+            requiresFreshServiceGraph: true,
+            newerHistoryWasReconciled: false
+        ))
+
+        assertWorkspaceGoalsStateIsDefault(model)
+    }
+
+    @MainActor
+    private func configureNonDefaultWorkspaceGoalsState(_ model: AppModel) async throws {
+        let delivery = try XCTUnwrap(model.dashboard?.workspaceGoals.delivery.first)
+        let execution = try XCTUnwrap(model.dashboard?.workspaceGoals.execution.first { $0.link.ticketID != nil })
+        await model.navigate(to: .goals)
+        model.selectWorkspaceDeliveryGoal(delivery.id)
+        model.setWorkspaceGoalsDeliveryLifecycle(delivery.goal.lifecycle)
+        model.setWorkspaceGoalsDomain(.execution)
+        model.setWorkspaceGoalsProjectID(execution.project.id)
+        model.setWorkspaceGoalsExecutionStatus(execution.status)
+        model.setWorkspaceGoalsExecutionScope(.linked)
+        model.selectWorkspaceExecutionGoal(execution.id)
+        model.setWorkspaceGoalsViewportOffset(284.5)
+    }
+
+    @MainActor
+    private func assertWorkspaceGoalsStateIsDefault(
+        _ model: AppModel,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertEqual(model.workspaceGoalsDomain, .delivery, file: file, line: line)
+        XCTAssertNil(model.workspaceGoalsProjectID, file: file, line: line)
+        XCTAssertNil(model.workspaceGoalsDeliveryLifecycle, file: file, line: line)
+        XCTAssertNil(model.workspaceGoalsExecutionStatus, file: file, line: line)
+        XCTAssertEqual(model.workspaceGoalsExecutionScope, .all, file: file, line: line)
+        XCTAssertNil(model.selectedWorkspaceDeliveryGoalID, file: file, line: line)
+        XCTAssertNil(model.selectedWorkspaceExecutionGoalID, file: file, line: line)
+        XCTAssertNil(model.workspaceGoalsViewportOffset, file: file, line: line)
+    }
+
+    @MainActor
+    private func descendantScrollViews(in view: NSView) -> [NSScrollView] {
+        let current = (view as? NSScrollView).map { [$0] } ?? []
+        return current + view.subviews.flatMap(descendantScrollViews(in:))
+    }
+
+    @MainActor
+    private func scrollableHeight(_ scrollView: NSScrollView) -> CGFloat {
+        max(0, (scrollView.documentView?.bounds.height ?? 0) - scrollView.contentView.bounds.height)
     }
 }
