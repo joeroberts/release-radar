@@ -15,7 +15,7 @@ Phase 6E is complete locally and owner-authorized for publication and conditiona
 | 6B Goals | [PR #45](https://github.com/joeroberts/release-radar/pull/45), merge `1e03d9ad8a36c7c7ec80525233df6a5e7c3217e8` | [6B evidence](evidence/2026-09-10-phase6b-goals.md) |
 | 6C Evidence | [PR #46](https://github.com/joeroberts/release-radar/pull/46), merge `fbb0ab5da811ad0db51f1441492aa8c5531e3ce3` | [6C evidence](evidence/2026-09-10-phase6c-evidence.md) |
 | 6D Adoption | [PR #47](https://github.com/joeroberts/release-radar/pull/47), merge `f0c9e42af4a5eb19d739979e7dfa33239a8e4a3a` | [6D evidence](evidence/2026-09-10-phase6d-adoption.md) |
-| 6E Search and Help | Final source `d1445dc033fca9056782c493ebd04184d58fbc67`, integrated at `54d28bcf1ccf35f9201b43c51c769fa3d78e51bc` | [6E evidence](evidence/2026-09-10-phase6e-search.md) |
+| 6E Search and Help | [PR #48](https://github.com/joeroberts/release-radar/pull/48), OPEN at head `de87a66cd990f2f54332e51a60c534ba36f6d10b`; final source `d1445dc033fca9056782c493ebd04184d58fbc67` | [6E evidence](evidence/2026-09-10-phase6e-search.md) |
 
 The owner explicitly waived the pending/rate-limited CodeRabbit wait for #46/#47
 and authorized their immediate merges using completed independent reviews and
@@ -62,6 +62,8 @@ and merge once that actual review is clear and required checks pass. A pending,
 skipped or rate-limited check is not approval. Root remains the sole publication
 and integration owner. Installation, owner testing and later product work require
 separate explicit authorization.
+PR #48 is published from `codex/phase6e-reviewed` against the actual default.
+CodeRabbit is processing the current head; no completed review or merge is claimed.
 No owner SQLite, credentials, catalog binding/acceptance, consumer adoption,
 notifications, external security scans, runtime/hooks, packaging or cleanup is
 included. Eligibility is not authorization; no next slice is dispatched.
@@ -81,6 +83,6 @@ All durable deliverables are committed repository artifacts. Temporary builds,
 logs, xcresults, native stores, runfiles, markers and exported attachments remain
 under the per-slice roots listed in the evidence, including
 `/private/tmp/release-radar-phase6e-writer-01a08dee` and its root attachment exports.
-Temporary PR bodies `phase6a-pr.md` through `phase6d-pr.md` remain under
+Temporary PR bodies `phase6a-pr.md` through `phase6e-pr.md` remain under
 `/tmp/release-radar-phase6-publication/`; `/tmp/phase6b-unused` also remains.
 No temporary files were deleted. Cleanup requires explicit authorization.
