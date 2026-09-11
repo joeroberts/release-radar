@@ -34,11 +34,11 @@
 		</data>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<data>
-		YE/bu30oyxSs/E55SlGjgFq7j1Y=
+		AlJVv/ovB7wY6RbrNLCXbwLXEio=
 		</data>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<data>
-		utYtSMelCQsY/8GdxOJVfi8YKTE=
+		x5bY9V/leBaAbDeaRORcw5favAs=
 		</data>
 		<key>Resources/catalog-v1.md</key>
 		<data>
@@ -51,7 +51,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			dboTdtLu3oygwRF0Fj/PQqadNqA=
+			vJX6vA6imHBpeI2j7NZTlCnodGs=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -60,7 +60,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			WApqlNl4lqTjyKaxqxIvNHI7vyg=
+			Y4IWEUTRpgaqN9DlRtN3GBxGNKQ=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarAgentTools" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -69,7 +69,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			KzZsANI9EPNeIyYjEJWnqp+idpI=
+			34BVJQbbzPrTqYLjFuxDPl4zpww=
 			</data>
 			<key>requirement</key>
 			<string>identifier ReleaseRadarDocumentationTool and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -141,14 +141,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			pW+URwjX1E1iyFGzi6OEfVcy8wj7cs1MMcOS3PNfGbI=
+			68c09D3WRIKhaSwn44dtPe4ubU9vH1WroGiKebN/9Tk=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Y75/+KMXLdgWAwivKqpnJECneHQTquOtZMCHHQV5Yzk=
+			TAGMhHWVdiqvjDcAxpDlblwIK6/LMOSA/kFqAQZn5Ds=
 			</data>
 		</dict>
 		<key>Resources/catalog-v1.md</key>
