@@ -132,7 +132,14 @@ reauthorization, nullable decision metadata, exact destination filters, stale
 asynchronous results, byte-exact scope identity, shared Help completeness and
 audit/reference ID matching. The same writer is correcting this bounded outcome,
 with explicit Astra High escalation for authority/recovery and byte identity;
-the same reviewer will review the correction delta. Phase 6E is not complete.
+Correction `8056ae7e4063f3171d0410f87453c0b4adc9cad1` is integrated at
+`98b9671d4c84ae9a7977b14304dbccd04c93d310`; direct checks passed 10/10
+regressions, 8/8 affected integration cases and 1/1 focused native controls.
+Root verified corrected Help with real keyboard input in the isolated host.
+The same reviewer resolved seven findings and ordinary-edit invalidation; only
+the original R5 recovery-clearing invalidation boundary remains. The writer is
+making that bounded correction with one focused regression. Reviewer is
+quiescent and archived pending that same-outcome correction. Phase 6E is not complete.
 No shared build/native slot is held.
 
 ## Authorization and next eligible work
