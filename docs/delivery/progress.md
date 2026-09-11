@@ -92,4 +92,8 @@ under the per-slice roots listed in the evidence, including
 `/private/tmp/release-radar-phase6e-writer-01a08dee` and its root attachment exports.
 Temporary PR bodies `phase6a-pr.md` through `phase6e-pr.md` remain under
 `/tmp/release-radar-phase6-publication/`; `/tmp/phase6b-unused` also remains.
-No temporary files were deleted. Cleanup requires explicit authorization.
+Diagnostic outputs remain retained; no manual cleanup was performed. An automatic
+native-fixture teardown was found during PR review and removed from the focused
+fixture because its SQLite store could still be open. Earlier fixture lifecycle
+is not a claim that every ephemeral test file was retained. Any further cleanup
+requires explicit authorization.
