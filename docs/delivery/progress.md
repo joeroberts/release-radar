@@ -133,7 +133,7 @@ Publication state:
   `c7c36425dbee669bedbbb3f3ce328a91853d5d8c`, base `codex/release-radar-mvp`,
   merge `1e03d9ad8a36c7c7ec80525233df6a5e7c3217e8`; follows merged #44.
 
-No 6C implementation or coordination branch was pushed. PR #44's Required reset correction passed direct tests and independent review.
+The coordination branch remains local; reviewed 6C/6D publication branches are now pushed separately. PR #44's Required reset correction passed direct tests and independent review.
 The other four bot suggestions were assessed as non-blocking; event-time unknown
 provenance, existing failure recovery and direct migration checks are preserved.
 Root completed the owner-requested CodeRabbit review on #45 after #44 merged.
@@ -154,8 +154,23 @@ and focused audited-handoff/compatibility tests. ADR-006 reserves guidance v3;
 preserve immutable shared-V1 version/digest pairs. No governing AGENTS, installed
 skills/config, consumer instructions or guardrails may change.
 
-Publication authorization covers only the reviewed 6A/6B endpoints above.
-6C push/PR or merge, and all installation, require separate approval. Installation/other-Mac owner testing wait until
+Owner subsequently authorized 6D push/PR and actual CodeRabbit review with scoped
+valid feedback corrections. The required 6C dependency is published separately:
+
+- [PR #46](https://github.com/joeroberts/release-radar/pull/46): 6C prerequisite,
+  OPEN, head `c1ee62f0e31e82337e02d06d898d152a18de723e`, base
+  `codex/release-radar-mvp`.
+- [PR #47](https://github.com/joeroberts/release-radar/pull/47): 6D adoption,
+  OPEN, head `e9bf7801594386900e4afacb37cbde220429f7be`, base
+  `codex/phase6c-publish`.
+
+Both publication branches were synchronized by ordinary merges, their scoped
+diffs and documentation checks verified, and actual CodeRabbit reviews requested.
+Do not treat a skipped or rate-limited check as review. Merge of #46/#47 and all
+installation require separate approval. The owner briefly paused 6E for publication
+then explicitly reversed that pause: 6E continues from its assigned reviewed
+baseline and preserved test. It does not wait for publication or merge; later
+upstream synchronization must preserve its work. Installation/other-Mac owner testing wait until
 September 11 or later and do not block authorized source work. No owner
 state/SQLite, credentials, catalog binding/acceptance, consumer adoption,
 notifications, external security scans, runtime/hooks, packaging or cleanup.
