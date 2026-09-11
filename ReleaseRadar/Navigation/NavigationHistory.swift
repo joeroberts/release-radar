@@ -21,6 +21,9 @@ enum NavigationFocus: Hashable, Sendable {
     case recovery
     case workspaceGoal(Data)
     case workspaceGoalsFilter
+    case workspaceSearchField
+    case workspaceSearchFilters
+    case workspaceSearchResult(Data)
 }
 
 struct WorkspaceGoalsNavigationState: Equatable, Sendable {
@@ -31,6 +34,12 @@ struct WorkspaceGoalsNavigationState: Equatable, Sendable {
     var executionScope: WorkspaceExecutionScope
     var selectedDeliveryID: Data?
     var selectedExecutionID: Data?
+    var viewportOffset: Double?
+}
+
+struct WorkspaceSearchNavigationState: Equatable, Sendable {
+    var definition: WorkspaceSearchDefinition
+    var selectedResultID: Data?
     var viewportOffset: Double?
 }
 
@@ -45,6 +54,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
     var selectedHistoryEventID: HistoryEventIdentity?
     var historyViewportOffset: Double?
     var workspaceGoals: WorkspaceGoalsNavigationState?
+    var workspaceSearch: WorkspaceSearchNavigationState?
     var focus: NavigationFocus?
 
     init(
@@ -58,6 +68,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         selectedHistoryEventID: HistoryEventIdentity? = nil,
         historyViewportOffset: Double? = nil,
         workspaceGoals: WorkspaceGoalsNavigationState? = nil,
+        workspaceSearch: WorkspaceSearchNavigationState? = nil,
         focus: NavigationFocus? = nil
     ) {
         self.route = route
@@ -70,6 +81,7 @@ struct NavigationHistoryEntry: Equatable, Sendable {
         self.selectedHistoryEventID = selectedHistoryEventID
         self.historyViewportOffset = historyViewportOffset
         self.workspaceGoals = workspaceGoals
+        self.workspaceSearch = workspaceSearch
         self.focus = focus
     }
 }
@@ -106,6 +118,7 @@ struct NavigationHistory: Equatable, Sendable {
         selectedHistoryEventID: HistoryEventIdentity? = nil,
         historyViewportOffset: Double? = nil,
         workspaceGoals: WorkspaceGoalsNavigationState? = nil,
+        workspaceSearch: WorkspaceSearchNavigationState? = nil,
         focus: NavigationFocus? = nil
     ) {
         navigate(to: .init(
@@ -119,6 +132,7 @@ struct NavigationHistory: Equatable, Sendable {
             selectedHistoryEventID: selectedHistoryEventID,
             historyViewportOffset: historyViewportOffset,
             workspaceGoals: workspaceGoals,
+            workspaceSearch: workspaceSearch,
             focus: focus
         ))
     }
@@ -133,6 +147,7 @@ struct NavigationHistory: Equatable, Sendable {
         selectedHistoryEventID: HistoryEventIdentity? = nil,
         historyViewportOffset: Double? = nil,
         workspaceGoals: WorkspaceGoalsNavigationState? = nil,
+        workspaceSearch: WorkspaceSearchNavigationState? = nil,
         focus: NavigationFocus? = nil
     ) {
         entries[index].registration = registration ?? entries[index].registration
@@ -144,6 +159,7 @@ struct NavigationHistory: Equatable, Sendable {
         entries[index].selectedHistoryEventID = selectedHistoryEventID
         entries[index].historyViewportOffset = historyViewportOffset
         entries[index].workspaceGoals = workspaceGoals
+        entries[index].workspaceSearch = workspaceSearch
         entries[index].focus = focus
     }
 

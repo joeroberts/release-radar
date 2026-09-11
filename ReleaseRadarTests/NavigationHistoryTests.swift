@@ -62,6 +62,97 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testSearchResultNavigationRestoresExactSearchStateWithoutChangingActivePhase() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchNavigation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let projectID = DashboardSampleData.projectID
+        let nonactivePhaseID = PhaseID(rawValue: "search-nonactive-phase")
+        let ticketID = TicketID(rawValue: "SEARCH-NONACTIVE-1")
+        try await store.transact(actor: .init(id: "search-navigation-test"), reason: "Seed exact Search navigation target") { connection in
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'search-navigation-registration', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try DeliveryPlanningPolicy.upsertPhase(
+                projectID: projectID,
+                phaseID: nonactivePhaseID,
+                name: "Search nonactive phase",
+                mode: .governed,
+                connection: connection
+            )
+            try DeliveryPlanningPolicy.upsertTicket(
+                projectID: projectID,
+                ticketID: ticketID,
+                phaseID: nonactivePhaseID,
+                outcome: "Open exact Search navigation target",
+                lane: .backlog,
+                auditEventID: .init(rawValue: "search-navigation-audit"),
+                connection: connection
+            )
+        }
+        let activePhaseBefore = try await store.read {
+            try $0.scalarText(
+                "SELECT phase_id FROM project_active_phases WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText(ticketID.rawValue)
+        for domain in WorkspaceSearchDomain.allCases where domain != .ticket {
+            model.setWorkspaceSearchDomain(domain, enabled: false)
+        }
+        model.setWorkspaceSearchSort(.newest)
+        await model.runWorkspaceSearch()
+        let result = try XCTUnwrap(model.workspaceSearchProjection?.results.first)
+        model.selectWorkspaceSearchResult(result.id)
+        model.setWorkspaceSearchViewportOffset(287.5)
+
+        await model.openWorkspaceSearchResult(result)
+
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertEqual(model.viewedBoard(for: projectID)?.phaseID, nonactivePhaseID)
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        let activePhaseAfterOpen = try await store.read {
+            try $0.scalarText(
+                "SELECT phase_id FROM project_active_phases WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        XCTAssertEqual(activePhaseAfterOpen, activePhaseBefore)
+
+        await model.goBack()
+
+        XCTAssertEqual(model.selection, .search)
+        XCTAssertEqual(model.workspaceSearchDefinition.text, ticketID.rawValue)
+        XCTAssertEqual(model.workspaceSearchDefinition.domains, [.ticket])
+        XCTAssertEqual(model.workspaceSearchDefinition.sort, .newest)
+        XCTAssertEqual(model.selectedWorkspaceSearchResultID, result.id)
+        XCTAssertEqual(model.workspaceSearchViewportOffset, 287.5)
+        XCTAssertEqual(model.navigationFocus, .workspaceSearchResult(result.id))
+        XCTAssertNil(model.navigationRecoveryMessage)
+
+        await model.goForward()
+
+        XCTAssertEqual(model.selection, .phaseBoard(projectID))
+        XCTAssertEqual(model.viewedBoard(for: projectID)?.phaseID, nonactivePhaseID)
+        XCTAssertEqual(model.selectedTicketID, ticketID)
+        let activePhaseAfterForward = try await store.read {
+            try $0.scalarText(
+                "SELECT phase_id FROM project_active_phases WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        XCTAssertEqual(activePhaseAfterForward, activePhaseBefore)
+    }
+
+    @MainActor
     func testHistoryUsesExactRegistrationWhenProjectBecomesArchived() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-NavigationArchive-\(UUID().uuidString)", isDirectory: true)

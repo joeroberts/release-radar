@@ -386,3 +386,32 @@ This amendment adds no task database, proposal engine, watcher or owner-state
 mutation. Adoption cannot change ticket lanes or outcomes, Delivery Goals, phase
 readiness, review or acceptance, and the existing Accepted, retired, Completed-
 phase and unassigned-execution guards continue to control the typed commands.
+
+## Phase 6E workspace Search and saved-query boundary — 2026-09-10
+
+Workspace Search reads only recorded application-store facts for Projects,
+Delivery Goals, persisted Execution Goals, tickets including retirements, current
+decision-reference versions and the supported History sources. A query carries an
+explicit record-domain set, deterministic sort and either all currently authorized
+registrations or an exact byte-preserving registration selection. Each result
+retains a typed destination identity. A failing domain is reported as omitted and
+the projection is explicitly incomplete; Search does not query repository files,
+invoke an external provider or turn partial data into a complete claim.
+
+The working query and named queries are versioned preferences in the existing
+app-owned SQLite store. Unknown payload versions remain stored, visible and
+recoverable without dropping or guessing filters. Full application backup and
+restore include them, and tracking reset preserves them. Restore still rotates
+the application authority incarnation and project registrations, so a pre-restore
+query cannot execute until the owner deliberately selects current scope and
+resaves it. Backup bytes, repository documents and saved query payloads never
+become registration or delivery authority.
+
+Opening a result uses the exact recorded registration and typed destination.
+Navigation history preserves query, scope, domains, sort, exact selection,
+viewport and keyboard/accessibility focus. Browsing may select a nonactive phase
+for viewing but cannot change the active phase, lifecycle, lane, goal, review,
+acceptance, notification or other delivery state. Shared Help is likewise a local
+read-only navigation surface; its actions open existing routes and grant no new
+mutation or external-service authority. This amendment does not add full-file
+indexing, a provider search contract, portable archive changes or Phase 7 work.

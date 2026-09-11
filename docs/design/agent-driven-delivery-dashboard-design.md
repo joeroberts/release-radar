@@ -656,3 +656,41 @@ remain one coherent flow without changing the board's established responsive
 layout. Phase 6D captures record the mounted board/inspector and Help content;
 the approved Work Board mockups remain the visual reference rather than being
 replaced.
+
+## Phase 6E workspace Search and shared Help — 2026-09-10
+
+Search is a workspace-level, read-only destination for recorded Projects,
+Delivery Goals, Execution Goals, tickets, decision references and History. Its
+query, authorized project-registration scope, record-type filters and sort order
+are explicit controls. Results retain their typed record and registration
+identity; matching titles never permit one project, registration, ticket,
+reference version or History source to substitute for another.
+
+At wide widths the result list and exact selected-record detail remain side by
+side. At compact widths they stack in one vertically scrollable surface, keeping
+filters, saved queries, selection and the Open exact record action reachable.
+Back and Forward restore the query, complete filter definition, selected result,
+actual viewport and keyboard/accessibility focus. Opening a result may change the
+viewed phase but never the active phase. Archived and removed registrations route
+to their existing safe read-only surfaces; unavailable exact identities produce
+an accessible recovery explanation.
+
+The working search and named saved queries persist every supported filter in a
+versioned local format. A newer unsupported payload remains visible and deletable
+without being interpreted or silently replaced. Full backup preserves these
+preferences, tracking reset leaves them intact and restore rotates their project
+authority: the owner must choose the current scope, run and resave before an old
+query becomes actionable. A per-domain read failure is named as partial and the
+remaining results are never labelled complete.
+
+Help is a shared searchable route covering setup and documentation handoff,
+recovery, active versus viewed phase, planning and unplaced work, task adoption,
+proposal approval versus apply, readiness versus acceptance, saved-query recovery
+and exact-result navigation. Every contextual destination is an actual accessible
+control into an existing route. There was no dedicated Search or shared-Help
+mockup, so these surfaces reuse the approved History and Goals scope headers,
+dark bordered cards, provenance language, list/detail rhythm and compact stacking
+without importing their aspirational data-source states. The inspected native
+captures record the delivered [wide Search](../delivery/evidence/2026-09-10-phase6e-search-wide.png),
+[compact Search](../delivery/evidence/2026-09-10-phase6e-search-compact.png) and
+[shared Help](../delivery/evidence/2026-09-10-phase6e-help.png) treatments.
