@@ -125,8 +125,15 @@ case 1/1, route/recovery 4/4, navigation/native rendering 2/2 and the isolated l
 native journey 1/1. Root verified the exact host, Search/save/navigation/Help and
 compact scrolling, stopped CUA before completion, and confirmed host exit.
 The [canonical evidence](evidence/2026-09-10-phase6e-search.md) and three PNGs
-are catalogued; the repository documentation check passes. Independent review
-is pending; this is not Phase 6E completion. No shared build/native slot is held.
+are catalogued; the repository documentation check passes. Fresh independent
+Astra High reviewer `01a08e2f-2be2-78d1-8bc0-ec72f17bc17d` requested eight
+Required corrections: unsupported-query preservation, deliberate restored-scope
+reauthorization, nullable decision metadata, exact destination filters, stale
+asynchronous results, byte-exact scope identity, shared Help completeness and
+audit/reference ID matching. The same writer is correcting this bounded outcome,
+with explicit Astra High escalation for authority/recovery and byte identity;
+the same reviewer will review the correction delta. Phase 6E is not complete.
+No shared build/native slot is held.
 
 ## Authorization and next eligible work
 
