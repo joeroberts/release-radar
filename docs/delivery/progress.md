@@ -6,8 +6,8 @@ Phase 6 delivery follows the
 [controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md): History and
 attention, distinct Delivery and Execution Goals, revision-bound evidence,
 generic task adoption, workspace Search, saved views and shared Help.
-Phase 6A–6D are merged. Phase 6E is published and undergoing bounded PR corrections
-under owner authorization for publication and conditional merge.
+Phase 6A–6D are merged. Phase 6E's bounded PR corrections are directly verified
+and independently approved, ready for the authorized corrected publication and review.
 
 | Slice | Current endpoint | Canonical evidence |
 | --- | --- | --- |
@@ -44,11 +44,13 @@ Writer `01a08dee-d569-7350-af9f-0a89274103f0` used Sol High, with bounded Astra
 High escalation for authority/recovery and byte-identity corrections. The independent
 reviewer used Astra High. Requested settings were explicit; independent runtime
 settings readback was unavailable. No native/build reservation remains.
-The writer has resumed only for required PR #48 feedback at Sol High; the same
-independent reviewer remains archived until the correction delta is ready.
-Their completed local results are preserved. The same reviewer has resumed for
-correction candidate `08e04f562d41fa761ab5150d43c48ef9602d336d`; earlier bounded
-Phase 6 peers remain archived. Root owns all remaining build and native launches.
+The same independent reviewer approved final correction source
+`97b90d2795b47b243ac580d0361ebb973972a307` with no remaining Required findings.
+Root's final five affected navigation tests passed 5/5 and corrected compact live
+test passed 1/1. Exact registration labels were verified at recovery, rows, detail
+and actual Scope menu; menu evidence is accessibility text, not a screenshot.
+The writer is completing evidence-only closeout; completed peers are being archived.
+Earlier bounded Phase 6 peers remain archived. Root owns all remaining launches.
 
 Orchestrator `01a08bd9-8fa1-74b3-bfa0-a5e657e70179` owns this ledger/catalog and
 local `codex/phase6-coordination`; parent is `01a07e75-b254-72a1-be2a-3e97ac23baeb`.
@@ -67,20 +69,16 @@ and integration owner. Installation, owner testing and later product work requir
 separate explicit authorization.
 PR #48 is published from `codex/phase6e-reviewed` against the actual default.
 Actual CodeRabbit review `5174674187` completed on head `de87a66` at 03:21 UTC
-September 11. Five bounded corrections are active: post-navigation guards,
+September 11. Five bounded corrections are resolved: post-navigation guards,
 distinguishable registration labels, nonempty payload constraints, non-null saved
 query IDs and the pending-search test's scheduling wait. The cleanup suggestion
 conflicts with required diagnostic retention; optional fixture-loop and broad SQL
-pushdown suggestions do not block. No merge is claimed; corrected source requires
-affected checks, the same independent review and clear CodeRabbit disposition.
-Candidate `08e04f5` passes the schema/loading checks and four affected navigation
-checks, but independent review found a remaining same-route supersession case.
-Root's clean live check also reproduced result selection clearing its projection,
-blocking detail inspection. Both are bounded active corrections; no final approval
-or native pass is claimed. Recovery and result-row registration labels were
-visibly readable in the compact shell; the actual Scope menu exposed distinct IDs
-through accessibility. Live host `81409` exited after root stopped CUA and completed
-the handshake. No build/native reservation remains at this checkpoint.
+pushdown suggestions do not block. Independent review and the first live check
+identified same-route supersession and unchanged-text focus callbacks clearing
+results. Both are corrected and verified in source `97b90d2`. Current direct checks
+and independent review are complete; corrected publication still requires actual
+clear CodeRabbit disposition before the authorized merge. Root stopped CUA before
+completion and confirmed final live host `82472` exited. No reservation remains.
 
 The writer disclosed that correction native attempts 02 and 03 used inherited
 environment commands contrary to the explicit clean-environment grants. They are
