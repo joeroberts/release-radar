@@ -41,7 +41,7 @@ verification, screenshots and limitations. The subsequent CodeRabbit review iden
 Writer `01a08c9d-e36f-7a92-abba-69ade43678af` (Terra Medium, bounded escalation
 Sol High) and reviewer `01a08cde-c8c9-70d1-9ba1-1e4a566cb52b` (Sol High) are
 quiescent and archived at local completion. The writer is restored for read-only
-assessment of the same outcome; correction writing waits for 6D handback.
+assessment of the same outcome; correction writing is now released after 6D handback.
 
 Verification combines 13/13 focused source tests, the independent full native
 journey passing 1/1 on `bcf1c3f`, and the final changed sidebar raw accessibility
@@ -84,11 +84,14 @@ before fresh Sol High writer `01a08d97-f771-7de2-9384-e58d69a9178f` was dispatch
 from that baseline. It owns source/tests/affected docs; root owns this ledger and
 catalog/index metadata. Ceiling Astra High, no subagents. Actual requested model
 and effort were set at dispatch; runtime settings are not independently exposed.
-The writer holds the isolated build/test reservation and is now Astra High for
-named repeated compact-native fixture issues. Inventory/replay/evidence and
-focused guidance compatibility pass; final compact visible integration is using
-the proven guarded live-session pattern after discarding ambiguous AX-scroll
-experiments. No owner state or plain app launch is authorized.
+Writer candidate `0cd0a193e81d46264f1730ca0c5356504595898c` is integrated.
+It used bounded Astra High escalation for compact-native fixture diagnosis;
+4/4 adoption acceptance, focused compatibility and final guarded native 1/1
+passed. Root directly verified the visible compact Tasks/Help, stopped CUA before
+completion and read back the final result; host exit is confirmed. Writer is
+quiescent and all reservations are released. The
+[canonical evidence](evidence/2026-09-10-phase6d-adoption.md) and four images are
+catalogued. Independent candidate review is next; no approval is yet claimed.
 
 Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra High)
 is complete and archived with no blocking owner choice. Its bounded search identity,
@@ -122,7 +125,7 @@ head. Four Required findings remain: Goals state reset, filtered focus recovery,
 missing-board execution links and same-focus viewport restoration. The reported
 critical SQL terminator defect is absent from the reviewed source; the lane
 assertion suggestion is optional. Original writer is restored on the PR branch
-for read-only assessment, pending the sole writer slot after 6D. Corrected code
+for the four bounded corrections as sole product writer after 6D handback. Corrected code
 will receive direct verification and the same independent review before root
 pushes and merges. Owner merge authorization persists; no new approval is needed.
 Local source/tests/affected docs, scoped commits and necessary
