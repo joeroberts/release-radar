@@ -145,6 +145,9 @@ temporary diagnostics under
 `/private/tmp/release-radar-phase6e-writer-01a08dee`. They are not controlling
 artifacts. No temporary output was deleted.
 
-The initial independent review identified eight Required correction groups; the
-implementation and direct evidence above address all eight. Delta-review
-disposition and the final local correction commit will be recorded after review.
+Independent Astra High reviewer `01a08e2f-2be2-78d1-8bc0-ec72f17bc17d`
+approved the corrected outcome on September 11. All eight Required findings are
+resolved. Final source is `d1445dc033fca9056782c493ebd04184d58fbc67`, following
+correction `8056ae7e4063f3171d0410f87453c0b4adc9cad1` and initial candidate
+`e7c92a25b61ce444b57b60a3a9e73159494b9398`. This is local source completion;
+publication, installation and owner application-state acceptance are separate.
