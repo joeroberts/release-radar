@@ -166,8 +166,11 @@ valid feedback corrections. The required 6C dependency is published separately:
 
 Both publication branches were synchronized by ordinary merges, their scoped
 diffs and documentation checks verified, and actual CodeRabbit reviews requested.
-Do not treat a skipped or rate-limited check as review. Merge of #46/#47 and all
-installation require separate approval. The owner briefly paused 6E for publication
+Do not treat a skipped or rate-limited check as review. The owner now authorizes
+merging #46 then retargeting and merging #47 once actual CodeRabbit reviews have
+no unresolved valid actionable findings and applicable checks and correction
+reviews pass. Root remains the sole integration/correction coordinator.
+Installation still requires separate approval. The owner briefly paused 6E for publication
 then explicitly reversed that pause: 6E continues from its assigned reviewed
 baseline and preserved test. It does not wait for publication or merge; later
 upstream synchronization must preserve its work. Installation/other-Mac owner testing wait until
