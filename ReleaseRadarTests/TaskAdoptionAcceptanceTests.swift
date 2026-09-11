@@ -26,6 +26,24 @@ final class TaskAdoptionAcceptanceTests: XCTestCase {
         XCTAssertTrue(skill.contains("General approval of code or a delivery task is not approval to mutate Release Radar state"))
     }
 
+    func testPackagedSkillRequiresPreImplementationClassificationAndDurableReplayRecord() throws {
+        let skillURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("ReleaseRadar/CodexPluginMarketplace/plugins/release-radar/skills/release-radar/SKILL.md")
+        let skill = try String(contentsOf: skillURL, encoding: .utf8)
+
+        XCTAssertTrue(skill.contains("Before implementation begins"))
+        XCTAssertTrue(skill.contains("classify each non-Accepted ticket as atomic or non-atomic"))
+        XCTAssertTrue(skill.contains("Atomic tickets may remain without a task plan"))
+        XCTAssertTrue(skill.contains("complete titled task catalog"))
+        XCTAssertTrue(skill.contains("explicit owner approval of that exact catalog"))
+        XCTAssertTrue(skill.contains("existing repository delivery documentation referenced by `docs/delivery/progress.md`"))
+        XCTAssertTrue(skill.contains("pending or committed disposition"))
+        XCTAssertTrue(skill.contains("returned `ticketTaskPlanRevision` and audit ID"))
+        XCTAssertTrue(skill.contains("interruption, conversation loss, or partial execution"))
+        XCTAssertTrue(skill.contains("before replaying only an unchanged exact pending envelope"))
+    }
+
     func testDeliveryInventoryCapturesCompleteMixedTicketScopeWithoutWrites() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-TaskAdoption-\(UUID().uuidString)", isDirectory: true)

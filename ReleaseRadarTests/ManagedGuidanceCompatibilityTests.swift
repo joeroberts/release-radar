@@ -59,7 +59,10 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         let before = try await counts(store)
         let observation = await onboarding.observeProjectGuidanceContext(projectID: project)
         XCTAssertEqual(observation.state, .current(version: 3))
-        XCTAssertEqual(ProjectGuidancePresentation(documentationState: observation.documentationState).status, "Release Radar managed documentation current · v3")
+        let managedPresentation = ProjectGuidancePresentation(documentationState: observation.documentationState)
+        XCTAssertEqual(managedPresentation.status, "Release Radar managed documentation current · v3")
+        XCTAssertTrue(managedPresentation.detail.contains("Catalog v1"))
+        XCTAssertFalse(managedPresentation.detail.contains("Catalog v3"))
         let catalog = root.appendingPathComponent("docs/catalog.json")
         var changed = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: catalog)) as? [String: Any])
         changed["retiredArtifactIDs"] = ["retired-document", "newly-retired"]
@@ -69,6 +72,40 @@ final class ManagedGuidanceCompatibilityTests: XCTestCase {
         XCTAssertTrue(ProjectGuidancePresentation(documentationState: pending.documentationState).detail.contains("accept"))
         let after = try await counts(store)
         XCTAssertEqual(after, before)
+    }
+
+    func testGuidanceRecoveryPresentationNamesTheCurrentV3UpgradeTarget() {
+        let staged = ProjectGuidancePresentation(
+            documentationState: .stagedCatalog(
+                hasAuditedHandoff: false,
+                preview: .valid(version: 1, digest: "catalog")
+            )
+        )
+        XCTAssertTrue(staged.detail.contains("upgraded to v3"))
+        XCTAssertFalse(staged.detail.contains("upgraded to v2"))
+
+        let invalid = ProjectGuidancePresentation(
+            documentationState: .stagedCatalog(
+                hasAuditedHandoff: false,
+                preview: .invalid(.init(.malformedCatalog))
+            )
+        )
+        XCTAssertTrue(invalid.detail.contains("upgrading to v3"))
+        XCTAssertFalse(invalid.detail.contains("upgrading to v2"))
+
+        let unavailable = ProjectGuidancePresentation(
+            documentationState: .managedUnavailable(
+                hasAuditedHandoff: true,
+                reason: .catalogInvalid,
+                validationError: .malformedCatalog
+            )
+        )
+        XCTAssertTrue(unavailable.detail.contains("Guidance v3"))
+        XCTAssertFalse(unavailable.detail.contains("Guidance v2"))
+
+        let outdated = ProjectGuidancePresentation(state: .outdated(installed: 2, current: 3))
+        XCTAssertTrue(outdated.detail.contains("managed block to v3"))
+        XCTAssertFalse(outdated.detail.contains("managed block to v2"))
     }
 
     func testBundledCandidateAndUpgradePromptNameV3() throws {
