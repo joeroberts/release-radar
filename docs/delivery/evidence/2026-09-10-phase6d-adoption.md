@@ -60,6 +60,27 @@ All stores were synthetic and external services were suppressed. No owner
 application data, owner store, installation, provider, notification, network,
 catalog-acceptance, push, pull request or merge action was used.
 
+## Independent-review corrections
+
+The initial independent review found three required presentation and guidance
+omissions. The bounded correction now keeps the accepted catalog version
+separate from the current guidance version, names guidance v3 throughout the
+staged and recovery presentation, requires atomic/non-atomic classification and
+an explicitly owner-approved titled task catalog before non-atomic
+implementation, and records approved command envelopes plus their disposition,
+returned plan revisions and audit IDs in existing repository delivery
+documentation for exact recovery after interruption.
+
+The focused RED run executed three regression tests with the expected failures.
+After correction, `results-review-green-01.xcresult` passed all nine selected
+presentation, adoption-guidance, packaged-skill, lifecycle-digest and recognized
+capability tests with zero failures. The normalized unshipped 0.1.9 package
+digest is
+`b01335654a5dedcf2055c9bfa3e074e478f75dd2b9e4171dd16c1f2a4427ef83`;
+the frozen 0.1.7 and 0.1.8 identities remain unchanged. The accepted native UI
+evidence above was not rerun because these corrections do not change that Tasks
+or Help UI.
+
 ## Native visual and accessibility evidence
 
 ![Wide integrated task adoption](phase6d-adoption-tasks-wide.png)

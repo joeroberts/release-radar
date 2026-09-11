@@ -552,18 +552,18 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
             switch preview {
             case let .valid(version, _):
                 status = "Release Radar catalog staged · v\(version)"
-                detail = "Legacy guidance v1 remains supported and can be upgraded to v2. The catalog passed read-only validation. Import, evidence, and delivery state are unchanged."
+                detail = "Legacy guidance v1 remains supported and can be upgraded to v\(RepositoryDocumentContract.guidanceVersion). The catalog passed read-only validation. Import, evidence, and delivery state are unchanged."
                 systemImage = "doc.text.magnifyingglass"
             case let .invalid(error):
                 status = "Release Radar staged catalog needs repair"
-                detail = "Legacy guidance v1 remains supported. \(error.localizedDescription) Repair the catalog before upgrading to v2. Import, evidence, and delivery state are unchanged."
+                detail = "Legacy guidance v1 remains supported. \(error.localizedDescription) Repair the catalog before upgrading to v\(RepositoryDocumentContract.guidanceVersion). Import, evidence, and delivery state are unchanged."
                 systemImage = "exclamationmark.triangle"
             }
             actionTitle = "Copy update prompt"
-        case let .managed(audited, _, _):
-            let version = RepositoryDocumentContract.guidanceVersion
-            status = audited ? "Release Radar managed documentation current · v\(version)" : "Release Radar managed documentation handoff incomplete · v\(version)"
-            detail = "Catalog v\(version) matches this project's accepted repository and authorized root." + (audited ? " The exact guidance and audited handoff are present." : " Complete the audited guidance handoff without changing delivery state.")
+        case let .managed(audited, catalogVersion, _):
+            let guidanceVersion = RepositoryDocumentContract.guidanceVersion
+            status = audited ? "Release Radar managed documentation current · v\(guidanceVersion)" : "Release Radar managed documentation handoff incomplete · v\(guidanceVersion)"
+            detail = "Catalog v\(catalogVersion) matches this project's accepted repository and authorized root." + (audited ? " The exact guidance and audited handoff are present." : " Complete the audited guidance handoff without changing delivery state.")
             systemImage = audited ? "checkmark.circle" : "exclamationmark.arrow.triangle.2.circlepath"
             actionTitle = audited ? nil : "Copy repair prompt"
         case let .managedUnavailable(audited, reason, validationError):
@@ -583,7 +583,7 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
             default:
                 recovery = "Repair the catalog, files, indexes, and applicable checksums, then run the repository documentation check and reload." + (validationError.map { " Validation: \($0.rawValue)." } ?? "")
             }
-            detail = "Guidance v2 is readable, but managed operations are closed. " + recovery + (audited ? "" : " The guidance handoff also still needs its audited evidence.")
+            detail = "Guidance v\(RepositoryDocumentContract.guidanceVersion) is readable, but managed operations are closed. " + recovery + (audited ? "" : " The guidance handoff also still needs its audited evidence.")
             systemImage = "exclamationmark.triangle"
             switch reason {
             case .catalogInvalid, .guidanceUnavailable, .invalidTransition, .missingFile:
@@ -613,7 +613,7 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
             actionTitle = "Copy setup prompt"
         case let .outdated(installed, current):
             status = "Release Radar guidance update required · v\(installed) → v\(current)"
-            detail = "Legacy guidance remains supported. Validate the repository catalog and indexes before using Codex to upgrade only the managed block to v2."
+            detail = "Legacy guidance remains supported. Validate the repository catalog and indexes before using Codex to upgrade only the managed block to v\(current)."
             systemImage = "arrow.triangle.2.circlepath"
             actionTitle = "Copy update prompt"
         case .needsRepair:
