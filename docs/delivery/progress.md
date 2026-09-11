@@ -37,10 +37,11 @@ Phase 6B Workspace Goals is complete locally. Independently approved source is
 `fb8a210f0afc604a5a5f7e7b377602a12353c2d2` is integrated. The
 [brief](task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md) and
 [canonical evidence](evidence/2026-09-10-phase6b-goals.md) preserve behavior,
-verification, screenshots and limitations. No Required review findings remain.
+verification, screenshots and limitations. The subsequent CodeRabbit review identified four Required corrections, now pending.
 Writer `01a08c9d-e36f-7a92-abba-69ade43678af` (Terra Medium, bounded escalation
 Sol High) and reviewer `01a08cde-c8c9-70d1-9ba1-1e4a566cb52b` (Sol High) are
-quiescent and archived. No native reservation remains.
+quiescent and archived at local completion. The writer is restored for read-only
+assessment of the same outcome; correction writing waits for 6D handback.
 
 Verification combines 13/13 focused source tests, the independent full native
 journey passing 1/1 on `bcf1c3f`, and the final changed sidebar raw accessibility
@@ -83,6 +84,11 @@ before fresh Sol High writer `01a08d97-f771-7de2-9384-e58d69a9178f` was dispatch
 from that baseline. It owns source/tests/affected docs; root owns this ledger and
 catalog/index metadata. Ceiling Astra High, no subagents. Actual requested model
 and effort were set at dispatch; runtime settings are not independently exposed.
+The writer holds the isolated build/test reservation and is now Astra High for
+named repeated compact-native fixture issues. Inventory/replay/evidence and
+focused guidance compatibility pass; final compact visible integration is using
+the proven guarded live-session pattern after discarding ambiguous AX-scroll
+experiments. No owner state or plain app launch is authorized.
 
 Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra High)
 is complete and archived with no blocking owner choice. Its bounded search identity,
@@ -109,11 +115,16 @@ Publication state:
 No 6C implementation or coordination branch was pushed. PR #44's Required reset correction passed direct tests and independent review.
 The other four bot suggestions were assessed as non-blocking; event-time unknown
 provenance, existing failure recovery and direct migration checks are preserved.
-Root posted the owner-requested CodeRabbit review on #45 after retargeting.
-The bot [reported a review limit](https://github.com/joeroberts/release-radar/pull/45#issuecomment-5626551605)
-at 22:58 UTC; no actual review completed. Retry after approximately 23:58 UTC.
-Do not merge #45 before the requested actual review and disposition of any Required
-findings. Owner merge authorization persists; no new approval is needed.
+Root posted the owner-requested CodeRabbit review on #45 after retargeting and
+retried after the reported limit reset at 23:58 UTC. Actual review
+`5173582848` completed at 00:12 UTC on September 11 against the exact published
+head. Four Required findings remain: Goals state reset, filtered focus recovery,
+missing-board execution links and same-focus viewport restoration. The reported
+critical SQL terminator defect is absent from the reviewed source; the lane
+assertion suggestion is optional. Original writer is restored on the PR branch
+for read-only assessment, pending the sole writer slot after 6D. Corrected code
+will receive direct verification and the same independent review before root
+pushes and merges. Owner merge authorization persists; no new approval is needed.
 Local source/tests/affected docs, scoped commits and necessary
 fresh bounded peer tasks are authorized. One product writer at a time; the
 orchestrator does not implement product or use subagents. Exact committed baselines
