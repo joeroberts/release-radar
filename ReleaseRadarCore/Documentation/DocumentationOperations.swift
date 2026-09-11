@@ -58,6 +58,7 @@ public struct AgentQueryEnvelope: Codable, Equatable, Sendable {
 public enum AgentQuery: Codable, Equatable, Sendable {
     case inventoryEvidence(projectID: String?, rootID: String?)
     case ticketReferences(projectID: String, rootID: String, ticketID: String)
+    case ticketDeliveryEvidence(projectID: String, rootID: String, ticketID: String)
     case recordedImpacts(projectID: String, rootID: String, repositoryID: String, artifactID: String)
     case planChangeProposals(projectID: String)
     case phaseLifecycles(projectID: String)

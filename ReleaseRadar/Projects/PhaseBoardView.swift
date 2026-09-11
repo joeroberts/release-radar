@@ -61,6 +61,7 @@ struct PhaseBoardView: View {
     var openWorktreeRecovery: (() -> Void)? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
+    var loadTicketDeliveryEvidence: ((TicketID) async -> ReferenceLoadResult<TicketDeliveryEvidence>)? = nil
     var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
     var referenceContextIdentity: String? = nil
     var viewPhase: (PhaseID) -> Void = { _ in }
@@ -369,6 +370,9 @@ struct PhaseBoardView: View {
                 openWorktreeRecovery: openWorktreeRecovery,
                 loadEvidencePreview: loadEvidencePreview,
                 loadReferences: loadTicketReferences.map { loader in
+                    { await loader(selected.id) }
+                },
+                loadDeliveryEvidence: loadTicketDeliveryEvidence.map { loader in
                     { await loader(selected.id) }
                 },
                 openReferenceSource: openReferenceSource.map { opener in

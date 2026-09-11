@@ -321,3 +321,44 @@ observer mutation authority, or make repository documents, copied SQLite files o
 external services delivery authorities. Any future portable format that claims
 complete history must represent the supported event facts and provenance or reject
 the export explicitly.
+
+## Phase 6C revision-bound delivery-evidence boundary — 2026-09-10
+
+Release Radar owns a versioned evidence target per ticket and append-only typed
+observations for repository, commit, pull request, check, document, build and
+installation facts. Recording uses the existing authorized project registration,
+root and command-envelope boundaries. Exact replay is idempotent; a changed body,
+stale registration or stale evidence-set revision is rejected. The target,
+observation, audit event and command receipt commit atomically, so a failed command
+cannot leave an orphaned evidence fact or provenance record.
+
+Observation recording time is assigned by the app. The evidence-set revision at
+append supplies persistent ordering, including when timestamps tie; removal and
+recovery preserve it. The request's legacy `recordedAt` field remains part of
+exact replay identity but does not supply persisted time. Explicit supersession
+withdraws the predecessor from current expectation assessment even when the
+correction changes category, scope or applicability; both observations remain
+visible as history.
+
+Applicability is a deterministic comparison with the currently recorded target,
+not a live source probe. Missing legacy identity remains unknown and mismatched
+known identity is stale; neither state is upgraded from current repository,
+ticket, build or installation state. The read path may re-resolve an explicitly
+recorded managed-document artifact through the accepted catalog and authorized
+root solely to report availability and current digest. It does not execute tests
+or checks, make network requests, update the target or observation, or change
+ticket, phase or owner-acceptance state.
+
+Unknown checkout state or missing dirty-snapshot identity cannot establish exact
+applicability, including for checks bound to the recorded target. A PR revision
+must identify its recorded head or, for a merged PR, its recorded merge SHA.
+Evidence for the head does not thereby become evidence for the merge result.
+
+Project removal retains immutable evidence targets and observations with the
+historical registration identity while removing operational authority. Re-adding
+the project creates a newer registration; retained observations cannot authorize
+commands for it. Full application backup/recovery preserves retained generations,
+including evidence recorded after an older backup when the recovery contract
+reconciles retained history, and rejects pre-recovery registrations. This local
+contract does not extend portable archive v1 or assign execution authority to
+repository prose, observers, agents or external providers.

@@ -386,6 +386,9 @@ struct SidebarView: View {
                         loadTicketReferences: { ticketID in
                             await model.loadTicketReferences(projectID: projectID, ticketID: ticketID)
                         },
+                        loadTicketDeliveryEvidence: { ticketID in
+                            await model.loadTicketDeliveryEvidence(projectID: projectID, ticketID: ticketID)
+                        },
                         openReferenceSource: { ticketID, linkID, version in
                             Task {
                                 await model.openReferenceSource(
@@ -483,6 +486,9 @@ struct SidebarView: View {
                         loadTicketReferences: { ticketID in
                             await model.loadTicketReferences(projectID: projectID, ticketID: ticketID)
                         },
+                        loadTicketDeliveryEvidence: { ticketID in
+                            await model.loadTicketDeliveryEvidence(projectID: projectID, ticketID: ticketID)
+                        },
                         openReferenceSource: { ticketID, linkID, version in
                             Task {
                                 await model.openReferenceSource(
@@ -533,6 +539,9 @@ struct SidebarView: View {
                         },
                         loadTicketReferences: { ticketID in
                             await model.loadTicketReferences(projectID: projectID, ticketID: ticketID)
+                        },
+                        loadTicketDeliveryEvidence: { ticketID in
+                            await model.loadTicketDeliveryEvidence(projectID: projectID, ticketID: ticketID)
                         },
                         openReferenceSource: { ticketID, linkID, version in
                             Task {

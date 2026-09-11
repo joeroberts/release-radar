@@ -14,6 +14,7 @@ struct AllPhaseBoardView: View {
     var documentationStatus: DocumentationObservationStatus? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
+    var loadTicketDeliveryEvidence: ((TicketID) async -> ReferenceLoadResult<TicketDeliveryEvidence>)? = nil
     var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
     var referenceContextIdentity: String? = nil
     var requestedFocus: NavigationFocus? = nil
@@ -254,6 +255,9 @@ struct AllPhaseBoardView: View {
                 documentationStatus: documentationStatus,
                 loadEvidencePreview: loadEvidencePreview,
                 loadReferences: loadTicketReferences.map { loader in
+                    { await loader(selected.id) }
+                },
+                loadDeliveryEvidence: loadTicketDeliveryEvidence.map { loader in
                     { await loader(selected.id) }
                 },
                 openReferenceSource: openReferenceSource.map { opener in

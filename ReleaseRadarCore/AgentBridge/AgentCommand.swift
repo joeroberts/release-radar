@@ -61,6 +61,19 @@ public enum AgentCommand: Codable, Equatable, Sendable {
     case relocateLegacyEvidence(projectID: String, rootID: String, evidenceID: String, expectedPath: String, newPath: String)
     case upsertTicketReference(target: DocumentationTarget, ticketID: String, linkID: String, kind: TicketReferenceKind, artifactID: String, sourceLocalID: String?, locator: String?, expectedContentDigest: String, expectedLinkSetRevision: Int64)
     case retireTicketReference(projectID: String, rootID: String, ticketID: String, linkID: String, version: Int64, expectedLinkSetRevision: Int64)
+    case recordDeliveryEvidenceTarget(
+        target: DocumentationTarget,
+        ticketID: String,
+        revision: DeliveryEvidenceRevision,
+        expectations: [DeliveryEvidenceExpectation],
+        expectedEvidenceRevision: Int64
+    )
+    case appendDeliveryEvidenceObservation(
+        target: DocumentationTarget,
+        ticketID: String,
+        observation: DeliveryEvidenceObservation,
+        expectedEvidenceRevision: Int64
+    )
     case upsertPhase(phaseID: String, name: String)
     case upsertUnassignedTicket(ticketID: String, outcome: String)
     case placeUnassignedTicket(ticketID: String, phaseID: String, expectedPlanRevision: Int64)
@@ -130,6 +143,10 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
     case ticketReferenceIdentityImmutable
     case ticketReferenceTicketAccepted
     case ticketReferenceSourceNotAuthoritative
+    case deliveryEvidenceRevisionConflict(expected: Int64, current: Int64)
+    case deliveryEvidenceNotFound
+    case deliveryEvidenceTicketAccepted
+    case invalidDeliveryEvidence(String)
     case planChangeProposalRegistrationRequired
     case planChangeProposalNotFound
     case planChangeProposalVersionConflict(expected: Int64?, current: Int64?)
@@ -154,6 +171,8 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let ticketReferenceLinkSetRevision: Int64?
     public let ticketReferences: TicketReferenceSet?
     public let recordedImpacts: RecordedImpacts?
+    public let deliveryEvidenceRevision: Int64?
+    public let deliveryEvidence: TicketDeliveryEvidence?
     public let planChangeProposalVersion: Int64?
     public let planChangeProposalDecisionID: String?
     public let planChangeProposalApplicationID: String?
@@ -163,7 +182,7 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
     public let phaseLifecycleEvents: [PhaseLifecycleEventRecord]?
     public let phaseCompletionAssessments: [PhaseCompletionAssessment]?
 
-    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil) {
+    public init(entityIDs: [String], auditEventID: AuditEventID?, error: AgentCommandError?, inventory: EvidenceInventory? = nil, ticketTaskPlanRevision: Int64? = nil, phasePlanRevision: Int64? = nil, ticketReferenceLinkSetRevision: Int64? = nil, ticketReferences: TicketReferenceSet? = nil, recordedImpacts: RecordedImpacts? = nil, deliveryEvidenceRevision: Int64? = nil, deliveryEvidence: TicketDeliveryEvidence? = nil, planChangeProposalVersion: Int64? = nil, planChangeProposalDecisionID: String? = nil, planChangeProposalApplicationID: String? = nil, planChangeProposals: [PlanChangeProposalRecord]? = nil, phaseLifecycle: PhaseLifecycleRecord? = nil, phaseLifecycles: [PhaseLifecycleRecord]? = nil, phaseLifecycleEvents: [PhaseLifecycleEventRecord]? = nil, phaseCompletionAssessments: [PhaseCompletionAssessment]? = nil) {
         self.entityIDs = entityIDs
         self.auditEventID = auditEventID
         self.error = error
@@ -173,6 +192,8 @@ public struct AgentCommandResult: Codable, Equatable, Sendable {
         self.ticketReferenceLinkSetRevision = ticketReferenceLinkSetRevision
         self.ticketReferences = ticketReferences
         self.recordedImpacts = recordedImpacts
+        self.deliveryEvidenceRevision = deliveryEvidenceRevision
+        self.deliveryEvidence = deliveryEvidence
         self.planChangeProposalVersion = planChangeProposalVersion
         self.planChangeProposalDecisionID = planChangeProposalDecisionID
         self.planChangeProposalApplicationID = planChangeProposalApplicationID

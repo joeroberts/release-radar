@@ -14,6 +14,7 @@ struct ProjectPlanView: View {
     var documentationStatus: DocumentationObservationStatus? = nil
     var loadEvidencePreview: ((EvidenceID) async -> EvidencePreview)? = nil
     var loadTicketReferences: ((TicketID) async -> ReferenceLoadResult<TicketReferenceSet>)? = nil
+    var loadTicketDeliveryEvidence: ((TicketID) async -> ReferenceLoadResult<TicketDeliveryEvidence>)? = nil
     var openReferenceSource: ((TicketID, String, Int64) -> Void)? = nil
     var decideProposal: ((PlanChangeProposalID, Int64, String, PlanChangeDecisionDisposition) async -> AgentCommandResult)? = nil
     var applyProposal: ((PlanChangeProposalID, Int64, String, String) async -> AgentCommandResult)? = nil
@@ -395,6 +396,9 @@ struct ProjectPlanView: View {
                 documentationStatus: documentationStatus,
                 loadEvidencePreview: loadEvidencePreview,
                 loadReferences: loadTicketReferences.map { loader in
+                    { await loader(detail.id) }
+                },
+                loadDeliveryEvidence: loadTicketDeliveryEvidence.map { loader in
                     { await loader(detail.id) }
                 },
                 openReferenceSource: openReferenceSource.map { opener in

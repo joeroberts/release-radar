@@ -332,6 +332,8 @@ private func deliveryStoreTransactionAuthorizer(
         "retained_delivery_goal_obligation_drops",
         "retained_phase_lifecycles",
         "retained_phase_lifecycle_events",
+        "retained_ticket_delivery_evidence_targets",
+        "retained_ticket_delivery_evidence_observations",
     ]
     let protectedTable = (["audit_events", "project_removal_authorizations"] + removalHistoryTables).first { table in
         firstName?.caseInsensitiveCompare(table) == .orderedSame
