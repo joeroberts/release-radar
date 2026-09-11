@@ -15,7 +15,7 @@ and independently approved, ready for the authorized corrected publication and r
 | 6B Goals | [PR #45](https://github.com/joeroberts/release-radar/pull/45), merge `1e03d9ad8a36c7c7ec80525233df6a5e7c3217e8` | [6B evidence](evidence/2026-09-10-phase6b-goals.md) |
 | 6C Evidence | [PR #46](https://github.com/joeroberts/release-radar/pull/46), merge `fbb0ab5da811ad0db51f1441492aa8c5531e3ce3` | [6C evidence](evidence/2026-09-10-phase6c-evidence.md) |
 | 6D Adoption | [PR #47](https://github.com/joeroberts/release-radar/pull/47), merge `f0c9e42af4a5eb19d739979e7dfa33239a8e4a3a` | [6D evidence](evidence/2026-09-10-phase6d-adoption.md) |
-| 6E Search and Help | [PR #48](https://github.com/joeroberts/release-radar/pull/48), OPEN at head `de87a66cd990f2f54332e51a60c534ba36f6d10b`; final source `d1445dc033fca9056782c493ebd04184d58fbc67` | [6E evidence](evidence/2026-09-10-phase6e-search.md) |
+| 6E Search and Help | [PR #48](https://github.com/joeroberts/release-radar/pull/48), OPEN; final corrected source `97b90d2795b47b243ac580d0361ebb973972a307`, evidence `2b534ead2b31214fe54028fe980bfef45eb46ec6` | [6E evidence](evidence/2026-09-10-phase6e-search.md) |
 
 The owner explicitly waived the pending/rate-limited CodeRabbit wait for #46/#47
 and authorized their immediate merges using completed independent reviews and
@@ -49,7 +49,8 @@ The same independent reviewer approved final correction source
 Root's final five affected navigation tests passed 5/5 and corrected compact live
 test passed 1/1. Exact registration labels were verified at recovery, rows, detail
 and actual Scope menu; menu evidence is accessibility text, not a screenshot.
-The writer is completing evidence-only closeout; completed peers are being archived.
+The writer and independent reviewer are stopped and archived; evidence-only
+closeout is committed as `2b534ead2b31214fe54028fe980bfef45eb46ec6`.
 Earlier bounded Phase 6 peers remain archived. Root owns all remaining launches.
 
 Orchestrator `01a08bd9-8fa1-74b3-bfa0-a5e657e70179` owns this ledger/catalog and
@@ -74,8 +75,8 @@ distinguishable registration labels, nonempty payload constraints, non-null save
 query IDs and the pending-search test's scheduling wait. The cleanup suggestion
 conflicts with required diagnostic retention; optional fixture-loop and broad SQL
 pushdown suggestions do not block. Independent review and the first live check
-identified same-route supersession and unchanged-text focus callbacks clearing
-results. Both are corrected and verified in source `97b90d2`. Current direct checks
+identified same-route supersession and result selection clearing its projection.
+Both are corrected and verified in source `97b90d2`. Current direct checks
 and independent review are complete; corrected publication still requires actual
 clear CodeRabbit disposition before the authorized merge. Root stopped CUA before
 completion and confirmed final live host `82472` exited. No reservation remains.
@@ -104,7 +105,8 @@ All durable deliverables are committed repository artifacts. Temporary builds,
 logs, xcresults, native stores, runfiles, markers and exported attachments remain
 under the per-slice roots listed in the evidence, including
 `/private/tmp/release-radar-phase6e-writer-01a08dee` and its root attachment exports.
-Temporary PR bodies `phase6a-pr.md` through `phase6e-pr.md` remain under
+Temporary PR bodies `phase6a-pr.md` through `phase6e-pr.md` and
+`phase6e-review-response.md` remain under
 `/tmp/release-radar-phase6-publication/`; `/tmp/phase6b-unused` also remains.
 Diagnostic outputs remain retained; no manual cleanup was performed. An automatic
 native-fixture teardown was found during PR review and removed from the focused
