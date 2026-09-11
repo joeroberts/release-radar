@@ -24,6 +24,18 @@ public struct DeliveryGoalObligationKey: Codable, Equatable, Hashable, Sendable 
         self.goalID = goalID
         self.ticketID = ticketID
     }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        Data(lhs.phaseID.rawValue.utf8) == Data(rhs.phaseID.rawValue.utf8)
+            && Data(lhs.goalID.rawValue.utf8) == Data(rhs.goalID.rawValue.utf8)
+            && Data(lhs.ticketID.rawValue.utf8) == Data(rhs.ticketID.rawValue.utf8)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(Data(phaseID.rawValue.utf8))
+        hasher.combine(Data(goalID.rawValue.utf8))
+        hasher.combine(Data(ticketID.rawValue.utf8))
+    }
 }
 
 public enum PlanChangeOperation: Codable, Equatable, Sendable {

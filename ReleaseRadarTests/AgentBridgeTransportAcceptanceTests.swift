@@ -885,7 +885,14 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let session = try Self.runToolSession(helper, tool: "release_radar_finalize_phase_plan", arguments: ["version": true])
         let result = try XCTUnwrap(session.list["result"] as? [String: Any])
         let tools = try XCTUnwrap(result["tools"] as? [[String: Any]])
-        XCTAssertEqual(tools.count, 36)
+        XCTAssertEqual(tools.count, 37)
+        let deliveryInventory = try XCTUnwrap(
+            tools.first { $0["name"] as? String == "release_radar_delivery_inventory" }
+        )
+        XCTAssertEqual(
+            (deliveryInventory["inputSchema"] as? [String: Any])?["required"] as? [String],
+            ["version", "projectRoot", "projectID", "rootID"]
+        )
         for name in ["apply_phase_plan_revision", "finalize_phase_plan", "transition_delivery_goal"] {
             let tool = tools.first { $0["name"] as? String == "release_radar_" + name }
             XCTAssertNotNil(tool, name)
@@ -1092,17 +1099,17 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
 
     func testTicketTaskToolsUseRegisteredBrokerAndRecoverExactRequests() async throws {
         let bridgeService = SMAppService.agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
-        func requireControlledEnvironment() throws {
-            guard bridgeService.status == .enabled else {
-                throw TransportTestError.invalidResponse("Controlled task transport requires the already enabled bridge; this test does not register it")
-            }
+        func requireNoOtherAppHost() throws {
             let otherApps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.rekonlabs.ReleaseRadar")
                 .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
             guard otherApps.isEmpty else {
                 throw TransportTestError.invalidResponse("Quiesce other Release Radar app hosts before controlled task transport")
             }
         }
-        try requireControlledEnvironment()
+        guard bridgeService.status == .notRegistered else {
+            throw TransportTestError.invalidResponse("Controlled task transport requires an initially unregistered bridge")
+        }
+        try requireNoOtherAppHost()
         let fixture = try await makeTransportFixture()
         let packagedTool = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
         let projectRoot = fixture.projectRoot.path
@@ -1117,7 +1124,6 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let afterReply = CallbackInvalidationGate()
         let committedResult = ResultCapture()
         let appDelegate = AppDelegate()
-        try requireControlledEnvironment()
         let host = try await appDelegate.startAgentBridge(
             databaseURL: fixture.databaseURL,
             afterDispatchBeforeReply: { envelope, result in
@@ -1136,8 +1142,14 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             lostReply.release.signal()
             afterReply.release.signal()
             host.disconnectCallback()
-            XCTAssertEqual(bridgeService.status, .enabled, "Controlled task transport must preserve bridge registration")
+            do {
+                try host.unregister()
+            } catch {
+                XCTFail("Could not unregister the bridge owned by controlled task transport")
+            }
+            XCTAssertEqual(bridgeService.status, .notRegistered)
         }
+        XCTAssertEqual(bridgeService.status, .enabled)
         func arguments(_ requestID: UUID, _ fields: [String: Any]) -> [String: Any] {
             [
                 "version": 1, "requestID": requestID.uuidString, "projectRoot": projectRoot,
@@ -1232,7 +1244,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         try await assertReceipt(original, requestID: lostReplyID, command: .completeTicketTask(ticketID: "RR-03", taskID: "task-c", expectedRevision: 3), revision: 4)
 
         let reconnectDelegate = AppDelegate()
-        try requireControlledEnvironment()
+        try requireNoOtherAppHost()
         let reconnect = try await reconnectDelegate.startAgentBridge(databaseURL: fixture.databaseURL)
         defer { reconnect.disconnectCallback() }
         let replay = try decodeCommandResult(Self.runTool(packagedTool, tool: "release_radar_complete_ticket_task", arguments: arguments(lostReplyID, ["taskID": "task-c", "expectedRevision": 3])))
@@ -1255,8 +1267,8 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
 
     func testUnassignedTicketToolsUseRegisteredBrokerWithExactReplayAndPlacementRevision() async throws {
         let bridgeService = SMAppService.agent(plistName: ReleaseRadarBridgeTransport.launchAgentPlistName)
-        guard bridgeService.status == .enabled else {
-            throw TransportTestError.invalidResponse("Controlled unassigned transport requires the already enabled bridge")
+        guard bridgeService.status == .notRegistered else {
+            throw TransportTestError.invalidResponse("Controlled unassigned transport requires an initially unregistered bridge")
         }
         let otherApps = NSRunningApplication.runningApplications(withBundleIdentifier: "com.rekonlabs.ReleaseRadar")
             .filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
@@ -1265,7 +1277,16 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         }
         let fixture = try await makeTransportFixture()
         let host = try await AppDelegate().startAgentBridge(databaseURL: fixture.databaseURL)
-        defer { host.disconnectCallback() }
+        defer {
+            host.disconnectCallback()
+            do {
+                try host.unregister()
+            } catch {
+                XCTFail("Could not unregister the bridge owned by controlled unassigned transport")
+            }
+            XCTAssertEqual(bridgeService.status, .notRegistered)
+        }
+        XCTAssertEqual(bridgeService.status, .enabled)
         let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
         func common(_ requestID: UUID, reason: String) -> [String: Any] {
             ["version": 1, "requestID": requestID.uuidString, "projectRoot": fixture.projectRoot.path,
@@ -1343,6 +1364,10 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             try connection.execute("INSERT INTO delivery_goal_done_criteria (project_id, phase_id, goal_id, sort_order, criterion) VALUES ('project-1', 'phase-1', 'fixture-goal', 0, 'Delivered')")
             for ticketID in ["RR-03", "RR-PLAN"] {
                 try connection.execute("INSERT INTO delivery_goal_ticket_assignments (project_id, phase_id, goal_id, ticket_id) VALUES ('project-1', 'phase-1', 'fixture-goal', ?)", bindings: [.text(ticketID)])
+                try connection.execute(
+                    "INSERT INTO delivery_goal_obligations (project_id,phase_id,goal_id,ticket_id,scope,assessment,created_at) VALUES ('project-1','phase-1','fixture-goal',?,?,'current','2026-09-02T12:00:00Z')",
+                    bindings: [.text(ticketID), .text(ticketID == "RR-03" ? "Signed bridge" : "Guarded signed bridge")]
+                )
             }
             try connection.execute("UPDATE phase_plans SET state = 'ready', ready_revision = revision, finalized_at = '2026-09-02T12:00:00Z' WHERE project_id = 'project-1' AND phase_id = 'phase-1'")
             _ = try TicketTaskPlanningPolicy.revisePlan(
@@ -1483,7 +1508,8 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 36,
+              tools.count == 37,
+              hasDeliveryInventoryToolSchema(tools),
               hasTicketTaskToolSchemas(tools),
               hasDeliveryEvidenceToolSchemas(tools),
               let transition = tools.first(where: { $0["name"] as? String == "release_radar_transition_ticket" }),
@@ -1539,6 +1565,14 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
             && (placementProperties["expectedPlanRevision"] as? [String: Any])?["minimum"] as? Int == 0
             && placementSchema["additionalProperties"] as? Bool == false
             && NSDictionary(dictionary: activePhaseSchema).isEqual(to: expectedActivePhaseSchema)
+    }
+
+    nonisolated private static func hasDeliveryInventoryToolSchema(_ tools: [[String: Any]]) -> Bool {
+        guard let schema = tools.first(where: {
+            $0["name"] as? String == "release_radar_delivery_inventory"
+        })?["inputSchema"] as? [String: Any] else { return false }
+        return schema["additionalProperties"] as? Bool == false
+            && Set(schema["required"] as? [String] ?? []) == ["version", "projectRoot", "projectID", "rootID"]
     }
 
     nonisolated private static func hasTicketTaskToolSchemas(_ tools: [[String: Any]]) -> Bool {

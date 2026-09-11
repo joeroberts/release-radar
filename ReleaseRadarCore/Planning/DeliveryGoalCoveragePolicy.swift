@@ -84,7 +84,13 @@ public enum DeliveryGoalCoveragePolicy {
             carryReasons[source] = try text(row, "reason")
         }
 
-        let roots = nodes.keys.filter { $0.phaseID == phaseID && $0.goalID == goalID }
+        func sameIdentity(_ lhs: String, _ rhs: String) -> Bool {
+            Data(lhs.utf8) == Data(rhs.utf8)
+        }
+        let roots = nodes.keys.filter {
+            sameIdentity($0.phaseID.rawValue, phaseID.rawValue)
+                && sameIdentity($0.goalID.rawValue, goalID.rawValue)
+        }
         var included = Set(roots)
         var pending = roots
         while let next = pending.popLast() {
@@ -92,9 +98,14 @@ public enum DeliveryGoalCoveragePolicy {
                 pending.append(descendant)
             }
         }
-        let orderedKeys = included.sorted {
-            ($0.phaseID.rawValue, $0.goalID.rawValue, $0.ticketID.rawValue)
-                < ($1.phaseID.rawValue, $1.goalID.rawValue, $1.ticketID.rawValue)
+        let orderedKeys = included.sorted { lhs, rhs in
+            let lhsComponents = [lhs.phaseID.rawValue, lhs.goalID.rawValue, lhs.ticketID.rawValue]
+            let rhsComponents = [rhs.phaseID.rawValue, rhs.goalID.rawValue, rhs.ticketID.rawValue]
+            for (lhsComponent, rhsComponent) in zip(lhsComponents, rhsComponents) {
+                if sameIdentity(lhsComponent, rhsComponent) { continue }
+                return lhsComponent.utf8.lexicographicallyPrecedes(rhsComponent.utf8)
+            }
+            return false
         }
         func state(for obligationKey: DeliveryGoalObligationKey) -> DeliveryGoalObligationCoverageState {
             guard let node = nodes[obligationKey] else { return .uncovered }

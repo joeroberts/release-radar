@@ -1,7 +1,66 @@
 import XCTest
 @testable import ReleaseRadarCore
 
+private enum LegacyMigrationFixtureError: Error {
+    case newerSchemaContainsData(String)
+}
+
+private func requireEmptyFixtureTables(
+    _ tables: [String],
+    connection: SQLiteConnection
+) throws {
+    for table in tables {
+        let count = try connection.scalarInt("SELECT COUNT(*) FROM \(table)") ?? 0
+        guard count == 0 else {
+            XCTFail("Synthetic legacy fixtures must not discard newer \(table) data")
+            throw LegacyMigrationFixtureError.newerSchemaContainsData(table)
+        }
+    }
+}
+
+func removeVersionTwentySixSearchSchema(_ connection: SQLiteConnection) throws {
+    try requireEmptyFixtureTables(
+        ["workspace_search_preferences", "workspace_saved_queries"],
+        connection: connection
+    )
+    try connection.executeScript("""
+    DROP TABLE workspace_saved_queries;
+    DROP TABLE workspace_search_preferences;
+    """)
+}
+
+func removeVersionTwentyFiveDeliveryEvidenceSchema(_ connection: SQLiteConnection) throws {
+    try removeVersionTwentySixSearchSchema(connection)
+    try requireEmptyFixtureTables(
+        [
+            "ticket_delivery_evidence_sets",
+            "ticket_delivery_evidence_targets",
+            "ticket_delivery_evidence_observations",
+            "retained_ticket_delivery_evidence_targets",
+            "retained_ticket_delivery_evidence_observations",
+        ],
+        connection: connection
+    )
+    try connection.executeScript("""
+    DROP TRIGGER ticket_delivery_evidence_sets_reject_delete;
+    DROP TRIGGER ticket_delivery_evidence_targets_reject_update;
+    DROP TRIGGER ticket_delivery_evidence_targets_reject_delete;
+    DROP TRIGGER ticket_delivery_evidence_observations_reject_update;
+    DROP TRIGGER ticket_delivery_evidence_observations_reject_delete;
+    DROP TRIGGER retained_ticket_delivery_evidence_targets_reject_update;
+    DROP TRIGGER retained_ticket_delivery_evidence_targets_reject_delete;
+    DROP TRIGGER retained_ticket_delivery_evidence_observations_reject_update;
+    DROP TRIGGER retained_ticket_delivery_evidence_observations_reject_delete;
+    DROP TABLE retained_ticket_delivery_evidence_observations;
+    DROP TABLE retained_ticket_delivery_evidence_targets;
+    DROP TABLE ticket_delivery_evidence_observations;
+    DROP TABLE ticket_delivery_evidence_targets;
+    DROP TABLE ticket_delivery_evidence_sets;
+    """)
+}
+
 func removeVersionTwentyFourHistorySchema(_ connection: SQLiteConnection) throws {
+    try removeVersionTwentyFiveDeliveryEvidenceSchema(connection)
     for column in [
         "event_current_phase_id",
         "event_previous_phase_id",
