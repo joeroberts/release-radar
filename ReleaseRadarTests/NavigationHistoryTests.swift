@@ -111,7 +111,11 @@ final class NavigationHistoryTests: XCTestCase {
         model.setWorkspaceSearchSort(.newest)
         await model.runWorkspaceSearch()
         let result = try XCTUnwrap(model.workspaceSearchProjection?.results.first)
+        let projectionBeforeSelection = model.workspaceSearchProjection
         model.selectWorkspaceSearchResult(result.id)
+        model.setWorkspaceSearchText(model.workspaceSearchDefinition.text)
+        XCTAssertEqual(model.workspaceSearchProjection, projectionBeforeSelection)
+        XCTAssertEqual(model.selectedWorkspaceSearchResultID, result.id)
         model.setWorkspaceSearchViewportOffset(287.5)
 
         await model.openWorkspaceSearchResult(result)
@@ -703,7 +707,6 @@ final class NavigationHistoryTests: XCTestCase {
     @MainActor
     func testSupersededDeliveryGoalSearchNavigationPreservesDestinationContext() async throws {
         let fixture = try await makeSupersededSearchNavigationFixture()
-        let selectedTicketBefore = fixture.model.selectedTicketID
         let result = WorkspaceSearchResult(
             domain: .deliveryGoal,
             project: fixture.project,
@@ -720,18 +723,22 @@ final class NavigationHistoryTests: XCTestCase {
         let older = Task { await fixture.model.openWorkspaceSearchResult(result) }
         let enteredBlockedNavigation = await fixture.loader.waitUntilBlockedNavigationEntered()
         XCTAssertTrue(enteredBlockedNavigation)
-        await fixture.model.navigate(to: .settings)
+        await fixture.model.navigate(to: .phaseBoard(fixture.project.projectID))
+        fixture.model.setBoardFilter(
+            .unassigned,
+            projectID: fixture.project.projectID,
+            phaseID: DashboardSampleData.phaseID
+        )
         await fixture.loader.releaseBlockedNavigation()
         await older.value
 
-        XCTAssertEqual(fixture.model.selection, .settings)
-        XCTAssertEqual(fixture.model.selectedTicketID, selectedTicketBefore)
+        XCTAssertEqual(fixture.model.selection, .phaseBoard(fixture.project.projectID))
         XCTAssertEqual(
             fixture.model.boardFilter(
                 projectID: fixture.project.projectID,
                 phaseID: DashboardSampleData.phaseID
             ),
-            .all
+            .unassigned
         )
     }
 
@@ -759,11 +766,16 @@ final class NavigationHistoryTests: XCTestCase {
         let older = Task { await fixture.model.openWorkspaceSearchResult(result) }
         let enteredBlockedNavigation = await fixture.loader.waitUntilBlockedNavigationEntered()
         XCTAssertTrue(enteredBlockedNavigation)
-        await fixture.model.navigate(to: .settings)
+        await fixture.model.navigate(to: .phaseBoard(fixture.project.projectID))
+        fixture.model.viewPhase(
+            projectID: fixture.project.projectID,
+            phaseID: DashboardSampleData.phaseID
+        )
+        fixture.model.selectTicket(selectedTicketBefore)
         await fixture.loader.releaseBlockedNavigation()
         await older.value
 
-        XCTAssertEqual(fixture.model.selection, .settings)
+        XCTAssertEqual(fixture.model.selection, .phaseBoard(fixture.project.projectID))
         XCTAssertEqual(fixture.model.selectedTicketID, selectedTicketBefore)
         XCTAssertEqual(
             fixture.model.viewedBoard(for: fixture.project.projectID)?.phaseID,
@@ -791,11 +803,12 @@ final class NavigationHistoryTests: XCTestCase {
         let older = Task { await fixture.model.openWorkspaceSearchResult(result) }
         let enteredBlockedNavigation = await fixture.loader.waitUntilBlockedNavigationEntered()
         XCTAssertTrue(enteredBlockedNavigation)
-        await fixture.model.navigate(to: .settings)
+        await fixture.model.navigate(to: .projectPlan(fixture.project.projectID))
+        fixture.model.selectTicket(selectedTicketBefore)
         await fixture.loader.releaseBlockedNavigation()
         await older.value
 
-        XCTAssertEqual(fixture.model.selection, .settings)
+        XCTAssertEqual(fixture.model.selection, .projectPlan(fixture.project.projectID))
         XCTAssertEqual(fixture.model.selectedTicketID, selectedTicketBefore)
     }
 
@@ -1239,7 +1252,7 @@ private actor BlockingNavigationObservationLoader {
 
     func load(projectID: ProjectID) async -> DocumentationObservationPayload {
         loadCount += 1
-        if loadCount > 1, !blockedNavigationReleased {
+        if loadCount == 2, !blockedNavigationReleased {
             await withCheckedContinuation { releaseContinuation = $0 }
         }
         return DocumentationObservationPayload(

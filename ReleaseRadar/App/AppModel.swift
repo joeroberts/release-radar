@@ -149,6 +149,7 @@ final class AppModel {
     private var codexPluginObservedAt: Date?
     private var projectionReloadGeneration: UInt64 = 0
     private var navigationGeneration: UInt64 = 0
+    private var lastCommittedNavigationGeneration: UInt64 = 0
     private var workspaceSearchGeneration: UInt64 = 0
     private(set) var documentationServiceGeneration: UInt64 = 0
     @ObservationIgnored private var documentationMonitoringTask: Task<Void, Never>?
@@ -371,6 +372,7 @@ final class AppModel {
             navigationFocus = .route(resolvedRoute)
         }
         navigationHistory.navigate(to: historyEntry(for: resolvedRoute, focus: navigationFocus))
+        lastCommittedNavigationGeneration = generation
     }
 
     func goBack() async { await restoreNavigation(step: .back) }
@@ -1213,6 +1215,7 @@ final class AppModel {
 
     func setWorkspaceSearchText(_ text: String) {
         guard canEditSupportedWorkspaceSearch else { return }
+        guard workspaceSearchDefinition.text != text else { return }
         invalidateWorkspaceSearchRun()
         workspaceSearchDefinition.text = text
         workspaceSearchFailure = nil
@@ -1462,8 +1465,10 @@ final class AppModel {
             guard dashboard?.board(for: projectID, phaseID: phaseID)?.deliveryGoals.contains(where: {
                 Data($0.goalID.rawValue.utf8) == Data(goalID.utf8)
             }) == true else { return searchDestinationUnavailable("Delivery Goal") }
+            let expectedNavigationGeneration = navigationGeneration &+ 1
             await navigate(to: .phaseBoard(projectID))
-            guard selection == .phaseBoard(projectID) else { return }
+            guard lastCommittedNavigationGeneration == expectedNavigationGeneration,
+                  selection == .phaseBoard(projectID) else { return }
             viewPhase(projectID: projectID, phaseID: phaseID)
             setBoardFilter(.goal(.init(rawValue: goalID)), projectID: projectID, phaseID: phaseID)
         case let .executionGoal(projectID, _, threadID, goalID):
@@ -1487,13 +1492,17 @@ final class AppModel {
             }
         case let .ticket(projectID, _, ticketID, phaseID):
             if let phaseID, dashboard?.board(for: projectID, phaseID: phaseID)?.detail(for: ticketID) != nil {
+                let expectedNavigationGeneration = navigationGeneration &+ 1
                 await navigate(to: .phaseBoard(projectID))
-                guard selection == .phaseBoard(projectID) else { return }
+                guard lastCommittedNavigationGeneration == expectedNavigationGeneration,
+                      selection == .phaseBoard(projectID) else { return }
                 viewPhase(projectID: projectID, phaseID: phaseID)
                 selectTicket(ticketID)
             } else if dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil {
+                let expectedNavigationGeneration = navigationGeneration &+ 1
                 await navigate(to: .projectPlan(projectID))
-                guard selection == .projectPlan(projectID) else { return }
+                guard lastCommittedNavigationGeneration == expectedNavigationGeneration,
+                      selection == .projectPlan(projectID) else { return }
                 selectTicket(ticketID)
             } else {
                 searchDestinationUnavailable("ticket")
