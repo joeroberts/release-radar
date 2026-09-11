@@ -14,6 +14,7 @@ struct TicketDetailView: View {
     var referenceContextIdentity: String? = nil
     var reload: () async -> Void = {}
     @State private var isReloadingTasks = false
+    @State private var isTaskHelpPresented = false
     @ScaledMetric(relativeTo: .subheadline) private var taskFontSize = 12
 
     var body: some View {
@@ -130,6 +131,23 @@ struct TicketDetailView: View {
 
     private var tasksSection: some View {
         detailSection("Tasks", systemImage: "checklist") {
+            HStack {
+                Text("Definitions and completion are revisioned")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Button {
+                    isTaskHelpPresented = true
+                } label: {
+                    Label("Help", systemImage: "questionmark.circle")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Task adoption help")
+                .accessibilityIdentifier("task-adoption-help-button")
+                .popover(isPresented: $isTaskHelpPresented, arrowEdge: .trailing) {
+                    TaskAdoptionHelpView()
+                }
+            }
             switch detail.taskPlan {
             case .noPlan:
                 Text("No task plan")
@@ -236,6 +254,59 @@ struct TicketDetailView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(RekonTheme.border.opacity(0.82), lineWidth: RekonBorder.hairline)
+        }
+    }
+}
+
+enum TaskAdoptionHelpContent {
+    static let title = "Adopting ticket tasks"
+    static let introduction = "Codex proposes one exact, project-scoped reconciliation. Nothing changes until you approve that reconciliation and the same inventory baseline still applies."
+    static let classifications = "Each non-Accepted ticket is classified as atomic, non-atomic, already-planned, or blocked. Existing rows stay unchanged unless the reconciliation names an addition, permitted definition revision, or supersession."
+    static let evidence = "A task is completed from prior evidence only when the current target has an explicitly applicable, available, successful observation for that exact ticket and task scope. Uncertain, failed, stale, or generic evidence keeps it Pending."
+    static let recovery = "Commands use the exact plan revision and return the next revision. If availability is uncertain, retry the exact request. If identity or baseline changed, refresh and approve a new reconciliation."
+}
+
+struct TaskAdoptionHelpView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Label(TaskAdoptionHelpContent.title, systemImage: "checklist.checked")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(RekonTheme.primaryText)
+                Text(TaskAdoptionHelpContent.introduction)
+                    .foregroundStyle(RekonTheme.secondaryText)
+                helpSection("What you approve", text: TaskAdoptionHelpContent.classifications)
+                helpSection("Prior completion", text: TaskAdoptionHelpContent.evidence)
+                helpSection("Apply and recover", text: TaskAdoptionHelpContent.recovery)
+                Label("Read the Tasks card and History after success.", systemImage: "clock.arrow.circlepath")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(RekonTheme.primaryText)
+                HStack {
+                    Spacer()
+                    Button("Done") { dismiss() }
+                        .keyboardShortcut(.defaultAction)
+                        .accessibilityIdentifier("task-adoption-help-done")
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(minWidth: 280, idealWidth: 420, minHeight: 420, idealHeight: 520)
+        .background(RekonTheme.surface)
+        .accessibilityIdentifier("task-adoption-help")
+    }
+
+    private func helpSection(_ title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(RekonTheme.primaryText)
+            Text(text)
+                .font(.callout)
+                .foregroundStyle(RekonTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

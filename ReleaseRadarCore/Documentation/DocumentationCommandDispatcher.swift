@@ -135,7 +135,7 @@ struct DocumentationCommandDispatcher: Sendable {
             guard catalog.mode != .unavailable else { throw DocumentationOperationError.guidanceUnavailable }
             let relative = try DocumentationCatalogContext.relative(path: newPath, root: context.root)
             _ = try catalog.reader.read(relative)
-            if catalog.mode == .managedV2 {
+            if catalog.mode.isManaged {
                 let snapshot = try catalog.managedSnapshot(); try context.requireAccepted(snapshot)
                 guard try catalog.exactArtifact(path: newPath, root: context.root) == nil else { throw DocumentationOperationError.managedCommandRequired }
             }

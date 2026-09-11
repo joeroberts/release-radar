@@ -156,6 +156,7 @@ private struct MCPServer {
         let version = try integer("version", in: arguments)
         if [
             "release_radar_inventory_evidence",
+            "release_radar_delivery_inventory",
             "release_radar_ticket_references",
             "release_radar_ticket_delivery_evidence",
             "release_radar_recorded_impacts",
@@ -168,6 +169,11 @@ private struct MCPServer {
                 var value: [String: Any] = [:]
                 for key in ["projectID", "rootID"] { if let item = try optionalString(key, in: arguments) { value[key] = item } }
                 query = ["inventoryEvidence": value]
+            case "release_radar_delivery_inventory":
+                query = ["deliveryInventory": [
+                    "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                    "rootID": try taskString("rootID", in: arguments, maximumBytes: 256),
+                ]]
             case "release_radar_ticket_references":
                 query = ["ticketReferences": [
                     "projectID": try string("projectID", in: arguments),
@@ -1172,6 +1178,12 @@ private struct MCPServer {
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
              "inputSchema": ["type": "object", "additionalProperties": false, "required": ["version", "projectRoot"],
                              "properties": ["version": ["type": "integer", "const": 1], "projectRoot": string, "projectID": string, "rootID": string]]],
+            ["name": "release_radar_delivery_inventory", "description": "Read the complete authorized project-scoped phase, ticket, retirement, task-plan and full task-history inventory for exact task adoption. Oversized or unavailable inventory fails closed; no rows are silently omitted.",
+             "annotations": ["readOnlyHint": true, "destructiveHint": false],
+             "inputSchema": ["type": "object", "additionalProperties": false,
+                             "required": ["version", "projectRoot", "projectID", "rootID"],
+                             "properties": ["version": ["type": "integer", "const": 1],
+                                            "projectRoot": string, "projectID": taskID, "rootID": taskID]]],
             ["name": "release_radar_ticket_references", "description": "Read a ticket's retained requirement and decision link history plus exact current source facts. This never mutates delivery state.",
              "annotations": ["readOnlyHint": true, "destructiveHint": false],
              "inputSchema": ["type": "object", "additionalProperties": false,

@@ -28,6 +28,8 @@ public struct AgentQueryDispatcher: Sendable {
             switch envelope.query {
             case let .inventoryEvidence(project, root):
                 projectID = project; rootID = root; extraIdentities = []
+            case let .deliveryInventory(project, root):
+                projectID = project; rootID = root; extraIdentities = []
             case let .ticketReferences(project, root, ticket):
                 projectID = project; rootID = root; extraIdentities = [ticket]
             case let .ticketDeliveryEvidence(project, root, ticket):
@@ -45,6 +47,31 @@ public struct AgentQueryDispatcher: Sendable {
             switch envelope.query {
             case .inventoryEvidence:
                 break
+            case let .deliveryInventory(project, root):
+                let capture = try await store.documentationRead { connection in
+                    let context = try DocumentationRootContext.read(
+                        connection,
+                        path: envelope.projectRoot,
+                        projectID: project,
+                        rootID: root,
+                        schemaVersion: store.schemaVersionForDocumentation
+                    )
+                    return try DeliveryInventoryCapture(connection, context: context)
+                }
+                return try await bookmarkStore.withSecurityScopedAccess(bookmark: capture.context.bookmark) { resolved in
+                    try capture.context.verifyAuthorization(resolved)
+                    let result = AgentCommandResult(
+                        entityIDs: capture.inventory.tickets.map(\.ticketID),
+                        auditEventID: nil,
+                        error: nil,
+                        deliveryInventory: capture.inventory
+                    )
+                    try await store.documentationRead { try capture.context.verifyPersisted($0) }
+                    guard try JSONEncoder().encode(result).count <= Self.maximumResponseBytes else {
+                        throw DocumentationOperationError.inventoryTooLarge
+                    }
+                    return result
+                }
             case let .ticketReferences(project, root, ticket):
                 let capture = try await store.documentationRead { connection in
                     let context = try DocumentationRootContext.read(
@@ -246,6 +273,193 @@ public struct AgentQueryDispatcher: Sendable {
     }
 }
 
+private struct DeliveryInventoryCapture: Sendable {
+    let context: DocumentationRootContext
+    let inventory: DeliveryInventory
+
+    init(_ connection: SQLiteConnection, context: DocumentationRootContext) throws {
+        self.context = context
+
+        let phases = try connection.rows(
+            """
+            SELECT p.id, p.name, l.lifecycle, l.revision
+            FROM phases p
+            JOIN phase_lifecycles l
+              ON l.project_id = p.project_id AND l.phase_id = p.id
+            WHERE p.project_id = ?
+            ORDER BY p.id
+            """,
+            bindings: [.text(context.projectID)],
+            maximum: 4_096
+        ).map { row -> DeliveryInventoryPhase in
+            guard let phaseID = Self.text(row, "id"),
+                  let name = Self.text(row, "name"),
+                  let rawLifecycle = Self.text(row, "lifecycle"),
+                  let lifecycle = PhaseLifecycle(rawValue: rawLifecycle),
+                  let lifecycleRevision = Self.integer(row, "revision") else {
+                throw DocumentationOperationError.invalidRequest
+            }
+            return .init(
+                phaseID: phaseID,
+                name: name,
+                lifecycle: lifecycle,
+                lifecycleRevision: lifecycleRevision
+            )
+        }
+        let lifecycleByPhase = Dictionary(uniqueKeysWithValues: phases.map { ($0.phaseID, $0.lifecycle) })
+
+        let tasksByTicket = try Dictionary(grouping: connection.rows(
+            """
+            SELECT ticket_id, id, label, title, sort_order, completion, lifecycle,
+                   created_at, updated_at, completed_at, superseded_at
+            FROM ticket_tasks
+            WHERE project_id = ?
+            ORDER BY ticket_id, sort_order, id
+            """,
+            bindings: [.text(context.projectID)],
+            maximum: 8_192
+        ).map { row -> (String, DeliveryInventoryTask) in
+            guard let ticketID = Self.text(row, "ticket_id"),
+                  let taskID = Self.text(row, "id"),
+                  let label = Self.text(row, "label"),
+                  let title = Self.text(row, "title"),
+                  let sortOrder = Self.integer(row, "sort_order"),
+                  let rawCompletion = Self.text(row, "completion"),
+                  let completion = TicketTaskCompletion(rawValue: rawCompletion),
+                  let rawLifecycle = Self.text(row, "lifecycle"),
+                  let lifecycle = TicketTaskLifecycle(rawValue: rawLifecycle),
+                  let createdAt = Self.text(row, "created_at"),
+                  let updatedAt = Self.text(row, "updated_at") else {
+                throw DocumentationOperationError.invalidRequest
+            }
+            guard sortOrder >= 0, sortOrder <= Int64(Int.max) else {
+                throw DocumentationOperationError.invalidRequest
+            }
+            return (ticketID, .init(
+                taskID: taskID,
+                label: label,
+                title: title,
+                sortOrder: Int(sortOrder),
+                completion: completion,
+                lifecycle: lifecycle,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                completedAt: Self.text(row, "completed_at"),
+                supersededAt: Self.text(row, "superseded_at")
+            ))
+        }, by: { $0.0 }).mapValues { $0.map(\.1) }
+
+        let ticketRows = try connection.rows(
+            """
+            SELECT t.id, t.outcome, t.phase_id, t.lane, p.revision,
+                   r.disposition, r.reason, r.last_phase_id, r.last_lane, r.retired_at
+            FROM tickets t
+            LEFT JOIN ticket_task_plans p
+              ON p.project_id = t.project_id AND p.ticket_id = t.id
+            LEFT JOIN ticket_retirements r
+              ON r.project_id = t.project_id AND r.ticket_id = t.id
+            WHERE t.project_id = ?
+            ORDER BY t.id
+            """,
+            bindings: [.text(context.projectID)],
+            maximum: 4_096
+        )
+        let tickets = try ticketRows.map { row -> DeliveryInventoryTicket in
+            guard let ticketID = Self.text(row, "id"),
+                  let outcome = Self.text(row, "outcome") else {
+                throw DocumentationOperationError.invalidRequest
+            }
+            let phaseID = Self.text(row, "phase_id")
+            let lane = try Self.lane(row, "lane")
+            let tasks = tasksByTicket[ticketID] ?? []
+            let planRevision = Self.integer(row, "revision")
+            guard (planRevision == nil) == tasks.isEmpty else {
+                throw DocumentationOperationError.invalidRequest
+            }
+
+            let retirement: DeliveryInventoryRetirement?
+            if let disposition = Self.text(row, "disposition") {
+                guard let reason = Self.text(row, "reason"),
+                      let retiredAt = Self.text(row, "retired_at") else {
+                    throw DocumentationOperationError.invalidRequest
+                }
+                retirement = .init(
+                    disposition: disposition,
+                    reason: reason,
+                    lastPhaseID: Self.text(row, "last_phase_id"),
+                    lastLane: try Self.lane(row, "last_lane"),
+                    retiredAt: retiredAt
+                )
+            } else {
+                guard Self.text(row, "reason") == nil,
+                      Self.text(row, "last_phase_id") == nil,
+                      Self.text(row, "last_lane") == nil,
+                      Self.text(row, "retired_at") == nil else {
+                    throw DocumentationOperationError.invalidRequest
+                }
+                retirement = nil
+            }
+
+            let definitionEligibility: TicketTaskAdoptionEligibility
+            if retirement != nil {
+                definitionEligibility = .retiredTicket
+            } else if lane == .accepted {
+                definitionEligibility = .acceptedTicket
+            } else if phaseID.flatMap({ lifecycleByPhase[$0] }) == .completed {
+                definitionEligibility = .completedPhase
+            } else {
+                definitionEligibility = .eligible
+            }
+            let completionEligibility: TicketTaskAdoptionEligibility = if phaseID == nil {
+                .unassignedTicket
+            } else {
+                definitionEligibility
+            }
+            return .init(
+                ticketID: ticketID,
+                outcome: outcome,
+                phaseID: phaseID,
+                lane: lane,
+                taskPlanRevision: planRevision,
+                tasks: tasks,
+                retirement: retirement,
+                definitionEligibility: definitionEligibility,
+                completionEligibility: completionEligibility
+            )
+        }
+
+        inventory = .init(
+            projectID: context.projectID,
+            projectName: context.projectName,
+            rootID: context.rootID,
+            rootPath: context.root.path,
+            registration: context.registration.map {
+                .init(registrationID: $0.registrationID, requestGeneration: $0.requestGeneration)
+            },
+            phases: phases,
+            tickets: tickets,
+            activeTaskCount: tickets.flatMap(\.tasks).filter { $0.lifecycle == .active }.count,
+            isComplete: true
+        )
+    }
+
+    private static func text(_ row: [String: SQLiteValue], _ key: String) -> String? {
+        if case let .text(value)? = row[key] { value } else { nil }
+    }
+
+    private static func integer(_ row: [String: SQLiteValue], _ key: String) -> Int64? {
+        if case let .integer(value)? = row[key] { value } else { nil }
+    }
+
+    private static func lane(_ row: [String: SQLiteValue], _ key: String) throws -> TicketLane? {
+        guard let rawValue = text(row, key) else { return nil }
+        guard let lane = TicketLane(rawValue: rawValue) else {
+            throw DocumentationOperationError.invalidRequest
+        }
+        return lane
+    }
+}
+
 private struct InventoryCapture: Sendable {
     let context: DocumentationRootContext
     let records: [(LocatedEvidenceRecord, String?)]
@@ -287,8 +501,8 @@ private struct InventoryCapture: Sendable {
         }
         var failure: DocumentationOperationError?
         if catalog.mode == .unavailable { failure = .guidanceUnavailable }
-        else if catalog.snapshot == nil, catalog.validationError != .missingFile || catalog.mode == .managedV2 { failure = .catalogInvalid }
-        if failure == nil, catalog.mode == .managedV2, let snapshot = catalog.snapshot {
+        else if catalog.snapshot == nil, catalog.validationError != .missingFile || catalog.mode.isManaged { failure = .catalogInvalid }
+        if failure == nil, catalog.mode.isManaged, let snapshot = catalog.snapshot {
             do { try context.requireAccepted(snapshot) } catch { failure = DocumentationCatalogContext.map(error) }
         }
         let observation = DocumentationCatalogObservation(guidance: catalog.mode, repositoryID: catalog.snapshot?.catalog.repositoryID.lowercased(), version: catalog.snapshot?.version,
@@ -301,7 +515,7 @@ private struct InventoryCapture: Sendable {
                 let path: String
                 switch record.locator {
                 case let .managedDocument(id):
-                    guard catalog.mode == .managedV2 else { return row(pair, error: .guidanceUnavailable) }
+                    guard catalog.mode.isManaged else { return row(pair, error: .guidanceUnavailable) }
                     guard let match = catalog.snapshot?.catalog.artifacts.first(where: { $0.artifactID == id }) else { return row(pair, error: .evidenceConflict) }
                     artifact = match; path = match.path
                     _ = try catalog.reader.read(path)

@@ -560,8 +560,9 @@ struct ProjectGuidancePresentation: Equatable, Sendable {
                 systemImage = "exclamationmark.triangle"
             }
             actionTitle = "Copy update prompt"
-        case let .managed(audited, version, _):
-            status = audited ? "Release Radar managed documentation current · v2" : "Release Radar managed documentation handoff incomplete · v2"
+        case let .managed(audited, _, _):
+            let version = RepositoryDocumentContract.guidanceVersion
+            status = audited ? "Release Radar managed documentation current · v\(version)" : "Release Radar managed documentation handoff incomplete · v\(version)"
             detail = "Catalog v\(version) matches this project's accepted repository and authorized root." + (audited ? " The exact guidance and audited handoff are present." : " Complete the audited guidance handoff without changing delivery state.")
             systemImage = audited ? "checkmark.circle" : "exclamationmark.arrow.triangle.2.circlepath"
             actionTitle = audited ? nil : "Copy repair prompt"

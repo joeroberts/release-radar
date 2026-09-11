@@ -630,7 +630,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             rejectedTaskDescriptors: [],
             authorizedWorktreeURLs: [],
             worktreesRequiringAuthorization: [],
-            documentationState: .legacy(.outdated(installed: 1, current: 2))
+            documentationState: .legacy(.outdated(installed: 1, current: 3))
         )
         var copied = ""
         let view = OnboardingView(
@@ -904,7 +904,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
 
     private var states: [(String, ProjectDocumentationState)] {
         [
-            ("v1-update", .legacy(.outdated(installed: 1, current: 2))),
+            ("v1-update", .legacy(.outdated(installed: 1, current: 3))),
             ("managed-current", .managed(hasAuditedHandoff: true, catalogVersion: 1, catalogDigest: "test-only")),
             ("managed-unavailable", .managedUnavailable(hasAuditedHandoff: true, reason: .catalogUnaccepted, validationError: nil))
         ]

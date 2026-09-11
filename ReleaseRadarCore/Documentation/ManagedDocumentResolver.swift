@@ -64,7 +64,7 @@ public struct ManagedDocumentResolver: Sendable {
             let reader: RepositoryDocumentReader
             do { reader = try RepositoryDocumentReader(rootURL: root, limits: limits, afterRead: nil) }
             catch let failure as RepositoryDocumentError where failure.code == .readFailed { return failed(.rootUnavailable) }
-            guard try RepositoryDocumentationMode.read(reader) == .managedV2 else { return failed(.guidanceUnavailable) }
+            guard try RepositoryDocumentationMode.read(reader).isManaged else { return failed(.guidanceUnavailable) }
             let validator = RepositoryDocumentValidator(limits: limits)
             let snapshot = try validator.decodeCatalogSnapshot(reader.read(RepositoryDocumentContract.catalogPath, catalog: true))
             try reader.verifyStable()

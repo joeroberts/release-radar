@@ -58,7 +58,7 @@ struct EvidencePreviewReader: Sendable {
         }
         do {
             let reader = try RepositoryDocumentReader(rootURL: root, limits: limits, afterRead: nil)
-            guard try RepositoryDocumentationMode.read(reader) == .managedV2 else {
+            guard try RepositoryDocumentationMode.read(reader).isManaged else {
                 return .init(identity: identity, path: nil, status: .rejected, content: nil)
             }
             let validator = RepositoryDocumentValidator(limits: limits)
