@@ -7,21 +7,21 @@ Date: 2026-09-11
 This guide covers every merged product change from the start of Tuesday,
 September 8, 2026 through the completed Phase 6 baseline:
 
-- Range: `cd16df1b0226aa8a08bd167364779103ebe86278..5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`
+- Delivered-product range: `cd16df1b0226aa8a08bd167364779103ebe86278..5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`
 - Merged pull requests: #33 through #48
-- App build-source baseline: `5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`
-- DMG first committed in package artifact commit:
-  `90153ca760a129ebe3bbd136b562b25b56d486f4`
+- Acceptance-correction source: `acc740113d1e7e056b5e7f1b2e3a0e3e21f24c27`
+- DMG package artifact commit: `09caafe0108496297684089603aa04c0cfffe361`
 - App version/build: `0.1.9 (1)`
-- DMG: `dist/ReleaseRadar-0.1.9-5e7b9b8.dmg`
-- DMG SHA-256: `49aafc6ea49caff78539858ecabdca056188168d1a30580df34f647b23919454`
-- Main executable SHA-256: `721f86100acb5c7521f3f0275d9a9f82c13e2670f09cd5c7ab69db07928b537a`
-- CodeDirectory hash: `3239875711bc9957418f8c322f5d27cd904fafd7`
+- DMG: `dist/ReleaseRadar-0.1.9-acc7401.dmg`
+- DMG SHA-256: `bfb3e769f7f5acea37aeca0573a8a53ad484795fcbe2f36c07010c8f6fe7b046`
+- Main executable SHA-256: `52a4a1a8015fde064582c8768828d60907b641d09d827c15806919c2b283e428`
+- CodeDirectory hash: `cf90e9252c9b56e1699041d098987b37dea340ce`
 - Signature: Apple Development, team `2UA854NLX4`, Hardened Runtime enabled
 
-The earlier `ReleaseRadar-0.1.7-fb2ff3b.dmg` is not the acceptance candidate.
-Its embedded app is version 0.1.7, was signed September 7, and predates all work
-in this guide.
+The earlier `ReleaseRadar-0.1.7-fb2ff3b.dmg` and diagnostic
+`ReleaseRadar-0.1.9-5e7b9b8.dmg` are not the acceptance candidate. The former
+predates this guide; the latter contains the five focused failures described in
+the previous revision of this guide.
 
 The 0.1.9 DMG is an owner-only local build. Its bundle and nested code pass strict
 signature verification, but it is not notarized and Gatekeeper does not assess it
@@ -30,36 +30,40 @@ build. Phase 7 implementation remains paused.
 
 ## Automated verification status
 
-This candidate is suitable for diagnosis and manual exploration, but it is not
-acceptance-green and should not yet replace the owner's normal working version.
-The September 11 cross-slice verification found one product regression:
+The five focused failures in the diagnostic candidate are corrected in this
+candidate:
 
-- A focused Phase 4–6 contract run executed 197 tests: 192 passed and 5 failed.
-  Three failures reproduced individually.
-- The material product failure is
-  `DeliveryPlanningPolicyAcceptanceTests.testCanonicalEquivalentIdentitiesRemainByteDistinctThroughFinalizationAndTransfers`.
-  Canonically equivalent but byte-distinct Delivery Goal IDs are both reported
-  incomplete during finalization. This violates the established byte-exact
-  identity contract and blocks owner acceptance of proposal finalization or
-  successor transfer behavior involving those identities.
-- Two reproduced migration failures are stale test-fixture defects rather than
-  evidence of an old-store migration failure. The tests lower a schema-26
-  database's version after removing only an older slice's tables, leaving newer
-  evidence tables in place; migration then correctly refuses to recreate those
-  existing tables.
-- The other two focused failures are harness-environment failures: XCTest resolves
-  its temporary root through the macOS `/var` symlink, while the no-follow tests
-  intentionally reject a symlinked root.
-- Signed `CodexPluginLifecycleTransportTests` passed 14 of 14 tests. The signed
-  `AgentBridgeTransportAcceptanceTests` aggregate is not green: it contains stale
-  tool-count/schema expectations and tests that require an isolated pre-enabled
-  broker setup; one delivery-goal callback also reaches the newly enforced
-  plan-incomplete behavior.
+- The exact five reported tests plus a direct byte-distinct key regression test
+  pass 6 of 6. Canonically equivalent Delivery Goal IDs now remain distinct in
+  Swift collection keys, finalization coverage, and successor transfer selection.
+- The affected planning, successor, proposal, lifecycle, history, migration,
+  recovery, and shared-execution suites pass 114 of 114 unsigned tests.
+- The historical migration fixtures now unwind newer empty schema in dependency
+  order and refuse to discard nonempty data. Production migration strictness is
+  unchanged.
+- The XCTest fixtures resolve their physical temporary root before exercising the
+  no-follow reader. Product `O_NOFOLLOW` and symlink-ancestor rejection remain
+  unchanged.
+- Agent-bridge expectations now cover all 37 tools, current delivery inventory,
+  complete delivery-goal obligations, and test-owned broker registration. An
+  unsigned agent-bridge selection passed 11 of 13; its only two failures were the
+  expected code-signing rejection when unsigned tests attempted to load a signed
+  LaunchAgent.
+- A signed test bundle builds successfully, but the corrected signed service tests
+  have not yet run. They require explicit authorization to temporarily register
+  and unregister the test LaunchAgent services. The prior diagnostic baseline's
+  plugin lifecycle result was 14 of 14; that result is not attributed to this
+  rebuilt candidate.
 
-Do not record this build as owner-accepted. Manual testing may continue to gather
-additional evidence, but avoid relying on plan finalization or successor-transfer
-results until the byte-exact identity regression is corrected and the affected
-checks pass on a rebuilt candidate.
+The exact correction commit received independent source review with no Required
+or Optional findings. The rebuilt Release bundle and every nested executable pass
+strict signature, Hardened Runtime, and exact-entitlement verification. The DMG
+verifies, mounts read-only, and contains byte-identical executable and CodeResources
+copies of the staged app.
+
+Do not record this build as owner-accepted yet. The remaining automated acceptance
+gap is the authorized signed service run, followed by the manual owner checks in
+this guide. Phase 7 remains paused.
 
 ## Time budget
 
@@ -85,10 +89,10 @@ store to schema 26. An older app must not be pointed at that migrated live store
    commit above, then verify the DMG checksum from the checkout root:
 
    ```sh
-   shasum -a 256 dist/ReleaseRadar-0.1.9-5e7b9b8.dmg
+   shasum -a 256 dist/ReleaseRadar-0.1.9-acc7401.dmg
    ```
 
-   Expected digest: `49aafc6ea49caff78539858ecabdca056188168d1a30580df34f647b23919454`.
+   Expected digest: `bfb3e769f7f5acea37aeca0573a8a53ad484795fcbe2f36c07010c8f6fe7b046`.
 5. Open the DMG and drag **ReleaseRadar.app** onto its **Applications** link.
    Approve Finder's Replace prompt if an older app is installed.
 6. If macOS blocks the first open because this local build is not notarized,
@@ -401,8 +405,8 @@ live owner dataset merely to test it.
 
 For each failure, record:
 
-1. App version/build `0.1.9 (1)`, build-source baseline `5e7b9b8`, package artifact
-   commit `90153ca`, and whether the app was copied from the DMG named above. If
+1. App version/build `0.1.9 (1)`, correction source `acc7401`, package artifact
+   commit `09caafe`, and whether the app was copied from the DMG named above. If
    reporting a guide defect, also include the current documentation commit.
 2. Exact project registration, phase, ticket, goal, proposal, reference, evidence,
    or task revision involved. Redact credentials and private document content.
@@ -423,6 +427,6 @@ boundary violation. Do not reset or repair live data; report the evidence first.
 Report each section as Pass, Fail, or Not exercised. A truthful empty, unavailable,
 stale, partial, or recovery state is a pass when its precondition is real and no
 identity is guessed. Passing checks do not themselves mark work Accepted, change a
-lane, complete a phase, or authorize Phase 7. This candidate already has the known
-automated acceptance blocker recorded above, so a clean manual pass is additional
-diagnostic evidence rather than authorization to accept or promote the build.
+lane, complete a phase, or authorize Phase 7. A clean manual pass does not close
+the signed service-test gap recorded above and is not by itself authorization to
+accept or promote the build.
