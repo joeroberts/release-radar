@@ -153,6 +153,238 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testUnsupportedWorkingSearchSurvivesHelpBackAndOrdinarySearchWithoutReplacingBytes() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-UnsupportedWorkingSearch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let opaquePayload = Data([0x00, 0xff, 0x7c, 0x10, 0x80])
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed newer working search") { connection in
+            try connection.execute(
+                "INSERT INTO workspace_search_preferences (singleton_id, payload_version, payload_data, updated_at) VALUES (1, 99, ?, '2026-09-10T12:00:00Z')",
+                bindings: [.blob(opaquePayload)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadWorkspaceSearchPreferences(runSearch: false)
+
+        await model.navigate(to: .search)
+        await model.navigate(to: .help)
+        await model.goBack()
+        model.setWorkspaceSearchText("ordinary replacement")
+        await model.runWorkspaceSearch()
+        await model.saveCurrentWorkspaceSearch(name: "Must not save")
+
+        XCTAssertEqual(model.selection, .search)
+        XCTAssertTrue(model.workspaceSearchPreferenceIsUnsupported)
+        let stored = try await store.read { connection -> (Int64, Data) in
+            let row = try XCTUnwrap(try connection.row(
+                "SELECT payload_version, payload_data FROM workspace_search_preferences WHERE singleton_id = 1"
+            ))
+            guard case let .integer(version)? = row["payload_version"],
+                  case let .blob(payload)? = row["payload_data"] else {
+                throw StoreError.unavailable("Unexpected working-search fixture shape")
+            }
+            return (version, payload)
+        }
+        XCTAssertEqual(stored.0, 99)
+        XCTAssertEqual(stored.1, opaquePayload)
+        XCTAssertFalse(model.workspaceSearchSavedQueries.contains { $0.name == "Must not save" })
+    }
+
+    @MainActor
+    func testRestoredSavedQueryRequiresExplicitExactScopeChoiceBeforeRunAndSave() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RestoredSavedSearch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "restored-search-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed restored Search project") { connection in
+            try connection.execute(
+                "INSERT INTO projects (id, name) VALUES (?, 'Restored Search project')",
+                bindings: [.text(projectID.rawValue)]
+            )
+            try connection.execute(
+                "INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'registration-before', 1, 'complete')",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        let repository = WorkspaceSearchPreferencesRepository(store: store)
+        let saved = try await repository.saveQuery(
+            id: "restored-query",
+            name: "Restored query",
+            definition: .init(
+                text: "Restored",
+                scope: .registrations([.init(projectID: projectID, registrationID: "registration-before")]),
+                domains: [.project]
+            )
+        )
+        try await store.transact(actor: .init(id: "fixture"), reason: "Rotate restored Search authority") { connection in
+            try connection.execute(
+                "UPDATE application_recovery_state SET incarnation_id = '22222222-2222-4222-8222-222222222222' WHERE singleton_id = 1"
+            )
+            try connection.execute(
+                "UPDATE project_registrations SET registration_id = 'registration-after' WHERE project_id = ?",
+                bindings: [.text(projectID.rawValue)]
+            )
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+
+        await model.loadWorkspaceSavedQuery(.supported(saved))
+        await model.saveCurrentWorkspaceSearch(name: "Blocked ordinary save")
+
+        XCTAssertTrue(model.workspaceSearchFailure?.contains("earlier authorization state") == true)
+        XCTAssertFalse(model.workspaceSearchSavedQueries.contains { $0.name == "Blocked ordinary save" })
+        let currentProject = try XCTUnwrap(model.availableWorkspaceSearchProjects.first)
+        model.setWorkspaceSearchProject(currentProject, enabled: true)
+        XCTAssertEqual(
+            model.workspaceSearchDefinition.scope,
+            .registrations([.init(projectID: projectID, registrationID: "registration-after")])
+        )
+        XCTAssertNil(model.workspaceSearchDefinition.authorityIncarnationID)
+
+        await model.runWorkspaceSearch()
+        await model.saveCurrentWorkspaceSearch(name: "Rescoped query")
+
+        XCTAssertEqual(model.workspaceSearchProjection?.results.count, 1)
+        XCTAssertTrue(model.workspaceSearchSavedQueries.contains { $0.name == "Rescoped query" })
+    }
+
+    @MainActor
+    func testEditingDefinitionInvalidatesPendingSearchBeforeItCanPublishOrPersist() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-PendingSearch-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed pending Search project") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES ('pending-project', 'Old needle project')")
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES ('pending-project', 'pending-registration', 1, 'complete')")
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        let gate = BlockingStoreReadGate()
+        let blocker = Task {
+            try await store.read { _ in
+                gate.entered.signal()
+                gate.release.wait()
+            }
+        }
+        await gate.waitUntilEntered()
+        model.setWorkspaceSearchText("Old needle")
+        let pending = Task { await model.runWorkspaceSearch() }
+        await Task.yield()
+        XCTAssertTrue(model.workspaceSearchIsLoading)
+
+        model.setWorkspaceSearchText("New query")
+        gate.release.signal()
+        try await blocker.value
+        await pending.value
+
+        XCTAssertEqual(model.workspaceSearchDefinition.text, "New query")
+        XCTAssertNil(model.workspaceSearchProjection)
+        XCTAssertFalse(model.workspaceSearchIsLoading)
+        guard case .none = try await WorkspaceSearchPreferencesRepository(store: store).loadWorkingDefinition() else {
+            return XCTFail("A stale pending definition must not be persisted")
+        }
+    }
+
+    @MainActor
+    func testSearchAuditResultOverridesConflictingHistoryFilterAndForwardRestoresExactEvent() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchAuditNavigation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "search-audit-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed Search audit project") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES (?, 'Search audit project')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'search-audit-registration', 1, 'complete')", bindings: [.text(projectID.rawValue)])
+        }
+        try await store.transact(
+            actor: .init(id: "fixture"),
+            reason: "Audit description without identity",
+            auditEventID: .init(rawValue: "search-audit-identity"),
+            auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)
+        ) { _ in }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        model.setHistoryFilter(.notifications, projectID: projectID)
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("search-audit-identity")
+        for domain in WorkspaceSearchDomain.allCases where domain != .history {
+            model.setWorkspaceSearchDomain(domain, enabled: false)
+        }
+        await model.runWorkspaceSearch()
+        let result = try XCTUnwrap(model.workspaceSearchProjection?.results.first)
+
+        await model.openWorkspaceSearchResult(result)
+
+        guard case let .history(_, _, _, sourceID) = result.identity else {
+            return XCTFail("Expected History result")
+        }
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID)?.sourceID, sourceID)
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .search)
+        await model.goForward()
+        XCTAssertEqual(model.selection, .activity(projectID))
+        XCTAssertEqual(model.historyFilter(for: projectID), .audit)
+        XCTAssertEqual(model.selectedHistoryEventID(for: projectID)?.sourceID, sourceID)
+    }
+
+    @MainActor
+    func testSearchUnlinkedExecutionGoalOverridesConflictingFiltersAndForwardRestoresExactGoal() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchGoalNavigation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let projectID = ProjectID(rawValue: "search-goal-project")
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed Search goal project") { connection in
+            try connection.execute("INSERT INTO projects (id, name) VALUES (?, 'Search goal project')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO project_registrations (project_id, registration_id, request_generation, setup_state) VALUES (?, 'search-goal-registration', 1, 'complete')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO observed_threads (id, project_id, status, last_observed_at) VALUES ('search-goal-thread', ?, 'completed', '2026-09-10T12:00:00Z')", bindings: [.text(projectID.rawValue)])
+            try connection.execute("INSERT INTO observed_goals (id, project_id, thread_id, status, text, last_observed_at) VALUES ('search-unlinked-goal', ?, 'search-goal-thread', 'Completed', 'Unlinked exact Search goal', '2026-09-10T12:00:00Z')", bindings: [.text(projectID.rawValue)])
+        }
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        let goal = try XCTUnwrap(model.dashboard?.workspaceGoals.execution.first)
+        model.setWorkspaceGoalsDomain(.execution)
+        model.setWorkspaceGoalsExecutionStatus("Waiting")
+        model.setWorkspaceGoalsExecutionScope(.linked)
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("search-unlinked-goal")
+        for domain in WorkspaceSearchDomain.allCases where domain != .executionGoal {
+            model.setWorkspaceSearchDomain(domain, enabled: false)
+        }
+        await model.runWorkspaceSearch()
+        let result = try XCTUnwrap(model.workspaceSearchProjection?.results.first)
+
+        await model.openWorkspaceSearchResult(result)
+
+        XCTAssertEqual(model.selection, .goals)
+        XCTAssertEqual(model.workspaceGoalsDomain, .execution)
+        XCTAssertEqual(model.workspaceGoalsProjectID, projectID)
+        XCTAssertNil(model.workspaceGoalsExecutionStatus)
+        XCTAssertEqual(model.workspaceGoalsExecutionScope, .unlinked)
+        XCTAssertEqual(model.selectedWorkspaceExecutionGoalID, goal.id)
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .search)
+        await model.goForward()
+        XCTAssertEqual(model.selection, .goals)
+        XCTAssertEqual(model.workspaceGoalsProjectID, projectID)
+        XCTAssertNil(model.workspaceGoalsExecutionStatus)
+        XCTAssertEqual(model.workspaceGoalsExecutionScope, .unlinked)
+        XCTAssertEqual(model.selectedWorkspaceExecutionGoalID, goal.id)
+    }
+
+    @MainActor
     func testHistoryUsesExactRegistrationWhenProjectBecomesArchived() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-NavigationArchive-\(UUID().uuidString)", isDirectory: true)
@@ -823,5 +1055,19 @@ private actor BlockingNavigationObservationLoader {
     func releaseBlockedNavigation() {
         releaseContinuation?.resume()
         releaseContinuation = nil
+    }
+}
+
+private final class BlockingStoreReadGate: @unchecked Sendable {
+    let entered = DispatchSemaphore(value: 0)
+    let release = DispatchSemaphore(value: 0)
+
+    func waitUntilEntered() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global().async {
+                self.entered.wait()
+                continuation.resume()
+            }
+        }
     }
 }

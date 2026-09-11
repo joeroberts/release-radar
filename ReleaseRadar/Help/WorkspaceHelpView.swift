@@ -22,6 +22,9 @@ enum WorkspaceHelpDestination: Equatable, Sendable {
 }
 
 enum WorkspaceHelpContent {
+    static let historyProvenance = "Audit, review, completion, observation, and notification records keep their own provenance. Observation rows are latest persisted snapshots, not an invented timeline."
+    static let deliveryEvidenceBoundary = "Recorded evidence is not live evidence. Applicability follows the exact recorded target identity, and evidence remains separate from owner acceptance. Reading or recording evidence does not change tasks, lanes, phase lifecycle, or owner acceptance."
+
     static let topics: [WorkspaceHelpTopic] = [
         .init(
             id: "setup-handoff",
@@ -58,7 +61,7 @@ enum WorkspaceHelpContent {
         .init(
             id: "task-adoption",
             title: "Adopt generic agent tasks",
-            detail: "Classify the work first. Non-atomic work needs an exact approved task catalog, durable request and receipt records, and evidence-backed reconciliation before Release Radar marks prior work done.",
+            detail: "\(TaskAdoptionHelpContent.introduction) \(TaskAdoptionHelpContent.classifications) \(TaskAdoptionHelpContent.evidence) \(TaskAdoptionHelpContent.recovery)",
             keywords: "task adoption generic agent atomic non-atomic receipt evidence",
             actionTitle: "Open Project Plan",
             destination: .projectPlan
@@ -74,26 +77,26 @@ enum WorkspaceHelpContent {
         .init(
             id: "readiness-acceptance",
             title: "Readiness versus acceptance",
-            detail: "Readiness is computed from recorded planning and delivery evidence. Acceptance is an explicit owner decision and remains separate from checks passing or a phase being ready.",
-            keywords: "readiness acceptance evidence owner decision goals phase",
+            detail: "Readiness is computed from recorded planning and delivery evidence. Acceptance is an explicit owner decision and remains separate from checks passing or a phase being ready. \(deliveryEvidenceBoundary)",
+            keywords: "readiness acceptance delivery evidence applicability owner decision goals phase",
             actionTitle: "Open Goals",
             destination: .goals
         ),
         .init(
             id: "saved-query-recovery",
             title: "Recover a saved query after restore",
-            detail: "Saved filters remain visible after recovery, but Release Radar will not silently substitute new project registrations. Rechoose the project scope, run the query, and resave it under the new authority.",
-            keywords: "saved query recovery restore authorization registration scope filters",
+            detail: "Saved filters remain visible after recovery, but Release Radar will not silently substitute new project registrations. Rechoose the exact current project scope, run the query, and resave it under the new authority. If the working search was created by a newer version, use Reset to a new search or open a supported saved query; Search will not interpret or overwrite the opaque filters before that explicit choice.",
+            keywords: "saved query recovery restore authorization registration scope filters newer version reset working search",
             actionTitle: "Open Search",
             destination: .search
         ),
         .init(
             id: "search-navigation",
             title: "Navigate exact search results",
-            detail: "Search uses recorded identities rather than names. Back and Forward restore the query, filters, selected result, scroll position and focus; archived or removed destinations open their safe read-only recovery surface.",
-            keywords: "search navigation exact identity back forward archived removed",
-            actionTitle: "Open Search",
-            destination: .search
+            detail: "Search uses recorded identities rather than names. Back and Forward restore the query, filters, selected result, scroll position and focus; archived or removed destinations open their safe read-only recovery surface. \(historyProvenance)",
+            keywords: "search navigation exact identity back forward archived removed history source provenance retained observations",
+            actionTitle: "Open History",
+            destination: .history
         ),
     ]
 

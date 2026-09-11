@@ -251,15 +251,20 @@ public enum WorkspaceSearchQuery {
         store: DeliveryStore,
         definition: WorkspaceSearchDefinition
     ) async throws -> WorkspaceSearchDefinition {
-        let incarnationID = try await store.read { connection in
-            try requiredText(
+        try await store.read { connection in
+            let incarnationID = try requiredText(
                 try connection.row("SELECT incarnation_id FROM application_recovery_state WHERE singleton_id = 1"),
                 "incarnation_id"
             )
+            if let expected = definition.authorityIncarnationID,
+               !Data(expected.utf8).elementsEqual(Data(incarnationID.utf8)) {
+                throw WorkspaceSearchError.authorizationRequired
+            }
+            var result = definition
+            result.authorityIncarnationID = incarnationID
+            _ = try validatedAuthority(connection: connection, definition: result)
+            return result
         }
-        var result = definition
-        result.authorityIncarnationID = incarnationID
-        return result
     }
 
     private struct Authority: Sendable {
@@ -268,6 +273,21 @@ public enum WorkspaceSearchQuery {
 
         func project(_ rawID: String) -> WorkspaceSearchProjectIdentity? {
             projects.first { Data($0.projectID.rawValue.utf8).elementsEqual(Data(rawID.utf8)) }
+        }
+    }
+
+    private struct RegistrationByteKey: Hashable, Sendable {
+        let projectID: Data
+        let registrationID: Data
+
+        init(_ identity: WorkspaceSearchRegistrationIdentity) {
+            projectID = Data(identity.projectID.rawValue.utf8)
+            registrationID = Data(identity.registrationID.utf8)
+        }
+
+        init(_ project: WorkspaceSearchProjectIdentity) {
+            projectID = Data(project.projectID.rawValue.utf8)
+            registrationID = Data(project.registrationID.utf8)
         }
     }
 
@@ -309,12 +329,14 @@ public enum WorkspaceSearchQuery {
             return .init(projects: available)
         case let .registrations(requested):
             let availableByKey = Dictionary(uniqueKeysWithValues: available.map {
-                ("\($0.projectID.rawValue)\u{1f}\($0.registrationID)", $0)
+                (RegistrationByteKey($0), $0)
             })
-            let selected = requested.compactMap {
-                availableByKey["\($0.projectID.rawValue)\u{1f}\($0.registrationID)"]
+            let requestedKeys = requested.map(RegistrationByteKey.init)
+            guard Set(requestedKeys).count == requestedKeys.count else {
+                throw WorkspaceSearchError.authorizationRequired
             }
-            guard selected.count == Set(requested).count else {
+            let selected = requestedKeys.compactMap { availableByKey[$0] }
+            guard selected.count == requestedKeys.count else {
                 throw WorkspaceSearchError.authorizationRequired
             }
             return .init(projects: selected)
@@ -492,14 +514,16 @@ public enum WorkspaceSearchQuery {
         )
         return try rows.compactMap { row in
             let projectID = try requiredText(row, "project_id")
+            guard let project = authority.project(projectID) else { return nil }
             let artifactID = try requiredText(row, "artifact_id")
-            let sourceLocalID = try requiredText(row, "source_local_id")
-            let locator = try requiredText(row, "locator")
-            guard let project = authority.project(projectID), matches(text, in: [
-                artifactID, sourceLocalID, locator, optionalText(row, "observed_path") ?? ""
+            let linkID = try requiredText(row, "id")
+            let sourceLocalID = optionalText(row, "source_local_id")
+            let locator = optionalText(row, "locator")
+            let observedPath = try requiredText(row, "observed_path")
+            guard matches(text, in: [
+                linkID, artifactID, sourceLocalID ?? "", locator ?? "", observedPath
             ]) else { return nil }
             let ticketID = TicketID(rawValue: try requiredText(row, "ticket_id"))
-            let linkID = try requiredText(row, "id")
             let version = try requiredInt(row, "version")
             let repositoryID = try requiredText(row, "repository_id")
             return .init(
@@ -514,8 +538,8 @@ public enum WorkspaceSearchQuery {
                     repositoryID: repositoryID,
                     artifactID: artifactID
                 ),
-                title: sourceLocalID,
-                detail: "\(ticketID.rawValue) · \(locator)",
+                title: sourceLocalID ?? artifactID,
+                detail: "\(ticketID.rawValue) · \(locator ?? observedPath)",
                 occurredAt: optionalText(row, "created_at")
             )
         }
@@ -540,13 +564,13 @@ public enum WorkspaceSearchQuery {
         )
         for row in auditRows {
             let projectID = try requiredText(row, "project_id")
+            let sourceID = try requiredText(row, "id")
             guard let project = authority.project(projectID),
                   optionalText(row, "registration_id") == project.registrationID,
                   matches(text, in: [
-                    try requiredText(row, "reason"), optionalText(row, "entity_type") ?? "",
+                    sourceID, try requiredText(row, "reason"), optionalText(row, "entity_type") ?? "",
                     optionalText(row, "entity_id") ?? ""
                   ]) else { continue }
-            let sourceID = try requiredText(row, "id")
             results.append(.init(
                 domain: .history,
                 project: project,

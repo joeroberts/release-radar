@@ -677,17 +677,23 @@ an accessible recovery explanation.
 
 The working search and named saved queries persist every supported filter in a
 versioned local format. A newer unsupported payload remains visible and deletable
-without being interpreted or silently replaced. Full backup preserves these
-preferences, tracking reset leaves them intact and restore rotates their project
-authority: the owner must choose the current scope, run and resave before an old
-query becomes actionable. A per-domain read failure is named as partial and the
-remaining results are never labelled complete.
+without being interpreted or silently replaced. Search and Save stay unavailable
+for an unsupported working payload until the owner explicitly resets to a new
+search or opens a supported named query. Full backup preserves these preferences,
+tracking reset leaves them intact and restore rotates their project authority: the
+owner must choose either all currently authorized projects or an exact current
+project registration, then run and resave before an old query becomes actionable.
+A per-domain read failure is named as partial and the remaining results are never
+labelled complete.
 
 Help is a shared searchable route covering setup and documentation handoff,
 recovery, active versus viewed phase, planning and unplaced work, task adoption,
 proposal approval versus apply, readiness versus acceptance, saved-query recovery
-and exact-result navigation. Every contextual destination is an actual accessible
-control into an existing route. There was no dedicated Search or shared-Help
+and exact-result navigation. It reuses the shipped contextual explanations for
+History provenance, delivery-evidence applicability and task-adoption recovery,
+and explains the explicit newer-version working-query reset. Every contextual
+destination is an actual accessible control into an existing route. There was no
+dedicated Search or shared-Help
 mockup, so these surfaces reuse the approved History and Goals scope headers,
 dark bordered cards, provenance language, list/detail rhythm and compact stacking
 without importing their aspirational data-source states. The inspected native

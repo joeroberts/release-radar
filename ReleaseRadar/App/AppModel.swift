@@ -79,6 +79,7 @@ final class AppModel {
     private(set) var workspaceSearchIsLoading = false
     private(set) var workspaceSearchFailure: String?
     private(set) var workspaceSearchPreferenceIsUnsupported = false
+    private(set) var workspaceSearchNeedsScopeReselection = false
     private(set) var selectedWorkspaceSearchResultID: Data?
     private(set) var workspaceSearchViewportOffset: Double?
     private(set) var workspaceSearchPersistenceMessage: String?
@@ -600,8 +601,11 @@ final class AppModel {
             }
         }
         if case .search = route, let searchState = entry.workspaceSearch {
+            invalidateWorkspaceSearchRun()
             workspaceSearchDefinition = searchState.definition
             workspaceSearchViewportOffset = searchState.viewportOffset.map { max(0, $0) }
+            workspaceSearchPreferenceIsUnsupported = searchState.preferenceIsUnsupported
+            workspaceSearchNeedsScopeReselection = searchState.needsScopeReselection
             if let selected = searchState.selectedResultID,
                workspaceSearchProjection?.results.contains(where: { $0.id == selected }) == true {
                 selectedWorkspaceSearchResultID = selected
@@ -1050,6 +1054,7 @@ final class AppModel {
         workspaceSearchIsLoading = false
         workspaceSearchFailure = nil
         workspaceSearchPreferenceIsUnsupported = false
+        workspaceSearchNeedsScopeReselection = false
         selectedWorkspaceSearchResultID = nil
         workspaceSearchViewportOffset = nil
         workspaceSearchPersistenceMessage = nil
@@ -1174,7 +1179,9 @@ final class AppModel {
         .init(
             definition: workspaceSearchDefinition,
             selectedResultID: selectedWorkspaceSearchResultID,
-            viewportOffset: workspaceSearchViewportOffset
+            viewportOffset: workspaceSearchViewportOffset,
+            preferenceIsUnsupported: workspaceSearchPreferenceIsUnsupported,
+            needsScopeReselection: workspaceSearchNeedsScopeReselection
         )
     }
 
@@ -1203,6 +1210,8 @@ final class AppModel {
     }
 
     func setWorkspaceSearchText(_ text: String) {
+        guard canEditSupportedWorkspaceSearch else { return }
+        invalidateWorkspaceSearchRun()
         workspaceSearchDefinition.text = text
         workspaceSearchFailure = nil
         navigationFocus = .workspaceSearchField
@@ -1210,12 +1219,16 @@ final class AppModel {
     }
 
     func setWorkspaceSearchSort(_ sort: WorkspaceSearchSort) {
+        guard canEditSupportedWorkspaceSearch else { return }
+        invalidateWorkspaceSearchRun()
         workspaceSearchDefinition.sort = sort
         navigationFocus = .workspaceSearchFilters
         captureCurrentNavigationContext()
     }
 
     func setWorkspaceSearchDomain(_ domain: WorkspaceSearchDomain, enabled: Bool) {
+        guard canEditSupportedWorkspaceSearch else { return }
+        invalidateWorkspaceSearchRun()
         if enabled { workspaceSearchDefinition.domains.insert(domain) }
         else { workspaceSearchDefinition.domains.remove(domain) }
         navigationFocus = .workspaceSearchFilters
@@ -1223,32 +1236,41 @@ final class AppModel {
     }
 
     func setWorkspaceSearchAllAuthorizedScope() {
+        guard canEditSupportedWorkspaceSearch else { return }
+        invalidateWorkspaceSearchRun()
         workspaceSearchDefinition.scope = .allAuthorized
         workspaceSearchDefinition.authorityIncarnationID = nil
+        workspaceSearchNeedsScopeReselection = false
         workspaceSearchFailure = nil
         navigationFocus = .workspaceSearchFilters
         captureCurrentNavigationContext()
     }
 
     func setWorkspaceSearchProject(_ project: WorkspaceSearchProjectIdentity, enabled: Bool) {
+        guard canEditSupportedWorkspaceSearch else { return }
         var registrations: [WorkspaceSearchRegistrationIdentity]
-        switch workspaceSearchDefinition.scope {
-        case .allAuthorized:
+        switch (workspaceSearchNeedsScopeReselection, workspaceSearchDefinition.scope) {
+        case (true, _) where enabled:
+            registrations = []
+        case (_, .allAuthorized):
             registrations = availableWorkspaceSearchProjects.map {
                 .init(projectID: $0.projectID, registrationID: $0.registrationID)
             }
-        case let .registrations(selected):
+        case let (_, .registrations(selected)):
             registrations = selected
         }
         let identity = WorkspaceSearchRegistrationIdentity(
             projectID: project.projectID,
             registrationID: project.registrationID
         )
-        registrations.removeAll { $0 == identity }
+        registrations.removeAll { registrationIdentity($0, matches: identity) }
         if enabled { registrations.append(identity) }
+        guard !workspaceSearchNeedsScopeReselection || enabled else { return }
+        invalidateWorkspaceSearchRun()
         registrations.sort { ($0.projectID.rawValue, $0.registrationID) < ($1.projectID.rawValue, $1.registrationID) }
         workspaceSearchDefinition.scope = .registrations(registrations)
         workspaceSearchDefinition.authorityIncarnationID = nil
+        workspaceSearchNeedsScopeReselection = false
         workspaceSearchFailure = nil
         navigationFocus = .workspaceSearchFilters
         captureCurrentNavigationContext()
@@ -1259,11 +1281,17 @@ final class AppModel {
         case .allAuthorized:
             true
         case let .registrations(registrations):
-            registrations.contains(.init(projectID: project.projectID, registrationID: project.registrationID))
+            registrations.contains {
+                registrationIdentity(
+                    $0,
+                    matches: .init(projectID: project.projectID, registrationID: project.registrationID)
+                )
+            }
         }
     }
 
     func runWorkspaceSearch(persist: Bool = true, captureNavigation: Bool = true) async {
+        guard canExecuteWorkspaceSearch else { return }
         workspaceSearchGeneration &+= 1
         let generation = workspaceSearchGeneration
         workspaceSearchIsLoading = true
@@ -1282,7 +1310,7 @@ final class AppModel {
             guard generation == workspaceSearchGeneration else { return }
             workspaceSearchDefinition = definition
             workspaceSearchProjection = projection
-            workspaceSearchPreferenceIsUnsupported = false
+            workspaceSearchNeedsScopeReselection = false
             if let selectedWorkspaceSearchResultID,
                !projection.results.contains(where: { $0.id == selectedWorkspaceSearchResultID }) {
                 self.selectedWorkspaceSearchResultID = nil
@@ -1300,6 +1328,9 @@ final class AppModel {
             workspaceSearchProjection = nil
             selectedWorkspaceSearchResultID = nil
             workspaceSearchFailure = error.localizedDescription
+            if (error as? WorkspaceSearchError) == .authorizationRequired {
+                workspaceSearchNeedsScopeReselection = true
+            }
         }
         guard generation == workspaceSearchGeneration else { return }
         workspaceSearchIsLoading = false
@@ -1309,15 +1340,25 @@ final class AppModel {
     func loadWorkspaceSearchPreferences(runSearch: Bool) async {
         let repository = WorkspaceSearchPreferencesRepository(store: store)
         do {
+            invalidateWorkspaceSearchRun(clearProjection: false)
             workspaceSearchSavedQueries = try await repository.loadSavedQueries()
             switch try await repository.loadWorkingDefinition() {
             case .none:
                 workspaceSearchPreferenceIsUnsupported = false
+                workspaceSearchNeedsScopeReselection = false
             case let .supported(definition):
+                if workspaceSearchProjection?.definition != definition {
+                    workspaceSearchProjection = nil
+                    selectedWorkspaceSearchResultID = nil
+                }
                 workspaceSearchDefinition = definition
                 workspaceSearchPreferenceIsUnsupported = false
+                workspaceSearchNeedsScopeReselection = false
             case .unsupported:
                 workspaceSearchPreferenceIsUnsupported = true
+                workspaceSearchNeedsScopeReselection = false
+                workspaceSearchProjection = nil
+                selectedWorkspaceSearchResultID = nil
                 workspaceSearchPersistenceMessage = "The saved working search was created by a newer Release Radar. Its filters remain stored and were not replaced."
             }
             if runSearch, !workspaceSearchPreferenceIsUnsupported {
@@ -1331,7 +1372,10 @@ final class AppModel {
     func loadWorkspaceSavedQuery(_ record: WorkspaceSavedQueryRecord) async {
         switch record {
         case let .supported(query):
+            invalidateWorkspaceSearchRun()
             workspaceSearchDefinition = query.definition
+            workspaceSearchPreferenceIsUnsupported = false
+            workspaceSearchNeedsScopeReselection = false
             selectedWorkspaceSearchResultID = nil
             workspaceSearchViewportOffset = nil
             await runWorkspaceSearch()
@@ -1341,6 +1385,7 @@ final class AppModel {
     }
 
     func saveCurrentWorkspaceSearch(name: String) async {
+        guard canExecuteWorkspaceSearch else { return }
         do {
             _ = try await WorkspaceSearchPreferencesRepository(store: store)
                 .saveQuery(name: name, definition: workspaceSearchDefinition)
@@ -1349,6 +1394,9 @@ final class AppModel {
             workspaceSearchPersistenceMessage = "Saved query “\(name.trimmingCharacters(in: .whitespacesAndNewlines))”."
         } catch {
             workspaceSearchPersistenceMessage = error.localizedDescription
+            if (error as? WorkspaceSearchError) == .authorizationRequired {
+                workspaceSearchNeedsScopeReselection = true
+            }
         }
     }
 
@@ -1362,9 +1410,16 @@ final class AppModel {
         }
     }
 
-    func reauthorizeWorkspaceSearch() async {
-        workspaceSearchDefinition.authorityIncarnationID = nil
-        await runWorkspaceSearch()
+    func resetUnsupportedWorkspaceSearch() {
+        guard workspaceSearchPreferenceIsUnsupported else { return }
+        invalidateWorkspaceSearchRun()
+        workspaceSearchDefinition = .init()
+        workspaceSearchPreferenceIsUnsupported = false
+        workspaceSearchNeedsScopeReselection = false
+        workspaceSearchFailure = nil
+        workspaceSearchPersistenceMessage = "New Search ready. The newer-version working search will be replaced only after you run this new definition."
+        navigationFocus = .workspaceSearchField
+        captureCurrentNavigationContext()
     }
 
     func selectWorkspaceSearchResult(_ id: Data?) {
@@ -1417,7 +1472,13 @@ final class AppModel {
             if item.link.ticketID != nil {
                 await openWorkspaceExecutionGoal(item)
             } else {
+                workspaceGoalsDomain = .execution
+                workspaceGoalsProjectID = item.project.id
+                workspaceGoalsExecutionStatus = nil
+                workspaceGoalsExecutionScope = .unlinked
+                selectedWorkspaceDeliveryGoalID = nil
                 await navigate(to: .goals)
+                guard selection == .goals else { return }
                 setWorkspaceGoalsDomain(.execution)
                 selectWorkspaceExecutionGoal(item.id)
             }
@@ -1444,8 +1505,57 @@ final class AppModel {
                     && $0.identity.source == source.activitySource
                     && Data($0.identity.sourceID.utf8) == Data(sourceID.utf8)
             }) else { return searchDestinationUnavailable("History event") }
+            historyFilters[Data(projectID.rawValue.utf8)] = historyFilter(for: source)
             await navigate(to: .activity(projectID))
+            guard selection == .activity(projectID) else { return }
             selectHistoryEvent(item.identity, projectID: projectID)
+        }
+    }
+
+    private var canEditSupportedWorkspaceSearch: Bool {
+        guard !workspaceSearchPreferenceIsUnsupported else {
+            workspaceSearchPersistenceMessage = "Reset the newer-version working search or open a supported saved query before changing its filters."
+            return false
+        }
+        return true
+    }
+
+    private var canExecuteWorkspaceSearch: Bool {
+        guard !workspaceSearchPreferenceIsUnsupported else {
+            workspaceSearchPersistenceMessage = "Reset the newer-version working search or open a supported saved query before running or saving it."
+            return false
+        }
+        guard !workspaceSearchNeedsScopeReselection else {
+            workspaceSearchFailure = WorkspaceSearchError.authorizationRequired.localizedDescription
+            return false
+        }
+        return true
+    }
+
+    private func invalidateWorkspaceSearchRun(clearProjection: Bool = true) {
+        workspaceSearchGeneration &+= 1
+        workspaceSearchIsLoading = false
+        if clearProjection {
+            workspaceSearchProjection = nil
+            selectedWorkspaceSearchResultID = nil
+        }
+    }
+
+    private func registrationIdentity(
+        _ lhs: WorkspaceSearchRegistrationIdentity,
+        matches rhs: WorkspaceSearchRegistrationIdentity
+    ) -> Bool {
+        lhs.projectID.rawValue.utf8.elementsEqual(rhs.projectID.rawValue.utf8)
+            && lhs.registrationID.utf8.elementsEqual(rhs.registrationID.utf8)
+    }
+
+    private func historyFilter(for source: WorkspaceSearchHistorySource) -> HistoryFilter {
+        switch source {
+        case .audit: .audit
+        case .review: .reviews
+        case .completion: .completions
+        case .observation: .observations
+        case .notification: .notifications
         }
     }
 

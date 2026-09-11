@@ -72,7 +72,11 @@ struct WorkspaceSearchView: View {
                     Task { await model.runWorkspaceSearch() }
                 }
                 .buttonStyle(RekonPrimaryButtonStyle())
-                .disabled(model.workspaceSearchIsLoading)
+                .disabled(
+                    model.workspaceSearchIsLoading
+                        || model.workspaceSearchPreferenceIsUnsupported
+                        || model.workspaceSearchNeedsScopeReselection
+                )
                 .accessibilityIdentifier("workspace-search-run")
             }
 
@@ -87,6 +91,7 @@ struct WorkspaceSearchView: View {
         }
         .padding(16)
         .background(RekonTheme.backgroundRaised, in: RoundedRectangle(cornerRadius: 12))
+        .disabled(model.workspaceSearchPreferenceIsUnsupported)
     }
 
     private var scopeControl: some View {
@@ -164,6 +169,10 @@ struct WorkspaceSearchView: View {
                     }
                 }
                 .buttonStyle(RekonSecondaryButtonStyle())
+                .disabled(
+                    model.workspaceSearchPreferenceIsUnsupported
+                        || model.workspaceSearchNeedsScopeReselection
+                )
                 .accessibilityIdentifier("workspace-search-save")
             }
             if !model.workspaceSearchSavedQueries.isEmpty {
@@ -201,17 +210,28 @@ struct WorkspaceSearchView: View {
             RekonCallout(tone: .danger, systemImage: "magnifyingglass.circle") {
                 Text("Search unavailable").font(.headline)
                 Text(failure)
-                if failure.localizedCaseInsensitiveContains("authorization") {
-                    Button("Choose current project scope") { model.setWorkspaceSearchAllAuthorizedScope() }
+                if model.workspaceSearchNeedsScopeReselection {
+                    Text("Choose the exact current scope. Your earlier restrictive scope stays unchanged until you make one of these choices.")
+                    Button("Use all authorized projects") { model.setWorkspaceSearchAllAuthorizedScope() }
                         .buttonStyle(RekonSecondaryButtonStyle())
-                        .accessibilityIdentifier("workspace-search-reauthorize")
+                        .accessibilityIdentifier("workspace-search-scope-all-recovery")
+                    ForEach(model.availableWorkspaceSearchProjects, id: \.self) { project in
+                        Button("Use \(project.name) only · \(project.lifecycle == .archived ? "Archived" : "Active")") {
+                            model.setWorkspaceSearchProject(project, enabled: true)
+                        }
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .accessibilityIdentifier("workspace-search-scope-project-recovery-\(project.registrationID)")
+                    }
                 }
             }
         }
         if model.workspaceSearchPreferenceIsUnsupported {
             RekonCallout(tone: .warning, systemImage: "exclamationmark.triangle") {
                 Text("Saved working search needs a newer Release Radar").font(.headline)
-                Text("Its stored filter payload has not been replaced. Open Help for recovery guidance.")
+                Text("Its stored filter payload has not been replaced. Reset explicitly or open a supported saved query before Search can run or save.")
+                Button("Reset to a new search") { model.resetUnsupportedWorkspaceSearch() }
+                    .buttonStyle(RekonSecondaryButtonStyle())
+                    .accessibilityIdentifier("workspace-search-reset-unsupported")
                 Button("Open Help") { Task { await model.navigate(to: .help) } }
                     .buttonStyle(RekonSecondaryButtonStyle())
             }
