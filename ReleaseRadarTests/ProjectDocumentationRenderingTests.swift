@@ -397,6 +397,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             )
         }
 
+        helperModel.codexPluginSettingsMessage = nil
         helperModel.codexPluginOperation = .restartHelper
         try await render(
             SettingsView(model: helperModel),

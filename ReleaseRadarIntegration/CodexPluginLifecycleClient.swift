@@ -6,6 +6,7 @@ protocol PluginLifecycleServiceManaging: AnyObject {
     var status: SMAppService.Status { get }
     func register() throws
     func unregister() throws
+    func unregister(completionHandler handler: @Sendable @escaping (Error?) -> Void)
 }
 
 extension SMAppService: PluginLifecycleServiceManaging {}
@@ -51,7 +52,7 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
     func reinstall() async -> CodexPluginHelperReply { await call(.reinstall) }
     func restartHelper() async -> CodexPluginHelperReply {
         do {
-            try rebindService()
+            try await rebindService()
             return validatedReply(await invoke(.status))
         } catch {
             return Self.failureReply(for: error)
@@ -111,7 +112,7 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
         guard reply.error == .codexUnavailable || reply.error == .marketplaceConflict else {
             return reply
         }
-        try rebindService()
+        try await rebindService()
         return validatedReply(await invoke(.status))
     }
 
@@ -135,11 +136,19 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
         )
     }
 
-    private func rebindService() throws {
+    private func rebindService() async throws {
         invalidateConnection()
         switch service.status {
         case .enabled:
-            try service.unregister()
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                service.unregister { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            }
         case .notRegistered, .notFound:
             break
         case .requiresApproval:

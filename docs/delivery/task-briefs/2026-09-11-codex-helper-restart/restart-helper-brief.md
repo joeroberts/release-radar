@@ -16,7 +16,9 @@ delivery task owns that ledger.
 - **Scope:** Own the existing lifecycle manager/client/coordinator, Settings model
   and view, focused tests, shared Help, this brief, catalog metadata, and generated
   documentation indexes. Preserve plugin bytes, Codex configuration, project data,
-  receipts except for existing observation behavior, and all unrelated work.
+  and all unrelated work. Preserve receipt evidence except for the existing
+  observation audit path restoring managed intent after an exact known-clean
+  restart observation.
 - **Authority:** Owner kickoff in the delivery task; accepted
   `docs/architecture/ADR-002-codex-plugin-lifecycle.md`,
   `docs/design/release-radar-codex-plugin-lifecycle-design.md`,
@@ -40,9 +42,10 @@ delivery task owns that ledger.
 ## Design and constraints
 
 The app-side client exposes a restart operation without adding a fifth XPC method.
-It invalidates the existing connection, unregisters the fixed `SMAppService` when
-enabled, registers the same helper declared by the currently installed app, and
-performs one fresh status call. It never invokes install, remove, or reinstall and
+It invalidates the existing connection, asynchronously unregisters the fixed
+`SMAppService` when enabled, waits for macOS to confirm the running helper has
+terminated, registers the same helper declared by the currently installed app,
+and performs one fresh status call. It never invokes install, remove, or reinstall and
 accepts no caller-selected path, identity, command, or arguments.
 
 The existing AppModel operation state serializes the owner action with every other
@@ -56,16 +59,22 @@ The explicit restart addresses a stale enabled helper whose old code can validly
 return `needsRepair(.integrityInvalid)` for the newer four-file package. Existing
 automatic recovery remains limited to unavailable/conflicting replies; integrity
 validation is not weakened and a plugin reinstall is not used as a service restart.
+If the fresh clean version and digest exactly match the last verified managed
+identity, an attention-required observation receipt returns to managed-installed
+through the existing audited observation store. Mismatched, never-installed, and
+removed receipts retain their existing semantics.
 
 ## Test strategy and acceptance criteria
 
 Use test-first changes in existing suites. The failing tests must establish:
 
-1. the client unregisters and registers an enabled service, then issues exactly one
-   status operation and returns that validated result;
+1. the client waits for asynchronous helper termination before registering an
+   enabled service, then issues exactly one status operation and returns that
+   validated result;
 2. registration approval/failure is surfaced without a remote or plugin mutation;
 3. the coordinator converts the fresh result through the existing receipt/state
-   rules without recording an installation change;
+   rules without recording an installation change, restoring managed intent only
+   for the last verified exact clean identity;
 4. AppModel publishes progress, success, and actionable failure, refreshes dependent
    documentation observations, and rejects a second lifecycle action while busy;
 5. Settings exposes one accessible **Restart helper** control and responsive

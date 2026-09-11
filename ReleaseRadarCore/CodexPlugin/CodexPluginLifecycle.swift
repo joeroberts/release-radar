@@ -196,7 +196,11 @@ public actor CodexPluginLifecycleCoordinator {
         guard let receipt = try? await store.load() else {
             return .init(state: .failed(.malformedResult))
         }
-        return await statusFrom(reply: await manager.restartHelper(), receipt: receipt)
+        return await statusFrom(
+            reply: await manager.restartHelper(),
+            receipt: receipt,
+            recoverKnownCleanAfterRestart: true
+        )
     }
 
     public func remove() async -> CodexPluginLifecycleResult {
@@ -276,16 +280,23 @@ public actor CodexPluginLifecycleCoordinator {
 
     private func statusFrom(
         reply: CodexPluginHelperReply,
-        receipt: CodexPluginReceipt
+        receipt: CodexPluginReceipt,
+        recoverKnownCleanAfterRestart: Bool = false
     ) async -> CodexPluginLifecycleResult {
         guard reply.wireVersion == 1, reply.error == nil, let observed = reply.observedState
         else { return .init(state: .failed(reply.error ?? .malformedResult)) }
         do {
-            let updated = observationReceipt(current: receipt, observed: observed)
+            let updated = observationReceipt(
+                current: receipt,
+                observed: observed,
+                recoverKnownCleanAfterRestart: recoverKnownCleanAfterRestart
+            )
             if updated.intent != receipt.intent {
                 try await store.recordObservation(
                     updated,
-                    reason: "Observe Release Radar Codex plugin state"
+                    reason: recoverKnownCleanAfterRestart
+                        ? "Observe Release Radar Codex plugin state after helper restart"
+                        : "Observe Release Radar Codex plugin state"
                 )
             }
             return .init(state: CodexPluginLifecycleReducer.presentation(
@@ -300,10 +311,19 @@ public actor CodexPluginLifecycleCoordinator {
 
     private func observationReceipt(
         current: CodexPluginReceipt,
-        observed: CodexPluginObservedState
+        observed: CodexPluginObservedState,
+        recoverKnownCleanAfterRestart: Bool = false
     ) -> CodexPluginReceipt {
         let intent: CodexPluginIntent
         switch observed {
+        case .clean where recoverKnownCleanAfterRestart
+            && (current.intent == .neverInstalled || current.intent == .removed):
+            intent = current.intent
+        case let .clean(version, digest) where recoverKnownCleanAfterRestart
+            && current.intent == .attentionRequired
+            && current.managedVersion == version
+            && current.managedDigest == digest:
+            intent = .managedInstalled
         case .absent where current.intent == .managedInstalled:
             intent = .removed
         case let .clean(_, digest) where current.managedDigest != digest:
