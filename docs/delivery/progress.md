@@ -44,8 +44,9 @@ Writer `01a08dee-d569-7350-af9f-0a89274103f0` used Sol High, with bounded Astra
 High escalation for authority/recovery and byte-identity corrections. The independent
 reviewer used Astra High. Requested settings were explicit; independent runtime
 settings readback was unavailable. No native/build reservation remains.
-Both writer and reviewer are complete, quiescent and archived; their commits and
-useful results are preserved. Earlier bounded Phase 6 peers are also archived.
+The writer has resumed only for required PR #48 feedback at Sol High; the same
+independent reviewer remains archived until the correction delta is ready.
+Their completed local results are preserved. Earlier bounded Phase 6 peers remain archived.
 
 Orchestrator `01a08bd9-8fa1-74b3-bfa0-a5e657e70179` owns this ledger/catalog and
 local `codex/phase6-coordination`; parent is `01a07e75-b254-72a1-be2a-3e97ac23baeb`.
@@ -63,7 +64,13 @@ skipped or rate-limited check is not approval. Root remains the sole publication
 and integration owner. Installation, owner testing and later product work require
 separate explicit authorization.
 PR #48 is published from `codex/phase6e-reviewed` against the actual default.
-CodeRabbit is processing the current head; no completed review or merge is claimed.
+Actual CodeRabbit review `5174674187` completed on head `de87a66` at 03:21 UTC
+September 11. Five bounded corrections are active: post-navigation guards,
+distinguishable registration labels, nonempty payload constraints, non-null saved
+query IDs and the pending-search test's scheduling wait. The cleanup suggestion
+conflicts with required diagnostic retention; optional fixture-loop and broad SQL
+pushdown suggestions do not block. No merge is claimed; corrected source requires
+affected checks, the same independent review and clear CodeRabbit disposition.
 No owner SQLite, credentials, catalog binding/acceptance, consumer adoption,
 notifications, external security scans, runtime/hooks, packaging or cleanup is
 included. Eligibility is not authorization; no next slice is dispatched.
