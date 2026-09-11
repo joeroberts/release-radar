@@ -108,13 +108,19 @@ Read-only 6E chief consultation `01a08dab-7ac7-7031-96c8-d658e29bfe1e` (Astra Hi
 is complete and archived with no blocking owner choice. Its bounded search identity,
 SQLite-backed saved preference, recovery and shared Help recommendations are
 preserved in the [6E brief](task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md).
-Reviewed 6D integration is complete; 6E is eligible for its authorized writer dispatch.
+Reviewed 6D integration is complete. Fresh Sol High delivery task
+`01a08dee-d569-7350-af9f-0a89274103f0` is dispatched from exact handoff
+`ded1dbee9fc53d533a2ac3364c235eca560ccccb`. It is the sole product writer for
+Search, saved views and Help; root retains ledger/catalog/index ownership.
+The profile addresses cross-component identity, persistence and recovery;
+ceiling Astra High, no subagents, never Ultra. Actual requested settings were
+set at dispatch; independent runtime settings readback is unavailable.
 
 ## Authorization and next eligible work
 
 The complete Phase 6 outcome remains History/attention, distinct workspace
 Delivery and Execution Goals, revision-bound evidence, generic task adoption,
-workspace search/saved views and contextual Help. Next source slice is
+workspace search/saved views and contextual Help. Current source slice is
 6E workspace search, saved views and Help under its committed brief.
 Owner explicitly authorized pushing reviewed 6A/6B and opening separate PRs.
 Publication state:
