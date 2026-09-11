@@ -9,6 +9,9 @@ September 8, 2026 through the completed Phase 6 baseline:
 
 - Range: `cd16df1b0226aa8a08bd167364779103ebe86278..5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`
 - Merged pull requests: #33 through #48
+- App build-source baseline: `5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`
+- DMG first committed in package artifact commit:
+  `90153ca760a129ebe3bbd136b562b25b56d486f4`
 - App version/build: `0.1.9 (1)`
 - DMG: `dist/ReleaseRadar-0.1.9-5e7b9b8.dmg`
 - DMG SHA-256: `49aafc6ea49caff78539858ecabdca056188168d1a30580df34f647b23919454`
@@ -61,7 +64,8 @@ checks pass on a rebuilt candidate.
 ## Time budget
 
 - Quick pass: 20–30 minutes
-- Complete read-only and navigation pass: 45–60 minutes
+- Complete navigation and inspection pass: 45–60 minutes; Search interactions
+  persist workspace UI preferences
 - Disposable-project mutation pass: 60–90 minutes
 - Optional global backup/restore checks: 20–30 minutes plus restore time
 
@@ -77,10 +81,11 @@ store to schema 26. An older app must not be pointed at that migrated live store
    history, plugin receipts, and notification history. It does not contain
    credentials, repositories, portable project files, or device permission grants.
 3. Quit Release Radar.
-4. Verify the DMG checksum in Terminal:
+4. In Terminal, change to the repository checkout containing the package artifact
+   commit above, then verify the DMG checksum from the checkout root:
 
    ```sh
-   shasum -a 256 /Users/jroberts/.codex/worktrees/db04/release_radar/dist/ReleaseRadar-0.1.9-5e7b9b8.dmg
+   shasum -a 256 dist/ReleaseRadar-0.1.9-5e7b9b8.dmg
    ```
 
    Expected digest: `49aafc6ea49caff78539858ecabdca056188168d1a30580df34f647b23919454`.
@@ -103,10 +108,13 @@ store to schema 26. An older app must not be pointed at that migrated live store
    reinstall 0.1.7 over the migrated live store. A rollback requires quitting
    0.1.9, reinstalling the earlier app, and restoring the pre-upgrade backup.
 
-## Quick non-destructive pass
+## Quick low-risk smoke pass
 
-Use an existing project with representative data. Browsing, filtering, Search,
-Help, preview, and compatibility refresh are read-only.
+Use an existing project with representative data only after completing the backup
+precautions above. These checks do not change delivery records or repository files,
+but Search query, scope, filter, and sort interactions persist the workspace's
+working Search definition as application preferences. Do not save or delete a
+named query in this quick pass.
 
 1. Confirm the sidebar contains **Projects**, **Search**, **Goals**,
    **Needs Review**, **Notifications**, **Settings**, and **Help**. Open a project
@@ -128,24 +136,49 @@ Help, preview, and compatibility refresh are read-only.
    sort order, select a result, and choose **Open exact record**. Go Back and
    Forward. Expected: query, scope, domains, sort, selection, viewport, and focus
    restore without changing active phase or delivery state.
-6. Save the current Search as a named query, change the filters, then reopen the
-   saved query. Expected: every supported filter returns. Delete the test query
-   when finished.
-7. Open **Help** and search separately for `saved query`, `source provenance`,
+6. Open **Help** and search separately for `saved query`, `source provenance`,
    and `delivery evidence applicability`. Expected: relevant cards remain, and
    their **Open Search**, **Open History**, or **Open Goals** actions navigate to
    the real destinations.
-8. On **Project Overview**, find **Shared execution** and choose
+7. On **Project Overview**, find **Shared execution** and choose
    **Refresh compatibility**. Expected: one honest read-only state such as
    Compatible with V1, Not declared, Pending catalog acceptance, Incompatible,
    or Unavailable, with direct results/recovery where applicable. There must be
    no adoption, install, or update action in this panel.
-9. Resize the window to about 760 points wide and repeat a ticket detail, History,
+8. Resize the window to about 760 points wide and repeat a ticket detail, History,
    Goals, Search, and Help check. Expected: inspectors stack below their lists,
    controls remain reachable by scrolling, text wraps, and there is no horizontal
    clipping.
 
+## Disposable-project mutation setup
+
+Complete this setup before any state-changing step in the feature checklist below.
+Do not use a production repository or important Release Radar project for those
+mutation checks.
+
+1. Create a new local Git repository with an initial commit and a few small Markdown
+   files. Use a name such as `RR Owner Acceptance 2026-09-11`.
+2. Add it through **Projects → Add Project…** and complete only the normal supported
+   documentation handoff shown by the app. Keep all generated documentation inside
+   that disposable repository.
+3. After installing 0.1.9, update/install the bundled Release Radar Codex plugin
+   through **Settings** only if the app says that action is needed.
+4. In Codex, always name the exact disposable root and project. Ask it to use the
+   installed Release Radar tools, show the current inventory and exact revisions,
+   preview the intended mutations, and wait for your explicit approval.
+5. Seed two phases, at least two Delivery Goals, one unplaced ticket, placed tickets
+   in both phases, a cross-phase dependency, several task definitions, a cataloged
+   requirement/decision reference, and evidence expectations. Keep one nonactive
+   phase so navigation can be tested.
+6. Capture the project/registration, phase, goal, ticket, proposal, reference,
+   evidence-target, and task revision IDs that Codex reports. Use those exact IDs
+   when evaluating the UI.
+
 ## Complete feature checklist
+
+Inspection-only steps may use representative data, but every refresh, lifecycle,
+proposal, evidence, task, saved-query, project, plugin, or other persistence-changing
+step must use the disposable setup above after the backup precautions.
 
 ### Phase 3A — documentation freshness and folder recovery
 
@@ -333,37 +366,15 @@ Help, preview, and compatibility refresh are read-only.
 2. Change exact project-registration scope, record domains, and sort. Expected:
    deterministic results and clear partial-results warnings if a domain is
    unavailable. Search itself performs no delivery mutation or file/provider read.
-3. Save, load, and delete a named query. Relaunch the app and confirm the supported
-   saved query persists with every filter.
+3. Save, load, and delete a named query. This intentionally writes workspace
+   saved-query state. Relaunch the app and confirm the supported saved query
+   persists with every filter.
 4. Open a nonactive-phase ticket result and use Back/Forward. Expected: viewed phase
    changes, active phase does not, and Search state/selection/scroll/focus restore.
 5. If two project registrations share a name, confirm scope choices, results, and
    detail show enough stable registration identity to distinguish them.
 6. Verify all nine Help topics and their real navigation actions. At compact width,
    scroll through the complete Help content without clipping.
-
-## Disposable-project mutation setup
-
-Do not use a production repository or important Release Radar project for the
-mutation checks above.
-
-1. Create a new local Git repository with an initial commit and a few small Markdown
-   files. Use a name such as `RR Owner Acceptance 2026-09-11`.
-2. Add it through **Projects → Add Project…** and complete only the normal supported
-   documentation handoff shown by the app. Keep all generated documentation inside
-   that disposable repository.
-3. After installing 0.1.9, update/install the bundled Release Radar Codex plugin
-   through **Settings** only if the app says that action is needed.
-4. In Codex, always name the exact disposable root and project. Ask it to use the
-   installed Release Radar tools, show the current inventory and exact revisions,
-   preview the intended mutations, and wait for your explicit approval.
-5. Seed two phases, at least two Delivery Goals, one unplaced ticket, placed tickets
-   in both phases, a cross-phase dependency, several task definitions, a cataloged
-   requirement/decision reference, and evidence expectations. Keep one nonactive
-   phase so navigation can be tested.
-6. Capture the project/registration, phase, goal, ticket, proposal, reference,
-   evidence-target, and task revision IDs that Codex reports. Use those exact IDs
-   when evaluating the UI.
 
 ## Potentially destructive checks — optional and last
 
@@ -390,8 +401,9 @@ live owner dataset merely to test it.
 
 For each failure, record:
 
-1. App version/build `0.1.9 (1)`, candidate commit `5e7b9b8`, and whether the app
-   was copied from the DMG named above.
+1. App version/build `0.1.9 (1)`, build-source baseline `5e7b9b8`, package artifact
+   commit `90153ca`, and whether the app was copied from the DMG named above. If
+   reporting a guide defect, also include the current documentation commit.
 2. Exact project registration, phase, ticket, goal, proposal, reference, evidence,
    or task revision involved. Redact credentials and private document content.
 3. Window width (wide or about 760 points), sidebar state, route, filters, and

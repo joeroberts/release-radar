@@ -40,8 +40,10 @@ artifact rather than a generally distributable release.
 
 The [owner acceptance guide](evidence/2026-09-11-phase6-owner-acceptance-guide.md)
 covers the complete merged range from Phase 3A/3B through Phase 6E, including
-install/migration preparation, a quick read-only pass, disposable-project mutation
-checks, optional destructive checks, and bug-report evidence.
+install/migration preparation, a quick low-risk navigation pass with disclosed
+workspace Search preference writes, disposable-project mutation checks, optional
+destructive checks, and bug-report evidence. The app was built from `5e7b9b8`; the
+DMG and initial guide were first committed in package artifact commit `90153ca`.
 
 Packaging verification is green, but product acceptance is not. A focused
 Phase 4–6 contract run executed 197 tests: 192 passed and 5 failed. Three failures
