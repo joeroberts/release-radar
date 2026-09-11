@@ -158,18 +158,23 @@ Owner subsequently authorized 6D push/PR and actual CodeRabbit review with scope
 valid feedback corrections. The required 6C dependency is published separately:
 
 - [PR #46](https://github.com/joeroberts/release-radar/pull/46): 6C prerequisite,
-  OPEN, head `c1ee62f0e31e82337e02d06d898d152a18de723e`, base
-  `codex/release-radar-mvp`.
+  MERGED at 01:05:27 UTC September 11, head
+  `c1ee62f0e31e82337e02d06d898d152a18de723e`, base `codex/release-radar-mvp`,
+  merge `fbb0ab5da811ad0db51f1441492aa8c5531e3ce3`.
 - [PR #47](https://github.com/joeroberts/release-radar/pull/47): 6D adoption,
-  OPEN, head `e9bf7801594386900e4afacb37cbde220429f7be`, base
-  `codex/phase6c-publish`.
+  MERGED at 01:05:39 UTC September 11, head
+  `e9bf7801594386900e4afacb37cbde220429f7be`, retargeted base
+  `codex/release-radar-mvp`, merge `f0c9e42af4a5eb19d739979e7dfa33239a8e4a3a`.
 
 Both publication branches were synchronized by ordinary merges, their scoped
 diffs and documentation checks verified, and actual CodeRabbit reviews requested.
-Do not treat a skipped or rate-limited check as review. The owner now authorizes
-merging #46 then retargeting and merging #47 once actual CodeRabbit reviews have
-no unresolved valid actionable findings and applicable checks and correction
-reviews pass. Root remains the sole integration/correction coordinator.
+The owner subsequently explicitly waived the pending/rate-limited CodeRabbit
+wait and authorized immediate merges using completed independent reviews and
+direct checks. No actual bot review or inline finding had returned at merge;
+this is not a claim that CodeRabbit approved. Root merged #46, retargeted #47
+with its scoped delta unchanged, merged #47 and verified both GitHub results.
+The current default was fetched and integrated locally without tree changes.
+Root remains the sole integration/correction coordinator.
 Installation still requires separate approval. The owner briefly paused 6E for publication
 then explicitly reversed that pause: 6E continues from its assigned reviewed
 baseline and preserved test. It does not wait for publication or merge; later
