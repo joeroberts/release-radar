@@ -214,6 +214,12 @@ struct SidebarView: View {
     private var detail: some View {
         if model.selection == .settings {
             SettingsView(model: model)
+        } else if model.selection == .search {
+            WorkspaceSearchView(model: model)
+        } else if model.selection == .help {
+            WorkspaceHelpView { destination in
+                Task { await model.openWorkspaceHelpDestination(destination) }
+            }
         } else if let error = model.dashboardError {
             FailureStateView(
                 presentation: .init(
@@ -664,7 +670,7 @@ struct SidebarView: View {
                         Task { await model.openRecordedImpactTicket(projectID: projectID, impact: impact) }
                     }
                 )
-            case .settings:
+            case .search, .settings, .help:
                 EmptyView()
             }
         } else {
@@ -726,10 +732,12 @@ private extension AppRoute {
     var accessibilityID: String {
         switch self {
         case .projects: "projects"
+        case .search: "search"
         case .goals: "goals"
         case .needsReview: "needs-review"
         case .notifications: "notifications"
         case .settings: "settings"
+        case .help: "help"
         case .projectOverview: "project-overview"
         case .projectPlan: "project-plan"
         case .archivedProject: "archived-project"

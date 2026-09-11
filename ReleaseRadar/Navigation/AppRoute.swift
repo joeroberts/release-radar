@@ -2,10 +2,12 @@ import ReleaseRadarCore
 
 enum AppRoute: Hashable, Sendable {
     case projects
+    case search
     case goals
     case needsReview
     case notifications
     case settings
+    case help
     case projectOverview(ProjectID)
     case projectPlan(ProjectID)
     case archivedProject(ProjectID)
@@ -18,10 +20,12 @@ enum AppRoute: Hashable, Sendable {
 
     static let primaryRoutes: [AppRoute] = [
         .projects,
+        .search,
         .goals,
         .needsReview,
         .notifications,
         .settings,
+        .help,
     ]
 
     static func projectRoutes(for projectID: ProjectID) -> [AppRoute] {
@@ -37,10 +41,12 @@ enum AppRoute: Hashable, Sendable {
     var title: String {
         switch self {
         case .projects: "Projects"
+        case .search: "Search"
         case .goals: "Goals"
         case .needsReview: "Needs Review"
         case .notifications: "Notifications"
         case .settings: "Settings"
+        case .help: "Help"
         case .projectOverview: "Overview"
         case .projectPlan: "Project Plan"
         case .archivedProject: "Archived Project"
@@ -56,10 +62,12 @@ enum AppRoute: Hashable, Sendable {
     var systemImage: String {
         switch self {
         case .projects: "folder"
+        case .search: "magnifyingglass"
         case .goals: "target"
         case .needsReview: "checkmark.bubble"
         case .notifications: "bell"
         case .settings: "gearshape"
+        case .help: "questionmark.circle"
         case .projectOverview: "rectangle.grid.1x2"
         case .projectPlan: "list.bullet.rectangle.portrait"
         case .archivedProject: "archivebox"
@@ -83,7 +91,7 @@ enum AppRoute: Hashable, Sendable {
              let .referenceSource(projectID, _, _, _),
              let .recordedImpacts(projectID, _, _):
             projectID
-        case .projects, .goals, .needsReview, .notifications, .settings, .removedProject:
+        case .projects, .search, .goals, .needsReview, .notifications, .settings, .help, .removedProject:
             nil
         }
     }

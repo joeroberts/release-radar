@@ -7,6 +7,18 @@ enum AttachFolderOutcome: Equatable, Sendable {
     case attachedNeedsReload
 }
 
+private extension WorkspaceSearchHistorySource {
+    var activitySource: ActivitySource {
+        switch self {
+        case .audit: .audit
+        case .review: .review
+        case .completion: .completion
+        case .observation: .runtime
+        case .notification: .notification
+        }
+    }
+}
+
 enum ActivePhaseSelectionStatus: Equatable, Sendable {
     case idle
     case saving(PhaseID)
@@ -61,6 +73,15 @@ final class AppModel {
     private(set) var selectedWorkspaceDeliveryGoalID: Data?
     private(set) var selectedWorkspaceExecutionGoalID: Data?
     private(set) var workspaceGoalsViewportOffset: Double?
+    private(set) var workspaceSearchDefinition = WorkspaceSearchDefinition()
+    private(set) var workspaceSearchProjection: WorkspaceSearchProjection?
+    private(set) var workspaceSearchSavedQueries: [WorkspaceSavedQueryRecord] = []
+    private(set) var workspaceSearchIsLoading = false
+    private(set) var workspaceSearchFailure: String?
+    private(set) var workspaceSearchPreferenceIsUnsupported = false
+    private(set) var selectedWorkspaceSearchResultID: Data?
+    private(set) var workspaceSearchViewportOffset: Double?
+    private(set) var workspaceSearchPersistenceMessage: String?
     private(set) var navigationHistory = NavigationHistory(initial: .projects)
     private(set) var navigationRecoveryMessage: String?
     private(set) var navigationFocus: NavigationFocus? = .route(.projects)
@@ -127,6 +148,7 @@ final class AppModel {
     private var codexPluginObservedAt: Date?
     private var projectionReloadGeneration: UInt64 = 0
     private var navigationGeneration: UInt64 = 0
+    private var workspaceSearchGeneration: UInt64 = 0
     private(set) var documentationServiceGeneration: UInt64 = 0
     @ObservationIgnored private var documentationMonitoringTask: Task<Void, Never>?
 #if DEBUG
@@ -342,6 +364,8 @@ final class AppModel {
             navigationFocus = .workspaceGoal(goalID)
         } else if resolvedRoute == .goals {
             navigationFocus = .workspaceGoalsFilter
+        } else if resolvedRoute == .search {
+            navigationFocus = .workspaceSearchField
         } else {
             navigationFocus = .route(resolvedRoute)
         }
@@ -364,6 +388,15 @@ final class AppModel {
         let entry = navigationHistory.current
         navigationRecoveryMessage = nil
         restore(entry)
+        if entry.route == .search {
+            await runWorkspaceSearch(persist: false, captureNavigation: false)
+            if let selected = entry.workspaceSearch?.selectedResultID,
+               workspaceSearchProjection?.results.contains(where: { $0.id == selected }) == true {
+                selectedWorkspaceSearchResultID = selected
+                navigationFocus = .workspaceSearchResult(selected)
+                navigationRecoveryMessage = nil
+            }
+        }
     }
 
     private func captureCurrentNavigationContext() {
@@ -387,6 +420,7 @@ final class AppModel {
             if case .activity = route { historyViewportOffsets[Data(projectID.rawValue.utf8)] } else { nil }
         }
         let workspaceGoals = route == .goals ? workspaceGoalsNavigationState : nil
+        let workspaceSearch = route == .search ? workspaceSearchNavigationState : nil
         let selectedNavigationTicketID: TicketID? = if case .activity = route {
             nil
         } else {
@@ -402,6 +436,7 @@ final class AppModel {
             selectedHistoryEventID: selectedHistoryEventID,
             historyViewportOffset: historyViewportOffset,
             workspaceGoals: workspaceGoals,
+            workspaceSearch: workspaceSearch,
             focus: navigationFocus
         )
     }
@@ -426,6 +461,7 @@ final class AppModel {
             if case .activity = route { historyViewportOffsets[Data(projectID.rawValue.utf8)] } else { nil }
         }
         let workspaceGoals = route == .goals ? workspaceGoalsNavigationState : nil
+        let workspaceSearch = route == .search ? workspaceSearchNavigationState : nil
         let selectedNavigationTicketID: TicketID? = if case .activity = route {
             nil
         } else {
@@ -442,6 +478,7 @@ final class AppModel {
             selectedHistoryEventID: selectedHistoryEventID,
             historyViewportOffset: historyViewportOffset,
             workspaceGoals: workspaceGoals,
+            workspaceSearch: workspaceSearch,
             focus: focus
         )
     }
@@ -562,6 +599,19 @@ final class AppModel {
                 }
             }
         }
+        if case .search = route, let searchState = entry.workspaceSearch {
+            workspaceSearchDefinition = searchState.definition
+            workspaceSearchViewportOffset = searchState.viewportOffset.map { max(0, $0) }
+            if let selected = searchState.selectedResultID,
+               workspaceSearchProjection?.results.contains(where: { $0.id == selected }) == true {
+                selectedWorkspaceSearchResultID = selected
+            } else {
+                selectedWorkspaceSearchResultID = nil
+                if searchState.selectedResultID != nil {
+                    recovery.append("The exact Search result is unavailable; no replacement result was selected.")
+                }
+            }
+        }
         if case let .activity(projectID) = route {
             let key = Data(projectID.rawValue.utf8)
             historyFilters[key] = entry.historyFilter ?? .all
@@ -660,6 +710,12 @@ final class AppModel {
             if !focusIsAvailable,
                !recovery.contains(where: { $0.contains("exact Delivery Goal") || $0.contains("exact Execution Goal") }) {
                 recovery.append("The exact Goals focus is unavailable; no replacement goal was selected.")
+            }
+        }
+        if case let .workspaceSearchResult(resultID)? = entry.focus {
+            focusIsAvailable = workspaceSearchProjection?.results.contains(where: { $0.id == resultID }) == true
+            if !focusIsAvailable, entry.workspaceSearch?.selectedResultID == nil {
+                recovery.append("The exact Search result focus is unavailable; no replacement result was selected.")
             }
         }
         navigationFocus = if !recovery.isEmpty, route != entry.route {
@@ -846,6 +902,7 @@ final class AppModel {
             self.alertRules = try await ApplicationPreferenceReset(store: self.store).apply()
             self.clearEphemeralViewState()
             _ = await self.reloadProjectProjections()
+            await self.loadWorkspaceSearchPreferences(runSearch: false)
             self.applicationRecoveryMessage = "Application preferences were reset. Projects, tracking history, plugin management and credentials were preserved."
         }
     }
@@ -971,6 +1028,7 @@ final class AppModel {
             applyRecoveryCodexStatus(recovery)
         }
         await loadDashboard()
+        await loadWorkspaceSearchPreferences(runSearch: false)
         if !externalServicesSuppressed {
             await notificationCoordinator.initializeForLaunch()
             try await recoveryServices?.startSharedAgentBridge()
@@ -986,6 +1044,15 @@ final class AppModel {
         selectedWorkspaceDeliveryGoalID = nil
         selectedWorkspaceExecutionGoalID = nil
         workspaceGoalsViewportOffset = nil
+        workspaceSearchDefinition = .init()
+        workspaceSearchProjection = nil
+        workspaceSearchSavedQueries = []
+        workspaceSearchIsLoading = false
+        workspaceSearchFailure = nil
+        workspaceSearchPreferenceIsUnsupported = false
+        selectedWorkspaceSearchResultID = nil
+        workspaceSearchViewportOffset = nil
+        workspaceSearchPersistenceMessage = nil
         viewedPhaseIDs.removeAll()
         allPhaseBoardProjectIDs.removeAll()
         boardFilters.removeAll()
@@ -1101,6 +1168,319 @@ final class AppModel {
             selectedExecutionID: selectedWorkspaceExecutionGoalID,
             viewportOffset: workspaceGoalsViewportOffset
         )
+    }
+
+    private var workspaceSearchNavigationState: WorkspaceSearchNavigationState {
+        .init(
+            definition: workspaceSearchDefinition,
+            selectedResultID: selectedWorkspaceSearchResultID,
+            viewportOffset: workspaceSearchViewportOffset
+        )
+    }
+
+    var availableWorkspaceSearchProjects: [WorkspaceSearchProjectIdentity] {
+        let active = dashboard?.projects.compactMap { project -> WorkspaceSearchProjectIdentity? in
+            guard let registration = project.registration else { return nil }
+            return .init(
+                projectID: project.id,
+                registrationID: registration.registrationID,
+                name: project.name,
+                lifecycle: .active
+            )
+        } ?? []
+        let archived = dashboard?.archivedProjects.map { project in
+            WorkspaceSearchProjectIdentity(
+                projectID: project.id,
+                registrationID: project.registration.registrationID,
+                name: project.name,
+                lifecycle: .archived
+            )
+        } ?? []
+        return (active + archived).sorted {
+            ($0.name.localizedLowercase, $0.projectID.rawValue, $0.registrationID)
+                < ($1.name.localizedLowercase, $1.projectID.rawValue, $1.registrationID)
+        }
+    }
+
+    func setWorkspaceSearchText(_ text: String) {
+        workspaceSearchDefinition.text = text
+        workspaceSearchFailure = nil
+        navigationFocus = .workspaceSearchField
+        captureCurrentNavigationContext()
+    }
+
+    func setWorkspaceSearchSort(_ sort: WorkspaceSearchSort) {
+        workspaceSearchDefinition.sort = sort
+        navigationFocus = .workspaceSearchFilters
+        captureCurrentNavigationContext()
+    }
+
+    func setWorkspaceSearchDomain(_ domain: WorkspaceSearchDomain, enabled: Bool) {
+        if enabled { workspaceSearchDefinition.domains.insert(domain) }
+        else { workspaceSearchDefinition.domains.remove(domain) }
+        navigationFocus = .workspaceSearchFilters
+        captureCurrentNavigationContext()
+    }
+
+    func setWorkspaceSearchAllAuthorizedScope() {
+        workspaceSearchDefinition.scope = .allAuthorized
+        workspaceSearchDefinition.authorityIncarnationID = nil
+        workspaceSearchFailure = nil
+        navigationFocus = .workspaceSearchFilters
+        captureCurrentNavigationContext()
+    }
+
+    func setWorkspaceSearchProject(_ project: WorkspaceSearchProjectIdentity, enabled: Bool) {
+        var registrations: [WorkspaceSearchRegistrationIdentity]
+        switch workspaceSearchDefinition.scope {
+        case .allAuthorized:
+            registrations = availableWorkspaceSearchProjects.map {
+                .init(projectID: $0.projectID, registrationID: $0.registrationID)
+            }
+        case let .registrations(selected):
+            registrations = selected
+        }
+        let identity = WorkspaceSearchRegistrationIdentity(
+            projectID: project.projectID,
+            registrationID: project.registrationID
+        )
+        registrations.removeAll { $0 == identity }
+        if enabled { registrations.append(identity) }
+        registrations.sort { ($0.projectID.rawValue, $0.registrationID) < ($1.projectID.rawValue, $1.registrationID) }
+        workspaceSearchDefinition.scope = .registrations(registrations)
+        workspaceSearchDefinition.authorityIncarnationID = nil
+        workspaceSearchFailure = nil
+        navigationFocus = .workspaceSearchFilters
+        captureCurrentNavigationContext()
+    }
+
+    func workspaceSearchIncludes(_ project: WorkspaceSearchProjectIdentity) -> Bool {
+        switch workspaceSearchDefinition.scope {
+        case .allAuthorized:
+            true
+        case let .registrations(registrations):
+            registrations.contains(.init(projectID: project.projectID, registrationID: project.registrationID))
+        }
+    }
+
+    func runWorkspaceSearch(persist: Bool = true, captureNavigation: Bool = true) async {
+        workspaceSearchGeneration &+= 1
+        let generation = workspaceSearchGeneration
+        workspaceSearchIsLoading = true
+        workspaceSearchFailure = nil
+        workspaceSearchPersistenceMessage = nil
+        do {
+            let definition = if workspaceSearchDefinition.authorityIncarnationID == nil {
+                try await WorkspaceSearchQuery.boundToCurrentAuthority(
+                    store: store,
+                    definition: workspaceSearchDefinition
+                )
+            } else {
+                workspaceSearchDefinition
+            }
+            let projection = try await WorkspaceSearchQuery.search(store: store, definition: definition)
+            guard generation == workspaceSearchGeneration else { return }
+            workspaceSearchDefinition = definition
+            workspaceSearchProjection = projection
+            workspaceSearchPreferenceIsUnsupported = false
+            if let selectedWorkspaceSearchResultID,
+               !projection.results.contains(where: { $0.id == selectedWorkspaceSearchResultID }) {
+                self.selectedWorkspaceSearchResultID = nil
+            }
+            if persist {
+                do {
+                    try await WorkspaceSearchPreferencesRepository(store: store)
+                        .saveWorkingDefinition(definition)
+                } catch {
+                    workspaceSearchPersistenceMessage = "Results are current, but the working search could not be saved: \(error.localizedDescription)"
+                }
+            }
+        } catch {
+            guard generation == workspaceSearchGeneration else { return }
+            workspaceSearchProjection = nil
+            selectedWorkspaceSearchResultID = nil
+            workspaceSearchFailure = error.localizedDescription
+        }
+        guard generation == workspaceSearchGeneration else { return }
+        workspaceSearchIsLoading = false
+        if captureNavigation { captureCurrentNavigationContext() }
+    }
+
+    func loadWorkspaceSearchPreferences(runSearch: Bool) async {
+        let repository = WorkspaceSearchPreferencesRepository(store: store)
+        do {
+            workspaceSearchSavedQueries = try await repository.loadSavedQueries()
+            switch try await repository.loadWorkingDefinition() {
+            case .none:
+                workspaceSearchPreferenceIsUnsupported = false
+            case let .supported(definition):
+                workspaceSearchDefinition = definition
+                workspaceSearchPreferenceIsUnsupported = false
+            case .unsupported:
+                workspaceSearchPreferenceIsUnsupported = true
+                workspaceSearchPersistenceMessage = "The saved working search was created by a newer Release Radar. Its filters remain stored and were not replaced."
+            }
+            if runSearch, !workspaceSearchPreferenceIsUnsupported {
+                await runWorkspaceSearch(persist: false, captureNavigation: false)
+            }
+        } catch {
+            workspaceSearchFailure = error.localizedDescription
+        }
+    }
+
+    func loadWorkspaceSavedQuery(_ record: WorkspaceSavedQueryRecord) async {
+        switch record {
+        case let .supported(query):
+            workspaceSearchDefinition = query.definition
+            selectedWorkspaceSearchResultID = nil
+            workspaceSearchViewportOffset = nil
+            await runWorkspaceSearch()
+        case .unsupported:
+            workspaceSearchFailure = "This saved query was created by a newer Release Radar. It remains stored and can be deleted, but its filters cannot be safely interpreted."
+        }
+    }
+
+    func saveCurrentWorkspaceSearch(name: String) async {
+        do {
+            _ = try await WorkspaceSearchPreferencesRepository(store: store)
+                .saveQuery(name: name, definition: workspaceSearchDefinition)
+            workspaceSearchSavedQueries = try await WorkspaceSearchPreferencesRepository(store: store)
+                .loadSavedQueries()
+            workspaceSearchPersistenceMessage = "Saved query “\(name.trimmingCharacters(in: .whitespacesAndNewlines))”."
+        } catch {
+            workspaceSearchPersistenceMessage = error.localizedDescription
+        }
+    }
+
+    func deleteWorkspaceSavedQuery(id: String) async {
+        do {
+            let repository = WorkspaceSearchPreferencesRepository(store: store)
+            try await repository.deleteQuery(id: id)
+            workspaceSearchSavedQueries = try await repository.loadSavedQueries()
+        } catch {
+            workspaceSearchPersistenceMessage = error.localizedDescription
+        }
+    }
+
+    func reauthorizeWorkspaceSearch() async {
+        workspaceSearchDefinition.authorityIncarnationID = nil
+        await runWorkspaceSearch()
+    }
+
+    func selectWorkspaceSearchResult(_ id: Data?) {
+        selectedWorkspaceSearchResultID = id
+        navigationFocus = id.map(NavigationFocus.workspaceSearchResult) ?? .workspaceSearchField
+        captureCurrentNavigationContext()
+    }
+
+    func setWorkspaceSearchViewportOffset(_ offset: Double?) {
+        workspaceSearchViewportOffset = offset.map { max(0, $0) }
+        captureCurrentNavigationContext()
+    }
+
+    func openWorkspaceSearchResult(_ result: WorkspaceSearchResult) async {
+        guard let registration = registrationMatchingSearchResult(result) else {
+            navigationRecoveryMessage = "The exact project registration for this result is unavailable; a different registration was not substituted."
+            navigationFocus = .recovery
+            captureCurrentNavigationContext()
+            return
+        }
+        if let removed = dashboard?.removedProjects.first(where: {
+            $0.registration.hasSameNavigationIdentity(as: registration)
+        }) {
+            await navigate(to: .removedProject(removed.id))
+            return
+        }
+        if dashboard?.archivedProjects.contains(where: {
+            $0.registration.hasSameNavigationIdentity(as: registration)
+        }) == true {
+            await navigate(to: .archivedProject(registration.projectID))
+            return
+        }
+
+        switch result.identity {
+        case let .project(projectID, _):
+            await navigate(to: .projectOverview(projectID))
+        case let .deliveryGoal(projectID, _, phaseID, goalID):
+            guard dashboard?.board(for: projectID, phaseID: phaseID)?.deliveryGoals.contains(where: {
+                Data($0.goalID.rawValue.utf8) == Data(goalID.utf8)
+            }) == true else { return searchDestinationUnavailable("Delivery Goal") }
+            await navigate(to: .phaseBoard(projectID))
+            viewPhase(projectID: projectID, phaseID: phaseID)
+            setBoardFilter(.goal(.init(rawValue: goalID)), projectID: projectID, phaseID: phaseID)
+        case let .executionGoal(projectID, _, threadID, goalID):
+            guard let item = dashboard?.workspaceGoals.execution.first(where: {
+                $0.project.id == projectID
+                    && Data($0.threadID.utf8) == Data(threadID.rawValue.utf8)
+                    && Data($0.goalID.utf8) == Data(goalID.rawValue.utf8)
+            }) else { return searchDestinationUnavailable("Execution Goal observation") }
+            if item.link.ticketID != nil {
+                await openWorkspaceExecutionGoal(item)
+            } else {
+                await navigate(to: .goals)
+                setWorkspaceGoalsDomain(.execution)
+                selectWorkspaceExecutionGoal(item.id)
+            }
+        case let .ticket(projectID, _, ticketID, phaseID):
+            if let phaseID, dashboard?.board(for: projectID, phaseID: phaseID)?.detail(for: ticketID) != nil {
+                await navigate(to: .phaseBoard(projectID))
+                viewPhase(projectID: projectID, phaseID: phaseID)
+                selectTicket(ticketID)
+            } else if dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil {
+                await navigate(to: .projectPlan(projectID))
+                selectTicket(ticketID)
+            } else {
+                searchDestinationUnavailable("ticket")
+            }
+        case let .decisionReference(projectID, _, ticketID, linkID, version, _, _):
+            guard dashboard?.plan(for: projectID)?.detail(for: ticketID) != nil
+                    || dashboard?.boards.values.contains(where: {
+                        $0.project.id == projectID && $0.detail(for: ticketID) != nil
+                    }) == true else { return searchDestinationUnavailable("decision reference") }
+            await openReferenceSource(projectID: projectID, ticketID: ticketID, linkID: linkID, version: version)
+        case let .history(projectID, registrationID, source, sourceID):
+            guard let item = projectActivities[projectID]?.items.first(where: {
+                $0.identity.registrationID == registrationID
+                    && $0.identity.source == source.activitySource
+                    && Data($0.identity.sourceID.utf8) == Data(sourceID.utf8)
+            }) else { return searchDestinationUnavailable("History event") }
+            await navigate(to: .activity(projectID))
+            selectHistoryEvent(item.identity, projectID: projectID)
+        }
+    }
+
+    func openWorkspaceHelpDestination(_ destination: WorkspaceHelpDestination) async {
+        switch destination {
+        case .projects: await navigate(to: .projects)
+        case .settings: await navigate(to: .settings)
+        case .search: await navigate(to: .search)
+        case .goals: await navigate(to: .goals)
+        case .projectOverview: await navigate(to: .projectOverview(currentProjectID))
+        case .projectPlan: await navigate(to: .projectPlan(currentProjectID))
+        case .phaseBoard: await navigate(to: .phaseBoard(currentProjectID))
+        case .history: await navigate(to: .activity(currentProjectID))
+        }
+    }
+
+    private func registrationMatchingSearchResult(_ result: WorkspaceSearchResult) -> ProjectRegistration? {
+        let expected = ProjectRegistration(
+            projectID: result.project.projectID,
+            registrationID: result.project.registrationID,
+            requestGeneration: 0
+        )
+        return dashboard?.projects.compactMap(\.registration).first(where: {
+            $0.hasSameNavigationIdentity(as: expected)
+        }) ?? dashboard?.archivedProjects.map(\.registration).first(where: {
+            $0.hasSameNavigationIdentity(as: expected)
+        }) ?? dashboard?.removedProjects.map(\.registration).first(where: {
+            $0.hasSameNavigationIdentity(as: expected)
+        })
+    }
+
+    private func searchDestinationUnavailable(_ kind: String) {
+        navigationRecoveryMessage = "The exact \(kind) is unavailable; a different record was not substituted."
+        navigationFocus = .recovery
+        captureCurrentNavigationContext()
     }
 
     func setWorkspaceGoalsDomain(_ domain: WorkspaceGoalsDomain) {
@@ -3026,6 +3406,7 @@ final class AppModel {
         if dashboard == nil {
             await loadDashboard()
         }
+        await loadWorkspaceSearchPreferences(runSearch: true)
         await initializeCodexPluginLifecycleForLaunch()
     }
 
