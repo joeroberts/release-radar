@@ -119,8 +119,14 @@ The writer synchronized merged default `f0c9e42af4a5eb19d739979e7dfa33239a8e4a3a
 through ordinary merge `a8c23789d7477638c34eade33c76028c2bd8d448`, preserving
 its uncommitted work without conflicts. Initial core search acceptance passed
 1/1 with zero failures/skips, directly read back from the isolated result bundle.
-Saved-query recovery, navigation, Help, native verification and independent
-review remain in progress; this is not Phase 6E completion.
+Candidate `e7c92a25b61ce444b57b60a3a9e73159494b9398` is integrated locally.
+Direct checks combine five initial Search/Help passes, the corrected retired-ticket
+case 1/1, route/recovery 4/4, navigation/native rendering 2/2 and the isolated live
+native journey 1/1. Root verified the exact host, Search/save/navigation/Help and
+compact scrolling, stopped CUA before completion, and confirmed host exit.
+The [canonical evidence](evidence/2026-09-10-phase6e-search.md) and three PNGs
+are catalogued; the repository documentation check passes. Independent review
+is pending; this is not Phase 6E completion. No shared build/native slot is held.
 
 ## Authorization and next eligible work
 
