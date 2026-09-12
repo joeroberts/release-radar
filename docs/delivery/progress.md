@@ -38,8 +38,13 @@ restores that value; the code default is empty. The record does not identify
 the initiator, so attribution remains unknown. The submit button has a separate
 focus state inside pinned RDS `RekonSearchField`, consistent with the native blue
 focus treatment in the screenshot; exact focus transitions were not exercised.
-No search preferences were changed. Clearing the working search through the app
-and any RDS focus-treatment correction remain pending; neither is part of 0.1.15.
+No search preferences were changed. The owner subsequently authorized correction
+of the blue submit-button focus treatment. The original RDS toolbar delivery task
+is reopened for that bounded correction, with native focus/keyboard verification,
+one independent code/UX review and the authorized RDS PR/merge workflow. Release
+Radar will adopt the verified library merge and follow its standing local release
+workflow. Saved search data and search-persistence policy are outside this fix;
+the focus correction is not part of 0.1.15.
 The read-only toolbar diagnosis task is complete and archived with this result
 preserved here.
 
