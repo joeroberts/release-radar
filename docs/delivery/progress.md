@@ -45,12 +45,18 @@ independent review with no remaining findings. Its plan is recorded on
 `09dd3a8` records the final disposition and passing canonical documentation check.
 The existing missing historical catalog artifact was restored unchanged. Both
 bounded RDS planning/review tasks are stopped and archived; monitoring is paused.
-The owner subsequently approved RDS toolbar/search implementation. The fresh
-RekonUI Library task “Implement reusable RDS toolbar and search controls” is active
-from the reviewed baseline, with package/native-window verification and independent
-review required. Monitoring now follows that implementation. Historical tag creation
-and Release Radar consumer adoption remain separate actions. No tags or consumer
-adoption occurred.
+The owner subsequently approved RDS toolbar/search implementation. It is merged via
+[Add reusable toolbar and search controls](https://github.com/joeroberts/RekonDesignSystem/pull/7)
+at `3c2626102a2e97dd93f31fbc62b733085d6700ec`. GitHub confirms MERGED and CodeRabbit
+SUCCESS. Independent API/code/UX review had no findings; 97 package tests, 13 focused
+tests and 2 public-API tests passed. Author native wide/compact checks passed; the
+reviewer independently exercised the wide fixture and inspected compact layout,
+without a new independent compact capture. RDS supplies `RekonToolbar`,
+`RekonBorderlessIconButtonStyle` and additive `RekonSearchField` prompt/submit support.
+The implementation/review processes stopped, results are in the merged RDS ledger,
+and both bounded tasks are archived. Monitoring is paused. Historical/new tags and
+Release Radar consumer adoption remain separate actions. No tags, consumer change,
+installation or owner-state mutation occurred.
 
 ## Pursuit plan reconstruction — design only
 
