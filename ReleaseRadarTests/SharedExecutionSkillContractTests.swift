@@ -41,7 +41,7 @@ final class SharedExecutionSkillContractTests: XCTestCase {
         let manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: manifestData) as? [String: Any])
         let skill = try String(contentsOf: skillURL, encoding: .utf8)
 
-        XCTAssertEqual(manifest["version"] as? String, "0.1.10")
+        XCTAssertEqual(manifest["version"] as? String, "0.1.13")
         XCTAssertNil(manifest["hooks"])
         XCTAssertFalse(skill.contains("command-schema"))
         XCTAssertFalse(skill.contains("attestation-schema"))

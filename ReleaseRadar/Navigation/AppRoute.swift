@@ -20,12 +20,8 @@ enum AppRoute: Hashable, Sendable {
 
     static let primaryRoutes: [AppRoute] = [
         .projects,
-        .search,
         .goals,
         .needsReview,
-        .notifications,
-        .settings,
-        .help,
     ]
 
     static func projectRoutes(for projectID: ProjectID) -> [AppRoute] {

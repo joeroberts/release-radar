@@ -157,6 +157,113 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testToolbarSearchTypingKeepsSourceAndCommittedResultsUntilSubmission() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ToolbarSearchDraft-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("VD2-08")
+        await model.runWorkspaceSearch()
+        let committedProjection = try XCTUnwrap(model.workspaceSearchProjection)
+        await model.navigate(to: .projectOverview(DashboardSampleData.projectID))
+        let sourceHistoryCount = model.navigationHistory.entries.count
+
+        model.setWorkspaceSearchText("Rekon Pursuit")
+
+        XCTAssertEqual(model.selection, .projectOverview(DashboardSampleData.projectID))
+        XCTAssertEqual(model.workspaceSearchDefinition.text, "VD2-08")
+        XCTAssertEqual(model.workspaceSearchProjection, committedProjection)
+        XCTAssertEqual(model.navigationHistory.entries.count, sourceHistoryCount)
+
+        await model.runWorkspaceSearch()
+
+        XCTAssertEqual(model.selection, .search)
+        XCTAssertEqual(model.workspaceSearchDefinition.text, "Rekon Pursuit")
+        XCTAssertEqual(model.workspaceSearchProjection?.definition.text, "Rekon Pursuit")
+        XCTAssertEqual(model.navigationHistory.entries.count, sourceHistoryCount + 1)
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .projectOverview(DashboardSampleData.projectID))
+
+        await model.goForward()
+        XCTAssertEqual(model.selection, .search)
+        XCTAssertEqual(model.workspaceSearchDefinition.text, "Rekon Pursuit")
+    }
+
+    @MainActor
+    func testToolbarSavePersistsVisibleDraftAndOptionsWithoutSearchOrHistory() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ToolbarSearchSave-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+
+        await model.navigate(to: .search)
+        model.setWorkspaceSearchText("VD2-08")
+        for domain in WorkspaceSearchDomain.allCases where domain != .ticket {
+            model.setWorkspaceSearchDomain(domain, enabled: false)
+        }
+        model.setWorkspaceSearchSort(.newest)
+        await model.runWorkspaceSearch()
+        let committedProjection = try XCTUnwrap(model.workspaceSearchProjection)
+        await model.navigate(to: .projects)
+        model.setWorkspaceSearchText("visible toolbar draft")
+        let historyCount = model.navigationHistory.entries.count
+
+        await model.saveCurrentWorkspaceSearch(name: "Toolbar draft")
+
+        XCTAssertEqual(model.selection, .projects)
+        XCTAssertEqual(model.workspaceSearchProjection, committedProjection)
+        XCTAssertEqual(model.navigationHistory.entries.count, historyCount)
+        let saved = try XCTUnwrap(model.workspaceSearchSavedQueries.first { $0.name == "Toolbar draft" })
+        guard case let .supported(query) = saved else {
+            return XCTFail("Expected a supported saved query")
+        }
+        XCTAssertEqual(query.definition.text, "visible toolbar draft")
+        XCTAssertEqual(query.definition.domains, [.ticket])
+        XCTAssertEqual(query.definition.sort, .newest)
+    }
+
+    @MainActor
+    func testToolbarSaveReturnsFailureFromOverviewDespiteAnExistingSameNamedQuery() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ToolbarSearchSaveFailure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        model.setWorkspaceSearchText("existing definition")
+        await model.saveCurrentWorkspaceSearch(name: "Existing query")
+        XCTAssertTrue(model.workspaceSearchSavedQueries.contains { $0.name == "Existing query" })
+        model.setWorkspaceSearchText("unsaved replacement")
+        await model.navigate(to: .projectOverview(DashboardSampleData.projectID))
+        let historyCount = model.navigationHistory.entries.count
+        await store.close()
+
+        let outcome = await model.saveCurrentWorkspaceSearch(name: "Existing query")
+
+        guard case let .failed(message) = outcome else {
+            return XCTFail("The closed store must fail this exact save attempt")
+        }
+        XCTAssertTrue(message.contains("closed"))
+        XCTAssertEqual(model.selection, .projectOverview(DashboardSampleData.projectID))
+        XCTAssertEqual(model.navigationHistory.entries.count, historyCount)
+        XCTAssertEqual(model.workspaceSearchDraft, "unsaved replacement")
+        XCTAssertTrue(model.workspaceSearchSavedQueries.contains { $0.name == "Existing query" })
+    }
+
+    @MainActor
     func testUnsupportedWorkingSearchSurvivesHelpBackAndOrdinarySearchWithoutReplacingBytes() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-UnsupportedWorkingSearch-\(UUID().uuidString)", isDirectory: true)
@@ -290,7 +397,8 @@ final class NavigationHistoryTests: XCTestCase {
         try await blocker.value
         await pending.value
 
-        XCTAssertEqual(model.workspaceSearchDefinition.text, "New query")
+        XCTAssertEqual(model.workspaceSearchDefinition.text, "Old needle")
+        XCTAssertEqual(model.workspaceSearchDraft, "New query")
         XCTAssertNil(model.workspaceSearchProjection)
         XCTAssertFalse(model.workspaceSearchIsLoading)
         guard case .none = try await WorkspaceSearchPreferencesRepository(store: store).loadWorkingDefinition() else {

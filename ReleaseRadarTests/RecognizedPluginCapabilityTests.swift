@@ -7,7 +7,10 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
         let legacyDigest = "75f513d53675b6ae5679d2add575b76f9d32575d605f77702fd91a8c70d9f198"
         let sharedExecutionDigest = "ecc221b2ca91ac8913e73555b6ed310bce63d7f1ac9462d05b025478173d5a40"
         let currentDigest = "b01335654a5dedcf2055c9bfa3e074e478f75dd2b9e4171dd16c1f2a4427ef83"
-        let releaseDigest = "7f70bcd7a4fac4fe038dc00945b8fb56d3cdd472ec7f7816c40812631107939c"
+        let priorReleaseDigest = "7f70bcd7a4fac4fe038dc00945b8fb56d3cdd472ec7f7816c40812631107939c"
+        let releaseDigest = "2677797fd17f0091821cca09653f9951ab9007ef578a1226458faf632d319a9d"
+        let toolbarReleaseDigest = "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb"
+        let bookmarkHelpReleaseDigest = "ba87dfe795dc0efdf0de940a10a7f6c096c19ed5722b65a162a86d07237a06a6"
 
         XCTAssertEqual(RecognizedPluginCapability.known, [
             .init(manifestVersion: "0.1.7", normalizedPackageDigest: legacyDigest,
@@ -16,7 +19,13 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
                   sharedExecutionStandardVersions: [1]),
             .init(manifestVersion: "0.1.9", normalizedPackageDigest: currentDigest,
                   sharedExecutionStandardVersions: [1]),
-            .init(manifestVersion: "0.1.10", normalizedPackageDigest: releaseDigest,
+            .init(manifestVersion: "0.1.10", normalizedPackageDigest: priorReleaseDigest,
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.11", normalizedPackageDigest: releaseDigest,
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.12", normalizedPackageDigest: "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb",
+                  sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.13", normalizedPackageDigest: bookmarkHelpReleaseDigest,
                   sharedExecutionStandardVersions: [1]),
         ])
         XCTAssertEqual(
@@ -43,7 +52,21 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
         XCTAssertEqual(
             RecognizedPluginCapability.recognize(
                 manifestVersion: "0.1.10",
+                normalizedPackageDigest: priorReleaseDigest
+            )?.sharedExecutionStandardVersions,
+            [1]
+        )
+        XCTAssertEqual(
+            RecognizedPluginCapability.recognize(
+                manifestVersion: "0.1.11",
                 normalizedPackageDigest: releaseDigest
+            )?.sharedExecutionStandardVersions,
+            [1]
+        )
+        XCTAssertEqual(
+            RecognizedPluginCapability.recognize(
+                manifestVersion: "0.1.12",
+                normalizedPackageDigest: toolbarReleaseDigest
             )?.sharedExecutionStandardVersions,
             [1]
         )
@@ -60,7 +83,7 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
             normalizedPackageDigest: currentDigest
         ))
         XCTAssertNil(RecognizedPluginCapability.recognize(
-            manifestVersion: "0.1.11",
+            manifestVersion: "0.1.13",
             normalizedPackageDigest: currentDigest
         ))
     }
@@ -73,7 +96,7 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.10")
+        XCTAssertEqual(package.version, "0.1.13")
         XCTAssertEqual(package.relativeFiles, [
             ".codex-plugin/plugin.json",
             ".mcp.json",

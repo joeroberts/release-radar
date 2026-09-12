@@ -2,8 +2,67 @@
 
 ## Current outcome
 
-Phase 6 is merged through the actual default branch at
-`5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`. The delivered scope follows the
+The owner authorized immediate reconciliation of delivered local releases with the
+actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
+chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/pull/50)
+(acceptance, helper, navigation and RDS-field prerequisites),
+[PR #49](https://github.com/joeroberts/release-radar/pull/49) (toolbar adoption), and
+[PR #51](https://github.com/joeroberts/release-radar/pull/51) (remaining 0.1.12/0.1.13
+changes and release records). All three PRs are merged into the default branch;
+the final integration merge is `8de63b16e2fa0f84ca79b4c691e4a43117befce2`.
+The separately recorded 0.1.11 installation closeout is retained in that history.
+Both local integration and saved-project checkouts are synchronized with origin.
+The completed **Fix Search fields to use RDS** and **Phase 6 DMG and manual
+acceptance testing** tasks are archived after their commits reached the default
+branch and their work stopped. A subsequent owner correction exposed an incomplete
+task-list result: local records contained 14 top-level Release Radar tasks, while
+the listing tool returned only two. Direct reads identified eight more completed
+and quiescent tasks: three Phase 6 design reviewers, the 0.1.10 and 0.1.11 package
+tasks, the Restart helper package task, and two Phase 6 acceptance reviewers.
+Their results were verified in merged history and those eight tasks are archived.
+Read-only local metadata confirms six top-level tasks remain:
+
+- Master Delivery Thread — orchestration.
+- Diagnose missing Pursuit plan phases — retained investigation/design follow-up.
+- Align Overview metric labels with icons — explicitly stopped, not completed.
+- Correct Add Project RDS styling — candidate awaiting independent review, not merged.
+- Phase 7 portable continuity plan — replacement — preserved at owner request.
+- Phase 7 portable continuity independent… — preserved at owner request.
+
+The stopped and unfinished tasks were not resumed; Phase 7 tasks were not changed.
+
+The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
+tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
+`v0.1.13` are published to origin and retain their original release commits.
+The installed app version and matching repository/Downloads DMG checksum were
+read back after integration. Integration changes no product
+source or packaged bytes, so it requires no version bump, new DMG or reinstall.
+The [0.1.13 package evidence](evidence/2026-09-12-release-0.1.13-packaging.md)
+records identity, direct package checks and verified installation. Existing DMGs
+remain rollback copies; no extra app backup is needed.
+
+Fresh combined-source verification selected 207 tests: **194 passed, 7 skipped,
+and 6 failed cases (12 assertions)**. All six failed identically on unchanged
+default commit `5e7b9b8`: four native fixtures could not write outside the sandbox,
+one native board test could not obtain its AX element, and the native phase
+lifecycle journey retained its prior lifecycle/revision assertion failures. These
+are pre-existing failures, not a green full suite. Navigation/history, Search,
+Help, planning policy, helper restart and the new toolbar checks passed.
+Documentation catalog/index and diff checks pass. Existing independent product
+reviews remain terminal; no redundant package review was added.
+
+Only repository integration and the requested completed-task cleanup are included.
+Phase 7 stays paused and its tasks remain untouched. The missing Pursuit phases
+investigation remains open; unimplemented Phase 6 extensions and the Phase 8
+isolated stale-helper test retain their recorded boundaries. Repository integration
+does not claim application catalog acceptance or mutate owner project data.
+
+The milestone records below preserve their original scope and verification; their
+local-only publication restrictions are superseded only for this authorized
+integration. The active endpoint above controls current release status.
+
+The original Phase 6A–6E sequence reached the default branch at
+`5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`, before the corrective integration above. The delivered scope follows the
 [Phase 6 controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md):
 History and attention, distinct Delivery and Execution Goals, revision-bound
 evidence, generic task adoption, workspace Search, saved views, and shared Help.
@@ -18,6 +77,187 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
+
+## Owner correction candidate — September 12
+
+The owner directed two focused corrections to the toolbar/help adoption: Save query is
+again a borderless bookmark icon immediately beside the central Search field at wide
+and compact widths, and Help groups its existing guidance as Projects, Settings and
+Goals. Each help destination remains in-app and is exposed by a borderless up-right
+arrow beside its title with its meaningful accessible Open name. Focused unit and
+native rendering checks pass; the durable captures are [wide toolbar](evidence/2026-09-12-toolbar-bookmark-wide.png),
+[compact toolbar](evidence/2026-09-12-toolbar-bookmark-compact.png), and
+[grouped Help](evidence/2026-09-12-help-topic-groups-wide.png). Independent code/
+UX review approved commit `c045f29` with no Required or Optional findings. Its
+focused check passed 8 tests; 3 broader native Search/Help cases remained skipped
+because the XCTest host exposes no self-AX window after focus, not because of a
+candidate failure. The local-only endpoint is complete; catalog acceptance and
+application readback are not authorized by this UI correction. No packaging,
+installation, push, PR, merge, owner data, live app state, RDS-library, version,
+tag, metric, project management, archive/remove, or guided-setup work is included.
+
+## Completed local RDS toolbar consumer adoption — September 12
+
+The owner authorized Release Radar to adopt the merged RDS toolbar/search controls
+at `3c2626102a2e97dd93f31fbc62b733085d6700ec`. The bounded implementation is complete locally
+on `codex/rds-toolbar-adoption` from assigned baseline `83f3bb8`, controlled by the
+[toolbar adoption brief](task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md)
+and the [approved proposal](../design/phase6-workspace-toolbar-proposal.md). The
+assigned baseline is available locally but its named design branch is not
+advertised by `origin`; this does not replace or discard the assigned commit.
+
+Scope is the persistent RDS toolbar, app-owned draft/submission/save/history flow,
+compact and wide sidebar adoption, fixed documentation-checking footer, relevant
+guidance, focused tests and isolated native render evidence. Phase 6F metrics,
+Manage Project and Archive/Remove relocation, guided setup, packaging,
+installation, merge and owner/live application state remain separate and
+unauthorized. Independent code/integration and UX/accessibility review is complete.
+The delivery and review tasks are archived with their processes stopped. The
+reviewed result and captures are preserved in the canonical project checkout;
+monitoring is paused. The owner subsequently authorized reconciliation of delivered work.
+[PR #50](https://github.com/joeroberts/release-radar/pull/50) landed the prerequisite
+baseline, and [PR #49](https://github.com/joeroberts/release-radar/pull/49) was
+retargeted and merged into `codex/release-radar-mvp`. Later release records below
+cover packaging and installation.
+
+The initial local candidate `42e40f3` entered independent review. The reviewer
+found one required save-failure recovery defect: a failed save from a non-Search
+route could be silent, and an existing same-named query could incorrectly dismiss
+the popover. The bounded correction now returns the exact save-attempt outcome,
+dismisses only on confirmed success, and retains the entered name with an
+accessible actionable error on failure. Corrected candidate `8cd2bc6` passed
+follow-up independent review with no Required or Optional findings. The author’s
+five affected tests and the reviewer’s four directly affected tests pass,
+including the non-Search same-name regression, successful save path, native
+accessible failure presentation and wide/compact toolbar accessibility. The app
+build, documentation check and diff check pass, and both exact-candidate
+worktrees are clean.
+
+Before that correction, the focused XCTest selection passed 40 tests with 3
+explicit skips caused by the XCTest host exposing no self-accessibility windows
+after Search took focus; the toolbar test itself asserts every action is fully
+visible and accessible at 1280 and 760 points. All 9 workspace-search acceptance
+tests also pass.
+The disposable native test app was also exercised through supported external UI
+inspection: Return submission, Back restoration, save-without-run, Escape
+dismissal, and wide/compact accessibility all passed. The app build and managed
+documentation check pass. The reviewer did not independently repeat the external
+Return/save/Escape fixture because its sandbox could not remove the fixture’s
+hard-coded `/private/tmp` enable sentinel; the author evidence remains reported,
+and the disposable sentinel is now absent. Review captures are the
+[wide toolbar](evidence/2026-09-12-rds-toolbar-wide.png) and
+[compact toolbar](evidence/2026-09-12-rds-toolbar-compact.png). No installed app,
+owner database or live application state was changed.
+
+## Phase 6 extension design review — September 12
+
+The owner requests separate feature-architecture, chief-architecture and UX reviews
+of the [toolbar and project-management proposal](../design/phase6-workspace-toolbar-proposal.md)
+and its linked static mockup. Requirements include persistent search/navigation,
+RDS reuse, Manage Project relocation, guided shared-execution setup and metric
+alignment. These are required Phase 6 scope, not implementation authorization.
+Metric implementation was explicitly stopped and remains stopped. The proposal
+preserves the owner's 6F/6G/6H assignments and flags the earlier guided-setup naming
+for reconciliation. No app state or catalog acceptance is changed by this review.
+
+All three reviews and their requested options have concluded. The owner accepted
+the wide and corrected compact mockups as visual references and selected toolbar
+search with results-page filters/saved queries, the compact icon sidebar with
+direct Help/Settings/Notifications and bookmark Save, immediate Manage Project
+loading with in-place recovery, and Codex-task-mediated guided setup. The proposal
+records those selections. RDS API details and the guided-setup slice label remain
+proposed; product implementation has not been released.
+
+The separate RekonUI Library versioning/toolbar prerequisite has now passed its
+independent review with no remaining findings. Its plan is recorded on
+`codex/rds-versioning-toolbar-plan` in
+`docs/delivery/plans/2026-09-12-rds-versioning-toolbar-plan.md`; RDS closeout commit
+`09dd3a8` records the final disposition and passing canonical documentation check.
+The existing missing historical catalog artifact was restored unchanged. Both
+bounded RDS planning/review tasks are stopped and archived; monitoring is paused.
+The owner subsequently approved RDS toolbar/search implementation. It is merged via
+[Add reusable toolbar and search controls](https://github.com/joeroberts/RekonDesignSystem/pull/7)
+at `3c2626102a2e97dd93f31fbc62b733085d6700ec`. GitHub confirms MERGED and CodeRabbit
+SUCCESS. Independent API/code/UX review had no findings; 97 package tests, 13 focused
+tests and 2 public-API tests passed. Author native wide/compact checks passed; the
+reviewer independently exercised the wide fixture and inspected compact layout,
+without a new independent compact capture. RDS supplies `RekonToolbar`,
+`RekonBorderlessIconButtonStyle` and additive `RekonSearchField` prompt/submit support.
+The implementation/review processes stopped, results are in the merged RDS ledger,
+and both bounded tasks are archived. Monitoring is paused. Historical/new tags and
+Release Radar consumer adoption remain separate actions. No tags, consumer change,
+installation or owner-state mutation occurred.
+
+## Pursuit plan reconstruction — design only
+
+The owner approved the [one-time reconstruction decisions and entry reference](../design/repository-plan-reconstruction-design.md)
+and delegated durable persistence, review and sequencing to Master Delivery Thread.
+The package is recorded with its approved mockup and catalog identities; independent
+architecture/security-recovery/UX design review passed with no findings. Documentation
+and diff checks pass. The review is complete and its task archived. Implementation follows
+the final currently planned Phase 6 extension through 6H, not merged 6E. The
+separately proposed guided-setup 6I label is not an added dependency by inference.
+Reconstruction uses only a supported versioned structured snapshot, preserves
+explicit current lanes, and never fabricates historical activity. Atomic approved
+application remains provisional on a usable blocker-resolution/exclusion journey.
+No implementation, live recovery, database write, installation or publication is
+authorized. Source schema and exact execution/recovery contracts remain to resolve
+before implementation; no current snapshot is declared import-ready.
+
+## Release 0.1.11 package details
+
+The reviewed RDS treatment for the main Search input, saved-query name input and
+Help search input is packaged as Release Radar `0.1.11 (1)`. Version/source commit
+`fbf93e515a5dac4d35c54f463dee3692d7486de8` adds the matching app and bundled
+plugin versions and exact recognized plugin digest on branch
+`codex/release-0.1.11`. The annotated local tag `v0.1.11` identifies the containing
+release commit.
+
+- DMG: `dist/ReleaseRadar-0.1.11.dmg`
+- Durable owner copy: `/Users/jroberts/Downloads/ReleaseRadar-0.1.11.dmg`
+- DMG SHA-256: `06891ba3fdfc3730bcb3348c45255c474b53cac348f68ceedfbb03c16adb62f2`
+- Main executable SHA-256: `a093bbdccff161ecbbc46d74adbb3b518e8ad45233288e8bc0271f63a6a9ab9a`
+- CodeResources SHA-256: `dee39d94d9ba1e0ccd7a4f6181dd0d29099fa9d44acd23aa68af7cb1e41da7bf`
+- CodeDirectory hash: `85cef76aef01baae60d9b1e1a5606b1943c5ec00`
+- Plugin digest: `2677797fd17f0091821cca09653f9951ab9007ef578a1226458faf632d319a9d`
+- Signature: Apple Development team `2UA854NLX4`, Hardened Runtime enabled
+
+The [0.1.11 packaging evidence](evidence/2026-09-12-release-0.1.11-packaging.md)
+records the previously completed 12/12 correction checks and independent code-and-UX
+approval, focused version/resource verification, strict signed staging, read-only
+DMG mounting, staged/mounted identity and the matching Downloads copy. Under later
+explicit owner authorization, that exact package was installed in place after the
+signed `0.1.10 (1)` app was preserved at
+`/Users/jroberts/Documents/Release Radar Backups/Pre-0.1.11-2026-09-12.ReleaseRadarAppOnly.Xekm4B/ReleaseRadar.app`.
+The installed `0.1.11 (1)` bundle matches the package's executable,
+`CodeResources` and CodeDirectory hashes. It launched normally from `/Applications`;
+ordinary startup registered fresh lifecycle and Bridge processes from the new
+bundle, and both pass strict signature checks. No manual plugin/configuration
+change, direct owner-data operation, catalog acceptance, push, PR, merge or
+publication occurred. The package remains locally signed and not notarized.
+
+## Release 0.1.12 package details
+
+The independently reviewed RDS toolbar candidate is packaged as Release Radar
+`0.1.12 (1)` from version/source commit
+`0a281c1e812725d979ffccfd57782695aca4bef4`, which contains product candidate
+`8cd2bc634b8c06d04ec59e00e477ebc32f308192`. The bundled plugin is `0.1.12`
+with recognized digest
+`8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb` and
+the RDS dependency remains pinned to
+`3c2626102a2e97dd93f31fbc62b733085d6700ec`. The annotated local `v0.1.12`
+tag identifies the containing release-record commit.
+
+- DMG: `dist/ReleaseRadar-0.1.12.dmg`
+- Durable owner copy: `/Users/jroberts/Downloads/ReleaseRadar-0.1.12.dmg`
+- DMG SHA-256: `740da6bdb097207c26de686e22a8c0b9bac0abb6940935374a8826dd91232261`
+
+The [0.1.12 packaging evidence](evidence/2026-09-12-release-0.1.12-packaging.md)
+records focused version checks, signed no-launch staging, read-only mounted image
+verification, strict nested-code and entitlement checks, and identical staged/mounted
+hashes. The installed app remained running and unmodified. No app launch,
+installation, SQLite/Keychain access, notarization, push, PR, merge or publication
+occurred; this is not a generally distributable notarized release.
 
 ## Active navigation responsiveness correction
 

@@ -308,6 +308,42 @@ permissions. Hooks must preserve STOP, owner-approval waits and legitimate block
 must not grant authority or auto-publish, and must not create a new task database,
 review engine or unbounded continuation loop.
 
+## Standing Owner Authorization: Local Release Delivery
+
+The owner explicitly authorized this standing workflow on September 12, 2026
+and requested that it persist beyond the current session. After an authorized
+batch of Release Radar app changes passes applicable checks and independent
+review, complete these steps without asking for the same approval again:
+
+1. Commit the scoped changes.
+2. Advance the semantic patch version for ordinary fixes (for example, 0.1.12
+   to 0.1.13), keeping required app/package version metadata consistent.
+3. Create the matching annotated local Git tag, using the `vX.Y.Z` convention,
+   on the release commit. Preserve accurate build-source provenance and never
+   move or overwrite an existing release tag.
+4. Build and verify `ReleaseRadar-X.Y.Z.dmg` using the established signing and
+   packaging workflow, and provide the versioned installer in Downloads.
+5. Install that verified version in `/Applications/ReleaseRadar.app` and verify
+   the installed version and package identity.
+
+Existing versioned DMGs serve as rollback copies. Do not create extra app backup
+archives or duplicate rollback copies. Preserve existing installers unless the
+owner separately authorizes their removal.
+
+This authorization applies to local delivery of completed app changes, including
+the bookmark and Help corrections destined for 0.1.13. It does not turn planning,
+documentation-only work, or an intermediate task into a release. Coordinate one
+release owner after the intended batch is complete rather than packaging every
+commit or creating competing installations.
+
+Branch/tag pushes, PR creation, merges, public releases and notarization retain
+their separate authorization boundaries. Do not interpret installation approval
+as permission for unrelated project-data or configuration changes. An explicit
+STOP or a later narrower owner instruction takes precedence; legitimate runtime
+permission gates must still be respected. Report a concrete failure or missing
+permission rather than claiming completion or repeating an already granted
+approval question.
+
 ## UI Completion Standard
 
 A UI feature is complete only when it has:

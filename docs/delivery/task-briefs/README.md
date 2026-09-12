@@ -65,6 +65,9 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-10-phase6e-search](2026-09-10-phase6e-search) — leaf; Phase 6E workspace search, saved views and Help
 - [delivery.task-briefs.2026-09-11-codex-helper-restart](2026-09-11-codex-helper-restart) — leaf; Bounded Codex lifecycle helper restart and status recovery
 - [delivery.task-briefs.2026-09-11-phase6-acceptance-corrections](2026-09-11-phase6-acceptance-corrections) — leaf; Bounded corrections for Phase 6 acceptance failures
+- [delivery.task-briefs.2026-09-12-rds-toolbar-adoption](2026-09-12-rds-toolbar-adoption) — leaf; Owner-authorized Release Radar adoption of merged RDS toolbar and search controls
+- [delivery.task-briefs.2026-09-12-release-0.1.12](2026-09-12-release-0.1.12) — leaf; Owner-authorized local packaging and tag for Release Radar 0.1.12
+- [delivery.task-briefs.2026-09-12-release-0.1.13](2026-09-12-release-0.1.13) — leaf; Owner-authorized local packaging, tag and installation for Release Radar 0.1.13
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -727,6 +730,66 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-phase6-acceptance-corrections-brief-2026-09-11 | [docs/delivery/task-briefs/2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md](2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-12-rds-toolbar-adoption
+
+- Path: [docs/delivery/task-briefs/2026-09-12-rds-toolbar-adoption](2026-09-12-rds-toolbar-adoption)
+- Purpose: Owner-authorized Release Radar adoption of merged RDS toolbar and search controls
+- Allowed contents: Task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [003D9B42-FD49-4209-AC07-C18FAEB1D7A1](2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 003D9B42-FD49-4209-AC07-C18FAEB1D7A1 | [docs/delivery/task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md](2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md) | document | controlling &#40;delivery.rds-toolbar-adoption&#41; | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-12-release-0.1.12
+
+- Path: [docs/delivery/task-briefs/2026-09-12-release-0.1.12](2026-09-12-release-0.1.12)
+- Purpose: Owner-authorized local packaging and tag for Release Radar 0.1.12
+- Allowed contents: Task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [213D9B60-6FC9-4769-A43E-F49F90795085](2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 213D9B60-6FC9-4769-A43E-F49F90795085 | [docs/delivery/task-briefs/2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md](2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md) | document | controlling &#40;delivery.release-0.1.12-packaging&#41; | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-12-release-0.1.13
+
+- Path: [docs/delivery/task-briefs/2026-09-12-release-0.1.13](2026-09-12-release-0.1.13)
+- Purpose: Owner-authorized local packaging, tag and installation for Release Radar 0.1.13
+- Allowed contents: Task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [8D82DF0A-AE02-48AA-A8ED-5B0A56142406](2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| 8D82DF0A-AE02-48AA-A8ED-5B0A56142406 | [docs/delivery/task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md](2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md) | document | controlling &#40;delivery.release-0.1.13-packaging&#41; | active | none | none |
 
 ### Children
 
