@@ -62,7 +62,7 @@ struct WorkspaceSearchView: View {
                         set: { model.setWorkspaceSearchText($0) }
                     )
                 )
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(RekonQuietTextFieldStyle())
                 .onSubmit { Task { await model.runWorkspaceSearch() } }
                 .focused($searchFieldFocused)
                 .accessibilityFocused($accessibilitySearchFieldFocused)
@@ -159,7 +159,7 @@ struct WorkspaceSearchView: View {
             Text("Saved queries").font(RekonTypography.compactTitle)
             HStack(spacing: 8) {
                 TextField("Query name", text: $savedQueryName)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(RekonQuietTextFieldStyle())
                     .accessibilityIdentifier("workspace-search-save-name")
                 Button("Save") {
                     let name = savedQueryName

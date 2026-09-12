@@ -354,6 +354,22 @@ polling, or a live-state claim.
   never silently retried.
 - After a successful lifecycle change, Settings tells the owner to start a new
   Codex task to load the change.
+- **Restart helper** is a non-destructive secondary action beside the plugin
+  controls. It invalidates the app's existing lifecycle-helper connection,
+  unregisters the fixed helper when enabled, registers the helper bundled with
+  the currently installed Release Radar app after macOS confirms the old helper
+  has terminated, and performs one fresh status read.
+  It never invokes Install, Remove, or Reinstall and does not change plugin
+  contents, Codex configuration, or project data. It adds no XPC operation or
+  caller-selected input. Existing observation persistence applies; specifically,
+  an attention-required receipt returns to managed-installed only when the fresh
+  clean version and digest exactly match its last verified managed identity.
+- Restart participates in the existing serialized lifecycle operation state. The
+  button remains visible but disabled while any lifecycle operation is in flight;
+  Settings announces **Restarting lifecycle helper**, then an accessible success
+  stating that the helper restarted and plugin status refreshed, or the existing
+  actionable privacy-bounded failure. A Login Items authorization failure directs
+  the owner to approve the Release Radar helper and retry.
 
 ## Settings experience
 
@@ -366,6 +382,8 @@ Plugin** and includes:
 - Remove as a secondary destructive action when an installation is present;
 - actionable, privacy-bounded failure copy;
 - disabled actions while an operation is in progress;
+- a secondary **Restart helper** action that remains visible but disabled during
+  plugin lifecycle work;
 - accessibility labels, keyboard reachability, status announcements, and no
   color-only state communication.
 

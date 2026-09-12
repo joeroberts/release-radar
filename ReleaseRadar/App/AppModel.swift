@@ -85,6 +85,7 @@ final class AppModel {
     private(set) var workspaceSearchPersistenceMessage: String?
     private(set) var navigationHistory = NavigationHistory(initial: .projects)
     private(set) var navigationRecoveryMessage: String?
+    private(set) var navigationFailureMessage: String?
     private(set) var navigationFocus: NavigationFocus? = .route(.projects)
     var dashboardError: String?
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
@@ -334,34 +335,18 @@ final class AppModel {
 
     func navigate(to route: AppRoute) async {
         captureCurrentNavigationContext()
+        navigationFailureMessage = nil
         let previousProjectID = selection.projectID ?? selectedProjectID
         navigationGeneration &+= 1
         let generation = navigationGeneration
         let resolvedRoute = resolvedRouteForNavigation(route)
         navigationRecoveryMessage = resolvedRoute == route ? nil : "The requested destination changed with the project lifecycle. Its current location is shown."
 
-        if let projectID = resolvedRoute.projectID,
-           dashboard?.projects.contains(where: { $0.id == projectID }) == true {
-            do {
-                try await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
-            } catch {
-                guard generation == navigationGeneration else { return }
-                dashboardError = error.localizedDescription
-                return
-            }
-            guard generation == navigationGeneration else { return }
-            documentationObserver.invalidate(projectID: projectID)
-        }
-        if let projectID = resolvedRoute.projectID {
-            _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
-            guard generation == navigationGeneration else { return }
-        }
         if let destinationProjectID = resolvedRoute.projectID,
            destinationProjectID != previousProjectID {
             selectedTicketID = TicketID(rawValue: "")
         }
         selection = resolvedRoute
-        guard generation == navigationGeneration else { return }
         if resolvedRoute == .goals, let goalID = reconcileWorkspaceGoalsSelection() {
             navigationFocus = .workspaceGoal(goalID)
         } else if resolvedRoute == .goals {
@@ -373,6 +358,22 @@ final class AppModel {
         }
         navigationHistory.navigate(to: historyEntry(for: resolvedRoute, focus: navigationFocus))
         lastCommittedNavigationGeneration = generation
+
+        if let projectID = resolvedRoute.projectID,
+           dashboard?.projects.contains(where: { $0.id == projectID }) == true {
+            documentationObserver.invalidate(projectID: projectID)
+            do {
+                try await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
+            } catch {
+                guard generation == navigationGeneration else { return }
+                navigationFailureMessage = error.localizedDescription
+            }
+            guard generation == navigationGeneration else { return }
+        }
+        if let projectID = resolvedRoute.projectID {
+            _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
+            guard generation == navigationGeneration else { return }
+        }
     }
 
     func goBack() async { await restoreNavigation(step: .back) }
@@ -382,6 +383,7 @@ final class AppModel {
 
     private func restoreNavigation(step: NavigationStep) async {
         captureCurrentNavigationContext()
+        navigationFailureMessage = nil
         navigationGeneration &+= 1
         let moved = switch step {
         case .back: navigationHistory.goBack()
@@ -2881,6 +2883,11 @@ final class AppModel {
         _ = await reloadProjectProjections(context: .agentCommandCommitted)
     }
 
+    func reloadAfterNavigationFailure() async {
+        navigationFailureMessage = nil
+        await reloadDashboardAfterCommittedAgentCommand()
+    }
+
     func reloadAfterRepositoryRelocation() async {
         // Root relocation must re-observe authorization and guidance instead of
         // reusing the pre-relocation cache. This does not rerun app startup.
@@ -3592,6 +3599,19 @@ final class AppModel {
         guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
         beginCodexPluginOperation(.reinstall)
         await applyCodexPluginResult(await codexPluginCoordinator.reinstall(), operation: .reinstall)
+    }
+
+    func restartCodexPluginHelper() async {
+        guard codexPluginOperation == nil, let codexPluginCoordinator else { return }
+        beginCodexPluginOperation(.restartHelper)
+        let result = await codexPluginCoordinator.restartHelper()
+        await applyCodexPluginResult(result, operation: .restartHelper)
+        guard case .failed = result.state else {
+            let message = "Lifecycle helper restarted. Plugin status refreshed."
+            codexPluginSettingsMessage = message
+            codexPluginAnnouncement = message
+            return
+        }
     }
 
     private func beginCodexPluginOperation(_ operation: CodexPluginOperation) {

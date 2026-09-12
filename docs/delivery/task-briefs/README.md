@@ -63,6 +63,8 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-10-phase6c-evidence](2026-09-10-phase6c-evidence) — leaf; Phase 6C revision-bound delivery evidence
 - [delivery.task-briefs.2026-09-10-phase6d-adoption](2026-09-10-phase6d-adoption) — leaf; Phase 6D generic task adoption
 - [delivery.task-briefs.2026-09-10-phase6e-search](2026-09-10-phase6e-search) — leaf; Phase 6E workspace search, saved views and Help
+- [delivery.task-briefs.2026-09-11-codex-helper-restart](2026-09-11-codex-helper-restart) — leaf; Bounded Codex lifecycle helper restart and status recovery
+- [delivery.task-briefs.2026-09-11-phase6-acceptance-corrections](2026-09-11-phase6-acceptance-corrections) — leaf; Bounded corrections for Phase 6 acceptance failures
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -685,6 +687,46 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-phase6e-search-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md](2026-09-10-phase6e-search/phase6e-search-brief.md) | document | controlling &#40;delivery.phase6e-search&#41; | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-11-codex-helper-restart
+
+- Path: [docs/delivery/task-briefs/2026-09-11-codex-helper-restart](2026-09-11-codex-helper-restart)
+- Purpose: Bounded Codex lifecycle helper restart and status recovery
+- Allowed contents: Task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-codex-helper-restart-brief-2026-09-11](2026-09-11-codex-helper-restart/restart-helper-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-codex-helper-restart-brief-2026-09-11 | [docs/delivery/task-briefs/2026-09-11-codex-helper-restart/restart-helper-brief.md](2026-09-11-codex-helper-restart/restart-helper-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-11-phase6-acceptance-corrections
+
+- Path: [docs/delivery/task-briefs/2026-09-11-phase6-acceptance-corrections](2026-09-11-phase6-acceptance-corrections)
+- Purpose: Bounded corrections for Phase 6 acceptance failures
+- Allowed contents: Task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-phase6-acceptance-corrections-brief-2026-09-11](2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-phase6-acceptance-corrections-brief-2026-09-11 | [docs/delivery/task-briefs/2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md](2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

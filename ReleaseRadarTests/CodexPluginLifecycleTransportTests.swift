@@ -170,7 +170,8 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
             .clean(version: "0.1.7", digest: "shipped")
         )
         XCTAssertNil(reply.error)
-        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.asynchronousUnregisterCallCount, 1)
         XCTAssertEqual(service.registerCallCount, 1)
         XCTAssertEqual(remote.operations, [.status, .status, .install])
     }
@@ -189,7 +190,8 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
         let reply = await client.install()
 
         XCTAssertEqual(reply.error, .marketplaceConflict)
-        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.asynchronousUnregisterCallCount, 1)
         XCTAssertEqual(service.registerCallCount, 1)
         XCTAssertEqual(remote.operations, [.status, .status])
     }
@@ -209,9 +211,108 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
 
         XCTAssertEqual(reply.observedState, .absent)
         XCTAssertNil(reply.error)
-        XCTAssertEqual(service.unregisterCallCount, 1)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.asynchronousUnregisterCallCount, 1)
         XCTAssertEqual(service.registerCallCount, 1)
         XCTAssertEqual(remote.operations, [.status, .status])
+    }
+
+    func testClientExplicitRestartRecoversAStaleEnabledHelperWithoutPluginMutation() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        let unregisterStarted = expectation(description: "asynchronous helper teardown started")
+        service.onAsynchronousUnregisterStarted = { unregisterStarted.fulfill() }
+        service.holdsAsynchronousUnregisterCompletion = true
+        let remote = PluginLifecycleRemoteStub(replies: [
+            .init(
+                wireVersion: 1,
+                observedState: .needsRepair(.integrityInvalid),
+                error: nil
+            ),
+            .init(
+                wireVersion: 1,
+                observedState: .clean(version: "0.1.9", digest: "current"),
+                error: nil
+            ),
+        ])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let staleReply = await client.status()
+        let restart = Task { await client.restartHelper() }
+
+        await fulfillment(of: [unregisterStarted], timeout: 1)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.asynchronousUnregisterCallCount, 1)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertEqual(remote.operations, [.status])
+
+        service.completeAsynchronousUnregister()
+        let reply = await restart.value
+
+        XCTAssertEqual(staleReply.observedState, .needsRepair(.integrityInvalid))
+        XCTAssertNil(staleReply.error)
+        XCTAssertEqual(
+            reply.observedState,
+            .clean(version: "0.1.9", digest: "current")
+        )
+        XCTAssertNil(reply.error)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.asynchronousUnregisterCallCount, 1)
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertEqual(remote.operations, [.status, .status])
+    }
+
+    func testClientRestartSurfacesAsynchronousUnregisterFailureWithoutRegisterOrStatus() async {
+        let service = PluginLifecycleServiceStub(status: .enabled)
+        service.asynchronousUnregisterError = NSError(domain: "test", code: 1)
+        let remote = PluginLifecycleRemoteStub(replies: [])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.restartHelper()
+
+        XCTAssertEqual(reply.error, .codexUnavailable)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.asynchronousUnregisterCallCount, 1)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertTrue(remote.operations.isEmpty)
+    }
+
+    func testClientRestartSurfacesApprovalRequirementWithoutCallingHelper() async {
+        let service = PluginLifecycleServiceStub(status: .requiresApproval)
+        let remote = PluginLifecycleRemoteStub(replies: [])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.restartHelper()
+
+        XCTAssertEqual(reply.error, .unauthorizedPeer)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 0)
+        XCTAssertTrue(remote.operations.isEmpty)
+    }
+
+    func testClientRestartSurfacesRegistrationFailureWithoutCallingHelper() async {
+        let service = PluginLifecycleServiceStub(status: .notRegistered)
+        service.registerError = NSError(domain: "SMAppServiceErrorDomain", code: 1)
+        let remote = PluginLifecycleRemoteStub(replies: [])
+        let client = CodexPluginLifecycleClient(
+            service: service,
+            invokeRemote: remote.invoke
+        )
+
+        let reply = await client.restartHelper()
+
+        XCTAssertEqual(reply.error, .unauthorizedPeer)
+        XCTAssertEqual(service.unregisterCallCount, 0)
+        XCTAssertEqual(service.registerCallCount, 1)
+        XCTAssertTrue(remote.operations.isEmpty)
     }
 
     func testRecoveryStatusIsReadOnlyAndNeverRegistersOrRebindsHelper() async {
@@ -298,8 +399,14 @@ final class CodexPluginLifecycleTransportTests: XCTestCase {
 
 private final class PluginLifecycleServiceStub: PluginLifecycleServiceManaging {
     var status: SMAppService.Status
+    var registerError: Error?
+    var asynchronousUnregisterError: Error?
+    var holdsAsynchronousUnregisterCompletion = false
+    var onAsynchronousUnregisterStarted: (@Sendable () -> Void)?
     private(set) var registerCallCount = 0
     private(set) var unregisterCallCount = 0
+    private(set) var asynchronousUnregisterCallCount = 0
+    private var pendingAsynchronousUnregister: (@Sendable (Error?) -> Void)?
 
     init(status: SMAppService.Status) {
         self.status = status
@@ -307,12 +414,35 @@ private final class PluginLifecycleServiceStub: PluginLifecycleServiceManaging {
 
     func register() throws {
         registerCallCount += 1
+        if let registerError { throw registerError }
         status = .enabled
     }
 
     func unregister() throws {
         unregisterCallCount += 1
         status = .notRegistered
+    }
+
+    func unregister(completionHandler handler: @Sendable @escaping (Error?) -> Void) {
+        asynchronousUnregisterCallCount += 1
+        onAsynchronousUnregisterStarted?()
+        if holdsAsynchronousUnregisterCompletion {
+            pendingAsynchronousUnregister = handler
+            return
+        }
+        finishAsynchronousUnregister(handler)
+    }
+
+    func completeAsynchronousUnregister() {
+        guard let handler = pendingAsynchronousUnregister else { return }
+        pendingAsynchronousUnregister = nil
+        finishAsynchronousUnregister(handler)
+    }
+
+    private func finishAsynchronousUnregister(_ handler: @Sendable (Error?) -> Void) {
+        let error = asynchronousUnregisterError
+        if error == nil { status = .notRegistered }
+        handler(error)
     }
 }
 

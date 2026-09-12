@@ -43,12 +43,28 @@ enum WorkspaceHelpContent {
             destination: .settings
         ),
         .init(
+            id: "plugin-helper-restart",
+            title: "Restart the Codex lifecycle helper",
+            detail: "In Settings > Connections, use Restart helper when plugin status looks stale after replacing Release Radar. The action re-registers the helper and refreshes status; it does not reinstall or remove the plugin, Codex configuration stays intact, and projects remain unchanged. If macOS requests permission, allow the Release Radar helper in Login Items and retry. If it still fails, update or reinstall Release Radar before retrying.",
+            keywords: "plugin helper restart re-register stale status Login Items permission Codex",
+            actionTitle: "Open Settings",
+            destination: .settings
+        ),
+        .init(
             id: "active-viewed",
             title: "Active phase versus viewed phase",
             detail: "The active phase is shared delivery state. Choosing a phase to inspect changes only your view until you explicitly use the active-phase control.",
             keywords: "active viewed phase shared state filter",
             actionTitle: "Open Phase Board",
             destination: .phaseBoard
+        ),
+        .init(
+            id: "navigation-validation",
+            title: "Navigate while documentation is checked",
+            detail: "When you choose Overview, Project Plan, or Phase Board, the destination opens immediately. An animated checking status remains visible while Release Radar validates current project documentation, and verified-evidence actions remain unavailable until the current check finishes. If the dashboard-open audit fails, the selected page stays visible with a reload action.",
+            keywords: "navigation checking spinner progress documentation validation overview project plan phase board",
+            actionTitle: "Open Overview",
+            destination: .projectOverview
         ),
         .init(
             id: "planning-unplaced",
@@ -129,7 +145,7 @@ struct WorkspaceHelpView: View {
             }
 
             TextField("Search help", text: $query)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(RekonQuietTextFieldStyle())
                 .accessibilityIdentifier("help-search-field")
 
             ScrollView {

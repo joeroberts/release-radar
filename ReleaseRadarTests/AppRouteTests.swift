@@ -3664,6 +3664,98 @@ final class AppRouteTests: XCTestCase {
             CodexPluginSettingsPresentation(state: .installed(version: "0.1.0"), operation: .reinstall).actions,
             []
         )
+        XCTAssertTrue(CodexPluginSettingsPresentation(state: .installed(version: "0.1.0")).canRestartHelper)
+        XCTAssertFalse(
+            CodexPluginSettingsPresentation(
+                state: .installed(version: "0.1.0"),
+                operation: .restartHelper
+            ).canRestartHelper
+        )
+        XCTAssertEqual(CodexPluginOperation.restartHelper.announcement, "Restarting lifecycle helper")
+    }
+
+    @MainActor
+    func testRestartPluginHelperPublishesProgressSuccessAndSerializesLifecycleActions() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RestartHelper-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let lifecycleStore = CodexPluginLifecycleStore(store: store)
+        try await lifecycleStore.recordVerified(
+            .init(
+                intent: .managedInstalled,
+                managedVersion: "0.1.9",
+                managedDigest: "current",
+                verifiedAt: Date(timeIntervalSince1970: 1)
+            ),
+            reason: "Restart helper fixture"
+        )
+        let manager = AppLifecycleManager(replies: [
+            .init(
+                wireVersion: 1,
+                observedState: .clean(version: "0.1.9", digest: "current"),
+                error: nil
+            ),
+        ])
+        let model = AppModel(
+            store: store,
+            codexPluginCoordinator: .init(
+                manager: manager,
+                store: lifecycleStore,
+                shippedVersion: "0.1.9",
+                shippedDigest: "current"
+            ),
+            codexPluginShippedVersion: "0.1.9",
+            externalServicesSuppressed: true
+        )
+
+        await model.restartCodexPluginHelper()
+        let operationsAfterRestart = await manager.operations()
+
+        XCTAssertEqual(operationsAfterRestart, [.restartHelper])
+        XCTAssertEqual(model.codexPluginState, .installed(version: "0.1.9"))
+        XCTAssertEqual(model.codexPluginSettingsMessage, "Lifecycle helper restarted. Plugin status refreshed.")
+        XCTAssertEqual(model.codexPluginAnnouncement, "Lifecycle helper restarted. Plugin status refreshed.")
+        XCTAssertNil(model.codexPluginOperation)
+
+        model.codexPluginOperation = .install
+        await model.restartCodexPluginHelper()
+        let operationsWhileBusy = await manager.operations()
+        XCTAssertEqual(operationsWhileBusy, [.restartHelper])
+        XCTAssertEqual(model.codexPluginOperation, .install)
+    }
+
+    @MainActor
+    func testRestartPluginHelperPresentsActionablePermissionFailure() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-RestartHelperFailure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        let manager = AppLifecycleManager(replies: [
+            .init(wireVersion: 1, observedState: nil, error: .unauthorizedPeer),
+        ])
+        let model = AppModel(
+            store: store,
+            codexPluginCoordinator: .init(
+                manager: manager,
+                store: CodexPluginLifecycleStore(store: store),
+                shippedVersion: "0.1.9",
+                shippedDigest: "current"
+            ),
+            externalServicesSuppressed: true
+        )
+
+        await model.restartCodexPluginHelper()
+
+        XCTAssertEqual(model.codexPluginState, .failed(.unauthorizedPeer))
+        XCTAssertEqual(
+            model.codexPluginSettingsMessage,
+            "macOS did not authorize the Release Radar lifecycle helper. Review Login Items, then try again."
+        )
+        XCTAssertEqual(model.codexPluginAnnouncement, "Failed")
+        XCTAssertNil(model.codexPluginOperation)
     }
 
     func testPluginSettingsKeepsLiveObservationSeparate() {
@@ -6869,10 +6961,11 @@ private actor LaunchOrderLifecycleManager: CodexPluginLifecycleManaging {
     func install() async -> CodexPluginHelperReply { await status() }
     func remove() async -> CodexPluginHelperReply { await status() }
     func reinstall() async -> CodexPluginHelperReply { await status() }
+    func restartHelper() async -> CodexPluginHelperReply { await status() }
 }
 
 private actor AppLifecycleManager: CodexPluginLifecycleManaging {
-    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall }
+    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall, restartHelper }
     private var replies: [CodexPluginHelperReply]
     private var calls: [Operation] = []
 
@@ -6885,6 +6978,7 @@ private actor AppLifecycleManager: CodexPluginLifecycleManaging {
     func install() async -> CodexPluginHelperReply { next(.install) }
     func remove() async -> CodexPluginHelperReply { next(.remove) }
     func reinstall() async -> CodexPluginHelperReply { next(.reinstall) }
+    func restartHelper() async -> CodexPluginHelperReply { next(.restartHelper) }
     func operations() -> [Operation] { calls }
 
     private func next(_ operation: Operation) -> CodexPluginHelperReply {

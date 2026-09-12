@@ -373,6 +373,42 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             ]
         )
 
+        let helperModel = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("helper.sqlite")),
+            codexPluginShippedVersion: "0.1.9",
+            externalServicesSuppressed: true,
+            seedSampleData: false
+        )
+        helperModel.codexPluginState = .installed(version: "0.1.9")
+        helperModel.codexPluginSettingsMessage = "Lifecycle helper restarted. Plugin status refreshed."
+        for width in [1100.0, 620.0] {
+            try await render(
+                SettingsView(model: helperModel),
+                name: "codex-helper-restart-success-\(Int(width))",
+                width: width,
+                expected: nil,
+                expectedText: [
+                    "Release Radar Codex Plugin",
+                    "Installed",
+                    "Restart helper",
+                    "Lifecycle helper restarted. Plugin status refreshed.",
+                ],
+                minimumElementSizes: ["codex-plugin-restart-helper": .init(width: 44, height: 24)]
+            )
+        }
+
+        helperModel.codexPluginSettingsMessage = nil
+        helperModel.codexPluginOperation = .restartHelper
+        try await render(
+            SettingsView(model: helperModel),
+            name: "codex-helper-restart-progress",
+            width: 620,
+            expected: nil,
+            expectedText: ["Restarting lifecycle helper", "Restart helper"],
+            disabledIdentifiers: ["codex-plugin-restart-helper"]
+        )
+        helperModel.codexPluginOperation = nil
+
         model.alertRules = try AlertRuleSnapshot(values: Dictionary(
             uniqueKeysWithValues: AlertRuleKind.allCases.map { ($0, true) }
         ))
@@ -881,6 +917,26 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         )
     }
 
+    func testProjectNavigationStatusRendersCheckingAtWideAndCompactWidths() async throws {
+        for (name, width, isCompact) in [("wide", 280.0, false), ("compact", 86.0, true)] {
+            try await render(
+                ProjectNavigationStatusView(
+                    documentationStatus: .checking(identity: nil, generation: 1),
+                    isCompact: isCompact
+                )
+                .padding(12),
+                name: "project-navigation-checking-\(name)",
+                width: width,
+                expected: nil,
+                expectedText: ["Checking project documentation"],
+                presentIdentifiers: [
+                    "project-documentation-checking",
+                    "project-documentation-checking-progress",
+                ]
+            )
+        }
+    }
+
     private func compatibilityStatus(
         state: SharedExecutionCompatibilityState,
         directResults: [SharedExecutionDirectResult] = []
@@ -932,6 +988,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         expectedText: [String] = [],
         absentText: [String] = [],
         absentButtonTitles: [String] = [],
+        presentIdentifiers: [String] = [],
         focusIdentifiers: [String] = [],
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
@@ -989,6 +1046,12 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         let initialActual = accessibilityText(try XCTUnwrap(ownWindow))
+        for identifier in presentIdentifiers {
+            XCTAssertNotNil(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing accessibility element \(identifier)"
+            )
+        }
         for title in absentButtonTitles {
             XCTAssertNil(
                 accessibilityButton(try XCTUnwrap(ownWindow), title: title),

@@ -672,7 +672,7 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
-    func testLateProjectNavigationCannotReplaceNewerRouteOrAppendStaleHistory() async throws {
+    func testProjectNavigationCommitsBeforeObservationAndLateResultCannotReplaceNewerRoute() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-NavigationRace-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -693,15 +693,67 @@ final class NavigationHistoryTests: XCTestCase {
         let older = Task { await model.navigate(to: .phaseBoard(DashboardSampleData.projectID)) }
         let enteredBlockedNavigation = await loader.waitUntilBlockedNavigationEntered()
         XCTAssertTrue(enteredBlockedNavigation)
+        XCTAssertEqual(model.selection, .phaseBoard(DashboardSampleData.projectID))
+        XCTAssertEqual(model.navigationHistory.current.route, .phaseBoard(DashboardSampleData.projectID))
+        XCTAssertEqual(model.navigationFocus, .route(.phaseBoard(DashboardSampleData.projectID)))
+        if case .checking = model.documentationObservationStatus(for: DashboardSampleData.projectID) {
+            // The destination is usable while the read-only observation remains pending.
+        } else {
+            XCTFail("Project documentation must be checking while navigation validation is pending")
+        }
+
         await model.navigate(to: .settings)
         await loader.releaseBlockedNavigation()
         await older.value
 
         XCTAssertEqual(model.selection, .settings)
         XCTAssertEqual(model.navigationHistory.current.route, .settings)
-        XCTAssertFalse(model.navigationHistory.entries.dropLast().contains {
-            $0.route == .phaseBoard(DashboardSampleData.projectID)
-        })
+        XCTAssertEqual(
+            model.navigationHistory.entries.map(\.route),
+            [.projects, .phaseBoard(DashboardSampleData.projectID), .settings]
+        )
+    }
+
+    @MainActor
+    func testDashboardOpenFailureKeepsProjectDestinationVisibleAndValidationContinues() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-NavigationAuditFailure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let loader = BlockingNavigationObservationLoader(projectID: DashboardSampleData.projectID)
+        let observer = DocumentationObservationCoordinator { projectID in
+            await loader.load(projectID: projectID)
+        }
+        let model = AppModel(
+            store: store,
+            externalServicesSuppressed: true,
+            documentationObserver: observer
+        )
+        await model.loadDashboard()
+        await store.close()
+
+        let navigation = Task { await model.navigate(to: .projectPlan(DashboardSampleData.projectID)) }
+        let enteredBlockedValidation = await loader.waitUntilBlockedNavigationEntered()
+        XCTAssertTrue(enteredBlockedValidation)
+        XCTAssertEqual(model.selection, .projectPlan(DashboardSampleData.projectID))
+        XCTAssertEqual(model.navigationHistory.current.route, .projectPlan(DashboardSampleData.projectID))
+        XCTAssertNotNil(model.navigationFailureMessage)
+        XCTAssertNil(model.dashboardError)
+        if case .checking = model.documentationObservationStatus(for: DashboardSampleData.projectID) {
+            // The failed audit did not prevent the read-only validation from continuing.
+        } else {
+            XCTFail("Project documentation must remain checking until validation completes")
+        }
+
+        await loader.releaseBlockedNavigation()
+        await navigation.value
+        XCTAssertEqual(model.selection, .projectPlan(DashboardSampleData.projectID))
+
+        await model.navigate(to: .settings)
+        XCTAssertEqual(model.selection, .settings)
+        XCTAssertNil(model.navigationFailureMessage)
     }
 
     @MainActor

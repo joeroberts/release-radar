@@ -91,9 +91,7 @@ final class HistoryAcceptanceTests: XCTestCase {
         await fixture.store.close()
 
         let legacy = try SQLiteConnection(url: fixture.databaseURL)
-        for column in Self.versionTwentyFourAuditColumns.reversed() {
-            try legacy.execute("ALTER TABLE audit_events DROP COLUMN \(column)")
-        }
+        try removeVersionTwentyFourHistorySchema(legacy)
         try legacy.execute("PRAGMA user_version = 23")
         legacy.close()
 

@@ -7,6 +7,48 @@ import XCTest
 
 @MainActor
 final class WorkspaceSearchNativeRenderingTests: XCTestCase {
+    func testSearchAndHelpTextFieldsUseThePinnedRDSQuietFieldTreatment() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let searchSource = try String(
+            contentsOf: repositoryRoot.appending(path: "ReleaseRadar/Search/WorkspaceSearchView.swift"),
+            encoding: .utf8
+        )
+        let helpSource = try String(
+            contentsOf: repositoryRoot.appending(path: "ReleaseRadar/Help/WorkspaceHelpView.swift"),
+            encoding: .utf8
+        )
+
+        XCTAssertEqual(searchSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 2)
+        XCTAssertEqual(helpSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 1)
+        XCTAssertFalse(searchSource.contains(".textFieldStyle(.roundedBorder)"))
+        XCTAssertFalse(helpSource.contains(".textFieldStyle(.roundedBorder)"))
+    }
+
+    func testSearchAndHelpTextFieldsRenderWithPinnedRDSTreatmentInInertHost() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-SearchRDSRender-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite")),
+            externalServicesSuppressed: true,
+            seedSampleData: false
+        )
+        await model.loadDashboard()
+        await model.navigate(to: .search)
+
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        hosting.appearance = NSAppearance(named: .darkAqua)
+        hosting.frame = NSRect(x: 0, y: 0, width: 1_500, height: 900)
+        try await settle(hosting)
+        try capture(hosting, name: "search-rds-quiet-fields")
+
+        await model.navigate(to: .help)
+        try await settle(hosting)
+        try capture(hosting, name: "help-rds-quiet-field")
+    }
+
     func testSearchRecoveryControlsAndSharedHelpContentAreNativeAndActionable() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-SearchRecoveryNative-\(UUID().uuidString)", isDirectory: true)

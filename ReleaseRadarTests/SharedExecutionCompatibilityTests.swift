@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import XCTest
 @testable import ReleaseRadarCore
@@ -224,7 +225,15 @@ final class SharedExecutionCompatibilityTests: XCTestCase {
     }
 
     private func temporaryDirectory(_ name: String) throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+        guard let resolvedPath = realpath(FileManager.default.temporaryDirectory.path, nil) else {
+            throw CocoaError(.fileReadUnknown)
+        }
+        defer { free(resolvedPath) }
+        let physicalTemporaryDirectory = URL(
+            fileURLWithPath: String(cString: resolvedPath),
+            isDirectory: true
+        )
+        let directory = physicalTemporaryDirectory
             .appendingPathComponent("ReleaseRadar-SharedExecution-\(name)-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try FileManager.default.removeItem(at: directory) }

@@ -1038,6 +1038,34 @@ repair must not wait for an observer, companion or execution-host feasibility re
 | Parallel decisions | RM7 supported observation; RM8 companion; RM11 roles; #3 host discovery; early RM9 audience; I9 hooks pilot. | Each has a bounded proof/decision and independent result. Pursue opens a separately approved complete outcome; no-go closes the decision without placeholders. |
 | Conditional follow-on delivery | Selected live observer, full selected companion corpus, selected role execution/Run Guard. | Observer proof for live agent visibility; lifecycle/event/artifact contracts for cloud; one run owner for execution. These may be declined without making core delivery tracking incomplete. |
 
+### Phase 8 deferred stale-helper acceptance — owner decision 2026-09-11
+
+Phase 8 retains one explicit outstanding package-acceptance item for the Settings
+**Restart helper** action. In a separately provisioned, logged-in macOS account or
+macOS VM with its own GUI service domain, application store and Codex home, verify
+all of the following with signed installed application versions:
+
+- a real stale production helper, managed by the fixed `SMAppService`, survives an
+  application upgrade;
+- the installed Settings **Restart helper** action is activated while that stale
+  condition still exists and before startup recovery consumes it;
+- the operation awaits termination of the old helper before registration completes,
+  and the replacement process identity resolves to the currently installed helper;
+- the fresh plugin status and retained receipt follow the existing exact-version and
+  exact-digest safeguards, without install, remove or reinstall side effects;
+- plugin bytes, project data and unrelated owner state remain unchanged; and
+- permission, registration and restart failures present actionable recovery.
+
+The prior alternate-service synthetic harness is withdrawn and is not acceptance
+evidence. Existing automated service-ordering, coordinator and AppModel checks and
+the installed current-helper button check remain valid, but they do not satisfy this
+combined scenario. The owner defers this item rather than marks it passed: it does
+not block the current manual acceptance work or Phase 7, but Phase 8 must resolve it
+before broader distribution. Provisioning the isolated account or VM is a separate
+future authorization and is not authorized by this record. Any resulting package
+must use an application and DMG version newer than the recorded 0.1.9 package,
+expected to be `0.1.10` unless already consumed, with both versions matching.
+
 Do not gate every early repair on detailed design of every later optional feature.
 Set the shared semantic boundaries now, then write only the brief needed for the
 next coherent slice. Do not call a schema migration, design decision, status-only

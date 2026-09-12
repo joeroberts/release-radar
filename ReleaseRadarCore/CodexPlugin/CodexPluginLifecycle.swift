@@ -88,6 +88,7 @@ public protocol CodexPluginLifecycleManaging: Sendable {
     func install() async -> CodexPluginHelperReply
     func remove() async -> CodexPluginHelperReply
     func reinstall() async -> CodexPluginHelperReply
+    func restartHelper() async -> CodexPluginHelperReply
 }
 
 public extension CodexPluginLifecycleManaging {
@@ -191,6 +192,17 @@ public actor CodexPluginLifecycleCoordinator {
         )
     }
 
+    public func restartHelper() async -> CodexPluginLifecycleResult {
+        guard let receipt = try? await store.load() else {
+            return .init(state: .failed(.malformedResult))
+        }
+        return await statusFrom(
+            reply: await manager.restartHelper(),
+            receipt: receipt,
+            recoverKnownCleanAfterRestart: true
+        )
+    }
+
     public func remove() async -> CodexPluginLifecycleResult {
         let reply = await manager.remove()
         guard reply.wireVersion == 1, reply.error == nil else {
@@ -268,16 +280,23 @@ public actor CodexPluginLifecycleCoordinator {
 
     private func statusFrom(
         reply: CodexPluginHelperReply,
-        receipt: CodexPluginReceipt
+        receipt: CodexPluginReceipt,
+        recoverKnownCleanAfterRestart: Bool = false
     ) async -> CodexPluginLifecycleResult {
         guard reply.wireVersion == 1, reply.error == nil, let observed = reply.observedState
         else { return .init(state: .failed(reply.error ?? .malformedResult)) }
         do {
-            let updated = observationReceipt(current: receipt, observed: observed)
+            let updated = observationReceipt(
+                current: receipt,
+                observed: observed,
+                recoverKnownCleanAfterRestart: recoverKnownCleanAfterRestart
+            )
             if updated.intent != receipt.intent {
                 try await store.recordObservation(
                     updated,
-                    reason: "Observe Release Radar Codex plugin state"
+                    reason: recoverKnownCleanAfterRestart
+                        ? "Observe Release Radar Codex plugin state after helper restart"
+                        : "Observe Release Radar Codex plugin state"
                 )
             }
             return .init(state: CodexPluginLifecycleReducer.presentation(
@@ -292,10 +311,19 @@ public actor CodexPluginLifecycleCoordinator {
 
     private func observationReceipt(
         current: CodexPluginReceipt,
-        observed: CodexPluginObservedState
+        observed: CodexPluginObservedState,
+        recoverKnownCleanAfterRestart: Bool = false
     ) -> CodexPluginReceipt {
         let intent: CodexPluginIntent
         switch observed {
+        case .clean where recoverKnownCleanAfterRestart
+            && (current.intent == .neverInstalled || current.intent == .removed):
+            intent = current.intent
+        case let .clean(version, digest) where recoverKnownCleanAfterRestart
+            && current.intent == .attentionRequired
+            && current.managedVersion == version
+            && current.managedDigest == digest:
+            intent = .managedInstalled
         case .absent where current.intent == .managedInstalled:
             intent = .removed
         case let .clean(_, digest) where current.managedDigest != digest:
@@ -465,6 +493,16 @@ public struct RecognizedPluginCapability: Equatable, Sendable {
         Self(
             manifestVersion: "0.1.9",
             normalizedPackageDigest: "b01335654a5dedcf2055c9bfa3e074e478f75dd2b9e4171dd16c1f2a4427ef83",
+            sharedExecutionStandardVersions: [1]
+        ),
+        Self(
+            manifestVersion: "0.1.10",
+            normalizedPackageDigest: "7f70bcd7a4fac4fe038dc00945b8fb56d3cdd472ec7f7816c40812631107939c",
+            sharedExecutionStandardVersions: [1]
+        ),
+        Self(
+            manifestVersion: "0.1.11",
+            normalizedPackageDigest: "2677797fd17f0091821cca09653f9951ab9007ef578a1226458faf632d319a9d",
             sharedExecutionStandardVersions: [1]
         ),
     ]

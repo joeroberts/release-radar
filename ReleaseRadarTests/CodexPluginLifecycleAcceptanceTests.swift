@@ -47,13 +47,13 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.9")
+        XCTAssertEqual(package.version, "0.1.11")
         XCTAssertEqual(
             package.version,
             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         )
         XCTAssertEqual(package.relativeFiles, CodexPluginPackage.relativeFiles)
-        XCTAssertEqual(package.digest, "b01335654a5dedcf2055c9bfa3e074e478f75dd2b9e4171dd16c1f2a4427ef83")
+        XCTAssertEqual(package.digest, "2677797fd17f0091821cca09653f9951ab9007ef578a1226458faf632d319a9d")
     }
 
     func testBundledSkillDefinesOwnerAuthorizedAuditedRepositoryHandoff() throws {
@@ -528,6 +528,138 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
         XCTAssertEqual(operations, [.reinstall])
     }
 
+    func testRestartHelperRefreshesPresentationWithoutChangingReceiptOrAudit() async throws {
+        let (store, lifecycleStore) = try makeLifecycleStore(prefix: "RestartHelper")
+        let receipt = CodexPluginReceipt(
+            intent: .managedInstalled,
+            managedVersion: "0.1.9",
+            managedDigest: "current",
+            verifiedAt: Date(timeIntervalSince1970: 1)
+        )
+        try await lifecycleStore.recordVerified(
+            receipt,
+            reason: "Install Release Radar Codex plugin"
+        )
+        let auditCountBefore = try await auditCount(in: store)
+        let manager = ScriptedLifecycleManager(replies: [
+            .init(
+                wireVersion: 1,
+                observedState: .clean(version: "0.1.9", digest: "current"),
+                error: nil
+            ),
+        ])
+        let coordinator = CodexPluginLifecycleCoordinator(
+            manager: manager,
+            store: lifecycleStore,
+            shippedVersion: "0.1.9",
+            shippedDigest: "current"
+        )
+
+        let result = await coordinator.restartHelper()
+        let operations = await manager.operations()
+        let persistedReceipt = try await lifecycleStore.load()
+        let auditCountAfter = try await auditCount(in: store)
+
+        XCTAssertEqual(result, .init(state: .installed(version: "0.1.9")))
+        XCTAssertEqual(operations, [.restartHelper])
+        XCTAssertEqual(persistedReceipt, receipt)
+        XCTAssertEqual(auditCountAfter, auditCountBefore)
+    }
+
+    func testRestartHelperRestoresManagedIntentAfterStaleHelperReportsFalseRepair() async throws {
+        let (store, lifecycleStore) = try makeLifecycleStore(prefix: "RestartHelperStale")
+        let receipt = CodexPluginReceipt(
+            intent: .managedInstalled,
+            managedVersion: "0.1.9",
+            managedDigest: "current",
+            verifiedAt: Date(timeIntervalSince1970: 1)
+        )
+        try await lifecycleStore.recordVerified(receipt, reason: "Install Release Radar Codex plugin")
+        let manager = ScriptedLifecycleManager(replies: [
+            .init(
+                wireVersion: 1,
+                observedState: .needsRepair(.integrityInvalid),
+                error: nil
+            ),
+            .init(
+                wireVersion: 1,
+                observedState: .clean(version: "0.1.9", digest: "current"),
+                error: nil
+            ),
+        ])
+        let coordinator = CodexPluginLifecycleCoordinator(
+            manager: manager,
+            store: lifecycleStore,
+            shippedVersion: "0.1.9",
+            shippedDigest: "current"
+        )
+
+        let stale = await coordinator.status()
+        let receiptAfterStaleStatus = try await lifecycleStore.load()
+        let recovered = await coordinator.restartHelper()
+        let receiptAfterRestart = try await lifecycleStore.load()
+        let observationAuditCount = try await store.read {
+            try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE actor_id = 'release-radar-observer'")
+        }
+
+        XCTAssertEqual(stale.state, .needsRepair)
+        XCTAssertEqual(receiptAfterStaleStatus.intent, .attentionRequired)
+        XCTAssertEqual(recovered.state, .installed(version: "0.1.9"))
+        XCTAssertEqual(receiptAfterRestart, receipt)
+        XCTAssertEqual(observationAuditCount, 2)
+        let operations = await manager.operations()
+        XCTAssertEqual(operations, [.status, .restartHelper])
+    }
+
+    func testRestartHelperDoesNotRestoreManagedIntentWithoutExactKnownCleanIdentity() async throws {
+        let cases: [(String, CodexPluginReceipt, CodexPluginObservedState, CodexPluginPresentationState)] = [
+            (
+                "digest-mismatch",
+                .init(intent: .attentionRequired, managedVersion: "0.1.9", managedDigest: "known", verifiedAt: Date(timeIntervalSince1970: 1)),
+                .clean(version: "0.1.9", digest: "changed"),
+                .modified(version: "0.1.9")
+            ),
+            (
+                "version-mismatch",
+                .init(intent: .attentionRequired, managedVersion: "0.1.9", managedDigest: "known", verifiedAt: Date(timeIntervalSince1970: 1)),
+                .clean(version: "0.1.8", digest: "known"),
+                .needsRepair
+            ),
+            (
+                "removed",
+                .init(intent: .removed, managedVersion: "0.1.9", managedDigest: "known", verifiedAt: Date(timeIntervalSince1970: 1)),
+                .clean(version: "0.1.9", digest: "known"),
+                .needsRepair
+            ),
+            (
+                "never-installed",
+                .neverInstalled,
+                .clean(version: "0.1.9", digest: "known"),
+                .modified(version: "0.1.9")
+            ),
+        ]
+
+        for (name, receipt, observed, expectedState) in cases {
+            let (_, lifecycleStore) = try makeLifecycleStore(prefix: "RestartHelper-\(name)")
+            try await lifecycleStore.recordVerified(receipt, reason: "Restart helper fixture")
+            let manager = ScriptedLifecycleManager(replies: [
+                .init(wireVersion: 1, observedState: observed, error: nil),
+            ])
+            let coordinator = CodexPluginLifecycleCoordinator(
+                manager: manager,
+                store: lifecycleStore,
+                shippedVersion: "0.1.9",
+                shippedDigest: "known"
+            )
+
+            let result = await coordinator.restartHelper()
+            let persistedReceipt = try await lifecycleStore.load()
+
+            XCTAssertEqual(result.state, expectedState, name)
+            XCTAssertEqual(persistedReceipt, receipt, name)
+        }
+    }
+
     func testUpdateReinstallAndRemoveAuditOnlyTheirVerifiedPostconditions() async throws {
         enum Change { case update, reinstall }
         let changes: [(Change, ScriptedLifecycleManager.Operation, String)] = [
@@ -786,7 +918,7 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
 }
 
 private actor ScriptedLifecycleManager: CodexPluginLifecycleManaging {
-    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall }
+    enum Operation: Equatable { case status, statusReadOnly, install, remove, reinstall, restartHelper }
     private var replies: [CodexPluginHelperReply]
     private var calls: [Operation] = []
 
@@ -799,6 +931,7 @@ private actor ScriptedLifecycleManager: CodexPluginLifecycleManaging {
     func install() async -> CodexPluginHelperReply { next(.install) }
     func remove() async -> CodexPluginHelperReply { next(.remove) }
     func reinstall() async -> CodexPluginHelperReply { next(.reinstall) }
+    func restartHelper() async -> CodexPluginHelperReply { next(.restartHelper) }
     func operations() -> [Operation] { calls }
 
     private func next(_ operation: Operation) -> CodexPluginHelperReply {

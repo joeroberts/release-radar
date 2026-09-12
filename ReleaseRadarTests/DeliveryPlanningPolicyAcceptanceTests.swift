@@ -769,6 +769,22 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
         return (DeliveryStore(databaseURL: url), url)
     }
 
+    func testDeliveryGoalObligationKeysPreserveByteDistinctIdentity() {
+        let composed = DeliveryGoalObligationKey(
+            phaseID: .init(rawValue: "phase"),
+            goalID: .init(rawValue: "\u{e9}"),
+            ticketID: .init(rawValue: "ticket")
+        )
+        let decomposed = DeliveryGoalObligationKey(
+            phaseID: .init(rawValue: "phase"),
+            goalID: .init(rawValue: "e\u{301}"),
+            ticketID: .init(rawValue: "ticket")
+        )
+
+        XCTAssertNotEqual(composed, decomposed)
+        XCTAssertEqual(Set([composed, decomposed]).count, 2)
+    }
+
     func testCanonicalEquivalentIdentitiesRemainByteDistinctThroughFinalizationAndTransfers() async throws {
         let store = try await fixture(ticketCount: 0)
         let composed = "\u{e9}"
@@ -783,6 +799,32 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
         _ = try await revise(
             store, goals: [goal(composed), goal(decomposed)],
             assignments: [assignment(composed, composed), assignment(decomposed, decomposed)])
+        let initialCoverage = try await store.read { db in
+            try [composed, decomposed].map { goalID in
+                try DeliveryGoalCoveragePolicy.assess(
+                    projectID: Self.project,
+                    phaseID: Self.phase,
+                    goalID: .init(rawValue: goalID),
+                    connection: db
+                )
+            }
+        }
+        XCTAssertEqual(
+            initialCoverage.map { $0.obligations.map { Data($0.key.goalID.rawValue.utf8) } },
+            [[Data(composed.utf8)], [Data(decomposed.utf8)]]
+        )
+        XCTAssertTrue(initialCoverage.allSatisfy(\.isReadyCovered))
+        let criteriaCounts = try await store.read { db in
+            try [composed, decomposed].map { goalID in
+                try DeliveryPlanningPolicy.loadCriteria(
+                    projectID: Self.project,
+                    phaseID: Self.phase,
+                    goalID: .init(rawValue: goalID),
+                    connection: db
+                ).count
+            }
+        }
+        XCTAssertEqual(criteriaCounts, [1, 1])
         _ = try await finalize(store, revision: 1)
         let storedGoals = try await goals(store)
         XCTAssertEqual(
@@ -801,7 +843,16 @@ final class DeliveryPlanningPolicyAcceptanceTests: XCTestCase {
                 projectID: Self.project, ticketID: .init(rawValue: composed), connection: $0)
         }
         XCTAssertEqual(history.map(\.action), ["assigned", "reassigned"])
-        _ = try await finalize(store, revision: 2)
+        do {
+            _ = try await finalize(store, revision: 2)
+            XCTFail("Transferred assignments must not erase the prior goal obligations")
+        } catch let error as DeliveryPlanningPolicyError {
+            guard case let .phasePlanIncomplete(failure) = error else { throw error }
+            XCTAssertEqual(
+                Set(failure.incompleteGoalIDs.map { Data($0.rawValue.utf8) }),
+                Set([Data(composed.utf8), Data(decomposed.utf8)])
+            )
+        }
     }
 
     func testCanonicalEquivalentPhasesDoNotPermitGoalOwnershipBypass() async throws {

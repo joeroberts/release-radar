@@ -243,6 +243,30 @@ asserted the two current registration identities and a selected result;
 and PID 82472 was absent after exit. The result bundle contains both named compact
 attachments. No UI call occurred after host exit.
 
+## RDS text-field correction — 2026-09-12
+
+Candidate `2da4f27deabc70890b98f6bad19c7aadc7007de1` changes only the main
+Search input, saved-query name input, and Help search input from native
+`.roundedBorder` styling to the pinned RekonDesignSystem
+`RekonQuietTextFieldStyle()`. The existing native `TextField` bindings, Search
+submission, Save action, focus and accessibility state/identifiers, and disabled
+conditions remain unchanged.
+
+Focused synthetic-store verification passed 12/12 with no failures or skips,
+covering Search and Help behavior, the RDS-treatment regression, and an inert
+render host. Independent code-and-UX review found no Required or Optional
+findings. The owner-visible renders show the corrected controls on their approved
+dark surfaces:
+
+- [Search and saved-query fields](2026-09-12-phase6e-search-rds-fields.png)
+- [Help search field](2026-09-12-phase6e-help-rds-field.png)
+
+These are inert `NSHostingView` captures using a fresh synthetic store, not an
+installed or signed runtime session. The existing AX-window native suite could not
+discover its test window; the same three failures reproduce on the unmodified
+`1d05cbf` baseline before control inspection. That environment limitation does
+not change the focused passing result or the rendered evidence.
+
 ## Boundaries and retained outputs
 
 No owner application store or repository content was intentionally accessed or

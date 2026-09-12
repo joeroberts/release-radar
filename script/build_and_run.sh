@@ -156,7 +156,7 @@ expected_main_entitlements() {
         '<array>' \
         "<string>$APP_GROUP</string>" \
         '</array>' \
-        '<key>com.apple.security.files.user-selected.read-only</key>' \
+        '<key>com.apple.security.files.user-selected.read-write</key>' \
         '<true/>' \
         '<key>com.apple.security.network.client</key>' \
         '<true/>' \

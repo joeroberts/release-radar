@@ -752,6 +752,38 @@
       "isLeaf": true,
       "firstRead": "rr-phase6e-search-brief-2026-09-10",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-11-phase6-acceptance-corrections",
+      "path": "docs/delivery/task-briefs/2026-09-11-phase6-acceptance-corrections",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Bounded corrections for Phase 6 acceptance failures",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-phase6-acceptance-corrections-brief-2026-09-11",
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-11-codex-helper-restart",
+      "path": "docs/delivery/task-briefs/2026-09-11-codex-helper-restart",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Bounded Codex lifecycle helper restart and status recovery",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-codex-helper-restart-brief-2026-09-11",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -6117,6 +6149,21 @@
       }
     },
     {
+      "artifactID": "rr-2026-09-11-phase6-owner-acceptance-guide",
+      "path": "docs/delivery/evidence/2026-09-11-phase6-owner-acceptance-guide.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-phase6e-search-wide",
       "path": "docs/delivery/evidence/2026-09-10-phase6e-search-wide.png",
       "kind": "verificationEvidence",
@@ -6162,12 +6209,237 @@
       }
     },
     {
+      "artifactID": "rr-phase6e-search-rds-fields-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-phase6e-search-rds-fields.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6e-help-rds-field-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-phase6e-help-rds-field.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-phase6-delivery-history-2026-09-11",
       "path": "docs/delivery/archive/2026-09-11-phase6-delivery-history.md",
       "kind": "document",
       "lifecycle": "archived",
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6-acceptance-corrections-brief-2026-09-11",
+      "path": "docs/delivery/task-briefs/2026-09-11-phase6-acceptance-corrections/phase6-acceptance-corrections-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-11-phase6-acceptance-corrections",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-restart-helper-signed-installation-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-signed-installation.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-restart-helper-before-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-before.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-restart-helper-progress-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-progress.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-restart-helper-after-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-after.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-codex-helper-restart-brief-2026-09-11",
+      "path": "docs/delivery/task-briefs/2026-09-11-codex-helper-restart/restart-helper-brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-11-codex-helper-restart",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "prompt"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-release-0.1.10-packaging-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-release-0.1.10-packaging.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-release-0.1.11-packaging-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-release-0.1.11-packaging.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6-workspace-toolbar-proposal-2026-09-12",
+      "path": "docs/design/phase6-workspace-toolbar-proposal.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6-toolbar-mockup-proposal-2026-09-12",
+      "path": "docs/design/mockups/phase6-persistent-workspace-toolbar-proposal.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6-compact-toolbar-mockup-proposal-2026-09-12",
+      "path": "docs/design/mockups/phase6-compact-workspace-toolbar-proposal.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-repository-plan-reconstruction-design-2026-09-12",
+      "path": "docs/design/repository-plan-reconstruction-design.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-repository-plan-reconstruction-entry-2026-09-12",
+      "path": "docs/design/mockups/repository-plan-reconstruction-entry.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
