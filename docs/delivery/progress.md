@@ -13,6 +13,9 @@ The reviewed candidate and its integration record `3d6a98d` are packaged locally
 as **0.1.14 (1)**. The signed DMG, matching Downloads copy and installed app are
 recorded in the [0.1.14 package evidence](evidence/2026-09-12-release-0.1.14-packaging.md).
 No push, PR, default-branch merge, notarization or owner-data mutation occurred.
+The completed, idle Add Project task is now archived at the owner's request.
+Its release commits and evidence are preserved in the canonical integration
+checkout; this master task retains the pending remote integration endpoint.
 
 The owner authorized immediate reconciliation of delivered local releases with the
 actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
@@ -35,10 +38,10 @@ tasks, the Restart helper package task, and two Phase 6 acceptance reviewers.
 Their results were verified in merged history and those eight tasks are archived.
 The owner subsequently archived the completed missing-Pursuit-phase diagnosis
 and the stopped metric-layout task. The recovery design remains sequenced after
-Phase 6H; metrics remain stopped under Phase 6F. Four top-level tasks remain:
+Phase 6H; metrics remain stopped under Phase 6F. After the Add Project archival,
+the remaining tasks from this cleanup inventory are:
 
 - Master Delivery Thread — orchestration.
-- Correct Add Project RDS styling — reviewed candidate awaiting integration.
 - Phase 7 portable continuity plan — replacement — preserved at owner request.
 - Phase 7 portable continuity independent… — preserved at owner request.
 
