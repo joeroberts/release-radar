@@ -2,11 +2,13 @@
 
 ## Current outcome
 
-The installed release is **0.1.16 (1)**. Local annotated tag `v0.1.16` targets
-package commit `76cce40`, and releases 0.1.14–0.1.16 are merged through
-[PR #52](https://github.com/joeroberts/release-radar/pull/52) at
-`8d09fbc`. The signed package, installer, installation, layout, focus,
-accessibility, and smoke-launch checks are recorded in the
+The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
+remain unchanged; `v0.1.16` targets package commit `76cce40`. Releases
+0.1.14–0.1.16 are merged through [PR #52](https://github.com/joeroberts/release-radar/pull/52)
+at `8d09fbc`. [PR #53](https://github.com/joeroberts/release-radar/pull/53)
+merged the withdrawal of the unauthorized saved-checkout rule; its redundant
+checkout was removed. The signed package, installer, installation, layout,
+focus, accessibility, and smoke-launch checks are recorded in the
 [0.1.16 package evidence](evidence/2026-09-12-release-0.1.16-packaging.md).
 
 The RDS search-submit focus correction, its consumer adoption, and **Correct Add
@@ -19,10 +21,19 @@ records a failed review because that PR was closed.
 
 Phase 6F metrics remain stopped. The remaining Phase 6 extensions remain
 unimplemented; the archived missing-Pursuit-phase recovery design is sequenced
-after Phase 6H. Phase 7 planning and its preserved tasks remain paused. Full owner
-manual acceptance remains outstanding, and the Phase 8 isolated production
-stale-helper acceptance is deferred and unpassed; neither is implied complete by
-the historical packaging or review records.
+after Phase 6H. Phase 7 planning is independently approved, while its
+implementation and preserved tasks remain paused. Full owner manual acceptance
+remains outstanding, and the Phase 8 isolated production stale-helper acceptance
+is deferred and unpassed; neither is implied complete by the historical packaging
+or review records.
+
+The code default for the working-search preference is empty. The retained
+read-only diagnosis found saved `TEST` at `2026-09-12T16:17:36Z` with generic
+`release-radar` audit actor; it does not identify the initiator, and no preference
+was changed. The combined source check remains **194 passed, 7 skipped, and 6
+failed cases (12 assertions)**; those failures reproduced on unchanged `5e7b9b8`,
+so it is not a green full suite. Latest consumer-focused verification recorded
+3 passing checks and 1 skipped AX-fixture check.
 
 No owner SQLite/project data, application-catalog acceptance, or new release action
 is authorized by this ledger reconciliation. The milestones below are historical
