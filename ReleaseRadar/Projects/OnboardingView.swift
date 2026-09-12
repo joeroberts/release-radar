@@ -271,6 +271,10 @@ struct OnboardingView: View {
         onReloadAfterFolderAttachment: (@MainActor (ProjectID) async -> Bool)? = nil,
         pasteboardWriter: @escaping @MainActor (String) -> Bool = CodexPromptHandoff.writeToGeneralPasteboard,
         initialPreview: OnboardingPreview? = nil,
+        initialWorkflow: OnboardingWorkflow? = nil,
+        initialAttachableProjects: [ProjectRecord] = [],
+        initialSelectedAttachableProjectID: ProjectID? = nil,
+        initialAttachmentFolder: URL? = nil,
         onFinished: @escaping @MainActor (ProjectID) async -> Void
     ) {
         _onboarding = State(initialValue: FolderProjectOnboarding(store: store, codexTasks: codexTasks))
@@ -279,6 +283,11 @@ struct OnboardingView: View {
             _workflow = State(initialValue: .initialize)
             _projectName = State(initialValue: initialPreview.savedProjectName ?? initialPreview.selectedFolder.lastPathComponent)
             _excludedTaskIDs = State(initialValue: initialPreview.excludedTaskIDs)
+        } else if let initialWorkflow {
+            _workflow = State(initialValue: initialWorkflow)
+            _attachableProjects = State(initialValue: initialAttachableProjects)
+            _selectedAttachableProjectID = State(initialValue: initialSelectedAttachableProjectID)
+            _attachmentFolder = State(initialValue: initialAttachmentFolder)
         }
         self.navigationTitle = navigationTitle
         self.onCancel = onCancel
@@ -370,6 +379,7 @@ struct OnboardingView: View {
     private var newProjectWorkflow: some View {
         if projectID == nil {
             Button("Back", action: backToLanding)
+                .buttonStyle(RekonSecondaryButtonStyle())
                 .disabled(isInitializeCommitInFlight)
                 .accessibilityIdentifier("onboarding-back")
         }
@@ -383,6 +393,7 @@ struct OnboardingView: View {
 
         if preview == nil {
             Button("Choose Project Folder…", action: chooseFolder)
+                .buttonStyle(RekonPrimaryButtonStyle())
                 .disabled(isWorking)
         }
 
@@ -390,6 +401,7 @@ struct OnboardingView: View {
             Button("Open existing project") {
                 openExisting(completedProjectID)
             }
+            .buttonStyle(RekonPrimaryButtonStyle())
             .keyboardShortcut(.defaultAction)
             .disabled(isWorking)
             .accessibilityIdentifier("onboarding-open-existing")
@@ -404,6 +416,7 @@ struct OnboardingView: View {
                     Text("Worktrees outside the selected folder need separate owner authorization before they can be included.")
                         .foregroundStyle(.secondary)
                     Button("Authorize Worktree…", action: authorizeWorktree)
+                        .buttonStyle(RekonSecondaryButtonStyle())
                         .disabled(isWorking)
                 }
             }
@@ -451,6 +464,7 @@ struct OnboardingView: View {
                     Text(confirmation.detail)
                         .foregroundStyle(.secondary)
                     Button(OnboardingWorkflowPresentation.initializeTitle, action: initializeProject)
+                        .buttonStyle(RekonPrimaryButtonStyle())
                         .keyboardShortcut(.defaultAction)
                         .disabled(isWorking)
                         .accessibilityIdentifier("onboarding-initialize-confirm")
@@ -491,6 +505,7 @@ struct OnboardingView: View {
                             Image(systemName: "square.on.square")
                         }
                         .labelStyle(.iconOnly)
+                        .buttonStyle(RekonBorderlessIconButtonStyle())
                         .accessibilityLabel(CodexPromptHandoff.copyButtonAccessibilityLabel)
                         .accessibilityIdentifier(CodexPromptHandoff.copyButtonAccessibilityIdentifier)
                         .help(CodexPromptHandoff.copyButtonAccessibilityLabel)
@@ -513,6 +528,7 @@ struct OnboardingView: View {
 
             HStack {
                 Button("Finish Initialization", action: finish)
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
                     .disabled(isWorking)
                     .accessibilityIdentifier("onboarding-finish-initialization")
@@ -523,6 +539,7 @@ struct OnboardingView: View {
     @ViewBuilder
     private var attachmentWorkflow: some View {
         Button("Back", action: backToLanding)
+            .buttonStyle(RekonSecondaryButtonStyle())
             .disabled(isInitializeCommitInFlight || isAttachmentCommitInFlight)
             .accessibilityIdentifier("onboarding-back")
 
@@ -553,6 +570,7 @@ struct OnboardingView: View {
             .accessibilityIdentifier("onboarding-attach-project")
 
             Button("Choose Folder…", action: chooseAttachmentFolder)
+                .buttonStyle(RekonPrimaryButtonStyle())
                 .disabled(isWorking || selectedAttachableProjectID == nil || attachmentCommittedNeedsReload)
                 .accessibilityIdentifier("onboarding-attach-folder")
         }
@@ -571,6 +589,7 @@ struct OnboardingView: View {
 
                     if !attachmentCommittedNeedsReload {
                         Button("Attach Folder", action: confirmFolderAttachment)
+                            .buttonStyle(RekonPrimaryButtonStyle())
                             .keyboardShortcut(.defaultAction)
                             .disabled(isWorking)
                             .accessibilityIdentifier("onboarding-attach-confirm")

@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import RekonDesignSystem
 import SwiftUI
 import XCTest
 @testable import ReleaseRadarCore
@@ -46,6 +47,82 @@ final class AppRouteTests: XCTestCase {
             XCTAssertTrue(window.titlebarAppearsTransparent)
             XCTAssertEqual(window.titleVisibility, .hidden)
             try fullWindowCapture(window, name: captureName)
+        }
+    }
+
+    @MainActor
+    func testAddProjectLaterWorkflowWindowsUseRekonStyles() async throws {
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-AddProjectLaterWindows-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let folder = URL(fileURLWithPath: "/tmp/Release Radar Visual Fixture", isDirectory: true)
+        let project = ProjectRecord(id: ProjectID(rawValue: "visual-fixture-project"), name: "Visual Fixture")
+        let preview = OnboardingPreview(
+            selectedFolder: folder,
+            gitRoot: folder,
+            includedTaskDescriptors: [],
+            rejectedTaskDescriptors: [],
+            authorizedWorktreeURLs: [],
+            worktreesRequiringAuthorization: [],
+            savedProjectName: "Visual Fixture"
+        )
+        let fixtures: [(String, OnboardingView)] = [
+            ("initialize", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialWorkflow: .initialize,
+                onFinished: { _ in }
+            )),
+            ("initialize-confirmation", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialPreview: preview,
+                onFinished: { _ in }
+            )),
+            ("attach-confirmation", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialWorkflow: .attach,
+                initialAttachableProjects: [project],
+                initialSelectedAttachableProjectID: project.id,
+                initialAttachmentFolder: folder,
+                onFinished: { _ in }
+            )),
+            ("attach-empty", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialWorkflow: .attach,
+                onFinished: { _ in }
+            )),
+        ]
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        for (width, height, sizeName) in [(760.0, 560.0, "default"), (680.0, 500.0, "minimum")] {
+            for (fixtureName, fixture) in fixtures {
+                let hosting = NSHostingView(rootView: fixture.rekonWindowChrome())
+                hosting.frame = NSRect(x: 0, y: 0, width: width, height: height)
+                let window = NSWindow(
+                    contentRect: hosting.frame,
+                    styleMask: [.titled, .closable, .resizable],
+                    backing: .buffered,
+                    defer: false
+                )
+                window.isReleasedWhenClosed = false
+                window.contentView = hosting
+                defer { window.close() }
+
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                try await Task.sleep(for: .milliseconds(100))
+                hosting.layoutSubtreeIfNeeded()
+
+                XCTAssertTrue(window.titlebarAppearsTransparent)
+                XCTAssertEqual(window.titleVisibility, .hidden)
+                try fullWindowCapture(window, name: "add-project-\(fixtureName)-\(sizeName)-window")
+            }
         }
     }
 
@@ -3049,6 +3126,30 @@ final class AppRouteTests: XCTestCase {
         ])
         XCTAssertFalse(OnboardingWorkflowPresentation.landingActionTitles.contains("Import Existing Project"))
         XCTAssertFalse(OnboardingWorkflowPresentation.landingActionTitles.contains("Help"))
+    }
+
+    func testAddProjectLaterWorkflowActionsUseRekonStyles() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("ReleaseRadar/Projects/OnboardingView.swift"),
+            encoding: .utf8
+        )
+
+        for action in [
+            "Button(\"Back\", action: backToLanding)\n                .buttonStyle(RekonSecondaryButtonStyle())",
+            "Button(\"Choose Project Folder…\", action: chooseFolder)\n                .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Open existing project\") {\n                openExisting(completedProjectID)\n            }\n            .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Authorize Worktree…\", action: authorizeWorktree)\n                        .buttonStyle(RekonSecondaryButtonStyle())",
+            "Button(OnboardingWorkflowPresentation.initializeTitle, action: initializeProject)\n                        .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Finish Initialization\", action: finish)\n                    .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Choose Folder…\", action: chooseAttachmentFolder)\n                .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Attach Folder\", action: confirmFolderAttachment)\n                            .buttonStyle(RekonPrimaryButtonStyle())",
+        ] {
+            XCTAssertTrue(source.contains(action), "Missing RDS style for \(action)")
+        }
+        XCTAssertTrue(source.contains(".buttonStyle(RekonBorderlessIconButtonStyle())"))
     }
 
     func testInitializeConfirmationNamesProjectAndFolderAndPromisesNoRepositoryWrites() {
