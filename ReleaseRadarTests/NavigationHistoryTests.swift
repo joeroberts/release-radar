@@ -739,7 +739,8 @@ final class NavigationHistoryTests: XCTestCase {
         XCTAssertTrue(enteredBlockedValidation)
         XCTAssertEqual(model.selection, .projectPlan(DashboardSampleData.projectID))
         XCTAssertEqual(model.navigationHistory.current.route, .projectPlan(DashboardSampleData.projectID))
-        XCTAssertNotNil(model.dashboardError)
+        XCTAssertNotNil(model.navigationFailureMessage)
+        XCTAssertNil(model.dashboardError)
         if case .checking = model.documentationObservationStatus(for: DashboardSampleData.projectID) {
             // The failed audit did not prevent the read-only validation from continuing.
         } else {
@@ -749,6 +750,10 @@ final class NavigationHistoryTests: XCTestCase {
         await loader.releaseBlockedNavigation()
         await navigation.value
         XCTAssertEqual(model.selection, .projectPlan(DashboardSampleData.projectID))
+
+        await model.navigate(to: .settings)
+        XCTAssertEqual(model.selection, .settings)
+        XCTAssertNil(model.navigationFailureMessage)
     }
 
     @MainActor

@@ -85,6 +85,7 @@ final class AppModel {
     private(set) var workspaceSearchPersistenceMessage: String?
     private(set) var navigationHistory = NavigationHistory(initial: .projects)
     private(set) var navigationRecoveryMessage: String?
+    private(set) var navigationFailureMessage: String?
     private(set) var navigationFocus: NavigationFocus? = .route(.projects)
     var dashboardError: String?
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
@@ -334,6 +335,7 @@ final class AppModel {
 
     func navigate(to route: AppRoute) async {
         captureCurrentNavigationContext()
+        navigationFailureMessage = nil
         let previousProjectID = selection.projectID ?? selectedProjectID
         navigationGeneration &+= 1
         let generation = navigationGeneration
@@ -364,7 +366,7 @@ final class AppModel {
                 try await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
             } catch {
                 guard generation == navigationGeneration else { return }
-                dashboardError = error.localizedDescription
+                navigationFailureMessage = error.localizedDescription
             }
             guard generation == navigationGeneration else { return }
         }
@@ -381,6 +383,7 @@ final class AppModel {
 
     private func restoreNavigation(step: NavigationStep) async {
         captureCurrentNavigationContext()
+        navigationFailureMessage = nil
         navigationGeneration &+= 1
         let moved = switch step {
         case .back: navigationHistory.goBack()
@@ -2878,6 +2881,11 @@ final class AppModel {
 
     func reloadDashboardAfterCommittedAgentCommand() async {
         _ = await reloadProjectProjections(context: .agentCommandCommitted)
+    }
+
+    func reloadAfterNavigationFailure() async {
+        navigationFailureMessage = nil
+        await reloadDashboardAfterCommittedAgentCommand()
     }
 
     func reloadAfterRepositoryRelocation() async {

@@ -21,7 +21,7 @@ struct SidebarView: View {
                     .frame(height: geometry.size.height)
 
                 VStack(spacing: 0) {
-                    if model.dashboard != nil, let error = model.dashboardError {
+                    if let error = model.navigationFailureMessage {
                         FailureStateView(
                             presentation: .init(
                                 title: "Delivery data unavailable",
@@ -33,7 +33,7 @@ struct SidebarView: View {
                             style: .inline,
                             actionTitle: "Reload dashboard",
                             action: {
-                                Task { await model.reloadDashboardAfterCommittedAgentCommand() }
+                                Task { await model.reloadAfterNavigationFailure() }
                             }
                         )
                         .padding(.horizontal, 20)
@@ -248,7 +248,7 @@ struct SidebarView: View {
             WorkspaceHelpView { destination in
                 Task { await model.openWorkspaceHelpDestination(destination) }
             }
-        } else if let error = model.dashboardError, model.dashboard == nil {
+        } else if let error = model.dashboardError {
             FailureStateView(
                 presentation: .init(
                     title: "Delivery data unavailable",
