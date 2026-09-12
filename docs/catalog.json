@@ -6770,6 +6770,28 @@
       "supersedes": [],
       "applicationSensitivity": ["evidence"],
       "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-search-focus-0.1.16-wide-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-search-focus-0.1.16-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-search-focus-0.1.16-compact-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-search-focus-0.1.16-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
     }
   ]
 }
