@@ -112,6 +112,15 @@ service label and Mach service are already occupied by the owner's live helper;
 creating the stale precondition would require altering that working service and
 associated owner state, which was not authorized.
 
+The owner explicitly deferred this combined scenario to the
+[Phase 8 production-package acceptance obligation](../plans/2026-09-06-full-product-architecture-and-delivery-plan.md#phase-8-deferred-stale-helper-acceptance--owner-decision-2026-09-11).
+It is outstanding, not passed, and is nonblocking for the current manual acceptance
+work and Phase 7. Phase 8 must resolve it before broader distribution using the real
+fixed `SMAppService`, installed Settings button, awaited old-process termination,
+current installed-helper identity, fresh exact-identity plugin/receipt status,
+unchanged plugin/project data and actionable failures. Provisioning the required
+isolated logged-in account or VM remains separately authorized future setup.
+
 ## Preservation checks and limits
 
 The installed plugin cache retained exactly four files and matched the newly

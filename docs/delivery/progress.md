@@ -134,17 +134,26 @@ application synchronization. Full owner manual acceptance remains outstanding.
 
 Phase 7 planning is independently approved at
 `a0f22d965395248be6ec5928d2932d3a7ce5166d`. Phase 7 implementation remains paused
-and requires separate explicit authorization. The next eligible owner work is the
-broader manual acceptance guide; the unexercised stale-helper button precondition
-may be revisited only under a naturally occurring stale state or separate explicit
-authorization.
+and requires separate explicit authorization. The next eligible owner work remains
+the broader manual acceptance guide.
+
+The owner explicitly deferred the stale production-helper acceptance scenario to
+[Phase 8 production packaging and release readiness](plans/2026-09-06-full-product-architecture-and-delivery-plan.md#phase-8-deferred-stale-helper-acceptance--owner-decision-2026-09-11).
+It remains outstanding rather than passed and does not block current manual
+acceptance or Phase 7. Before broader distribution, Phase 8 must verify the real
+fixed `SMAppService` stale-helper upgrade handoff through the installed Settings
+button, including awaited old-process termination, current installed-helper
+identity, fresh exact-identity plugin/receipt status, unchanged plugin/project data
+and actionable failures. The [signed installation evidence](evidence/2026-09-11-restart-helper-signed-installation.md#remaining-stale-helper-gap)
+retains the accepted evidence and precise limitation.
 
 A faithful isolated stale-helper check would require a separately provisioned,
 logged-in macOS account or VM with its own GUI launchd domain, Codex home, Release
 Radar store and installed signed app versions. None was created or configured.
 This account's fixed service label and Mach service are occupied by the owner's live
 helper, so manufacturing the precondition here would alter the working service and
-owner state beyond the authorization granted.
+owner state beyond the authorization granted. Provisioning that environment remains
+separate future work and is not currently authorized.
 
 Any future DMG containing changes after the recorded 0.1.9 package must use a
 strictly newer semantic version, expected to be `0.1.10` unless already consumed,
