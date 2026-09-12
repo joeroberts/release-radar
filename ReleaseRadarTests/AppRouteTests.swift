@@ -3395,6 +3395,55 @@ final class AppRouteTests: XCTestCase {
         ])
     }
 
+    func testSaveQueryAttemptStateKeepsTheEnteredNameAndExposesFailure() {
+        var state = WorkspaceToolbarSaveState(name: "Existing query")
+
+        let shouldDismiss = state.resolve(.failed("Delivery store is closed"))
+
+        XCTAssertFalse(shouldDismiss)
+        XCTAssertEqual(state.name, "Existing query")
+        XCTAssertEqual(state.failure, "Delivery store is closed")
+    }
+
+    @MainActor
+    func testSaveQueryFailurePopoverExposesAccessibleRecovery() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 40, y: 40, width: 360, height: 280),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "RDS save failure popover — isolated native acceptance"
+        defer { window.close() }
+        let hosting = NSHostingView(rootView: WorkspaceSaveQueryPopover(
+            name: .constant("Existing query"),
+            failure: "Delivery store is closed",
+            onCancel: {},
+            onSave: {}
+        ).environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+        let failure = try XCTUnwrap(accessibilityElement(
+            nativeWindow,
+            identifier: "workspace-search-save-error"
+        ))
+        XCTAssertTrue(accessibilityText(failure).contains("Delivery store is closed"))
+        XCTAssertTrue(accessibilityText(failure).contains("try again"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search-save-name"))
+        XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search-save-confirm"))
+    }
+
     @MainActor
     func testPersistentToolbarAndResponsiveSidebarExposeOneAccessibleEntryPointPerAction() async throws {
         let directory = FileManager.default.temporaryDirectory

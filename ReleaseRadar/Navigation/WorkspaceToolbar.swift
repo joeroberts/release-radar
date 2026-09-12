@@ -13,6 +13,31 @@ enum WorkspaceShellLayout {
     }
 }
 
+struct WorkspaceToolbarSaveState: Equatable {
+    var name = ""
+    var failure: String?
+
+    mutating func reset() {
+        name = ""
+        failure = nil
+    }
+
+    mutating func beginAttempt() {
+        failure = nil
+    }
+
+    mutating func resolve(_ outcome: WorkspaceSearchSaveOutcome) -> Bool {
+        switch outcome {
+        case .saved:
+            failure = nil
+            return true
+        case let .failed(message):
+            failure = message
+            return false
+        }
+    }
+}
+
 struct WorkspaceToolbar: View {
     @Bindable var model: AppModel
     let isCompact: Bool
@@ -21,8 +46,7 @@ struct WorkspaceToolbar: View {
 
     @State private var isSearchFocused = false
     @State private var isSavePresented = false
-    @State private var savedQueryName = ""
-    @FocusState private var isSavedQueryNameFocused: Bool
+    @State private var saveState = WorkspaceToolbarSaveState()
 
     var body: some View {
         RekonToolbar {
@@ -126,34 +150,12 @@ struct WorkspaceToolbar: View {
     }
 
     private var savePopover: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Save query")
-                .font(RekonTypography.compactTitle)
-            Text("Save the visible query with its current scope, record types and sort.")
-                .font(RekonTypography.metadata)
-                .foregroundStyle(RekonTheme.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-            TextField("Query name", text: $savedQueryName)
-                .textFieldStyle(RekonQuietTextFieldStyle())
-                .focused($isSavedQueryNameFocused)
-                .onSubmit { saveQuery() }
-                .accessibilityIdentifier("workspace-search-save-name")
-            HStack {
-                Spacer()
-                Button("Cancel") { dismissSave() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Save") { saveQuery() }
-                    .buttonStyle(RekonPrimaryButtonStyle())
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(savedQueryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("workspace-search-save-confirm")
-            }
-        }
-        .padding(16)
-        .frame(width: 320)
-        .background(RekonTheme.backgroundRaised)
-        .onAppear { isSavedQueryNameFocused = true }
-        .onExitCommand { dismissSave() }
+        WorkspaceSaveQueryPopover(
+            name: $saveState.name,
+            failure: saveState.failure,
+            onCancel: dismissSave,
+            onSave: saveQuery
+        )
     }
 
     private var saveIsDisabled: Bool {
@@ -197,22 +199,22 @@ struct WorkspaceToolbar: View {
     }
 
     private func presentSave() {
-        savedQueryName = ""
+        saveState.reset()
         isSavePresented = true
     }
 
     private func dismissSave() {
-        savedQueryName = ""
+        saveState.reset()
         isSavePresented = false
         isSearchFocused = true
     }
 
     private func saveQuery() {
-        let name = savedQueryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = saveState.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
+        saveState.beginAttempt()
         Task {
-            await model.saveCurrentWorkspaceSearch(name: name)
-            if model.workspaceSearchSavedQueries.contains(where: { $0.name == name }) {
+            if saveState.resolve(await model.saveCurrentWorkspaceSearch(name: name)) {
                 dismissSave()
             }
         }
@@ -235,6 +237,57 @@ struct WorkspaceToolbar: View {
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
         .help(help ?? label)
+    }
+}
+
+struct WorkspaceSaveQueryPopover: View {
+    @Binding var name: String
+    let failure: String?
+    let onCancel: () -> Void
+    let onSave: () -> Void
+
+    @FocusState private var isNameFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Save query")
+                .font(RekonTypography.compactTitle)
+            Text("Save the visible query with its current scope, record types and sort.")
+                .font(RekonTypography.metadata)
+                .foregroundStyle(RekonTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            TextField("Query name", text: $name)
+                .textFieldStyle(RekonQuietTextFieldStyle())
+                .focused($isNameFocused)
+                .onSubmit(onSave)
+                .accessibilityIdentifier("workspace-search-save-name")
+            if let failure {
+                RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                    Text("Query not saved").font(.headline)
+                    Text(failure)
+                    Text("Correct the name or restore storage access, then try again.")
+                }
+                .accessibilityIdentifier("workspace-search-save-error")
+            }
+            HStack {
+                Spacer()
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: onSave)
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("workspace-search-save-confirm")
+            }
+        }
+        .padding(16)
+        .frame(width: 320)
+        .background(RekonTheme.backgroundRaised)
+        .onAppear { isNameFocused = true }
+        .onChange(of: failure) { _, newFailure in
+            if newFailure != nil { isNameFocused = true }
+        }
+        .onExitCommand(perform: onCancel)
     }
 }
 

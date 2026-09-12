@@ -37,11 +37,21 @@ installation, push/PR/merge and owner/live application state remain separate and
 unauthorized. One fresh independent code/integration and UX/accessibility review
 is required after the local candidate and direct evidence are ready.
 
-The local candidate is ready for that review. The focused XCTest selection
-passed 40 tests with 3 explicit skips caused by the XCTest host exposing no
-self-accessibility windows after Search took focus; the toolbar test itself
-asserts every action is fully visible and accessible at 1280 and 760 points.
-All 9 workspace-search acceptance tests also pass.
+The initial local candidate `42e40f3` entered independent review. The reviewer
+found one required save-failure recovery defect: a failed save from a non-Search
+route could be silent, and an existing same-named query could incorrectly dismiss
+the popover. The bounded correction now returns the exact save-attempt outcome,
+dismisses only on confirmed success, and retains the entered name with an
+accessible actionable error on failure. Five affected tests pass, including the
+non-Search same-name regression, accessible failure presentation, successful save
+path and wide/compact toolbar accessibility. The corrected candidate is ready for
+follow-up review.
+
+Before that correction, the focused XCTest selection passed 40 tests with 3
+explicit skips caused by the XCTest host exposing no self-accessibility windows
+after Search took focus; the toolbar test itself asserts every action is fully
+visible and accessible at 1280 and 760 points. All 9 workspace-search acceptance
+tests also pass.
 The disposable native test app was also exercised through supported external UI
 inspection: Return submission, Back restoration, save-without-run, Escape
 dismissal, and wide/compact accessibility all passed. The app build and managed

@@ -7,6 +7,11 @@ enum AttachFolderOutcome: Equatable, Sendable {
     case attachedNeedsReload
 }
 
+enum WorkspaceSearchSaveOutcome: Equatable, Sendable {
+    case saved(WorkspaceSavedQuery)
+    case failed(String)
+}
+
 private extension WorkspaceSearchHistorySource {
     var activitySource: ActivitySource {
         switch self {
@@ -1413,21 +1418,38 @@ final class AppModel {
         }
     }
 
-    func saveCurrentWorkspaceSearch(name: String) async {
-        guard canExecuteWorkspaceSearch else { return }
+    @discardableResult
+    func saveCurrentWorkspaceSearch(name: String) async -> WorkspaceSearchSaveOutcome {
+        guard canExecuteWorkspaceSearch else {
+            return .failed(
+                workspaceSearchFailure
+                    ?? workspaceSearchPersistenceMessage
+                    ?? "The query could not be saved."
+            )
+        }
         do {
             var definition = workspaceSearchDefinition
             definition.text = workspaceSearchDraft
-            _ = try await WorkspaceSearchPreferencesRepository(store: store)
-                .saveQuery(name: name, definition: definition)
-            workspaceSearchSavedQueries = try await WorkspaceSearchPreferencesRepository(store: store)
-                .loadSavedQueries()
-            workspaceSearchPersistenceMessage = "Saved query “\(name.trimmingCharacters(in: .whitespacesAndNewlines))”."
+            let repository = WorkspaceSearchPreferencesRepository(store: store)
+            let saved = try await repository.saveQuery(name: name, definition: definition)
+            do {
+                workspaceSearchSavedQueries = try await repository.loadSavedQueries()
+            } catch {
+                workspaceSearchSavedQueries.removeAll { $0.id == saved.id }
+                workspaceSearchSavedQueries.append(.supported(saved))
+                workspaceSearchSavedQueries.sort {
+                    ($0.name.localizedLowercase, $0.id) < ($1.name.localizedLowercase, $1.id)
+                }
+            }
+            workspaceSearchPersistenceMessage = "Saved query “\(saved.name)”."
+            return .saved(saved)
         } catch {
-            workspaceSearchPersistenceMessage = error.localizedDescription
+            let message = error.localizedDescription
+            workspaceSearchPersistenceMessage = message
             if (error as? WorkspaceSearchError) == .authorizationRequired {
                 workspaceSearchNeedsScopeReselection = true
             }
+            return .failed(message)
         }
     }
 

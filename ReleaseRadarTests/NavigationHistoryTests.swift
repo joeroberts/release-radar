@@ -234,6 +234,36 @@ final class NavigationHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testToolbarSaveReturnsFailureFromOverviewDespiteAnExistingSameNamedQuery() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ToolbarSearchSaveFailure-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        model.setWorkspaceSearchText("existing definition")
+        await model.saveCurrentWorkspaceSearch(name: "Existing query")
+        XCTAssertTrue(model.workspaceSearchSavedQueries.contains { $0.name == "Existing query" })
+        model.setWorkspaceSearchText("unsaved replacement")
+        await model.navigate(to: .projectOverview(DashboardSampleData.projectID))
+        let historyCount = model.navigationHistory.entries.count
+        await store.close()
+
+        let outcome = await model.saveCurrentWorkspaceSearch(name: "Existing query")
+
+        guard case let .failed(message) = outcome else {
+            return XCTFail("The closed store must fail this exact save attempt")
+        }
+        XCTAssertTrue(message.contains("closed"))
+        XCTAssertEqual(model.selection, .projectOverview(DashboardSampleData.projectID))
+        XCTAssertEqual(model.navigationHistory.entries.count, historyCount)
+        XCTAssertEqual(model.workspaceSearchDraft, "unsaved replacement")
+        XCTAssertTrue(model.workspaceSearchSavedQueries.contains { $0.name == "Existing query" })
+    }
+
+    @MainActor
     func testUnsupportedWorkingSearchSurvivesHelpBackAndOrdinarySearchWithoutReplacingBytes() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-UnsupportedWorkingSearch-\(UUID().uuidString)", isDirectory: true)
