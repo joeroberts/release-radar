@@ -2,25 +2,46 @@
 
 ## Current outcome
 
-Owner-authorized local Release Radar `0.1.13` packaging, local annotated tag
-and non-launch installation are active on `codex/release-0.1.13`, from committed
-baseline `3fb119c303e7da5a96baa07d43d53e5d4860e44b`. The controlling
-[release brief](task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md)
-limits the work to version/digest metadata, focused checks, local DMG copies,
-evidence and an authorized replacement of `/Applications/ReleaseRadar.app`.
-The independently reviewed bookmark and Help correction is source
-`c045f29ec09273dccabb033731f423d2d3850906`, with closeout `b7cc968`.
-The owner withdrew the redundant second package-review gate; its fresh reviewer
-was stopped, not approved. The prior independent product review and direct
-package checks remain sufficient for this routine version update. Annotated local
-tag `v0.1.13` targets package commit `b2497a58b3347c48bebe33c69a20fa6761790d6a`.
-The [package evidence](evidence/2026-09-12-release-0.1.13-packaging.md) records
-the signed local DMG, matching Downloads copy and verified non-launch installation
-of `/Applications/ReleaseRadar.app` as `0.1.13 (1)`. No push, PR, merge,
-publication, notarization or app launch occurred.
+The owner authorized immediate reconciliation of delivered local releases with the
+actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
+chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/pull/50)
+(acceptance, helper, navigation and RDS-field prerequisites),
+[PR #49](https://github.com/joeroberts/release-radar/pull/49) (toolbar adoption), and
+[PR #51](https://github.com/joeroberts/release-radar/pull/51) (remaining 0.1.12/0.1.13
+changes and release records). The first two are merged; merging this final record
+completes the delivered-source backlog. The separately recorded 0.1.11 installation
+closeout is retained in the same history.
 
-Phase 6 is merged through the actual default branch at
-`5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`. The delivered scope follows the
+The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
+tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
+`v0.1.13` retain their original release commits. Integration changes no product
+source or packaged bytes, so it requires no version bump, new DMG or reinstall.
+The [0.1.13 package evidence](evidence/2026-09-12-release-0.1.13-packaging.md)
+records identity, direct package checks and verified installation. Existing DMGs
+remain rollback copies; no extra app backup is needed.
+
+Fresh combined-source verification selected 207 tests: **194 passed, 7 skipped,
+and 6 failed cases (12 assertions)**. All six failed identically on unchanged
+default commit `5e7b9b8`: four native fixtures could not write outside the sandbox,
+one native board test could not obtain its AX element, and the native phase
+lifecycle journey retained its prior lifecycle/revision assertion failures. These
+are pre-existing failures, not a green full suite. Navigation/history, Search,
+Help, planning policy, helper restart and the new toolbar checks passed.
+Documentation catalog/index and diff checks pass. Existing independent product
+reviews remain terminal; no redundant package review was added.
+
+Only repository integration and the requested completed-task cleanup are included.
+Phase 7 stays paused and its tasks remain untouched. The missing Pursuit phases
+investigation remains open; unimplemented Phase 6 extensions and the Phase 8
+isolated stale-helper test retain their recorded boundaries. Repository integration
+does not claim application catalog acceptance or mutate owner project data.
+
+The milestone records below preserve their original scope and verification; their
+local-only publication restrictions are superseded only for this authorized
+integration. The active endpoint above controls current release status.
+
+The original Phase 6A–6E sequence reached the default branch at
+`5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`, before the corrective integration above. The delivered scope follows the
 [Phase 6 controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md):
 History and attention, distinct Delivery and Execution Goals, revision-bound
 evidence, generic task adoption, workspace Search, saved views, and shared Help.
@@ -72,11 +93,11 @@ installation, merge and owner/live application state remain separate and
 unauthorized. Independent code/integration and UX/accessibility review is complete.
 The delivery and review tasks are archived with their processes stopped. The
 reviewed result and captures are preserved in the canonical project checkout;
-monitoring is paused. The owner authorized push/PR creation and
-[PR #49](https://github.com/joeroberts/release-radar/pull/49) is open. Its base is
-`codex/rds-toolbar-adoption-base` at `83f3bb8`, keeping the diff limited to this
-reviewed adoption. Earlier baseline changes must land before retargeting to the
-default branch. Merge, packaging and installation remain separate endpoints.
+monitoring is paused. The owner subsequently authorized reconciliation of delivered work.
+[PR #50](https://github.com/joeroberts/release-radar/pull/50) landed the prerequisite
+baseline, and [PR #49](https://github.com/joeroberts/release-radar/pull/49) was
+retargeted and merged into `codex/release-radar-mvp`. Later release records below
+cover packaging and installation.
 
 The initial local candidate `42e40f3` entered independent review. The reviewer
 found one required save-failure recovery defect: a failed save from a non-Search
