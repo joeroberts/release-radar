@@ -19,24 +19,34 @@ final class AppRouteTests: XCTestCase {
             store: DeliveryStore(databaseURL: databaseURL),
             externalServicesSuppressed: true
         )
-        let hosting = NSHostingView(rootView: AddProjectWindowView(model: model))
-        hosting.frame = NSRect(x: 0, y: 0, width: 760, height: 560)
-        let window = NSWindow(
-            contentRect: hosting.frame,
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.isReleasedWhenClosed = false
-        window.contentView = hosting
-        defer { window.close() }
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        for (width, height, captureName) in [
+            (760.0, 560.0, "add-project-rds-default-window"),
+            (680.0, 500.0, "add-project-rds-minimum-window"),
+        ] {
+            let hosting = NSHostingView(rootView: AddProjectWindowView(model: model))
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: height)
+            let window = NSWindow(
+                contentRect: hosting.frame,
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.isReleasedWhenClosed = false
+            window.contentView = hosting
+            defer { window.close() }
 
-        window.makeKeyAndOrderFront(nil)
-        try await Task.sleep(for: .milliseconds(150))
-        hosting.layoutSubtreeIfNeeded()
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
 
-        XCTAssertTrue(window.titlebarAppearsTransparent)
-        XCTAssertEqual(window.titleVisibility, .hidden)
+            XCTAssertTrue(window.titlebarAppearsTransparent)
+            XCTAssertEqual(window.titleVisibility, .hidden)
+            try fullWindowCapture(window, name: captureName)
+        }
     }
 
     @MainActor
@@ -2156,6 +2166,21 @@ final class AppRouteTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
 
+    }
+
+    private func fullWindowCapture(_ window: NSWindow, name: String) throws {
+        let image = try XCTUnwrap(CGWindowListCreateImage(
+            .null,
+            .optionIncludingWindow,
+            CGWindowID(window.windowNumber),
+            .bestResolution
+        ))
+        let bitmap = NSBitmapImageRep(cgImage: image)
+        let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     private func accessibilityWindow(_ application: AXUIElement, title: String) -> AXUIElement? {
