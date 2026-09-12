@@ -105,6 +105,22 @@ installed bytes differ from the last managed receipt. The
 [signed installation evidence](evidence/2026-09-11-restart-helper-signed-installation.md)
 records the result and limitation.
 
+A later owner-supplied Settings screenshot shows plugin version `0.1.9` as
+**Installed**. It is recorded as a later observation without inferring which
+intervening action changed the earlier **Modified** state.
+
+The local `codex/restart-helper-dmg-live-test` correction adds an isolated
+real-process regression for the stale-helper gap. It uses a test-only launchd label,
+Mach service and Codex home; installs the current four-file plugin over real helper
+XPC; replaces the running helper with a valid legacy three-file process; calls the
+actual AppModel restart method; and verifies ordered teardown, PID termination,
+current executable identity, real XPC recovery, **Installed** presentation and
+exact receipt restoration. Its mutation check fails at stale-state/receipt
+assertions when the legacy inventory behavior is removed. Adjacent transport,
+coordinator and Settings-route tests and the Debug app build pass. The test uses a
+launchctl-backed service adapter and ad hoc unsandboxed helper fixtures, so it does
+not claim a production `SMAppService` registration or a SwiftUI button press.
+
 ## Authorization, limitations, and next work
 
 The authorized Restart helper package, installation, and bounded live-check endpoint
@@ -123,6 +139,11 @@ and requires separate explicit authorization. The next eligible owner work is th
 broader manual acceptance guide; the unexercised stale-helper button precondition
 may be revisited only under a naturally occurring stale state or separate explicit
 authorization.
+
+Any future DMG containing changes after the recorded 0.1.9 package must use a
+strictly newer semantic version, expected to be `0.1.10` unless already consumed,
+with matching application and DMG versions. No version bump or packaging is
+authorized in the current correction.
 
 The release staging bundle and repository `DerivedData` remain temporary build
 outputs. Earlier per-slice temporary diagnostics listed in the historical Phase 6

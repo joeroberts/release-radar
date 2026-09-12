@@ -67,6 +67,12 @@ existing reinstall guidance. Therefore the button's current-helper recovery path
 passed, while the stale-helper button path remains not exercised because startup
 recovery preempted it.
 
+A later owner-supplied Settings screenshot shows plugin version `0.1.9` as
+**Installed**. That screenshot is accepted as a later UI observation only: the
+intervening actions were not observed, so it does not show that the Restart helper
+action caused the state change and does not replace the contemporaneous
+**Modified** result above.
+
 The transient progress state was observed through accessibility. Native image
 capture settled after the operation and did not preserve a distinct progress frame;
 the retained progress PNG consequently matches the settled view and is not treated
@@ -75,6 +81,46 @@ as visual proof of the transient state.
 - [Settings before activation](2026-09-11-restart-helper-before.png)
 - [Attempted transient capture](2026-09-11-restart-helper-progress.png)
 - [Settings after activation](2026-09-11-restart-helper-after.png)
+
+## Isolated stale-helper regression
+
+A repository-owned isolated harness now complements the installed check. It
+builds distinct current and legacy helper executables from the production helper
+source, gives the legacy executable the earlier three-file plugin inventory, and
+runs them behind a test-only launchd label and Mach service. The test uses an
+isolated Codex home under `~/.codex/release-radar-tests/`; it does not use the
+owner's installed plugin state or Release Radar database.
+
+`script/test_isolated_helper_restart.sh` passed the focused real-process test. The
+test installs the current four-file plugin through real helper XPC, preserves the
+resulting managed receipt, starts the legacy helper and observes **Needs repair**,
+then calls the same `AppModel.restartCodexPluginHelper()` method used by Settings.
+It verifies that asynchronous unregister starts first, the legacy PID terminates
+before registration starts, the new process has the current executable path and
+CDHash, real helper XPC reports the current version and digest, Settings returns to
+**Installed**, and the exact prior receipt is restored. Removing the legacy
+inventory compile flag made the test fail at the stale-state and receipt assertions;
+restoring it returned the test to green.
+
+The complete evidence is deliberately composite:
+
+- the signed installed-app check above exercises the actual Settings button and a
+  production `SMAppService`, but only with an already-current helper;
+- repository unit tests exercise asynchronous `SMAppService` ordering and error
+  behavior with a service double;
+- the isolated regression exercises the actual AppModel method, client, XPC,
+  helper processes, plugin CLI operations, process termination, relaunch and
+  receipt recovery, but uses a launchctl-backed service adapter rather than a
+  production `SMAppService` registration and does not press the SwiftUI button.
+
+The isolated helpers are ad hoc signed and unsandboxed because a manually loaded
+legacy launchd job does not carry the registration metadata of an embedded
+`SMAppService`. The helper still applies the production app-peer requirement; the
+client's helper requirement is narrowed to the test executable identifier. The
+ordinary Debug build separately verifies that the production helper is built with
+its sandbox entitlements. Consequently, an actual stale production
+`SMAppService` handoff initiated by the installed SwiftUI button remains the only
+unexercised combination.
 
 ## Preservation checks and limits
 

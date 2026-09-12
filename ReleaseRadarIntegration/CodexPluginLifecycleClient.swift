@@ -23,6 +23,8 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
 
     private let service: any PluginLifecycleServiceManaging
     private let invokeRemote: RemoteInvoker?
+    private let machServiceName: String
+    private let helperCodeSigningRequirement: String
     private let lock = NSLock()
     private var connection: NSXPCConnection?
 
@@ -30,10 +32,14 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
         service: any PluginLifecycleServiceManaging = SMAppService.agent(
             plistName: ReleaseRadarPluginLifecycleTransport.launchAgentPlistName
         ),
-        invokeRemote: RemoteInvoker? = nil
+        invokeRemote: RemoteInvoker? = nil,
+        machServiceName: String = ReleaseRadarPluginLifecycleTransport.machService,
+        helperCodeSigningRequirement: String = ReleaseRadarPluginLifecycleTransport.helperRequirement
     ) {
         self.service = service
         self.invokeRemote = invokeRemote
+        self.machServiceName = machServiceName
+        self.helperCodeSigningRequirement = helperCodeSigningRequirement
     }
 
     func status() async -> CodexPluginHelperReply { await call(.status) }
@@ -206,11 +212,11 @@ final class CodexPluginLifecycleClient: CodexPluginLifecycleManaging, @unchecked
         lock.unlock()
         if let existing { return existing }
         let connection = NSXPCConnection(
-            machServiceName: ReleaseRadarPluginLifecycleTransport.machService,
+            machServiceName: machServiceName,
             options: []
         )
         connection.remoteObjectInterface = NSXPCInterface(with: ReleaseRadarPluginLifecycleXPC.self)
-        connection.setCodeSigningRequirement(ReleaseRadarPluginLifecycleTransport.helperRequirement)
+        connection.setCodeSigningRequirement(helperCodeSigningRequirement)
         connection.invalidationHandler = { [weak self, weak connection] in
             self?.lock.withLock {
                 if self?.connection === connection { self?.connection = nil }

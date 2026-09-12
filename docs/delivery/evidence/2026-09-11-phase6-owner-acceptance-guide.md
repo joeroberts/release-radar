@@ -27,6 +27,12 @@ candidates. The corrected package is superseded by the package above for the
 Restart helper recovery check; it remains the recorded candidate for the earlier
 bounded installation evidence.
 
+Any later DMG that includes source changes after this 0.1.9 package must use a
+strictly newer semantic version, expected to be `0.1.10` unless that version has
+already been consumed. The application bundle version and DMG filename/version
+must match. This guide does not authorize a version bump, package build, or
+installation.
+
 The 0.1.9 DMG is an owner-only local build. Its bundle and nested code pass strict
 signature verification, but it is not notarized and Gatekeeper does not assess it
 as a generally distributable app. Phase 7 portable export/import is not in this
@@ -188,6 +194,9 @@ limitation and test only the current-helper restart path.
 
 The signed installed result for this package is recorded in the
 [Restart helper evidence](2026-09-11-restart-helper-signed-installation.md).
+That evidence also records a later isolated real-process/XPC stale-helper
+regression and the precise boundary between it, the installed button check and the
+mocked service-ordering tests.
 
 ## Disposable-project mutation setup
 

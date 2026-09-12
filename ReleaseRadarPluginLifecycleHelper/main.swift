@@ -475,7 +475,24 @@ private final class Lifecycle: @unchecked Sendable {
         var buffer = [CChar](repeating: 0, count: Int(sysconf(_SC_GETPW_R_SIZE_MAX).clamped(to: 16_384...1_048_576)))
         guard getpwuid_r(geteuid(), &pwd, &buffer, buffer.count, &result) == 0,
               result != nil, let directory = pwd.pw_dir else { throw LifecycleError.integrityUnknown }
-        return URL(fileURLWithPath: String(cString: directory), isDirectory: true)
+        let accountHome = URL(fileURLWithPath: String(cString: directory), isDirectory: true)
+#if RELEASE_RADAR_ISOLATED_TEST
+        guard let requestedHome = ProcessInfo.processInfo.environment["RELEASE_RADAR_TEST_HOME"],
+              !requestedHome.isEmpty else { throw LifecycleError.integrityUnknown }
+        let allowedRoot = accountHome
+            .appendingPathComponent(".codex/release-radar-tests", isDirectory: true)
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let testHome = URL(fileURLWithPath: requestedHome, isDirectory: true)
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        guard testHome.path.hasPrefix(allowedRoot.path + "/") else {
+            throw LifecycleError.integrityUnknown
+        }
+        return testHome
+#else
+        return accountHome
+#endif
     }
 
     private func strictObject(_ data: Data) throws -> [String: Any]? {
@@ -565,7 +582,10 @@ private final class Lifecycle: @unchecked Sendable {
         }
 
         let argv = [cli.path] + arguments
-        let environment = ["LANG=C", "LC_ALL=C", "PATH=/usr/bin:/bin"]
+        var environment = ["LANG=C", "LC_ALL=C", "PATH=/usr/bin:/bin"]
+#if RELEASE_RADAR_ISOLATED_TEST
+        environment.append("CODEX_HOME=\(try effectiveHome().appendingPathComponent(".codex", isDirectory: true).path)")
+#endif
         var childPID = pid_t()
         let spawnStatus = withMutableCStringArray(argv) { argvPointer in
             withMutableCStringArray(environment) { environmentPointer in
@@ -863,7 +883,11 @@ private final class OutputCapture: @unchecked Sendable {
 private enum PluginDigester {
     struct Package { let version: String; let digest: String }
     private static let legacyFiles = [".codex-plugin/plugin.json", ".mcp.json", "skills/release-radar/SKILL.md"]
+#if RELEASE_RADAR_LEGACY_PLUGIN_INVENTORY
+    private static let files = legacyFiles
+#else
     private static let files = legacyFiles + ["skills/shared-execution/SKILL.md"]
+#endif
 
     static func marketplacePackage(at root: URL) throws -> Package {
         let plugin = root.appendingPathComponent("plugins/release-radar", isDirectory: true)
@@ -946,7 +970,33 @@ private extension Int {
 }
 
 private let delegate = ListenerDelegate()
-private let listener = NSXPCListener(machServiceName: "2UA854NLX4.com.rekonlabs.ReleaseRadar.plugin-lifecycle")
+private let lifecycleMachService: String = {
+#if RELEASE_RADAR_ISOLATED_TEST
+    let prefix = "2UA854NLX4.com.rekonlabs.ReleaseRadar.isolated-"
+    let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".-"))
+    guard let name = ProcessInfo.processInfo.environment["RELEASE_RADAR_TEST_MACH_SERVICE"],
+          name.hasPrefix(prefix), name.count <= 128,
+          name.unicodeScalars.allSatisfy({ allowedCharacters.contains($0) })
+    else { fatalError("Invalid isolated lifecycle Mach service") }
+    return name
+#else
+    return "2UA854NLX4.com.rekonlabs.ReleaseRadar.plugin-lifecycle"
+#endif
+}()
+
+private let listener = NSXPCListener(machServiceName: lifecycleMachService)
 listener.delegate = delegate
 listener.resume()
+#if RELEASE_RADAR_ISOLATED_TEST
+private let isolatedShutdownFile: String = {
+    guard let path = ProcessInfo.processInfo.environment["RELEASE_RADAR_TEST_SHUTDOWN_FILE"],
+          path.contains("/Library/Containers/com.rekonlabs.ReleaseRadar/Data/tmp/release-radar-isolated-helper."),
+          path.hasSuffix("/shutdown")
+    else { fatalError("Invalid isolated lifecycle shutdown file") }
+    return path
+}()
+private let isolatedShutdownTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
+    if access(isolatedShutdownFile, F_OK) == 0 { exit(EXIT_SUCCESS) }
+}
+#endif
 RunLoop.current.run()
