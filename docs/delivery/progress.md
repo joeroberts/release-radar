@@ -74,10 +74,18 @@ release commit.
 
 The [0.1.10 packaging evidence](evidence/2026-09-11-release-0.1.10-packaging.md)
 records focused version tests, strict nested-code and entitlement checks, read-only
-DMG mounting, staged/mounted identity and the matching Downloads copy. The installed
-application and helper processes remained unchanged. This local package is not
-notarized or generally distributable. Installation, app launch, full manual
-acceptance and the Phase 8 stale production-helper scenario remain outstanding.
+DMG mounting, staged/mounted identity and the matching Downloads copy. Under later
+explicit owner authorization, the verified Downloads DMG was installed in place.
+The prior `0.1.9 (1)` application remains available at
+`/Users/jroberts/Documents/Release Radar Backups/Pre-0.1.10-2026-09-11.ReleaseRadarAppOnly.V5Ojxa/ReleaseRadar.app`.
+The installed application is now `0.1.10 (1)`, matches the package's signed
+executable, `CodeResources`, and CodeDirectory identity, and reopened the existing
+Pursuit workspace. Normal startup replaced both service processes with executables
+from the new `/Applications/ReleaseRadar.app` and reported the Codex plugin as
+**Installed** at `0.1.10`; no manual plugin or helper action was used. The local tag
+remains on the original release commit. This package is not notarized or generally
+distributable. Full manual acceptance and the Phase 8 stale production-helper
+scenario remain outstanding.
 
 ## Earlier owner acceptance candidate
 
