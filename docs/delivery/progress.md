@@ -26,6 +26,22 @@ in the [later-workflow evidence](evidence/2026-09-12-add-project-rds-later-workf
 The correction is packaged and installed locally as **0.1.15 (1)**. Its signed
 DMG, matching Downloads copy and installed identity are recorded in the
 [0.1.15 package evidence](evidence/2026-09-12-release-0.1.15-packaging.md).
+The corrected delivery task is complete, idle and archived again. Local release
+tag `v0.1.15` identifies package commit `94a7768`; remote integration of the
+0.1.14/0.1.15 changes is still pending in this master task.
+
+The owner also reported an unexpected `TEST` search value and a blue square
+around the search-submit icon. Read-only diagnosis against installed 0.1.14
+found `TEST` in the sandbox store's supported working-search preference, saved
+at 2026-09-12T16:17:36Z with the generic `release-radar` audit actor. Startup
+restores that value; the code default is empty. The record does not identify
+the initiator, so attribution remains unknown. The submit button has a separate
+focus state inside pinned RDS `RekonSearchField`, consistent with the native blue
+focus treatment in the screenshot; exact focus transitions were not exercised.
+No search preferences were changed. Clearing the working search through the app
+and any RDS focus-treatment correction remain pending; neither is part of 0.1.15.
+The read-only toolbar diagnosis task is complete and archived with this result
+preserved here.
 
 The owner authorized immediate reconciliation of delivered local releases with the
 actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
