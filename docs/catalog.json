@@ -6402,6 +6402,17 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-phase6-compact-toolbar-mockup-proposal-2026-09-12",
+      "path": "docs/design/mockups/phase6-compact-workspace-toolbar-proposal.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
+      "checksum": {"policy": "notApplicable"}
     }
   ]
 }

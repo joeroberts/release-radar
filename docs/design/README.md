@@ -63,6 +63,7 @@
 | 7faa2ee4-07ad-4f20-ace6-58c6cc231964 | [docs/design/mockups/icon.png](mockups/icon.png) | designAsset | nonAuthoritative | completed | none | none |
 | 15da1e7b-53c5-4bb2-867b-47efc43486f9 | [docs/design/mockups/needs&#95;review.png](mockups/needs_review.png) | designAsset | supporting | active | none | none |
 | 525d606f-8cc2-48fa-a5fd-8fbbe5698f4b | [docs/design/mockups/onboarding&#95;state.png](mockups/onboarding_state.png) | designAsset | nonAuthoritative | superseded | none | none |
+| rr-phase6-compact-toolbar-mockup-proposal-2026-09-12 | [docs/design/mockups/phase6-compact-workspace-toolbar-proposal.png](mockups/phase6-compact-workspace-toolbar-proposal.png) | designAsset | supporting | proposed | none | none |
 | rr-phase6-toolbar-mockup-proposal-2026-09-12 | [docs/design/mockups/phase6-persistent-workspace-toolbar-proposal.png](mockups/phase6-persistent-workspace-toolbar-proposal.png) | designAsset | supporting | proposed | none | none |
 | 3a8a3e7b-5510-42cb-8a9a-ae6180db10a3 | [docs/design/mockups/phase&#95;board.png](mockups/phase_board.png) | designAsset | supporting | active | none | none |
 | 12882659-ebf5-4541-b5a7-3e1f22a4230e | [docs/design/mockups/settings.png](mockups/settings.png) | designAsset | supporting | active | none | none |

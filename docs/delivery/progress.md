@@ -30,6 +30,28 @@ Metric implementation was explicitly stopped and remains stopped. The proposal
 preserves the owner's 6F/6G/6H assignments and flags the earlier guided-setup naming
 for reconciliation. No app state or catalog acceptance is changed by this review.
 
+All three reviews and their requested options have concluded. The owner accepted
+the wide and corrected compact mockups as visual references and selected toolbar
+search with results-page filters/saved queries, the compact icon sidebar with
+direct Help/Settings/Notifications and bookmark Save, immediate Manage Project
+loading with in-place recovery, and Codex-task-mediated guided setup. The proposal
+records those selections. RDS API details and the guided-setup slice label remain
+proposed; product implementation has not been released.
+
+The separate RekonUI Library versioning/toolbar prerequisite has now passed its
+independent review with no remaining findings. Its plan is recorded on
+`codex/rds-versioning-toolbar-plan` in
+`docs/delivery/plans/2026-09-12-rds-versioning-toolbar-plan.md`; RDS closeout commit
+`09dd3a8` records the final disposition and passing canonical documentation check.
+The existing missing historical catalog artifact was restored unchanged. Both
+bounded RDS planning/review tasks are stopped and archived; monitoring is paused.
+The owner subsequently approved RDS toolbar/search implementation. The fresh
+RekonUI Library task “Implement reusable RDS toolbar and search controls” is active
+from the reviewed baseline, with package/native-window verification and independent
+review required. Monitoring now follows that implementation. Historical tag creation
+and Release Radar consumer adoption remain separate actions. No tags or consumer
+adoption occurred.
+
 ## Release 0.1.11 package candidate
 
 The reviewed RDS treatment for the main Search input, saved-query name input and
