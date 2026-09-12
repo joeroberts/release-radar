@@ -109,17 +109,16 @@ A later owner-supplied Settings screenshot shows plugin version `0.1.9` as
 **Installed**. It is recorded as a later observation without inferring which
 intervening action changed the earlier **Modified** state.
 
-The local `codex/restart-helper-dmg-live-test` correction adds an isolated
-real-process regression for the stale-helper gap. It uses a test-only launchd label,
-Mach service and Codex home; installs the current four-file plugin over real helper
-XPC; replaces the running helper with a valid legacy three-file process; calls the
-actual AppModel restart method; and verifies ordered teardown, PID termination,
-current executable identity, real XPC recovery, **Installed** presentation and
-exact receipt restoration. Its mutation check fails at stale-state/receipt
-assertions when the legacy inventory behavior is removed. Adjacent transport,
-coordinator and Settings-route tests and the Debug app build pass. The test uses a
-launchctl-backed service adapter and ad hoc unsandboxed helper fixtures, so it does
-not claim a production `SMAppService` registration or a SwiftUI button press.
+An attempted isolated process harness on `codex/restart-helper-dmg-live-test` used
+an alternate launchd/Mach service, custom adapter, ad hoc unsandboxed helpers and a
+sentinel exit. Independent review rejected it as evidence because it did not
+exercise production `SMAppService` unregister/register and duplicated explicitly
+rejected test machinery. The harness and its production-source seams were
+withdrawn. Existing tests continue to cover asynchronous service ordering, exact
+stale-to-clean receipt restoration and AppModel presentation; the installed check
+covers the actual button and production service with an already-current helper.
+The exact stale production `SMAppService` plus installed Settings button combination
+remains unexercised.
 
 ## Authorization, limitations, and next work
 
@@ -139,6 +138,13 @@ and requires separate explicit authorization. The next eligible owner work is th
 broader manual acceptance guide; the unexercised stale-helper button precondition
 may be revisited only under a naturally occurring stale state or separate explicit
 authorization.
+
+A faithful isolated stale-helper check would require a separately provisioned,
+logged-in macOS account or VM with its own GUI launchd domain, Codex home, Release
+Radar store and installed signed app versions. None was created or configured.
+This account's fixed service label and Mach service are occupied by the owner's live
+helper, so manufacturing the precondition here would alter the working service and
+owner state beyond the authorization granted.
 
 Any future DMG containing changes after the recorded 0.1.9 package must use a
 strictly newer semantic version, expected to be `0.1.10` unless already consumed,

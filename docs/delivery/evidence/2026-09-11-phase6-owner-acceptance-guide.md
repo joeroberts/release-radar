@@ -194,9 +194,9 @@ limitation and test only the current-helper restart path.
 
 The signed installed result for this package is recorded in the
 [Restart helper evidence](2026-09-11-restart-helper-signed-installation.md).
-That evidence also records a later isolated real-process/XPC stale-helper
-regression and the precise boundary between it, the installed button check and the
-mocked service-ordering tests.
+That evidence also records the boundary between the installed button check and the
+mocked service-ordering tests, the withdrawn synthetic process experiment, and the
+still-unexercised stale production-service combination.
 
 ## Disposable-project mutation setup
 

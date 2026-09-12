@@ -82,45 +82,35 @@ as visual proof of the transient state.
 - [Attempted transient capture](2026-09-11-restart-helper-progress.png)
 - [Settings after activation](2026-09-11-restart-helper-after.png)
 
-## Isolated stale-helper regression
+## Remaining stale-helper gap
 
-A repository-owned isolated harness now complements the installed check. It
-builds distinct current and legacy helper executables from the production helper
-source, gives the legacy executable the earlier three-file plugin inventory, and
-runs them behind a test-only launchd label and Mach service. The test uses an
-isolated Codex home under `~/.codex/release-radar-tests/`; it does not use the
-owner's installed plugin state or Release Radar database.
+An attempted isolated process harness used an alternate launchd label and Mach
+service, a custom service adapter, ad hoc unsandboxed helper fixtures and a
+sentinel-driven exit. Although that experiment produced a green synthetic run,
+independent review rejected it as proof: it did not exercise production
+`SMAppService.unregister` or `SMAppService.register`, and its supporting machinery
+was larger than the missing behavior. The harness and all production-source test
+seams were withdrawn.
 
-`script/test_isolated_helper_restart.sh` passed the focused real-process test. The
-test installs the current four-file plugin through real helper XPC, preserves the
-resulting managed receipt, starts the legacy helper and observes **Needs repair**,
-then calls the same `AppModel.restartCodexPluginHelper()` method used by Settings.
-It verifies that asynchronous unregister starts first, the legacy PID terminates
-before registration starts, the new process has the current executable path and
-CDHash, real helper XPC reports the current version and digest, Settings returns to
-**Installed**, and the exact prior receipt is restored. Removing the legacy
-inventory compile flag made the test fail at the stale-state and receipt assertions;
-restoring it returned the test to green.
-
-The complete evidence is deliberately composite:
+The accepted evidence therefore remains:
 
 - the signed installed-app check above exercises the actual Settings button and a
   production `SMAppService`, but only with an already-current helper;
-- repository unit tests exercise asynchronous `SMAppService` ordering and error
-  behavior with a service double;
-- the isolated regression exercises the actual AppModel method, client, XPC,
-  helper processes, plugin CLI operations, process termination, relaunch and
-  receipt recovery, but uses a launchctl-backed service adapter rather than a
-  production `SMAppService` registration and does not press the SwiftUI button.
+- repository tests exercise asynchronous service ordering and errors with the
+  existing service double, exact stale-to-clean receipt restoration in the
+  coordinator, and AppModel progress and final presentation.
 
-The isolated helpers are ad hoc signed and unsandboxed because a manually loaded
-legacy launchd job does not carry the registration metadata of an embedded
-`SMAppService`. The helper still applies the production app-peer requirement; the
-client's helper requirement is narrowed to the test executable identifier. The
-ordinary Debug build separately verifies that the production helper is built with
-its sandbox entitlements. Consequently, an actual stale production
-`SMAppService` handoff initiated by the installed SwiftUI button remains the only
-unexercised combination.
+The exact stale production `SMAppService` plus installed SwiftUI button combination
+is still unexercised. A faithful isolated check needs a separately provisioned,
+logged-in macOS account or macOS VM with its own GUI launchd domain, Codex home,
+Release Radar store and installed application. In that environment an older signed
+app can register and leave its real embedded helper running, the current signed app
+can replace it, and the actual Settings button can perform the production
+unregister/register handoff without touching the owner's working service or data.
+No such account or VM was created or configured here. On this account the fixed
+service label and Mach service are already occupied by the owner's live helper;
+creating the stale precondition would require altering that working service and
+associated owner state, which was not authorized.
 
 ## Preservation checks and limits
 
