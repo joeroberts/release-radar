@@ -33,11 +33,15 @@ Scope is the persistent RDS toolbar, app-owned draft/submission/save/history flo
 compact and wide sidebar adoption, fixed documentation-checking footer, relevant
 guidance, focused tests and isolated native render evidence. Phase 6F metrics,
 Manage Project and Archive/Remove relocation, guided setup, packaging,
-installation, push/PR/merge and owner/live application state remain separate and
+installation, merge and owner/live application state remain separate and
 unauthorized. Independent code/integration and UX/accessibility review is complete.
 The delivery and review tasks are archived with their processes stopped. The
 reviewed result and captures are preserved in the canonical project checkout;
-monitoring is paused. The next delivery step is owner-authorized push/PR creation.
+monitoring is paused. The owner authorized push/PR creation and
+[PR #49](https://github.com/joeroberts/release-radar/pull/49) is open. Its base is
+`codex/rds-toolbar-adoption-base` at `83f3bb8`, keeping the diff limited to this
+reviewed adoption. Earlier baseline changes must land before retargeting to the
+default branch. Merge, packaging and installation remain separate endpoints.
 
 The initial local candidate `42e40f3` entered independent review. The reviewer
 found one required save-failure recovery defect: a failed save from a non-Search
