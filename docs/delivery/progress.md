@@ -26,7 +26,7 @@ appeared inert while Release Radar awaited the dashboard-open audit and a full
 documentation observation. The local `codex/navigation-responsive-validation`
 candidate is based on the verified Phase 8 documentation baseline
 `c2962d9374306a7db0a36985aba1a681fd48177c`; source and tests are committed at
-`43b4617`.
+`43b4617`, with the navigation-specific failure-state correction at `140487d`.
 
 Overview, Project Plan and Phase Board now publish their selected route, focus and
 history entry before awaiting the existing audit and read-only documentation

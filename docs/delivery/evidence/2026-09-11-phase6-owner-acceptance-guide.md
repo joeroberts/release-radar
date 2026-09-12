@@ -78,7 +78,7 @@ review with no remaining findings. Its signed follow-on package passed the same
 strict bundle, nested-code, entitlement and mounted-identity checks; the bounded
 installed result and stale-precondition limitation are recorded below.
 
-The navigation responsiveness correction at source commit `43b4617` is not part
+The navigation responsiveness correction through source commit `140487d` is not part
 of the installed 0.1.9 package identified above. It keeps the first-dashboard-open
 audit and current documentation validation, but publishes the selected project
 destination before waiting for those operations. Its focused synthetic run passed
@@ -182,7 +182,7 @@ named query in this quick pass.
 ### Navigation responsiveness check for a future reviewed build
 
 Run this subsection only after a reviewed package containing source commit
-`43b4617` is separately authorized and installed.
+`140487d` is separately authorized and installed.
 
 1. From **Projects**, activate a project card. Expected: **Overview** becomes the
    selected, visible destination immediately. A native animated progress indicator
