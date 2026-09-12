@@ -42,10 +42,13 @@ found one required save-failure recovery defect: a failed save from a non-Search
 route could be silent, and an existing same-named query could incorrectly dismiss
 the popover. The bounded correction now returns the exact save-attempt outcome,
 dismisses only on confirmed success, and retains the entered name with an
-accessible actionable error on failure. Five affected tests pass, including the
-non-Search same-name regression, accessible failure presentation, successful save
-path and wide/compact toolbar accessibility. The corrected candidate is ready for
-follow-up review.
+accessible actionable error on failure. Corrected candidate `8cd2bc6` passed
+follow-up independent review with no Required or Optional findings. The author’s
+five affected tests and the reviewer’s four directly affected tests pass,
+including the non-Search same-name regression, successful save path, native
+accessible failure presentation and wide/compact toolbar accessibility. The app
+build, documentation check and diff check pass, and both exact-candidate
+worktrees are clean.
 
 Before that correction, the focused XCTest selection passed 40 tests with 3
 explicit skips caused by the XCTest host exposing no self-accessibility windows
@@ -55,7 +58,10 @@ tests also pass.
 The disposable native test app was also exercised through supported external UI
 inspection: Return submission, Back restoration, save-without-run, Escape
 dismissal, and wide/compact accessibility all passed. The app build and managed
-documentation check pass. Review captures are the
+documentation check pass. The reviewer did not independently repeat the external
+Return/save/Escape fixture because its sandbox could not remove the fixture’s
+hard-coded `/private/tmp` enable sentinel; the author evidence remains reported,
+and the disposable sentinel is now absent. Review captures are the
 [wide toolbar](evidence/2026-09-12-rds-toolbar-wide.png) and
 [compact toolbar](evidence/2026-09-12-rds-toolbar-compact.png). No installed app,
 owner database or live application state was changed.
