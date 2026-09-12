@@ -408,6 +408,7 @@ struct OnboardingView: View {
         } else if let preview, projectID == nil {
             Form {
                 TextField("Project name", text: $projectName)
+                    .textFieldStyle(RekonQuietTextFieldStyle())
             }
             .frame(maxWidth: 440)
 
@@ -425,13 +426,18 @@ struct OnboardingView: View {
                 Text("Matching Codex tasks")
                     .font(.headline)
                 ForEach(preview.includedTaskDescriptors, id: \.id) { task in
-                    Toggle(task.title, isOn: Binding(
-                        get: { !excludedTaskIDs.contains(task.id) },
-                        set: { included in
-                            if included { excludedTaskIDs.remove(task.id) }
-                            else { excludedTaskIDs.insert(task.id) }
-                        }
-                    ))
+                    RekonCheckbox(
+                        isOn: Binding(
+                            get: { !excludedTaskIDs.contains(task.id) },
+                            set: { included in
+                                if included { excludedTaskIDs.remove(task.id) }
+                                else { excludedTaskIDs.insert(task.id) }
+                            }
+                        ),
+                        title: task.title,
+                        accessibilityLabel: task.title,
+                        accessibilityIdentifier: "onboarding-task-\(task.id)"
+                    )
                 }
             }
 
@@ -559,15 +565,17 @@ struct OnboardingView: View {
                 accessibilityID: "attachment-no-eligible-projects"
             ))
         } else {
-            Picker("Project", selection: $selectedAttachableProjectID) {
-                Text("Select a project").tag(ProjectID?.none)
-                ForEach(attachableProjects, id: \.id) { project in
-                    Text(project.name).tag(Optional(project.id))
-                }
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("Project")
+                RekonPicker(
+                    selection: selectedAttachableProjectOption,
+                    options: attachableProjectOptionTitles,
+                    accessibilityLabel: "Project",
+                    accessibilityIdentifier: "onboarding-attach-project"
+                )
             }
             .frame(maxWidth: 440)
             .disabled(isWorking || attachmentFolder != nil)
-            .accessibilityIdentifier("onboarding-attach-project")
 
             Button("Choose Folder…", action: chooseAttachmentFolder)
                 .buttonStyle(RekonPrimaryButtonStyle())
@@ -609,6 +617,46 @@ struct OnboardingView: View {
         else { return nil }
         return AttachFolderConfirmation(project: project, folder: attachmentFolder)
     }
+
+    private var attachableProjectOptionTitles: [String] {
+        [attachableProjectPlaceholder] + attachableProjectOptions.map(\.title)
+    }
+
+    private var selectedAttachableProjectOption: Binding<String> {
+        Binding(
+            get: {
+                guard let selectedAttachableProjectID else { return attachableProjectPlaceholder }
+                return attachableProjectOptions.first(where: { $0.id == selectedAttachableProjectID })?.title
+                    ?? attachableProjectPlaceholder
+            },
+            set: { title in
+                selectedAttachableProjectID = attachableProjectOptions.first(where: { $0.title == title })?.id
+            }
+        )
+    }
+
+    private var attachableProjectOptions: [(id: ProjectID, title: String)] {
+        let duplicateNames = Set(
+            Dictionary(grouping: attachableProjects, by: \.name)
+                .filter { $0.value.count > 1 }
+                .keys
+        )
+        var usedTitles = Set([attachableProjectPlaceholder])
+        return attachableProjects.map { project in
+            let base = duplicateNames.contains(project.name)
+                ? "\(project.name) · \(project.id.rawValue)"
+                : project.name
+            var title = base
+            var suffix = 2
+            while !usedTitles.insert(title).inserted {
+                title = "\(base) · \(suffix)"
+                suffix += 1
+            }
+            return (project.id, title)
+        }
+    }
+
+    private var attachableProjectPlaceholder: String { "Select a project" }
 
     private func beginAttachmentWorkflow() {
         guard let loadAttachableProjects else { return }
@@ -943,8 +991,12 @@ struct OnboardingView: View {
                     .frame(maxHeight: 240)
                 }
 
-                Toggle("Apply these reviewed records to the new project", isOn: $importRecognizedArtifacts)
-                    .accessibilityIdentifier("onboarding-import-recognized")
+                RekonCheckbox(
+                    isOn: $importRecognizedArtifacts,
+                    title: "Apply these reviewed records to the new project",
+                    accessibilityLabel: "Apply these reviewed records to the new project",
+                    accessibilityIdentifier: "onboarding-import-recognized"
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

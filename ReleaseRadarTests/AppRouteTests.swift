@@ -58,13 +58,28 @@ final class AppRouteTests: XCTestCase {
         let store = DeliveryStore(databaseURL: databaseURL)
         let folder = URL(fileURLWithPath: "/tmp/Release Radar Visual Fixture", isDirectory: true)
         let project = ProjectRecord(id: ProjectID(rawValue: "visual-fixture-project"), name: "Visual Fixture")
+        let recognizedArtifact = ImportPreview(
+            sourceRoot: folder,
+            artifactURL: folder.appendingPathComponent(".rekon-release-radar.json"),
+            schemaVersion: 1,
+            activePhaseID: nil,
+            phases: [],
+            phaseDependencies: [],
+            tickets: [],
+            ticketDependencies: [],
+            evidence: [],
+            reviewItems: []
+        )
         let preview = OnboardingPreview(
             selectedFolder: folder,
             gitRoot: folder,
-            includedTaskDescriptors: [],
+            includedTaskDescriptors: [
+                .init(id: "visual-fixture-task", workingDirectory: folder, title: "Visual fixture task")
+            ],
             rejectedTaskDescriptors: [],
             authorizedWorktreeURLs: [],
             worktreesRequiringAuthorization: [],
+            recognizedArtifactPreview: recognizedArtifact,
             savedProjectName: "Visual Fixture"
         )
         let fixtures: [(String, OnboardingView)] = [
@@ -3149,6 +3164,10 @@ final class AppRouteTests: XCTestCase {
         ] {
             XCTAssertTrue(source.contains(action), "Missing RDS style for \(action)")
         }
+        XCTAssertTrue(source.contains(".textFieldStyle(RekonQuietTextFieldStyle())"))
+        XCTAssertTrue(source.contains("RekonCheckbox("))
+        XCTAssertTrue(source.contains("RekonPicker("))
+        XCTAssertTrue(source.contains("selectedAttachableProjectOption"))
         XCTAssertTrue(source.contains(".buttonStyle(RekonBorderlessIconButtonStyle())"))
     }
 
