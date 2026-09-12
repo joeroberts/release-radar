@@ -19,6 +19,59 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
 
+## Completed local RDS toolbar consumer adoption — September 12
+
+The owner authorized Release Radar to adopt the merged RDS toolbar/search controls
+at `3c2626102a2e97dd93f31fbc62b733085d6700ec`. The bounded implementation is complete locally
+on `codex/rds-toolbar-adoption` from assigned baseline `83f3bb8`, controlled by the
+[toolbar adoption brief](task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md)
+and the [approved proposal](../design/phase6-workspace-toolbar-proposal.md). The
+assigned baseline is available locally but its named design branch is not
+advertised by `origin`; this does not replace or discard the assigned commit.
+
+Scope is the persistent RDS toolbar, app-owned draft/submission/save/history flow,
+compact and wide sidebar adoption, fixed documentation-checking footer, relevant
+guidance, focused tests and isolated native render evidence. Phase 6F metrics,
+Manage Project and Archive/Remove relocation, guided setup, packaging,
+installation, merge and owner/live application state remain separate and
+unauthorized. Independent code/integration and UX/accessibility review is complete.
+The delivery and review tasks are archived with their processes stopped. The
+reviewed result and captures are preserved in the canonical project checkout;
+monitoring is paused. The owner authorized push/PR creation and
+[PR #49](https://github.com/joeroberts/release-radar/pull/49) is open. Its base is
+`codex/rds-toolbar-adoption-base` at `83f3bb8`, keeping the diff limited to this
+reviewed adoption. Earlier baseline changes must land before retargeting to the
+default branch. Merge, packaging and installation remain separate endpoints.
+
+The initial local candidate `42e40f3` entered independent review. The reviewer
+found one required save-failure recovery defect: a failed save from a non-Search
+route could be silent, and an existing same-named query could incorrectly dismiss
+the popover. The bounded correction now returns the exact save-attempt outcome,
+dismisses only on confirmed success, and retains the entered name with an
+accessible actionable error on failure. Corrected candidate `8cd2bc6` passed
+follow-up independent review with no Required or Optional findings. The author’s
+five affected tests and the reviewer’s four directly affected tests pass,
+including the non-Search same-name regression, successful save path, native
+accessible failure presentation and wide/compact toolbar accessibility. The app
+build, documentation check and diff check pass, and both exact-candidate
+worktrees are clean.
+
+Before that correction, the focused XCTest selection passed 40 tests with 3
+explicit skips caused by the XCTest host exposing no self-accessibility windows
+after Search took focus; the toolbar test itself asserts every action is fully
+visible and accessible at 1280 and 760 points. All 9 workspace-search acceptance
+tests also pass.
+The disposable native test app was also exercised through supported external UI
+inspection: Return submission, Back restoration, save-without-run, Escape
+dismissal, and wide/compact accessibility all passed. The app build and managed
+documentation check pass. The reviewer did not independently repeat the external
+Return/save/Escape fixture because its sandbox could not remove the fixture’s
+hard-coded `/private/tmp` enable sentinel; the author evidence remains reported,
+and the disposable sentinel is now absent. Review captures are the
+[wide toolbar](evidence/2026-09-12-rds-toolbar-wide.png) and
+[compact toolbar](evidence/2026-09-12-rds-toolbar-compact.png). No installed app,
+owner database or live application state was changed.
+
 ## Phase 6 extension design review — September 12
 
 The owner requests separate feature-architecture, chief-architecture and UX reviews

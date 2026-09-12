@@ -5,11 +5,8 @@ import RekonDesignSystem
 
 struct WorkspaceSearchView: View {
     @Bindable var model: AppModel
-    @State private var savedQueryName = ""
-    @FocusState private var searchFieldFocused: Bool
     @FocusState private var filtersFocused: Bool
     @FocusState private var focusedResultID: Data?
-    @AccessibilityFocusState private var accessibilitySearchFieldFocused: Bool
     @AccessibilityFocusState private var accessibilityFiltersFocused: Bool
     @AccessibilityFocusState private var accessibilityResultID: Data?
 
@@ -21,14 +18,7 @@ struct WorkspaceSearchView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     RekonScreenHeader(
                         title: "Search",
-                        subtitle: "Find recorded delivery identities across every authorized project",
-                        trailing: AnyView(
-                            Button("Help", systemImage: "questionmark.circle") {
-                                Task { await model.navigate(to: .help) }
-                            }
-                            .buttonStyle(RekonSecondaryButtonStyle())
-                            .accessibilityIdentifier("search-help")
-                        )
+                        subtitle: "Find recorded delivery identities across every authorized project"
                     )
                     queryControls
                     savedQueries
@@ -54,32 +44,6 @@ struct WorkspaceSearchView: View {
 
     private var queryControls: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                TextField(
-                    "Search IDs, names and recorded text",
-                    text: Binding(
-                        get: { model.workspaceSearchDefinition.text },
-                        set: { model.setWorkspaceSearchText($0) }
-                    )
-                )
-                .textFieldStyle(RekonQuietTextFieldStyle())
-                .onSubmit { Task { await model.runWorkspaceSearch() } }
-                .focused($searchFieldFocused)
-                .accessibilityFocused($accessibilitySearchFieldFocused)
-                .accessibilityIdentifier("workspace-search-field")
-
-                Button("Search", systemImage: "magnifyingglass") {
-                    Task { await model.runWorkspaceSearch() }
-                }
-                .buttonStyle(RekonPrimaryButtonStyle())
-                .disabled(
-                    model.workspaceSearchIsLoading
-                        || model.workspaceSearchPreferenceIsUnsupported
-                        || model.workspaceSearchNeedsScopeReselection
-                )
-                .accessibilityIdentifier("workspace-search-run")
-            }
-
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 16) { scopeControl; domainControl; sortControl }
                 VStack(alignment: .leading, spacing: 10) { scopeControl; domainControl; sortControl }
@@ -157,24 +121,6 @@ struct WorkspaceSearchView: View {
     private var savedQueries: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Saved queries").font(RekonTypography.compactTitle)
-            HStack(spacing: 8) {
-                TextField("Query name", text: $savedQueryName)
-                    .textFieldStyle(RekonQuietTextFieldStyle())
-                    .accessibilityIdentifier("workspace-search-save-name")
-                Button("Save") {
-                    let name = savedQueryName
-                    Task {
-                        await model.saveCurrentWorkspaceSearch(name: name)
-                        if !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { savedQueryName = "" }
-                    }
-                }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .disabled(
-                    model.workspaceSearchPreferenceIsUnsupported
-                        || model.workspaceSearchNeedsScopeReselection
-                )
-                .accessibilityIdentifier("workspace-search-save")
-            }
             if !model.workspaceSearchSavedQueries.isEmpty {
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
@@ -198,6 +144,10 @@ struct WorkspaceSearchView: View {
                         }
                     }
                 }
+            } else {
+                Text("Use Save query in the toolbar to name the visible query and options.")
+                    .font(RekonTypography.metadata)
+                    .foregroundStyle(RekonTheme.secondaryText)
             }
         }
     }
@@ -346,9 +296,6 @@ struct WorkspaceSearchView: View {
 
     private func applyRequestedFocus() {
         switch model.navigationFocus {
-        case .workspaceSearchField:
-            searchFieldFocused = true
-            accessibilitySearchFieldFocused = true
         case .workspaceSearchFilters:
             filtersFocused = true
             accessibilityFiltersFocused = true

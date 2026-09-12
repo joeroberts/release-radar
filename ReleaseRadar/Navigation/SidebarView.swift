@@ -9,18 +9,36 @@ struct SidebarView: View {
     @AccessibilityFocusState private var accessibilityNavigationControlFocus: NavigationFocus?
     var body: some View {
         GeometryReader { geometry in
+            let isForcedCompact = WorkspaceShellLayout.isForcedCompact(width: geometry.size.width)
+            let isCompact = WorkspaceShellLayout.isCompact(
+                width: geometry.size.width,
+                userCollapsed: model.isSidebarCompact
+            )
+            let sidebarWidth = DashboardLayout.sidebarWidth(isCompact: isCompact)
+            let detailWidth = max(0, geometry.size.width - sidebarWidth - 1)
             HStack(alignment: .top, spacing: 0) {
-                sidebar
+                sidebar(isCompact: isCompact)
                     .frame(
-                        width: DashboardLayout.sidebarWidth(isCompact: model.isSidebarCompact),
+                        width: sidebarWidth,
                         height: geometry.size.height
                     )
                     .background(RekonTheme.backgroundRaised)
 
                 RekonSeparator(.vertical)
-                    .frame(height: geometry.size.height)
+                    .frame(width: 1, height: geometry.size.height)
 
                 VStack(spacing: 0) {
+                    WorkspaceToolbar(
+                        model: model,
+                        isCompact: isCompact,
+                        isSidebarForcedCompact: isForcedCompact,
+                        toggleSidebar: {
+                            withAnimation(.easeInOut(duration: 0.16)) {
+                                model.isSidebarCompact.toggle()
+                            }
+                        }
+                    )
+
                     if let error = model.navigationFailureMessage {
                         FailureStateView(
                             presentation: .init(
@@ -44,7 +62,7 @@ struct SidebarView: View {
                         .frame(maxWidth: .infinity)
                         .frame(maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(width: detailWidth)
                 .frame(height: geometry.size.height)
                 .background(RekonTheme.background)
             }
@@ -63,59 +81,25 @@ struct SidebarView: View {
         .onChange(of: model.navigationFocus) { _, focus in applyNavigationFocus(focus) }
     }
 
-    private var sidebar: some View {
+    private func sidebar(isCompact: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                if !model.isSidebarCompact {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Delivery")
-                            .font(RekonTypography.compactTitle)
-                            .foregroundStyle(RekonTheme.primaryText)
-                        Text("Local agent workspace")
-                            .font(RekonTypography.metadata)
-                            .foregroundStyle(RekonTheme.secondaryText)
-                    }
-                    .transition(.opacity)
-                }
-
-                Spacer(minLength: 0)
-
-                Button {
-                    withAnimation(.easeInOut(duration: 0.16)) {
-                        model.isSidebarCompact.toggle()
-                    }
-                } label: {
-                    Image(systemName: "sidebar.left")
-                        .font(.system(size: 15, weight: .light))
-                        .frame(width: 28, height: 28)
-                }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .help(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
-                .accessibilityLabel(model.isSidebarCompact ? "Expand navigation sidebar" : "Collapse navigation sidebar")
-                .accessibilityHint(model.isSidebarCompact
-                    ? "Shows navigation labels beside their icons."
-                    : "Hides navigation labels and keeps their icons visible.")
-                .accessibilityIdentifier("sidebar-collapse")
-            }
-            .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
+            ReleaseRadarLogoMark()
+                .frame(maxWidth: .infinity)
             .padding(.top, 16)
 
             VStack(spacing: 4) {
                 ForEach(AppRoute.primaryRoutes, id: \.self) { route in
-                    sidebarButton(route: route, count: primaryCount(for: route)) {
+                    sidebarButton(route: route, count: primaryCount(for: route), isCompact: isCompact) {
                         Task { await model.navigate(to: route) }
                     }
                 }
             }
 
-            NavigationHistoryControls(model: model)
-            .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
-
             if let message = model.navigationRecoveryMessage {
                 Text(message)
                     .font(.caption)
                     .foregroundStyle(RekonTheme.warning)
-                    .padding(.horizontal, model.isSidebarCompact ? 12 : 16)
+                    .padding(.horizontal, isCompact ? 12 : 16)
                     .accessibilityIdentifier("navigation-recovery")
                     .focusable()
                     .focused($navigationControlFocus, equals: .recovery)
@@ -126,7 +110,7 @@ struct SidebarView: View {
                 RekonSeparator()
                     .padding(.horizontal, 12)
 
-                if !model.isSidebarCompact {
+                if !isCompact {
                     Text(currentProject.name)
                         .font(.caption.weight(.medium))
                         .foregroundStyle(RekonTheme.secondaryText)
@@ -135,14 +119,9 @@ struct SidebarView: View {
                         .padding(.horizontal, 18)
                 }
 
-                ProjectNavigationStatusView(
-                    documentationStatus: model.documentationObservationStatus(for: currentProject.id),
-                    isCompact: model.isSidebarCompact
-                )
-
                 VStack(spacing: 4) {
                     ForEach(AppRoute.projectRoutes(for: currentProject.id), id: \.self) { route in
-                        sidebarButton(route: route, count: nil) {
+                        sidebarButton(route: route, count: nil, isCompact: isCompact) {
                             Task { await model.navigate(to: route) }
                         }
                     }
@@ -151,13 +130,14 @@ struct SidebarView: View {
 
             Spacer(minLength: 12)
 
-            if !model.isSidebarCompact {
-                Text("Persisted locally")
-                    .font(.caption)
-                    .foregroundStyle(RekonTheme.secondaryText.opacity(0.7))
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 14)
-            }
+            ProjectNavigationStatusView(
+                documentationStatus: model.currentProject.flatMap {
+                    model.documentationObservationStatus(for: $0.id)
+                },
+                isCompact: isCompact
+            )
+            .frame(height: 62)
+            .padding(.bottom, 8)
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .clipped()
@@ -166,6 +146,7 @@ struct SidebarView: View {
     private func sidebarButton(
         route: AppRoute,
         count: Int?,
+        isCompact: Bool,
         action: @escaping () -> Void
     ) -> some View {
         let isSelected = model.selection == route
@@ -177,13 +158,13 @@ struct SidebarView: View {
                         .font(.system(size: 24, weight: .light))
                         .frame(width: 34, height: 34)
 
-                    if !model.isSidebarCompact {
+                    if !isCompact {
                         Text(route.title)
                             .lineLimit(1)
                         Spacer(minLength: 0)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: model.isSidebarCompact ? .center : .leading)
+                .frame(maxWidth: .infinity, alignment: isCompact ? .center : .leading)
                 .frame(height: 46)
 
                 if let count, count > 0 {
@@ -193,11 +174,11 @@ struct SidebarView: View {
                         .padding(.horizontal, count > 9 ? 5 : 0)
                         .frame(minWidth: 19, minHeight: 19)
                         .background(RekonTheme.danger.opacity(0.14), in: Capsule())
-                        .offset(x: model.isSidebarCompact ? -2 : -4, y: 1)
+                        .offset(x: isCompact ? -2 : -4, y: 1)
                         .accessibilityLabel("\(count) items")
                 }
             }
-            .padding(.horizontal, model.isSidebarCompact ? 10 : 12)
+            .padding(.horizontal, isCompact ? 10 : 12)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -754,22 +735,24 @@ struct NavigationHistoryControls: View {
             } label: {
                 Image(systemName: "chevron.backward")
             }
-            .buttonStyle(RekonSecondaryButtonStyle())
+            .buttonStyle(RekonBorderlessIconButtonStyle())
             .keyboardShortcut("[", modifiers: .command)
             .disabled(!model.canNavigateBack)
             .accessibilityLabel("Back")
             .accessibilityIdentifier("navigation-back")
+            .help("Back")
 
             Button {
                 Task { await model.goForward() }
             } label: {
                 Image(systemName: "chevron.forward")
             }
-            .buttonStyle(RekonSecondaryButtonStyle())
+            .buttonStyle(RekonBorderlessIconButtonStyle())
             .keyboardShortcut("]", modifiers: .command)
             .disabled(!model.canNavigateForward)
             .accessibilityLabel("Forward")
             .accessibilityIdentifier("navigation-forward")
+            .help("Forward")
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Navigation history")

@@ -31,6 +31,12 @@ final class WorkspaceHelpTests: XCTestCase {
         XCTAssertEqual(newerVersion?.id, "saved-query-recovery")
         XCTAssertEqual(newerVersion?.destination, .search)
         XCTAssertTrue(newerVersion?.detail.contains("Reset to a new search") == true)
+        XCTAssertTrue(newerVersion?.detail.contains("toolbar") == true)
+
+        let searchNavigation = try? XCTUnwrap(WorkspaceHelpContent.filtered(by: "toolbar draft submit").first)
+        XCTAssertEqual(searchNavigation?.id, "search-navigation")
+        XCTAssertTrue(searchNavigation?.detail.contains("Typing") == true)
+        XCTAssertTrue(searchNavigation?.detail.contains("Return") == true)
 
         let helper = try? XCTUnwrap(WorkspaceHelpContent.filtered(by: "restart helper Login Items").first)
         XCTAssertEqual(helper?.id, "plugin-helper-restart")

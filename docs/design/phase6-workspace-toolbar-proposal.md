@@ -1,6 +1,6 @@
 # Phase 6 extension: project management and persistent toolbar
 
-Status: initial feature-architecture, chief-architecture and UX reviews concluded; owner selections recorded below. No implementation authorization. The stopped Overview metric task remains stopped. This proposal is separate from the 0.1.11 release and the Add Project styling correction.
+Status: initial feature-architecture, chief-architecture and UX reviews concluded; owner selections recorded below. On September 12 the owner authorized the bounded RDS toolbar consumer adoption described in the delivery brief. That authorization does not extend to the stopped Overview metric task, Manage Project relocation, guided setup, packaging or installation. This proposal remains separate from the 0.1.11 release and the Add Project styling correction.
 
 ## Owner outcome
 
@@ -17,7 +17,7 @@ The owner accepted the smaller, borderless-logo revision as sufficient visual re
 - **Manage Project:** open immediately with the selected project's identity, load sections independently, and show applicable retry/recovery in place if a section fails. Preserve existing authorization and archived/removed-record access.
 - **Guided setup:** initiate a Codex task that prepares the exact repository change for owner approval. Apply only the approved change and report verified completion or actionable recovery; task dispatch itself is not successful setup.
 
-These are design selections. The reusable RDS API details and proposed guided-setup slice label remain recommendations, and the explicitly stopped metric implementation remains stopped.
+These are design selections. The merged RDS toolbar API and its Release Radar consumer adoption are now authorized through the bounded delivery brief. The proposed guided-setup slice label remains a recommendation, and the explicitly stopped metric implementation remains stopped.
 
 ## Requested design
 
