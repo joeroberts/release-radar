@@ -9,9 +9,10 @@ passed. One independent code/UX review approved the candidate with no findings.
 Full native-window captures are preserved at [default size](evidence/2026-09-12-add-project-rds-window-default.png)
 and [minimum size](evidence/2026-09-12-add-project-rds-window-minimum.png); the inert
 fixture shows inactive traffic lights and does not launch the installed owner app.
-The reviewed candidate is in the local integration checkout. Push/PR/default-branch
-merge approval is the next endpoint, followed by the standing versioned-package
-and installation workflow. No new DMG or installation has occurred for this fix.
+The reviewed candidate and its integration record `3d6a98d` are packaged locally
+as **0.1.14 (1)**. The signed DMG, matching Downloads copy and installed app are
+recorded in the [0.1.14 package evidence](evidence/2026-09-12-release-0.1.14-packaging.md).
+No push, PR, default-branch merge, notarization or owner-data mutation occurred.
 
 The owner authorized immediate reconciliation of delivered local releases with the
 actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
@@ -43,13 +44,10 @@ Phase 6H; metrics remain stopped under Phase 6F. Four top-level tasks remain:
 
 Only the Add Project task was resumed. Phase 7 tasks were not changed.
 
-The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
-tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
-`v0.1.13` are published to origin and retain their original release commits.
-The installed app version and matching repository/Downloads DMG checksum were
-read back after integration. Integration changes no product
-source or packaged bytes, so it requires no version bump, new DMG or reinstall.
-The [0.1.13 package evidence](evidence/2026-09-12-release-0.1.13-packaging.md)
+The installed release is **0.1.14 (1)**. Its local annotated `v0.1.14` tag targets
+the package-record commit; published tags `v0.1.10` through `v0.1.13` retain their
+original release commits. The installed app version and matching repository/Downloads
+DMG checksum were read back after packaging. The [0.1.14 package evidence](evidence/2026-09-12-release-0.1.14-packaging.md)
 records identity, direct package checks and verified installation. Existing DMGs
 remain rollback copies; no extra app backup is needed.
 
