@@ -10,6 +10,8 @@ Reduce Overview/sidebar clutter, make shared navigation and search persistent, a
 
 ## Requested design
 
+- Use the actual Release Radar application logo in the sidebar header, replacing the generic Delivery / Local agent workspace identity shown in the mockup. Use the approved existing brand asset; do not invent a replacement logo. The current generated image predates this correction.
+
 - Main content has a persistent top toolbar, separated from the page by a thin divider. Page title/subtitle sit underneath.
 - Left toolbar order: sidebar toggle, Back, Forward. All use borderless glyphs. Sidebar toggle moves out of the sidebar. Preserve navigation history semantics.
 - Balanced central persistent RDS search field; magnifying glass submits. Save query is available in the toolbar. Submitting changes the main content area to search results while the toolbar stays visible. Existing scope, filters, saved queries and exact-record navigation must remain reachable; the design needs to settle their placement.
