@@ -377,7 +377,7 @@
 			repositoryURL = "https://github.com/joeroberts/RekonDesignSystem.git";
 			requirement = {
 				kind = revision;
-				revision = 3c2626102a2e97dd93f31fbc62b733085d6700ec;
+				revision = f986e85e786f55f1d73d6e429de11370399414f7;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
