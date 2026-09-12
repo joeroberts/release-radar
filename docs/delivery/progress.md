@@ -23,7 +23,9 @@ Initialize screen exposed unstyled later-workflow controls. The local candidate
 confirmations, completion and error states; it preserves folder-picker and data
 behavior. Fresh native-window captures and the independent re-review are recorded
 in the [later-workflow evidence](evidence/2026-09-12-add-project-rds-later-workflows.md).
-The authorized local 0.1.15 package and installation endpoint remains active.
+The correction is packaged and installed locally as **0.1.15 (1)**. Its signed
+DMG, matching Downloads copy and installed identity are recorded in the
+[0.1.15 package evidence](evidence/2026-09-12-release-0.1.15-packaging.md).
 
 The owner authorized immediate reconciliation of delivered local releases with the
 actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
@@ -55,10 +57,10 @@ the remaining tasks from this cleanup inventory are:
 
 Only the Add Project task was resumed. Phase 7 tasks were not changed.
 
-The installed release is **0.1.14 (1)**. Its local annotated `v0.1.14` tag targets
+The installed release is **0.1.15 (1)**. Its local annotated `v0.1.15` tag targets
 the package-record commit; published tags `v0.1.10` through `v0.1.13` retain their
 original release commits. The installed app version and matching repository/Downloads
-DMG checksum were read back after packaging. The [0.1.14 package evidence](evidence/2026-09-12-release-0.1.14-packaging.md)
+DMG checksum were read back after packaging. The [0.1.15 package evidence](evidence/2026-09-12-release-0.1.15-packaging.md)
 records identity, direct package checks and verified installation. Existing DMGs
 remain rollback copies; no extra app backup is needed.
 
