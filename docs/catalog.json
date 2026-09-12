@@ -6411,8 +6411,42 @@
       "authorityLevel": "supporting",
       "parentCollection": "design.mockups",
       "supersedes": [],
-      "applicationSensitivity": ["none"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-repository-plan-reconstruction-design-2026-09-12",
+      "path": "docs/design/repository-plan-reconstruction-design.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-repository-plan-reconstruction-entry-2026-09-12",
+      "path": "docs/design/mockups/repository-plan-reconstruction-entry.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }

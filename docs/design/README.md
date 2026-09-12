@@ -30,6 +30,7 @@
 | 8d761556-f57d-4271-90a7-17c59348660b | [docs/design/release-radar-ticket-tasks-design.md](release-radar-ticket-tasks-design.md) | document | controlling &#40;product.ticket-task-presentation&#41; | active | none | none |
 | a1208906-0e77-4e17-8b0f-74d51231a2cd | [docs/design/release-radar-ux-redesign-study.md](release-radar-ux-redesign-study.md) | document | supporting | proposed | none | none |
 | 3619538f-28d6-4114-b132-9e6ee3f8aa6d | [docs/design/release-radar-ux-redesign.html](release-radar-ux-redesign.html) | designAsset | supporting | proposed | none | none |
+| rr-repository-plan-reconstruction-design-2026-09-12 | [docs/design/repository-plan-reconstruction-design.md](repository-plan-reconstruction-design.md) | document | supporting | proposed | none | none |
 | rr-shared-execution-integration-v1-design-2026-09-09 | [docs/design/shared-execution-integration-v1-design.md](shared-execution-integration-v1-design.md) | document | supporting | proposed | none | none |
 
 ### Children
@@ -66,6 +67,7 @@
 | rr-phase6-compact-toolbar-mockup-proposal-2026-09-12 | [docs/design/mockups/phase6-compact-workspace-toolbar-proposal.png](mockups/phase6-compact-workspace-toolbar-proposal.png) | designAsset | supporting | proposed | none | none |
 | rr-phase6-toolbar-mockup-proposal-2026-09-12 | [docs/design/mockups/phase6-persistent-workspace-toolbar-proposal.png](mockups/phase6-persistent-workspace-toolbar-proposal.png) | designAsset | supporting | proposed | none | none |
 | 3a8a3e7b-5510-42cb-8a9a-ae6180db10a3 | [docs/design/mockups/phase&#95;board.png](mockups/phase_board.png) | designAsset | supporting | active | none | none |
+| rr-repository-plan-reconstruction-entry-2026-09-12 | [docs/design/mockups/repository-plan-reconstruction-entry.png](mockups/repository-plan-reconstruction-entry.png) | designAsset | supporting | proposed | none | none |
 | 12882659-ebf5-4541-b5a7-3e1f22a4230e | [docs/design/mockups/settings.png](mockups/settings.png) | designAsset | supporting | active | none | none |
 | 1264ec5e-b7ef-49b9-840c-6808f1ce4184 | [docs/design/mockups/work&#95;board.png](mockups/work_board.png) | designAsset | supporting | proposed | none | none |
 | 66b3610b-3e68-46b0-88f0-2b9ea206066d | [docs/design/mockups/work&#95;board&#95;compact.png](mockups/work_board_compact.png) | designAsset | supporting | proposed | none | none |

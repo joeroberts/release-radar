@@ -52,7 +52,22 @@ review required. Monitoring now follows that implementation. Historical tag crea
 and Release Radar consumer adoption remain separate actions. No tags or consumer
 adoption occurred.
 
-## Release 0.1.11 package candidate
+## Pursuit plan reconstruction — design only
+
+The owner approved the [one-time reconstruction decisions and entry reference](../design/repository-plan-reconstruction-design.md)
+and delegated durable persistence, review and sequencing to Master Delivery Thread.
+The package is recorded with its approved mockup and catalog identities; independent
+architecture/security-recovery/UX design review is pending. Implementation follows
+the final currently planned Phase 6 extension through 6H, not merged 6E. The
+separately proposed guided-setup 6I label is not an added dependency by inference.
+Reconstruction uses only a supported versioned structured snapshot, preserves
+explicit current lanes, and never fabricates historical activity. Atomic approved
+application remains provisional on a usable blocker-resolution/exclusion journey.
+No implementation, live recovery, database write, installation or publication is
+authorized. Source schema and exact execution/recovery contracts remain to resolve
+before implementation; no current snapshot is declared import-ready.
+
+## Release 0.1.11 package details
 
 The reviewed RDS treatment for the main Search input, saved-query name input and
 Help search input is packaged as Release Radar `0.1.11 (1)`. Version/source commit
