@@ -47,17 +47,41 @@ against the approved Phase Board sidebar language. Independent reviewer task
 `01a0937b-4d46-7c30-8292-663c1e5de0bc` approved the exact candidate through
 `1da1427b336ca2c89f18c7f155da6aeef6fe9703` with no Required or Optional
 findings; its independent focused selection passed 7 of 7 tests. The bounded local
-implementation and review endpoint is complete. Authorization remains limited to
-local source, tests, existing Help/manual guidance, this ledger and local commits;
-no package, install, launch, owner-data mutation, push, PR or merge is authorized.
+implementation and review endpoint is complete. The later package authorization
+covered the scoped 0.1.10 version metadata, signed local DMG, release evidence,
+local commits and annotated local version tag only.
 
 The Phase 8 stale production-helper acceptance scenario remains deferred and
-unchanged. Any future DMG containing this correction must use a strictly newer
-semantic version, expected to be `0.1.10` unless already consumed.
+unchanged.
 
-## Owner acceptance candidate
+## Release 0.1.10 package candidate
 
-The current owner candidate includes the merged Phase 6 baseline plus the
+The reviewed responsive-navigation and loading-animation correction is packaged
+as Release Radar `0.1.10 (1)`. Version/source commit
+`130e90846cd59ed3a181cf3665bbd27cd50d03cd` adds the matching app and bundled
+plugin versions and the exact recognized plugin digest while preserving earlier
+recognized identities. The annotated local tag `v0.1.10` identifies the containing
+release commit.
+
+- DMG: `dist/ReleaseRadar-0.1.10.dmg`
+- Durable owner copy: `/Users/jroberts/Downloads/ReleaseRadar-0.1.10.dmg`
+- DMG SHA-256: `a28ee8e47c92fc7256f274448ffc3083a442a09b8eee4a70c89e06ed67d4617b`
+- Main executable SHA-256: `1493df3303c00e78ae9affb8aef44e9d2d7cf705a09034a2c2530a342396057e`
+- CodeResources SHA-256: `e246a98214fc7f60eb04cf93c05249e5f8ba14ed3188648b3e72e30fafdca606`
+- CodeDirectory hash: `d6c7a7dbbfa4fef6934cb8709f2b7e2f38581619`
+- Plugin digest: `7f70bcd7a4fac4fe038dc00945b8fb56d3cdd472ec7f7816c40812631107939c`
+- Signature: Apple Development team `2UA854NLX4`, Hardened Runtime enabled
+
+The [0.1.10 packaging evidence](evidence/2026-09-11-release-0.1.10-packaging.md)
+records focused version tests, strict nested-code and entitlement checks, read-only
+DMG mounting, staged/mounted identity and the matching Downloads copy. The installed
+application and helper processes remained unchanged. This local package is not
+notarized or generally distributable. Installation, app launch, full manual
+acceptance and the Phase 8 stale production-helper scenario remain outstanding.
+
+## Earlier owner acceptance candidate
+
+The earlier owner candidate includes the merged Phase 6 baseline plus the
 independently approved acceptance corrections at
 `acc740113d1e7e056b5e7f1b2e3a0e3e21f24c27`:
 
@@ -191,10 +215,9 @@ helper, so manufacturing the precondition here would alter the working service a
 owner state beyond the authorization granted. Provisioning that environment remains
 separate future work and is not currently authorized.
 
-Any future DMG containing changes after the recorded 0.1.9 package must use a
-strictly newer semantic version, expected to be `0.1.10` unless already consumed,
-with matching application and DMG versions. No version bump or packaging is
-authorized in the current correction.
+Any future DMG containing changes after the recorded 0.1.10 package must use a
+strictly newer semantic version with matching application, bundled plugin and DMG
+versions. The current authorization does not extend to another package.
 
 The release staging bundle and repository `DerivedData` remain temporary build
 outputs. Earlier per-slice temporary diagnostics listed in the historical Phase 6

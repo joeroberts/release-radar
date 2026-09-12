@@ -81,6 +81,7 @@
 | rr-phase6e-search-wide | [docs/delivery/evidence/2026-09-10-phase6e-search-wide.png](evidence/2026-09-10-phase6e-search-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-10-phase6e-search | [docs/delivery/evidence/2026-09-10-phase6e-search.md](evidence/2026-09-10-phase6e-search.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-2026-09-11-phase6-owner-acceptance-guide | [docs/delivery/evidence/2026-09-11-phase6-owner-acceptance-guide.md](evidence/2026-09-11-phase6-owner-acceptance-guide.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-release-0.1.10-packaging-2026-09-11 | [docs/delivery/evidence/2026-09-11-release-0.1.10-packaging.md](evidence/2026-09-11-release-0.1.10-packaging.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-restart-helper-after-2026-09-11 | [docs/delivery/evidence/2026-09-11-restart-helper-after.png](evidence/2026-09-11-restart-helper-after.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-restart-helper-before-2026-09-11 | [docs/delivery/evidence/2026-09-11-restart-helper-before.png](evidence/2026-09-11-restart-helper-before.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-restart-helper-progress-2026-09-11 | [docs/delivery/evidence/2026-09-11-restart-helper-progress.png](evidence/2026-09-11-restart-helper-progress.png) | verificationEvidence | nonAuthoritative | completed | none | none |
