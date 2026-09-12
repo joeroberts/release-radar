@@ -78,6 +78,14 @@ review with no remaining findings. Its signed follow-on package passed the same
 strict bundle, nested-code, entitlement and mounted-identity checks; the bounded
 installed result and stale-precondition limitation are recorded below.
 
+The navigation responsiveness correction at source commit `43b4617` is not part
+of the installed 0.1.9 package identified above. It keeps the first-dashboard-open
+audit and current documentation validation, but publishes the selected project
+destination before waiting for those operations. Its focused synthetic run passed
+62 tests with 2 signed-picker tests skipped and no failures. The next DMG containing
+this correction must use the newer semantic version described above; this guide
+does not authorize building or installing it.
+
 The scoped automated correction acceptance is green. Do not record this build as
 owner-accepted until the manual owner checks in this guide are completed and the
 owner explicitly accepts it. Phase 7 remains paused.
@@ -170,6 +178,27 @@ named query in this quick pass.
    Goals, Search, and Help check. Expected: inspectors stack below their lists,
    controls remain reachable by scrolling, text wraps, and there is no horizontal
    clipping.
+
+### Navigation responsiveness check for a future reviewed build
+
+Run this subsection only after a reviewed package containing source commit
+`43b4617` is separately authorized and installed.
+
+1. From **Projects**, activate a project card. Expected: **Overview** becomes the
+   selected, visible destination immediately. A native animated progress indicator
+   and **Checking project documentation** status may remain in the project sidebar
+   while the read-only check finishes.
+2. Open **Project Plan**, then **Phase Board** while the checking status is still
+   visible. Expected: each requested page responds immediately; the latest click
+   remains selected and an older asynchronous result never replaces it. Back and
+   Forward retain the requested route sequence and focus.
+3. While checking is visible, inspect an evidence-dependent action. Expected: the
+   page remains usable for reading, but actions that require current verified
+   evidence remain unavailable until the check publishes its result.
+4. Do not damage or close the owner store to manufacture an audit failure. The
+   isolated automated regression covers that path. If an ordinary failure occurs,
+   expected behavior is an actionable **Delivery data unavailable** banner with
+   **Reload dashboard** above the still-visible selected destination.
 
 ## Restart helper recovery check
 

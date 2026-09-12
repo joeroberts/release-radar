@@ -19,6 +19,39 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
 
+## Active navigation responsiveness correction
+
+The owner authorized a bounded correction for project-navigation clicks that
+appeared inert while Release Radar awaited the dashboard-open audit and a full
+documentation observation. The local `codex/navigation-responsive-validation`
+candidate is based on the verified Phase 8 documentation baseline
+`c2962d9374306a7db0a36985aba1a681fd48177c`; source and tests are committed at
+`43b4617`.
+
+Overview, Project Plan and Phase Board now publish their selected route, focus and
+history entry before awaiting the existing audit and read-only documentation
+validation. Validation still withdraws stale evidence while checking, so existing
+evidence-dependent action guards remain fail-closed. Rapid navigation retains the
+latest requested destination, and a dashboard-open failure appears in an
+actionable inline banner without replacing that destination. The project sidebar
+shows a native animated progress indicator with accessible **Checking project
+documentation** text while validation is pending. No polling interval, persistence
+schema, data-loading architecture, authorization rule or external integration was
+changed.
+
+Direct verification currently passes 62 tests with 2 signed native-picker tests
+skipped and no failures across navigation history, documentation observation,
+native wide/compact rendering, Help and the first-dashboard-open notification
+boundary. The new status was visually inspected at 280- and 86-point widths
+against the approved Phase Board sidebar language. Independent review of the exact
+candidate remains pending. Authorization is limited to local source, tests,
+existing Help/manual guidance, this ledger and local commits; no package, install,
+launch, owner-data mutation, push, PR or merge is authorized.
+
+The Phase 8 stale production-helper acceptance scenario remains deferred and
+unchanged. Any future DMG containing this correction must use a strictly newer
+semantic version, expected to be `0.1.10` unless already consumed.
+
 ## Owner acceptance candidate
 
 The current owner candidate includes the merged Phase 6 baseline plus the
