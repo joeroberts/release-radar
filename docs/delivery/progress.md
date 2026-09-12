@@ -14,8 +14,22 @@ The separately recorded 0.1.11 installation closeout is retained in that history
 Both local integration and saved-project checkouts are synchronized with origin.
 The completed **Fix Search fields to use RDS** and **Phase 6 DMG and manual
 acceptance testing** tasks are archived after their commits reached the default
-branch and their work stopped. The Pursuit diagnosis remains open; Phase 7 tasks
-were not changed.
+branch and their work stopped. A subsequent owner correction exposed an incomplete
+task-list result: local records contained 14 top-level Release Radar tasks, while
+the listing tool returned only two. Direct reads identified eight more completed
+and quiescent tasks: three Phase 6 design reviewers, the 0.1.10 and 0.1.11 package
+tasks, the Restart helper package task, and two Phase 6 acceptance reviewers.
+Their results were verified in merged history and those eight tasks are archived.
+Read-only local metadata confirms six top-level tasks remain:
+
+- Master Delivery Thread — orchestration.
+- Diagnose missing Pursuit plan phases — retained investigation/design follow-up.
+- Align Overview metric labels with icons — explicitly stopped, not completed.
+- Correct Add Project RDS styling — candidate awaiting independent review, not merged.
+- Phase 7 portable continuity plan — replacement — preserved at owner request.
+- Phase 7 portable continuity independent… — preserved at owner request.
+
+The stopped and unfinished tasks were not resumed; Phase 7 tasks were not changed.
 
 The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
 tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
