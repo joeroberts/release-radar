@@ -1,4 +1,5 @@
 import AppKit
+import RekonDesignSystem
 import ReleaseRadarCore
 import SwiftUI
 
@@ -223,6 +224,7 @@ struct AddProjectWindowView: View {
             await model.reloadAfterOnboarding()
             close()
         }
+        .rekonWindowChrome()
     }
 
     private func close() {
@@ -295,6 +297,7 @@ struct OnboardingView: View {
                     HStack {
                         Spacer()
                         Button("Cancel", action: cancel)
+                            .buttonStyle(RekonSecondaryButtonStyle())
                             .keyboardShortcut(.cancelAction)
                             .disabled(isInitializeCommitInFlight || isAttachmentCommitInFlight)
                             .accessibilityIdentifier("onboarding-cancel")
@@ -348,8 +351,7 @@ struct OnboardingView: View {
                 Button(OnboardingWorkflowPresentation.initializeTitle) {
                     workflow = .initialize
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(RekonPrimaryButtonStyle())
                 .accessibilityIdentifier("onboarding-initialize-project")
 
                 if loadAttachableProjects != nil {
@@ -357,8 +359,7 @@ struct OnboardingView: View {
                         workflow = .attach
                         beginAttachmentWorkflow()
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    .buttonStyle(RekonSecondaryButtonStyle())
                     .accessibilityIdentifier("onboarding-attach-existing")
                 }
             }

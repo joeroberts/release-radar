@@ -11,6 +11,35 @@ private enum SyntheticBackupScopeError: Error {
 
 final class AppRouteTests: XCTestCase {
     @MainActor
+    func testAddProjectWindowUsesRekonChrome() async throws {
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-AddProjectChrome-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: databaseURL),
+            externalServicesSuppressed: true
+        )
+        let hosting = NSHostingView(rootView: AddProjectWindowView(model: model))
+        hosting.frame = NSRect(x: 0, y: 0, width: 760, height: 560)
+        let window = NSWindow(
+            contentRect: hosting.frame,
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.contentView = hosting
+        defer { window.close() }
+
+        window.makeKeyAndOrderFront(nil)
+        try await Task.sleep(for: .milliseconds(150))
+        hosting.layoutSubtreeIfNeeded()
+
+        XCTAssertTrue(window.titlebarAppearsTransparent)
+        XCTAssertEqual(window.titleVisibility, .hidden)
+    }
+
+    @MainActor
     func testNativeNavigationHistoryControlsExposeBoundariesAndPerformBackForward() async throws {
         let databaseURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ReleaseRadar-NativeHistory-\(UUID().uuidString).sqlite")
