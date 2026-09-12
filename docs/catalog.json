@@ -800,6 +800,38 @@
       "isLeaf": true,
       "firstRead": "003D9B42-FD49-4209-AC07-C18FAEB1D7A1",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-12-release-0.1.12",
+      "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.12",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Owner-authorized local packaging and tag for Release Radar 0.1.12",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "213D9B60-6FC9-4769-A43E-F49F90795085",
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-12-release-0.1.13",
+      "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.13",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Owner-authorized local packaging, tag and installation for Release Radar 0.1.13",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "8D82DF0A-AE02-48AA-A8ED-5B0A56142406",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -6405,6 +6437,51 @@
       }
     },
     {
+      "artifactID": "rr-toolbar-bookmark-wide-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-toolbar-bookmark-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-toolbar-bookmark-compact-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-toolbar-bookmark-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-help-topic-groups-wide-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-help-topic-groups-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-phase6-toolbar-mockup-proposal-2026-09-12",
       "path": "docs/design/mockups/phase6-persistent-workspace-toolbar-proposal.png",
       "kind": "designAsset",
@@ -6505,6 +6582,68 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "213D9B60-6FC9-4769-A43E-F49F90795085",
+      "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.release-0.1.12-packaging",
+      "parentCollection": "delivery.task-briefs.2026-09-12-release-0.1.12",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "8D82DF0A-AE02-48AA-A8ED-5B0A56142406",
+      "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.release-0.1.13-packaging",
+      "parentCollection": "delivery.task-briefs.2026-09-12-release-0.1.13",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-release-0.1.12-packaging-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-release-0.1.12-packaging.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-release-0.1.13-packaging-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-release-0.1.13-packaging.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
       ],
       "checksum": {
         "policy": "notApplicable"

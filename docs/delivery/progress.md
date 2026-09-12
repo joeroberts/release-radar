@@ -2,8 +2,46 @@
 
 ## Current outcome
 
-Phase 6 is merged through the actual default branch at
-`5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`. The delivered scope follows the
+The owner authorized immediate reconciliation of delivered local releases with the
+actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
+chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/pull/50)
+(acceptance, helper, navigation and RDS-field prerequisites),
+[PR #49](https://github.com/joeroberts/release-radar/pull/49) (toolbar adoption), and
+[PR #51](https://github.com/joeroberts/release-radar/pull/51) (remaining 0.1.12/0.1.13
+changes and release records). The first two are merged; merging this final record
+completes the delivered-source backlog. The separately recorded 0.1.11 installation
+closeout is retained in the same history.
+
+The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
+tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
+`v0.1.13` retain their original release commits. Integration changes no product
+source or packaged bytes, so it requires no version bump, new DMG or reinstall.
+The [0.1.13 package evidence](evidence/2026-09-12-release-0.1.13-packaging.md)
+records identity, direct package checks and verified installation. Existing DMGs
+remain rollback copies; no extra app backup is needed.
+
+Fresh combined-source verification selected 207 tests: **194 passed, 7 skipped,
+and 6 failed cases (12 assertions)**. All six failed identically on unchanged
+default commit `5e7b9b8`: four native fixtures could not write outside the sandbox,
+one native board test could not obtain its AX element, and the native phase
+lifecycle journey retained its prior lifecycle/revision assertion failures. These
+are pre-existing failures, not a green full suite. Navigation/history, Search,
+Help, planning policy, helper restart and the new toolbar checks passed.
+Documentation catalog/index and diff checks pass. Existing independent product
+reviews remain terminal; no redundant package review was added.
+
+Only repository integration and the requested completed-task cleanup are included.
+Phase 7 stays paused and its tasks remain untouched. The missing Pursuit phases
+investigation remains open; unimplemented Phase 6 extensions and the Phase 8
+isolated stale-helper test retain their recorded boundaries. Repository integration
+does not claim application catalog acceptance or mutate owner project data.
+
+The milestone records below preserve their original scope and verification; their
+local-only publication restrictions are superseded only for this authorized
+integration. The active endpoint above controls current release status.
+
+The original Phase 6A–6E sequence reached the default branch at
+`5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`, before the corrective integration above. The delivered scope follows the
 [Phase 6 controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md):
 History and attention, distinct Delivery and Execution Goals, revision-bound
 evidence, generic task adoption, workspace Search, saved views, and shared Help.
@@ -18,6 +56,24 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
+
+## Owner correction candidate — September 12
+
+The owner directed two focused corrections to the toolbar/help adoption: Save query is
+again a borderless bookmark icon immediately beside the central Search field at wide
+and compact widths, and Help groups its existing guidance as Projects, Settings and
+Goals. Each help destination remains in-app and is exposed by a borderless up-right
+arrow beside its title with its meaningful accessible Open name. Focused unit and
+native rendering checks pass; the durable captures are [wide toolbar](evidence/2026-09-12-toolbar-bookmark-wide.png),
+[compact toolbar](evidence/2026-09-12-toolbar-bookmark-compact.png), and
+[grouped Help](evidence/2026-09-12-help-topic-groups-wide.png). Independent code/
+UX review approved commit `c045f29` with no Required or Optional findings. Its
+focused check passed 8 tests; 3 broader native Search/Help cases remained skipped
+because the XCTest host exposes no self-AX window after focus, not because of a
+candidate failure. The local-only endpoint is complete; catalog acceptance and
+application readback are not authorized by this UI correction. No packaging,
+installation, push, PR, merge, owner data, live app state, RDS-library, version,
+tag, metric, project management, archive/remove, or guided-setup work is included.
 
 ## Completed local RDS toolbar consumer adoption — September 12
 
@@ -37,11 +93,11 @@ installation, merge and owner/live application state remain separate and
 unauthorized. Independent code/integration and UX/accessibility review is complete.
 The delivery and review tasks are archived with their processes stopped. The
 reviewed result and captures are preserved in the canonical project checkout;
-monitoring is paused. The owner authorized push/PR creation and
-[PR #49](https://github.com/joeroberts/release-radar/pull/49) is open. Its base is
-`codex/rds-toolbar-adoption-base` at `83f3bb8`, keeping the diff limited to this
-reviewed adoption. Earlier baseline changes must land before retargeting to the
-default branch. Merge, packaging and installation remain separate endpoints.
+monitoring is paused. The owner subsequently authorized reconciliation of delivered work.
+[PR #50](https://github.com/joeroberts/release-radar/pull/50) landed the prerequisite
+baseline, and [PR #49](https://github.com/joeroberts/release-radar/pull/49) was
+retargeted and merged into `codex/release-radar-mvp`. Later release records below
+cover packaging and installation.
 
 The initial local candidate `42e40f3` entered independent review. The reviewer
 found one required save-failure recovery defect: a failed save from a non-Search
@@ -148,10 +204,39 @@ release commit.
 The [0.1.11 packaging evidence](evidence/2026-09-12-release-0.1.11-packaging.md)
 records the previously completed 12/12 correction checks and independent code-and-UX
 approval, focused version/resource verification, strict signed staging, read-only
-DMG mounting, staged/mounted identity and the matching Downloads copy. The installed
-app and helper process identities were preserved. The package is not notarized or
-generally distributable, and no installation, app launch, helper/plugin action,
-owner-state access, push, PR, merge or publication occurred.
+DMG mounting, staged/mounted identity and the matching Downloads copy. Under later
+explicit owner authorization, that exact package was installed in place after the
+signed `0.1.10 (1)` app was preserved at
+`/Users/jroberts/Documents/Release Radar Backups/Pre-0.1.11-2026-09-12.ReleaseRadarAppOnly.Xekm4B/ReleaseRadar.app`.
+The installed `0.1.11 (1)` bundle matches the package's executable,
+`CodeResources` and CodeDirectory hashes. It launched normally from `/Applications`;
+ordinary startup registered fresh lifecycle and Bridge processes from the new
+bundle, and both pass strict signature checks. No manual plugin/configuration
+change, direct owner-data operation, catalog acceptance, push, PR, merge or
+publication occurred. The package remains locally signed and not notarized.
+
+## Release 0.1.12 package details
+
+The independently reviewed RDS toolbar candidate is packaged as Release Radar
+`0.1.12 (1)` from version/source commit
+`0a281c1e812725d979ffccfd57782695aca4bef4`, which contains product candidate
+`8cd2bc634b8c06d04ec59e00e477ebc32f308192`. The bundled plugin is `0.1.12`
+with recognized digest
+`8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb` and
+the RDS dependency remains pinned to
+`3c2626102a2e97dd93f31fbc62b733085d6700ec`. The annotated local `v0.1.12`
+tag identifies the containing release-record commit.
+
+- DMG: `dist/ReleaseRadar-0.1.12.dmg`
+- Durable owner copy: `/Users/jroberts/Downloads/ReleaseRadar-0.1.12.dmg`
+- DMG SHA-256: `740da6bdb097207c26de686e22a8c0b9bac0abb6940935374a8826dd91232261`
+
+The [0.1.12 packaging evidence](evidence/2026-09-12-release-0.1.12-packaging.md)
+records focused version checks, signed no-launch staging, read-only mounted image
+verification, strict nested-code and entitlement checks, and identical staged/mounted
+hashes. The installed app remained running and unmodified. No app launch,
+installation, SQLite/Keychain access, notarization, push, PR, merge or publication
+occurred; this is not a generally distributable notarized release.
 
 ## Active navigation responsiveness correction
 

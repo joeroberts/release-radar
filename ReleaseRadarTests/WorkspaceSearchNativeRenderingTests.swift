@@ -28,6 +28,8 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         XCTAssertEqual(helpSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 1)
         XCTAssertEqual(toolbarSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 1)
         XCTAssertTrue(toolbarSource.contains("RekonSearchField("))
+        XCTAssertTrue(toolbarSource.contains("HStack(spacing: RekonTheme.Spacing.micro) {\n                searchField\n                saveButton\n            }"))
+        XCTAssertFalse(toolbarSource.contains("Button(\"Save query\")"))
         XCTAssertFalse(searchSource.contains(".textFieldStyle(.roundedBorder)"))
         XCTAssertFalse(helpSource.contains(".textFieldStyle(.roundedBorder)"))
     }

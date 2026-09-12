@@ -55,10 +55,13 @@ struct WorkspaceToolbar: View {
                 NavigationHistoryControls(model: model)
             }
         } center: {
-            searchField.frame(minWidth: isCompact ? 180 : 280, maxWidth: isCompact ? 320 : 440)
+            HStack(spacing: RekonTheme.Spacing.micro) {
+                searchField
+                saveButton
+            }
+            .frame(minWidth: isCompact ? 180 : 280, maxWidth: isCompact ? 320 : 440)
         } trailing: {
             HStack(spacing: RekonTheme.Spacing.micro) {
-                saveButton
                 iconButton("Help", systemImage: "questionmark.circle", identifier: "workspace-toolbar-help") {
                     Task { await model.navigate(to: .help) }
                 }
@@ -109,22 +112,13 @@ struct WorkspaceToolbar: View {
         )
     }
 
-    @ViewBuilder private var saveButton: some View {
-        if isCompact {
-            iconButton("Save query", systemImage: "bookmark", identifier: "workspace-search-save") {
-                presentSave()
-            }
-            .disabled(saveIsDisabled)
-            .help(saveHelp)
-            .popover(isPresented: $isSavePresented) { savePopover }
-        } else {
-            Button("Save query") { presentSave() }
-                .buttonStyle(RekonSecondaryButtonStyle())
-                .disabled(saveIsDisabled)
-                .help(saveHelp)
-                .accessibilityIdentifier("workspace-search-save")
-                .popover(isPresented: $isSavePresented) { savePopover }
+    private var saveButton: some View {
+        iconButton("Save query", systemImage: "bookmark", identifier: "workspace-search-save") {
+            presentSave()
         }
+        .disabled(saveIsDisabled)
+        .help(saveHelp)
+        .popover(isPresented: $isSavePresented) { savePopover }
     }
 
     private var notificationsButton: some View {
