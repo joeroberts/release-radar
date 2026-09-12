@@ -3664,6 +3664,7 @@ final class AppRouteTests: XCTestCase {
 
         for width in [1_280.0, 760.0] {
             model.isSidebarCompact = false
+            model.setWorkspaceSearchText("Toolbar clear")
             window.setContentSize(NSSize(width: width, height: 720))
             hosting.frame = window.contentView?.bounds ?? .zero
             try await Task.sleep(for: .milliseconds(250))
@@ -3679,6 +3680,7 @@ final class AppRouteTests: XCTestCase {
                 "navigation-forward",
                 "workspace-search-field",
                 "workspace-search-run",
+                "workspace-search-clear",
                 "workspace-search-save",
                 "workspace-toolbar-help",
                 "workspace-toolbar-settings",
@@ -3694,6 +3696,15 @@ final class AppRouteTests: XCTestCase {
                     "Expected \(identifier) to remain fully visible at width \(Int(width)); window=\(nativeWindowFrame), element=\(elementFrame)"
                 )
             }
+            XCTAssertEqual(
+                AXUIElementPerformAction(
+                    try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-clear")),
+                    kAXPressAction as CFString
+                ),
+                .success
+            )
+            try await Task.sleep(for: .milliseconds(100))
+            XCTAssertEqual(model.workspaceSearchDraft, "")
             for duplicate in ["sidebar-search", "sidebar-help", "sidebar-settings", "sidebar-notifications"] {
                 XCTAssertNil(accessibilityElement(nativeWindow, identifier: duplicate))
             }
