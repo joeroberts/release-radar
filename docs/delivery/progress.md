@@ -85,28 +85,44 @@ remaining findings and is archived. Delivery-author task
 archive after parent confirmation. No package, installation, or live helper
 verification was performed for this newer change.
 
+Owner-authorized task `01a092d8-9831-76c0-ba7c-c899f195bee5` built and verified
+`dist/ReleaseRadar-0.1.9-a60b1fd.dmg` from reviewed closeout `07d8f877` (product
+source `a60b1fd`) and committed the package at
+`69f939563f2e4044b00b91a0c1c22424aecb84a8`. The locally signed
+0.1.9 (1) bundle passed strict nested-code, Hardened Runtime, entitlement, DMG,
+mounted-identity and installed-identity checks. The previously installed `acc7401`
+app and the earlier 0.1.7 app remain preserved in separate rollback directories.
+
+The stale 0.1.7 helper PID `48996` survived application replacement, but existing
+startup recovery replaced it from the newly installed app before the Settings
+action was activated. The task did not manufacture the stale condition. One
+**Restart helper** activation then exposed the in-progress accessibility state,
+replaced current helper PID `67535` with PID `67987` executing from
+`/Applications/ReleaseRadar.app`, and finished with the success message and enabled
+actions. Plugin inventory and bytes remained unchanged and Pursuit remained
+visible. Final status is honestly **Modified**, not **Installed**, because the
+installed bytes differ from the last managed receipt. The
+[signed installation evidence](evidence/2026-09-11-restart-helper-signed-installation.md)
+records the result and limitation.
+
 ## Authorization, limitations, and next work
 
-The current authorized endpoint for Restart helper recovery is its local branch,
-repository records, focused checks, independent review, and scoped local commits.
-No push, PR, merge, DMG creation, further installation, app launch, owner SQLite
-access, live helper restart, external publication, or cleanup is authorized. The
-owner separately authorized the completed `acc7401` in-place installation/startup
-check and the earlier temporary signed test-service registration and teardown;
-neither authorization carries forward to this newer change.
+The authorized Restart helper package, installation, and bounded live-check endpoint
+is complete. No push, PR, merge, plugin installation/removal, owner SQLite access,
+unrelated application mutation, external publication, notarization, Phase 7 work,
+or cleanup was authorized or performed.
 
 Application inventory, catalog binding/acceptance, and managed readback remain
 unauthorized. The last recorded inventory was `bindingMissing`, `isComplete:false`
 for `project-fffdc0e0b15b9b86`; local documentation checks do not establish managed
-application synchronization. The installed application reflects `acc7401` and
-predates the Restart helper candidate. Full owner manual acceptance remains
-outstanding.
+application synchronization. Full owner manual acceptance remains outstanding.
 
 Phase 7 planning is independently approved at
 `a0f22d965395248be6ec5928d2932d3a7ce5166d`. Phase 7 implementation remains paused
-and requires separate explicit authorization. The next step is an owner decision
-on integrating and packaging the approved local Restart helper candidate; any
-further installation or manual acceptance requires separate explicit authorization.
+and requires separate explicit authorization. The next eligible owner work is the
+broader manual acceptance guide; the unexercised stale-helper button precondition
+may be revisited only under a naturally occurring stale state or separate explicit
+authorization.
 
 The release staging bundle and repository `DerivedData` remain temporary build
 outputs. Earlier per-slice temporary diagnostics listed in the historical Phase 6

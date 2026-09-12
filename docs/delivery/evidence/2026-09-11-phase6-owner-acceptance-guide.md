@@ -10,18 +10,22 @@ September 8, 2026 through the completed Phase 6 baseline:
 - Delivered-product range: `cd16df1b0226aa8a08bd167364779103ebe86278..5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`
 - Merged pull requests: #33 through #48
 - Acceptance-correction source: `acc740113d1e7e056b5e7f1b2e3a0e3e21f24c27`
-- DMG package artifact commit: `09caafe0108496297684089603aa04c0cfffe361`
+- Restart helper source: `a60b1fd2f5c56d145bcbc634fd0e3f75a8765f26`
+- Reviewed package baseline: `07d8f8771a7a4bb87542a14b7c23e85436d68337`
+- DMG package artifact commit: `69f939563f2e4044b00b91a0c1c22424aecb84a8`
 - App version/build: `0.1.9 (1)`
-- DMG: `dist/ReleaseRadar-0.1.9-acc7401.dmg`
-- DMG SHA-256: `bfb3e769f7f5acea37aeca0573a8a53ad484795fcbe2f36c07010c8f6fe7b046`
-- Main executable SHA-256: `52a4a1a8015fde064582c8768828d60907b641d09d827c15806919c2b283e428`
-- CodeDirectory hash: `cf90e9252c9b56e1699041d098987b37dea340ce`
+- DMG: `dist/ReleaseRadar-0.1.9-a60b1fd.dmg`
+- DMG SHA-256: `6144d3cc1639a648f3f017b7fabe0552952dd59245b406cb48eb6b7509e282dc`
+- Main executable SHA-256: `ac7e312203b3b900fb6e36d4e34be202e495640483f2554e45e7126ce922bf00`
+- CodeDirectory hash: `619175606f973a8482e2ccc2baa4603b04670151`
 - Signature: Apple Development, team `2UA854NLX4`, Hardened Runtime enabled
 
-The earlier `ReleaseRadar-0.1.7-fb2ff3b.dmg` and diagnostic
-`ReleaseRadar-0.1.9-5e7b9b8.dmg` are not the acceptance candidate. The former
-predates this guide; the latter contains the five focused failures described in
-the previous revision of this guide.
+The earlier `ReleaseRadar-0.1.7-fb2ff3b.dmg`, diagnostic
+`ReleaseRadar-0.1.9-5e7b9b8.dmg`, and corrected
+`ReleaseRadar-0.1.9-acc7401.dmg` remain preserved. The first two are not acceptance
+candidates. The corrected package is superseded by the package above for the
+Restart helper recovery check; it remains the recorded candidate for the earlier
+bounded installation evidence.
 
 The 0.1.9 DMG is an owner-only local build. Its bundle and nested code pass strict
 signature verification, but it is not notarized and Gatekeeper does not assess it
@@ -63,6 +67,11 @@ strict signature, Hardened Runtime, and exact-entitlement verification. The DMG
 verifies, mounts read-only, and contains byte-identical executable and CodeResources
 copies of the staged app.
 
+The later Restart helper source passed its focused 54-of-54 test run and independent
+review with no remaining findings. Its signed follow-on package passed the same
+strict bundle, nested-code, entitlement and mounted-identity checks; the bounded
+installed result and stale-precondition limitation are recorded below.
+
 The scoped automated correction acceptance is green. Do not record this build as
 owner-accepted until the manual owner checks in this guide are completed and the
 owner explicitly accepts it. Phase 7 remains paused.
@@ -91,10 +100,10 @@ store to schema 26. An older app must not be pointed at that migrated live store
    commit above, then verify the DMG checksum from the checkout root:
 
    ```sh
-   shasum -a 256 dist/ReleaseRadar-0.1.9-acc7401.dmg
+   shasum -a 256 dist/ReleaseRadar-0.1.9-a60b1fd.dmg
    ```
 
-   Expected digest: `bfb3e769f7f5acea37aeca0573a8a53ad484795fcbe2f36c07010c8f6fe7b046`.
+   Expected digest: `6144d3cc1639a648f3f017b7fabe0552952dd59245b406cb48eb6b7509e282dc`.
 5. Open the DMG and drag **ReleaseRadar.app** onto its **Applications** link.
    Approve Finder's Replace prompt if an older app is installed.
 6. If macOS blocks the first open because this local build is not notarized,
@@ -155,6 +164,30 @@ named query in this quick pass.
    Goals, Search, and Help check. Expected: inspectors stack below their lists,
    controls remain reachable by scrolling, text wraps, and there is no horizontal
    clipping.
+
+## Restart helper recovery check
+
+This check does not install, reinstall, remove or modify the plugin. If ordinary
+startup recovery has already replaced a stale helper, do not recreate that
+condition by downgrading or manually re-registering the service; record the
+limitation and test only the current-helper restart path.
+
+1. Open **Settings → Connections** and record the plugin state and currently
+   registered lifecycle helper identity when available.
+2. Activate **Restart helper** once. Expected: the button announces
+   **Restarting lifecycle helper** and lifecycle actions remain unavailable until
+   the asynchronous operation completes.
+3. Expected completion: **Lifecycle helper restarted. Plugin status refreshed.**
+   The replacement helper must execute from the currently installed application.
+   If macOS requires Login Items approval, follow the visible recovery guidance
+   and retry only after approval.
+4. Confirm the plugin inventory and bytes did not change and the existing owner
+   workspace remains visible. **Installed** is expected only when the exact retained
+   receipt matches; an honest **Modified** state with reinstall guidance is correct
+   when it does not.
+
+The signed installed result for this package is recorded in the
+[Restart helper evidence](2026-09-11-restart-helper-signed-installation.md).
 
 ## Disposable-project mutation setup
 
@@ -407,8 +440,8 @@ live owner dataset merely to test it.
 
 For each failure, record:
 
-1. App version/build `0.1.9 (1)`, correction source `acc7401`, package artifact
-   commit `09caafe`, and whether the app was copied from the DMG named above. If
+1. App version/build `0.1.9 (1)`, Restart helper source `a60b1fd`, package artifact
+   commit `69f9395`, and whether the app was copied from the DMG named above. If
    reporting a guide defect, also include the current documentation commit.
 2. Exact project registration, phase, ticket, goal, proposal, reference, evidence,
    or task revision involved. Redact credentials and private document content.

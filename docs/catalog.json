@@ -6239,6 +6239,66 @@
       }
     },
     {
+      "artifactID": "rr-restart-helper-signed-installation-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-signed-installation.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-restart-helper-before-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-before.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-restart-helper-progress-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-progress.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-restart-helper-after-2026-09-11",
+      "path": "docs/delivery/evidence/2026-09-11-restart-helper-after.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-codex-helper-restart-brief-2026-09-11",
       "path": "docs/delivery/task-briefs/2026-09-11-codex-helper-restart/restart-helper-brief.md",
       "kind": "document",

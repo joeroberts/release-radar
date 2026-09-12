@@ -1,8 +1,8 @@
 # Codex lifecycle helper restart
 
-Date: 2026-09-11. Status: implementation and independent review complete;
-signed installed acceptance pending. The current delivery state remains in
-`docs/delivery/progress.md`.
+Date: 2026-09-11. Status: implementation, independent review, signed packaging,
+installation and bounded live acceptance complete. The current delivery state
+remains in `docs/delivery/progress.md`.
 
 ## Shared execution context
 
@@ -48,6 +48,36 @@ passed, the repository documentation indexes match the catalog, and wide, compac
 and progress renders were inspected. No package was created and no installed or
 live helper was exercised for this newer change. Signed installed acceptance needs
 separate owner authorization.
+
+## Owner-authorized signed acceptance extension
+
+The owner subsequently authorized a new local signed DMG containing the approved
+implementation, an app-specific rollback copy, in-place replacement and relaunch
+of `/Applications/ReleaseRadar.app`, and one activation of the installed Settings
+**Restart helper** button against the retained stale helper when that condition is
+still present. The packaging task uses branch
+`codex/restart-helper-dmg-live-test` rooted at reviewed closeout `07d8f877`, whose
+last product-source commit is `a60b1fd`; it must not package another checkout.
+
+Acceptance requires strict signature, nested-code, Hardened Runtime, exact
+entitlement, DMG mount/identity, and installed-bundle identity checks. The live
+check records the prior helper identity, button progress/final UI, the replacement
+helper executable path and process identity, plugin file inventory/content, and
+visible owner workspace preservation. It may perform only the button's bounded
+service re-registration and audited status recovery. Plugin installation/removal,
+direct SQLite access, unrelated owner-state changes, Phase 7, publication,
+notarization, and cleanup remain excluded. The parent delegated this task's
+progress-ledger updates; one scoped local package/artifact commit and one scoped
+documentation/evidence closeout commit are authorized.
+
+The extension completed with package artifact commit
+`69f939563f2e4044b00b91a0c1c22424aecb84a8` and the durable
+result in `docs/delivery/evidence/2026-09-11-restart-helper-signed-installation.md`.
+The button restarted the current installed helper and preserved plugin bytes and
+the visible Pursuit workspace. Startup recovery replaced the retained stale 0.1.7
+helper before the button could be activated, so the stale-helper button precondition
+was not exercised or recreated. Final plugin status remained truthfully Modified
+because the installed bytes differed from the last managed receipt.
 
 ## Design and constraints
 
