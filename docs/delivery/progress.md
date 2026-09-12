@@ -153,6 +153,29 @@ app and helper process identities were preserved. The package is not notarized o
 generally distributable, and no installation, app launch, helper/plugin action,
 owner-state access, push, PR, merge or publication occurred.
 
+## Release 0.1.12 package details
+
+The independently reviewed RDS toolbar candidate is packaged as Release Radar
+`0.1.12 (1)` from version/source commit
+`0a281c1e812725d979ffccfd57782695aca4bef4`, which contains product candidate
+`8cd2bc634b8c06d04ec59e00e477ebc32f308192`. The bundled plugin is `0.1.12`
+with recognized digest
+`8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb` and
+the RDS dependency remains pinned to
+`3c2626102a2e97dd93f31fbc62b733085d6700ec`. The annotated local `v0.1.12`
+tag identifies the containing release-record commit.
+
+- DMG: `dist/ReleaseRadar-0.1.12.dmg`
+- Durable owner copy: `/Users/jroberts/Downloads/ReleaseRadar-0.1.12.dmg`
+- DMG SHA-256: `740da6bdb097207c26de686e22a8c0b9bac0abb6940935374a8826dd91232261`
+
+The [0.1.12 packaging evidence](evidence/2026-09-12-release-0.1.12-packaging.md)
+records focused version checks, signed no-launch staging, read-only mounted image
+verification, strict nested-code and entitlement checks, and identical staged/mounted
+hashes. The installed app remained running and unmodified. No app launch,
+installation, SQLite/Keychain access, notarization, push, PR, merge or publication
+occurred; this is not a generally distributable notarized release.
+
 ## Active navigation responsiveness correction
 
 The owner authorized a bounded correction for project-navigation clicks that

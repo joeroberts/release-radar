@@ -91,6 +91,7 @@
 | rr-rds-toolbar-compact-2026-09-12 | [docs/delivery/evidence/2026-09-12-rds-toolbar-compact.png](evidence/2026-09-12-rds-toolbar-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-rds-toolbar-wide-2026-09-12 | [docs/delivery/evidence/2026-09-12-rds-toolbar-wide.png](evidence/2026-09-12-rds-toolbar-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-release-0.1.11-packaging-2026-09-12 | [docs/delivery/evidence/2026-09-12-release-0.1.11-packaging.md](evidence/2026-09-12-release-0.1.11-packaging.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-release-0.1.12-packaging-2026-09-12 | [docs/delivery/evidence/2026-09-12-release-0.1.12-packaging.md](evidence/2026-09-12-release-0.1.12-packaging.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
