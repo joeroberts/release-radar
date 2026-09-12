@@ -2,6 +2,17 @@
 
 ## Current outcome
 
+The owner resumed **Correct Add Project RDS styling** to close its missing review.
+Candidate `8176e319` incorporates the merged default baseline and applies existing
+RDS window chrome and Cancel/Initialize/Attach styles. Both focused AppRoute tests
+passed. One independent code/UX review approved the candidate with no findings.
+Full native-window captures are preserved at [default size](evidence/2026-09-12-add-project-rds-window-default.png)
+and [minimum size](evidence/2026-09-12-add-project-rds-window-minimum.png); the inert
+fixture shows inactive traffic lights and does not launch the installed owner app.
+The reviewed candidate is in the local integration checkout. Push/PR/default-branch
+merge approval is the next endpoint, followed by the standing versioned-package
+and installation workflow. No new DMG or installation has occurred for this fix.
+
 The owner authorized immediate reconciliation of delivered local releases with the
 actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
 chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/pull/50)
@@ -11,7 +22,8 @@ chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/
 changes and release records). All three PRs are merged into the default branch;
 the final integration merge is `8de63b16e2fa0f84ca79b4c691e4a43117befce2`.
 The separately recorded 0.1.11 installation closeout is retained in that history.
-Both local integration and saved-project checkouts are synchronized with origin.
+Both local integration and saved-project checkouts were synchronized with origin
+at that reconciliation checkpoint.
 The completed **Fix Search fields to use RDS** and **Phase 6 DMG and manual
 acceptance testing** tasks are archived after their commits reached the default
 branch and their work stopped. A subsequent owner correction exposed an incomplete
@@ -20,16 +32,16 @@ the listing tool returned only two. Direct reads identified eight more completed
 and quiescent tasks: three Phase 6 design reviewers, the 0.1.10 and 0.1.11 package
 tasks, the Restart helper package task, and two Phase 6 acceptance reviewers.
 Their results were verified in merged history and those eight tasks are archived.
-Read-only local metadata confirms six top-level tasks remain:
+The owner subsequently archived the completed missing-Pursuit-phase diagnosis
+and the stopped metric-layout task. The recovery design remains sequenced after
+Phase 6H; metrics remain stopped under Phase 6F. Four top-level tasks remain:
 
 - Master Delivery Thread — orchestration.
-- Diagnose missing Pursuit plan phases — retained investigation/design follow-up.
-- Align Overview metric labels with icons — explicitly stopped, not completed.
-- Correct Add Project RDS styling — candidate awaiting independent review, not merged.
+- Correct Add Project RDS styling — reviewed candidate awaiting integration.
 - Phase 7 portable continuity plan — replacement — preserved at owner request.
 - Phase 7 portable continuity independent… — preserved at owner request.
 
-The stopped and unfinished tasks were not resumed; Phase 7 tasks were not changed.
+Only the Add Project task was resumed. Phase 7 tasks were not changed.
 
 The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
 tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
@@ -53,7 +65,7 @@ reviews remain terminal; no redundant package review was added.
 
 Only repository integration and the requested completed-task cleanup are included.
 Phase 7 stays paused and its tasks remain untouched. The missing Pursuit phases
-investigation remains open; unimplemented Phase 6 extensions and the Phase 8
+diagnosis is archived with its recovery design preserved; unimplemented Phase 6 extensions and the Phase 8
 isolated stale-helper test retain their recorded boundaries. Repository integration
 does not claim application catalog acceptance or mutate owner project data.
 
