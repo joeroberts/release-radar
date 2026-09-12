@@ -20,10 +20,33 @@ struct SidebarView: View {
                 RekonSeparator(.vertical)
                     .frame(height: geometry.size.height)
 
-                detail
-                    .frame(maxWidth: .infinity)
-                    .frame(height: geometry.size.height)
-                    .background(RekonTheme.background)
+                VStack(spacing: 0) {
+                    if model.dashboard != nil, let error = model.dashboardError {
+                        FailureStateView(
+                            presentation: .init(
+                                title: "Delivery data unavailable",
+                                detail: error,
+                                systemImage: "externaldrive.badge.exclamationmark",
+                                tone: .error,
+                                accessibilityID: "failure-delivery-data"
+                            ),
+                            style: .inline,
+                            actionTitle: "Reload dashboard",
+                            action: {
+                                Task { await model.reloadDashboardAfterCommittedAgentCommand() }
+                            }
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                    }
+
+                    detail
+                        .frame(maxWidth: .infinity)
+                        .frame(maxHeight: .infinity)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: geometry.size.height)
+                .background(RekonTheme.background)
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
             .clipped()
@@ -111,6 +134,11 @@ struct SidebarView: View {
                         .lineLimit(1)
                         .padding(.horizontal, 18)
                 }
+
+                ProjectNavigationStatusView(
+                    documentationStatus: model.documentationObservationStatus(for: currentProject.id),
+                    isCompact: model.isSidebarCompact
+                )
 
                 VStack(spacing: 4) {
                     ForEach(AppRoute.projectRoutes(for: currentProject.id), id: \.self) { route in
@@ -220,7 +248,7 @@ struct SidebarView: View {
             WorkspaceHelpView { destination in
                 Task { await model.openWorkspaceHelpDestination(destination) }
             }
-        } else if let error = model.dashboardError {
+        } else if let error = model.dashboardError, model.dashboard == nil {
             FailureStateView(
                 presentation: .init(
                     title: "Delivery data unavailable",
@@ -677,6 +705,41 @@ struct SidebarView: View {
             ProgressView("Loading local delivery data…")
                 .controlSize(.large)
         }
+    }
+
+}
+
+struct ProjectNavigationStatusView: View {
+    let documentationStatus: DocumentationObservationStatus?
+    let isCompact: Bool
+
+    var body: some View {
+        if isChecking {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("project-documentation-checking-progress")
+                if !isCompact {
+                    Text("Checking project documentation…")
+                        .font(RekonTypography.metadata)
+                        .foregroundStyle(RekonTheme.secondaryText)
+                        .lineLimit(2)
+                }
+            }
+            .padding(.horizontal, isCompact ? 10 : 12)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, alignment: isCompact ? .center : .leading)
+            .background(RekonTheme.elevatedSurface, in: RoundedRectangle(cornerRadius: 9))
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Checking project documentation")
+            .accessibilityIdentifier("project-documentation-checking")
+            .padding(.horizontal, isCompact ? 8 : 16)
+        }
+    }
+
+    private var isChecking: Bool {
+        if case .checking = documentationStatus { return true }
+        return false
     }
 
 }

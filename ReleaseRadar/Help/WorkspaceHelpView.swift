@@ -59,6 +59,14 @@ enum WorkspaceHelpContent {
             destination: .phaseBoard
         ),
         .init(
+            id: "navigation-validation",
+            title: "Navigate while documentation is checked",
+            detail: "When you choose Overview, Project Plan, or Phase Board, the destination opens immediately. An animated checking status remains visible while Release Radar validates current project documentation, and verified-evidence actions remain unavailable until the current check finishes. If the dashboard-open audit fails, the selected page stays visible with a reload action.",
+            keywords: "navigation checking spinner progress documentation validation overview project plan phase board",
+            actionTitle: "Open Overview",
+            destination: .projectOverview
+        ),
+        .init(
             id: "planning-unplaced",
             title: "Planning and unplaced work",
             detail: "Project Plan shows delivery structure and unplaced tickets. A ticket is not active delivery work until it is placed in a phase and lane through an approved change.",

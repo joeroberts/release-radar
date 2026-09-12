@@ -9,6 +9,7 @@ final class WorkspaceHelpTests: XCTestCase {
             "setup-handoff", "recovery", "active-viewed", "planning-unplaced",
             "task-adoption", "proposal-approval", "readiness-acceptance",
             "saved-query-recovery", "search-navigation", "plugin-helper-restart",
+            "navigation-validation",
         ])
         XCTAssertTrue(topics.allSatisfy { !$0.title.isEmpty && !$0.detail.isEmpty })
         XCTAssertTrue(topics.allSatisfy { $0.destination != nil })
@@ -36,5 +37,11 @@ final class WorkspaceHelpTests: XCTestCase {
         XCTAssertEqual(helper?.destination, .settings)
         XCTAssertTrue(helper?.detail.contains("does not reinstall or remove the plugin") == true)
         XCTAssertTrue(helper?.detail.contains("projects remain unchanged") == true)
+
+        let navigation = try? XCTUnwrap(WorkspaceHelpContent.filtered(by: "navigation checking spinner").first)
+        XCTAssertEqual(navigation?.id, "navigation-validation")
+        XCTAssertEqual(navigation?.destination, .projectOverview)
+        XCTAssertTrue(navigation?.detail.contains("destination opens immediately") == true)
+        XCTAssertTrue(navigation?.detail.contains("actions remain unavailable") == true)
     }
 }

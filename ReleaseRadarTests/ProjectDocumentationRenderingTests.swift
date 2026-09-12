@@ -917,6 +917,26 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         )
     }
 
+    func testProjectNavigationStatusRendersCheckingAtWideAndCompactWidths() async throws {
+        for (name, width, isCompact) in [("wide", 280.0, false), ("compact", 86.0, true)] {
+            try await render(
+                ProjectNavigationStatusView(
+                    documentationStatus: .checking(identity: nil, generation: 1),
+                    isCompact: isCompact
+                )
+                .padding(12),
+                name: "project-navigation-checking-\(name)",
+                width: width,
+                expected: nil,
+                expectedText: ["Checking project documentation"],
+                presentIdentifiers: [
+                    "project-documentation-checking",
+                    "project-documentation-checking-progress",
+                ]
+            )
+        }
+    }
+
     private func compatibilityStatus(
         state: SharedExecutionCompatibilityState,
         directResults: [SharedExecutionDirectResult] = []
@@ -968,6 +988,7 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         expectedText: [String] = [],
         absentText: [String] = [],
         absentButtonTitles: [String] = [],
+        presentIdentifiers: [String] = [],
         focusIdentifiers: [String] = [],
         disabledIdentifiers: [String] = [],
         pressIdentifiers: [String] = [],
@@ -1025,6 +1046,12 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
             }
         }
         let initialActual = accessibilityText(try XCTUnwrap(ownWindow))
+        for identifier in presentIdentifiers {
+            XCTAssertNotNil(
+                accessibilityElement(try XCTUnwrap(ownWindow), identifier: identifier),
+                "Missing accessibility element \(identifier)"
+            )
+        }
         for title in absentButtonTitles {
             XCTAssertNil(
                 accessibilityButton(try XCTUnwrap(ownWindow), title: title),

@@ -340,28 +340,11 @@ final class AppModel {
         let resolvedRoute = resolvedRouteForNavigation(route)
         navigationRecoveryMessage = resolvedRoute == route ? nil : "The requested destination changed with the project lifecycle. Its current location is shown."
 
-        if let projectID = resolvedRoute.projectID,
-           dashboard?.projects.contains(where: { $0.id == projectID }) == true {
-            do {
-                try await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
-            } catch {
-                guard generation == navigationGeneration else { return }
-                dashboardError = error.localizedDescription
-                return
-            }
-            guard generation == navigationGeneration else { return }
-            documentationObserver.invalidate(projectID: projectID)
-        }
-        if let projectID = resolvedRoute.projectID {
-            _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
-            guard generation == navigationGeneration else { return }
-        }
         if let destinationProjectID = resolvedRoute.projectID,
            destinationProjectID != previousProjectID {
             selectedTicketID = TicketID(rawValue: "")
         }
         selection = resolvedRoute
-        guard generation == navigationGeneration else { return }
         if resolvedRoute == .goals, let goalID = reconcileWorkspaceGoalsSelection() {
             navigationFocus = .workspaceGoal(goalID)
         } else if resolvedRoute == .goals {
@@ -373,6 +356,22 @@ final class AppModel {
         }
         navigationHistory.navigate(to: historyEntry(for: resolvedRoute, focus: navigationFocus))
         lastCommittedNavigationGeneration = generation
+
+        if let projectID = resolvedRoute.projectID,
+           dashboard?.projects.contains(where: { $0.id == projectID }) == true {
+            documentationObserver.invalidate(projectID: projectID)
+            do {
+                try await MeaningfulDeliveryEventRecorder(store: store).markDashboardOpened(projectID: projectID)
+            } catch {
+                guard generation == navigationGeneration else { return }
+                dashboardError = error.localizedDescription
+            }
+            guard generation == navigationGeneration else { return }
+        }
+        if let projectID = resolvedRoute.projectID {
+            _ = await refreshDocumentationObservation(projectID: projectID, withdrawCurrent: true)
+            guard generation == navigationGeneration else { return }
+        }
     }
 
     func goBack() async { await restoreNavigation(step: .back) }
