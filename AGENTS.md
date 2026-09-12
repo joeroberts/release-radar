@@ -308,6 +308,15 @@ permissions. Hooks must preserve STOP, owner-approval waits and legitimate block
 must not grant authority or auto-publish, and must not create a new task database,
 review engine or unbounded continuation loop.
 
+## Integration Checkout Ownership
+
+The owner directed on September 12, 2026 that integration use the saved project
+checkout. Do not create or retain a separate integration checkout without an
+assigned Codex task. Delivery writers may use their assigned isolated worktrees;
+after their authorized changes are merged and durable results are preserved,
+retire worktrees that are no longer needed. Use the saved project checkout for
+parent-managed integration and release records.
+
 ## Standing Owner Authorization: Local Release Delivery
 
 The owner explicitly authorized this standing workflow on September 12, 2026
