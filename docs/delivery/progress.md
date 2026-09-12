@@ -12,6 +12,9 @@ The independently reviewed bookmark and Help correction is source
 `c045f29ec09273dccabb033731f423d2d3850906`, with closeout `b7cc968`.
 Independent package/version review is pending the version/source candidate.
 No push, PR, merge, publication, notarization or app launch is authorized.
+The [package candidate evidence](evidence/2026-09-12-release-0.1.13-packaging.md)
+records the signed local DMG and matching Downloads copy; local tag and non-launch
+installation remain pending that single review.
 
 Phase 6 is merged through the actual default branch at
 `5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`. The delivered scope follows the
