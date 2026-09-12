@@ -2,6 +2,18 @@
 
 ## Current outcome
 
+The owner-authorized **RDS search-submit focus correction** is complete and
+installed locally as **0.1.16 (1)**. Release Radar now pins merged
+RekonDesignSystem revision `f986e85e786f55f1d73d6e429de11370399414f7`.
+The toolbar retains its borderless bookmark Save control immediately right of
+the search field in the centered micro-spaced group at wide and compact widths.
+The consumer's independent code/UX review identified stale-evidence and
+focused-submit proof gaps; both were corrected without an additional review
+cycle. Focused inert-host checks and the [0.1.16 package evidence](evidence/2026-09-12-release-0.1.16-packaging.md)
+record the resulting layout, focus, clear, accessibility, signature, installer
+and smoke-launch results. No owner search preference, SQLite state, remote, PR,
+notarization, or publication action occurred.
+
 The owner resumed **Correct Add Project RDS styling** to close its missing review.
 Candidate `8176e319` incorporates the merged default baseline and applies existing
 RDS window chrome and Cancel/Initialize/Attach styles. Both focused AppRoute tests
