@@ -3699,6 +3699,21 @@ final class AppRouteTests: XCTestCase {
             }
             XCTAssertFalse(accessibilityText(nativeWindow).contains("Persisted locally"))
             try taskCapture(hosting, name: width == 760 ? "rds-toolbar-compact" : "rds-toolbar-wide")
+
+            let submit = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run"))
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(submit, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                .success,
+                "The RDS submit glyph must be focusable at width \(Int(width))."
+            )
+            try await Task.sleep(for: .milliseconds(100))
+            var focused: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(submit, kAXFocusedAttribute as CFString, &focused),
+                .success
+            )
+            XCTAssertEqual(focused as? Bool, true)
+            try taskCapture(hosting, name: width == 760 ? "search-focus-0.1.16-compact" : "search-focus-0.1.16-wide")
         }
 
         window.setContentSize(NSSize(width: 1_280, height: 720))
