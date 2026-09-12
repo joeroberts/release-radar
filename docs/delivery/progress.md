@@ -7,9 +7,9 @@ Releases 0.1.14–0.1.16 are merged into the default branch through
 existing commit order. Tags `v0.1.14`, `v0.1.15` and `v0.1.16` are published
 unchanged. The saved project checkout is synchronized with the merge, and the
 unassigned `release_radar-phase6-design-review` worktree and its build output
-have been removed. Future parent-managed integration uses the saved project
-checkout, as recorded in `AGENTS.md`. Prior DMGs and unrelated files remain
-preserved. No rebuild or installation was needed for this reconciliation.
+have been removed. The unauthorized saved-checkout rule was withdrawn at the
+owner's request. Prior DMGs and unrelated files remain preserved. No rebuild or
+installation was needed for this reconciliation.
 
 The owner-authorized **RDS search-submit focus correction** is complete and
 installed locally as **0.1.16 (1)**. Release Radar now pins merged
