@@ -86,6 +86,8 @@
 | rr-restart-helper-before-2026-09-11 | [docs/delivery/evidence/2026-09-11-restart-helper-before.png](evidence/2026-09-11-restart-helper-before.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-restart-helper-progress-2026-09-11 | [docs/delivery/evidence/2026-09-11-restart-helper-progress.png](evidence/2026-09-11-restart-helper-progress.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-restart-helper-signed-installation-2026-09-11 | [docs/delivery/evidence/2026-09-11-restart-helper-signed-installation.md](evidence/2026-09-11-restart-helper-signed-installation.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6e-help-rds-field-2026-09-12 | [docs/delivery/evidence/2026-09-12-phase6e-help-rds-field.png](evidence/2026-09-12-phase6e-help-rds-field.png) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-phase6e-search-rds-fields-2026-09-12 | [docs/delivery/evidence/2026-09-12-phase6e-search-rds-fields.png](evidence/2026-09-12-phase6e-search-rds-fields.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |

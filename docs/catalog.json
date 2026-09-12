@@ -6209,6 +6209,36 @@
       }
     },
     {
+      "artifactID": "rr-phase6e-search-rds-fields-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-phase6e-search-rds-fields.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6e-help-rds-field-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-phase6e-help-rds-field.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-phase6-delivery-history-2026-09-11",
       "path": "docs/delivery/archive/2026-09-11-phase6-delivery-history.md",
       "kind": "document",
