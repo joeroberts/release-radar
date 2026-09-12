@@ -47,13 +47,13 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.12")
+        XCTAssertEqual(package.version, "0.1.13")
         XCTAssertEqual(
             package.version,
             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         )
         XCTAssertEqual(package.relativeFiles, CodexPluginPackage.relativeFiles)
-        XCTAssertEqual(package.digest, "8f23498996d2beb1994db711d39527ef42a96ffab6344d1976e5e18f925e90eb")
+        XCTAssertEqual(package.digest, "ba87dfe795dc0efdf0de940a10a7f6c096c19ed5722b65a162a86d07237a06a6")
     }
 
     func testBundledSkillDefinesOwnerAuthorizedAuditedRepositoryHandoff() throws {

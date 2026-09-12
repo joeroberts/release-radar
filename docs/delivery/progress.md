@@ -2,6 +2,17 @@
 
 ## Current outcome
 
+Owner-authorized local Release Radar `0.1.13` packaging, local annotated tag
+and non-launch installation are active on `codex/release-0.1.13`, from committed
+baseline `3fb119c303e7da5a96baa07d43d53e5d4860e44b`. The controlling
+[release brief](task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md)
+limits the work to version/digest metadata, focused checks, local DMG copies,
+evidence and an authorized replacement of `/Applications/ReleaseRadar.app`.
+The independently reviewed bookmark and Help correction is source
+`c045f29ec09273dccabb033731f423d2d3850906`, with closeout `b7cc968`.
+Independent package/version review is pending the version/source candidate.
+No push, PR, merge, publication, notarization or app launch is authorized.
+
 Phase 6 is merged through the actual default branch at
 `5e7b9b86e55cd8aed192fb116bbe0bcae9bea66a`. The delivered scope follows the
 [Phase 6 controlling plan](plans/2026-09-10-phase6-outcomes-tasks-history.md):

@@ -816,6 +816,22 @@
       "isLeaf": true,
       "firstRead": "213D9B60-6FC9-4769-A43E-F49F90795085",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-12-release-0.1.13",
+      "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.13",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Owner-authorized local packaging, tag and installation for Release Radar 0.1.13",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "8D82DF0A-AE02-48AA-A8ED-5B0A56142406",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -6579,6 +6595,22 @@
       "authorityLevel": "controlling",
       "authorityRole": "delivery.release-0.1.12-packaging",
       "parentCollection": "delivery.task-briefs.2026-09-12-release-0.1.12",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "8D82DF0A-AE02-48AA-A8ED-5B0A56142406",
+      "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.release-0.1.13-packaging",
+      "parentCollection": "delivery.task-briefs.2026-09-12-release-0.1.13",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
