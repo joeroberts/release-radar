@@ -17,6 +17,14 @@ The completed, idle Add Project task is now archived at the owner's request.
 Its release commits and evidence are preserved in the canonical integration
 checkout; this master task retains the pending remote integration endpoint.
 
+The owner subsequently reopened the same correction after the installed 0.1.14
+Initialize screen exposed unstyled later-workflow controls. The local candidate
+`39ca6bc` extends existing RDS controls across Initialize and Attach selections,
+confirmations, completion and error states; it preserves folder-picker and data
+behavior. Fresh native-window captures and the independent re-review are recorded
+in the [later-workflow evidence](evidence/2026-09-12-add-project-rds-later-workflows.md).
+The authorized local 0.1.15 package and installation endpoint remains active.
+
 The owner authorized immediate reconciliation of delivered local releases with the
 actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
 chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/pull/50)

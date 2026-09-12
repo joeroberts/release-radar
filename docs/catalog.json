@@ -6693,6 +6693,72 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-add-project-initialize-default-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-add-project-initialize-default.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-add-project-initialize-minimum-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-add-project-initialize-minimum.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-add-project-attach-confirmation-default-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-add-project-attach-confirmation-default.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-add-project-attach-confirmation-minimum-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-add-project-attach-confirmation-minimum.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-add-project-attach-empty-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-add-project-attach-empty-default.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-add-project-rds-later-workflows-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-add-project-rds-later-workflows.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
     }
   ]
 }
