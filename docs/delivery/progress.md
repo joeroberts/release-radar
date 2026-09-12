@@ -19,6 +19,17 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
 
+## Phase 6 extension design review — September 12
+
+The owner requests separate feature-architecture, chief-architecture and UX reviews
+of the [toolbar and project-management proposal](../design/phase6-workspace-toolbar-proposal.md)
+and its linked static mockup. Requirements include persistent search/navigation,
+RDS reuse, Manage Project relocation, guided shared-execution setup and metric
+alignment. These are required Phase 6 scope, not implementation authorization.
+Metric implementation was explicitly stopped and remains stopped. The proposal
+preserves the owner's 6F/6G/6H assignments and flags the earlier guided-setup naming
+for reconciliation. No app state or catalog acceptance is changed by this review.
+
 ## Release 0.1.11 package candidate
 
 The reviewed RDS treatment for the main Search input, saved-query name input and

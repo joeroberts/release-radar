@@ -6372,6 +6372,36 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-phase6-workspace-toolbar-proposal-2026-09-12",
+      "path": "docs/design/phase6-workspace-toolbar-proposal.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-phase6-toolbar-mockup-proposal-2026-09-12",
+      "path": "docs/design/mockups/phase6-persistent-workspace-toolbar-proposal.png",
+      "kind": "designAsset",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
