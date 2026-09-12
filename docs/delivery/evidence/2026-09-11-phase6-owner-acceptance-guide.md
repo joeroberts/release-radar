@@ -206,6 +206,21 @@ Run this subsection only after a reviewed package containing source commit
    expected behavior is an actionable **Delivery data unavailable** banner with
    **Reload dashboard** above the still-visible selected destination.
 
+#### Recorded owner result — installed 0.1.10
+
+On September 12, the owner supplied a screenshot showing Pursuit Overview loaded
+with documentation and catalog status current. Asked whether Overview opened
+promptly and whether the loading animation was visible while validation ran, the
+owner answered yes. After opening Project Plan and then Phase Board, the owner
+confirmed that both opened promptly. The owner separately confirmed that activating
+the Pursuit project card from Projects opened Overview promptly.
+
+This bounded result owner-verifies the reported navigation-responsiveness defect as
+resolved for Overview, Project Plan, Phase Board, and the Projects-to-Overview card
+path, with the loading animation observed during validation. It does not mark rapid
+switching or latest-destination retention, fault injection, the remainder of this
+guide, or the Phase 8 stale-helper scenario as passed.
+
 ## Restart helper recovery check
 
 This check does not install, reinstall, remove or modify the plugin. If ordinary

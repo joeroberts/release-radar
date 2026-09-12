@@ -51,6 +51,15 @@ implementation and review endpoint is complete. The later package authorization
 covered the scoped 0.1.10 version metadata, signed local DMG, release evidence,
 local commits and annotated local version tag only.
 
+The installed `0.1.10` build now has bounded owner manual acceptance for the
+reported responsiveness defect. The owner's screenshot showed Pursuit Overview
+loaded with documentation and catalog status current; the owner confirmed that
+Overview, Project Plan, Phase Board, and the Pursuit project-card route to Overview
+all opened promptly, and that the loading animation appeared while validation ran.
+Rapid switching and latest-destination retention, fault injection, the complete
+Phase 6 owner guide, and the Phase 8 stale-helper scenario were not explicitly
+confirmed and remain outstanding.
+
 The Phase 8 stale production-helper acceptance scenario remains deferred and
 unchanged.
 
