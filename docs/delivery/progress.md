@@ -2,12 +2,14 @@
 
 ## Current outcome
 
-The owner authorized reconciliation and removal of the unassigned Phase 6
-integration checkout. Releases 0.1.14–0.1.16 are being integrated in their existing
-commit order through one PR; their original release tags remain unchanged.
-Future parent-managed integration uses the saved project checkout, as recorded
-in `AGENTS.md`. The extra checkout will be removed after the merge and repository
-readback; prior DMGs and unrelated files remain preserved.
+Releases 0.1.14–0.1.16 are merged into the default branch through
+[PR #52](https://github.com/joeroberts/release-radar/pull/52), preserving the
+existing commit order. Tags `v0.1.14`, `v0.1.15` and `v0.1.16` are published
+unchanged. The saved project checkout is synchronized with the merge, and the
+unassigned `release_radar-phase6-design-review` worktree and its build output
+have been removed. Future parent-managed integration uses the saved project
+checkout, as recorded in `AGENTS.md`. Prior DMGs and unrelated files remain
+preserved. No rebuild or installation was needed for this reconciliation.
 
 The owner-authorized **RDS search-submit focus correction** is complete and
 installed locally as **0.1.16 (1)**. Release Radar now pins merged
@@ -22,8 +24,8 @@ and smoke-launch results. No owner search preference, SQLite state, remote, PR,
 notarization, or publication action occurred.
 The completed RDS and consumer correction tasks are idle and archived. Their
 results are preserved in their repositories; local annotated `v0.1.16` targets
-`76cce40`. Release Radar remote integration of 0.1.14–0.1.16 remains pending in
-this master task. Phase 7 tasks remain untouched.
+`76cce40`. Release Radar remote integration is complete through PR #52.
+Phase 7 tasks remain untouched.
 
 The owner resumed **Correct Add Project RDS styling** to close its missing review.
 Candidate `8176e319` incorporates the merged default baseline and applies existing
@@ -51,7 +53,7 @@ DMG, matching Downloads copy and installed identity are recorded in the
 [0.1.15 package evidence](evidence/2026-09-12-release-0.1.15-packaging.md).
 The corrected delivery task is complete, idle and archived again. Local release
 tag `v0.1.15` identifies package commit `94a7768`; remote integration of the
-0.1.14/0.1.15 changes is still pending in this master task.
+0.1.14/0.1.15 changes subsequently completed through PR #52.
 
 The owner also reported an unexpected `TEST` search value and a blue square
 around the search-submit icon. Read-only diagnosis against installed 0.1.14
