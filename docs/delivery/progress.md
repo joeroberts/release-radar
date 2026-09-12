@@ -28,11 +28,14 @@ Goals. Each help destination remains in-app and is exposed by a borderless up-ri
 arrow beside its title with its meaningful accessible Open name. Focused unit and
 native rendering checks pass; the durable captures are [wide toolbar](evidence/2026-09-12-toolbar-bookmark-wide.png),
 [compact toolbar](evidence/2026-09-12-toolbar-bookmark-compact.png), and
-[grouped Help](evidence/2026-09-12-help-topic-groups-wide.png). This is a local
-candidate on `codex/toolbar-bookmark-help-groups` from baseline `f257ba6`, pending
-the required fresh independent code/UX review. No packaging, installation, push,
-PR, merge, owner data, live app state, RDS-library, version, tag, metric, project
-management, archive/remove, or guided-setup work is included.
+[grouped Help](evidence/2026-09-12-help-topic-groups-wide.png). Independent code/
+UX review approved commit `c045f29` with no Required or Optional findings. Its
+focused check passed 8 tests; 3 broader native Search/Help cases remained skipped
+because the XCTest host exposes no self-AX window after focus, not because of a
+candidate failure. The local-only endpoint is complete; catalog acceptance and
+application readback are not authorized by this UI correction. No packaging,
+installation, push, PR, merge, owner data, live app state, RDS-library, version,
+tag, metric, project management, archive/remove, or guided-setup work is included.
 
 ## Completed local RDS toolbar consumer adoption — September 12
 
