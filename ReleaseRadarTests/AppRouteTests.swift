@@ -171,6 +171,14 @@ final class AppRouteTests: XCTestCase {
         XCTAssertEqual(SettingsLayout.contentWidth(for: 40), 0)
     }
 
+    func testWorkspaceShellLayoutForcesCompactAtTheApprovedMinimumWidth() {
+        XCTAssertFalse(WorkspaceShellLayout.isForcedCompact(width: 1_280))
+        XCTAssertFalse(WorkspaceShellLayout.isCompact(width: 1_280, userCollapsed: false))
+        XCTAssertTrue(WorkspaceShellLayout.isCompact(width: 1_280, userCollapsed: true))
+        XCTAssertTrue(WorkspaceShellLayout.isForcedCompact(width: 760))
+        XCTAssertTrue(WorkspaceShellLayout.isCompact(width: 760, userCollapsed: false))
+    }
+
     func testEmptyReviewLayoutSuppressesTheListAndZeroBadge() {
         XCTAssertFalse(NeedsReviewLayout.showsInboxList(openItems: 0, deliveryGoals: 0, completedItems: 0))
         XCTAssertTrue(NeedsReviewLayout.showsInboxList(openItems: 0, deliveryGoals: 0, completedItems: 1))
@@ -2146,6 +2154,24 @@ final class AppRouteTests: XCTestCase {
         return nil
     }
 
+    private func accessibilityFrame(_ element: AXUIElement) throws -> CGRect {
+        var positionValue: CFTypeRef?
+        var sizeValue: CFTypeRef?
+        XCTAssertEqual(AXUIElementCopyAttributeValue(
+            element, kAXPositionAttribute as CFString, &positionValue
+        ), .success)
+        XCTAssertEqual(AXUIElementCopyAttributeValue(
+            element, kAXSizeAttribute as CFString, &sizeValue
+        ), .success)
+        let position = try XCTUnwrap(positionValue)
+        let size = try XCTUnwrap(sizeValue)
+        var point = CGPoint.zero
+        var dimensions = CGSize.zero
+        XCTAssertTrue(AXValueGetValue(position as! AXValue, .cgPoint, &point))
+        XCTAssertTrue(AXValueGetValue(size as! AXValue, .cgSize, &dimensions))
+        return CGRect(origin: point, size: dimensions)
+    }
+
     private func accessibilityElement(_ root: AXUIElement, identifier: String) -> AXUIElement? {
         var pending = [root]
         var inspected = 0
@@ -3359,22 +3385,128 @@ final class AppRouteTests: XCTestCase {
 
         XCTAssertEqual(routes.map(\.title), [
             "Projects",
-            "Search",
             "Goals",
             "Needs Review",
-            "Notifications",
-            "Settings",
-            "Help",
         ])
         XCTAssertEqual(routes.map(\.systemImage), [
             "folder",
-            "magnifyingglass",
             "target",
             "checkmark.bubble",
-            "bell",
-            "gearshape",
-            "questionmark.circle",
         ])
+    }
+
+    @MainActor
+    func testPersistentToolbarAndResponsiveSidebarExposeOneAccessibleEntryPointPerAction() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-ToolbarNative-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let store = DeliveryStore(databaseURL: directory.appendingPathComponent("store.sqlite"))
+        try await DashboardSampleData.seedIfNeeded(in: store)
+        let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
+        await model.loadDashboard()
+        await model.navigate(to: .projectOverview(DashboardSampleData.projectID))
+
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let window = NSWindow(
+            contentRect: NSRect(x: 40, y: 40, width: 1_280, height: 720),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.isReleasedWhenClosed = false
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.title = "RDS toolbar adoption — isolated native acceptance"
+        defer { window.close() }
+        let hosting = NSHostingView(rootView: SidebarView(model: model).environment(\.colorScheme, .dark))
+        window.contentView = hosting
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        for width in [1_280.0, 760.0] {
+            model.isSidebarCompact = false
+            window.setContentSize(NSSize(width: width, height: 720))
+            hosting.frame = window.contentView?.bounds ?? .zero
+            try await Task.sleep(for: .milliseconds(250))
+            hosting.layoutSubtreeIfNeeded()
+
+            let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+            let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+            let nativeWindowFrame = try accessibilityFrame(nativeWindow)
+            for identifier in [
+                "workspace-toolbar",
+                "workspace-toolbar-sidebar-toggle",
+                "navigation-back",
+                "navigation-forward",
+                "workspace-search-field",
+                "workspace-search-run",
+                "workspace-search-save",
+                "workspace-toolbar-help",
+                "workspace-toolbar-settings",
+                "workspace-toolbar-notifications",
+            ] {
+                let element = try XCTUnwrap(
+                    accessibilityElement(nativeWindow, identifier: identifier),
+                    "Expected \(identifier) at width \(Int(width))"
+                )
+                let elementFrame = try accessibilityFrame(element)
+                XCTAssertTrue(
+                    nativeWindowFrame.contains(elementFrame),
+                    "Expected \(identifier) to remain fully visible at width \(Int(width)); window=\(nativeWindowFrame), element=\(elementFrame)"
+                )
+            }
+            for duplicate in ["sidebar-search", "sidebar-help", "sidebar-settings", "sidebar-notifications"] {
+                XCTAssertNil(accessibilityElement(nativeWindow, identifier: duplicate))
+            }
+            XCTAssertFalse(accessibilityText(nativeWindow).contains("Persisted locally"))
+            try taskCapture(hosting, name: width == 760 ? "rds-toolbar-compact" : "rds-toolbar-wide")
+        }
+
+        window.setContentSize(NSSize(width: 1_280, height: 720))
+        hosting.frame = window.contentView?.bounds ?? .zero
+        try await Task.sleep(for: .milliseconds(250))
+        hosting.layoutSubtreeIfNeeded()
+        let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+        let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+
+        model.setWorkspaceSearchText("VD2-08")
+        let sourceHistoryCount = model.navigationHistory.entries.count
+        XCTAssertEqual(
+            AXUIElementPerformAction(
+                try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run")),
+                kAXPressAction as CFString
+            ),
+            .success
+        )
+        for _ in 0..<40 where model.selection != .search {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        XCTAssertEqual(model.selection, .search)
+        XCTAssertEqual(model.workspaceSearchDefinition.text, "VD2-08")
+        XCTAssertEqual(model.navigationHistory.entries.count, sourceHistoryCount + 1)
+
+        await model.goBack()
+        XCTAssertEqual(model.selection, .projectOverview(DashboardSampleData.projectID))
+
+        let enableURL = URL(fileURLWithPath: "/private/tmp/release-radar-rds-toolbar-native-enable")
+        if FileManager.default.fileExists(atPath: enableURL.path) {
+            try FileManager.default.removeItem(at: enableURL)
+            let readyURL = URL(fileURLWithPath: "/private/tmp/release-radar-rds-toolbar-native-ready")
+            let completeURL = URL(fileURLWithPath: "/private/tmp/release-radar-rds-toolbar-native-complete")
+            let identity = "pid=\(ProcessInfo.processInfo.processIdentifier)\nwindow=\(window.title)\n"
+            try Data(identity.utf8).write(to: readyURL, options: .atomic)
+            print("RDS TOOLBAR READY: use native keyboard input to submit with Return; verify Back; save a different visible draft as Native toolbar query without running; dismiss a second Save popover with Escape; inspect wide and compact layouts; finish on the project Overview")
+            for _ in 0..<900 where !FileManager.default.fileExists(atPath: completeURL.path) {
+                try await Task.sleep(for: .milliseconds(200))
+            }
+            _ = try String(contentsOf: completeURL, encoding: .utf8)
+            XCTAssertEqual(model.selection, .projectOverview(DashboardSampleData.projectID))
+            XCTAssertTrue(model.workspaceSearchSavedQueries.contains { $0.name == "Native toolbar query" })
+            try FileManager.default.removeItem(at: readyURL)
+            try FileManager.default.removeItem(at: completeURL)
+        }
     }
 
     func testProjectRoutesRetainTheirProjectAndExposeExpectedLabels() {

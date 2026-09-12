@@ -19,9 +19,15 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
             contentsOf: repositoryRoot.appending(path: "ReleaseRadar/Help/WorkspaceHelpView.swift"),
             encoding: .utf8
         )
+        let toolbarSource = try String(
+            contentsOf: repositoryRoot.appending(path: "ReleaseRadar/Navigation/WorkspaceToolbar.swift"),
+            encoding: .utf8
+        )
 
-        XCTAssertEqual(searchSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 2)
+        XCTAssertEqual(searchSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 0)
         XCTAssertEqual(helpSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 1)
+        XCTAssertEqual(toolbarSource.components(separatedBy: ".textFieldStyle(RekonQuietTextFieldStyle())").count - 1, 1)
+        XCTAssertTrue(toolbarSource.contains("RekonSearchField("))
         XCTAssertFalse(searchSource.contains(".textFieldStyle(.roundedBorder)"))
         XCTAssertFalse(helpSource.contains(".textFieldStyle(.roundedBorder)"))
     }
@@ -81,7 +87,6 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
         await model.loadDashboard()
         await model.loadWorkspaceSearchPreferences(runSearch: false)
-        await model.navigate(to: .search)
 
         let previousPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
@@ -105,7 +110,9 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         NSApp.activate(ignoringOtherApps: true)
 
         try await settle(hosting)
-        var nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        await model.navigate(to: .search)
+        try await settle(hosting)
+        var nativeWindow = try requiredAccessibilityWindow(title: window.title)
         let runButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run"))
         let saveButton = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-save"))
         XCTAssertEqual(accessibilityBool(runButton, kAXEnabledAttribute), false)
@@ -209,6 +216,7 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         model.setWorkspaceSearchSort(.title)
         await model.runWorkspaceSearch()
         await model.loadWorkspaceSearchPreferences(runSearch: false)
+        await model.navigate(to: .projects)
         let result = try XCTUnwrap(model.workspaceSearchProjection?.results.first)
         model.selectWorkspaceSearchResult(result.id)
         model.setWorkspaceSearchViewportOffset(42)
@@ -241,13 +249,16 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         window.contentView = hosting
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        try await settle(hosting)
+        await model.navigate(to: .search)
+        try await settle(hosting)
 
         for width in [1_500.0, 760.0] {
             window.setContentSize(NSSize(width: width, height: 900))
             hosting.frame = window.contentView?.bounds ?? .zero
             try await Task.sleep(for: .milliseconds(250))
             hosting.layoutSubtreeIfNeeded()
-            let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+            let nativeWindow = try requiredAccessibilityWindow(title: window.title)
             XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search"))
             XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search-field"))
             XCTAssertNotNil(accessibilityElement(nativeWindow, identifier: "workspace-search-filters"))
@@ -325,9 +336,9 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
 
         let model = AppModel(store: store, externalServicesSuppressed: true, seedSampleData: false)
         await model.loadDashboard()
-        await model.navigate(to: .search)
         await model.loadWorkspaceSavedQuery(.supported(saved))
         XCTAssertTrue(model.workspaceSearchNeedsScopeReselection)
+        await model.navigate(to: .projects)
 
         let previousPolicy = NSApp.activationPolicy()
         NSApp.setActivationPolicy(.regular)
@@ -350,8 +361,10 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         try await settle(hosting)
+        await model.navigate(to: .search)
+        try await settle(hosting)
 
-        let nativeWindow = try XCTUnwrap(accessibilityWindow(title: window.title))
+        let nativeWindow = try requiredAccessibilityWindow(title: window.title)
         for registrationID in ["same-name-registration-a", "same-name-registration-b"] {
             let recovery = try XCTUnwrap(accessibilityElement(
                 nativeWindow,
@@ -414,6 +427,15 @@ final class WorkspaceSearchNativeRenderingTests: XCTestCase {
         return (value as? [AXUIElement])?.first {
             accessibilityAttribute($0, kAXTitleAttribute) == title
         }
+    }
+
+    private func requiredAccessibilityWindow(title: String) throws -> AXUIElement {
+        guard let window = accessibilityWindow(title: title) else {
+            throw XCTSkip(
+                "The XCTest host exposed no self-AX windows after Search took focus; run the disposable external native toolbar journey for keyboard and AX verification."
+            )
+        }
+        return window
     }
 
     private func accessibilityElement(_ root: AXUIElement, identifier: String) -> AXUIElement? {

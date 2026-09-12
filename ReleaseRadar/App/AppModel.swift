@@ -73,6 +73,7 @@ final class AppModel {
     private(set) var selectedWorkspaceDeliveryGoalID: Data?
     private(set) var selectedWorkspaceExecutionGoalID: Data?
     private(set) var workspaceGoalsViewportOffset: Double?
+    private(set) var workspaceSearchDraft = ""
     private(set) var workspaceSearchDefinition = WorkspaceSearchDefinition()
     private(set) var workspaceSearchProjection: WorkspaceSearchProjection?
     private(set) var workspaceSearchSavedQueries: [WorkspaceSavedQueryRecord] = []
@@ -607,6 +608,7 @@ final class AppModel {
         if case .search = route, let searchState = entry.workspaceSearch {
             invalidateWorkspaceSearchRun()
             workspaceSearchDefinition = searchState.definition
+            workspaceSearchDraft = searchState.definition.text
             workspaceSearchViewportOffset = searchState.viewportOffset.map { max(0, $0) }
             workspaceSearchPreferenceIsUnsupported = searchState.preferenceIsUnsupported
             workspaceSearchNeedsScopeReselection = searchState.needsScopeReselection
@@ -1055,6 +1057,7 @@ final class AppModel {
         selectedWorkspaceExecutionGoalID = nil
         workspaceGoalsViewportOffset = nil
         workspaceSearchDefinition = .init()
+        workspaceSearchDraft = ""
         workspaceSearchProjection = nil
         workspaceSearchSavedQueries = []
         workspaceSearchIsLoading = false
@@ -1216,13 +1219,11 @@ final class AppModel {
     }
 
     func setWorkspaceSearchText(_ text: String) {
-        guard canEditSupportedWorkspaceSearch else { return }
-        guard workspaceSearchDefinition.text != text else { return }
-        invalidateWorkspaceSearchRun()
-        workspaceSearchDefinition.text = text
+        guard workspaceSearchDraft != text else { return }
+        invalidateWorkspaceSearchRun(clearProjection: false)
+        workspaceSearchDraft = text
         workspaceSearchFailure = nil
         navigationFocus = .workspaceSearchField
-        captureCurrentNavigationContext()
     }
 
     func setWorkspaceSearchSort(_ sort: WorkspaceSearchSort) {
@@ -1298,6 +1299,25 @@ final class AppModel {
     }
 
     func runWorkspaceSearch(persist: Bool = true, captureNavigation: Bool = true) async {
+        if captureNavigation {
+            captureCurrentNavigationContext()
+        }
+        let submittedNewDraft = workspaceSearchDefinition.text != workspaceSearchDraft
+        if !workspaceSearchPreferenceIsUnsupported, submittedNewDraft {
+            invalidateWorkspaceSearchRun()
+            workspaceSearchDefinition.text = workspaceSearchDraft
+            workspaceSearchFailure = nil
+        }
+        if captureNavigation {
+            if selection == .search {
+                if submittedNewDraft, !workspaceSearchPreferenceIsUnsupported {
+                    navigationFocus = .workspaceSearchField
+                    navigationHistory.navigate(to: historyEntry(for: .search, focus: navigationFocus))
+                }
+            } else {
+                await navigate(to: .search)
+            }
+        }
         guard canExecuteWorkspaceSearch else { return }
         workspaceSearchGeneration &+= 1
         let generation = workspaceSearchGeneration
@@ -1359,6 +1379,7 @@ final class AppModel {
                     selectedWorkspaceSearchResultID = nil
                 }
                 workspaceSearchDefinition = definition
+                workspaceSearchDraft = definition.text
                 workspaceSearchPreferenceIsUnsupported = false
                 workspaceSearchNeedsScopeReselection = false
             case .unsupported:
@@ -1381,6 +1402,7 @@ final class AppModel {
         case let .supported(query):
             invalidateWorkspaceSearchRun()
             workspaceSearchDefinition = query.definition
+            workspaceSearchDraft = query.definition.text
             workspaceSearchPreferenceIsUnsupported = false
             workspaceSearchNeedsScopeReselection = false
             selectedWorkspaceSearchResultID = nil
@@ -1394,8 +1416,10 @@ final class AppModel {
     func saveCurrentWorkspaceSearch(name: String) async {
         guard canExecuteWorkspaceSearch else { return }
         do {
+            var definition = workspaceSearchDefinition
+            definition.text = workspaceSearchDraft
             _ = try await WorkspaceSearchPreferencesRepository(store: store)
-                .saveQuery(name: name, definition: workspaceSearchDefinition)
+                .saveQuery(name: name, definition: definition)
             workspaceSearchSavedQueries = try await WorkspaceSearchPreferencesRepository(store: store)
                 .loadSavedQueries()
             workspaceSearchPersistenceMessage = "Saved query “\(name.trimmingCharacters(in: .whitespacesAndNewlines))”."
@@ -1421,6 +1445,7 @@ final class AppModel {
         guard workspaceSearchPreferenceIsUnsupported else { return }
         invalidateWorkspaceSearchRun()
         workspaceSearchDefinition = .init()
+        workspaceSearchDraft = ""
         workspaceSearchPreferenceIsUnsupported = false
         workspaceSearchNeedsScopeReselection = false
         workspaceSearchFailure = nil

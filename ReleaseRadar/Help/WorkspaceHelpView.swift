@@ -101,7 +101,7 @@ enum WorkspaceHelpContent {
         .init(
             id: "saved-query-recovery",
             title: "Recover a saved query after restore",
-            detail: "Saved filters remain visible after recovery, but Release Radar will not silently substitute new project registrations. Rechoose the exact current project scope, run the query, and resave it under the new authority. If the working search was created by a newer version, use Reset to a new search or open a supported saved query; Search will not interpret or overwrite the opaque filters before that explicit choice.",
+            detail: "Saved filters remain visible after recovery, but Release Radar will not silently substitute new project registrations. Rechoose the exact current project scope, run the query, and use Save query in the toolbar to resave it under the new authority. If the working search was created by a newer version, use Reset to a new search or open a supported saved query; Search will not interpret or overwrite the opaque filters before that explicit choice.",
             keywords: "saved query recovery restore authorization registration scope filters newer version reset working search",
             actionTitle: "Open Search",
             destination: .search
@@ -109,8 +109,8 @@ enum WorkspaceHelpContent {
         .init(
             id: "search-navigation",
             title: "Navigate exact search results",
-            detail: "Search uses recorded identities rather than names. Back and Forward restore the query, filters, selected result, scroll position and focus; archived or removed destinations open their safe read-only recovery surface. \(historyProvenance)",
-            keywords: "search navigation exact identity back forward archived removed history source provenance retained observations",
+            detail: "Search uses recorded identities rather than names. Typing in the toolbar keeps the current page and results unchanged; Return and the magnifying glass submit the draft once and open Search. Back and Forward restore the source page, query, filters, selected result, scroll position and focus; archived or removed destinations open their safe read-only recovery surface. \(historyProvenance)",
+            keywords: "search toolbar draft submit navigation exact identity back forward archived removed history source provenance retained observations",
             actionTitle: "Open History",
             destination: .history
         ),

@@ -784,6 +784,22 @@
       "isLeaf": true,
       "firstRead": "rr-codex-helper-restart-brief-2026-09-11",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-12-rds-toolbar-adoption",
+      "path": "docs/delivery/task-briefs/2026-09-12-rds-toolbar-adoption",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Owner-authorized Release Radar adoption of merged RDS toolbar and search controls",
+      "allowedContents": [
+        "Task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "003D9B42-FD49-4209-AC07-C18FAEB1D7A1",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -6440,6 +6456,52 @@
       "lifecycle": "proposed",
       "authorityLevel": "supporting",
       "parentCollection": "design.mockups",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-rds-toolbar-wide-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-rds-toolbar-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-rds-toolbar-compact-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-rds-toolbar-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "003D9B42-FD49-4209-AC07-C18FAEB1D7A1",
+      "path": "docs/delivery/task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.rds-toolbar-adoption",
+      "parentCollection": "delivery.task-briefs.2026-09-12-rds-toolbar-adoption",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
