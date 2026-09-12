@@ -19,6 +19,32 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
 
+## Release 0.1.11 package candidate
+
+The reviewed RDS treatment for the main Search input, saved-query name input and
+Help search input is packaged as Release Radar `0.1.11 (1)`. Version/source commit
+`fbf93e515a5dac4d35c54f463dee3692d7486de8` adds the matching app and bundled
+plugin versions and exact recognized plugin digest on branch
+`codex/release-0.1.11`. The annotated local tag `v0.1.11` identifies the containing
+release commit.
+
+- DMG: `dist/ReleaseRadar-0.1.11.dmg`
+- Durable owner copy: `/Users/jroberts/Downloads/ReleaseRadar-0.1.11.dmg`
+- DMG SHA-256: `06891ba3fdfc3730bcb3348c45255c474b53cac348f68ceedfbb03c16adb62f2`
+- Main executable SHA-256: `a093bbdccff161ecbbc46d74adbb3b518e8ad45233288e8bc0271f63a6a9ab9a`
+- CodeResources SHA-256: `dee39d94d9ba1e0ccd7a4f6181dd0d29099fa9d44acd23aa68af7cb1e41da7bf`
+- CodeDirectory hash: `85cef76aef01baae60d9b1e1a5606b1943c5ec00`
+- Plugin digest: `2677797fd17f0091821cca09653f9951ab9007ef578a1226458faf632d319a9d`
+- Signature: Apple Development team `2UA854NLX4`, Hardened Runtime enabled
+
+The [0.1.11 packaging evidence](evidence/2026-09-12-release-0.1.11-packaging.md)
+records the previously completed 12/12 correction checks and independent code-and-UX
+approval, focused version/resource verification, strict signed staging, read-only
+DMG mounting, staged/mounted identity and the matching Downloads copy. The installed
+app and helper process identities were preserved. The package is not notarized or
+generally distributable, and no installation, app launch, helper/plugin action,
+owner-state access, push, PR, merge or publication occurred.
+
 ## Active navigation responsiveness correction
 
 The owner authorized a bounded correction for project-navigation clicks that
