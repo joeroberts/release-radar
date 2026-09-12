@@ -19,10 +19,10 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
 
-## Active RDS toolbar consumer adoption — September 12
+## Completed local RDS toolbar consumer adoption — September 12
 
 The owner authorized Release Radar to adopt the merged RDS toolbar/search controls
-at `3c2626102a2e97dd93f31fbc62b733085d6700ec`. The bounded implementation is active
+at `3c2626102a2e97dd93f31fbc62b733085d6700ec`. The bounded implementation is complete locally
 on `codex/rds-toolbar-adoption` from assigned baseline `83f3bb8`, controlled by the
 [toolbar adoption brief](task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md)
 and the [approved proposal](../design/phase6-workspace-toolbar-proposal.md). The
@@ -34,8 +34,10 @@ compact and wide sidebar adoption, fixed documentation-checking footer, relevant
 guidance, focused tests and isolated native render evidence. Phase 6F metrics,
 Manage Project and Archive/Remove relocation, guided setup, packaging,
 installation, push/PR/merge and owner/live application state remain separate and
-unauthorized. One fresh independent code/integration and UX/accessibility review
-is required after the local candidate and direct evidence are ready.
+unauthorized. Independent code/integration and UX/accessibility review is complete.
+The delivery and review tasks are archived with their processes stopped. The
+reviewed result and captures are preserved in the canonical project checkout;
+monitoring is paused. The next delivery step is owner-authorized push/PR creation.
 
 The initial local candidate `42e40f3` entered independent review. The reviewer
 found one required save-failure recovery defect: a failed save from a non-Search
