@@ -183,10 +183,16 @@ release commit.
 The [0.1.11 packaging evidence](evidence/2026-09-12-release-0.1.11-packaging.md)
 records the previously completed 12/12 correction checks and independent code-and-UX
 approval, focused version/resource verification, strict signed staging, read-only
-DMG mounting, staged/mounted identity and the matching Downloads copy. The installed
-app and helper process identities were preserved. The package is not notarized or
-generally distributable, and no installation, app launch, helper/plugin action,
-owner-state access, push, PR, merge or publication occurred.
+DMG mounting, staged/mounted identity and the matching Downloads copy. Under later
+explicit owner authorization, that exact package was installed in place after the
+signed `0.1.10 (1)` app was preserved at
+`/Users/jroberts/Documents/Release Radar Backups/Pre-0.1.11-2026-09-12.ReleaseRadarAppOnly.Xekm4B/ReleaseRadar.app`.
+The installed `0.1.11 (1)` bundle matches the package's executable,
+`CodeResources` and CodeDirectory hashes. It launched normally from `/Applications`;
+ordinary startup registered fresh lifecycle and Bridge processes from the new
+bundle, and both pass strict signature checks. No manual plugin/configuration
+change, direct owner-data operation, catalog acceptance, push, PR, merge or
+publication occurred. The package remains locally signed and not notarized.
 
 ## Release 0.1.12 package details
 
