@@ -13,6 +13,10 @@ cycle. Focused inert-host checks and the [0.1.16 package evidence](evidence/2026
 record the resulting layout, focus, clear, accessibility, signature, installer
 and smoke-launch results. No owner search preference, SQLite state, remote, PR,
 notarization, or publication action occurred.
+The completed RDS and consumer correction tasks are idle and archived. Their
+results are preserved in their repositories; local annotated `v0.1.16` targets
+`76cce40`. Release Radar remote integration of 0.1.14–0.1.16 remains pending in
+this master task. Phase 7 tasks remain untouched.
 
 The owner resumed **Correct Add Project RDS styling** to close its missing review.
 Candidate `8176e319` incorporates the merged default baseline and applies existing
