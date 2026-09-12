@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import RekonDesignSystem
 import SwiftUI
 import XCTest
 @testable import ReleaseRadarCore
@@ -10,6 +11,150 @@ private enum SyntheticBackupScopeError: Error {
 }
 
 final class AppRouteTests: XCTestCase {
+    @MainActor
+    func testAddProjectWindowUsesRekonChrome() async throws {
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-AddProjectChrome-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let model = AppModel(
+            store: DeliveryStore(databaseURL: databaseURL),
+            externalServicesSuppressed: true
+        )
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        for (width, height, captureName) in [
+            (760.0, 560.0, "add-project-rds-default-window"),
+            (680.0, 500.0, "add-project-rds-minimum-window"),
+        ] {
+            let hosting = NSHostingView(rootView: AddProjectWindowView(model: model))
+            hosting.frame = NSRect(x: 0, y: 0, width: width, height: height)
+            let window = NSWindow(
+                contentRect: hosting.frame,
+                styleMask: [.titled, .closable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.isReleasedWhenClosed = false
+            window.contentView = hosting
+            defer { window.close() }
+
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            try await Task.sleep(for: .milliseconds(150))
+            hosting.layoutSubtreeIfNeeded()
+
+            XCTAssertTrue(window.titlebarAppearsTransparent)
+            XCTAssertEqual(window.titleVisibility, .hidden)
+            try fullWindowCapture(window, name: captureName)
+        }
+    }
+
+    @MainActor
+    func testAddProjectLaterWorkflowWindowsUseRekonStyles() async throws {
+        let databaseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ReleaseRadar-AddProjectLaterWindows-\(UUID().uuidString).sqlite")
+        addTeardownBlock { try? FileManager.default.removeItem(at: databaseURL) }
+        let store = DeliveryStore(databaseURL: databaseURL)
+        let folder = URL(fileURLWithPath: "/tmp/Release Radar Visual Fixture", isDirectory: true)
+        let project = ProjectRecord(id: ProjectID(rawValue: "visual-fixture-project"), name: "Visual Fixture")
+        let recognizedArtifact = ImportPreview(
+            sourceRoot: folder,
+            artifactURL: folder.appendingPathComponent(".rekon-release-radar.json"),
+            schemaVersion: 1,
+            activePhaseID: nil,
+            phases: [],
+            phaseDependencies: [],
+            tickets: [],
+            ticketDependencies: [],
+            evidence: [],
+            reviewItems: []
+        )
+        let preview = OnboardingPreview(
+            selectedFolder: folder,
+            gitRoot: folder,
+            includedTaskDescriptors: [
+                .init(id: "visual-fixture-task", workingDirectory: folder, title: "Visual fixture task")
+            ],
+            rejectedTaskDescriptors: [],
+            authorizedWorktreeURLs: [],
+            worktreesRequiringAuthorization: [],
+            recognizedArtifactPreview: recognizedArtifact,
+            savedProjectName: "Visual Fixture"
+        )
+        let fixtures: [(String, OnboardingView)] = [
+            ("initialize", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialWorkflow: .initialize,
+                onFinished: { _ in }
+            )),
+            ("initialize-confirmation", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialPreview: preview,
+                onFinished: { _ in }
+            )),
+            ("attach-confirmation", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialWorkflow: .attach,
+                initialAttachableProjects: [project],
+                initialSelectedAttachableProjectID: project.id,
+                initialAttachmentFolder: folder,
+                onFinished: { _ in }
+            )),
+            ("attach-empty", OnboardingView(
+                store: store,
+                onOpenExisting: { _ in },
+                initialWorkflow: .attach,
+                onFinished: { _ in }
+            )),
+        ]
+        let previousPolicy = NSApp.activationPolicy()
+        NSApp.setActivationPolicy(.regular)
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+
+        for (width, height, sizeName) in [(760.0, 560.0, "default"), (680.0, 500.0, "minimum")] {
+            for (fixtureName, fixture) in fixtures {
+                let hosting = NSHostingView(rootView: fixture.rekonWindowChrome())
+                hosting.frame = NSRect(x: 0, y: 0, width: width, height: height)
+                let window = NSWindow(
+                    contentRect: hosting.frame,
+                    styleMask: [.titled, .closable, .resizable],
+                    backing: .buffered,
+                    defer: false
+                )
+                window.isReleasedWhenClosed = false
+                window.title = "Add Project Visual Fixture \(fixtureName) \(sizeName)"
+                window.contentView = hosting
+                defer { window.close() }
+
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                try await Task.sleep(for: .milliseconds(100))
+                hosting.layoutSubtreeIfNeeded()
+
+                XCTAssertTrue(window.titlebarAppearsTransparent)
+                XCTAssertEqual(window.titleVisibility, .hidden)
+                if fixtureName == "attach-confirmation" {
+                    let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+                    let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+                    let projectSelector = try XCTUnwrap(
+                        accessibilityElement(nativeWindow, identifier: "onboarding-attach-project")
+                    )
+                    var isEnabled: CFTypeRef?
+                    XCTAssertEqual(
+                        AXUIElementCopyAttributeValue(projectSelector, kAXEnabledAttribute as CFString, &isEnabled),
+                        .success
+                    )
+                    XCTAssertEqual(isEnabled as? Bool, false)
+                }
+                try fullWindowCapture(window, name: "add-project-\(fixtureName)-\(sizeName)-window")
+            }
+        }
+    }
+
     @MainActor
     func testNativeNavigationHistoryControlsExposeBoundariesAndPerformBackForward() async throws {
         let databaseURL = FileManager.default.temporaryDirectory
@@ -2129,6 +2274,21 @@ final class AppRouteTests: XCTestCase {
 
     }
 
+    private func fullWindowCapture(_ window: NSWindow, name: String) throws {
+        let image = try XCTUnwrap(CGWindowListCreateImage(
+            .null,
+            .optionIncludingWindow,
+            CGWindowID(window.windowNumber),
+            .bestResolution
+        ))
+        let bitmap = NSBitmapImageRep(cgImage: image)
+        let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+        let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.png")
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     private func accessibilityWindow(_ application: AXUIElement, title: String) -> AXUIElement? {
         func matches(_ element: AXUIElement) -> Bool {
             var candidateTitle: CFTypeRef?
@@ -2997,6 +3157,34 @@ final class AppRouteTests: XCTestCase {
         XCTAssertFalse(OnboardingWorkflowPresentation.landingActionTitles.contains("Help"))
     }
 
+    func testAddProjectLaterWorkflowActionsUseRekonStyles() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("ReleaseRadar/Projects/OnboardingView.swift"),
+            encoding: .utf8
+        )
+
+        for action in [
+            "Button(\"Back\", action: backToLanding)\n                .buttonStyle(RekonSecondaryButtonStyle())",
+            "Button(\"Choose Project Folder…\", action: chooseFolder)\n                .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Open existing project\") {\n                openExisting(completedProjectID)\n            }\n            .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Authorize Worktree…\", action: authorizeWorktree)\n                        .buttonStyle(RekonSecondaryButtonStyle())",
+            "Button(OnboardingWorkflowPresentation.initializeTitle, action: initializeProject)\n                        .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Finish Initialization\", action: finish)\n                    .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Choose Folder…\", action: chooseAttachmentFolder)\n                .buttonStyle(RekonPrimaryButtonStyle())",
+            "Button(\"Attach Folder\", action: confirmFolderAttachment)\n                            .buttonStyle(RekonPrimaryButtonStyle())",
+        ] {
+            XCTAssertTrue(source.contains(action), "Missing RDS style for \(action)")
+        }
+        XCTAssertTrue(source.contains(".textFieldStyle(RekonQuietTextFieldStyle())"))
+        XCTAssertTrue(source.contains("RekonCheckbox("))
+        XCTAssertTrue(source.contains("RekonPicker("))
+        XCTAssertTrue(source.contains("selectedAttachableProjectOption"))
+        XCTAssertTrue(source.contains(".buttonStyle(RekonBorderlessIconButtonStyle())"))
+    }
+
     func testInitializeConfirmationNamesProjectAndFolderAndPromisesNoRepositoryWrites() {
         let folder = URL(fileURLWithPath: "/tmp/Delivery Workspace", isDirectory: true)
         let confirmation = InitializeProjectConfirmation(
@@ -3476,6 +3664,7 @@ final class AppRouteTests: XCTestCase {
 
         for width in [1_280.0, 760.0] {
             model.isSidebarCompact = false
+            model.setWorkspaceSearchText("Toolbar clear")
             window.setContentSize(NSSize(width: width, height: 720))
             hosting.frame = window.contentView?.bounds ?? .zero
             try await Task.sleep(for: .milliseconds(250))
@@ -3491,6 +3680,7 @@ final class AppRouteTests: XCTestCase {
                 "navigation-forward",
                 "workspace-search-field",
                 "workspace-search-run",
+                "workspace-search-clear",
                 "workspace-search-save",
                 "workspace-toolbar-help",
                 "workspace-toolbar-settings",
@@ -3506,11 +3696,35 @@ final class AppRouteTests: XCTestCase {
                     "Expected \(identifier) to remain fully visible at width \(Int(width)); window=\(nativeWindowFrame), element=\(elementFrame)"
                 )
             }
+            XCTAssertEqual(
+                AXUIElementPerformAction(
+                    try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-clear")),
+                    kAXPressAction as CFString
+                ),
+                .success
+            )
+            try await Task.sleep(for: .milliseconds(100))
+            XCTAssertEqual(model.workspaceSearchDraft, "")
             for duplicate in ["sidebar-search", "sidebar-help", "sidebar-settings", "sidebar-notifications"] {
                 XCTAssertNil(accessibilityElement(nativeWindow, identifier: duplicate))
             }
             XCTAssertFalse(accessibilityText(nativeWindow).contains("Persisted locally"))
             try taskCapture(hosting, name: width == 760 ? "rds-toolbar-compact" : "rds-toolbar-wide")
+
+            let submit = try XCTUnwrap(accessibilityElement(nativeWindow, identifier: "workspace-search-run"))
+            XCTAssertEqual(
+                AXUIElementSetAttributeValue(submit, kAXFocusedAttribute as CFString, kCFBooleanTrue),
+                .success,
+                "The RDS submit glyph must be focusable at width \(Int(width))."
+            )
+            try await Task.sleep(for: .milliseconds(100))
+            var focused: CFTypeRef?
+            XCTAssertEqual(
+                AXUIElementCopyAttributeValue(submit, kAXFocusedAttribute as CFString, &focused),
+                .success
+            )
+            XCTAssertEqual(focused as? Bool, true)
+            try taskCapture(hosting, name: width == 760 ? "search-focus-0.1.16-compact" : "search-focus-0.1.16-wide")
         }
 
         window.setContentSize(NSSize(width: 1_280, height: 720))

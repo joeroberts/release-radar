@@ -1,4 +1,5 @@
 import AppKit
+import RekonDesignSystem
 import ReleaseRadarCore
 import SwiftUI
 
@@ -223,6 +224,7 @@ struct AddProjectWindowView: View {
             await model.reloadAfterOnboarding()
             close()
         }
+        .rekonWindowChrome()
     }
 
     private func close() {
@@ -269,6 +271,10 @@ struct OnboardingView: View {
         onReloadAfterFolderAttachment: (@MainActor (ProjectID) async -> Bool)? = nil,
         pasteboardWriter: @escaping @MainActor (String) -> Bool = CodexPromptHandoff.writeToGeneralPasteboard,
         initialPreview: OnboardingPreview? = nil,
+        initialWorkflow: OnboardingWorkflow? = nil,
+        initialAttachableProjects: [ProjectRecord] = [],
+        initialSelectedAttachableProjectID: ProjectID? = nil,
+        initialAttachmentFolder: URL? = nil,
         onFinished: @escaping @MainActor (ProjectID) async -> Void
     ) {
         _onboarding = State(initialValue: FolderProjectOnboarding(store: store, codexTasks: codexTasks))
@@ -277,6 +283,11 @@ struct OnboardingView: View {
             _workflow = State(initialValue: .initialize)
             _projectName = State(initialValue: initialPreview.savedProjectName ?? initialPreview.selectedFolder.lastPathComponent)
             _excludedTaskIDs = State(initialValue: initialPreview.excludedTaskIDs)
+        } else if let initialWorkflow {
+            _workflow = State(initialValue: initialWorkflow)
+            _attachableProjects = State(initialValue: initialAttachableProjects)
+            _selectedAttachableProjectID = State(initialValue: initialSelectedAttachableProjectID)
+            _attachmentFolder = State(initialValue: initialAttachmentFolder)
         }
         self.navigationTitle = navigationTitle
         self.onCancel = onCancel
@@ -295,6 +306,7 @@ struct OnboardingView: View {
                     HStack {
                         Spacer()
                         Button("Cancel", action: cancel)
+                            .buttonStyle(RekonSecondaryButtonStyle())
                             .keyboardShortcut(.cancelAction)
                             .disabled(isInitializeCommitInFlight || isAttachmentCommitInFlight)
                             .accessibilityIdentifier("onboarding-cancel")
@@ -348,8 +360,7 @@ struct OnboardingView: View {
                 Button(OnboardingWorkflowPresentation.initializeTitle) {
                     workflow = .initialize
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(RekonPrimaryButtonStyle())
                 .accessibilityIdentifier("onboarding-initialize-project")
 
                 if loadAttachableProjects != nil {
@@ -357,8 +368,7 @@ struct OnboardingView: View {
                         workflow = .attach
                         beginAttachmentWorkflow()
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    .buttonStyle(RekonSecondaryButtonStyle())
                     .accessibilityIdentifier("onboarding-attach-existing")
                 }
             }
@@ -369,6 +379,7 @@ struct OnboardingView: View {
     private var newProjectWorkflow: some View {
         if projectID == nil {
             Button("Back", action: backToLanding)
+                .buttonStyle(RekonSecondaryButtonStyle())
                 .disabled(isInitializeCommitInFlight)
                 .accessibilityIdentifier("onboarding-back")
         }
@@ -382,6 +393,7 @@ struct OnboardingView: View {
 
         if preview == nil {
             Button("Choose Project Folder…", action: chooseFolder)
+                .buttonStyle(RekonPrimaryButtonStyle())
                 .disabled(isWorking)
         }
 
@@ -389,12 +401,14 @@ struct OnboardingView: View {
             Button("Open existing project") {
                 openExisting(completedProjectID)
             }
+            .buttonStyle(RekonPrimaryButtonStyle())
             .keyboardShortcut(.defaultAction)
             .disabled(isWorking)
             .accessibilityIdentifier("onboarding-open-existing")
         } else if let preview, projectID == nil {
             Form {
                 TextField("Project name", text: $projectName)
+                    .textFieldStyle(RekonQuietTextFieldStyle())
             }
             .frame(maxWidth: 440)
 
@@ -403,6 +417,7 @@ struct OnboardingView: View {
                     Text("Worktrees outside the selected folder need separate owner authorization before they can be included.")
                         .foregroundStyle(.secondary)
                     Button("Authorize Worktree…", action: authorizeWorktree)
+                        .buttonStyle(RekonSecondaryButtonStyle())
                         .disabled(isWorking)
                 }
             }
@@ -411,13 +426,18 @@ struct OnboardingView: View {
                 Text("Matching Codex tasks")
                     .font(.headline)
                 ForEach(preview.includedTaskDescriptors, id: \.id) { task in
-                    Toggle(task.title, isOn: Binding(
-                        get: { !excludedTaskIDs.contains(task.id) },
-                        set: { included in
-                            if included { excludedTaskIDs.remove(task.id) }
-                            else { excludedTaskIDs.insert(task.id) }
-                        }
-                    ))
+                    RekonCheckbox(
+                        isOn: Binding(
+                            get: { !excludedTaskIDs.contains(task.id) },
+                            set: { included in
+                                if included { excludedTaskIDs.remove(task.id) }
+                                else { excludedTaskIDs.insert(task.id) }
+                            }
+                        ),
+                        title: task.title,
+                        accessibilityLabel: task.title,
+                        accessibilityIdentifier: "onboarding-task-\(task.id)"
+                    )
                 }
             }
 
@@ -450,6 +470,7 @@ struct OnboardingView: View {
                     Text(confirmation.detail)
                         .foregroundStyle(.secondary)
                     Button(OnboardingWorkflowPresentation.initializeTitle, action: initializeProject)
+                        .buttonStyle(RekonPrimaryButtonStyle())
                         .keyboardShortcut(.defaultAction)
                         .disabled(isWorking)
                         .accessibilityIdentifier("onboarding-initialize-confirm")
@@ -490,6 +511,7 @@ struct OnboardingView: View {
                             Image(systemName: "square.on.square")
                         }
                         .labelStyle(.iconOnly)
+                        .buttonStyle(RekonBorderlessIconButtonStyle())
                         .accessibilityLabel(CodexPromptHandoff.copyButtonAccessibilityLabel)
                         .accessibilityIdentifier(CodexPromptHandoff.copyButtonAccessibilityIdentifier)
                         .help(CodexPromptHandoff.copyButtonAccessibilityLabel)
@@ -512,6 +534,7 @@ struct OnboardingView: View {
 
             HStack {
                 Button("Finish Initialization", action: finish)
+                    .buttonStyle(RekonPrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
                     .disabled(isWorking)
                     .accessibilityIdentifier("onboarding-finish-initialization")
@@ -522,6 +545,7 @@ struct OnboardingView: View {
     @ViewBuilder
     private var attachmentWorkflow: some View {
         Button("Back", action: backToLanding)
+            .buttonStyle(RekonSecondaryButtonStyle())
             .disabled(isInitializeCommitInFlight || isAttachmentCommitInFlight)
             .accessibilityIdentifier("onboarding-back")
 
@@ -541,17 +565,26 @@ struct OnboardingView: View {
                 accessibilityID: "attachment-no-eligible-projects"
             ))
         } else {
-            Picker("Project", selection: $selectedAttachableProjectID) {
-                Text("Select a project").tag(ProjectID?.none)
-                ForEach(attachableProjects, id: \.id) { project in
-                    Text(project.name).tag(Optional(project.id))
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text("Project")
+                if isWorking || attachmentFolder != nil {
+                    TextField("Project", text: .constant(selectedAttachableProjectOption.wrappedValue))
+                        .textFieldStyle(RekonQuietTextFieldStyle())
+                        .disabled(true)
+                        .accessibilityIdentifier("onboarding-attach-project")
+                } else {
+                    RekonPicker(
+                        selection: selectedAttachableProjectOption,
+                        options: attachableProjectOptionTitles,
+                        accessibilityLabel: "Project",
+                        accessibilityIdentifier: "onboarding-attach-project"
+                    )
                 }
             }
             .frame(maxWidth: 440)
-            .disabled(isWorking || attachmentFolder != nil)
-            .accessibilityIdentifier("onboarding-attach-project")
 
             Button("Choose Folder…", action: chooseAttachmentFolder)
+                .buttonStyle(RekonPrimaryButtonStyle())
                 .disabled(isWorking || selectedAttachableProjectID == nil || attachmentCommittedNeedsReload)
                 .accessibilityIdentifier("onboarding-attach-folder")
         }
@@ -570,6 +603,7 @@ struct OnboardingView: View {
 
                     if !attachmentCommittedNeedsReload {
                         Button("Attach Folder", action: confirmFolderAttachment)
+                            .buttonStyle(RekonPrimaryButtonStyle())
                             .keyboardShortcut(.defaultAction)
                             .disabled(isWorking)
                             .accessibilityIdentifier("onboarding-attach-confirm")
@@ -589,6 +623,46 @@ struct OnboardingView: View {
         else { return nil }
         return AttachFolderConfirmation(project: project, folder: attachmentFolder)
     }
+
+    private var attachableProjectOptionTitles: [String] {
+        [attachableProjectPlaceholder] + attachableProjectOptions.map(\.title)
+    }
+
+    private var selectedAttachableProjectOption: Binding<String> {
+        Binding(
+            get: {
+                guard let selectedAttachableProjectID else { return attachableProjectPlaceholder }
+                return attachableProjectOptions.first(where: { $0.id == selectedAttachableProjectID })?.title
+                    ?? attachableProjectPlaceholder
+            },
+            set: { title in
+                selectedAttachableProjectID = attachableProjectOptions.first(where: { $0.title == title })?.id
+            }
+        )
+    }
+
+    private var attachableProjectOptions: [(id: ProjectID, title: String)] {
+        let duplicateNames = Set(
+            Dictionary(grouping: attachableProjects, by: \.name)
+                .filter { $0.value.count > 1 }
+                .keys
+        )
+        var usedTitles = Set([attachableProjectPlaceholder])
+        return attachableProjects.map { project in
+            let base = duplicateNames.contains(project.name)
+                ? "\(project.name) · \(project.id.rawValue)"
+                : project.name
+            var title = base
+            var suffix = 2
+            while !usedTitles.insert(title).inserted {
+                title = "\(base) · \(suffix)"
+                suffix += 1
+            }
+            return (project.id, title)
+        }
+    }
+
+    private var attachableProjectPlaceholder: String { "Select a project" }
 
     private func beginAttachmentWorkflow() {
         guard let loadAttachableProjects else { return }
@@ -923,8 +997,12 @@ struct OnboardingView: View {
                     .frame(maxHeight: 240)
                 }
 
-                Toggle("Apply these reviewed records to the new project", isOn: $importRecognizedArtifacts)
-                    .accessibilityIdentifier("onboarding-import-recognized")
+                RekonCheckbox(
+                    isOn: $importRecognizedArtifacts,
+                    title: "Apply these reviewed records to the new project",
+                    accessibilityLabel: "Apply these reviewed records to the new project",
+                    accessibilityIdentifier: "onboarding-import-recognized"
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

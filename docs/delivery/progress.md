@@ -2,6 +2,75 @@
 
 ## Current outcome
 
+The owner authorized reconciliation and removal of the unassigned Phase 6
+integration checkout. Releases 0.1.14–0.1.16 are being integrated in their existing
+commit order through one PR; their original release tags remain unchanged.
+Future parent-managed integration uses the saved project checkout, as recorded
+in `AGENTS.md`. The extra checkout will be removed after the merge and repository
+readback; prior DMGs and unrelated files remain preserved.
+
+The owner-authorized **RDS search-submit focus correction** is complete and
+installed locally as **0.1.16 (1)**. Release Radar now pins merged
+RekonDesignSystem revision `f986e85e786f55f1d73d6e429de11370399414f7`.
+The toolbar retains its borderless bookmark Save control immediately right of
+the search field in the centered micro-spaced group at wide and compact widths.
+The consumer's independent code/UX review identified stale-evidence and
+focused-submit proof gaps; both were corrected without an additional review
+cycle. Focused inert-host checks and the [0.1.16 package evidence](evidence/2026-09-12-release-0.1.16-packaging.md)
+record the resulting layout, focus, clear, accessibility, signature, installer
+and smoke-launch results. No owner search preference, SQLite state, remote, PR,
+notarization, or publication action occurred.
+The completed RDS and consumer correction tasks are idle and archived. Their
+results are preserved in their repositories; local annotated `v0.1.16` targets
+`76cce40`. Release Radar remote integration of 0.1.14–0.1.16 remains pending in
+this master task. Phase 7 tasks remain untouched.
+
+The owner resumed **Correct Add Project RDS styling** to close its missing review.
+Candidate `8176e319` incorporates the merged default baseline and applies existing
+RDS window chrome and Cancel/Initialize/Attach styles. Both focused AppRoute tests
+passed. One independent code/UX review approved the candidate with no findings.
+Full native-window captures are preserved at [default size](evidence/2026-09-12-add-project-rds-window-default.png)
+and [minimum size](evidence/2026-09-12-add-project-rds-window-minimum.png); the inert
+fixture shows inactive traffic lights and does not launch the installed owner app.
+The reviewed candidate and its integration record `3d6a98d` are packaged locally
+as **0.1.14 (1)**. The signed DMG, matching Downloads copy and installed app are
+recorded in the [0.1.14 package evidence](evidence/2026-09-12-release-0.1.14-packaging.md).
+No push, PR, default-branch merge, notarization or owner-data mutation occurred.
+The completed, idle Add Project task is now archived at the owner's request.
+Its release commits and evidence are preserved in the canonical integration
+checkout; this master task retains the pending remote integration endpoint.
+
+The owner subsequently reopened the same correction after the installed 0.1.14
+Initialize screen exposed unstyled later-workflow controls. The local candidate
+`39ca6bc` extends existing RDS controls across Initialize and Attach selections,
+confirmations, completion and error states; it preserves folder-picker and data
+behavior. Fresh native-window captures and the independent re-review are recorded
+in the [later-workflow evidence](evidence/2026-09-12-add-project-rds-later-workflows.md).
+The correction is packaged and installed locally as **0.1.15 (1)**. Its signed
+DMG, matching Downloads copy and installed identity are recorded in the
+[0.1.15 package evidence](evidence/2026-09-12-release-0.1.15-packaging.md).
+The corrected delivery task is complete, idle and archived again. Local release
+tag `v0.1.15` identifies package commit `94a7768`; remote integration of the
+0.1.14/0.1.15 changes is still pending in this master task.
+
+The owner also reported an unexpected `TEST` search value and a blue square
+around the search-submit icon. Read-only diagnosis against installed 0.1.14
+found `TEST` in the sandbox store's supported working-search preference, saved
+at 2026-09-12T16:17:36Z with the generic `release-radar` audit actor. Startup
+restores that value; the code default is empty. The record does not identify
+the initiator, so attribution remains unknown. The submit button has a separate
+focus state inside pinned RDS `RekonSearchField`, consistent with the native blue
+focus treatment in the screenshot; exact focus transitions were not exercised.
+No search preferences were changed. The owner subsequently authorized correction
+of the blue submit-button focus treatment. The original RDS toolbar delivery task
+is reopened for that bounded correction, with native focus/keyboard verification,
+one independent code/UX review and the authorized RDS PR/merge workflow. Release
+Radar will adopt the verified library merge and follow its standing local release
+workflow. Saved search data and search-persistence policy are outside this fix;
+the focus correction is not part of 0.1.15.
+The read-only toolbar diagnosis task is complete and archived with this result
+preserved here.
+
 The owner authorized immediate reconciliation of delivered local releases with the
 actual default branch, `codex/release-radar-mvp`, on September 12. The dependency
 chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/pull/50)
@@ -11,7 +80,8 @@ chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/
 changes and release records). All three PRs are merged into the default branch;
 the final integration merge is `8de63b16e2fa0f84ca79b4c691e4a43117befce2`.
 The separately recorded 0.1.11 installation closeout is retained in that history.
-Both local integration and saved-project checkouts are synchronized with origin.
+Both local integration and saved-project checkouts were synchronized with origin
+at that reconciliation checkpoint.
 The completed **Fix Search fields to use RDS** and **Phase 6 DMG and manual
 acceptance testing** tasks are archived after their commits reached the default
 branch and their work stopped. A subsequent owner correction exposed an incomplete
@@ -20,24 +90,21 @@ the listing tool returned only two. Direct reads identified eight more completed
 and quiescent tasks: three Phase 6 design reviewers, the 0.1.10 and 0.1.11 package
 tasks, the Restart helper package task, and two Phase 6 acceptance reviewers.
 Their results were verified in merged history and those eight tasks are archived.
-Read-only local metadata confirms six top-level tasks remain:
+The owner subsequently archived the completed missing-Pursuit-phase diagnosis
+and the stopped metric-layout task. The recovery design remains sequenced after
+Phase 6H; metrics remain stopped under Phase 6F. After the Add Project archival,
+the remaining tasks from this cleanup inventory are:
 
 - Master Delivery Thread — orchestration.
-- Diagnose missing Pursuit plan phases — retained investigation/design follow-up.
-- Align Overview metric labels with icons — explicitly stopped, not completed.
-- Correct Add Project RDS styling — candidate awaiting independent review, not merged.
 - Phase 7 portable continuity plan — replacement — preserved at owner request.
 - Phase 7 portable continuity independent… — preserved at owner request.
 
-The stopped and unfinished tasks were not resumed; Phase 7 tasks were not changed.
+Only the Add Project task was resumed. Phase 7 tasks were not changed.
 
-The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
-tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
-`v0.1.13` are published to origin and retain their original release commits.
-The installed app version and matching repository/Downloads DMG checksum were
-read back after integration. Integration changes no product
-source or packaged bytes, so it requires no version bump, new DMG or reinstall.
-The [0.1.13 package evidence](evidence/2026-09-12-release-0.1.13-packaging.md)
+The installed release is **0.1.15 (1)**. Its local annotated `v0.1.15` tag targets
+the package-record commit; published tags `v0.1.10` through `v0.1.13` retain their
+original release commits. The installed app version and matching repository/Downloads
+DMG checksum were read back after packaging. The [0.1.15 package evidence](evidence/2026-09-12-release-0.1.15-packaging.md)
 records identity, direct package checks and verified installation. Existing DMGs
 remain rollback copies; no extra app backup is needed.
 
@@ -53,7 +120,7 @@ reviews remain terminal; no redundant package review was added.
 
 Only repository integration and the requested completed-task cleanup are included.
 Phase 7 stays paused and its tasks remain untouched. The missing Pursuit phases
-investigation remains open; unimplemented Phase 6 extensions and the Phase 8
+diagnosis is archived with its recovery design preserved; unimplemented Phase 6 extensions and the Phase 8
 isolated stale-helper test retain their recorded boundaries. Repository integration
 does not claim application catalog acceptance or mutate owner project data.
 
