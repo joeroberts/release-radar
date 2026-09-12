@@ -6421,6 +6421,51 @@
       }
     },
     {
+      "artifactID": "rr-toolbar-bookmark-wide-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-toolbar-bookmark-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-toolbar-bookmark-compact-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-toolbar-bookmark-compact.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-help-topic-groups-wide-2026-09-12",
+      "path": "docs/delivery/evidence/2026-09-12-help-topic-groups-wide.png",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
       "artifactID": "rr-phase6-toolbar-mockup-proposal-2026-09-12",
       "path": "docs/design/mockups/phase6-persistent-workspace-toolbar-proposal.png",
       "kind": "designAsset",

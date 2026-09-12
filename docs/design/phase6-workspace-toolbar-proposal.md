@@ -13,7 +13,7 @@ The owner accepted the smaller, borderless-logo revision as sufficient visual re
 ## Owner selections — September 12
 
 - **Search:** keep query entry and Save query in the persistent toolbar; filters and saved-query management belong on the results page. Typing does not navigate. Submission opens results; Back restores the source context. Implement this with the recommended app-owned draft and existing complete search/history definition, preserving scope and exact-record navigation.
-- **Compact layout:** use the icon sidebar, keep Help, Settings and Notifications directly visible, and represent Save query with a bookmark icon. The visible Save query label remains in the wide layout. Retain accessible names, keyboard navigation and notification state.
+- **Save query correction:** at both wide and compact widths, represent Save query with a borderless bookmark icon immediately adjacent to the central search field. Keep Help, Settings and Notifications directly visible in their approved right-hand order. Retain the Save query accessible name/help, keyboard navigation, naming popover and notification state.
 - **Manage Project:** open immediately with the selected project's identity, load sections independently, and show applicable retry/recovery in place if a section fails. Preserve existing authorization and archived/removed-record access.
 - **Guided setup:** initiate a Codex task that prepares the exact repository change for owner approval. Apply only the approved change and report verified completion or actionable recovery; task dispatch itself is not successful setup.
 
@@ -25,7 +25,7 @@ These are design selections. The merged RDS toolbar API and its Release Radar co
 
 - Main content has a persistent top toolbar, separated from the page by a thin divider inset at both ends, connecting to neither the sidebar boundary nor the right window edge. Page title/subtitle sit underneath. Preserve the installed application's near-black navy surfaces and restrained blue borders; the brighter blue/cyan surface treatment in earlier generated mockups is not approved.
 - Left toolbar order: sidebar toggle, Back, Forward. All use borderless glyphs. Sidebar toggle moves out of the sidebar. Preserve navigation history semantics.
-- Balanced central persistent RDS search field; magnifying glass submits. Save query is available in the toolbar. Submitting changes the main content area to search results while the toolbar stays visible. The results page retains scope, filters, saved-query management and exact-record navigation.
+- Balanced central persistent RDS search field; magnifying glass submits. A bookmark Save query icon is grouped immediately after the field at every supported width. Submitting changes the main content area to search results while the toolbar stays visible. The results page retains scope, filters, saved-query management and exact-record navigation.
 - Right toolbar order: Help (question mark enclosed in a circle, no outer button outline or visible Help text), Settings cog, Notifications bell. Icons are borderless. Search, Help, Settings and Notifications leave the sidebar.
 - Remaining global sidebar items: Projects, Goals, Needs Review. Existing project navigation remains.
 - Move the animated Checking project documentation indicator to a fixed sidebar footer area so its appearance/disappearance does not shift menu items. Remove the redundant Persisted locally footer label. Preserve validation behavior and accessible checking state; reserve stable layout space when needed.

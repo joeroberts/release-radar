@@ -19,6 +19,21 @@ evidence, generic task adoption, workspace Search, saved views, and shared Help.
 The [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md)
 preserves closed checkpoints, review history, and earlier task identities.
 
+## Owner correction candidate — September 12
+
+The owner directed two focused corrections to the toolbar/help adoption: Save query is
+again a borderless bookmark icon immediately beside the central Search field at wide
+and compact widths, and Help groups its existing guidance as Projects, Settings and
+Goals. Each help destination remains in-app and is exposed by a borderless up-right
+arrow beside its title with its meaningful accessible Open name. Focused unit and
+native rendering checks pass; the durable captures are [wide toolbar](evidence/2026-09-12-toolbar-bookmark-wide.png),
+[compact toolbar](evidence/2026-09-12-toolbar-bookmark-compact.png), and
+[grouped Help](evidence/2026-09-12-help-topic-groups-wide.png). This is a local
+candidate on `codex/toolbar-bookmark-help-groups` from baseline `f257ba6`, pending
+the required fresh independent code/UX review. No packaging, installation, push,
+PR, merge, owner data, live app state, RDS-library, version, tag, metric, project
+management, archive/remove, or guided-setup work is included.
+
 ## Completed local RDS toolbar consumer adoption — September 12
 
 The owner authorized Release Radar to adopt the merged RDS toolbar/search controls

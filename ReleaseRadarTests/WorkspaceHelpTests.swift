@@ -2,6 +2,30 @@ import XCTest
 @testable import ReleaseRadar
 
 final class WorkspaceHelpTests: XCTestCase {
+    func testTopicsAreGroupedForProjectsSettingsAndGoalsWithoutLosingTheirDestinations() {
+        let groups = WorkspaceHelpContent.groups(filteredBy: "")
+
+        XCTAssertEqual(groups.map(\.title), ["Projects", "Settings", "Goals"])
+        XCTAssertEqual(groups[0].topics.map(\.id), [
+            "setup-handoff", "active-viewed", "navigation-validation", "planning-unplaced",
+            "task-adoption", "proposal-approval", "search-navigation",
+        ])
+        XCTAssertEqual(groups[1].topics.map(\.id), [
+            "recovery", "plugin-helper-restart", "saved-query-recovery",
+        ])
+        XCTAssertEqual(groups[2].topics.map(\.id), ["readiness-acceptance"])
+        XCTAssertEqual(groups[0].topics.last?.destination, .history)
+        XCTAssertEqual(groups[1].topics.last?.destination, .search)
+        XCTAssertEqual(groups[2].topics.first?.destination, .goals)
+    }
+
+    func testFilteringHidesEmptyHelpGroups() {
+        let groups = WorkspaceHelpContent.groups(filteredBy: "restart helper")
+
+        XCTAssertEqual(groups.map(\.title), ["Settings"])
+        XCTAssertEqual(groups.first?.topics.map(\.id), ["plugin-helper-restart"])
+    }
+
     func testSharedHelpCatalogCoversEverySelectedJourneyAndHasActionableDestinations() {
         let topics = WorkspaceHelpContent.topics
 
