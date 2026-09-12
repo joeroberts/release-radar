@@ -8,13 +8,20 @@ chain is preserved through [PR #50](https://github.com/joeroberts/release-radar/
 (acceptance, helper, navigation and RDS-field prerequisites),
 [PR #49](https://github.com/joeroberts/release-radar/pull/49) (toolbar adoption), and
 [PR #51](https://github.com/joeroberts/release-radar/pull/51) (remaining 0.1.12/0.1.13
-changes and release records). The first two are merged; merging this final record
-completes the delivered-source backlog. The separately recorded 0.1.11 installation
-closeout is retained in the same history.
+changes and release records). All three PRs are merged into the default branch;
+the final integration merge is `8de63b16e2fa0f84ca79b4c691e4a43117befce2`.
+The separately recorded 0.1.11 installation closeout is retained in that history.
+Both local integration and saved-project checkouts are synchronized with origin.
+The completed **Fix Search fields to use RDS** and **Phase 6 DMG and manual
+acceptance testing** tasks are archived after their commits reached the default
+branch and their work stopped. The Pursuit diagnosis remains open; Phase 7 tasks
+were not changed.
 
 The installed release remains **0.1.13 (1)**. Its original annotated `v0.1.13`
 tag targets `b2497a58b3347c48bebe33c69a20fa6761790d6a`; tags `v0.1.10` through
-`v0.1.13` retain their original release commits. Integration changes no product
+`v0.1.13` are published to origin and retain their original release commits.
+The installed app version and matching repository/Downloads DMG checksum were
+read back after integration. Integration changes no product
 source or packaged bytes, so it requires no version bump, new DMG or reinstall.
 The [0.1.13 package evidence](evidence/2026-09-12-release-0.1.13-packaging.md)
 records identity, direct package checks and verified installation. Existing DMGs
