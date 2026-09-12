@@ -567,15 +567,21 @@ struct OnboardingView: View {
         } else {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text("Project")
-                RekonPicker(
-                    selection: selectedAttachableProjectOption,
-                    options: attachableProjectOptionTitles,
-                    accessibilityLabel: "Project",
-                    accessibilityIdentifier: "onboarding-attach-project"
-                )
+                if isWorking || attachmentFolder != nil {
+                    TextField("Project", text: .constant(selectedAttachableProjectOption.wrappedValue))
+                        .textFieldStyle(RekonQuietTextFieldStyle())
+                        .disabled(true)
+                        .accessibilityIdentifier("onboarding-attach-project")
+                } else {
+                    RekonPicker(
+                        selection: selectedAttachableProjectOption,
+                        options: attachableProjectOptionTitles,
+                        accessibilityLabel: "Project",
+                        accessibilityIdentifier: "onboarding-attach-project"
+                    )
+                }
             }
             .frame(maxWidth: 440)
-            .disabled(isWorking || attachmentFolder != nil)
 
             Button("Choose Folder…", action: chooseAttachmentFolder)
                 .buttonStyle(RekonPrimaryButtonStyle())

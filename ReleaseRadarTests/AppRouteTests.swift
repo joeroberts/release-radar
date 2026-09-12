@@ -126,6 +126,7 @@ final class AppRouteTests: XCTestCase {
                     defer: false
                 )
                 window.isReleasedWhenClosed = false
+                window.title = "Add Project Visual Fixture \(fixtureName) \(sizeName)"
                 window.contentView = hosting
                 defer { window.close() }
 
@@ -136,6 +137,19 @@ final class AppRouteTests: XCTestCase {
 
                 XCTAssertTrue(window.titlebarAppearsTransparent)
                 XCTAssertEqual(window.titleVisibility, .hidden)
+                if fixtureName == "attach-confirmation" {
+                    let application = AXUIElementCreateApplication(ProcessInfo.processInfo.processIdentifier)
+                    let nativeWindow = try XCTUnwrap(accessibilityWindow(application, title: window.title))
+                    let projectSelector = try XCTUnwrap(
+                        accessibilityElement(nativeWindow, identifier: "onboarding-attach-project")
+                    )
+                    var isEnabled: CFTypeRef?
+                    XCTAssertEqual(
+                        AXUIElementCopyAttributeValue(projectSelector, kAXEnabledAttribute as CFString, &isEnabled),
+                        .success
+                    )
+                    XCTAssertEqual(isEnabled as? Bool, false)
+                }
                 try fullWindowCapture(window, name: "add-project-\(fixtureName)-\(sizeName)-window")
             }
         }
