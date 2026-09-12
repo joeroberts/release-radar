@@ -145,7 +145,7 @@ struct WorkspaceHelpView: View {
             }
 
             TextField("Search help", text: $query)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(RekonQuietTextFieldStyle())
                 .accessibilityIdentifier("help-search-field")
 
             ScrollView {
