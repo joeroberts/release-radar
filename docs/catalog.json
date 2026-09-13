@@ -832,6 +832,22 @@
       "isLeaf": true,
       "firstRead": "8D82DF0A-AE02-48AA-A8ED-5B0A56142406",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-13-operative-authority-reconciliation",
+      "path": "docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Bounded reconciliation of operative documentation authority",
+      "allowedContents": [
+        "Controlling task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-operative-authority-reconciliation-brief-2026-09-13",
+      "archiveDestination": "delivery.archive"
     }
   ],
   "artifacts": [
@@ -6794,6 +6810,18 @@
       "parentCollection": "delivery.evidence",
       "supersedes": [],
       "applicationSensitivity": ["evidence"],
+      "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-operative-authority-reconciliation-brief-2026-09-13",
+      "path": "docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.task-scope",
+      "parentCollection": "delivery.task-briefs.2026-09-13-operative-authority-reconciliation",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
       "checksum": {"policy": "notApplicable"}
     }
   ]
