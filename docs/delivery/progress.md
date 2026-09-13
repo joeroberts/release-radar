@@ -8,7 +8,9 @@ records the bounded scope and owner evidence. Operative rules now make accepted
 ADRs immutable, direct current specification maintenance to owning mutable designs,
 and reconcile the bounded authority wording for ADR-006 and the
 usable-project-lifecycle brief without changing their catalog classifications or
-any ADR bytes. Outcomes 2 and 3 remain unopened.
+any ADR bytes. Publication is tracked in
+[PR #58](https://github.com/joeroberts/release-radar/pull/58); GitHub is the source
+for its live review and merge state. Outcomes 2 and 3 remain unopened.
 
 The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
