@@ -12,8 +12,9 @@ controlling sources for Release Radar. Current artifacts include:
 - `docs/delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md`
   for whole-product dependencies and assessed future direction; preserve its
   distinction between approved inclusion, proposed contracts and implementation
-- `docs/architecture/ADR-007-proportional-delivery-validation.md` for the
-  operating model and bounded validation policy
+- `docs/architecture/ADR-007-proportional-delivery-validation.md` as the record
+  of the operating-model and proportional-validation decision; `AGENTS.md`
+  contains the operative agent rules
 - `docs/design/agent-driven-delivery-dashboard-design.md` and
   `docs/design/mockups/` for product and visual design
 - `docs/architecture/ADR-001-release-radar-boundaries.md` for architecture,
@@ -28,6 +29,15 @@ as a navigation aid and verify consequential findings against the current
 source, tests, configuration, application bundle, or running app as
 appropriate.
 
+Accepted ADRs are immutable decision records. Current implementation
+specifications belong in the owning mutable design documents; operative agent
+rules belong in `AGENTS.md`; current authorization and delivery state belong in
+`docs/delivery/progress.md`. Plans, briefs, skills, reviews and implementation
+assignments cannot authorize editing an accepted ADR. Routine specification
+maintenance must preserve accepted ADR text. A future architectural change
+requires a separately authorized decision; it is not permission to amend an
+accepted ADR.
+
 ## Design References
 
 Design screenshots are stored under `docs/design/mockups/`. Each filename
@@ -40,8 +50,9 @@ identifies the section or feature it represents.
   interaction design.
 - Compare the running application with the screenshots. Source inspection alone
   is not evidence of visual correctness.
-- Record necessary deviations and their rationale in the applicable design
-  document or architecture decision record.
+- Record necessary deviations and their rationale in the owning mutable design
+  document. A deviation requiring an architectural change needs a separately
+  authorized decision; preserve accepted ADRs.
 
 ## Durable Artifact Placement
 

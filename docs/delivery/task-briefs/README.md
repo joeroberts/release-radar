@@ -68,6 +68,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-12-rds-toolbar-adoption](2026-09-12-rds-toolbar-adoption) — leaf; Owner-authorized Release Radar adoption of merged RDS toolbar and search controls
 - [delivery.task-briefs.2026-09-12-release-0.1.12](2026-09-12-release-0.1.12) — leaf; Owner-authorized local packaging and tag for Release Radar 0.1.12
 - [delivery.task-briefs.2026-09-12-release-0.1.13](2026-09-12-release-0.1.13) — leaf; Owner-authorized local packaging, tag and installation for Release Radar 0.1.13
+- [delivery.task-briefs.2026-09-13-operative-authority-reconciliation](2026-09-13-operative-authority-reconciliation) — leaf; Bounded reconciliation of operative documentation authority
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -790,6 +791,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | 8D82DF0A-AE02-48AA-A8ED-5B0A56142406 | [docs/delivery/task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md](2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-13-operative-authority-reconciliation
+
+- Path: [docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation](2026-09-13-operative-authority-reconciliation)
+- Purpose: Bounded reconciliation of operative documentation authority
+- Allowed contents: Controlling task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-operative-authority-reconciliation-brief-2026-09-13](2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-operative-authority-reconciliation-brief-2026-09-13 | [docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md](2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
