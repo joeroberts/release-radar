@@ -2,13 +2,13 @@
 
 ## Current outcome
 
-Outcome 1 operative-authority reconciliation is active under the
-[controlling brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md).
-The repository candidate makes accepted ADRs immutable, directs current
-specification maintenance to owning mutable designs, and reconciles the bounded
-authority wording for ADR-006 and the usable-project-lifecycle brief without
-changing their catalog classifications or any ADR bytes. Outcomes 2 and 3 remain
-unopened.
+Outcome 1 operative-authority reconciliation is complete. The
+[completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
+records the bounded scope and owner evidence. Operative rules now make accepted
+ADRs immutable, direct current specification maintenance to owning mutable designs,
+and reconcile the bounded authority wording for ADR-006 and the
+usable-project-lifecycle brief without changing their catalog classifications or
+any ADR bytes. Outcomes 2 and 3 remain unopened.
 
 The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
@@ -67,11 +67,19 @@ add another dependency. No live reconstruction is authorized.
 
 ## Verification and remaining limitations
 
-The authority-reconciliation candidate passes the repository-native documentation
-check and `git diff --check`. Focused searches find none of the replaced operative
-directions, and every existing ADR is unchanged from baseline
-`892b1e11597dd1cff30f04818ecd7dac0605b897`. Independent review is pending.
-These repository checks do not establish application acceptance or synchronization.
+Authority-reconciliation candidate
+`f39aae7cf9a2bdfd4adedcd96b1ef73f64014572` passed the repository-native
+documentation check, `git diff --check`, focused obsolete-direction searches and
+the baseline comparison proving every existing ADR unchanged from
+`892b1e11597dd1cff30f04818ecd7dac0605b897`. Independent reviewer task
+`01a09b95-5f77-7260-8f06-bccb29143d78` accepted the corrected candidate with no
+Required, Optional or Out-of-scope findings. Final catalog/index closeout also
+passes repository validation. Chief-architect task
+`01a09b8a-1350-7c42-9d14-0aa07f28df40` and reviewer task
+`01a09b95-5f77-7260-8f06-bccb29143d78` are archived. The delivery-owner task
+remains active only to report this closeout; coordinator archival follows that
+stopped result. These checks do not establish application acceptance or
+synchronization.
 
 Repository documentation validation passes. The eight completed briefs and their
 catalog/index metadata agree; stable artifact identities and evidence remain
@@ -116,11 +124,10 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Complete the one authorized independent review of the operative-authority
-reconciliation and apply only any Required bounded corrections. After that local
-closeout, inspect the current application binding/catalog status without changing
-it, then present any exact required binding or catalog acceptance mutation for
-owner approval. The last recorded missing binding must not be treated as fresh
+Inspect the current application binding/catalog status without changing it, then
+present any exact required binding or catalog acceptance mutation for owner
+approval. This follow-up is not authorized by the completed outcome 1 task. The
+last recorded missing binding must not be treated as fresh
 application state or repaired by editing SQLite. Broader owner manual
 acceptance remains outstanding under the existing guide. No product slice,
 paused task, stopped metrics work, live recovery or Phase 8 environment

@@ -810,7 +810,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-operative-authority-reconciliation-brief-2026-09-13 | [docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md](2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md) | document | controlling &#40;delivery.task-scope&#41; | active | none | none |
+| rr-operative-authority-reconciliation-brief-2026-09-13 | [docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md](2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
