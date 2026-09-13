@@ -16,22 +16,25 @@ records signed identity, matching repository/Downloads DMGs, installation,
 layout, focus, accessibility and smoke-launch checks. Existing versioned DMGs
 remain the rollback copies.
 
-The active task is the owner-approved documentation reconciliation in
-[PR #54](https://github.com/joeroberts/release-radar/pull/54): consolidate this
-ledger, preserve closed detail in the historical archive, correct Phase 6
-publication wording, and close the eight completed brief catalog entries and
-their generated indexes. PR #54 carries the current review status; merge still
-requires owner approval.
+The owner-approved repository cleanup is complete. Documentation reconciliation
+[PR #54](https://github.com/joeroberts/release-radar/pull/54) and the **Stage Release**
+action label [PR #56](https://github.com/joeroberts/release-radar/pull/56) are merged
+into `main`. Local Git references and disposable build output were cleaned up;
+retained work, installers and test evidence were preserved. The
+[Historical cleanup closeout](archive/2026-09-11-phase6-delivery-history.md#september-12-repository-cleanup-closeout)
+records review limitations and disk recovery. No app release was required.
+Current coordination is tracking closeout; no new product implementation is open.
 
 ## Current authorization
 
-The owner approved this documentation-only reconciliation on September 12.
-Its scope is the ledger/archive, Phase 6 publication wording, the eight completed
-briefs and their catalog/index metadata. The delivery endpoint is a verified
-scoped commit and update to PR #54, followed by review. **Merge requires separate
-owner approval.** This assignment does not authorize application catalog
-acceptance, evidence mutation, owner SQLite/project-data access, an app release,
-or the separately proposed Git/build cleanup and Codex/GitHub configuration work.
+The owner authorized the documentation reconciliation, local Git/build cleanup,
+and the specific Codex action rename, then separately approved both PR merges.
+Recording their verified outcomes remains part of delivery coordination.
+Application binding/catalog acceptance, evidence mutation and owner SQLite or
+project-data changes remain outside that authorization. GitHub protections and
+CI are captured for further planning in
+[issue #55](https://github.com/joeroberts/release-radar/issues/55); no protection,
+workflow or governing-policy change has been approved by that issue.
 
 Earlier owner directions authorize scoped local commits, branch pushes and PRs
 for already-authorized delivery work. Earlier Phase 6 local-only publication
@@ -51,18 +54,19 @@ add another dependency. No live reconstruction is authorized.
 
 ## Verification and remaining limitations
 
-The installed documentation checker passes on this correction. Exactly eight
-brief entries changed lifecycle/authority; artifact IDs, paths, collections and
-checksum policies are unchanged. The affected task-brief index was regenerated.
-Closed ledger detail is preserved in the existing historical archive with its
-relative evidence links rebased. No application acceptance/readback was performed.
+Repository documentation validation passes. The eight completed briefs and their
+catalog/index metadata agree; stable artifact identities and evidence remain
+preserved. Closed delivery details are in the historical archive. Repository
+validation does not establish application acceptance or synchronization.
 
 The previously completed product reviews remain terminal. They do not establish
 CodeRabbit review of the remote integrations: PR #52 had no CodeRabbit review or
 comment, and PR #53's CodeRabbit review failed because the PR was already closed.
-PR #54 carries the correction's current review record. Review coverage must be
-verified from its actual commit range, not a green badge; the earlier coverage
-gap is retained in the historical record.
+PR #54's final documentation head received an explicit successful CodeRabbit
+review. PR #56 was merged on the owner's instruction while CodeRabbit remained
+rate-limited; its green status was not a completed review. The
+[Historical cleanup closeout](archive/2026-09-11-phase6-delivery-history.md#september-12-repository-cleanup-closeout)
+retains the review links and exact outcomes.
 
 The last combined source check recorded **194 passed, 7 skipped, and 6 failed
 cases (12 assertions)**. Those failures reproduced on unchanged `5e7b9b8`; this
@@ -80,11 +84,11 @@ retains the exact limitation. A separately provisioned GUI account or VM remains
 future work requiring its own authorization; the owner's live helper must not be
 used to manufacture the stale precondition.
 
-Application inventory, binding/acceptance and managed readback remain outside
-this task. The last recorded inventory was `bindingMissing`, `isComplete:false`
+The repository cleanup did not perform application inventory, binding/catalog
+acceptance or managed readback. The last recorded inventory was `bindingMissing`, `isComplete:false`
 for `project-fffdc0e0b15b9b86`; repository checks cannot establish current managed
 application synchronization. The changed catalog remains pending application
-acceptance; this reconciliation does not perform that acceptance.
+acceptance; no acceptance has been recorded for this repository correction.
 
 The saved `TEST` search-value diagnosis remains unresolved as to initiator; the
 retained audit used only the generic actor. No preference was changed. Details,
@@ -93,7 +97,11 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Present PR #54 for the owner's merge decision after final-correction review.
-The local documentation checks recorded above are complete. Broader owner manual
-acceptance remains outstanding. No product slice, paused task, stopped metrics work, live recovery,
-or Phase 8 environment provisioning is released by this documentation closeout.
+Inspect the current application binding/catalog status without changing it, then
+present any exact required binding or catalog acceptance mutation for owner
+approval. The last recorded missing binding must not be treated as fresh
+application state or repaired by editing SQLite. Broader owner manual
+acceptance remains outstanding under the existing guide. No product slice,
+paused task, stopped metrics work, live recovery or Phase 8 environment
+provisioning is released by this closeout. GitHub protection/CI planning remains
+in issue #55 and is not a prerequisite for these follow-ups.

@@ -6,6 +6,37 @@ review and authorization statements below describe prior checkpoints only.
 Final local Phase 6E source is `d1445dc033fca9056782c493ebd04184d58fbc67`;
 independent review resolved all Required findings on September 11.
 
+## September 12 repository cleanup closeout
+
+Historical and non-authoritative; these facts describe the completed cleanup.
+
+- The owner approved [PR #54](https://github.com/joeroberts/release-radar/pull/54)
+  for merge after CodeRabbit explicitly reviewed final head `52fde1d` and
+  [found no issues](https://github.com/joeroberts/release-radar/pull/54#issuecomment-5649759447).
+  It merged into `main` at `a719059`. The eight completed briefs retained their
+  artifact IDs and evidence; documentation validation passed.
+- The owner specifically approved renaming the Codex action from **Run** to
+  **Stage Release**, then approved [PR #56](https://github.com/joeroberts/release-radar/pull/56)
+  for merge at `c5bcfe2`. Its command and default `stage-release-no-launch` mapping
+  were unchanged. TOML parsing, shell syntax and whitespace checks passed without
+  a build, launch or installation. CodeRabbit was
+  [rate-limited](https://github.com/joeroberts/release-radar/pull/56#issuecomment-5649950895);
+  no completed review was claimed despite the green status.
+- Local `origin/HEAD` was corrected to `origin/main`. Cleanup removed 75 merged,
+  unused local branches, preserving all eight then-unmerged branches and both
+  retained worktrees. The dirty architecture worktree was unchanged. The primary
+  checkout was subsequently returned to clean `main`, synchronized at `c5bcfe2`.
+- Owner-approved removal of six obsolete `dist/PR-23-*` directories reclaimed
+  approximately 99 MB; five clean merged worktrees reclaimed approximately 1.8 GB.
+  The later removal of 15 disposable cache directories reduced the three measured
+  build/test folders from 1,228,890,112 to 187,609,088 bytes, reclaiming
+  1,041,281,024 bytes (1.04 GB). Test-result bundles, the historical release ZIP,
+  all 11 versioned DMGs and the dirty architecture worktree were preserved.
+- [Issue #55](https://github.com/joeroberts/release-radar/issues/55) captures future
+  GitHub protection/CI planning. No protection, workflow, governing instruction,
+  owner preference, SQLite data or catalog acceptance was changed by this cleanup.
+  These repository/configuration corrections did not require an app release.
+
 # Release Radar delivery state
 
 ## Current outcome and active task
