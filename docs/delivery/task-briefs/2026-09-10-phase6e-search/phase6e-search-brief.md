@@ -1,6 +1,9 @@
 # Phase 6E: workspace search, saved views and Help
 
-Status: controlling refinement of the authorized Phase 6 sequence. Implementation
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): controlling refinement of the authorized Phase 6 sequence. Implementation
 waits for reviewed 6D integration; dispatch sets the exact committed baseline
 containing that dependency and this brief.
 

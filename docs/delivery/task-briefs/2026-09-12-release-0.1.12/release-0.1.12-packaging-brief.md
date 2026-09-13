@@ -1,6 +1,9 @@
 # Release Radar 0.1.12 packaging
 
-Status: owner-authorized local packaging and local-tag endpoint. This brief
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): owner-authorized local packaging and local-tag endpoint. This brief
 packages the independently reviewed RDS toolbar adoption; it does not reopen
 product design or implementation.
 

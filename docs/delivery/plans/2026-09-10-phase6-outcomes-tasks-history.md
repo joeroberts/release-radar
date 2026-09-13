@@ -9,9 +9,11 @@ Source baseline: `e5372d170d9202d207922fe51f38bcf0827a2967` (merged Phase 5 and 
 The owner authorized Phase 6 planning followed directly by bounded local
 implementation. The [whole-product plan](2026-09-06-full-product-architecture-and-delivery-plan.md)
 defines inclusion; this plan resolves the delivery sequence without dropping any
-selected outcome. [Progress](../progress.md) owns live authorization and assignments.
-Installation and owner testing wait until September 11 or later and separate
-authorization. Source completion does not claim installed acceptance.
+selected outcome. [Current authorization](../progress.md#current-authorization)
+owns live authorization and assignments. The original installation/testing wait
+was superseded by later owner directions and completed release delivery. Full
+owner manual acceptance remains outstanding; source or installation completion
+does not imply that acceptance.
 
 The complete outcome is workspace Delivery Goals, the distinct Execution goal
 browser (P14), generic task adoption (P10/[issue #1](https://github.com/joeroberts/release-radar/issues/1)),
@@ -118,7 +120,11 @@ never Ultra. Fresh task worktrees start from the exact committed controlling
 baseline, one product writer at a time. Archive completed bounded peers after
 source/evidence preservation and process handback.
 
-Push/PR is not yet authorized for Phase 6; each merge and installation requires
-separate approval. Present the first reviewed slice's concrete publication
-endpoint to the parent before accumulating the full phase unpublished. No cleanup,
-notifications, external scans, consumer changes or owner-state mutations.
+Later owner directions authorize scoped local commits, branch pushes and PRs for
+already-authorized delivery work; the original local-only publication restriction
+is historical. Each merge still requires owner approval. Completed authorized app
+batches follow the standing local version/tag/DMG/installation workflow in
+[AGENTS.md](../../../AGENTS.md); documentation-only corrections do not trigger it.
+The [current authorization](../progress.md#current-authorization) preserves the
+stopped and paused work boundaries. This plan does not independently authorize
+cleanup, notifications, external scans, consumer changes or owner-state mutations.

@@ -609,7 +609,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase6a-history-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md](2026-09-10-phase6a-history/phase6a-history-brief.md) | document | controlling &#40;delivery.phase6a-history&#41; | active | none | none |
+| rr-phase6a-history-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md](2026-09-10-phase6a-history/phase6a-history-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -629,7 +629,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase6b-goals-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md](2026-09-10-phase6b-goals/phase6b-goals-brief.md) | document | controlling &#40;delivery.phase6b-goals&#41; | active | none | none |
+| rr-phase6b-goals-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md](2026-09-10-phase6b-goals/phase6b-goals-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -649,7 +649,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase6c-evidence-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md](2026-09-10-phase6c-evidence/phase6c-evidence-brief.md) | document | controlling &#40;delivery.phase6c-evidence&#41; | active | none | none |
+| rr-phase6c-evidence-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md](2026-09-10-phase6c-evidence/phase6c-evidence-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -669,7 +669,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase6d-adoption-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md](2026-09-10-phase6d-adoption/phase6d-adoption-brief.md) | document | controlling &#40;delivery.phase6d-adoption&#41; | active | none | none |
+| rr-phase6d-adoption-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md](2026-09-10-phase6d-adoption/phase6d-adoption-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -689,7 +689,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-phase6e-search-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md](2026-09-10-phase6e-search/phase6e-search-brief.md) | document | controlling &#40;delivery.phase6e-search&#41; | active | none | none |
+| rr-phase6e-search-brief-2026-09-10 | [docs/delivery/task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md](2026-09-10-phase6e-search/phase6e-search-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -749,7 +749,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| 003D9B42-FD49-4209-AC07-C18FAEB1D7A1 | [docs/delivery/task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md](2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md) | document | controlling &#40;delivery.rds-toolbar-adoption&#41; | active | none | none |
+| 003D9B42-FD49-4209-AC07-C18FAEB1D7A1 | [docs/delivery/task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md](2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -769,7 +769,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| 213D9B60-6FC9-4769-A43E-F49F90795085 | [docs/delivery/task-briefs/2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md](2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md) | document | controlling &#40;delivery.release-0.1.12-packaging&#41; | active | none | none |
+| 213D9B60-6FC9-4769-A43E-F49F90795085 | [docs/delivery/task-briefs/2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md](2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -789,7 +789,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| 8D82DF0A-AE02-48AA-A8ED-5B0A56142406 | [docs/delivery/task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md](2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md) | document | controlling &#40;delivery.release-0.1.13-packaging&#41; | active | none | none |
+| 8D82DF0A-AE02-48AA-A8ED-5B0A56142406 | [docs/delivery/task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md](2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

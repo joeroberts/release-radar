@@ -1,6 +1,9 @@
 # Phase 6D: generic task adoption
 
-Status: controlling refinement of the authorized Phase 6 sequence. Dispatch sets
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): controlling refinement of the authorized Phase 6 sequence. Dispatch sets
 the exact committed baseline containing this brief and reviewed 6C dependency.
 
 ## Objective and scope

@@ -1,6 +1,9 @@
 # Phase 6C: revision-bound delivery evidence
 
-Status: controlling refinement of the approved Phase 6 sequence; local delivery
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): controlling refinement of the approved Phase 6 sequence; local delivery
 authorized. Dispatch supplies the exact committed baseline containing this brief.
 
 ## Objective and boundaries

@@ -1,6 +1,9 @@
 # Phase 6A: truthful event-time History
 
-Status: controlling brief; independent planning review passed at `22126cf` with
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): controlling brief; independent planning review passed at `22126cf` with
 no Required findings. Local implementation is authorized.
 
 ## Objective and outcome
