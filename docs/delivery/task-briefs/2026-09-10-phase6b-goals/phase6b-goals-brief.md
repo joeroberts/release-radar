@@ -1,6 +1,9 @@
 # Phase 6B: workspace Delivery and Execution Goals
 
-Status: controlling refinement of the independently reviewed Phase 6 sequence;
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): controlling refinement of the independently reviewed Phase 6 sequence;
 local implementation authorized. Dispatch names the committed handoff revision.
 
 ## Objective and scope

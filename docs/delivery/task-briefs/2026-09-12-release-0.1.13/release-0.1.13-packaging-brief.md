@@ -1,6 +1,9 @@
 # Release Radar 0.1.13 packaging and installation
 
-Status: owner-authorized local release delivery. This brief packages and installs
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): owner-authorized local release delivery. This brief packages and installs
 the independently reviewed bookmark and Help correction; it does not reopen
 product design or implementation.
 

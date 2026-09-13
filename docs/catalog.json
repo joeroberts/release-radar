@@ -5880,8 +5880,8 @@
       "artifactID": "rr-phase6a-history-brief-2026-09-10",
       "path": "docs/delivery/task-briefs/2026-09-10-phase6a-history/phase6a-history-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-10-phase6a-history",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5889,8 +5889,7 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.phase6a-history"
+      }
     },
     {
       "artifactID": "rr-phase6a-history",
@@ -5941,8 +5940,8 @@
       "artifactID": "rr-phase6b-goals-brief-2026-09-10",
       "path": "docs/delivery/task-briefs/2026-09-10-phase6b-goals/phase6b-goals-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-10-phase6b-goals",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5950,8 +5949,7 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.phase6b-goals"
+      }
     },
     {
       "artifactID": "rr-2026-09-10-phase6b-goals",
@@ -6017,8 +6015,8 @@
       "artifactID": "rr-phase6c-evidence-brief-2026-09-10",
       "path": "docs/delivery/task-briefs/2026-09-10-phase6c-evidence/phase6c-evidence-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-10-phase6c-evidence",
       "supersedes": [],
       "applicationSensitivity": [
@@ -6026,8 +6024,7 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.phase6c-evidence"
+      }
     },
     {
       "artifactID": "rr-2026-09-10-phase6c-evidence",
@@ -6078,8 +6075,8 @@
       "artifactID": "rr-phase6d-adoption-brief-2026-09-10",
       "path": "docs/delivery/task-briefs/2026-09-10-phase6d-adoption/phase6d-adoption-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-10-phase6d-adoption",
       "supersedes": [],
       "applicationSensitivity": [
@@ -6087,15 +6084,14 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.phase6d-adoption"
+      }
     },
     {
       "artifactID": "rr-phase6e-search-brief-2026-09-10",
       "path": "docs/delivery/task-briefs/2026-09-10-phase6e-search/phase6e-search-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-10-phase6e-search",
       "supersedes": [],
       "applicationSensitivity": [
@@ -6103,8 +6099,7 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.phase6e-search"
+      }
     },
     {
       "artifactID": "rr-2026-09-10-phase6d-adoption",
@@ -6605,9 +6600,8 @@
       "artifactID": "003D9B42-FD49-4209-AC07-C18FAEB1D7A1",
       "path": "docs/delivery/task-briefs/2026-09-12-rds-toolbar-adoption/rds-toolbar-adoption-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.rds-toolbar-adoption",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-12-rds-toolbar-adoption",
       "supersedes": [],
       "applicationSensitivity": [
@@ -6621,9 +6615,8 @@
       "artifactID": "213D9B60-6FC9-4769-A43E-F49F90795085",
       "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.12/release-0.1.12-packaging-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.release-0.1.12-packaging",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-12-release-0.1.12",
       "supersedes": [],
       "applicationSensitivity": [
@@ -6637,9 +6630,8 @@
       "artifactID": "8D82DF0A-AE02-48AA-A8ED-5B0A56142406",
       "path": "docs/delivery/task-briefs/2026-09-12-release-0.1.13/release-0.1.13-packaging-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.release-0.1.13-packaging",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-12-release-0.1.13",
       "supersedes": [],
       "applicationSensitivity": [

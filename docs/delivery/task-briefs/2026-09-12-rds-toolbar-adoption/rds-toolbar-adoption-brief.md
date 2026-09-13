@@ -1,6 +1,9 @@
 # RDS toolbar consumer adoption
 
-Status: owner-authorized bounded implementation. This brief records the already
+Status: completed; historical and non-authoritative. Delivery is integrated into
+`main`; current authorization lives in [progress](../../progress.md#current-authorization).
+
+Original assignment status (historical): owner-authorized bounded implementation. This brief records the already
 approved toolbar decisions; it does not reopen Phase 6 planning.
 
 ## Objective and outcome
