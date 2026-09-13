@@ -20,7 +20,8 @@ The active task is the owner-approved documentation reconciliation in
 [PR #54](https://github.com/joeroberts/release-radar/pull/54): consolidate this
 ledger, preserve closed detail in the historical archive, correct Phase 6
 publication wording, and close the eight completed brief catalog entries and
-their generated indexes. Final review and merge remain pending.
+their generated indexes. PR #54 carries the current review status; merge still
+requires owner approval.
 
 ## Current authorization
 
@@ -59,9 +60,9 @@ relative evidence links rebased. No application acceptance/readback was performe
 The previously completed product reviews remain terminal. They do not establish
 CodeRabbit review of the remote integrations: PR #52 had no CodeRabbit review or
 comment, and PR #53's CodeRabbit review failed because the PR was already closed.
-PR #54's recorded CodeRabbit coverage reaches `deb5179`; its request to review
-`108915e` was rate-limited. Final correction coverage must be verified from the
-review's actual commit range, not a green badge.
+PR #54 carries the correction's current review record. Review coverage must be
+verified from its actual commit range, not a green badge; the earlier coverage
+gap is retained in the historical record.
 
 The last combined source check recorded **194 passed, 7 skipped, and 6 failed
 cases (12 assertions)**. Those failures reproduced on unchanged `5e7b9b8`; this
@@ -92,7 +93,7 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Complete PR #54's documentation checks and final-correction review, then present
-it for the owner's merge decision. Broader owner manual acceptance remains
-outstanding. No product slice, paused task, stopped metrics work, live recovery,
+Present PR #54 for the owner's merge decision after final-correction review.
+The local documentation checks recorded above are complete. Broader owner manual
+acceptance remains outstanding. No product slice, paused task, stopped metrics work, live recovery,
 or Phase 8 environment provisioning is released by this documentation closeout.
