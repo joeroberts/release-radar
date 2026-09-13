@@ -51,10 +51,11 @@ Repository validation does not establish application acceptance or synchronizati
 
 ## Assignment, review and endpoint
 
-Delivery task `01a09b88-ccbb-79d3-9e5e-f3dcbf2cc708` coordinates this task-owned
-worktree and creates the independent reviewer. This delivery owner has exclusive
-write ownership of the authorized files and `docs/delivery/progress.md`, dispatched
-as `gpt-5.6-sol` / `high` with ceiling `high`; the runtime settings are not
-independently exposed. The reviewer covers scope, approval attribution, authority
-consistency, unchanged ADRs and catalog/document agreement. Only Required findings
-block. The endpoint is scoped verified local commits only.
+Coordinator task `01a09b88-ccbb-79d3-9e5e-f3dcbf2cc708` owns coordination and
+reviewer creation. Delivery-owner task
+`01a09b8f-40de-7bb1-9a40-2bcbbe566cbb` owns this task worktree, the authorized
+files and `docs/delivery/progress.md`; it was dispatched as `gpt-5.6-sol` / `high`
+with ceiling `high`, though the runtime settings are not independently exposed.
+The reviewer covers scope, approval attribution, authority consistency, unchanged
+ADRs and catalog/document agreement. Only Required findings block. The endpoint
+is scoped verified local commits only.
