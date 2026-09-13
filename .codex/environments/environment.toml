@@ -6,6 +6,6 @@ name = "release-radar"
 script = ""
 
 [[actions]]
-name = "Run"
+name = "Stage Release"
 icon = "run"
 command = "./script/build_and_run.sh"
