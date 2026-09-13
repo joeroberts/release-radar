@@ -168,8 +168,9 @@ or after Phase 4 source delivery, using recommendations and concrete consequence
    assignments separately from current obligations. Do not infer Active-goal
    supersession or rewrite dependency targets.
 
-**Actionable handoff after selections:** amend only affected accepted contracts,
-persist the next bounded brief, and start each writer from the merged Phase 4
+**Actionable handoff after selections:** record the owner-selected contract
+changes in the affected owning mutable designs, preserving accepted ADRs; persist
+the next bounded brief, and start each writer from the merged Phase 4
 navigation contract. Coherent checkpoints are (a) recorded planning and its complete
 readback/Overview/Plan/shared-board journey, (b) references, impacts and proposal
 comparison/atomic apply, and (c) withdrawal/replacement/splitting with coverage and
@@ -349,8 +350,9 @@ changes or app-state mutation, and does not accept or synchronize a catalog.
 ## Owner-approved roadmap additions — 2026-09-06
 
 The owner approved including all six recommendations below. Their inclusion is
-settled; detailed design, architecture amendments and implementation remain to be
-approved in the applicable slice. This approval does not promote the whole plan
+settled; detailed design, separately authorized architectural decisions and
+implementation remain to be approved in the applicable slice. This approval does
+not promote the whole plan
 or other existing proposals to approved status. The existing six-goal/eleven-ticket
 catalog remains intact; these references identify additional documented outcomes,
 not newly created application tickets.
@@ -602,8 +604,9 @@ automatic-refresh work in slice 3. Do not repeat it as a lifecycle prerequisite.
 
 These contracts have named consequences, not an additional framework. D3's removal
 policy and D9's authority boundary are owner-selected; the presentation scope in
-D11 is also settled. Other details remain proposed unless explicitly accepted in
-the controlling ADRs. The 2026-09-08 ADR-003 amendment accepts the Phase 4
+D11 is also settled. Other details remain proposed unless explicitly accepted by
+the owner and recorded in the applicable decision record or owning mutable design.
+The 2026-09-08 ADR-003 amendment accepts the Phase 4
 navigation/dependency/relaunch subset of D6; future surface contracts remain open. Approve or amend unresolved contracts before their owning
 feature. No schema-only foundation is a completed owner feature.
 
@@ -668,18 +671,26 @@ Concrete contradictions requiring reconciliation in the owning slice:
   RR-R10 require importer tickets in Backlog and prohibit imported migration
   continuation. Recommend preserving formal state in the new complete package,
   while requiring current destination prerequisites before subsequent execution.
-  The future format decision must explicitly amend the conflicting importer rule;
-  this recommendation does not change v1 behavior or grant an import bypass.
+  The future format requires a separately authorized decision resolving the
+  conflicting importer semantics, recorded in the owning mutable design while
+  preserving accepted ADRs; this recommendation does not change v1 behavior or
+  grant an import bypass.
 - **History and authority (D7/D12/D13):** current Activity decorates historical
   events with current ticket lane/phase. Proposed transition wording requires
   actual event facts, not those decorations. An accepted catalog snapshot also
   does not version mutable prose: traceability and code evidence need explicit
   source-revision references, without checksum-controlling the plan itself.
-- **Document maturity:** ADR-006's pending header and older implementation
-  statements disagree with controlling catalog/delivered MDCP evidence. Follow
-  the accepted boundary and verified delivery record; do not infer a new approval
-  from either label. Governing-document reconciliation is separate authorized
-  work, not part of this plan-only candidate.
+- **ADR-006 authority:** The owner approved the substantive M1 Managed Repository
+  Documentation Contract architecture and planning direction and required the
+  reviewed package to be committed without revision. ADR-006 therefore retains
+  its original pending-approval wording as historical text. Its active/controlling
+  catalog classification identifies the accepted M1 architectural direction; it
+  does not establish blanket approval of every paragraph or later appendix. The
+  approval expressly excluded M1's full-role review matrix, mutable-brief checksums
+  and validation-of-validation requirements, and did not authorize implementation
+  or application/external mutations. Later additions retain their separately
+  evidenced scope; this reconciliation neither approves them nor changes any ADR
+  bytes.
 
 ### Material owner choices and when they are needed
 
@@ -1026,7 +1037,7 @@ repair must not wait for an observer, companion or execution-host feasibility re
 
 | Slice | Complete outcome | Dependencies and boundaries |
 | --- | --- | --- |
-| 0 Joint contract reconciliation | Owner selects/amends D1–D13 as applicable; RM1 resolves the coupled IA/planning meanings; update affected accepted artifacts only under that explicit approval. Retain the six newly approved scope additions; resolve their detailed contracts without reopening the inclusion decision. Record other proposed feature outcomes so they cannot be lost. | This proposed assessment is the input. Resolve lifecycle/identity and planning semantics now; detailed APIs and task briefs belong to each upcoming slice. No hidden infrastructure build. |
+| 0 Joint contract reconciliation | Owner selects/amends D1–D13 as applicable; RM1 resolves the coupled IA/planning meanings; record explicitly approved specification changes in the owning mutable designs while preserving accepted ADRs; architectural changes require separately authorized decisions. Retain the six newly approved scope additions; resolve their detailed contracts without reopening the inclusion decision. Record other proposed feature outcomes so they cannot be lost. | This proposed assessment is the input. Resolve lifecycle/identity and planning semantics now; detailed APIs and task briefs belong to each upcoming slice. No hidden infrastructure build. |
 | 1 Usable project lifecycle | C1/C2/C3/C12 plus setup state, consolidated health and truthful registration readback: create/resume/edit a visible phase-less project, bootstrap docs through explicit steps, recover access directly. RDS pilot and Help for these flows. | D1/D2/D8/D11. Preserve store policy. Regression covers copied handoff and relaunch, not a manually inserted test phase. |
 | 2 Safe management and recovery | C4–C7: managed relocation/root handling, archive/restore/remove-from-tracking with retained history, coordinated backup/reset restoration, installed-plugin reconciliation and their C12 health/recovery actions. | D1–D3/D7/D8; implement the selected retention policy with historical identity and stale-command protections. Deliver bounded substeps with owner-visible recovery; no destructive migration without explicit owner authorization. |
 | 3 Current documentation and evidence | C8/C9/#18/#19 share freshness and recovery. Overview, evidence and C12 health agree after external edits, access loss and catalog changes. | Deliver C8's bounded OS-metadata validator repair early and independently; the broader freshness work uses lifecycle generations from 1/2. Can overlap navigation work with separate file ownership. Watching never accepts or repairs. |
@@ -1138,18 +1149,20 @@ another authority system. On approval, reconcile these exact sources:
 | Dashboard design, onboarding and mutation principles | Phase-required completion and guidance-only prompt deadlock; early “no delivery gates” language conflicts with accepted readiness/acceptance rules. | Adopt complete setup semantics and distinguish authorization/readiness/acceptance from agent execution. |
 | ADR-001 archive v1 and companion boundary | V1 lacks newer domain sections and file bytes; its audit exclusion conflicts with retained assignment-event history. The old companion draft proposed cloud authority. | The owner-approved continuity amendment selects a complete project-record/document/evidence package and Mac/repository authority with read-only cloud publication. Preserve v1 meanings and design the new format explicitly; detailed RM8 implementation remains unapproved. |
 | ADR-003 and Project Plan proposal | Active context versus proposed lifecycle “Current.” | Retain one active-context authority and choose separate lifecycle/order names. |
-| ADR-004/005/006 headers and implementation claims | “Pending/proposed” text competes with active controlling catalog and delivered behavior. | Reconcile status after checking approvals; do not infer authority from a header or mark proposals implemented. |
+| ADR-004/005/006 headers and implementation claims | “Pending/proposed” text competes with active controlling catalog and delivered behavior. | Use the ADR-006 authority clarification above and reconcile any remaining status outside ADR files after checking approvals; do not infer authority from a header or mark proposals implemented. |
 | Managed-documentation contract / shipped catalog reference | Blanket prohibition of hidden OS files causes `.DS_Store` to invalidate otherwise valid documentation. | Implement C8's narrow, tested discovery exclusion and document its versioned compatibility rule; retain artifact and filesystem safety requirements. |
 | RR-R10 archive statements / roadmap | Export/import remain future RM5/6; the design requires v1 lane conversion to Backlog while ADR-001 preserves source lanes and DG2 requires lossless continuity. | Approve one versioned preservation/readiness contract, reject unsupported state without omission, and state delivered capability accurately. Keep RM10 Help distinct from completed RR-R10. |
 | Planning/UX studies and mockups | Outdated no-phase-discovery claim; two goal domains; additional surfaces not scheduled as implementation. | Preserve intended jobs, update obsolete diagnosis, make chosen IA and added outcomes explicit, label declined alternatives. |
 | Progress | September 2 acceptance/readback describes historical state, not the reset installation today. | Retain concise historical pointers; record current task and current observed limitations without reopening accepted work. |
 
-For a new feature or bug, change the relevant row in this document and only the
-affected decisions/dependencies, then update its owning design/ADR when behavior
-changes. Ask four practical questions in the existing brief: which identities or
-authorities change; which existing/future capabilities consume that change; what
-must migrate/round-trip/recover; which complete user journey proves it. If the
-change introduces a real product direction, add a row before implementation.
+For an authorized feature or bug fix, update the relevant row and affected
+decision/dependency references in this document, then maintain the owning mutable
+design when behavior changes. Preserve accepted ADRs; an architectural change
+requires a separately authorized decision. Ask four practical questions in the
+existing brief: which identities or authorities change; which existing/future
+capabilities consume that change; what must migrate/round-trip/recover; which
+complete user journey proves it. If the change introduces a real product direction,
+add a row before implementation.
 This is a compatibility check, not a new gate engine or ledger. Scope is still the
 owner's request; future compatibility does not authorize speculative implementation.
 

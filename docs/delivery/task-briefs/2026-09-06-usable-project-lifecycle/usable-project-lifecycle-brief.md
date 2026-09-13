@@ -1,7 +1,10 @@
 # Usable project lifecycle delivery
 
-Date: 2026-09-06. Status: active controlling brief; current authorization and
-programme sequencing remain in `docs/delivery/progress.md`.
+Date: 2026-09-06. Status: active supporting reference for the owner-accepted
+usable-project-lifecycle delivery. This brief preserves the bounded slice's
+requirements and historical assignment; it does not independently authorize
+further work. Current authorization and programme sequencing remain in
+`docs/delivery/progress.md`.
 
 ## Objective and outcome
 

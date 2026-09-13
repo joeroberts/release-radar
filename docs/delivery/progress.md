@@ -2,6 +2,14 @@
 
 ## Current outcome
 
+Outcome 1 operative-authority reconciliation is active under the
+[controlling brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md).
+The repository candidate makes accepted ADRs immutable, directs current
+specification maintenance to owning mutable designs, and reconciles the bounded
+authority wording for ADR-006 and the usable-project-lifecycle brief without
+changing their catalog classifications or any ADR bytes. Outcomes 2 and 3 remain
+unopened.
+
 The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
 Releases 0.1.14–0.1.16 are integrated into `main` through
@@ -26,6 +34,11 @@ records review limitations and disk recovery. No app release was required.
 Current coordination is tracking closeout; no new product implementation is open.
 
 ## Current authorization
+
+The owner authorized this repository-only outcome, its controlling brief,
+documentation/index changes, independent review and scoped local commits. Push,
+PR, merge, tag, packaging, release, installation, application launch, binding,
+catalog acceptance, evidence mutation and owner data or SQLite access are excluded.
 
 The owner authorized the documentation reconciliation, local Git/build cleanup,
 and the specific Codex action rename, then separately approved both PR merges.
@@ -53,6 +66,12 @@ remains sequenced after Phase 6H. Proposed guided-setup label 6I does not silent
 add another dependency. No live reconstruction is authorized.
 
 ## Verification and remaining limitations
+
+The authority-reconciliation candidate passes the repository-native documentation
+check and `git diff --check`. Focused searches find none of the replaced operative
+directions, and every existing ADR is unchanged from baseline
+`892b1e11597dd1cff30f04818ecd7dac0605b897`. Independent review is pending.
+These repository checks do not establish application acceptance or synchronization.
 
 Repository documentation validation passes. The eight completed briefs and their
 catalog/index metadata agree; stable artifact identities and evidence remain
@@ -97,9 +116,11 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Inspect the current application binding/catalog status without changing it, then
-present any exact required binding or catalog acceptance mutation for owner
-approval. The last recorded missing binding must not be treated as fresh
+Complete the one authorized independent review of the operative-authority
+reconciliation and apply only any Required bounded corrections. After that local
+closeout, inspect the current application binding/catalog status without changing
+it, then present any exact required binding or catalog acceptance mutation for
+owner approval. The last recorded missing binding must not be treated as fresh
 application state or repaired by editing SQLite. Broader owner manual
 acceptance remains outstanding under the existing guide. No product slice,
 paused task, stopped metrics work, live recovery or Phase 8 environment

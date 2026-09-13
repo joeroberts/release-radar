@@ -107,8 +107,9 @@ owner application. No owner SQLite, credentials or services. Runtime screenshots
 keyboard/AX and relevant widths compare against repository mockups; limitations
 remain explicit. Synthetic restoration verifies new persistence without owner data.
 
-Writers own their complete source slice, affected design/ADR text and canonical
-evidence; the orchestrator alone integrates catalog/index/progress. New durable
+Writers own their complete source slice, affected mutable design documentation
+and canonical evidence, while preserving accepted ADRs; the orchestrator alone
+integrates catalog/index/progress. New durable
 artifacts use catalog identities and repository paths, mutable records have no
 checksums. Run documentation validation. Application catalog acceptance/readback
 remain separately unauthorized and cannot be claimed from a local check.
