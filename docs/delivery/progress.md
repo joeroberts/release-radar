@@ -36,9 +36,12 @@ Current coordination is tracking closeout; no new product implementation is open
 ## Current authorization
 
 The owner authorized this repository-only outcome, its controlling brief,
-documentation/index changes, independent review and scoped local commits. Push,
-PR, merge, tag, packaging, release, installation, application launch, binding,
-catalog acceptance, evidence mutation and owner data or SQLite access are excluded.
+documentation/index changes, independent review, scoped local commits, branch push,
+PR creation and merge, and the annotated documentation milestone tag
+`docs/operative-authority-reconciliation-2026-09-13` after merge. The delivery
+owner owns the branch push and PR creation; the coordinator owns merge and tagging.
+Packaging, app release, installation, application launch, binding, catalog
+acceptance, evidence mutation and owner data or SQLite access remain excluded.
 
 The owner authorized the documentation reconciliation, local Git/build cleanup,
 and the specific Codex action rename, then separately approved both PR merges.
