@@ -433,7 +433,7 @@ review, explicit owner acceptance and external effects, and material safety and
 recovery. If those local fallbacks do not cover every removed required clause, stop
 the affected material work; unrelated read-only and product work may continue under
 the local instructions.
-<!-- release-radar-shared-execution:v1:end -->
+<!-- release-radar-shared-execution:end -->
 
 <!-- release-radar-guidance:v2:start -->
 ## Release Radar tracking
