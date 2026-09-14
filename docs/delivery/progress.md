@@ -4,11 +4,28 @@
 
 **Outcome 2 is owner-authorized and active.** The [current brief](task-briefs/2026-09-14-outcome2-current-specifications/brief.md) records complete scope, separate delivery/review ownership, direct evaluations and local-only endpoint. The coordinator monitors progress, resolves routine blockers and owns this ledger. Outcome 3 runtime changes remain unopened.
 
-Fresh delivery task `01a09deb-5029-7891-aaf2-121780258f55` (Sol/high) and fresh independent reviewer `01a09dec-933e-7473-aefe-f044fd3d53e5` (Astra/high) started from committed kickoff baseline `24f981d`. Delivery owns its worktree docs; review owns no implementation files; coordinator owns canonical integration and this ledger. A ten-minute coordination heartbeat monitors completion and actionable blockers.
+Fresh delivery task `01a09deb-5029-7891-aaf2-121780258f55` (Sol/high) and fresh independent reviewer `01a09dec-933e-7473-aefe-f044fd3d53e5` (Astra/high) started from committed kickoff baseline `24f981d`. Delivery owns its worktree docs; review owns no implementation files; coordinator owns canonical integration and this ledger. Candidate `4a5c859` passed native checks, unchanged-ADR/governing-file comparison and 396-ID/path preservation. Independent review requires three bounded transfers of continuing Phase 5B, M6A protected-copy and conditional Run Guard requirements into current mutable owners; delivery is correcting them before the same reviewer rechecks. A ten-minute coordination heartbeat monitors completion and actionable blockers.
 
 Foundation clarification: Shared Execution V1 source delivery is complete, as recorded in the [source evidence](evidence/2026-09-09-shared-execution-integration-v1.md). Installed capability/runtime verification and exact repository adoption remain separate evidence requirements. Environment provisioning, profiles and enforced task lifecycle are a versioned extension tracked for Outcome 3. Outcome 2 reconciles these distinctions in current specifications; it does not implement or adopt them.
 
-The owner approved parallel installed V1 verification and adoption preparation. Fresh task `01a09df3-a7ea-7293-848a-4029490cfa82` (Sol/high), based on `322f4f6`, owns read-only installed-capability checks and an exact adoption-patch proposal; it does not edit Outcome 2 documents or governing configuration. Final adoption/integrated verification waits for Outcome 2 and the exact owner-approved adoption patch. The coordinator preserves the findings, resolves overlaps and monitors this task alongside Outcome 2.
+The parallel V1 verification/preparation task `01a09df3-a7ea-7293-848a-4029490cfa82`
+(Sol/high) completed on clean baseline `322f4f6` and is archived. Codex's plugin inventory reports
+0.1.16 installed/enabled; the product-normalized package digest exactly matches
+its recognized standard-[1] row. Installed/cache/source shared-skill bytes match
+and the fresh task loaded the skill explicitly. Installed documentation `diagnose`
+0.1.16 (build 1, contract 1) passed on its exact worktree. No V1 adoption marker is
+present. Supported inventory returned `rootUnavailable` for that worktree; this
+is neither canonical binding evidence nor a broken installed-capability result.
+
+The exact prepared adoption proposal is to insert the unchanged V1 block from
+[the current design's section 5](../design/shared-execution-integration-v1-design.md#5-exact-consumer-adoption-block)
+immediately before `release-radar-guidance:v2:start` in AGENTS.md, with one blank
+line separating the blocks. No existing clause is removed; all local product,
+review, authority, safety/recovery and external-action fallbacks remain. This is
+unapplied. Reconcile it with integrated Outcome 2, obtain exact owner approval,
+then use one writer and fresh independent review. Generic-task skill selection,
+missing/incompatible/owner-denied runtime cases and registered canonical app
+compatibility readback remain unproved. No configuration or app state changed.
 
 The chief-architect isolation assessment is complete. The owner approved retaining
 native desktop tasks, the desktop's local App Server and named permission profiles.
