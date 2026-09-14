@@ -9,11 +9,16 @@ the supported native-desktop connection, first-turn permissions, all-tool bounda
 project/profile lifecycle and complete macOS delivery. Produce one concrete proposal
 or exact unsupported controls. Runtime implementation/configuration and changes to
 accepted ADRs remain unopened; the coordinator owns follow-through and integration.
-Fresh chief architect `01a09fd8-0f4e-7d61-aa3d-a4ccc5db5f33` (Astra/high) is active
-from committed baseline `ff73921`. The existing heartbeat monitors this assessment
-every ten minutes; a fresh independent reviewer will receive its exact candidate.
-The monitor continues through required corrections, local integration and archive
-closeout, then pauses for the concrete owner implementation decision.
+Fresh chief architect `01a09fd8-0f4e-7d61-aa3d-a4ccc5db5f33` (Astra/high) completed
+candidate `be30175` from `ff73921`: a proposed assessment plus catalog/design index.
+It identifies five missing native-desktop controls, concrete lifecycle/workspace
+contracts and proposed acceptance scenarios; no runtime scenario ran. Fresh
+independent reviewer `01a09fe2-e4cb-7772-8682-f299d8923713` (Astra/high) is active on
+that exact candidate, including whether the proposed boundaries are necessary and
+supported rather than over-prescribed. Installed documentation checks and author
+preservation checks passed; independent review remains pending. The existing
+heartbeat monitors every ten minutes through corrections, local integration and
+archive closeout, then pauses for the concrete owner implementation decision.
 
 **Exact Shared Execution v1 adoption is complete and locally integrated at `065f8b3`.**
 The [completed brief](task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md)
