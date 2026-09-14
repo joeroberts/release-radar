@@ -34,6 +34,20 @@ were created; the three task worktrees (`32dc`, `df51`, `fdd1` under
 `/Users/jroberts/.codex/worktrees/`) are retained as temporary task storage, with no
 durable deliverable solely there. Prior retained fixtures listed below are untouched.
 
+**Owner-requested coordinator daisy-chain test — September 14:** main delegated
+launch to `Release Radar - Restricted coordinator`
+(`01a0a03e-8a7e-7c03-983b-42a5aab0c239`), rather than creating the child itself.
+Its current session metadata confirms managed restricted filesystem rules, root
+deny, canonical/visualization workspace writes and network disabled. Project listing
+succeeded. Its one supported `create_thread` request (fresh main worktree,
+Terra/medium) failed before returning any child ID: “MCP tool call requires approval,
+but approval policy is never.” Sending its result back through the message tool
+was rejected identically; main retrieved the completed result read-only. No child
+started, so child inheritance and allowed/denied file tests are **notRun**, not failed.
+No settings, files or test fixtures changed; no bypass or retry occurred. The
+restricted coordinator remains available and unarchived. This changed-source test
+exposes an approval-policy gate before the inheritance hypothesis can be evaluated.
+
 **Remaining blocker:** the supported `create_thread` interface has no permission
 profile parameter or effective-settings selection/readback operation. Available
 tool discovery found no replacement; the fresh worker actually started Full Access.
