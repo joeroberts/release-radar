@@ -11,6 +11,35 @@ is not. The separate local worker client remains an alternative proposal, not an
 authorized replacement or implementation. No profile, tool, ADR or runtime change
 is authorized by this decision; retained experimental files remain untouched.
 
+The subsequent owner-authorized lifecycle assessment against
+[Shared Execution V1](../design/shared-execution-integration-v1-design.md) is
+complete: the manager direction is conditionally feasible as a versioned extension,
+not functionality already delivered by V1. V1 supplies context, direct checks and
+compatibility/adoption diagnostics; it explicitly excludes runtime management.
+The chief architect identified these remaining contracts and evidence:
+
+- Provisioning: reusable relative profile templates plus project-specific roots
+  and environment records; supported Codex configuration operations must preserve
+  unrelated entries and detect conflicting owner edits.
+- Task creation: a supported, authenticated RR-to-existing-desktop connection
+  must bind workspace and permissions before the first model turn. Documented
+  App Server APIs do not prove that attachment or native desktop integration.
+- Tools: enforce role-specific capabilities across non-shell routes while leaving
+  coordinator and unrelated task access intact.
+- Delivery: demonstrate a representative restricted macOS build, read-only current
+  inputs, a fixed review candidate, separate role outputs and integration of only
+  the reviewed change against its expected canonical baseline.
+- Lifecycle: reconcile uncertain creation, version profile updates, rotate identity
+  on root changes/re-add, and retire only owned unreferenced resources while
+  preserving history. Reuse existing app-owned records, not a second task database.
+
+Codex remains configuration owner; RR would request operations through an approved
+boundary. The existing fixed plugin-lifecycle helper cannot be repurposed by
+inference. The assessment used supplied canonical source/ADR excerpts and pilot
+evidence plus official [App Server](https://learn.chatgpt.com/docs/app-server) and
+[permission](https://learn.chatgpt.com/docs/permissions) documentation; it did not
+prove new runtime behavior. Accepted ADRs and runtime configuration stay unchanged.
+
 The owner-authorized **current-document workspace pilot is complete**. The
 [result](evidence/2026-09-13-current-document-workspace-pilot.md) records selected
 current inputs, deliberate historical retrieval, direct source preservation and
@@ -153,13 +182,17 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-For workspace isolation, retain the desktop/App Server/profile route. Any further
-configuration proposal must identify supported task-scoped controls for non-shell
-tools and read-only inputs with separate delivery/review outputs, then receive
-chief-architect review and owner implementation approval. Repeat runtime probes
-only against a concrete changed configuration or new capability evidence. The
-alternative worker client, global policy changes and new execution environments
-are not released by the owner's decision to retain the desktop workflow.
+Outcome 2 current-specification reconciliation and existing V1 adoption can be
+separately authorized without claiming enforced environment management. For the
+environment extension, the next eligible feasibility check is the supported,
+authenticated RR-to-desktop interface for native task creation with restrictions
+bound before generation. If available, test one restricted peer alongside an
+unaffected coordinator and unrelated task; if unavailable, record the exact missing
+interface and block runtime management there. First-turn tool binding and
+configuration/lifecycle recovery contracts, followed by native build/review/
+integration evidence, remain prerequisites to Outcome 3's complete environment
+target. No implementation, new profile, alternate worker client, global policy or
+new execution environment is authorized by this assessment.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner
