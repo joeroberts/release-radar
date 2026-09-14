@@ -14,11 +14,27 @@ from `e80ab27`. The old coordinator confirmed relinquishing ownership and its
 archive closeout; its worktree remains untouched. The existing monitor is retargeted
 here and active. The [owning brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
 now includes the authorized configuration continuation. Chief architect
-`01a0a035-2586-7ad0-8c29-92fa5d385f1b` reviews only the exact workspace-relative
-profile correction before a fresh delivery writer. The profile is still path-specific
-pending that review. Other config, accepted ADRs and unrelated dirty proposal files
-remain preserved. Current task-creation tools expose no profile selector; no supported
-replacement was found. No runtime isolation or application synchronization is claimed.
+`01a0a035-2586-7ad0-8c29-92fa5d385f1b` completed pre-change review with no
+Required findings and is archived. Fresh delivery
+`01a0a037-2d01-72c2-a977-6ca5fbec2fd7` applied exactly the named-profile edit
+from `f603b53`, in worktree `df51`, and stopped. Its Terra/medium settings and
+Full Access startup were read back from its session record. The profile now uses
+`:workspace_roots` with `"." = "write"`; root deny, minimal read, network off and
+all other bytes are preserved. The exact reusable snippet is in the owning brief.
+Direct TOML parsing, byte-preservation comparison and installed-config readback
+passed with Python 3.13. No temporary files were created by this correction.
+Independent candidate review remains pending.
+
+**Remaining blocker:** the supported `create_thread` interface has no permission
+profile parameter or effective-settings selection/readback operation. Available
+tool discovery found no replacement; the fresh worker actually started Full Access.
+The previously recorded Codex UI denial still prohibits that route. No private IPC,
+alternate UI automation, default-policy change or bundle patch is authorized as a
+workaround. Restricted startup, history-denial tests and real migration therefore
+remain unexecuted. Auxiliary workspace roots and non-shell readers remain unproved;
+the profile edit is not complete workspace/history enforcement. No SQLite, binding,
+catalog acceptance, migration, installation or publication occurred. The filesystem
+catalog update remains pending application acceptance; no synchronization is claimed.
 
 **Simple coordinator-managed workspace: architect checkpoint complete; delivery is blocked on profile selection at task creation.**
 The owner-directed [brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
@@ -48,9 +64,9 @@ read/enumeration/search and Git recovery, and actual CodeGraph/host file-reading
 routes to these paths, plus deliberate coordinator retrieval. These paths and tests
 are proposed, not created, moved or executed. No new runtime manager is required.
 
-The read-only checkpoint produced no files or temporary artifacts. Its result is
-preserved here; the completed task is archived and its monitor is paused. Real migration/configuration,
-application catalog acceptance and new probes remain unexecuted. The owner task
+The earlier read-only checkpoint produced no files or temporary artifacts; that
+task is archived. The subsequent authorized profile correction is recorded above.
+Real migration, application catalog acceptance and new runtime probes remain unexecuted. The owner task
 creation interface gap must be resolved before releasing a migration writer.
 Existing dirty proposal/catalog/index rows and prior fixtures remain untouched.
 
