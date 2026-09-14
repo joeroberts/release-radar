@@ -2,6 +2,18 @@
 
 ## Current outcome
 
+The exact Shared Execution V1 draft remains [PR #60](https://github.com/joeroberts/release-radar/pull/60) at reviewed SHA
+`5dcea14c4a11570d67c8e2f1eb16bd8f1680f4f3`, stacked on PR #59. The Outcome 3
+assessment is being isolated on `codex/outcome3-assessment` as proposed supporting
+documentation only; no runtime implementation, main merge, or remote change is
+authorized.
+
+The preserved [Outcome 3 assessment](../design/outcome3-runtime-enforcement-assessment.md)
+retains its original provenance and limitations: chief-architect corrections
+`be30175` and `77def74`, followed by independent reviewer
+`01a09fe2-e4cb-7772-8682-f299d8923713`. Its native attachment, pre-turn admission,
+and persistent all-tool enforcement gaps remain unestablished.
+
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
 records the bounded scope and owner evidence. Operative rules now make accepted
@@ -10,7 +22,8 @@ and reconcile the bounded authority wording for ADR-006 and the
 usable-project-lifecycle brief without changing their catalog classifications or
 any ADR bytes. Publication is tracked in
 [PR #58](https://github.com/joeroberts/release-radar/pull/58); GitHub is the source
-for its live review and merge state. Outcomes 2 and 3 remain unopened.
+for its live review and merge state. Outcome 2 remains unopened; Outcome 3 remains
+limited to the preserved proposed assessment above.
 
 The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
@@ -36,6 +49,10 @@ records review limitations and disk recovery. No app release was required.
 Current coordination is tracking closeout; no new product implementation is open.
 
 ## Current authorization
+
+Outcome 3 authorization is limited to this branch-only preservation candidate and
+its independent review. It does not authorize a local or remote `main` merge,
+runtime implementation, configuration, application state, or publication.
 
 The owner authorized this repository-only outcome, its controlling brief,
 documentation/index changes, independent review, scoped local commits, branch push,
