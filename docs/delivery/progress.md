@@ -132,8 +132,9 @@ the baseline comparison proving every existing ADR unchanged from
 `01a09b95-5f77-7260-8f06-bccb29143d78` accepted the corrected candidate with no
 Required, Optional or Out-of-scope findings. Final catalog/index closeout also
 passes repository validation. Chief-architect task
-`01a09b8a-1350-7c42-9d14-0aa07f28df40` was subsequently restored for standing
-architecture assessments and remains available. Reviewer task
+`01a09b8a-1350-7c42-9d14-0aa07f28df40` is now archived after its completed
+assessments. The owner explicitly rejected its reuse; future architecture work
+requires a fresh task using current documents. Reviewer task
 `01a09b95-5f77-7260-8f06-bccb29143d78` is archived. The delivery-owner task
 remains active only to report this closeout; coordinator archival follows that
 stopped result. These checks do not establish application acceptance or
