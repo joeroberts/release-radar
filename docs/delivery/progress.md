@@ -12,18 +12,27 @@ Canonical coordination is active in replacement task
 `01a0a034-404c-7d80-91aa-4caf10bc80b3`, at the exact canonical root on `main`
 from `e80ab27`. The old coordinator confirmed relinquishing ownership and its
 archive closeout; its worktree remains untouched. The existing monitor is retargeted
-here and active. The [owning brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
+here; it pauses at the confirmed interface blocker below. The [owning brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
 now includes the authorized configuration continuation. Chief architect
 `01a0a035-2586-7ad0-8c29-92fa5d385f1b` completed pre-change review with no
 Required findings and is archived. Fresh delivery
 `01a0a037-2d01-72c2-a977-6ca5fbec2fd7` applied exactly the named-profile edit
-from `f603b53`, in worktree `df51`, and stopped. Its Terra/medium settings and
+from `f603b53`, in worktree `df51`, stopped and is archived. Its Terra/medium settings and
 Full Access startup were read back from its session record. The profile now uses
 `:workspace_roots` with `"." = "write"`; root deny, minimal read, network off and
 all other bytes are preserved. The exact reusable snippet is in the owning brief.
 Direct TOML parsing, byte-preservation comparison and installed-config readback
 passed with Python 3.13. No temporary files were created by this correction.
-Independent candidate review remains pending.
+Independent reviewer `01a0a038-c746-7381-9a69-f1639797aa7a` (Sol/high,
+settings read back) passed candidate `70124a5` with no findings. Its exact-root
+documentation check, scoped diff hygiene, installed-profile parse/readback and
+semantics checks passed. Prior-byte preservation is supported by delivery's direct
+comparison, not independently recovered original bytes. The reviewer stopped;
+its result is preserved here and the task is archived. The profile correction
+is complete; the overall workspace setup remains blocked below. No scratch files
+were created; the three task worktrees (`32dc`, `df51`, `fdd1` under
+`/Users/jroberts/.codex/worktrees/`) are retained as temporary task storage, with no
+durable deliverable solely there. Prior retained fixtures listed below are untouched.
 
 **Remaining blocker:** the supported `create_thread` interface has no permission
 profile parameter or effective-settings selection/readback operation. Available
