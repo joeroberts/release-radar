@@ -852,7 +852,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-outcome2-current-specifications-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md](2026-09-14-outcome2-current-specifications/brief.md) | document | controlling &#40;delivery.outcome2-current-specifications&#41; | active | none | none |
+| rr-outcome2-current-specifications-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md](2026-09-14-outcome2-current-specifications/brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

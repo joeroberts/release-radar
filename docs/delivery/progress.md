@@ -2,9 +2,26 @@
 
 ## Current outcome
 
-**Outcome 2 is owner-authorized and active.** The [current brief](task-briefs/2026-09-14-outcome2-current-specifications/brief.md) records complete scope, separate delivery/review ownership, direct evaluations and local-only endpoint. The coordinator monitors progress, resolves routine blockers and owns this ledger. Outcome 3 runtime changes remain unopened.
+**Outcome 2 is complete and locally integrated at `5b17e9a`.** The
+[completed brief](task-briefs/2026-09-14-outcome2-current-specifications/brief.md)
+records the authorized outcome and local-only endpoint. Current reading routes,
+mutable specifications, lifecycle classifications and indexes are reconciled.
+Continuing Phase 5B, M6A custody/recovery and conditional Run Guard requirements
+have current mutable homes; historical records remain deliberately retrievable.
 
-Fresh delivery task `01a09deb-5029-7891-aaf2-121780258f55` (Sol/high) and fresh independent reviewer `01a09dec-933e-7473-aefe-f044fd3d53e5` (Astra/high) started from committed kickoff baseline `24f981d`. Delivery owns its worktree docs; review owns no implementation files; coordinator owns canonical integration and this ledger. Candidate `4a5c859` passed native checks, unchanged-ADR/governing-file comparison and 396-ID/path preservation. Independent review requires three bounded transfers of continuing Phase 5B, M6A protected-copy and conditional Run Guard requirements into current mutable owners; delivery is correcting them before the same reviewer rechecks. A ten-minute coordination heartbeat monitors completion and actionable blockers.
+Independent review passed corrected candidate `7599b80` after three Required
+preservation findings were resolved. Native documentation validation, diff hygiene,
+current managed-document/shared-V1 reading scenarios and historical lookup passed.
+All 396 pre-closeout artifact IDs/paths, AGENTS.md and accepted ADR bytes are
+preserved. Integrated reviewed files match that candidate except the separately
+retained unapproved proposal registration/index row. This establishes documentation
+and navigation correctness, not runtime isolation or application catalog acceptance.
+
+Fresh delivery `01a09deb-5029-7891-aaf2-121780258f55` (Sol/high) and independent
+reviewer `01a09dec-933e-7473-aefe-f044fd3d53e5` (Astra/high) finished and are archived.
+Temporary build output `/tmp/rr-outcome2-docs.bo7OTV` and prior permission/pilot
+fixtures remain retained; nothing was deleted. The older uncommitted broad proposal
+and its catalog/index entries remain excluded from authorized commits.
 
 Foundation clarification: Shared Execution V1 source delivery is complete, as recorded in the [source evidence](evidence/2026-09-09-shared-execution-integration-v1.md). Installed capability/runtime verification and exact repository adoption remain separate evidence requirements. Environment provisioning, profiles and enforced task lifecycle are a versioned extension tracked for Outcome 3. Outcome 2 reconciles these distinctions in current specifications; it does not implement or adopt them.
 
@@ -87,7 +104,7 @@ and reconcile the bounded authority wording for ADR-006 and the
 usable-project-lifecycle brief without changing their catalog classifications or
 any ADR bytes. Publication is tracked in
 [PR #58](https://github.com/joeroberts/release-radar/pull/58); GitHub is the source
-for its live review and merge state. Outcomes 2 and 3 remain unopened.
+for its live review and merge state. Outcome 2 is now complete; Outcome 3 implementation remains unopened.
 
 The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
@@ -160,10 +177,8 @@ passes repository validation. Chief-architect task
 `01a09b8a-1350-7c42-9d14-0aa07f28df40` is now archived after its completed
 assessments. The owner explicitly rejected its reuse; future architecture work
 requires a fresh task using current documents. Reviewer task
-`01a09b95-5f77-7260-8f06-bccb29143d78` is archived. The delivery-owner task
-remains active only to report this closeout; coordinator archival follows that
-stopped result. These checks do not establish application acceptance or
-synchronization.
+`01a09b95-5f77-7260-8f06-bccb29143d78` is archived. These historical checks do not establish application acceptance or
+synchronization, and do not indicate any currently running delivery assignment.
 
 Repository documentation validation passes. The eight completed briefs and their
 catalog/index metadata agree; stable artifact identities and evidence remain
@@ -208,17 +223,17 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Outcome 2 current-specification reconciliation and existing V1 adoption can be
-separately authorized without claiming enforced environment management. For the
-environment extension, the next eligible feasibility check is the supported,
-authenticated RR-to-desktop interface for native task creation with restrictions
-bound before generation. If available, test one restricted peer alongside an
-unaffected coordinator and unrelated task; if unavailable, record the exact missing
-interface and block runtime management there. First-turn tool binding and
-configuration/lifecycle recovery contracts, followed by native build/review/
-integration evidence, remain prerequisites to Outcome 3's complete environment
-target. No implementation, new profile, alternate worker client, global policy or
-new execution environment is authorized by this assessment.
+Next is the exact repository V1 adoption proposal prepared in parallel and now
+reconciled with Outcome 2's unchanged AGENTS.md. The installed-capability checks
+are complete to the limits above. Exact governing-file patch approval, one writer,
+fresh independent review and integrated runtime/adoption checks remain necessary;
+no adoption block has been applied. Further installation/configuration/app-state
+mutations require their separately bounded authorization.
+
+For the Outcome 3 environment extension, the supported authenticated RR-to-desktop
+interface, restrictions before generation, role-specific non-shell capabilities,
+configuration/lifecycle recovery and representative native build/review/integration
+remain unresolved. V1 adoption does not establish those capabilities.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner
