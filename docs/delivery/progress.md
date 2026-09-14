@@ -2,6 +2,15 @@
 
 ## Current outcome
 
+**Owner correction: use a simple coordinator-managed workspace.** The owner
+rejected introducing a runtime manager as a prerequisite. The coordinator creates
+correctly configured native tasks; historical documents belong outside worker
+read/search permissions, with deliberate coordinator retrieval. The
+[current brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
+opens a fresh chief-architect check of exact paths/settings and bounded delivery.
+The broad assessment below is prior proposal evidence, not the controlling approach.
+Real migration/configuration targets must be resolved before any such write.
+
 **Outcome 3 architecture assessment is complete; runtime implementation remains unopened.**
 The [reviewed proposal](../design/outcome3-runtime-enforcement-assessment.md)
 identifies the remaining native boundary: supported authenticated attachment to the

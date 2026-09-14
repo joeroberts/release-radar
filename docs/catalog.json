@@ -6977,6 +6977,22 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-outcome3-simple-workspace-brief-2026-09-14",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome3-simple-workspace.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.outcome3-simple-workspace",
+      "parentCollection": "delivery.task-briefs",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
 
   ]
