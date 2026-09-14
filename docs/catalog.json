@@ -848,7 +848,40 @@
       "isLeaf": true,
       "firstRead": "rr-operative-authority-reconciliation-brief-2026-09-13",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-13-current-document-workspace-pilot",
+      "path": "docs/delivery/task-briefs/2026-09-13-current-document-workspace-pilot",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Owner-authorized bounded current-document workspace pilot",
+      "allowedContents": [
+        "Pilot brief and concise result"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-current-document-workspace-pilot-brief-2026-09-13",
+      "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-14-outcome2-current-specifications",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Outcome 2 current specifications and routine reading paths; progress determines authorization",
+      "allowedContents": [
+        "Controlling task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-outcome2-current-specifications-brief-2026-09-14",
+      "archiveDestination": "delivery.archive"
     }
+
   ],
   "artifacts": [
     {
@@ -885,8 +918,8 @@
       "artifactID": "6ddee986-d90e-4732-9ff4-62d1a0eb4e34",
       "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
       "supersedes": [],
       "applicationSensitivity": [
@@ -3376,8 +3409,8 @@
       "artifactID": "bdb0f78b-3c1d-4ce2-8272-27cc5bf88ddd",
       "path": "docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-01-managed-repository-documentation-contract",
       "supersedes": [],
       "applicationSensitivity": [
@@ -4289,8 +4322,8 @@
       "artifactID": "7856796b-eb43-47cd-b897-20234cd94131",
       "path": "docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-08-29-delivery-goals-roadmap-readiness",
       "supersedes": [],
       "applicationSensitivity": [
@@ -4484,8 +4517,8 @@
       "artifactID": "rr-c8-pilot-kickoff-2026-09-06",
       "path": "docs/delivery/task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-06-operating-baseline",
       "supersedes": [],
       "applicationSensitivity": [
@@ -4514,8 +4547,8 @@
       "artifactID": "rr-usable-project-lifecycle-brief-2026-09-06",
       "path": "docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-06-usable-project-lifecycle",
       "supersedes": [],
       "applicationSensitivity": [
@@ -4559,8 +4592,8 @@
       "artifactID": "rr-live-observation-discovery-2026-09-07",
       "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/live-observation-discovery.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
       "supersedes": [],
       "applicationSensitivity": [
@@ -4574,8 +4607,8 @@
       "artifactID": "rr-iphone-companion-discovery-2026-09-07",
       "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/iphone-companion-discovery.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
       "supersedes": [],
       "applicationSensitivity": [
@@ -4589,8 +4622,8 @@
       "artifactID": "rr-run-ownership-discovery-2026-09-07",
       "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
       "supersedes": [],
       "applicationSensitivity": [
@@ -4604,8 +4637,8 @@
       "artifactID": "rr-rules-hooks-discovery-2026-09-07",
       "path": "docs/delivery/task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-07-parallel-discovery",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5594,8 +5627,9 @@
       "artifactID": "rr-shared-execution-integration-v1-design-2026-09-09",
       "path": "docs/design/shared-execution-integration-v1-design.md",
       "kind": "document",
-      "lifecycle": "proposed",
-      "authorityLevel": "supporting",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "product.shared-execution-v1",
       "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5610,8 +5644,8 @@
       "artifactID": "rr-shared-integration-implementation-plan-2026-09-09",
       "path": "docs/delivery/task-briefs/2026-09-09-shared-integration/implementation-plan.md",
       "kind": "document",
-      "lifecycle": "proposed",
-      "authorityLevel": "supporting",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-09-shared-integration",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5880,8 +5914,8 @@
       "artifactID": "rr-phase6-plan-2026-09-10",
       "path": "docs/delivery/plans/2026-09-10-phase6-outcomes-tasks-history.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.plans",
       "supersedes": [],
       "applicationSensitivity": [
@@ -5889,8 +5923,7 @@
       ],
       "checksum": {
         "policy": "notApplicable"
-      },
-      "authorityRole": "delivery.phase6-sequence"
+      }
     },
     {
       "artifactID": "rr-phase6a-history-brief-2026-09-10",
@@ -6822,6 +6855,53 @@
       "supersedes": [],
       "applicationSensitivity": ["none"],
       "checksum": {"policy": "notApplicable"}
+    },
+    {
+      "artifactID": "rr-current-document-workspace-pilot-brief-2026-09-13",
+      "path": "docs/delivery/task-briefs/2026-09-13-current-document-workspace-pilot/brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-13-current-document-workspace-pilot",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-current-document-workspace-pilot-result-2026-09-13",
+      "path": "docs/delivery/evidence/2026-09-13-current-document-workspace-pilot.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-outcome2-current-specifications-brief-2026-09-14",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.outcome2-current-specifications",
+      "parentCollection": "delivery.task-briefs.2026-09-14-outcome2-current-specifications",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
+
   ]
 }

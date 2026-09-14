@@ -68,7 +68,9 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-12-rds-toolbar-adoption](2026-09-12-rds-toolbar-adoption) — leaf; Owner-authorized Release Radar adoption of merged RDS toolbar and search controls
 - [delivery.task-briefs.2026-09-12-release-0.1.12](2026-09-12-release-0.1.12) — leaf; Owner-authorized local packaging and tag for Release Radar 0.1.12
 - [delivery.task-briefs.2026-09-12-release-0.1.13](2026-09-12-release-0.1.13) — leaf; Owner-authorized local packaging, tag and installation for Release Radar 0.1.13
+- [delivery.task-briefs.2026-09-13-current-document-workspace-pilot](2026-09-13-current-document-workspace-pilot) — leaf; Owner-authorized bounded current-document workspace pilot
 - [delivery.task-briefs.2026-09-13-operative-authority-reconciliation](2026-09-13-operative-authority-reconciliation) — leaf; Bounded reconciliation of operative documentation authority
+- [delivery.task-briefs.2026-09-14-outcome2-current-specifications](2026-09-14-outcome2-current-specifications) — leaf; Outcome 2 current specifications and routine reading paths; progress determines authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -175,7 +177,7 @@ Leaf: no child collections.
 | a1e930aa-1ab0-47f3-a77f-c1986686b7e0 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-10-phase-browsing-delivery-goals-brief.md) | document | nonAuthoritative | completed | none | none |
 | d97170ea-7811-4aba-b068-bd69d6ee0ea1 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-11a-integration-staged-candidate-brief.md) | document | nonAuthoritative | completed | none | none |
 | cbb4ca49-f1a0-43d1-96cf-2949de99e5fc | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-final-outcome-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-final-outcome-brief.md) | document | nonAuthoritative | completed | none | none |
-| 6ddee986-d90e-4732-9ff4-62d1a0eb4e34 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md](2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md) | document | supporting | active | none | none |
+| 6ddee986-d90e-4732-9ff4-62d1a0eb4e34 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md](2026-08-29-delivery-goals-roadmap-readiness/task-11b-install-recovery-runbook.md) | document | nonAuthoritative | completed | none | none |
 | rr-r10-task11b-installed-workflow-repair | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-11b-installed-workflow-repair-brief.md) | document | nonAuthoritative | completed | none | none |
 | 362c407f-7d7b-488b-9204-91c8b0103265 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1a-schema-v10-fixture-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-1a-schema-v10-fixture-brief.md) | document | nonAuthoritative | completed | none | none |
 | 8cec7739-107d-4180-94aa-c9956515226d | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-1b-v11-persistence-models-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-1b-v11-persistence-models-brief.md) | document | nonAuthoritative | completed | none | none |
@@ -189,7 +191,7 @@ Leaf: no child collections.
 | 9bb82f9f-8b26-45ff-b2da-f4a3a19f670c | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-6-delivery-planning-policy-brief.md) | document | nonAuthoritative | completed | none | none |
 | bf4b1c0f-ec77-4641-b23d-efdfc5cbe467 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-7-ticket-writer-policy-brief.md) | document | nonAuthoritative | completed | none | none |
 | bc74c88a-cc63-4deb-8b2b-63ed254a476f | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-brief.md) | document | nonAuthoritative | completed | none | none |
-| 7856796b-eb43-47cd-b897-20234cd94131 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md) | document | supporting | active | none | none |
+| 7856796b-eb43-47cd-b897-20234cd94131 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md](2026-08-29-delivery-goals-roadmap-readiness/task-7a-install-bootstrap-runbook.md) | document | nonAuthoritative | completed | none | none |
 | dda2b5e7-4a6a-4557-ba4c-8685bb3f76da | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-8-audited-delivery-goal-commands-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-8-audited-delivery-goal-commands-brief.md) | document | nonAuthoritative | completed | none | none |
 | f8d9dbb3-0bfe-4e3c-a7a1-b481b3982ce9 | [docs/delivery/task-briefs/2026-08-29-delivery-goals-roadmap-readiness/task-9-delivery-projections-brief.md](2026-08-29-delivery-goals-roadmap-readiness/task-9-delivery-projections-brief.md) | document | nonAuthoritative | completed | none | none |
 
@@ -243,7 +245,7 @@ Leaf: no child collections.
 | 011f16aa-fb30-458e-947b-56a8097415fb | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md](2026-09-01-managed-repository-documentation-contract/m4-stage-repository-catalog-brief.md) | document | nonAuthoritative | completed | none | none |
 | c44ceed1-073d-455b-bb79-fe345f455a1f | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md](2026-09-01-managed-repository-documentation-contract/m5-guidance-v2-compatibility-brief.md) | document | nonAuthoritative | completed | none | none |
 | e47faa43-b783-46de-931f-cc98456224fd | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md](2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-inventory-brief.md) | document | nonAuthoritative | completed | none | none |
-| bdb0f78b-3c1d-4ce2-8272-27cc5bf88ddd | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md](2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md) | document | supporting | active | none | none |
+| bdb0f78b-3c1d-4ce2-8272-27cc5bf88ddd | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md](2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md) | document | nonAuthoritative | completed | none | none |
 | 34b9a03b-8249-4468-ac45-bc916038fc47 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md](2026-09-01-managed-repository-documentation-contract/m6b-adopt-managed-evidence-brief.md) | document | nonAuthoritative | completed | none | none |
 | c1b4b005-b1e4-452f-bfa2-9099999eb7e1 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md](2026-09-01-managed-repository-documentation-contract/m7-catalog-driven-cutover-brief.md) | document | nonAuthoritative | completed | none | none |
 | 49eedb35-c8d8-420e-9212-2121b30950d2 | [docs/delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md](2026-09-01-managed-repository-documentation-contract/m8-runtime-acceptance-closeout-brief.md) | document | nonAuthoritative | completed | none | none |
@@ -286,7 +288,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-c8-pilot-kickoff-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md](2026-09-06-operating-baseline/c8-pilot-kickoff.md) | document | supporting | active | none | none |
+| rr-c8-pilot-kickoff-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/c8-pilot-kickoff.md](2026-09-06-operating-baseline/c8-pilot-kickoff.md) | document | nonAuthoritative | completed | none | none |
 | rr-operating-baseline-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-operating-baseline/operating-baseline-brief.md](2026-09-06-operating-baseline/operating-baseline-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
@@ -307,7 +309,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-usable-project-lifecycle-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md](2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md) | document | supporting | active | none | none |
+| rr-usable-project-lifecycle-brief-2026-09-06 | [docs/delivery/task-briefs/2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md](2026-09-06-usable-project-lifecycle/usable-project-lifecycle-brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -407,10 +409,10 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-iphone-companion-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/iphone-companion-discovery.md](2026-09-07-parallel-discovery/iphone-companion-discovery.md) | document | supporting | active | none | none |
-| rr-live-observation-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/live-observation-discovery.md](2026-09-07-parallel-discovery/live-observation-discovery.md) | document | supporting | active | none | none |
-| rr-rules-hooks-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md](2026-09-07-parallel-discovery/rules-hooks-discovery.md) | document | supporting | active | none | none |
-| rr-run-ownership-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md](2026-09-07-parallel-discovery/run-ownership-discovery.md) | document | supporting | active | none | none |
+| rr-iphone-companion-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/iphone-companion-discovery.md](2026-09-07-parallel-discovery/iphone-companion-discovery.md) | document | nonAuthoritative | completed | none | none |
+| rr-live-observation-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/live-observation-discovery.md](2026-09-07-parallel-discovery/live-observation-discovery.md) | document | nonAuthoritative | completed | none | none |
+| rr-rules-hooks-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/rules-hooks-discovery.md](2026-09-07-parallel-discovery/rules-hooks-discovery.md) | document | nonAuthoritative | completed | none | none |
+| rr-run-ownership-discovery-2026-09-07 | [docs/delivery/task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md](2026-09-07-parallel-discovery/run-ownership-discovery.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -530,7 +532,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-shared-integration-implementation-plan-2026-09-09 | [docs/delivery/task-briefs/2026-09-09-shared-integration/implementation-plan.md](2026-09-09-shared-integration/implementation-plan.md) | document | supporting | proposed | none | none |
+| rr-shared-integration-implementation-plan-2026-09-09 | [docs/delivery/task-briefs/2026-09-09-shared-integration/implementation-plan.md](2026-09-09-shared-integration/implementation-plan.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
@@ -796,6 +798,26 @@ Leaf: no child collections.
 
 Leaf: no child collections.
 
+## Leaf collection: delivery.task-briefs.2026-09-13-current-document-workspace-pilot
+
+- Path: [docs/delivery/task-briefs/2026-09-13-current-document-workspace-pilot](2026-09-13-current-document-workspace-pilot)
+- Purpose: Owner-authorized bounded current-document workspace pilot
+- Allowed contents: Pilot brief and concise result
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-current-document-workspace-pilot-brief-2026-09-13](2026-09-13-current-document-workspace-pilot/brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-current-document-workspace-pilot-brief-2026-09-13 | [docs/delivery/task-briefs/2026-09-13-current-document-workspace-pilot/brief.md](2026-09-13-current-document-workspace-pilot/brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
 ## Leaf collection: delivery.task-briefs.2026-09-13-operative-authority-reconciliation
 
 - Path: [docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation](2026-09-13-operative-authority-reconciliation)
@@ -811,6 +833,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-operative-authority-reconciliation-brief-2026-09-13 | [docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md](2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-14-outcome2-current-specifications
+
+- Path: [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications](2026-09-14-outcome2-current-specifications)
+- Purpose: Outcome 2 current specifications and routine reading paths; progress determines authorization
+- Allowed contents: Controlling task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-outcome2-current-specifications-brief-2026-09-14](2026-09-14-outcome2-current-specifications/brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-outcome2-current-specifications-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md](2026-09-14-outcome2-current-specifications/brief.md) | document | controlling &#40;delivery.outcome2-current-specifications&#41; | active | none | none |
 
 ### Children
 
