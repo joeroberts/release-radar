@@ -2,6 +2,15 @@
 
 ## Current outcome
 
+The chief-architect isolation assessment is complete. The owner approved retaining
+native desktop tasks, the desktop's local App Server and named permission profiles.
+The unresolved capability is an enforced per-task allowlist covering every exposed
+tool route from the first turn through follow-ups while preserving coordinator
+access. Command filesystem enforcement is demonstrated; complete worker isolation
+is not. The separate local worker client remains an alternative proposal, not an
+authorized replacement or implementation. No profile, tool, ADR or runtime change
+is authorized by this decision; retained experimental files remain untouched.
+
 The owner-authorized **current-document workspace pilot is complete**. The
 [result](evidence/2026-09-13-current-document-workspace-pilot.md) records selected
 current inputs, deliberate historical retrieval, direct source preservation and
@@ -94,8 +103,9 @@ the baseline comparison proving every existing ADR unchanged from
 `01a09b95-5f77-7260-8f06-bccb29143d78` accepted the corrected candidate with no
 Required, Optional or Out-of-scope findings. Final catalog/index closeout also
 passes repository validation. Chief-architect task
-`01a09b8a-1350-7c42-9d14-0aa07f28df40` and reviewer task
-`01a09b95-5f77-7260-8f06-bccb29143d78` are archived. The delivery-owner task
+`01a09b8a-1350-7c42-9d14-0aa07f28df40` was subsequently restored for standing
+architecture assessments and remains available. Reviewer task
+`01a09b95-5f77-7260-8f06-bccb29143d78` is archived. The delivery-owner task
 remains active only to report this closeout; coordinator archival follows that
 stopped result. These checks do not establish application acceptance or
 synchronization.
@@ -142,6 +152,14 @@ prior release checkpoints, review outcomes and task closeouts are preserved in
 the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#september-12-release-and-integration-checkpoints).
 
 ## Next eligible work
+
+For workspace isolation, retain the desktop/App Server/profile route. Any further
+configuration proposal must identify supported task-scoped controls for non-shell
+tools and read-only inputs with separate delivery/review outputs, then receive
+chief-architect review and owner implementation approval. Repeat runtime probes
+only against a concrete changed configuration or new capability evidence. The
+alternative worker client, global policy changes and new execution environments
+are not released by the owner's decision to retain the desktop workflow.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner
