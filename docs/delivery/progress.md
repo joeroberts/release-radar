@@ -2,6 +2,24 @@
 
 ## Current outcome
 
+**Owner-approved continuation: complete the simple workspace setup.** The owner
+explicitly directed the coordinator to work from the canonical checkout on main,
+create fresh delivery/review tasks, use a reusable workspace-relative restricted
+profile, keep history outside worker read/search access, and handle the setup.
+This supersedes the earlier assessment-only endpoint for this bounded setup; it
+opens no new runtime manager, VM, publication or unrelated app-data operation.
+The existing path-specific rr-project-restricted profile in Codex config has
+root deny, minimal read, canonical-project write and network disabled. It is not
+yet workspace-relative or proven through task startup. Two local profile checks
+passed creation and a path correction; neither established runtime enforcement.
+The old coordinator task is attached to worktree 9b6e. A replacement coordinator
+will be created directly in the canonical checkout; it takes sole ownership of
+ledger/integration/configuration coordination after startup is confirmed. Preserve
+all accepted ADRs, unrelated dirty proposal rows, retained fixtures and existing
+profile/default settings except the specifically authorized restricted-profile fix.
+Chief-architect review still precedes configuration/migration changes. Resolve and
+test actual supported task creation; do not bypass the recorded Codex UI block.
+
 **Simple coordinator-managed workspace: architect checkpoint complete; delivery is blocked on profile selection at task creation.**
 The owner-directed [brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
 retains coordinator-created native tasks and historical files outside worker
