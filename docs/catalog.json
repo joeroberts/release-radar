@@ -6952,13 +6952,27 @@
       "artifactID": "rr-outcome3-runtime-enforcement-brief-2026-09-14",
       "path": "docs/delivery/task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.outcome3-runtime-enforcement",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-14-outcome3-runtime-enforcement",
       "supersedes": [],
       "applicationSensitivity": [
         "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-outcome3-runtime-enforcement-assessment-2026-09-14",
+      "path": "docs/design/outcome3-runtime-enforcement-assessment.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
       ],
       "checksum": {
         "policy": "notApplicable"

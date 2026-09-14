@@ -2,24 +2,37 @@
 
 ## Current outcome
 
-**Outcome 3 runtime-enforcement assessment is owner-approved and active.** The
-[current brief](task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md)
-opens a fresh chief-architect assessment and independent candidate review. Resolve
-the supported native-desktop connection, first-turn permissions, all-tool boundaries,
-project/profile lifecycle and complete macOS delivery. Produce one concrete proposal
-or exact unsupported controls. Runtime implementation/configuration and changes to
-accepted ADRs remain unopened; the coordinator owns follow-through and integration.
-Fresh chief architect `01a09fd8-0f4e-7d61-aa3d-a4ccc5db5f33` (Astra/high) completed
-candidate `be30175` from `ff73921`: a proposed assessment plus catalog/design index.
-Fresh independent reviewer `01a09fe2-e4cb-7772-8682-f299d8923713` (Astra/high)
-returned two Required corrections: distinguish instruction loading from model
-exposure because App Server separates start/turn; separate required lifecycle
-safeguards from mechanisms that need not all come from the desktop product.
-The architect delivered corrected candidate `77def74`; the same independent
-reviewer is checking the bounded corrections. Installed documentation, scope and
-preservation checks passed; all runtime scenarios remain unexecuted.
-The existing heartbeat monitors every ten minutes through required corrections,
-local integration and archive closeout, then pauses for the concrete owner decision.
+**Outcome 3 architecture assessment is complete; runtime implementation remains unopened.**
+The [reviewed proposal](../design/outcome3-runtime-enforcement-assessment.md)
+identifies the remaining native boundary: supported authenticated attachment to the
+existing desktop, admission before the first model turn, and persistent enforcement
+across all tool/follow-up routes. App Server's separate start/turn primitives can
+support pre-turn source inspection in a controlled client; instruction loading is
+not itself model exposure. Safe provisioning and nonduplicating recovery may compose
+supported configuration primitives with RR-owned records rather than requiring
+new desktop APIs for every safeguard.
+
+The selected native desktop/local App Server/profile direction remains in place.
+Complete enforcement is unestablished with that route. A separate App Server client
+with isolated macOS workers is a conditional alternative, not an approved replacement
+or proven implementation; it loses native worker-task integration and still needs
+credential, hosted-tool and native-build feasibility checks. The proposal contains
+concrete workspace, profile lifecycle, review/integration and allowed/denied test
+scenarios; every runtime scenario remains notRun. Hooks supplement covered operations
+and do not close the unsupported boundary. New runtime-owner/custody/recovery
+decisions require separate authorization; accepted ADRs stay unchanged.
+
+Chief architect `01a09fd8-0f4e-7d61-aa3d-a4ccc5db5f33` (Astra/high) produced
+`be30175`, then corrected two Required overstatements in `77def74`. Independent
+reviewer `01a09fe2-e4cb-7772-8682-f299d8923713` (Astra/high) passed the corrected
+candidate. Installed 0.1.16 documentation check/diagnose passed at canonical
+integration; proposal/index bytes match the reviewed candidate, and governing
+instructions and accepted ADRs are preserved. The
+[assessment brief](task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md)
+is complete. Both peers have stopped and are archived. The monitor pauses at this closeout. No new temporary
+files, runtime/configuration/app-state changes or publication occurred. Existing
+fixtures and unrelated uncommitted proposal/catalog/index rows remain retained.
+Application catalog acceptance remains pending; no synchronization claim is made.
 
 **Exact Shared Execution v1 adoption is complete and locally integrated at `065f8b3`.**
 The [completed brief](task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md)
@@ -163,6 +176,10 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
+The September 14 Outcome 3 assessment approval is fulfilled through reviewed
+repository documentation and local integration. Runtime implementation, configuration
+and the alternative execution environment require the concrete owner decision.
+
 The September 14 exact V1 adoption approval is fulfilled through local integration
 and closeout. It authorized no push, PR, remote merge, tag, release or app-state
 change. Earlier authorizations below retain their own original task scope.
@@ -261,8 +278,8 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 Outcome 2 and the approved exact V1 adoption patch are complete locally. Installed
 capability and fresh-review skill selection are verified to the limits above.
-Outcome 3's environment extension is the next architectural work, with its concrete
-capability gaps retained below; this closeout does not authorize implementation.
+The reviewed Outcome 3 assessment is complete. Its native attachment/admission and
+persistent all-tool gaps remain unestablished; implementation is not authorized.
 Further installation/configuration/app-state mutations require their separately
 bounded authorization.
 

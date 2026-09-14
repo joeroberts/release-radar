@@ -874,7 +874,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-outcome3-runtime-enforcement-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md](2026-09-14-outcome3-runtime-enforcement/brief.md) | document | controlling &#40;delivery.outcome3-runtime-enforcement&#41; | active | none | none |
+| rr-outcome3-runtime-enforcement-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md](2026-09-14-outcome3-runtime-enforcement/brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 
