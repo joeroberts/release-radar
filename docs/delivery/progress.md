@@ -2,6 +2,8 @@
 
 ## Current outcome
 
+**Exact Shared Execution v1 adoption is owner-approved and active.** The [current brief](task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md) authorizes only the prepared AGENTS.md block addition, direct checks, fresh independent review and scoped local integration. Existing local rules and accepted ADRs remain intact; no runtime configuration or app-state change is opened.
+
 **Outcome 2 is complete and locally integrated at `5b17e9a`.** The
 [completed brief](task-briefs/2026-09-14-outcome2-current-specifications/brief.md)
 records the authorized outcome and local-only endpoint. Current reading routes,
