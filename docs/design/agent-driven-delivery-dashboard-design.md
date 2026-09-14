@@ -12,6 +12,14 @@ The application does not write delivery state into project repositories and does
 not ask agents to maintain a parallel JSON dashboard. It keeps its own local
 state and links back to project documents as evidence.
 
+This design now owns the continuing usable-project-lifecycle requirements formerly
+carried by the completed delivery brief: opaque project and registration identity,
+resumable folder-backed setup, explicit zero-phase completion, durable name and
+exclusions, exact-registration edits, copied documentation handoffs, same-folder
+reauthorization, truthful combined health, stale-result rejection, contextual Help,
+and recoverable compact/wide accessible errors. The catalogued brief remains
+historical provenance, not a routine product-specification input.
+
 ## Goals
 
 - Show all onboarded projects and their current delivery health before drilling
@@ -453,10 +461,23 @@ the source/link context, ticket, scope/filter and actual keyboard/accessibility
 focus. Unavailable historical content remains visibly unavailable, never replaced
 by current prose; missing targets never select another ticket. Native browsing is
 read-only, with link creation/revision/retirement performed through typed agent
-commands. Wide/compact and recovery journeys must be verified against the Phase
-Board/Dependencies visual language. The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
-sets the complete bounded acceptance criteria; it does not adopt later proposal
-or lifecycle surfaces.
+commands. Each mutation uses stable link identity, the expected ticket-local link-set
+revision and existing request/registration admission; link, history, audit and
+receipt commit atomically, exact replay is idempotent, and stale/cross-project/
+conflicting/failed operations have no partial effect. Accepted link sets cannot be
+backfilled or revised. Archive/restore, removal/re-add and backup retain history
+without reconnecting by path or name, and late source/preview results are withdrawn
+after project, registration, root or selection changes.
+
+Wide/compact and recovery journeys must be verified against the Phase Board/
+Dependencies visual language. Acceptance includes placed and unassigned link
+revision/retirement, exact history and reverse-impact counts; changed/moved/retired/
+superseded/unavailable distinctions; unsafe and stale-source failures; replay and
+rollback; lifecycle recovery; and Details → source → Recorded impacts → ticket →
+Back/Forward with empty/error/incomplete states and actual keyboard/accessibility
+focus. The completed [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+retains delivery provenance; it is not the current UI, admission, recovery or
+acceptance authority and does not adopt later proposal or lifecycle surfaces.
 
 ## Phase 5C proposal workflow — 2026-09-10
 

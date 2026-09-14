@@ -281,12 +281,15 @@ complete until all selected behavior ships. Phase 5A passed direct checks and
 independent review, then merged with explicit owner approval in PR #38 at
 `a8877aa`. Later slices retain separate merge approval.
 
-Phase 5B's [controlling brief](../task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
-incorporates the fresh read-only chief-architecture assessment on merged `a8877aa`:
-separate retained ticket-link versions, complete safe-byte content digests distinct
-from catalog acceptance, current versus historical resolution, typed link mutations
-and read-only native recorded-impact navigation. No unresolved owner choice was
-identified; proposals, successor obligations and lifecycle remain later slices.
+Phase 5B delivered separate retained ticket-link versions, complete safe-byte
+content digests distinct from catalog acceptance, current versus historical
+resolution, atomic typed link mutations and read-only native recorded-impact
+navigation. The owning current contracts are the
+[managed-documentation](../../design/managed-repository-documentation-contract.md#phase-5b-source-revision-and-readback-extension--2026-09-09)
+and [dashboard](../../design/agent-driven-delivery-dashboard-design.md#phase-5b-references-and-recorded-impacts--2026-09-09)
+designs. The completed [Phase 5B brief](../task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+retains delivery provenance only. No unresolved owner choice was identified;
+proposals, successor obligations and lifecycle remained later slices at that point.
 
 Each actual new record participates in additive migration, archive/restore,
 retained removal history, full backup and stale-request invalidation. No inferred
@@ -913,19 +916,29 @@ and VoiceOver. A package build or screenshot alone is not UI acceptance.
 
 ## Integration feasibility and boundaries
 
-The current [official App Server documentation](https://learn.chatgpt.com/docs/app-server)
-describes startup-selected transports and labels WebSocket experimental/unsupported.
-It does not establish a supported authenticated external connection to this running
-desktop instance. RM7 needs a bounded proof against the actual installed product;
-starting another server does not prove attachment. Add no private-state scraper.
-Live observation also needs stable goal identity and a consumed event stream, not
-just a transport. An approved no-go must leave useful delivery tracking available.
+The completed I1/RM7 discovery is a **no-go for live observation of the current
+installed desktop instance**. The documented App Server starts or owns a separate
+runtime; it does not establish a supported authenticated attachment to the
+desktop-owned process. Starting another server, using private IPC/state,
+Accessibility or screen scraping is not a substitute. Keep the observer result
+`unavailable` and last-known material `stale`, with source, reason and checked time.
+Useful delivery, document, evidence and historical execution browsing remains
+available.
+
+Reopen I1 only if the current official product provides a supported desktop-runtime
+attachment, revocable least-privilege project/task reads, immutable provider/thread/
+goal-generation identity, gap-closing snapshot/subscription or cursor semantics,
+and a sandbox-compatible authenticated recovery flow. Meeting those conditions is
+feasibility evidence, not implementation, entitlement, installation or app-state
+authorization. The completed discovery remains deliberate historical provenance;
+this paragraph owns the current no-go requirement.
 
 RM8 uses the owner-selected read-only publication boundary, retaining Mac delivery
 authority and repository document custody. Cloud authority and document relocation
-are not selected. Remaining design must include current
-goals/readiness/tasks, selected operational documents/evidence/history, cache and
-asset limits, inclusion/privacy, account switch, deletion, reset and schema upgrades.
+are not selected. The current proposed companion specification is the
+[CloudKit iPhone companion](../../design/cloudkit-iphone-companion-draft.md); it
+retains the completed discovery's complete corpus, manifest/withdrawal consistency,
+limits, privacy, account, deletion, reset and schema-recovery requirements.
 Separate local commit time, publication time and source observation freshness;
 recent upload cannot make old Codex state live. Apple documents asynchronous
 CKSyncEngine scheduling, persisted engine state and app-specific error handling;
@@ -940,6 +953,49 @@ as a controller. A fixed first-party host is the discovery boundary; marketplace
 public SDKs and general orchestration are outside it. RM9's distribution choice
 must account for portable helper behavior and nested executables, as well as
 [Apple signing/notarization requirements](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution).
+
+### Conditional I7/I8 execution-owner constraints
+
+The completed [run-ownership discovery](../task-briefs/2026-09-07-parallel-discovery/run-ownership-discovery.md)
+is historical provenance. If I7/I8 is later selected, the following constraints
+remain **proposed** and must be resolved by its separately authorized design and
+feasibility work; they do not describe current runtime behavior.
+
+- Bind a run to project, registration/request generation, authorized root,
+  immutable candidate/source revision, assignment/role, provider, requested
+  model/effort, grant revision and stable start request. Persist start intent before
+  dispatch. A lost provider-start reply is `unknown`: reconcile through supported
+  provider identity or retain it for owner recovery, never blindly repeat it.
+  Request correlation alone is not provider idempotency, and reconnect must prove
+  the same execution owner and service instance before admitting commands.
+- Grants enumerate exact operations, root read/write scope, provider/network use,
+  limits and expiry. Denied, stale or unenforceable grants prevent start. Revocation
+  closes admission, cancels pending approval requests and begins owned cancellation;
+  it cannot undo bytes already read or transmitted or effects already committed.
+  Do not inherit arbitrary owner MCP servers, plugins, hooks, environment secrets or
+  full-access settings. Provider credentials require a separately approved supported
+  boundary; existing installer or Release Radar credentials cannot be borrowed.
+- Cancellation first targets the exact provider turn cooperatively. After a bounded
+  timeout, terminate only a still-revalidated process launched by that owner, using
+  evidence stronger than PID or process name. Descendant containment, PID reuse and
+  side-effect shutdown require direct proof. If shutdown is unconfirmed, keep the
+  run `unknown` with recovery guidance. Transport loss closes grants and new starts;
+  relaunch reconciles persisted intent and owned processes before any resume. Late
+  or duplicate events cannot reopen terminal work or cross registrations.
+- Enable/upgrade negotiates host, provider and schema compatibility, quiesces before
+  migration and restores no grants or starts. Disable/uninstall/reinstall closes
+  admission and reconciles owned work before claiming stopped while retaining
+  history unless erasure is separately authorized. Archive suspends new runs;
+  restore requires renewed availability, grants and explicit restart. Removal or
+  ticket withdrawal invalidates admission/callbacks and preserves event-time
+  history without claiming external work stopped; re-add creates a new registration.
+- Backup/reset either captures a defined consistent execution-owner boundary or
+  reports an incomplete backup. Restore rotates generations and invalidates grants,
+  pending starts and replay authority without automatic work/notification replay.
+  Portable packages include versioned run history/results/provenance only when that
+  history becomes a supported project record; they exclude credentials, live
+  handles, grants and checkouts. Imported and phone/cloud history is read-only and
+  cannot resume or own execution.
 
 ## Execution reliability: what rules and hooks can enforce
 
@@ -960,6 +1016,19 @@ brief, separating approved behavior from proposed direction. Worker conclusions
 cannot promote proposals or add scope. Continuing architectural responsibility
 survives conversation replacement through the existing ADRs, designs and this plan.
 No feature depends on undocumented memory in a long-running agent.
+
+The delivered Shared Execution V1 source standard supplies bounded task context,
+direct-result reporting and compatibility/adoption diagnosis only. Release Radar-
+managed permission profiles, project-relative provisioning, restrictions bound
+before the first model turn, non-shell tool capability control, uncertain task
+creation recovery and an end-to-end native build/review/integration lifecycle are a
+possible versioned environment-management extension. They remain Outcome 3 scope,
+not delivered V1 behavior or authority to change Codex configuration. Any extension
+must use a supported authenticated connection to the retained desktop, preserve
+coordinator and unrelated-task access, reconcile profile-version updates and
+uncertain creation, rotate identity when roots change or projects are re-added, and
+retire only owned unreferenced resources while preserving history. Reuse existing
+app-owned records; do not create a second task database.
 
 Root AGENTS.md is the single model-assignment table. Model and effort are explicit
 task settings chosen for ambiguity and consequence; Luna/Terra handle suitable
@@ -994,10 +1063,11 @@ engine. All 40 assessed capabilities and their approval distinctions remain inta
 
 ### Separate rules and hooks implementation
 
-The user asked about actual [Codex rules](https://learn.chatgpt.com/docs/agent-configuration/rules)
-and [hooks](https://learn.chatgpt.com/docs/hooks), not more prose in AGENTS.md.
-They can improve mechanical follow-through, but cannot settle ambiguous product
-scope or judge whether a feature truly meets its intended outcome.
+The completed I9 discovery is a **no-go for adopting rules or hooks on the currently
+demonstrated capability**. Rules and hooks can improve narrow mechanics, but they
+cannot preserve task-scoped authorization, identify every legitimate completion
+exit, prove data minimization, settle product scope, or judge whether a feature met
+its outcome. No configuration or hook executable is selected by this plan.
 
 Rules control matching command permissions; they do not require a missing test,
 commit or PR to happen. Prefix matching and shell wrappers limit what they can
@@ -1007,13 +1077,14 @@ continuation at Stop. Post-tool hooks cannot undo a completed action, and covere
 tool paths are not a universal security boundary. Verify behavior in the installed
 Codex version before relying on it. Avoid parsing undocumented transcript internals.
 
-Proposed small pilot, as a separately authorized agent-configuration task:
+Any future reconsideration is a separately authorized agent-configuration task and
+must first prove these properties in the installed client:
 
 | Mechanism | Useful enforcement | Required escape/boundary |
 | --- | --- | --- |
-| Rules / PreToolUse | Block narrowly identified unauthorized destructive or external actions; validate relevant command arguments for supported tools. | Preserve the actual authorization model; wrappers/MCP paths need their own supported coverage. Do not claim a universal sandbox. |
-| PostToolUse | Record actual test/commit/PR outcomes and failures for the active task, using existing command results and a small bounded local record only if necessary. | Associate evidence with the changed scope/revision; account for asynchronous command completion. Tool success alone is not product success. |
-| Stop | Remind an active implementation task of a missing agreed check, documentation disposition, local commit or authorized PR endpoint. | Permit reviews/questions, approval waits, explicit blockers, user STOP and interruption. Use stop-hook continuation context and cap corrective attempts; report a persistent failure rather than loop. |
+| Rules / PreToolUse | Approval-aware control that permits an explicitly authorized endpoint while denying the same endpoint without authorization | Prefix-only or context-blind denial is insufficient; wrappers, MCP and hosted paths retain their own supported coverage. Do not claim a universal sandbox. |
+| PostToolUse | Data-minimized input with no persistence/network behavior and fresh trust after executable changes | Post-action observation cannot undo side effects or become proof of product success. |
+| Stop | Stable owned fail-open task state distinguishing success, review/question, approval wait, explicit blocker, STOP and interruption | Do not parse transcripts; cap continuation and preserve legitimate exits. |
 
 Do not auto-commit, auto-publish, accept delivery work or invent authorization in a
 hook. Hooks are additive and may execute concurrently, so they are not an ordered
@@ -1025,9 +1096,8 @@ For each implementation slice, put a short delivery endpoint and change-specific
 checks in its existing brief: what working behavior completes it, which docs change,
 what local commit is expected, and whether PR/push/merge/install are authorized.
 Use existing tests and Git results. Do not build a new task database, process
-scorecard, transcript validator or mandatory reviewer matrix. Pilot hooks after
-the actual test selection and endpoint are clear, then keep only mechanisms that
-prevent a demonstrated failure without creating new deadlocks.
+scorecard, transcript validator or mandatory reviewer matrix. Without the proofs
+above, retain the no-go and do not install or enable rules or hooks.
 
 ## Delivery sequence and dependencies
 

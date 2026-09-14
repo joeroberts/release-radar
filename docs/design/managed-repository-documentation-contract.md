@@ -1,11 +1,18 @@
 # Release Radar Managed Repository Documentation Contract
 
-- Status: M1 owner-approved; ADR-007 accepted; M1A propagation correction
-  pending owner review
+- Status: Active product contract; MDCP M1-M8 delivered; later amendments retain
+  their own stated approval and implementation boundaries
 - Date: 2026-09-01
 - Program: MDCP
 - Planning base: `653cdfd647590bfefbb23b556d48bd5970846a97`
 - Architecture: `docs/architecture/ADR-006-managed-repository-documentation-contract.md`
+
+This mutable design is the current product specification for managed repository
+documentation. The accepted ADR records the architecture decision and remains
+unchanged; this file owns current implementation detail. Milestone narratives and
+review text below are retained provenance from their named checkpoints, not current
+authorization or an instruction to rerun completed work. Current authorization and
+application synchronization state live in `docs/delivery/progress.md`.
 
 ## Decision summary
 
@@ -737,10 +744,12 @@ reviewed the exact substantive M1 package and returned GO with Required 0,
 Optional 0, and Out of scope 0. The resulting status-only ledger update records
 those verdicts; owner approval remains pending.
 
-The owner subsequently approved M1 and accepted ADR-007. M2, Task 4B, app
-launch, tests, storage migration, guidance activation, document movement,
-evidence mutation, Git commit/push, and external issue changes each remain
-separately authorization-gated.
+The owner subsequently approved M1 and accepted ADR-007. MDCP M2-M8 and their
+approved activation/cutover work later completed; their durable contract remains in
+this design and their execution history remains in catalogued briefs/evidence.
+Future app launch, storage or evidence mutation, catalog acceptance, document move,
+publication, or external issue work still requires its own current authorization;
+historical milestone approval is not reusable authority.
 
 ## Phase 5B source revision and readback extension — 2026-09-09
 
@@ -755,5 +764,50 @@ pending, missing, unsafe or unstable access remains explicit, and late callbacks
 cannot republish content after context changes. Historical content is shown only
 when safely resolved bytes match the linked digest. Scoped link/history/reverse
 queries report incomplete results honestly and never mutate app or repository
-state. The [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
-defines command admission, recovery and verification for this extension.
+state.
+
+Each logical ticket link has stable identity and a ticket-local link-set revision.
+New or revised authoritative links require current registration, exact bound root,
+fresh authorized access, managed-v2 mode, the accepted repository/catalog identity,
+an active controlling source, and revalidation of both expected content digest and
+catalog immediately before commit. Commands carry the expected link-set revision,
+actor/reason and existing request/registration admission; link changes, retained
+history, audit and receipt commit atomically. Exact replay returns its prior result.
+Conflicting replay, cross-project identity, stale state, expired admission or any
+failure leaves no partial link, history, audit or mutation. Accepted ticket link
+sets are immutable, including backfill.
+
+Relaunch, archive/restore and full backup preserve link versions and retirement
+facts. Removal retains them under the historical registration before operational
+deletion; re-add never reconnects by folder or name. Restore rotates admission and
+requires renewed folder access. Repository bytes stay outside app backup. A future
+portable package carries link/version/retirement identity, source provenance and
+required documents without source capabilities; it does not silently change the
+existing format. Direct acceptance exercises placed and unassigned links, revision
+and retirement history, reverse impacts, binding/root/repository mismatch, unsafe
+or unstable reads, bounds, stale revisions, replay/rollback, migration with no
+inferred links, lifecycle/recovery, and complete wide/compact accessible navigation.
+
+The completed [Phase 5B brief](../delivery/task-briefs/2026-09-09-phase5b-reference-impacts/phase5b-reference-impacts-brief.md)
+is provenance for the delivered extension and its test history, not current command,
+recovery, acceptance or execution authority.
+
+## Protected activation artifacts and recovery
+
+The completed [M6A activation runbook](../delivery/task-briefs/2026-09-01-managed-repository-documentation-contract/m6a-owner-activation-runbook.md)
+is historical provenance. Its continuing custody rules remain current: approved
+protected copies, backups, disposable restores, migration snapshots and quarantined
+failed state remain retained under their exact owner-approved custody and disposal
+terms. Routine work must not inspect protected owner paths, bookmark bytes, evidence
+content, backup locations or request bodies, and historical activation approval does
+not authorize another operation, recovery, read, cleanup or deletion.
+
+If a typed operation is `outcomeUnknown`, keep writers quiesced and reconcile by
+supported readback or exact replay of the complete original request; never create a
+replacement request or restore across an uncertain commit. Migration, corruption or
+unexpected-state recovery closes all writers and restores the exact approved
+database set, including the approved presence or absence of its pre-migration
+snapshot, together with the matching software, configuration and guidance. Recovery
+then proves supported readback against the preserved baseline. Quarantine is allowed
+only at an explicitly approved protected location, and retained material is deleted
+only under its specific approved retention/disposal terms.

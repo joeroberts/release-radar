@@ -2,19 +2,27 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Source implementation authorized; design remains non-gating |
+| Status | Active V1 product specification; source implementation delivered; adoption and runtime proof remain separate |
 | Date | 2026-09-09 |
 | Baseline inspected | `8930f9643ca1f46e7681ce9b838ce9b0f5b024fc` |
 | Intended consumers | Release Radar, Rekon Pursuit, and separately adopted future repositories |
-| Delivery effect | Local source candidate only; no installation, app-state, or consumer-adoption effect |
+| Delivery effect | V1 source delivered; no installation, app-state, runtime-loading, or consumer-adoption effect |
 
-The owner authorized source implementation under this reviewed design. The local
-source candidate still creates no installed behavior, application-state mutation,
-runtime proof, or consumer adoption. This design defines a small shared execution
-contract for repeatable Codex
+The owner authorized and completed the source implementation under this reviewed
+design. The [source evidence](../delivery/evidence/2026-09-09-shared-execution-integration-v1.md)
+records the delivered plugin skill, diagnostic, compatibility reducer and read-only
+presentation. Those source results create no installed behavior, application-state
+mutation, runtime-loading proof, or consumer adoption. This design is the current
+V1 specification for a small shared execution contract for repeatable Codex
 delivery without turning Release Radar into an execution engine or copying another
-large instruction manual into every repository. It remains non-gating design input,
-not a completion gate or permission to change any consumer.
+large instruction manual into every repository. It remains non-gating to ordinary
+delivery and is not permission to change any consumer.
+
+V1 does not include Release Radar-managed permission profiles, task provisioning,
+first-turn tool binding, worker lifecycle management, or native build/review
+orchestration. Those are possible versioned environment-management extensions and
+belong to separately authorized Outcome 3 work; their later feasibility cannot be
+reported as already delivered V1 functionality.
 
 The design consumes the non-gating assessment in the
 [full-product plan](../delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md#shared-execution-integration-assessment--proposed-non-gating--2026-09-08),
@@ -56,7 +64,10 @@ V1 does **not** provide:
 - new Phase 5 domain fields or meanings; or
 - ADR-006 guidance v3, which remains reserved for Issue #1/P10.
 
-### Baseline evidence
+### Historical pre-implementation baseline evidence
+
+The facts in this subsection describe the inspected `0.1.7` baseline. They explain
+why V1 took this shape; they do not describe the delivered source candidate.
 
 - The current [documentation-tool entry point](../../ReleaseRadarDocumentationTool/main.swift)
   exposes only `check`, `write`, and help. `check` is read-only and prints one
@@ -352,12 +363,10 @@ tested, that the working tree was clean, that the app accepted the catalog, or t
 delivery state is correct. `write` remains a separate explicitly authorized
 repository mutation and is never part of a check fallback.
 
-### Small additive diagnostic for later implementation
+### Delivered additive diagnostic
 
-The current tool exposes catalog-v1 compatibility in `--help`, but it does not emit
-an explicit checker contract, tool version/build, catalog identity/digest, or
-machine-readable result. V1 proposes one additive read-only command in the **same**
-fixed-purpose executable:
+The delivered source adds one read-only command to the **same** fixed-purpose
+executable:
 
 ```sh
 ReleaseRadarDocumentationTool diagnose --root "/absolute/authorized/repository" --format json
@@ -449,12 +458,12 @@ different version, and an otherwise unrecognized combination support no standard
 The app exposes the matched version, digest-match state, and supported-standard list
 read-only to the compatibility reducer. It never infers capability from SemVer
 ordering, a version string alone, a receipt alone, or skill text read from a modified
-installation. The current `0.1.7` baseline package supports no shared-execution
-standard because it contains no such skill; when the list is introduced, any row
-retained for exact `0.1.7` backward diagnosis therefore has an empty supported-
-standard set. The first package that adds V1 must add and package-validate its own
-new exact row. This list is source code/package contract, not an adoption database or
-a new installed-state owner.
+installation. The historical `0.1.7` package supports no shared-execution standard
+because it contains no such skill. Delivered source retains that exact backward-
+diagnostic row with an empty supported-standard set and adds the exact `0.1.8`
+version/digest row for V1. This list is source code/package contract, not an
+adoption database or a new installed-state owner. Package source still does not
+prove what is installed or loaded by a particular task.
 
 Release Radar computes, but does not authorize, one **technical compatibility**
 diagnostic from four independent observations:
@@ -689,36 +698,29 @@ risk. Runtime installation, signed bundle behavior, actual task context selectio
 and real consumer adoption need their own separately authorized acceptance; static
 or synthetic source proof cannot establish them.
 
-## 12. Later authorized work and owner decisions
+## 12. Delivered source and remaining boundaries
 
-This candidate authors no implementation. If approved, the smallest Release Radar
-source slice is:
+V1 source delivery is complete: the packaged on-demand skill, exact capability
+registry, read-only documentation diagnostic, compatibility observation and
+presentation were implemented and directly checked under the source evidence linked
+above. This closes the former source-slice proposal without changing V1's negative
+authority or making V1 a gate for ordinary delivery.
 
-- add the one on-demand `shared-execution` skill to the existing plugin package and
-  extend existing package-integrity tests with the exact
-  `RecognizedPluginCapability` source;
-- add the read-only `diagnose` mode to the existing documentation executable while
-  preserving `check`/`write` compatibility;
-- add a read-only technical compatibility presentation using existing plugin,
-  repository, binding, and catalog observations, without Git/owner-approval claims;
-  and
-- add only the static and synthetic source checks in section 11. Actual task/runtime
-  behavior remains a separately authorized fresh-task pilot.
+The following remain separate, current decisions or operations:
 
-It must not add a task runner, adoption database, generic command schema, hook,
-review-attestation model, Run Guard dependency, or new delivery mutation merely to
-implement V1.
+1. an exact owner-approved consumer adoption or supersession patch, including the
+   consumer's independent local fallbacks;
+2. plugin installation/update, Codex trust or permission changes, task-loaded skill
+   proof, and any installed runtime verification;
+3. repository binding or catalog acceptance and any owner/application-state
+   mutation;
+4. identification of Perspective's one canonical root before inspection or
+   adoption, and a separately approved Pursuit patch; and
+5. any future P10/P17/D13 attestation, Run Guard, or environment-management
+   extension, including profiles, provisioning, first-turn tool binding, and
+   build/review lifecycle management.
 
-The remaining owner decisions are:
-
-1. approve, revise, or reject the on-demand-skill plus thin-local-block approach;
-2. approve the exact V1 block and stable SEI clauses;
-3. separately authorize and scope the Release Radar source slice;
-4. later approve an exact Pursuit supersession/adoption patch;
-5. identify Perspective's one canonical root before any inspection or adoption;
-6. separately authorize any plugin install/update, Codex trust/permission change,
-   repository catalog acceptance, or runtime verification; and
-7. decide any future P10/P17/D13 attestation or Run Guard work on its own merits.
-
-Until those decisions occur, this file remains a proposed, non-gating design. Phase
-5 and ordinary consumer delivery continue under their existing contracts.
+None may be inferred from the source evidence, plugin SemVer, this document's active
+lifecycle, or a task using the shared skill. V1 still adds no task runner, adoption
+database, generic command schema, hook, review-attestation model, Run Guard
+dependency, or delivery mutation.
