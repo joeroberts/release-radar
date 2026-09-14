@@ -8,6 +8,8 @@ Fresh delivery task `01a09deb-5029-7891-aaf2-121780258f55` (Sol/high) and fresh 
 
 Foundation clarification: Shared Execution V1 source delivery is complete, as recorded in the [source evidence](evidence/2026-09-09-shared-execution-integration-v1.md). Installed capability/runtime verification and exact repository adoption remain separate evidence requirements. Environment provisioning, profiles and enforced task lifecycle are a versioned extension tracked for Outcome 3. Outcome 2 reconciles these distinctions in current specifications; it does not implement or adopt them.
 
+The owner approved parallel installed V1 verification and adoption preparation. Fresh task `01a09df3-a7ea-7293-848a-4029490cfa82` (Sol/high), based on `322f4f6`, owns read-only installed-capability checks and an exact adoption-patch proposal; it does not edit Outcome 2 documents or governing configuration. Final adoption/integrated verification waits for Outcome 2 and the exact owner-approved adoption patch. The coordinator preserves the findings, resolves overlaps and monitors this task alongside Outcome 2.
+
 The chief-architect isolation assessment is complete. The owner approved retaining
 native desktop tasks, the desktop's local App Server and named permission profiles.
 The unresolved capability is an enforced per-task allowlist covering every exposed
