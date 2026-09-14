@@ -10,6 +10,9 @@ read/search permissions, with deliberate coordinator retrieval. The
 opens a fresh chief-architect check of exact paths/settings and bounded delivery.
 The broad assessment below is prior proposal evidence, not the controlling approach.
 Real migration/configuration targets must be resolved before any such write.
+Fresh chief architect `01a0a007-5307-72c1-b724-114c72131e1e` (Astra/high) is active
+on baseline `b54916a`, read-only, to resolve the existing coordinator task-creation
+route and simple file permissions. The existing monitor is active for this scope.
 
 **Outcome 3 architecture assessment is complete; runtime implementation remains unopened.**
 The [reviewed proposal](../design/outcome3-runtime-enforcement-assessment.md)
