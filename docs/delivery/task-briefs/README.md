@@ -873,7 +873,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-shared-execution-v1-adoption-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md](2026-09-14-shared-execution-v1-adoption/brief.md) | document | controlling &#40;delivery.shared-execution-v1-adoption&#41; | active | none | none |
+| rr-shared-execution-v1-adoption-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md](2026-09-14-shared-execution-v1-adoption/brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

@@ -2,7 +2,21 @@
 
 ## Current outcome
 
-**Exact Shared Execution v1 adoption is owner-approved and active.** The [current brief](task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md) authorizes only the prepared AGENTS.md block addition, direct checks, fresh independent review and scoped local integration. Existing local rules and accepted ADRs remain intact; no runtime configuration or app-state change is opened.
+**Exact Shared Execution v1 adoption is complete and locally integrated at `065f8b3`.**
+The [completed brief](task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md)
+authorized the exact 19-line AGENTS.md addition. Existing clauses and accepted ADRs
+are unchanged. Fresh delivery `01a09fb4-d719-73d3-b384-d9db83a1bc6d` (Terra/medium)
+produced candidate `a8918a7` from `7a308ce`; fresh independent reviewer
+`01a09fb6-7873-7843-a968-7c7447721eff` (Sol/high) passed it without findings.
+The installed 0.1.16 helper's diagnose/check passed on the candidate and canonical
+integration; exact block comparison, retained fallback clauses, marker uniqueness,
+ADR preservation and diff hygiene passed. The reviewer selected the shared skill
+from repository-local guidance; it was not explicitly requested in the assignment.
+That observation does not prove universal automatic selection or runtime isolation.
+Both peers have finished and are archived. No configuration, installation,
+app-state or publication change occurred. Temporary comparison files
+`/tmp/release-radar-shared-execution-block.actual` and
+`/tmp/release-radar-shared-execution-block.expected` remain retained.
 
 **Outcome 2 is complete and locally integrated at `5b17e9a`.** The
 [completed brief](task-briefs/2026-09-14-outcome2-current-specifications/brief.md)
@@ -32,19 +46,16 @@ The parallel V1 verification/preparation task `01a09df3-a7ea-7293-848a-4029490cf
 0.1.16 installed/enabled; the product-normalized package digest exactly matches
 its recognized standard-[1] row. Installed/cache/source shared-skill bytes match
 and the fresh task loaded the skill explicitly. Installed documentation `diagnose`
-0.1.16 (build 1, contract 1) passed on its exact worktree. No V1 adoption marker is
-present. Supported inventory returned `rootUnavailable` for that worktree; this
+0.1.16 (build 1, contract 1) passed on its exact worktree. No V1 adoption marker was present at that preparation baseline; the approved
+block is now integrated as recorded above. Supported inventory returned `rootUnavailable` for that worktree; this
 is neither canonical binding evidence nor a broken installed-capability result.
 
-The exact prepared adoption proposal is to insert the unchanged V1 block from
+The exact block from
 [the current design's section 5](../design/shared-execution-integration-v1-design.md#5-exact-consumer-adoption-block)
-immediately before `release-radar-guidance:v2:start` in AGENTS.md, with one blank
-line separating the blocks. No existing clause is removed; all local product,
-review, authority, safety/recovery and external-action fallbacks remain. This is
-unapplied. Reconcile it with integrated Outcome 2, obtain exact owner approval,
-then use one writer and fresh independent review. Generic-task skill selection,
-missing/incompatible/owner-denied runtime cases and registered canonical app
-compatibility readback remain unproved. No configuration or app state changed.
+is now adopted immediately before the v2 tracking block. No existing clause was
+removed. Missing/incompatible/owner-denied runtime cases, universal skill selection
+and registered canonical app compatibility readback remain unproved; they are not
+acceptance criteria for this exact patch. No configuration or app state changed.
 
 The chief-architect isolation assessment is complete. The owner approved retaining
 native desktop tasks, the desktop's local App Server and named permission profiles.
@@ -132,6 +143,10 @@ records review limitations and disk recovery. No app release was required.
 Current coordination is tracking closeout; no new product implementation is open.
 
 ## Current authorization
+
+The September 14 exact V1 adoption approval is fulfilled through local integration
+and closeout. It authorized no push, PR, remote merge, tag, release or app-state
+change. Earlier authorizations below retain their own original task scope.
 
 The owner authorized this repository-only outcome, its controlling brief,
 documentation/index changes, independent review, scoped local commits, branch push,
@@ -225,12 +240,12 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Next is the exact repository V1 adoption proposal prepared in parallel and now
-reconciled with Outcome 2's unchanged AGENTS.md. The installed-capability checks
-are complete to the limits above. Exact governing-file patch approval, one writer,
-fresh independent review and integrated runtime/adoption checks remain necessary;
-no adoption block has been applied. Further installation/configuration/app-state
-mutations require their separately bounded authorization.
+Outcome 2 and the approved exact V1 adoption patch are complete locally. Installed
+capability and fresh-review skill selection are verified to the limits above.
+Outcome 3's environment extension is the next architectural work, with its concrete
+capability gaps retained below; this closeout does not authorize implementation.
+Further installation/configuration/app-state mutations require their separately
+bounded authorization.
 
 For the Outcome 3 environment extension, the supported authenticated RR-to-desktop
 interface, restrictions before generation, role-specific non-shell capabilities,

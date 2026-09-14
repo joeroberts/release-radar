@@ -6921,9 +6921,8 @@
       "artifactID": "rr-shared-execution-v1-adoption-brief-2026-09-14",
       "path": "docs/delivery/task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md",
       "kind": "document",
-      "lifecycle": "active",
-      "authorityLevel": "controlling",
-      "authorityRole": "delivery.shared-execution-v1-adoption",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-14-shared-execution-v1-adoption",
       "supersedes": [],
       "applicationSensitivity": [
