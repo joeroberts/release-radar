@@ -11,14 +11,14 @@ or exact unsupported controls. Runtime implementation/configuration and changes 
 accepted ADRs remain unopened; the coordinator owns follow-through and integration.
 Fresh chief architect `01a09fd8-0f4e-7d61-aa3d-a4ccc5db5f33` (Astra/high) completed
 candidate `be30175` from `ff73921`: a proposed assessment plus catalog/design index.
-It identifies five missing native-desktop controls, concrete lifecycle/workspace
-contracts and proposed acceptance scenarios; no runtime scenario ran. Fresh
-independent reviewer `01a09fe2-e4cb-7772-8682-f299d8923713` (Astra/high) is active on
-that exact candidate, including whether the proposed boundaries are necessary and
-supported rather than over-prescribed. Installed documentation checks and author
-preservation checks passed; independent review remains pending. The existing
-heartbeat monitors every ten minutes through corrections, local integration and
-archive closeout, then pauses for the concrete owner implementation decision.
+Fresh independent reviewer `01a09fe2-e4cb-7772-8682-f299d8923713` (Astra/high)
+returned two Required corrections: distinguish instruction loading from model
+exposure because App Server separates start/turn; separate required lifecycle
+safeguards from mechanisms that need not all come from the desktop product.
+The same architect is correcting this bounded candidate. Installed documentation,
+scope and preservation checks passed; all runtime scenarios remain unexecuted.
+The existing heartbeat monitors every ten minutes through required corrections,
+local integration and archive closeout, then pauses for the concrete owner decision.
 
 **Exact Shared Execution v1 adoption is complete and locally integrated at `065f8b3`.**
 The [completed brief](task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md)
