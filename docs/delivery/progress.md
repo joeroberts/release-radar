@@ -4,6 +4,10 @@
 
 **Outcome 2 is owner-authorized and active.** The [current brief](task-briefs/2026-09-14-outcome2-current-specifications/brief.md) records complete scope, separate delivery/review ownership, direct evaluations and local-only endpoint. The coordinator monitors progress, resolves routine blockers and owns this ledger. Outcome 3 runtime changes remain unopened.
 
+Fresh delivery task `01a09deb-5029-7891-aaf2-121780258f55` (Sol/high) and fresh independent reviewer `01a09dec-933e-7473-aefe-f044fd3d53e5` (Astra/high) started from committed kickoff baseline `24f981d`. Delivery owns its worktree docs; review owns no implementation files; coordinator owns canonical integration and this ledger. A ten-minute coordination heartbeat monitors completion and actionable blockers.
+
+Foundation clarification: Shared Execution V1 source delivery is complete, as recorded in the [source evidence](evidence/2026-09-09-shared-execution-integration-v1.md). Installed capability/runtime verification and exact repository adoption remain separate evidence requirements. Environment provisioning, profiles and enforced task lifecycle are a versioned extension tracked for Outcome 3. Outcome 2 reconciles these distinctions in current specifications; it does not implement or adopt them.
+
 The chief-architect isolation assessment is complete. The owner approved retaining
 native desktop tasks, the desktop's local App Server and named permission profiles.
 The unresolved capability is an enforced per-task allowlist covering every exposed
