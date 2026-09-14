@@ -59,15 +59,30 @@ metadata and the coordinator's report; the launch was not repeated under an unch
 runtime gate. The installed file therefore does not activate on-request for this
 existing desktop task. A supported task-policy update/reload is still needed; the
 available task tools expose no such control and the UI denial remains in force.
-The chief task is archived; independent review of the exact file addition is pending.
+The chief task is archived. Independent reviewer
+`01a0a04a-5e3c-7be2-8220-ec7d5eaa9139` reviewed `341b118`; its one Required
+ledger-wording correction is resolved ("further default-policy change"). No Optional
+findings. Configuration review is complete; desktop activation remains blocked.
+The reviewer stopped and its result is preserved here.
 The existing brief contains the exact authorized test scope. No temporary files or
 child test task were created by this attempt.
+
+**Owner-relaunched restricted coordinator 02:** task
+`01a0a04b-6c0a-7883-a472-7e33ed87914a` reported effective `never` on the
+owner-requested test turn. Main read back session metadata confirming `never`,
+managed root-deny/workspace-write rules and `network_access = false`. No child was
+launched and no file probes or markers were created. Its result-message call was
+also approval-blocked; main retrieved the result read-only. Thus a fresh owner launch
+with the restricted profile still does not establish on-request approval in the
+desktop runtime. Do not ask for another identical relaunch or claim inheritance
+failure: inheritance remains untested until effective approval changes. Coordinator
+02 remains unarchived; global defaults and named filesystem profiles are unchanged.
 
 **Remaining blocker:** the supported `create_thread` interface has no permission
 profile parameter or effective-settings selection/readback operation. Available
 tool discovery found no replacement; the fresh worker actually started Full Access.
 The previously recorded Codex UI denial still prohibits that route. No private IPC,
-alternate UI automation, default-policy change or bundle patch is authorized as a
+alternate UI automation, further default-policy change or bundle patch is authorized as a
 workaround. Restricted startup, history-denial tests and real migration therefore
 remain unexecuted. Auxiliary workspace roots and non-shell readers remain unproved;
 the profile edit is not complete workspace/history enforcement. No SQLite, binding,
