@@ -14,7 +14,7 @@ It is not another whole-runtime research project. RR app-controlled task creatio
 new authentication/grant systems, VMs and a separate worker client are not required
 by this correction and must not be introduced as prerequisites.
 
-## Scope, assignment and endpoint
+## Completed read-only checkpoint (historical scope)
 
 A fresh chief architect (Astra/high; ceiling Astra/high) owns the concrete boundary
 assessment. Start at the committed kickoff revision named by the coordinator.
@@ -43,3 +43,69 @@ content and catalog identities; active ADRs stay available unchanged. Classify
 completed supporting evidence separately from obsolete instructions. Before any
 real migration/configuration write, resolve exact targets and chief-architect advice.
 Do not declare enforcement from a folder name, profile label or prose alone.
+
+## Authorized implementation continuation — September 14
+
+The owner's subsequent instruction opens the bounded setup below and supersedes
+only the checkpoint's no-configuration-write endpoint. Standard: shared-execution/1;
+the installed 0.1.16 skill exposes standard 1. The replacement coordinator owns
+canonical main at `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`
+from `e80ab27` (workingTree: unrelated pending proposal preserved).
+
+Outcome: coordinator-created workers use a reusable restricted profile tied to
+their assigned workspace, with obsolete history outside their read/search access.
+The profile correction is an independently deliverable part; it does not establish
+the full outcome or authorize migration without a working boundary.
+
+Exact authorized configuration change in `/Users/jroberts/.codex/config.toml`:
+replace the canonical absolute-path write entry with this workspace-relative table,
+preserving the existing root/minimal/network rules and all unrelated bytes:
+
+```toml
+[permissions.rr-project-restricted.filesystem]
+":root" = "deny"
+":minimal" = "read"
+
+[permissions.rr-project-restricted.filesystem.":workspace_roots"]
+"." = "write"
+
+[permissions.rr-project-restricted.network]
+enabled = false
+```
+
+The [official permissions specification](https://learn.chatgpt.com/docs/permissions)
+defines these rules for every effective runtime and profile-defined workspace root,
+which may include auxiliary roots. No global default, legacy sandbox setting,
+other profile, runtime manager, private IPC or desktop bundle change is authorized.
+The recorded Codex Computer Use denial must not be bypassed.
+
+Assignment: fresh chief architect Astra/high reviews this exact change before the
+write; fresh delivery owner Terra/medium owns only the named profile edit and its
+direct checks, from the coordinator's committed continuation baseline. The delivery
+root is the fresh assigned worktree reported at startup; the configuration file is
+a serialized shared resource. The coordinator alone owns this brief, catalog/index
+and progress changes. Fresh independent reviewer Sol/high covers configuration and
+security scope plus the small documentation candidate; ceiling Astra/high. No
+subagents. Do not claim these setup/review tasks themselves have restricted startup.
+
+Direct checks: parse TOML before/after; verify the exact expected named-profile
+structure and byte preservation outside the single replacement; read back the
+installed configuration. Run the installed documentation tool check on the exact
+repository root and inspect the scoped diff. Static configuration checks cannot
+prove runtime restrictions. Supported per-task profile selection and effective-root
+readback must precede runtime allowed/denied tests and any real history migration.
+Test actual available shell, Git and non-shell reading routes before claiming
+history exclusion. Do not create new probe infrastructure while selection is blocked.
+
+Acceptance: the profile contains no fixed checkout/worktree grant; other settings
+are preserved; direct checks and independent review pass; current records distinguish
+the delivered correction from the unresolved startup/history boundary. The complete
+workspace outcome additionally requires verified restricted startup and history
+exclusion. Migration targets remain unselected; no record moves are authorized yet.
+
+Architecture: preserve [ADR-001](../../architecture/ADR-001-release-radar-boundaries.md)
+and [ADR-006](../../architecture/ADR-006-managed-repository-documentation-contract.md).
+No app persistence/schema change; configuration selection compatibility is the named
+risk. Restore the old single path grant only under explicit recovery direction.
+Local scoped documentation commits are authorized. No push, PR, merge, release,
+installation, deletion, SQLite, binding or application catalog acceptance.

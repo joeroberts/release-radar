@@ -8,17 +8,17 @@ create fresh delivery/review tasks, use a reusable workspace-relative restricted
 profile, keep history outside worker read/search access, and handle the setup.
 This supersedes the earlier assessment-only endpoint for this bounded setup; it
 opens no new runtime manager, VM, publication or unrelated app-data operation.
-The existing path-specific rr-project-restricted profile in Codex config has
-root deny, minimal read, canonical-project write and network disabled. It is not
-yet workspace-relative or proven through task startup. Two local profile checks
-passed creation and a path correction; neither established runtime enforcement.
-The old coordinator task is attached to worktree 9b6e. A replacement coordinator
-will be created directly in the canonical checkout; it takes sole ownership of
-ledger/integration/configuration coordination after startup is confirmed. Preserve
-all accepted ADRs, unrelated dirty proposal rows, retained fixtures and existing
-profile/default settings except the specifically authorized restricted-profile fix.
-Chief-architect review still precedes configuration/migration changes. Resolve and
-test actual supported task creation; do not bypass the recorded Codex UI block.
+Canonical coordination is active in replacement task
+`01a0a034-404c-7d80-91aa-4caf10bc80b3`, at the exact canonical root on `main`
+from `e80ab27`. The old coordinator confirmed relinquishing ownership and its
+archive closeout; its worktree remains untouched. The existing monitor is retargeted
+here and active. The [owning brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
+now includes the authorized configuration continuation. Chief architect
+`01a0a035-2586-7ad0-8c29-92fa5d385f1b` reviews only the exact workspace-relative
+profile correction before a fresh delivery writer. The profile is still path-specific
+pending that review. Other config, accepted ADRs and unrelated dirty proposal files
+remain preserved. Current task-creation tools expose no profile selector; no supported
+replacement was found. No runtime isolation or application synchronization is claimed.
 
 **Simple coordinator-managed workspace: architect checkpoint complete; delivery is blocked on profile selection at task creation.**
 The owner-directed [brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
