@@ -78,6 +78,21 @@ desktop runtime. Do not ask for another identical relaunch or claim inheritance
 failure: inheritance remains untested until effective approval changes. Coordinator
 02 remains unarchived; global defaults and named filesystem profiles are unchanged.
 
+**Desktop approval-source trace:** read-only installed-bundle inspection and the
+September 14 desktop log identify an explicit task/turn override. At 14:21:33 and
+14:24:51 UTC, coordinator 02 sent `requestApprovalPolicy=never`,
+`requestPermissionProfile=rr-project-restricted` and
+`useAppServerPermissionDefault=false`. The desktop turn builder prioritizes explicit
+request and retained task/turn approval settings; selecting a named profile alone
+supplies its ID without a replacement approval value. This establishes the immediate
+cause, not the original source of the initial `never`. The running server process
+has no approval-policy command-line override. The desktop contains a
+`thread/settings/update` path, but no available coordinator tool exposes that
+operation or an approval argument. The required correction is task approval
+`on-request` while retaining the named profile; no supported callable route to apply
+it has been established. Global edits/restarts are not a verified fix. No settings,
+bundle, app state, temporary artifacts or new tasks changed during this trace.
+
 **Remaining blocker:** the supported `create_thread` interface has no permission
 profile parameter or effective-settings selection/readback operation. Available
 tool discovery found no replacement; the fresh worker actually started Full Access.
