@@ -15,8 +15,9 @@ Fresh independent reviewer `01a09fe2-e4cb-7772-8682-f299d8923713` (Astra/high)
 returned two Required corrections: distinguish instruction loading from model
 exposure because App Server separates start/turn; separate required lifecycle
 safeguards from mechanisms that need not all come from the desktop product.
-The same architect is correcting this bounded candidate. Installed documentation,
-scope and preservation checks passed; all runtime scenarios remain unexecuted.
+The architect delivered corrected candidate `77def74`; the same independent
+reviewer is checking the bounded corrections. Installed documentation, scope and
+preservation checks passed; all runtime scenarios remain unexecuted.
 The existing heartbeat monitors every ten minutes through required corrections,
 local integration and archive closeout, then pauses for the concrete owner decision.
 
