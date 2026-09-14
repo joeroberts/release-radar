@@ -2,17 +2,39 @@
 
 ## Current outcome
 
-**Owner correction: use a simple coordinator-managed workspace.** The owner
-rejected introducing a runtime manager as a prerequisite. The coordinator creates
-correctly configured native tasks; historical documents belong outside worker
-read/search permissions, with deliberate coordinator retrieval. The
-[current brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
-opens a fresh chief-architect check of exact paths/settings and bounded delivery.
-The broad assessment below is prior proposal evidence, not the controlling approach.
-Real migration/configuration targets must be resolved before any such write.
-Fresh chief architect `01a0a007-5307-72c1-b724-114c72131e1e` (Astra/high) is active
-on baseline `b54916a`, read-only, to resolve the existing coordinator task-creation
-route and simple file permissions. The existing monitor is active for this scope.
+**Simple coordinator-managed workspace: architect checkpoint complete; delivery is blocked on profile selection at task creation.**
+The owner-directed [brief](task-briefs/2026-09-14-outcome3-simple-workspace.md)
+retains coordinator-created native tasks and historical files outside worker
+read/search permissions. The earlier broad assessment is prior proposal evidence,
+not the controlling implementation approach.
+
+Fresh chief architect `01a0a007-5307-72c1-b724-114c72131e1e` (Astra/high) inspected
+baseline `b54916a` and installed desktop build 26.908.40834/8881. The internal
+`Vhi` task-start helper accepts `permissionProfileId` for ordinary/worktree tasks,
+but its exposed create_thread handler omits the argument. Source-task Full Access
+and saved selections can override destination defaults; changing a project default
+alone is not a demonstrated fix. Computer Use rejected read-only Codex access:
+“Computer Use is not allowed to use the app 'com.openai.codex' for safety reasons.”
+No alternate automation mechanism was attempted. The precise missing operation is
+supported explicit pre-start profile selection through the coordinator's task
+creation interface, with effective-settings readback. Do not substitute owner clicks.
+
+The minimal proposed layout retains history in canonical docs/delivery/archive/
+and stages active work under the sibling release_radar-workers/<task-id>/ tree.
+Workers must lack access to canonical history, shared Git objects and indexes that
+recover it. Select obsolete instructions by lifecycle, authority, replacements and
+current dependencies; completed supporting evidence is not automatically obsolete.
+Keep current accepted ADRs accessible and unchanged; preserve moved bytes, stable
+IDs and catalog/reference integrity. Check current input/output use, denied history
+read/enumeration/search and Git recovery, and actual CodeGraph/host file-reading
+routes to these paths, plus deliberate coordinator retrieval. These paths and tests
+are proposed, not created, moved or executed. No new runtime manager is required.
+
+The read-only checkpoint produced no files or temporary artifacts. Its result is
+preserved here; the completed task is archived and its monitor is paused. Real migration/configuration,
+application catalog acceptance and new probes remain unexecuted. The owner task
+creation interface gap must be resolved before releasing a migration writer.
+Existing dirty proposal/catalog/index rows and prior fixtures remain untouched.
 
 **Outcome 3 architecture assessment is complete; runtime implementation remains unopened.**
 The [reviewed proposal](../design/outcome3-runtime-enforcement-assessment.md)
@@ -287,6 +309,12 @@ prior release checkpoints, review outcomes and task closeouts are preserved in
 the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#september-12-release-and-integration-checkpoints).
 
 ## Next eligible work
+
+Resolve supported coordinator task creation with explicit pre-start profile
+selection and effective-settings readback. The simple workspace implementation is
+blocked on that operation; no owner task creation or selector babysitting is the
+proposed workaround. Earlier broad architectural alternatives below are not the
+owner-selected next step.
 
 Outcome 2 and the approved exact V1 adoption patch are complete locally. Installed
 capability and fresh-review skill selection are verified to the limits above.
