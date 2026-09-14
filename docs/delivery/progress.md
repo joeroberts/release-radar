@@ -48,6 +48,21 @@ No settings, files or test fixtures changed; no bypass or retry occurred. The
 restricted coordinator remains available and unarchived. This changed-source test
 exposes an approval-policy gate before the inheritance hypothesis can be evaluated.
 
+**Approval-prompt correction authorized:** the owner directed the coordinator to
+apply `on-request` and rerun the daisy chain. Chief
+`01a0a048-221f-7f50-b051-de09934a5f59` completed the narrow pre-change check.
+The single-key repository `.codex/config.toml` now sets `approval_policy =
+"on-request"`; TOML/readback passed. This affects trusted sessions loading the
+Release Radar project layer, not global defaults. The named restricted profile is
+unchanged. Its next turn still supplied effective `never`, confirmed by session
+metadata and the coordinator's report; the launch was not repeated under an unchanged
+runtime gate. The installed file therefore does not activate on-request for this
+existing desktop task. A supported task-policy update/reload is still needed; the
+available task tools expose no such control and the UI denial remains in force.
+The chief task is archived; independent review of the exact file addition is pending.
+The existing brief contains the exact authorized test scope. No temporary files or
+child test task were created by this attempt.
+
 **Remaining blocker:** the supported `create_thread` interface has no permission
 profile parameter or effective-settings selection/readback operation. Available
 tool discovery found no replacement; the fresh worker actually started Full Access.

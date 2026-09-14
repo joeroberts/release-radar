@@ -109,3 +109,25 @@ No app persistence/schema change; configuration selection compatibility is the n
 risk. Restore the old single path grant only under explicit recovery direction.
 Local scoped documentation commits are authorized. No push, PR, merge, release,
 installation, deletion, SQLite, binding or application catalog acceptance.
+
+## Authorized approval-prompt test — September 14
+
+After the restricted coordinator's child launch failed under `approval_policy =
+"never"`, the owner authorized changing approval behavior to `on-request` and
+retrying the same daisy chain. Chief `01a0a048-221f-7f50-b051-de09934a5f59`
+confirmed the supported bounded next test. The canonical coordinator owns the
+single-key `.codex/config.toml` addition: `approval_policy = "on-request"`.
+This is a trusted Release Radar repository default, not a per-task override;
+other sessions loading this repository layer may inherit it. Global configuration,
+named permission profiles, filesystem/network grants and autoapproval are unchanged.
+
+Check TOML/readback, then ask existing restricted coordinator
+`01a0a03e-8a7e-7c03-983b-42a5aab0c239` to retry the single child-launch test.
+Main must not launch that child. Read effective turn policy; a retained `never`
+override is a blocker, not permission to bypass it. If a prompt appears, await its
+actual approval. If a child starts, test the previously authorized harmless
+workspace read/write, canonical README read, archive enumeration and Git availability
+with contents suppressed. No real history migration or other mutations. One fresh
+independent review covers the exact config addition and direct results. Local commit
+is authorized; no publication or changes to other project defaults. This supersedes
+only the prior prohibition on this exact repository approval-default change.
