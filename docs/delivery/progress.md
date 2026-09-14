@@ -2,6 +2,20 @@
 
 ## Current outcome
 
+The owner-authorized **current-document workspace pilot is complete**. The
+[result](evidence/2026-09-13-current-document-workspace-pilot.md) records selected
+current inputs, deliberate historical retrieval, direct source preservation and
+independent review. One omitted consumer-compatibility requirement was corrected;
+final review has no findings. Both peers used the verified named desktop profile.
+Accepted ADRs, configuration and existing fixtures remain unchanged. This proves
+the bounded document-selection/handoff route, not complete historical-access or
+role isolation. Exposed non-shell tools and blocked skill/Perl dependencies remain
+explicit limits; no broader implementation or application operation is opened.
+
+Delivery `01a09d80-ca12-7213-a1fb-6388962b3af2` (Sol/high) and independent reviewer
+`01a09d80-ccc0-7b71-8b8e-abb2ac05187e` (Astra/high) are stopped and archived. Experimental files remain retained. Pre-existing broad
+proposal changes remain unapproved and excluded from the pilot source and commit.
+
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
 records the bounded scope and owner evidence. Operative rules now make accepted
