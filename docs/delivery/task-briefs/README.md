@@ -70,6 +70,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-12-release-0.1.13](2026-09-12-release-0.1.13) — leaf; Owner-authorized local packaging, tag and installation for Release Radar 0.1.13
 - [delivery.task-briefs.2026-09-13-current-document-workspace-pilot](2026-09-13-current-document-workspace-pilot) — leaf; Owner-authorized bounded current-document workspace pilot
 - [delivery.task-briefs.2026-09-13-operative-authority-reconciliation](2026-09-13-operative-authority-reconciliation) — leaf; Bounded reconciliation of operative documentation authority
+- [delivery.task-briefs.2026-09-14-outcome2-current-specifications](2026-09-14-outcome2-current-specifications) — leaf; Outcome 2 current specifications and routine reading paths; progress determines authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -832,6 +833,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-operative-authority-reconciliation-brief-2026-09-13 | [docs/delivery/task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md](2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-14-outcome2-current-specifications
+
+- Path: [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications](2026-09-14-outcome2-current-specifications)
+- Purpose: Outcome 2 current specifications and routine reading paths; progress determines authorization
+- Allowed contents: Controlling task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-outcome2-current-specifications-brief-2026-09-14](2026-09-14-outcome2-current-specifications/brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-outcome2-current-specifications-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md](2026-09-14-outcome2-current-specifications/brief.md) | document | controlling &#40;delivery.outcome2-current-specifications&#41; | active | none | none |
 
 ### Children
 

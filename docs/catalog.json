@@ -864,7 +864,24 @@
       "isLeaf": true,
       "firstRead": "rr-current-document-workspace-pilot-brief-2026-09-13",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-14-outcome2-current-specifications",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Outcome 2 current specifications and routine reading paths; progress determines authorization",
+      "allowedContents": [
+        "Controlling task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-outcome2-current-specifications-brief-2026-09-14",
+      "archiveDestination": "delivery.archive"
     }
+
   ],
   "artifacts": [
     {
@@ -6868,6 +6885,23 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-outcome2-current-specifications-brief-2026-09-14",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome2-current-specifications/brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.outcome2-current-specifications",
+      "parentCollection": "delivery.task-briefs.2026-09-14-outcome2-current-specifications",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
+
   ]
 }

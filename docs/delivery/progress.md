@@ -2,6 +2,8 @@
 
 ## Current outcome
 
+**Outcome 2 is owner-authorized and active.** The [current brief](task-briefs/2026-09-14-outcome2-current-specifications/brief.md) records complete scope, separate delivery/review ownership, direct evaluations and local-only endpoint. The coordinator monitors progress, resolves routine blockers and owns this ledger. Outcome 3 runtime changes remain unopened.
+
 The chief-architect isolation assessment is complete. The owner approved retaining
 native desktop tasks, the desktop's local App Server and named permission profiles.
 The unresolved capability is an enforced per-task allowlist covering every exposed
