@@ -2,6 +2,14 @@
 
 ## Current outcome
 
+**Outcome 3 runtime-enforcement assessment is owner-approved and active.** The
+[current brief](task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md)
+opens a fresh chief-architect assessment and independent candidate review. Resolve
+the supported native-desktop connection, first-turn permissions, all-tool boundaries,
+project/profile lifecycle and complete macOS delivery. Produce one concrete proposal
+or exact unsupported controls. Runtime implementation/configuration and changes to
+accepted ADRs remain unopened; the coordinator owns follow-through and integration.
+
 **Exact Shared Execution v1 adoption is complete and locally integrated at `065f8b3`.**
 The [completed brief](task-briefs/2026-09-14-shared-execution-v1-adoption/brief.md)
 authorized the exact 19-line AGENTS.md addition. Existing clauses and accepted ADRs
