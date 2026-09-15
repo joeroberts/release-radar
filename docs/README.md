@@ -21,6 +21,70 @@ follow the local [task-brief](delivery/task-briefs/README.md),
 that record as attributed provenance only; return to the current route above for
 present requirements and authorization.
 
+## Native developer setup
+
+This records the owner-confirmed host setup reported by Main on September 15,
+2026. It does not grant configuration or release authority. The catalog has no
+separate active developer/build guide; this existing entry point owns the
+reusable setup, while the [release evidence](delivery/evidence/2026-09-15-release-0.1.17-packaging.md)
+records verification and the [ledger](delivery/progress.md) records current state.
+
+The confirmed `rr-project-restricted` filesystem profile keeps root denial and
+minimal read access, with read access to `/Applications/Xcode.app`,
+`/Library/Developer`, `/System/Library` and `/opt/homebrew`; write access to
+`:tmpdir`, the assigned worktree and `~/Library/Caches/org.swift.swiftpm`.
+Existing narrow Git, credential and workspace permissions remain in force.
+No opaque system Clang-cache write grant is part of this setup.
+
+When updating the Codex TOML setup, replace the existing table rather than
+appending another table with the same name. Main removed only the second
+identical `:workspace_roots` table after the duplicate prevented task delivery;
+full parser/readback validation passed and permissions were unchanged by that
+deduplication. Start a fresh task turn after configuration changes and verify
+effective access before retrying a previously denied operation.
+
+Main's fresh readback confirmed zero `SWIFTPM_MODULECACHE_OVERRIDE` entries in
+the owner's `.zshrc`. Keep this setting per build/worktree. An interactive shell
+startup export using `$PWD` captures the directory at export time and does not
+follow later `cd` commands; it is unsuitable for automation. Do not source the
+owner's startup file to prepare a build. Owner-reported cache-directory creation
+has not been independently verified; retain any existing cache pending scoped
+cleanup.
+
+For an authorized native build, first enter the intended worktree and create its
+cache. `env` below exports absolute paths for that build's child processes:
+
+```sh
+cd /absolute/path/to/release_radar-worktree &&
+mkdir -p "$PWD/.build/swiftpm-module-cache" "$PWD/.build/tmp" &&
+env \
+  PATH=/Applications/Xcode.app/Contents/Developer/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin \
+  TMPDIR="$PWD/.build/tmp" \
+  SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/swiftpm-module-cache" \
+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_OPTIONAL_LOCKS=0 \
+  GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper \
+  GIT_CONFIG_VALUE_0='!/opt/homebrew/Cellar/gh/2.96.0/bin/gh auth git-credential' \
+  /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild \
+  -project ReleaseRadar.xcodeproj -scheme ReleaseRadar \
+  -destination platform=macOS -derivedDataPath "$PWD/DerivedData" \
+  SWIFT_MODULE_CACHE_PATH="$PWD/.build/swiftpm-module-cache" \
+  CLANG_MODULE_CACHE_PATH="$PWD/.build/swiftpm-module-cache" build
+```
+
+Use the authorized focused test filters and a fresh result path for test runs;
+local release staging uses the existing `script/build_and_run.sh` workflow with
+the same explicit environment. The `gh` path above is the verified local
+installation and uses its existing login without persistent Git configuration.
+Verify tool paths on another host.
+
+`SWIFTPM_MODULECACHE_OVERRIDE` is an unadvertised compatibility hook implemented
+by the [Swift 6.3.3 manifest loader](https://raw.githubusercontent.com/swiftlang/swift-package-manager/swift-6.3.3-RELEASE/Sources/PackageLoading/ManifestLoader.swift).
+Its task-local Swift module-file creation was verified here; this does not
+guarantee future toolchain compatibility or a green native build. App build
+settings alone did not redirect the manifest compiler cache, and the public
+`-packageCachePath` attempt did not relocate its `.dia` output. Recheck behavior
+after toolchain updates. Installation remains on hold in the current ledger.
+
 <!-- release-radar-docs:v1:start -->
 
 ## Collection: docs

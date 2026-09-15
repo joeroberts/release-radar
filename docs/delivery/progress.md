@@ -6,7 +6,7 @@ The owner merged [PR #59](https://github.com/joeroberts/release-radar/pull/59) i
 `main` at `2f73623`, [PR #60](https://github.com/joeroberts/release-radar/pull/60)
 into the Outcome 2 branch at `ac6c440`, [PR #61](https://github.com/joeroberts/release-radar/pull/61)
 into the V1 branch at `7defed8`, and corrective [PR #62](https://github.com/joeroberts/release-radar/pull/62)
-into `main` at current remote baseline `f4e77542`. Outcome 2 specifications, Shared
+into `main` at historical integration `f4e77542`. Outcome 2 specifications, Shared
 Execution V1 guidance, and the Outcome 3 assessment are integrated into remote
 `main`. The [preserved assessment](../design/outcome3-runtime-enforcement-assessment.md)
 records the remaining native attachment, pre-turn admission, and persistent
@@ -19,16 +19,28 @@ Restricted provisions named branches and worktrees, then launches read-write
 only against candidates and roots assigned by Main. Neither coordinator merges
 `main`; all work uses a named branch.
 
-The prior documentation correction `7544700` was delivered through
-[PR #63](https://github.com/joeroberts/release-radar/pull/63), which is merged into
-`main`; the current remote-main baseline `56320b3` includes it. Its native
-documentation check and independent review passed. The current four-document
-specification correction is complete locally at `f33661d`: the native
-documentation check and `git diff --check` passed, and independent review
-approved the correction with no remaining documentation findings. It remains
-branch/worktree-only; no push, PR, or merge is authorized. Hardened
-descriptor-relative/no-follow installed-cache traversal remains unimplemented as
-recorded in the [plugin lifecycle design](../design/release-radar-codex-plugin-lifecycle-design.md#lifecycle-boundary).
+The documentation corrections are integrated through
+[PR #63](https://github.com/joeroberts/release-radar/pull/63) and
+[PR #64](https://github.com/joeroberts/release-radar/pull/64). The installed-cache
+containment security fix is merged through
+[PR #65](https://github.com/joeroberts/release-radar/pull/65), release baseline
+`89dfc85ad330a30a2ae48d09c7e5252a44ac5111`. Main reported its independent review
+and focused native containment tests complete. This restores the helper-local
+cache boundary; it does not implement the separate Outcome 3 runtime-enforcement
+assessment. Canonical-main state and unrelated work are outside this writer's
+ownership and were not changed.
+
+The local release candidate is **0.1.17 (1)** on
+`codex/cache-containment-patch-release`, controlled by the
+[release brief](task-briefs/2026-09-15-release-0.1.17/brief.md). The active assignment
+is documentation-only: record the confirmed native setup, correct release
+records, run documentation checks and commit the scoped correction for Main's
+existing release reviewer. Native readiness is pending a fresh check under
+Main's final toolchain/profile readback. Zero release-version tests executed;
+no 0.1.17 package or tag is complete. **Installation is on hold** on the owner's
+later instruction; the last verified installed version is **0.1.16 (1)**. The
+[candidate evidence](evidence/2026-09-15-release-0.1.17-packaging.md) distinguishes
+proven cache routing from unverified native/package readiness.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -66,6 +78,18 @@ records review limitations and disk recovery. No app release was required.
 Current coordination is tracking closeout; no new product implementation is open.
 
 ## Current authorization
+
+Main released the exact worktree
+`/Users/jroberts/.codex/worktrees/d7aa/release_radar` and named release branch
+from the committed PR #65 baseline for consistent 0.1.17 metadata and local
+release delivery. The current bounded assignment is documentation-only, with
+native builds, configuration, `.zshrc`, governing-file and build-logic edits
+excluded. It includes the existing developer entry point, brief/evidence/ledger,
+documentation checks and a scoped local documentation commit. Main arranges
+correction review through existing reviewer `01a0a48a`. Installation is suspended
+by the owner's later hold, which overrides earlier standing delivery language;
+review alone does not clear it. No push, tag push, PR, merge, public release,
+notarization, app launch, database, binding or catalog acceptance is authorized.
 
 Outcome 3 assessment work is complete. It does not authorize a local or remote
 `main` merge, runtime implementation, configuration, application state, or
@@ -110,6 +134,25 @@ remains sequenced after Phase 6H. Proposed guided-setup label 6I does not silent
 add another dependency. No live reconstruction is authorized.
 
 ## Verification and remaining limitations
+
+For the 0.1.17 metadata candidate, direct static version/digest assertions,
+repository-native documentation checking and `git diff --check` passed.
+Main reported static metadata candidate `73ee4aa` review PASS with no findings
+from reviewer `01a0a48a`; that review remains terminal. Focused native attempts
+executed zero tests. Task-local Swift module creation and effective SwiftPM cache
+writes were verified. Main's final toolchain/profile readback and confirmed
+`.zshrc` global-export removal are documented in
+[Native developer setup](../README.md#native-developer-setup); owner-reported
+cache-directory creation remains unverified. The last native sandbox-profile
+failure predates that readback and does not establish present readiness.
+No build runs in this documentation-only assignment. Fresh native verification,
+signed-package checks and package review remain outstanding; installation is
+on hold. The documentation correction is pending Main's existing reviewer.
+Its native documentation check, `git diff --check` and recipe shell-syntax check
+passed without running the recipe or a build. Existing catalog identities,
+paths, lifecycle and index sections remain unchanged.
+The catalog remains pending application acceptance; no managed application
+readback or synchronization is claimed.
 
 Authority-reconciliation candidate
 `f39aae7cf9a2bdfd4adedcd96b1ef73f64014572` passed the repository-native
@@ -167,6 +210,14 @@ prior release checkpoints, review outcomes and task closeouts are preserved in
 the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#september-12-release-and-integration-checkpoints).
 
 ## Next eligible work
+
+Main's existing release reviewer reviews the bounded setup/record correction.
+Then resume authorized native verification in a fresh turn with the confirmed
+profile and explicit per-worktree cache environment; do not infer a current
+sandbox-profile blocker from the older attempt. Complete focused release tests,
+signed 0.1.17 package verification and independent package review. Installation
+remains on hold until explicit owner resume. Existing 0.1.16 installation and
+rollback DMGs remain preserved. Outcome 3 is not reopened.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner
