@@ -3,6 +3,15 @@
 Main authorized this release on September 15, 2026 under the standing local
 release workflow. Current state remains in [progress](../../progress.md).
 
+Current assignment is documentation-only: record the owner-confirmed native
+setup in [the existing developer entry point](../../../README.md#native-developer-setup),
+correct this brief/evidence/ledger, run documentation checks and make a scoped
+local documentation commit. Main arranges correction review through release
+reviewer `01a0a48a`. No native builds, configuration/startup-file edits or build
+logic changes are released by this assignment. **Installation is on hold** on
+the owner's later instruction; prior standing delivery language below does not
+clear that hold.
+
 ## Objective, scope and dependencies
 
 Package the independently reviewed installed-cache containment fix merged in
@@ -19,7 +28,8 @@ tests is required absent a concrete behavior change.
 
 Single release writer: Sol/high, branch `codex/cache-containment-patch-release`,
 root `/Users/jroberts/.codex/worktrees/d7aa/release_radar`, exact baseline above.
-Main owns independent-review dispatch and releases installation after review.
+Main owns independent-review dispatch; installation requires an explicit owner
+resume after the hold and the required independent review.
 Escalation ceiling remains the assigned profile; request only concrete runtime
 permission gates. Use direct Xcode Git with command-local disabled global/system
 configuration and optional locks, and worktree-local command-scoped temporary
