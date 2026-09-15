@@ -33,8 +33,8 @@ ownership and were not changed.
 The active local release candidate is **0.1.17 (1)** on
 `codex/cache-containment-patch-release`, controlled by the
 [release brief](task-briefs/2026-09-15-release-0.1.17/brief.md). Packaging is blocked
-by the native Xcode runtime's denied CoreSimulator framework access, including
-one supported escalation attempt. Zero release-version tests executed; no
+by the native Xcode runtime's denied DVTDownloads framework access after the
+owner's narrow CoreSimulator read-permission addition. Zero release-version tests executed; no
 0.1.17 package, tag or installation is complete. The
 [candidate evidence](evidence/2026-09-15-release-0.1.17-packaging.md) records the
 exact limitation. The installed version remains **0.1.16 (1)**.
@@ -132,9 +132,14 @@ add another dependency. No live reconstruction is authorized.
 
 For the active 0.1.17 candidate, direct static version/digest assertions,
 repository-native documentation checking and `git diff --check` passed.
-Focused Xcode tests did not execute because required framework access remained
-blocked after one supported escalation. New package/signature/installed-identity
-verification and fresh independent release review remain outstanding. The
+Focused Xcode tests did not execute: after one supported escalation and the
+owner's narrow CoreSimulator read-permission addition, the changed-condition
+retry stopped at the next denied dependency,
+`/Library/Developer/PrivateFrameworks/DVTDownloads.framework/Versions/A/DVTDownloads`.
+Main reported static metadata candidate `73ee4aa` review PASS with no findings
+from reviewer `01a0a48a`. That review remains terminal. New
+package/signature/installed-identity verification and independent package review
+remain outstanding. The
 catalog/index candidate is repository-valid and pending application acceptance;
 no managed application readback or synchronization is claimed.
 
