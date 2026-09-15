@@ -33,13 +33,16 @@ ownership and were not changed.
 Release metadata **0.1.17 (1)** was recorded by [PR #66](https://github.com/joeroberts/release-radar/pull/66)
 at `ef012b68`. [PR #67](https://github.com/joeroberts/release-radar/pull/67) merged
 the corrected release record at `7172df9`; its durable evidence is
-`62fa8d0`. The active assignment is owner-authorized 0.1.17 packaging and Git distribution
-by the designated BuildAgent under the [release brief](task-briefs/2026-09-15-release-0.1.17/brief.md). The signed 0.1.17 package and matching Downloads copy are directly verified;
-independent package review and Git publication remain pending. No 0.1.17 tag
-is complete, and **installation remains on hold** on the
-owner's later instruction; the last verified installed version is **0.1.16
-(1)**. The [candidate evidence](evidence/2026-09-15-release-0.1.17-packaging.md)
-records the Release build, signatures, mounted payload and installer checksums.
+`62fa8d0`. The owner-authorized 0.1.17 packaging and Git-distribution outcome is
+complete through [PR #69](https://github.com/joeroberts/release-radar/pull/69),
+open against `main`. The signed DMG and matching Downloads copy passed direct
+verification and independent RO04 review. Published annotated tag `v0.1.17`
+points to reviewed artifact commit `430e891244cef931bdc55293fa6d6967b1c0570e`;
+publication-record follow-ups do not rebuild the artifact. **Installation remains
+on hold**; last verified installed version is **0.1.16 (1)**. The
+[package evidence](evidence/2026-09-15-release-0.1.17-packaging.md) records source
+provenance, package identity, checks, review and publication. Main retains PR
+merge/installation coordination; no further BuildAgent action is active.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -136,9 +139,9 @@ existing staging script: exit 0, strict signing/entitlements and source/staged
 identity passed. Read-only APFS DMG payload verification passed; repository and
 Downloads copies match SHA-256 `68bc6da35ff75a23fde777bd8beb67a3802eb2a205da260459a51fbb0ab58c5b`.
 All 46 built/staged/mounted entries match. Zero XCTest ran under the explicit
-no-app-launch boundary. Independent RO04 package review and publication are pending;
+no-app-launch boundary. Independent RO04 review passed exact artifact commit
+`430e8912` with no findings; branch, normal PR #69 and annotated tag are published;
 see the [package evidence](evidence/2026-09-15-release-0.1.17-packaging.md).
-
 
 BuildAgent task `01a0a51a-43e5-7a62-8571-519dfc7e57d7` ran an incremental DEBUG
 build at `ef012b68`: exit `0`, `BUILD SUCCEEDED`, succeeded xcresult, zero
@@ -213,9 +216,9 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Obtain independent review of the directly verified package candidate, then
-publish the authorized branch/PR and annotated version tag. The existing version XCTest is app-hosted and cannot run within the
-no-launch boundary; report direct checks and zero XCTest execution explicitly.
+Owner review/merge of PR #69 is next; no main merge is authorized for BuildAgent.
+Packaging and Git distribution are complete. Zero XCTest ran under the no-launch
+boundary; direct package checks and independent review are recorded.
 Installation remains on hold until an explicit owner resume. Outcome 3 is not reopened.
 
 Inspect the current application binding/catalog status without changing it, then

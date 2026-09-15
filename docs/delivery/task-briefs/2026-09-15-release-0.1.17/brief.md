@@ -1,9 +1,9 @@
-# Release Radar 0.1.17 local release
+# Release Radar 0.1.17 package and Git delivery — completed
 
 Main authorized this release on September 15, 2026 under the standing local
 release workflow. Current state remains in [progress](../../progress.md).
 
-Current assignment: the owner explicitly authorized the designated BuildAgent to
+Completed scope: the owner explicitly authorized the designated BuildAgent to
 build and verify 0.1.17, persist the DMG in Git and Downloads, and publish its
 branch through a normal PR plus an annotated version tag after independent
 package review. **Installation remains on hold.** App launch, notarization,
@@ -63,3 +63,11 @@ overwrite an installer. Installation, app launch, main merge, GitHub Release,
 notarization, database access, binding, catalog acceptance and configuration
 changes remain excluded. Repository/package checks do not establish application
 synchronization. No version bump beyond the existing 0.1.17 (1) is authorized.
+
+## Outcome
+
+Direct package checks and independent RO04 review passed reviewed artifact commit
+`430e891244cef931bdc55293fa6d6967b1c0570e`. Annotated `v0.1.17` points to that
+commit; the branch is published through [PR #69](https://github.com/joeroberts/release-radar/pull/69).
+The matching Downloads installer is verified. Installation remains on hold.
+Current state belongs to the ledger; this completed brief is non-authoritative.
