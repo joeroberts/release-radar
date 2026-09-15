@@ -111,6 +111,7 @@
 | rr-toolbar-bookmark-wide-2026-09-12 | [docs/delivery/evidence/2026-09-12-toolbar-bookmark-wide.png](evidence/2026-09-12-toolbar-bookmark-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-current-document-workspace-pilot-result-2026-09-13 | [docs/delivery/evidence/2026-09-13-current-document-workspace-pilot.md](evidence/2026-09-13-current-document-workspace-pilot.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-release-0.1.17-packaging-2026-09-15 | [docs/delivery/evidence/2026-09-15-release-0.1.17-packaging.md](evidence/2026-09-15-release-0.1.17-packaging.md) | verificationEvidence | nonAuthoritative | completed | none | none |
+| rr-release-0.1.18-packaging-2026-09-15 | [docs/delivery/evidence/2026-09-15-release-0.1.18-packaging.md](evidence/2026-09-15-release-0.1.18-packaging.md) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-compact-2026-09-07 | [docs/delivery/evidence/c4-relocation-compact.png](evidence/c4-relocation-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-relocation-wide-2026-09-07 | [docs/delivery/evidence/c4-relocation-wide.png](evidence/c4-relocation-wide.png) | verificationEvidence | nonAuthoritative | completed | none | none |
 | rr-c4-worktree-recovery-compact-2026-09-07 | [docs/delivery/evidence/c4-worktree-recovery-compact.png](evidence/c4-worktree-recovery-compact.png) | verificationEvidence | nonAuthoritative | completed | none | none |

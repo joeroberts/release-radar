@@ -217,8 +217,9 @@ boundary.
 
 The helper:
 
-- is separately signed with Hardened Runtime and deliberately has no App
-  Sandbox entitlement;
+- is separately signed with Hardened Runtime and remains inside App Sandbox,
+  with only the minimum local exceptions accepted in ADR-002's August 28
+  implementation amendment;
 - has no app-group, Keychain, folder-bookmark, network, SQLite, or
   `ReleaseRadarCore` access;
 - is registered as a same-user `SMAppService` agent;
@@ -253,8 +254,11 @@ The helper:
   home paths, configuration contents, or credentials.
 
 The production status path accepts no filesystem root. The helper-local
-`PluginDigester` anchors the `getpwuid_r` home with a no-follow directory open
-and opens each fixed cache component and targeted version separately with
+`PluginDigester` anchors the `getpwuid_r` home with a search-only (`O_SEARCH`),
+no-follow directory open; home is traversed but never enumerated. The signed
+helper's existing sandbox grants cache reads below `.codex`, while an `O_RDONLY`
+home open fails with `EPERM`. Each fixed cache component and targeted version
+retains its read-only directory open separately with
 `openat`. It retains descriptor and parent/name links through the snapshot,
 enumerates only within the version root, and rejects symlinks and nonregular
 entries. Harmless empty directories remain compatible with the earlier reader;
