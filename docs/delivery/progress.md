@@ -23,9 +23,12 @@ The prior documentation correction `7544700` was delivered through
 [PR #63](https://github.com/joeroberts/release-radar/pull/63), which is merged into
 `main`; the current remote-main baseline `56320b3` includes it. Its native
 documentation check and independent review passed. The current four-document
-specification correction is authorized only in its named branch/worktree through
-a scoped local commit and independent review. No push, PR, or merge is authorized
-for that new correction.
+specification correction is complete locally at `f33661d`: the native
+documentation check and `git diff --check` passed, and independent review
+approved the correction with no remaining documentation findings. It remains
+branch/worktree-only; no push, PR, or merge is authorized. Hardened
+descriptor-relative/no-follow installed-cache traversal remains unimplemented as
+recorded in the [plugin lifecycle design](../design/release-radar-codex-plugin-lifecycle-design.md#lifecycle-boundary).
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
