@@ -880,6 +880,22 @@
       "isLeaf": true,
       "firstRead": "rr-outcome2-current-specifications-brief-2026-09-14",
       "archiveDestination": "delivery.archive"
+    },
+    {
+      "collectionID": "delivery.task-briefs.2026-09-14-outcome3-runtime-enforcement",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome3-runtime-enforcement",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Outcome 3 runtime enforcement assessment; progress controls authorization",
+      "allowedContents": [
+        "Controlling task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-outcome3-runtime-enforcement-brief-2026-09-14",
+      "archiveDestination": "delivery.archive"
     }
 
   ],
@@ -6894,6 +6910,36 @@
       "authorityLevel": "controlling",
       "authorityRole": "delivery.outcome2-current-specifications",
       "parentCollection": "delivery.task-briefs.2026-09-14-outcome2-current-specifications",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-outcome3-runtime-enforcement-brief-2026-09-14",
+      "path": "docs/delivery/task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md",
+      "kind": "document",
+      "lifecycle": "completed",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.task-briefs.2026-09-14-outcome3-runtime-enforcement",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-outcome3-runtime-enforcement-assessment-2026-09-14",
+      "path": "docs/design/outcome3-runtime-enforcement-assessment.md",
+      "kind": "document",
+      "lifecycle": "proposed",
+      "authorityLevel": "supporting",
+      "parentCollection": "design",
       "supersedes": [],
       "applicationSensitivity": [
         "none"
