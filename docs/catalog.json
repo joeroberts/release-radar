@@ -4,6 +4,17 @@
   "retiredArtifactIDs": [],
   "collections": [
     {
+      "collectionID": "delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix",
+      "path": "docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Signed helper verification regression; progress controls authorization",
+      "allowedContents": ["Controlling task brief"],
+      "prohibitedContents": ["Owner data and credentials", "Temporary build output"],
+      "isLeaf": true,
+      "firstRead": "rr-plugin-verification-sandbox-fix-brief-2026-09-15",
+      "archiveDestination": "delivery.archive"
+    },
+    {
       "collectionID": "delivery.task-briefs.2026-09-15-release-0.1.17",
       "path": "docs/delivery/task-briefs/2026-09-15-release-0.1.17",
       "parentCollection": "delivery.task-briefs",
@@ -927,6 +938,18 @@
 
   ],
   "artifacts": [
+    {
+      "artifactID": "rr-plugin-verification-sandbox-fix-brief-2026-09-15",
+      "path": "docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.plugin-verification-sandbox-fix",
+      "parentCollection": "delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix",
+      "supersedes": [],
+      "applicationSensitivity": ["none"],
+      "checksum": {"policy": "notApplicable"}
+    },
     {
       "artifactID": "rr-installed-plugin-cache-containment-brief-2026-09-15",
       "path": "docs/delivery/task-briefs/2026-09-15-installed-plugin-cache-containment/brief.md",

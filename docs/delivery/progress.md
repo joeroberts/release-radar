@@ -2,6 +2,43 @@
 
 ## Current outcome
 
+Main opened the owner-approved signed-helper verification regression fix on
+`codex/plugin-verification-sandbox-fix` from merged 0.1.17 baseline
+`328f27372ea0904f7eaedc97a983b96ce0e05523`, exact writer root
+`/Users/jroberts/.codex/worktrees/118f/release_radar`. The
+[controlling brief](task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md)
+records source/tests/docs ownership and security limits. Main/BuildAgent reproduced
+the signed baseline home read-open failure (`EPERM`) and confirmed a search-only
+home descriptor can open the granted `.codex` child. The unchanged reader executed
+twelve native tests: eleven passed, and the traversal-only-home regression failed
+with `integrityUnknown`. The minimal correction now uses `O_SEARCH` only for the
+home anchor and preserves descendant read opens and all no-follow/identity checks.
+The corrected actual reader passed all twelve native methods. BuildAgent's signed
+probe read exactly the four recognized 0.1.17 package files, completed snapshot
+validation and matched the previously verified package digest while the old home
+read-open diagnostic still failed. Final documentation validation and Main/RO04
+independent code/security review remain pending.
+Main reported installed 0.1.17 helper bytes matching the packaged source
+and repeated `integrityUnknown`; this writer has not touched live state.
+
+BuildAgent exclusively owns native build/sign/test execution and probe scratch.
+The writer owns source/tests/docs and scoped local commits; Main/RO04 assigns the
+independent code/security review. After passing checks and review, BuildAgent owns
+the authorized 0.1.18 package/DMG, push/PR and annotated tag endpoint.
+**Installation remains on hold.** No live helper registration/restart/reinstall,
+app launch, owner plugin write, main merge or application/catalog state mutation
+is authorized. The repository catalog transition remains pending app acceptance.
+
+Preflight is clean at the assigned baseline and existing branch attached. The
+restricted profile denies installed skill-file reads; repository local fallbacks
+apply. CodeGraph reports no usable index despite `.codegraph/` being present;
+targeted current-source inspection supplies navigation. Task readback confirms
+the root but exposes no actual model/effort settings. Native GREEN and the isolated
+signed runtime recheck passed; installed-helper replacement and the real reinstall
+journey remain untested under the state-preservation boundary. Next eligible
+action is final serialized documentation validation and the scoped candidate
+commit for Main/RO04 review.
+
 The owner merged [PR #59](https://github.com/joeroberts/release-radar/pull/59) into
 `main` at `2f73623`, [PR #60](https://github.com/joeroberts/release-radar/pull/60)
 into the Outcome 2 branch at `ac6c440`, [PR #61](https://github.com/joeroberts/release-radar/pull/61)

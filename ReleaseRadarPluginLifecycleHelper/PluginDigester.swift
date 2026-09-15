@@ -151,14 +151,17 @@ enum PluginDigester {
         }
 
         func openHome(_ home: URL) throws -> Int32 {
-            try openDirectory(home.path, parent: nil, relative: "home")
+            // Home is a traversal anchor; the sandbox grants reads only below .codex.
+            try openDirectory(home.path, parent: nil, relative: "home", accessMode: O_SEARCH)
         }
 
-        func openDirectory(_ name: String, parent: Int32?, relative: String) throws -> Int32 {
+        func openDirectory(
+            _ name: String, parent: Int32?, relative: String, accessMode: Int32 = O_RDONLY
+        ) throws -> Int32 {
             let before = try entry(name, parent: parent)
             guard before.type == S_IFDIR else { throw LifecycleError.integrityInvalid }
             try testEvent?(.willOpenDirectory(relative))
-            let flags = O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
+            let flags = accessMode | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
             let descriptor = parent.map { openat($0, name, flags) } ?? open(name, flags)
             guard descriptor >= 0 else { throw failure() }
             do {

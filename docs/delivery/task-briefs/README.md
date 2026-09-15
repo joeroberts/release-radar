@@ -73,6 +73,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-14-outcome2-current-specifications](2026-09-14-outcome2-current-specifications) — leaf; Outcome 2 current specifications and routine reading paths; progress determines authorization
 - [delivery.task-briefs.2026-09-14-outcome3-runtime-enforcement](2026-09-14-outcome3-runtime-enforcement) — leaf; Outcome 3 runtime enforcement assessment; progress controls authorization
 - [delivery.task-briefs.2026-09-15-installed-plugin-cache-containment](2026-09-15-installed-plugin-cache-containment) — leaf; Installed plugin cache containment; progress controls authorization
+- [delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix](2026-09-15-plugin-verification-sandbox-fix) — leaf; Signed helper verification regression; progress controls authorization
 - [delivery.task-briefs.2026-09-15-release-0.1.17](2026-09-15-release-0.1.17) — leaf; Local 0.1.17 release; progress controls authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
@@ -896,6 +897,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-installed-plugin-cache-containment-brief-2026-09-15 | [docs/delivery/task-briefs/2026-09-15-installed-plugin-cache-containment/brief.md](2026-09-15-installed-plugin-cache-containment/brief.md) | document | controlling &#40;delivery.installed-plugin-cache-containment&#41; | active | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix
+
+- Path: [docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix](2026-09-15-plugin-verification-sandbox-fix)
+- Purpose: Signed helper verification regression; progress controls authorization
+- Allowed contents: Controlling task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-plugin-verification-sandbox-fix-brief-2026-09-15](2026-09-15-plugin-verification-sandbox-fix/brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-plugin-verification-sandbox-fix-brief-2026-09-15 | [docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md](2026-09-15-plugin-verification-sandbox-fix/brief.md) | document | controlling &#40;delivery.plugin-verification-sandbox-fix&#41; | active | none | none |
 
 ### Children
 

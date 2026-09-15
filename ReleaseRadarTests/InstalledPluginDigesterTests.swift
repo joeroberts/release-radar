@@ -48,6 +48,60 @@ final class InstalledPluginDigesterTests: XCTestCase {
         }
     }
 
+    func testTraversalOnlyHomeRetainsBothFrozenDigests() throws {
+        for current in [false, true] {
+            let f = try fixture(current: current)
+            XCTAssertEqual(chmod(f.home.path, 0o111), 0)
+            defer { _ = chmod(f.home.path, 0o700) }
+            let package = try PluginDigester.installedPackage(home: f.home, version: version)
+            XCTAssertEqual(package.version, version)
+            XCTAssertEqual(package.digest, current ? currentDigest : legacyDigest)
+        }
+    }
+
+    func testHomeReplacementBeforeOpenAndAfterAnchorIsRejected() throws {
+        for current in [false, true] {
+            for beforeOpen in [false, true] {
+                for restore in [false, true] {
+                    let f = try fixture(current: current)
+                    let scratch = f.home.deletingLastPathComponent().appendingPathComponent(UUID().uuidString)
+                    try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+                    addTeardownBlock { try FileManager.default.removeItem(at: scratch) }
+                    let alternate = scratch.appendingPathComponent("alternate")
+                    let parked = scratch.appendingPathComponent("parked")
+                    try FileManager.default.copyItem(at: f.home, to: alternate)
+                    var ran = false
+                    var reads = 0
+                    invalid {
+                        _ = try PluginDigester.installedPackage(home: f.home, version: version) { event in
+                            if case .readChunk = event { reads += 1 }
+                            let trigger: PluginDigester.SnapshotEvent = beforeOpen
+                                ? .willOpenDirectory("home") : .openedDirectory("home")
+                            guard event == trigger, !ran else { return }
+                            ran = true
+                            try FileManager.default.moveItem(at: f.home, to: parked)
+                            if beforeOpen {
+                                try FileManager.default.createSymbolicLink(at: f.home, withDestinationURL: alternate)
+                            } else {
+                                try FileManager.default.moveItem(at: alternate, to: f.home)
+                            }
+                            if restore {
+                                if beforeOpen {
+                                    try FileManager.default.removeItem(at: f.home)
+                                } else {
+                                    try FileManager.default.moveItem(at: f.home, to: alternate)
+                                }
+                                try FileManager.default.moveItem(at: parked, to: f.home)
+                            }
+                        }
+                    }
+                    XCTAssertTrue(ran)
+                    if beforeOpen { XCTAssertEqual(reads, 0, "Reject changed home before package reads") }
+                }
+            }
+        }
+    }
+
     func testSymlinkedFixedComponentsCannotReadExternalPackages() throws {
         for current in [false, true] {
             for index in fixed.indices {
