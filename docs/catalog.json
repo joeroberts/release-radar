@@ -4,6 +4,22 @@
   "retiredArtifactIDs": [],
   "collections": [
     {
+      "collectionID": "delivery.task-briefs.2026-09-15-release-0.1.17",
+      "path": "docs/delivery/task-briefs/2026-09-15-release-0.1.17",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Local 0.1.17 release; progress controls authorization",
+      "allowedContents": [
+        "Controlling release brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-release-0.1.17-brief-2026-09-15",
+      "archiveDestination": "delivery.archive"
+    },
+    {
       "collectionID": "delivery.task-briefs.2026-09-15-installed-plugin-cache-containment",
       "path": "docs/delivery/task-briefs/2026-09-15-installed-plugin-cache-containment",
       "parentCollection": "delivery.task-briefs",
@@ -6970,7 +6986,37 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "rr-release-0.1.17-brief-2026-09-15",
+      "path": "docs/delivery/task-briefs/2026-09-15-release-0.1.17/brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.release-0.1.17",
+      "parentCollection": "delivery.task-briefs.2026-09-15-release-0.1.17",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-release-0.1.17-packaging-2026-09-15",
+      "path": "docs/delivery/evidence/2026-09-15-release-0.1.17-packaging.md",
+      "kind": "verificationEvidence",
+      "lifecycle": "active",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.evidence",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
-
   ]
 }

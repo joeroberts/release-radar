@@ -27,6 +27,8 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
                   sharedExecutionStandardVersions: [1]),
             .init(manifestVersion: "0.1.16", normalizedPackageDigest: addProjectRDSReleaseDigest,
                   sharedExecutionStandardVersions: [1]),
+            .init(manifestVersion: "0.1.17", normalizedPackageDigest: "94d7c1c3c506e3b62f7710e7e84df8ad4fc671b9029d06b1f0369b2882230a07",
+                  sharedExecutionStandardVersions: [1]),
         ])
         XCTAssertEqual(
             RecognizedPluginCapability.recognize(
@@ -96,7 +98,7 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.16")
+        XCTAssertEqual(package.version, "0.1.17")
         XCTAssertEqual(package.relativeFiles, [
             ".codex-plugin/plugin.json",
             ".mcp.json",
