@@ -2,23 +2,28 @@
 
 ## Current outcome
 
-The exact Shared Execution V1 draft remains [PR #60](https://github.com/joeroberts/release-radar/pull/60) at reviewed SHA
-`5dcea14c4a11570d67c8e2f1eb16bd8f1680f4f3`, stacked on PR #59. The Outcome 3
-assessment is being isolated on `codex/outcome3-assessment` as proposed supporting
-documentation only; no runtime implementation, main merge, or remote change is
-authorized.
+The owner merged [PR #59](https://github.com/joeroberts/release-radar/pull/59) into
+`main` at `2f73623`, [PR #60](https://github.com/joeroberts/release-radar/pull/60)
+into the Outcome 2 branch at `ac6c440`, [PR #61](https://github.com/joeroberts/release-radar/pull/61)
+into the V1 branch at `7defed8`, and corrective [PR #62](https://github.com/joeroberts/release-radar/pull/62)
+into `main` at current remote baseline `f4e77542`. Outcome 2 specifications, Shared
+Execution V1 guidance, and the Outcome 3 assessment are integrated into remote
+`main`. The [preserved assessment](../design/outcome3-runtime-enforcement-assessment.md)
+records the remaining native attachment, pre-turn admission, and persistent
+all-tool enforcement gaps. Runtime implementation remains unopened and requires
+separate owner authorization.
 
-The preserved [Outcome 3 assessment](../design/outcome3-runtime-enforcement-assessment.md)
-retains its original provenance and limitations: chief-architect corrections
-`be30175` and `77def74`, followed by independent reviewer
-`01a09fe2-e4cb-7772-8682-f299d8923713`. Its native attachment, pre-turn admission,
-and persistent all-tool enforcement gaps remain unestablished.
-Reviewed candidate `22317ae23f7075ce2f8e887940ae0d538f310acc` was approved by
-independent reviewer `01a0a25e-a330-7423-95f7-9e9a302a2783` with no remaining
-Required findings. The historical-authority clarification is resolved; native
-documentation and `git diff` checks passed. `codex/outcome3-assessment` remains
-local only pending the owner's publication decision. Writer and reviewer work are
-complete; Main will archive the completed bounded tasks after durable closeout.
+Main is the sole delegator to the standing Restricted and RO04 coordinators.
+Restricted provisions named branches and worktrees, then launches read-write
+`rr-project-restricted` workers. RO04 launches `rr-project-ro` independent reviewers
+only against candidates and roots assigned by Main. Neither coordinator merges
+`main`; all work uses a named branch.
+
+The current documentation correction on `codex/coordinator-docs-current` is locally
+committed at `3d0de4c`. The native documentation check and independent review task
+`01a0a303-474d-7bf1-9f32-4a576220bfc3` passed; no publication or `main` merge is
+authorized for this correction. The completed writer and reviewer tasks are to be
+archived on closeout.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -28,9 +33,9 @@ and reconcile the bounded authority wording for ADR-006 and the
 usable-project-lifecycle brief without changing their catalog classifications or
 any ADR bytes. Publication is tracked in
 [PR #58](https://github.com/joeroberts/release-radar/pull/58); GitHub is the source
-for its live review and merge state. Outcome 2's delivered specifications are in
-draft PR #59; Outcome 3 is only the proposed assessment isolated locally on
-`codex/outcome3-assessment`.
+for its live review and merge state. Outcome 2's delivered specifications, Shared
+Execution V1 guidance, and Outcome 3's assessment are integrated into `main`;
+Outcome 3 runtime implementation remains unopened.
 
 The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
@@ -57,9 +62,9 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
-Outcome 3 authorization is limited to this branch-only preservation candidate and
-its independent review. It does not authorize a local or remote `main` merge,
-runtime implementation, configuration, application state, or publication.
+Outcome 3 assessment work is complete. It does not authorize a local or remote
+`main` merge, runtime implementation, configuration, application state, or
+publication.
 
 The following paragraph records historical Outcome 1 operative-authority
 reconciliation authorization only; it does not authorize present actions. The
