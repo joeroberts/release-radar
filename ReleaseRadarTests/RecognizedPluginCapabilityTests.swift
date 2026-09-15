@@ -117,14 +117,11 @@ final class RecognizedPluginCapabilityTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let source = try String(
-            contentsOf: repositoryRoot.appendingPathComponent("ReleaseRadarPluginLifecycleHelper/main.swift"),
+            contentsOf: repositoryRoot.appendingPathComponent("ReleaseRadarPluginLifecycleHelper/PluginDigester.swift"),
             encoding: .utf8
         )
-        let start = try XCTUnwrap(source.range(of: "private enum PluginDigester"))
-        let end = try XCTUnwrap(
-            source.range(of: "\nprivate extension Int", range: start.upperBound..<source.endIndex)
-        )
-        let digester = String(source[start.lowerBound..<end.lowerBound])
+        let start = try XCTUnwrap(source.range(of: "enum PluginDigester"))
+        let digester = String(source[start.lowerBound...])
 
         XCTAssertTrue(digester.contains(
             #"private static let legacyFiles = [".codex-plugin/plugin.json", ".mcp.json", "skills/release-radar/SKILL.md"]"#

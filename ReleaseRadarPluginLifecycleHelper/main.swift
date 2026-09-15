@@ -22,12 +22,6 @@ private func currentExecutableURL() -> URL {
     return URL(fileURLWithPath: String(cString: buffer)).standardizedFileURL
 }
 
-private enum LifecycleError: String, Codable, Error {
-    case codexUnavailable, codexUntrusted, unauthorizedPeer, marketplaceConflict
-    case malformedResult, outputOverflow, timeout, integrityInvalid, integrityUnknown
-    case postconditionFailed, partialReinstall
-}
-
 private enum ObservedState: Codable, Equatable {
     case absent
     case clean(version: String, digest: String)
@@ -857,85 +851,6 @@ private final class OutputCapture: @unchecked Sendable {
                 if exceeded { return }
             }
         }
-    }
-}
-
-private enum PluginDigester {
-    struct Package { let version: String; let digest: String }
-    private static let legacyFiles = [".codex-plugin/plugin.json", ".mcp.json", "skills/release-radar/SKILL.md"]
-    private static let files = legacyFiles + ["skills/shared-execution/SKILL.md"]
-
-    static func marketplacePackage(at root: URL) throws -> Package {
-        let plugin = root.appendingPathComponent("plugins/release-radar", isDirectory: true)
-        return try package(at: plugin, expectedVersion: nil)
-    }
-
-    static func installedPackage(home: URL, version: String) throws -> Package {
-        guard isStrictSemVer(version) else { throw LifecycleError.integrityInvalid }
-        let root = home.appendingPathComponent(".codex/plugins/cache/release-radar/release-radar", isDirectory: true)
-            .appendingPathComponent(version, isDirectory: true)
-        return try package(at: root, expectedVersion: version)
-    }
-
-    static func isStrictSemVer(_ version: String) -> Bool {
-        version.utf8.count <= 128
-            && version.range(of: #"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"#, options: .regularExpression) != nil
-    }
-
-    private static func package(at root: URL, expectedVersion: String?) throws -> Package {
-        var inventory: [String] = []
-        guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey]) else {
-            throw LifecycleError.integrityInvalid
-        }
-        while let url = enumerator.nextObject() as? URL {
-            let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey])
-            if values.isSymbolicLink == true { throw LifecycleError.integrityInvalid }
-            if values.isDirectory == true { continue }
-            guard values.isRegularFile == true else { throw LifecycleError.integrityInvalid }
-            inventory.append(String(url.path.dropFirst(root.path.count + 1)))
-        }
-        let packageFiles: [String]
-        if inventory.sorted() == files.sorted() {
-            packageFiles = files
-        } else if inventory.sorted() == legacyFiles.sorted() {
-            packageFiles = legacyFiles
-        } else {
-            throw LifecycleError.integrityInvalid
-        }
-        let manifestData = try stableFile(root.appendingPathComponent(".codex-plugin/plugin.json"))
-        guard let manifest = try? JSONSerialization.jsonObject(with: manifestData) as? [String: Any],
-              manifest["name"] as? String == "release-radar", let version = manifest["version"] as? String,
-              isStrictSemVer(version), expectedVersion == nil || version == expectedVersion else {
-            throw LifecycleError.integrityInvalid
-        }
-        let mcpData = try stableFile(root.appendingPathComponent(".mcp.json"))
-        guard let mcp = try? JSONSerialization.jsonObject(with: mcpData) as? [String: Any],
-              mcp.count == 1, let server = mcp["release_radar"] as? [String: Any],
-              server["command"] is String, (server["args"] as? [Any])?.isEmpty == true else {
-            throw LifecycleError.integrityInvalid
-        }
-        var hasher = SHA256()
-        for relative in packageFiles.sorted(by: { $0.utf8.lexicographicallyPrecedes($1.utf8) }) {
-            let data = try stableFile(root.appendingPathComponent(relative))
-            hasher.update(data: Data(relative.utf8)); hasher.update(data: Data([0]))
-            var count = UInt64(data.count).bigEndian
-            withUnsafeBytes(of: &count) { hasher.update(data: Data($0)) }
-            hasher.update(data: data)
-        }
-        return Package(version: version, digest: hasher.finalize().map { String(format: "%02x", $0) }.joined())
-    }
-
-    private static func stableFile(_ url: URL) throws -> Data {
-        var before = stat(), after = stat()
-        guard lstat(url.path, &before) == 0, (before.st_mode & S_IFMT) == S_IFREG,
-              let data = try? Data(contentsOf: url), lstat(url.path, &after) == 0,
-              before.st_dev == after.st_dev, before.st_ino == after.st_ino,
-              before.st_size == after.st_size,
-              before.st_mtimespec.tv_sec == after.st_mtimespec.tv_sec,
-              before.st_mtimespec.tv_nsec == after.st_mtimespec.tv_nsec else {
-            throw LifecycleError.integrityInvalid
-        }
-        return data
     }
 }
 

@@ -72,6 +72,7 @@ briefs that were accepted or cited as controlling during delivery.
 - [delivery.task-briefs.2026-09-13-operative-authority-reconciliation](2026-09-13-operative-authority-reconciliation) — leaf; Bounded reconciliation of operative documentation authority
 - [delivery.task-briefs.2026-09-14-outcome2-current-specifications](2026-09-14-outcome2-current-specifications) — leaf; Outcome 2 current specifications and routine reading paths; progress determines authorization
 - [delivery.task-briefs.2026-09-14-outcome3-runtime-enforcement](2026-09-14-outcome3-runtime-enforcement) — leaf; Outcome 3 runtime enforcement assessment; progress controls authorization
+- [delivery.task-briefs.2026-09-15-installed-plugin-cache-containment](2026-09-15-installed-plugin-cache-containment) — leaf; Installed plugin cache containment; progress controls authorization
 
 ## Leaf collection: delivery.task-briefs.2026-08-23-release-radar-mvp
 
@@ -874,6 +875,26 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-outcome3-runtime-enforcement-brief-2026-09-14 | [docs/delivery/task-briefs/2026-09-14-outcome3-runtime-enforcement/brief.md](2026-09-14-outcome3-runtime-enforcement/brief.md) | document | nonAuthoritative | completed | none | none |
+
+### Children
+
+Leaf: no child collections.
+
+## Leaf collection: delivery.task-briefs.2026-09-15-installed-plugin-cache-containment
+
+- Path: [docs/delivery/task-briefs/2026-09-15-installed-plugin-cache-containment](2026-09-15-installed-plugin-cache-containment)
+- Purpose: Installed plugin cache containment; progress controls authorization
+- Allowed contents: Controlling task brief
+- Prohibited contents: Owner data and credentials; Temporary build output
+- First read: [rr-installed-plugin-cache-containment-brief-2026-09-15](2026-09-15-installed-plugin-cache-containment/brief.md)
+- Archive destination: [delivery.archive](../archive)
+- Historical boundary: archived artifacts are non-authoritative.
+
+### Artifacts
+
+| ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
+| --- | --- | --- | --- | --- | --- | --- |
+| rr-installed-plugin-cache-containment-brief-2026-09-15 | [docs/delivery/task-briefs/2026-09-15-installed-plugin-cache-containment/brief.md](2026-09-15-installed-plugin-cache-containment/brief.md) | document | controlling &#40;delivery.installed-plugin-cache-containment&#41; | active | none | none |
 
 ### Children
 
