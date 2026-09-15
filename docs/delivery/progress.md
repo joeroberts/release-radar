@@ -13,9 +13,12 @@ retains its original provenance and limitations: chief-architect corrections
 `be30175` and `77def74`, followed by independent reviewer
 `01a09fe2-e4cb-7772-8682-f299d8923713`. Its native attachment, pre-turn admission,
 and persistent all-tool enforcement gaps remain unestablished.
-Original candidate `6e45c86b38b983009928d2ff6170dfe3069cbd1f` received independent review and
-requires this bounded authority clarification; the corrected candidate is not yet
-approved.
+Reviewed candidate `22317ae23f7075ce2f8e887940ae0d538f310acc` was approved by
+independent reviewer `01a0a25e-a330-7423-95f7-9e9a302a2783` with no remaining
+Required findings. The historical-authority clarification is resolved; native
+documentation and `git diff` checks passed. `codex/outcome3-assessment` remains
+local only pending the owner's publication decision. Writer and reviewer work are
+complete; Main will archive the completed bounded tasks after durable closeout.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
