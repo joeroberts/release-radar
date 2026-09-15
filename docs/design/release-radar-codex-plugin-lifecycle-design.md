@@ -252,16 +252,29 @@ The helper:
 - returns normalized status or error categories and never raw command output,
   home paths, configuration contents, or credentials.
 
-The production status path accepts no filesystem root. Its implemented
-installed-cache reader supplies the `getpwuid_r` home and targeted CLI version,
-constructs URLs, enumerates the package with `FileManager`, and performs
-before/after `lstat` checks on each file read. Those pathname-based checks support
-the inventory and changed-file classification, but are not descriptor-relative
-traversal and must not be described as equivalent to no-follow containment.
-The descriptor-relative/no-follow rule above remains a security requirement that
-is not established by the current installed-cache implementation or its tests;
-any claim of hardened cache traversal requires a dedicated implementation and
-verification.
+The production status path accepts no filesystem root. The helper-local
+`PluginDigester` anchors the `getpwuid_r` home with a no-follow directory open
+and opens each fixed cache component and targeted version separately with
+`openat`. It retains descriptor and parent/name links through the snapshot,
+enumerates only within the version root, and rejects symlinks and nonregular
+entries. Harmless empty directories remain compatible with the earlier reader;
+only the recognized three-file or four-file regular-file inventory is read.
+Included files use no-follow, nonblocking opens and are checked against their
+entry metadata before reading. Each file is read once, and retained bytes supply
+both validation and the unchanged normalized digest. Handle and entry identity,
+mode, size, modification/change times and directory entries are checked before
+returning. The signed-resource marketplace reader retains its prior behavior.
+
+The [dedicated containment brief](../delivery/task-briefs/2026-09-15-installed-plugin-cache-containment/brief.md)
+requires native synthetic tests of the actual helper reader and independent
+code/security review. On September 15, 2026 the actual reader compiled with
+Swift 6 and all ten native synthetic XCTest methods passed with no failures or
+exceptions, using a worktree-local temporary directory. Main reported no Required
+findings from the independent static review of the implementation candidate;
+review of the bounded test temporary-path correction remains part of closeout.
+These repository checks do not establish installed helper behavior or application
+catalog acceptance. No owner cache or installed application state is accessed by
+the synthetic checks.
 
 The XPC listener accepts only the same effective user and the signed Release
 Radar application identity. The helper exposes no MCP, STDIO, URL, network, or
