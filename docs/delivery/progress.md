@@ -33,11 +33,16 @@ ownership and were not changed.
 Release metadata **0.1.17 (1)** was recorded by [PR #66](https://github.com/joeroberts/release-radar/pull/66)
 at `ef012b68`. [PR #67](https://github.com/joeroberts/release-radar/pull/67) merged
 the corrected release record at `7172df9`; its durable evidence is
-`62fa8d0`. The active assignment is this bounded ledger closeout only. No
-0.1.17 package or tag is complete, and **installation remains on hold** on the
-owner's later instruction; the last verified installed version is **0.1.16
-(1)**. The [candidate evidence](evidence/2026-09-15-release-0.1.17-packaging.md)
-distinguishes proven cache routing from unverified package readiness.
+`62fa8d0`. The owner-authorized 0.1.17 packaging and Git-distribution outcome is
+complete through [PR #69](https://github.com/joeroberts/release-radar/pull/69),
+open against `main`. The signed DMG and matching Downloads copy passed direct
+verification and independent RO04 review. Published annotated tag `v0.1.17`
+points to reviewed artifact commit `430e891244cef931bdc55293fa6d6967b1c0570e`;
+publication-record follow-ups do not rebuild the artifact. **Installation remains
+on hold**; last verified installed version is **0.1.16 (1)**. The
+[package evidence](evidence/2026-09-15-release-0.1.17-packaging.md) records source
+provenance, package identity, checks, review and publication. Main retains PR
+merge/installation coordination; no further BuildAgent action is active.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -76,13 +81,14 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
-Main authorized this branch-local ledger correction only. It excludes native
-builds and tests, package preparation, configuration, governing files,
-application state, SQLite, binding or catalog acceptance, pushes, PRs, merges,
-tags, publication, notarization, launch, and installation. The earlier PR #67
-worker and its independent reviewer are archived; the former PR #66 `d7aa`
-worktree is removed. Installation remains suspended by the owner's later hold;
-review does not clear it.
+The owner explicitly authorized BuildAgent to build and verify 0.1.17 (1),
+commit the versioned DMG and delivery records, copy the verified installer to
+Downloads, and publish the package branch through a normal PR plus an annotated
+`v0.1.17` tag after Main's independent RO04 package review. Work is isolated on
+`codex/release-0.1.17-package` from `b8a21539383dedbce9d6b6f9844849f7568203d5`.
+BuildAgent owns this scoped ledger update. Installation remains on hold; app
+launch, notarization, GitHub Release creation, main merge, configuration and
+application/catalog state changes remain excluded. Existing installers stay intact.
 
 Outcome 3 assessment work is complete. It does not authorize a local or remote
 `main` merge, runtime implementation, configuration, application state, or
@@ -127,6 +133,15 @@ remains sequenced after Phase 6H. Proposed guided-setup label 6I does not silent
 add another dependency. No live reconstruction is authorized.
 
 ## Verification and remaining limitations
+
+BuildAgent built the native Release package from clean source `0670e7a` using the
+existing staging script: exit 0, strict signing/entitlements and source/staged
+identity passed. Read-only APFS DMG payload verification passed; repository and
+Downloads copies match SHA-256 `68bc6da35ff75a23fde777bd8beb67a3802eb2a205da260459a51fbb0ab58c5b`.
+All 46 built/staged/mounted entries match. Zero XCTest ran under the explicit
+no-app-launch boundary. Independent RO04 review passed exact artifact commit
+`430e8912` with no findings; branch, normal PR #69 and annotated tag are published;
+see the [package evidence](evidence/2026-09-15-release-0.1.17-packaging.md).
 
 BuildAgent task `01a0a51a-43e5-7a62-8571-519dfc7e57d7` ran an incremental DEBUG
 build at `ef012b68`: exit `0`, `BUILD SUCCEEDED`, succeeded xcresult, zero
@@ -201,11 +216,10 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Package preparation is the next release step only after relevant owner
-authorization; this ledger correction grants none. Any later package work must
-complete its applicable release checks and independent package review.
-Installation remains on hold until an explicit owner resume. Existing 0.1.16
-installation and rollback DMGs remain preserved. Outcome 3 is not reopened.
+Owner review/merge of PR #69 is next; no main merge is authorized for BuildAgent.
+Packaging and Git distribution are complete. Zero XCTest ran under the no-launch
+boundary; direct package checks and independent review are recorded.
+Installation remains on hold until an explicit owner resume. Outcome 3 is not reopened.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner

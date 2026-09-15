@@ -915,7 +915,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-release-0.1.17-brief-2026-09-15 | [docs/delivery/task-briefs/2026-09-15-release-0.1.17/brief.md](2026-09-15-release-0.1.17/brief.md) | document | controlling &#40;delivery.release-0.1.17&#41; | active | none | none |
+| rr-release-0.1.17-brief-2026-09-15 | [docs/delivery/task-briefs/2026-09-15-release-0.1.17/brief.md](2026-09-15-release-0.1.17/brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

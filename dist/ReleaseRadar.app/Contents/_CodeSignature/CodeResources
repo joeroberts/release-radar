@@ -18,7 +18,7 @@
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.codex-plugin/plugin.json</key>
 		<data>
-		7HiFRgRdn0TdNmp3xyd4hnBaL0Q=
+		R82icBFaBPubnDafsKcaDOE1FzE=
 		</data>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
 		<data>
@@ -34,11 +34,11 @@
 		</data>
 		<key>Resources/ReleaseRadarBridgeAgent</key>
 		<data>
-		1ci+rJ95QbyKP4pwAMJhTQn+A2c=
+		6SX6iFgOJJlQgYNyJSU6RImenNY=
 		</data>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<data>
-		mENqEAHQkOgcgYyZTaGwuMCCaaM=
+		xYiTQQQXeUCTBJG7gpnmssEHz5g=
 		</data>
 		<key>Resources/catalog-v1.md</key>
 		<data>
@@ -51,7 +51,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			RsNVc/MV1k8E3H17j+BaLPCEnFc=
+			79TZsmyXnXunDp1zBEmln+9gVF0=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarCore" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -60,7 +60,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			bKB+fhq+5VI2J2gw+mVAxeES1wg=
+			jswNj60bjSXY+Vg5TnsPRH8/ITg=
 			</data>
 			<key>requirement</key>
 			<string>identifier "com.rekonlabs.ReleaseRadarAgentTools" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -69,7 +69,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			9D0qS3zs76MfE7Ts4xwm1/XlkRA=
+			Cd6bJMQVlZEo+lDIcfMm49MePac=
 			</data>
 			<key>requirement</key>
 			<string>identifier ReleaseRadarDocumentationTool and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: jaroberts4@gmail.com (PT7GS96H3L)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -113,7 +113,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			W/wfSpJ93yBLwC4Cp2dPJeWrDLsSqx8BJ7h+yc2ozDY=
+			JXuKQYOfPiI7vhTq5WBL9dnkOmyfPYGJGEC3te4RSoE=
 			</data>
 		</dict>
 		<key>Resources/CodexPluginMarketplace/plugins/release-radar/.mcp.json</key>
@@ -141,14 +141,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			NL3kYhy1Fq0ITEV0PCRoPgImnicD2lk/UB8AWbMOlc8=
+			kXvAngnBu7PFKa/NAA0QtZsAzyBM8xmn5QLPwMqUq7U=
 			</data>
 		</dict>
 		<key>Resources/ReleaseRadarPluginLifecycleHelper</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			S/VBo13XYsRrKraTo/DsRKTsXmHydc88oEvgyJTCeYk=
+			Z3VE1DzzCBmeuPAXNYUcC+XR9Zl9ZdYZVZMzm622gbw=
 			</data>
 		</dict>
 		<key>Resources/catalog-v1.md</key>
