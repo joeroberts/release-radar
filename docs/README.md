@@ -55,8 +55,8 @@ For an authorized native build, first enter the intended worktree and create its
 cache. `env` below exports absolute paths for that build's child processes:
 
 ```sh
-cd /absolute/path/to/release_radar-worktree
-mkdir -p "$PWD/.build/swiftpm-module-cache" "$PWD/.build/tmp"
+cd /absolute/path/to/release_radar-worktree &&
+mkdir -p "$PWD/.build/swiftpm-module-cache" "$PWD/.build/tmp" &&
 env \
   PATH=/Applications/Xcode.app/Contents/Developer/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin \
   TMPDIR="$PWD/.build/tmp" \
