@@ -379,21 +379,20 @@ ADR-005 supersedes only its own earlier Ticket Tasks archive assumption; it
 does not implement the older Delivery Goals helper described by ADR-004 unless
 and until a real production exporter boundary exists.
 
-## Current delivery baseline
+## Historical delivery checkpoint (2026-09-02)
 
-Tasks 1A/1B/2A/2B/3/4A and MDCP are delivered. The existing owner store is
-schema v13 with managed documentation enabled; the v11/v12 definitions below
-remain the accepted foundation, not a future installation target. Current
-execution authorization and remaining work are recorded in
-`docs/delivery/progress.md`. Task 4B remains the next feature checkpoint.
+The September 2 MDCP record reported an owner store at schema v13 with managed
+documentation enabled. That is historical provenance, not fresh owner-schema
+evidence. The source migration target is now schema v26, but source definitions
+do not establish the schema of a live owner store; an actual schema assertion
+requires a newly authorized application readback.
 
-The implementation plan's post-MDCP conditions apply to remaining work:
-preserve the 19 current tools (21 after Task 4B, 24 after Task 8), existing
-result/inventory and receipt encodings, importer authorization and managed
-artifact identities, and evidence presentation during UI changes. Development
-checks isolate shared macOS bridge effects as well as the database. ADR-007
-supersedes older all-role review/hash ceremony for unopened work. Task 5's
-explicit owner UI acceptance and final owner acceptance remain required.
+Tasks 1A/1B/2A/2B/3/4A, MDCP, and Task 4B implementation and acceptance are
+complete historical checkpoints. The v11/v12 definitions below remain accepted
+foundation, not a future installation target. Current execution authorization,
+delivery status, and next eligible work are controlled solely by
+`docs/delivery/progress.md`; this design does not promote a historical Task 4B
+or Task 5 instruction into current marching orders.
 
 ## Historical planning-package handoff (completed)
 

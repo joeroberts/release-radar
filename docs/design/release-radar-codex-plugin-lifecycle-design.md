@@ -240,10 +240,12 @@ The helper:
   SemVer value (`major.minor.patch` with optional valid prerelease/build
   identifiers), with no empty identifier, `/`, NUL, `.` or `..` component;
 - opens each fixed directory component relative to the previously verified
-  directory descriptor with no-follow semantics, and reads only
-  `.codex-plugin/plugin.json`, `.mcp.json`, and
-  `skills/release-radar/SKILL.md`; each file must remain the same regular file
-  across the complete read before its bytes enter the deterministic digest;
+  directory descriptor with no-follow semantics, and recognizes only either the
+  historical three-file inventory (`.codex-plugin/plugin.json`, `.mcp.json`, and
+  `skills/release-radar/SKILL.md`) or the current four-file Shared Execution V1
+  inventory, which additionally contains `skills/shared-execution/SKILL.md`;
+  each included file must remain the same regular file across the complete read
+  before its bytes enter the deterministic digest;
 - never writes Codex configuration or cache directly and never reads Codex
   configuration, another plugin, or any other cache path;
 - returns normalized status or error categories and never raw command output,
@@ -287,11 +289,16 @@ The UI derives one of these presentation states:
 | Needs repair | Cache, manifest, marketplace, or receipt state is inconsistent | Reinstall, primary; Remove, secondary destructive |
 | Failed | Codex/helper/status operation failed | Try Again, primary |
 
-Installed integrity classification is exact:
+Installed integrity classification is exact. The bundled current package and
+manifest are version 0.1.16 and use the four-file Shared Execution V1 inventory.
+The earlier 0.1.5 three-file handoff remains a historical compatible inventory,
+not the current package shape. Marketplace-manifest validity is checked
+separately; the package digest covers only plugin-relative inventory files.
 
-- `clean(version:digest:)` requires the exact three-file inventory, three
-  stable regular files, valid plugin manifest and MCP JSON, matching
-  `release-radar` identity and targeted version, and the recognized digest;
+- `clean(version:digest:)` requires exactly one recognized inventory (the legacy
+  three-file or current four-file shape), stable regular files, valid plugin
+  manifest and MCP JSON, matching `release-radar` identity and targeted version,
+  and the recognized digest;
 - `modified(version:observedDigest:)` requires that same valid, stable shape but
   a different digest. A one-byte skill edit or a syntactically valid changed MCP
   command is Modified and its bytes are preserved;

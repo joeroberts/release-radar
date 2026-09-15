@@ -107,9 +107,14 @@ The SQLite database has four distinct record groups:
 | Operational audit | App | Every agent delivery update and observed meaningful runtime change, attributed to its originating Codex thread when available. |
 | Notification history | App | Pushover event fingerprint, attempted/sent/failed state, provider receipt when returned, acknowledgement, and related ticket/goal. |
 
-The app validates only data integrity: valid project and ticket references,
-project-bound thread links, dependency acyclicity, and atomic audit creation.
-It does not impose delivery gates or reserve Accepted for a manual app action.
+The app validates data integrity and app-owned delivery gates: valid project and
+ticket references, project-bound thread links, dependency acyclicity, and atomic
+audit creation. A ticket may move from Backlog to In progress only when its phase
+plan is Ready at its current revision, its assigned goal is actionable, and its
+dependencies are satisfied. A ticket Accepted transition invokes the current
+ticket-task plan gate, which rejects incomplete plans or a stale expected revision.
+Delivery Goal acceptance additionally requires eligible obligation coverage and
+available evidence.
 
 Observed Codex state is display context, not an implicit delivery transition.
 For example, a ticket may remain In progress while its linked goal is shown as
@@ -127,10 +132,12 @@ Agents receive local actions to:
 - resolve or dismiss an import-review item.
 
 Each action includes an explanatory reason, executes transactionally, and
-produces an audit event. Invalid references, cross-project links, or dependency
-cycles fail clearly and make no partial update. Agents may make any delivery
-transition, including Accepted, after obtaining owner validation through the
-normal Codex conversation.
+produces an audit event. Invalid references, cross-project links, dependency
+cycles, or unmet delivery gates fail clearly and make no partial update. Agent
+ticket transitions use the app-owned policies above; they do not rely on observed
+Codex state or conversation text to satisfy a gate. The app accepts only an
+owner-app-originated transition when recording Delivery Goal acceptance; that
+origin requirement does not apply to ordinary agent ticket transitions.
 
 ## Onboarding
 
