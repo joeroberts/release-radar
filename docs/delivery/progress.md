@@ -34,11 +34,12 @@ Release metadata **0.1.17 (1)** was recorded by [PR #66](https://github.com/joer
 at `ef012b68`. [PR #67](https://github.com/joeroberts/release-radar/pull/67) merged
 the corrected release record at `7172df9`; its durable evidence is
 `62fa8d0`. The active assignment is owner-authorized 0.1.17 packaging and Git distribution
-by the designated BuildAgent under the [release brief](task-briefs/2026-09-15-release-0.1.17/brief.md). No
-0.1.17 package or tag is complete, and **installation remains on hold** on the
+by the designated BuildAgent under the [release brief](task-briefs/2026-09-15-release-0.1.17/brief.md). The signed 0.1.17 package and matching Downloads copy are directly verified;
+independent package review and Git publication remain pending. No 0.1.17 tag
+is complete, and **installation remains on hold** on the
 owner's later instruction; the last verified installed version is **0.1.16
 (1)**. The [candidate evidence](evidence/2026-09-15-release-0.1.17-packaging.md)
-distinguishes proven cache routing from unverified package readiness.
+records the Release build, signatures, mounted payload and installer checksums.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -130,6 +131,15 @@ add another dependency. No live reconstruction is authorized.
 
 ## Verification and remaining limitations
 
+BuildAgent built the native Release package from clean source `0670e7a` using the
+existing staging script: exit 0, strict signing/entitlements and source/staged
+identity passed. Read-only APFS DMG payload verification passed; repository and
+Downloads copies match SHA-256 `68bc6da35ff75a23fde777bd8beb67a3802eb2a205da260459a51fbb0ab58c5b`.
+All 46 built/staged/mounted entries match. Zero XCTest ran under the explicit
+no-app-launch boundary. Independent RO04 package review and publication are pending;
+see the [package evidence](evidence/2026-09-15-release-0.1.17-packaging.md).
+
+
 BuildAgent task `01a0a51a-43e5-7a62-8571-519dfc7e57d7` ran an incremental DEBUG
 build at `ef012b68`: exit `0`, `BUILD SUCCEEDED`, succeeded xcresult, zero
 errors, one warning, signed Core not stripped, analyzer `0`, and arm64. It used
@@ -203,9 +213,8 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Complete the authorized native Release package, direct non-launch identity/signing
-and DMG checks, and independent package review, then publish the branch/PR and
-version tag. The existing version XCTest is app-hosted and cannot run within the
+Obtain independent review of the directly verified package candidate, then
+publish the authorized branch/PR and annotated version tag. The existing version XCTest is app-hosted and cannot run within the
 no-launch boundary; report direct checks and zero XCTest execution explicitly.
 Installation remains on hold until an explicit owner resume. Outcome 3 is not reopened.
 
