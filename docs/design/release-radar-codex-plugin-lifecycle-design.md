@@ -239,22 +239,29 @@ The helper:
   one path component of at most 128 ASCII characters and must be a strict
   SemVer value (`major.minor.patch` with optional valid prerelease/build
   identifiers), with no empty identifier, `/`, NUL, `.` or `..` component;
-- opens each fixed directory component relative to the previously verified
-  directory descriptor with no-follow semantics, and reads only
-  `.codex-plugin/plugin.json`, `.mcp.json`, and
-  `skills/release-radar/SKILL.md`; each file must remain the same regular file
-  across the complete read before its bytes enter the deterministic digest;
+- must, before installed-cache integrity can be represented as hardened, open
+  every fixed directory component descriptor-relatively with no-follow
+  semantics, recognize only either the historical three-file inventory
+  (`.codex-plugin/plugin.json`, `.mcp.json`, and
+  `skills/release-radar/SKILL.md`) or the current four-file Shared Execution V1
+  inventory (which additionally contains `skills/shared-execution/SKILL.md`),
+  and ensure each included file remains the same regular file throughout the
+  digest read;
 - never writes Codex configuration or cache directly and never reads Codex
   configuration, another plugin, or any other cache path;
 - returns normalized status or error categories and never raw command output,
   home paths, configuration contents, or credentials.
 
-The production status path accepts no filesystem root. An internal-only
-`InstalledPluginDigester(homeDirectory:version:)` seam permits derived cache
-fixtures in tests; production supplies only the `getpwuid_r` home and targeted
-CLI version. Descriptor-relative opening and before/after file metadata checks
-reject component replacement or a file changing while read, rather than
-canonicalizing an attacker-controlled path.
+The production status path accepts no filesystem root. Its implemented
+installed-cache reader supplies the `getpwuid_r` home and targeted CLI version,
+constructs URLs, enumerates the package with `FileManager`, and performs
+before/after `lstat` checks on each file read. Those pathname-based checks support
+the inventory and changed-file classification, but are not descriptor-relative
+traversal and must not be described as equivalent to no-follow containment.
+The descriptor-relative/no-follow rule above remains a security requirement that
+is not established by the current installed-cache implementation or its tests;
+any claim of hardened cache traversal requires a dedicated implementation and
+verification.
 
 The XPC listener accepts only the same effective user and the signed Release
 Radar application identity. The helper exposes no MCP, STDIO, URL, network, or
@@ -287,11 +294,16 @@ The UI derives one of these presentation states:
 | Needs repair | Cache, manifest, marketplace, or receipt state is inconsistent | Reinstall, primary; Remove, secondary destructive |
 | Failed | Codex/helper/status operation failed | Try Again, primary |
 
-Installed integrity classification is exact:
+Installed integrity classification is exact. The bundled current package and
+manifest are version 0.1.16 and use the four-file Shared Execution V1 inventory.
+The earlier 0.1.5 three-file handoff remains a historical compatible inventory,
+not the current package shape. Marketplace-manifest validity is checked
+separately; the package digest covers only plugin-relative inventory files.
 
-- `clean(version:digest:)` requires the exact three-file inventory, three
-  stable regular files, valid plugin manifest and MCP JSON, matching
-  `release-radar` identity and targeted version, and the recognized digest;
+- `clean(version:digest:)` requires exactly one recognized inventory (the legacy
+  three-file or current four-file shape), stable regular files, valid plugin
+  manifest and MCP JSON, matching `release-radar` identity and targeted version,
+  and the recognized digest;
 - `modified(version:observedDigest:)` requires that same valid, stable shape but
   a different digest. A one-byte skill edit or a syntactically valid changed MCP
   command is Modified and its bytes are preserved;

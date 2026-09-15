@@ -19,11 +19,16 @@ Restricted provisions named branches and worktrees, then launches read-write
 only against candidates and roots assigned by Main. Neither coordinator merges
 `main`; all work uses a named branch.
 
-The current documentation correction on `codex/coordinator-docs-current` is locally
-committed at `3d0de4c`. The native documentation check and independent review task
-`01a0a303-474d-7bf1-9f32-4a576220bfc3` passed; no publication or `main` merge is
-authorized for this correction. The completed writer and reviewer tasks are to be
-archived on closeout.
+The prior documentation correction `7544700` was delivered through
+[PR #63](https://github.com/joeroberts/release-radar/pull/63), which is merged into
+`main`; the current remote-main baseline `56320b3` includes it. Its native
+documentation check and independent review passed. The current four-document
+specification correction is complete locally at `f33661d`: the native
+documentation check and `git diff --check` passed, and independent review
+approved the correction with no remaining documentation findings. It remains
+branch/worktree-only; no push, PR, or merge is authorized. Hardened
+descriptor-relative/no-follow installed-cache traversal remains unimplemented as
+recorded in the [plugin lifecycle design](../design/release-radar-codex-plugin-lifecycle-design.md#lifecycle-boundary).
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
