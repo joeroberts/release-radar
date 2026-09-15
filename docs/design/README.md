@@ -22,6 +22,7 @@
 | 37a68186-3912-480d-a755-de5cfdfecb9f | [docs/design/cloudkit-iphone-companion-draft.md](cloudkit-iphone-companion-draft.md) | document | supporting | proposed | none | none |
 | eddbab98-7db3-48d5-9015-4e1b7fd54cdf | [docs/design/delivery-dashboard-seven-mockups.html](delivery-dashboard-seven-mockups.html) | designAsset | nonAuthoritative | completed | none | none |
 | 5790258e-3166-423e-a5b9-45cd6d8a530d | [docs/design/managed-repository-documentation-contract.md](managed-repository-documentation-contract.md) | document | controlling &#40;product.managed-documentation&#41; | active | none | none |
+| rr-outcome3-runtime-enforcement-assessment-2026-09-14 | [docs/design/outcome3-runtime-enforcement-assessment.md](outcome3-runtime-enforcement-assessment.md) | document | supporting | proposed | none | none |
 | rr-phase6-workspace-toolbar-proposal-2026-09-12 | [docs/design/phase6-workspace-toolbar-proposal.md](phase6-workspace-toolbar-proposal.md) | document | supporting | proposed | none | none |
 | 466140f5-f952-474b-8c65-aad1a1727b2e | [docs/design/release-radar-active-phase-selection-design.md](release-radar-active-phase-selection-design.md) | document | controlling &#40;product.active-phase-selection&#41; | active | none | none |
 | a428dba8-6027-43e5-91d8-5c677ef34841 | [docs/design/release-radar-codex-plugin-lifecycle-design.md](release-radar-codex-plugin-lifecycle-design.md) | document | controlling &#40;product.codex-plugin-lifecycle&#41; | active | none | none |
