@@ -3,7 +3,9 @@
 ## Current outcome
 
 The signed-helper verification fix and 0.1.18 Git delivery are complete through
-[PR #70](https://github.com/joeroberts/release-radar/pull/70), open against `main`.
+[PR #70](https://github.com/joeroberts/release-radar/pull/70), merged into `main`
+at `f7e07b88296f7ef24747f4bb7bff66ee5d6f4ba8` from PR head
+`25aa1857f40906e34192d30dc84554d7339ce23`.
 Source security review passed `a30cfea04944e84559c208b4961dca1e57079c9e`;
 independent package/version review passed exact artifact
 `4ebbf754c316ccf33e8a81a8b77f89f61a64fe1f`, both with no findings.
@@ -13,11 +15,11 @@ signed real-home boundary proof, fresh Release/signatures/metadata, isolated sig
 0.1.18 reader and mounted DMG/Downloads checks passed. See
 [0.1.18 evidence](evidence/2026-09-15-release-0.1.18-packaging.md) and the
 [completed brief](task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md).
-**Installation remains on hold.** Installed 0.1.17 identity was directly verified
-during diagnosis; the live upgrade/reinstall recovery remains untested. Main owns
-owner merge/installation coordination; BuildAgent has finished this assignment.
-Both completed source/package reviewers are archived with PASS results preserved;
-the source writer remains open until Main completes the worktree handoff.
+**Installation remains on hold.** The owner reports that 0.1.18 fixed the plugin
+failure; this closeout does not claim agent-observed live upgrade, reinstall, or
+recovery. Main owns installation coordination; BuildAgent has finished this
+assignment. The source writer and both completed source/package reviewers are
+archived with their results preserved.
 
 The owner merged [PR #59](https://github.com/joeroberts/release-radar/pull/59) into
 `main` at `2f73623`, [PR #60](https://github.com/joeroberts/release-radar/pull/60)
@@ -58,8 +60,8 @@ points to reviewed artifact commit `430e891244cef931bdc55293fa6d6967b1c0570e`;
 publication-record follow-ups do not rebuild the artifact. **Installation remains
 on hold**; last verified installed version is **0.1.17 (1)**. The
 [package evidence](evidence/2026-09-15-release-0.1.17-packaging.md) records source
-provenance, package identity, checks, review and publication. Main retains PR
-merge/installation coordination; BuildAgent now owns the 0.1.18 assignment above.
+provenance, package identity, checks, review and publication. Main retains
+installation coordination; BuildAgent's 0.1.18 assignment is complete.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -98,10 +100,11 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
-The owner explicitly authorized BuildAgent to finish 0.1.18 (1) metadata,
-signed package/Downloads delivery, tracked staged app and DMG commits, independent
-package review, branch push/normal PR and annotated version-tag push. Sole ownership
-has transferred from the source writer; exact reviewed source is `a30cfea`.
+The owner authorized the completed 0.1.18 (1) metadata, signed package/Downloads
+delivery, tracked staged app and DMG commits, independent package review, branch
+push/normal PR and annotated version-tag push. The current closeout is limited to
+recording the merged result and cleanup readback; exact reviewed source is
+`a30cfea`.
 Installation, app launch, live helper restart/reinstall/registration, owner plugin
 writes, notarization, GitHub Release, main merge and application/catalog mutations
 remain excluded. Preserve earlier installers and tags.
@@ -232,9 +235,9 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Owner review/merge of PR #70 is next. Source and package review, direct checks,
-branch/PR and annotated tag publication are complete. Installation stays
-on hold; no live recovery journey is authorized. Outcome 3 remains unopened.
+PR #70 merge, source/package review, direct checks, branch/PR and annotated tag
+publication are complete. Installation stays on hold; no live recovery journey is
+claimed by this closeout. Outcome 3 remains unopened.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner
