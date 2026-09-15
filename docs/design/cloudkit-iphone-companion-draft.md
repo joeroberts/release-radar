@@ -76,6 +76,71 @@ readback accepts a changed catalog. SQLite is not copied to the phone or opened
 from iCloud Drive. Source loss requires an explicit backup/import recovery path;
 cloud publication alone does not become a full backup or authority takeover.
 
+## Reconciled companion requirements
+
+The completed iPhone discovery is retained as historical provenance under artifact
+`rr-iphone-companion-discovery-2026-09-07`. The following applicable requirements
+now belong to this proposed design; the completed assignment is not a default input.
+
+- The first complete product has Projects plus four read-only project destinations:
+  Overview, Work, Library, and History. It represents every record/artifact class
+  supported by the publishing Mac version or names the exact unavailable, excluded,
+  unsupported, or update-required reason. It is not a dashboard-only prototype.
+- Publication uses opaque account/project-zone identity, immutable versioned items,
+  and a manifest containing schema/minimum-reader version, publisher epoch,
+  registration, generation, expected identities/bytes, and source/publication
+  times. Upload items first and activate the manifest last. An incomplete generation
+  retains only the non-withdrawn portion of the last complete compatible generation.
+- A backward-compatible withdrawal envelope is processed before generation fallback.
+  It immediately hides named records, purges their cached bytes and derived search/
+  preview state, and prevents an older generation from restoring revoked content.
+  Archive remains browsable; remove-from-tracking publishes retained attributable
+  history only; re-add uses a new registration and zone.
+- Publication is off by default per project. Mac preflight lists account, categories,
+  item count, bytes, and every exclusion/limit reason. Managed evidence requires a
+  currently resolved accepted identity; legacy evidence requires explicit per-item
+  inclusion. Publication never expands a filesystem grant.
+- Hard exclusions are source/Git/build/dependency data, absolute paths, bookmarks,
+  device root IDs, SQLite/sidecars, credentials/tokens/Keychain values, reusable
+  command authority, and content outside current authorized roots. Stable no-follow
+  reads preserve source identity through the read.
+- Proposed bounds are 256 KiB encoded non-asset payload per record, 200 records and
+  1 MiB non-asset payload per send batch, existing repository-reader bounds of 32
+  MiB per artifact and 256 MiB selected artifact bytes per project generation, and
+  a 512 MiB per-account phone content cache. A limit failure is visible and never
+  produces a falsely complete manifest. Validate these numbers against representative
+  owner corpora before implementation.
+- Keep routing metadata minimal. Project names, domain IDs, titles, descriptions,
+  document bodies, audit detail and other owner text use encrypted fields/assets;
+  search is device-local after decryption. Cache files use complete file protection,
+  are treated as recreatable, and are excluded from device backup.
+- Display source observation/commit, repository-content observation, publication,
+  device-receipt, and last-server-check times separately. Offline says cached; recent
+  upload never extends a live-agent lease. Delivery/document/evidence/history remain
+  useful when agent status is unavailable.
+- Account switch/sign-out purges the old account's phone cache before initializing
+  another and suspends Mac publication until explicit re-enable. Stop publishing,
+  user-deleted zones, encrypted-data reset, quota/partial failures, and offline
+  cleanup remain visible; deleted/purged cloud data is not silently recreated.
+- Cloud is never backup or import authority. Tracking reset must withdraw cloud data
+  or durably retain a visible cleanup obligation. Backup restore reconciles current
+  account, consent and withdrawals before advancing the publisher epoch; uncertainty
+  disables publication pending explicit republish. Phone/cloud bytes cannot restore
+  Mac authority, resume execution, or replay commands/notifications.
+- Schema evolution is additive with per-record versions and minimum reader version.
+  Unknown authoritative types are not decoded as empty. A new Mac feature extends
+  the shared publication contract in its own slice; an older phone keeps only the
+  non-withdrawn last compatible generation and says Update required.
+
+Implementation remains separately authorized and depends on complete reset/restore
+semantics, event-time history, bounded artifact-content reads, current portable-model
+coverage, and an approved iPhone/RDS presentation decision. I1 live observation is
+not a prerequisite. Direct acceptance must cover every supported record class,
+incomplete multi-batch generations, offline relaunch, account changes, lifecycle and
+withdrawal, cache purge, reset/restore epochs, quota/retry/partial failures, schema
+compatibility, encrypted-field classification, absence of mobile writes, and
+physical-device remote-change delivery.
+
 ## Proposed storage boundaries
 
 | Information | Proposed storage | Notes |
@@ -267,26 +332,14 @@ Adds authentication, hosting, operations, and data-service ownership without a
 current cross-platform or multi-user requirement. It is out of scope unless a
 future requirement cannot be met by the owner's private iCloud account.
 
-## Open questions for later discussion
+## Remaining choices before implementation
 
-1. How should publication select and version repository artifacts while preserving
-   the selected operational corpus and existing validation/acceptance states?
-2. How should document/evidence download limits and offline availability work?
-3. How should the complete companion corpus be sequenced through bounded outcomes
-   without declaring a dashboard-only prototype complete?
-4. Which Mac-side supported event source can publish truthful running, waiting,
-   approval-needed, and completed agent states?
-5. How should read-only retained history after removal appear on the phone, and
-   how should publication withdrawal and cached-content retention work? Local
-   removal retains history; phone download/retention details remain unresolved.
-6. Should CloudKit contain the complete normalized delivery graph initially, or
-   only atomic mobile status projections plus artifacts?
-7. What owner-facing recovery is required for iCloud sign-out, account changes,
-   deleted zones, quota exhaustion, or an unavailable network?
-8. Should prompts and sensitive text use encrypted CloudKit fields, accepting
-   the corresponding query and indexing limitations?
-9. Should mobile notifications or widgets be included in the first companion
-   milestone or deferred until read-only in-app status is proven?
+1. Validate the proposed item, generation, batch, and cache limits against
+   representative owner corpora while preserving fail-visible behavior.
+2. Approve the first iPhone interaction design and whether RekonDesignSystem gains
+   iOS support or a separately reviewed compatible presentation layer is used.
+3. Approve the exact offline cloud-cleanup-pending behavior for a destructive local
+   reset; neither silent retention nor a recovery deadlock is acceptable.
 
 ## Conditions before approval or implementation
 

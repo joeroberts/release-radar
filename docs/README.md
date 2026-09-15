@@ -1,5 +1,26 @@
 # Release Radar documentation
 
+## Current reading routes
+
+Start here, then follow only the route needed for the task. Catalog lifecycle is
+about document use; it does not approve product work or change delivery state.
+
+| Need | Read in order |
+| --- | --- |
+| Current authorization, active outcome, or next work | [Delivery state](delivery/progress.md), then its linked active brief |
+| Existing product behavior or a product change | [Product design index](design/README.md), the owning active design, and only the accepted ADRs it cites |
+| Managed-document change, lifecycle change, or rename | [Managed repository documentation contract](design/managed-repository-documentation-contract.md), [ADR-006](architecture/ADR-006-managed-repository-documentation-contract.md), then the current delivery state |
+| Shared Execution V1 compatibility or adoption diagnosis | [Shared Execution Integration V1](design/shared-execution-integration-v1-design.md), then the consumer's own instructions and delivery state. V1 source delivery does not prove installation, runtime loading, or adoption. |
+| Proposed whole-product or companion work | [Full-product plan](delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md) and the linked proposed design. Read each section's approval qualification; proposal inclusion is not implementation authority. |
+
+Completed assignments, evidence, and archive records are not default specification
+inputs. When a named historical fact is needed, locate the exact stable artifact ID
+or path in [the catalog](catalog.json), confirm its lifecycle and authority, and
+follow the local [task-brief](delivery/task-briefs/README.md),
+[evidence](delivery/README.md), or [archive](delivery/archive/README.md) index. Use
+that record as attributed provenance only; return to the current route above for
+present requirements and authorization.
+
 <!-- release-radar-docs:v1:start -->
 
 ## Collection: docs

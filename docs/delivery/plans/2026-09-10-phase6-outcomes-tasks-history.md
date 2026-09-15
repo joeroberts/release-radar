@@ -1,7 +1,10 @@
 # Phase 6: outcomes, tasks and history
 
-Status: controlling Phase 6 implementation sequence; independent review passed at
-`22126cf560b6b4c527b20543a0f7064a91ac95ad` with no Required findings.
+Status: completed Phase 6 implementation sequence retained as non-authoritative
+delivery history; independent review passed at
+`22126cf560b6b4c527b20543a0f7064a91ac95ad` with no Required findings. Current
+product requirements live in the owning designs; current authorization and any
+stopped or deferred work live in `docs/delivery/progress.md`.
 Source baseline: `e5372d170d9202d207922fe51f38bcf0827a2967` (merged Phase 5 and shared V1 plus ledger closeout).
 
 ## Outcome and authority
