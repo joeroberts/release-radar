@@ -13,6 +13,9 @@ retains its original provenance and limitations: chief-architect corrections
 `be30175` and `77def74`, followed by independent reviewer
 `01a09fe2-e4cb-7772-8682-f299d8923713`. Its native attachment, pre-turn admission,
 and persistent all-tool enforcement gaps remain unestablished.
+Original candidate `6e45c86b38b983009928d2ff6170dfe3069cbd1f` received independent review and
+requires this bounded authority clarification; the corrected candidate is not yet
+approved.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -22,8 +25,9 @@ and reconcile the bounded authority wording for ADR-006 and the
 usable-project-lifecycle brief without changing their catalog classifications or
 any ADR bytes. Publication is tracked in
 [PR #58](https://github.com/joeroberts/release-radar/pull/58); GitHub is the source
-for its live review and merge state. Outcome 2 remains unopened; Outcome 3 remains
-limited to the preserved proposed assessment above.
+for its live review and merge state. Outcome 2's delivered specifications are in
+draft PR #59; Outcome 3 is only the proposed assessment isolated locally on
+`codex/outcome3-assessment`.
 
 The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
@@ -53,6 +57,11 @@ Current coordination is tracking closeout; no new product implementation is open
 Outcome 3 authorization is limited to this branch-only preservation candidate and
 its independent review. It does not authorize a local or remote `main` merge,
 runtime implementation, configuration, application state, or publication.
+
+The following paragraph records historical Outcome 1 operative-authority
+reconciliation authorization only; it does not authorize present actions. The
+current branch-only, no-main-merge rule supersedes it, and no current authority may
+be inferred from that historical record.
 
 The owner authorized this repository-only outcome, its controlling brief,
 documentation/index changes, independent review, scoped local commits, branch push,
