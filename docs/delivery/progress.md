@@ -2,42 +2,17 @@
 
 ## Current outcome
 
-Main opened the owner-approved signed-helper verification regression fix on
-`codex/plugin-verification-sandbox-fix` from merged 0.1.17 baseline
-`328f27372ea0904f7eaedc97a983b96ce0e05523`, exact writer root
-`/Users/jroberts/.codex/worktrees/118f/release_radar`. The
-[controlling brief](task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md)
-records source/tests/docs ownership and security limits. Main/BuildAgent reproduced
-the signed baseline home read-open failure (`EPERM`) and confirmed a search-only
-home descriptor can open the granted `.codex` child. The unchanged reader executed
-twelve native tests: eleven passed, and the traversal-only-home regression failed
-with `integrityUnknown`. The minimal correction now uses `O_SEARCH` only for the
-home anchor and preserves descendant read opens and all no-follow/identity checks.
-The corrected actual reader passed all twelve native methods. BuildAgent's signed
-probe read exactly the four recognized 0.1.17 package files, completed snapshot
-validation and matched the previously verified package digest while the old home
-read-open diagnostic still failed. Final documentation validation and Main/RO04
-independent code/security review remain pending.
-Main reported installed 0.1.17 helper bytes matching the packaged source
-and repeated `integrityUnknown`; this writer has not touched live state.
-
-BuildAgent exclusively owns native build/sign/test execution and probe scratch.
-The writer owns source/tests/docs and scoped local commits; Main/RO04 assigns the
-independent code/security review. After passing checks and review, BuildAgent owns
-the authorized 0.1.18 package/DMG, push/PR and annotated tag endpoint.
-**Installation remains on hold.** No live helper registration/restart/reinstall,
-app launch, owner plugin write, main merge or application/catalog state mutation
-is authorized. The repository catalog transition remains pending app acceptance.
-
-Preflight is clean at the assigned baseline and existing branch attached. The
-restricted profile denies installed skill-file reads; repository local fallbacks
-apply. CodeGraph reports no usable index despite `.codegraph/` being present;
-targeted current-source inspection supplies navigation. Task readback confirms
-the root but exposes no actual model/effort settings. Native GREEN and the isolated
-signed runtime recheck passed; installed-helper replacement and the real reinstall
-journey remain untested under the state-preservation boundary. Next eligible
-action is final serialized documentation validation and the scoped candidate
-commit for Main/RO04 review.
+The source fix for signed-helper verification is independently reviewed at
+`a30cfea04944e84559c208b4961dca1e57079c9e` (RO04 PASS, no findings).
+BuildAgent now owns 0.1.18 packaging and Git delivery on
+`codex/plugin-verification-sandbox-fix` in `/Users/jroberts/.codex/worktrees/118f/release_radar`.
+The [controlling brief](task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md)
+records authorization and acceptance. Twelve actual reader tests passed and the
+same-entitlement signed real-home probe confirmed O_SEARCH fixes the EPERM failure
+without broadening access. Version/package checks and independent package review
+are next; results belong in [0.1.18 evidence](evidence/2026-09-15-release-0.1.18-packaging.md).
+**Installation remains on hold.** Installed 0.1.17 identity was directly verified
+during diagnosis; the live upgrade/reinstall recovery remains untested.
 
 The owner merged [PR #59](https://github.com/joeroberts/release-radar/pull/59) into
 `main` at `2f73623`, [PR #60](https://github.com/joeroberts/release-radar/pull/60)
@@ -72,14 +47,14 @@ at `ef012b68`. [PR #67](https://github.com/joeroberts/release-radar/pull/67) mer
 the corrected release record at `7172df9`; its durable evidence is
 `62fa8d0`. The owner-authorized 0.1.17 packaging and Git-distribution outcome is
 complete through [PR #69](https://github.com/joeroberts/release-radar/pull/69),
-open against `main`. The signed DMG and matching Downloads copy passed direct
+merged at `328f2737`. The signed DMG and matching Downloads copy passed direct
 verification and independent RO04 review. Published annotated tag `v0.1.17`
 points to reviewed artifact commit `430e891244cef931bdc55293fa6d6967b1c0570e`;
 publication-record follow-ups do not rebuild the artifact. **Installation remains
-on hold**; last verified installed version is **0.1.16 (1)**. The
+on hold**; last verified installed version is **0.1.17 (1)**. The
 [package evidence](evidence/2026-09-15-release-0.1.17-packaging.md) records source
 provenance, package identity, checks, review and publication. Main retains PR
-merge/installation coordination; no further BuildAgent action is active.
+merge/installation coordination; BuildAgent now owns the 0.1.18 assignment above.
 
 Outcome 1 operative-authority reconciliation is complete. The
 [completed brief](task-briefs/2026-09-13-operative-authority-reconciliation/operative-authority-reconciliation-brief.md)
@@ -93,7 +68,7 @@ for its live review and merge state. Outcome 2's delivered specifications, Share
 Execution V1 guidance, and Outcome 3's assessment are integrated into `main`;
 Outcome 3 runtime implementation remains unopened.
 
-The installed release is **0.1.16 (1)**. Published tags `v0.1.14`–`v0.1.16`
+The last directly verified installed release is **0.1.17 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
 Releases 0.1.14–0.1.16 are integrated into `main` through
 [PR #52](https://github.com/joeroberts/release-radar/pull/52). `main` is GitHub's
@@ -118,14 +93,13 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
-The owner explicitly authorized BuildAgent to build and verify 0.1.17 (1),
-commit the versioned DMG and delivery records, copy the verified installer to
-Downloads, and publish the package branch through a normal PR plus an annotated
-`v0.1.17` tag after Main's independent RO04 package review. Work is isolated on
-`codex/release-0.1.17-package` from `b8a21539383dedbce9d6b6f9844849f7568203d5`.
-BuildAgent owns this scoped ledger update. Installation remains on hold; app
-launch, notarization, GitHub Release creation, main merge, configuration and
-application/catalog state changes remain excluded. Existing installers stay intact.
+The owner explicitly authorized BuildAgent to finish 0.1.18 (1) metadata,
+signed package/Downloads delivery, tracked staged app and DMG commits, independent
+package review, branch push/normal PR and annotated version-tag push. Sole ownership
+has transferred from the source writer; exact reviewed source is `a30cfea`.
+Installation, app launch, live helper restart/reinstall/registration, owner plugin
+writes, notarization, GitHub Release, main merge and application/catalog mutations
+remain excluded. Preserve earlier installers and tags.
 
 Outcome 3 assessment work is complete. It does not authorize a local or remote
 `main` merge, runtime implementation, configuration, application state, or
@@ -253,10 +227,10 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Owner review/merge of PR #69 is next; no main merge is authorized for BuildAgent.
-Packaging and Git distribution are complete. Zero XCTest ran under the no-launch
-boundary; direct package checks and independent review are recorded.
-Installation remains on hold until an explicit owner resume. Outcome 3 is not reopened.
+Complete the authorized 0.1.18 package checks and independent package review,
+then publish its branch/normal PR and annotated tag. Source security review and
+unchanged twelve-test/signed-boundary results remain terminal. Installation stays
+on hold; no live recovery journey is authorized. Outcome 3 remains unopened.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner

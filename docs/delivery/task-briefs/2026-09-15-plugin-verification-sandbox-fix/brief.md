@@ -102,4 +102,28 @@ snapshot validation. Its 0.1.17 digest matched Main's previously verified
 The old read-only home diagnostic still returned `EPERM` in that same process.
 These isolated checks preserve live helper/app/plugin state; they do not verify
 an installed 0.1.18 helper or the deferred real reinstall journey. Final
-documentation validation and Main/RO04 independent review remain pending.
+documentation validation passed. Independent RO04 reviewer
+`01a0a73a-7c0a-7573-9d8c-4722b79b19fa` passed source candidate
+`a30cfea04944e84559c208b4961dca1e57079c9e` with no findings.
+
+## Authorized 0.1.18 delivery assignment
+
+Main transferred sole branch/source/docs/release ownership to the standing BuildAgent
+at reviewed `a30cfea04944e84559c208b4961dca1e57079c9e`. The owner authorized
+0.1.18 (1) metadata, a signed Release build, the versioned repository and Downloads
+DMG, existing tracked staged app, independent package/version review, normal PR
+and annotated v0.1.18 tag publication. The source security review is complete;
+package review does not reopen it. Preserve all 0.1.17 installers/tags and prior
+recognized digests. Installation remains on hold; no live helper restart,
+registration/reinstall, app launch, owner plugin writes, notarization, GitHub
+Release, main merge or application catalog acceptance is authorized.
+
+Use the existing staging/signing workflow. Directly compare source and signed
+payload version/digest/registry, exact entitlements, source/staged/mounted payload
+and DMG checksums. Retain the signed real-home O_SEARCH proof and exercise the
+unchanged reader on isolated 0.1.18 payload content under the same entitlements.
+The twelve containment tests remain terminal unless their inputs or reader change;
+app-hosted version XCTest is excluded by the no-launch boundary. Commit clean
+build-source metadata before building and identify the separate reviewed artifact
+commit before tagging. Record results in the existing ledger and
+[0.1.18 evidence](../../evidence/2026-09-15-release-0.1.18-packaging.md).
