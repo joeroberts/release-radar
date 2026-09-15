@@ -33,8 +33,8 @@ ownership and were not changed.
 The active local release candidate is **0.1.17 (1)** on
 `codex/cache-containment-patch-release`, controlled by the
 [release brief](task-briefs/2026-09-15-release-0.1.17/brief.md). Packaging is blocked
-by the native Xcode runtime's denied DVTDownloads framework access after the
-owner's narrow CoreSimulator read-permission addition. Zero release-version tests executed; no
+by native private-dependency authentication and denied worktree-local log writes
+after the owner's private-framework directory read addition. Zero release-version tests executed; no
 0.1.17 package, tag or installation is complete. The
 [candidate evidence](evidence/2026-09-15-release-0.1.17-packaging.md) records the
 exact limitation. The installed version remains **0.1.16 (1)**.
@@ -132,10 +132,13 @@ add another dependency. No live reconstruction is authorized.
 
 For the active 0.1.17 candidate, direct static version/digest assertions,
 repository-native documentation checking and `git diff --check` passed.
-Focused Xcode tests did not execute: after one supported escalation and the
-owner's narrow CoreSimulator read-permission addition, the changed-condition
-retry stopped at the next denied dependency,
-`/Library/Developer/PrivateFrameworks/DVTDownloads.framework/Versions/A/DVTDownloads`.
+Focused Xcode tests did not execute. The fresh private-framework read preflight
+passed; the changed-condition Xcode retry exited `74` during private
+RekonDesignSystem clone authentication (`could not read Username`, prompts
+disabled). Its resolved revision remains `f986e85e786f55f1d73d6e429de11370399414f7`.
+Xcode also reported denied writes to worktree-local log manifests; exact paths
+are in the candidate evidence. Diagnostic-only xcresult and DerivedData scratch
+are retained. No credentials/configuration changes or identical retries occurred.
 Main reported static metadata candidate `73ee4aa` review PASS with no findings
 from reviewer `01a0a48a`. That review remains terminal. New
 package/signature/installed-identity verification and independent package review
@@ -200,7 +203,7 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Resolve the concrete native Xcode runtime-access blocker, complete focused
+Resolve the concrete native dependency/authentication and log-access blockers, complete focused
 release-version verification and signed 0.1.17 packaging, then obtain Main's
 fresh independent read-only candidate/package review before installation.
 Existing 0.1.16 installation and rollback DMGs remain preserved. This release
