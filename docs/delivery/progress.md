@@ -2,18 +2,22 @@
 
 ## Current outcome
 
-The source fix for signed-helper verification is independently reviewed at
-`a30cfea04944e84559c208b4961dca1e57079c9e` (RO04 PASS, no findings).
-BuildAgent now owns 0.1.18 packaging and Git delivery on
-`codex/plugin-verification-sandbox-fix` in `/Users/jroberts/.codex/worktrees/118f/release_radar`.
-The [controlling brief](task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md)
-records authorization and acceptance. Twelve actual reader tests passed and the
-same-entitlement signed real-home probe confirmed O_SEARCH fixes the EPERM failure
-without broadening access. Native Release, production Core metadata/capability, signed isolated 0.1.18
-reader, mounted DMG and matching Downloads checks passed. Independent package review
-and publication are next; results belong in [0.1.18 evidence](evidence/2026-09-15-release-0.1.18-packaging.md).
+The signed-helper verification fix and 0.1.18 Git delivery are complete through
+[PR #70](https://github.com/joeroberts/release-radar/pull/70), open against `main`.
+Source security review passed `a30cfea04944e84559c208b4961dca1e57079c9e`;
+independent package/version review passed exact artifact
+`4ebbf754c316ccf33e8a81a8b77f89f61a64fe1f`, both with no findings.
+Published annotated `v0.1.18` remains on that reviewed artifact; the later
+publication-record commit does not rebuild it. Twelve reader tests, same-entitlement
+signed real-home boundary proof, fresh Release/signatures/metadata, isolated signed
+0.1.18 reader and mounted DMG/Downloads checks passed. See
+[0.1.18 evidence](evidence/2026-09-15-release-0.1.18-packaging.md) and the
+[completed brief](task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md).
 **Installation remains on hold.** Installed 0.1.17 identity was directly verified
-during diagnosis; the live upgrade/reinstall recovery remains untested.
+during diagnosis; the live upgrade/reinstall recovery remains untested. Main owns
+owner merge/installation coordination; BuildAgent has finished this assignment.
+Both completed source/package reviewers are archived with PASS results preserved;
+the source writer remains open until Main completes the worktree handoff.
 
 The owner merged [PR #59](https://github.com/joeroberts/release-radar/pull/59) into
 `main` at `2f73623`, [PR #60](https://github.com/joeroberts/release-radar/pull/60)
@@ -228,8 +232,8 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Obtain independent review of the directly verified 0.1.18 artifact, then publish its branch/normal PR and annotated tag. Source security review and
-unchanged twelve-test/signed-boundary results remain terminal. Installation stays
+Owner review/merge of PR #70 is next. Source and package review, direct checks,
+branch/PR and annotated tag publication are complete. Installation stays
 on hold; no live recovery journey is authorized. Outcome 3 remains unopened.
 
 Inspect the current application binding/catalog status without changing it, then

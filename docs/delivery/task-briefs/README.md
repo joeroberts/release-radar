@@ -916,7 +916,7 @@ Leaf: no child collections.
 
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
-| rr-plugin-verification-sandbox-fix-brief-2026-09-15 | [docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md](2026-09-15-plugin-verification-sandbox-fix/brief.md) | document | controlling &#40;delivery.plugin-verification-sandbox-fix&#41; | active | none | none |
+| rr-plugin-verification-sandbox-fix-brief-2026-09-15 | [docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md](2026-09-15-plugin-verification-sandbox-fix/brief.md) | document | nonAuthoritative | completed | none | none |
 
 ### Children
 

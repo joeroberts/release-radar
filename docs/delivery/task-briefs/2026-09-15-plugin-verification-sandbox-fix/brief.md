@@ -1,4 +1,4 @@
-# Signed helper plugin verification regression
+# Signed helper plugin verification regression — completed
 
 Restore installed-package verification under the shipped helper's signed sandbox
 without expanding its filesystem access. The reported 0.1.17 helper repeatedly
@@ -130,5 +130,10 @@ commit before tagging. Record results in the existing ledger and
 
 Package direct checks passed: fresh Release staging, exact signatures/entitlements,
 production Core version/digest/capability, signed isolated 0.1.18 reader, APFS image,
-read-only mounted payload and matching Downloads copy. Package/version review and
-Git publication remain pending. Live installed-helper replacement remains excluded.
+read-only mounted payload and matching Downloads copy. Independent package/version review passed exact artifact `4ebbf754` with no
+findings; branch/normal [PR #70](https://github.com/joeroberts/release-radar/pull/70)
+and annotated `v0.1.18` on that artifact are published. Live installed-helper replacement remains excluded.
+
+This brief is completed and non-authoritative. The existing progress ledger owns
+current coordination and installation hold; no further action is authorized by
+historical implementation assignments above.
