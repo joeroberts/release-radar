@@ -267,10 +267,14 @@ returning. The signed-resource marketplace reader retains its prior behavior.
 
 The [dedicated containment brief](../delivery/task-briefs/2026-09-15-installed-plugin-cache-containment/brief.md)
 requires native synthetic tests of the actual helper reader and independent
-code/security review. Source changes alone do not establish hardened traversal;
-verification and acceptance remain pending until those checks can execute and
-review completes. No owner cache or installed application state is accessed by
-these synthetic checks.
+code/security review. On September 15, 2026 the actual reader compiled with
+Swift 6 and all ten native synthetic XCTest methods passed with no failures or
+exceptions, using a worktree-local temporary directory. Main reported no Required
+findings from the independent static review of the implementation candidate;
+review of the bounded test temporary-path correction remains part of closeout.
+These repository checks do not establish installed helper behavior or application
+catalog acceptance. No owner cache or installed application state is accessed by
+the synthetic checks.
 
 The XPC listener accepts only the same effective user and the signed Release
 Radar application identity. The helper exposes no MCP, STDIO, URL, network, or

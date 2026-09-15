@@ -9,7 +9,10 @@ final class InstalledPluginDigesterTests: XCTestCase {
     private let fixed = [".codex", "plugins", "cache", "release-radar", "release-radar", "1.2.3"]
 
     private func fixture(current: Bool, reverse: Bool = false) throws -> (home: URL, root: URL) {
-        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let temporary = ProcessInfo.processInfo.environment["TMPDIR"].map {
+            URL(fileURLWithPath: $0, isDirectory: true)
+        } ?? FileManager.default.temporaryDirectory
+        let home = temporary.appendingPathComponent(UUID().uuidString)
         let root = fixed.reduce(home) { $0.appendingPathComponent($1) }
         var contents: [(String, String)] = [
             (".codex-plugin/plugin.json", #"{"name":"release-radar","version":"1.2.3","extra":true}"#),

@@ -52,3 +52,27 @@ Endpoint is scoped local commit, focused native checks and independent review.
 No packaging, installation, push, PR, merge, app binding/catalog acceptance or
 other owner/external state mutation. Changed catalog metadata remains pending
 application acceptance; repository check success does not establish app state.
+
+## Direct verification, September 15, 2026
+
+The actual helper reader and ten XCTest methods compiled with Swift 6. The
+temporary native macOS runner uses `InstalledPluginDigesterTests.defaultTestSuite`,
+runs it and requires ten executions and `hasSucceeded`. Compile/run commands:
+
+```sh
+TMPDIR=/Users/jroberts/.codex/worktrees/63ab/release_radar/.build/installed-cache-tests/tmp /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -D DEBUG -swift-version 6 -module-cache-path .build/installed-cache-tests/ModuleCache -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -I /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -L /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -lXCTestSwiftSupport -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -Xlinker -rpath -Xlinker /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -Xlinker -rpath -Xlinker /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib ReleaseRadarPluginLifecycleHelper/PluginDigester.swift ReleaseRadarTests/InstalledPluginDigesterTests.swift .build/installed-cache-tests/main.swift -o .build/installed-cache-tests/tests
+TMPDIR=/Users/jroberts/.codex/worktrees/63ab/release_radar/.build/installed-cache-tests/tmp DYLD_FRAMEWORK_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks:/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks .build/installed-cache-tests/tests
+```
+
+Both exited zero. XCTest executed ten tests with zero failures and zero unexpected
+exceptions in 0.373 seconds. An earlier command-level permission denial cleared
+with local `TMPDIR`; invocation corrections supplied the native XCTest overlay,
+runner and frameworks. The first test execution failed during fixture creation;
+the test-only helper now uses the explicit `TMPDIR` path. No prepatch RED execution
+is claimed. Production code is unchanged from candidate `a306678`.
+
+Main reported no Required findings from that candidate's independent static
+code/security review; review of the temporary-path correction is pending. The
+repository documentation check and diff checks passed. No owner cache, installed
+helper, app-state or catalog-acceptance verification occurred. `.build/installed-cache-tests/`
+is retained temporary scratch, not a durable deliverable.
