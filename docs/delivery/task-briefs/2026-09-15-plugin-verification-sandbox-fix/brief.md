@@ -127,3 +127,8 @@ app-hosted version XCTest is excluded by the no-launch boundary. Commit clean
 build-source metadata before building and identify the separate reviewed artifact
 commit before tagging. Record results in the existing ledger and
 [0.1.18 evidence](../../evidence/2026-09-15-release-0.1.18-packaging.md).
+
+Package direct checks passed: fresh Release staging, exact signatures/entitlements,
+production Core version/digest/capability, signed isolated 0.1.18 reader, APFS image,
+read-only mounted payload and matching Downloads copy. Package/version review and
+Git publication remain pending. Live installed-helper replacement remains excluded.

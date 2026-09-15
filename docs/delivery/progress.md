@@ -9,8 +9,9 @@ BuildAgent now owns 0.1.18 packaging and Git delivery on
 The [controlling brief](task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md)
 records authorization and acceptance. Twelve actual reader tests passed and the
 same-entitlement signed real-home probe confirmed O_SEARCH fixes the EPERM failure
-without broadening access. Version/package checks and independent package review
-are next; results belong in [0.1.18 evidence](evidence/2026-09-15-release-0.1.18-packaging.md).
+without broadening access. Native Release, production Core metadata/capability, signed isolated 0.1.18
+reader, mounted DMG and matching Downloads checks passed. Independent package review
+and publication are next; results belong in [0.1.18 evidence](evidence/2026-09-15-release-0.1.18-packaging.md).
 **Installation remains on hold.** Installed 0.1.17 identity was directly verified
 during diagnosis; the live upgrade/reinstall recovery remains untested.
 
@@ -227,8 +228,7 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Complete the authorized 0.1.18 package checks and independent package review,
-then publish its branch/normal PR and annotated tag. Source security review and
+Obtain independent review of the directly verified 0.1.18 artifact, then publish its branch/normal PR and annotated tag. Source security review and
 unchanged twelve-test/signed-boundary results remain terminal. Installation stays
 on hold; no live recovery journey is authorized. Outcome 3 remains unopened.
 
