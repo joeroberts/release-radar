@@ -33,7 +33,8 @@ ownership and were not changed.
 Release metadata **0.1.17 (1)** was recorded by [PR #66](https://github.com/joeroberts/release-radar/pull/66)
 at `ef012b68`. [PR #67](https://github.com/joeroberts/release-radar/pull/67) merged
 the corrected release record at `7172df9`; its durable evidence is
-`62fa8d0`. The active assignment is this bounded ledger closeout only. No
+`62fa8d0`. The active assignment is owner-authorized 0.1.17 packaging and Git distribution
+by the designated BuildAgent under the [release brief](task-briefs/2026-09-15-release-0.1.17/brief.md). No
 0.1.17 package or tag is complete, and **installation remains on hold** on the
 owner's later instruction; the last verified installed version is **0.1.16
 (1)**. The [candidate evidence](evidence/2026-09-15-release-0.1.17-packaging.md)
@@ -76,13 +77,14 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
-Main authorized this branch-local ledger correction only. It excludes native
-builds and tests, package preparation, configuration, governing files,
-application state, SQLite, binding or catalog acceptance, pushes, PRs, merges,
-tags, publication, notarization, launch, and installation. The earlier PR #67
-worker and its independent reviewer are archived; the former PR #66 `d7aa`
-worktree is removed. Installation remains suspended by the owner's later hold;
-review does not clear it.
+The owner explicitly authorized BuildAgent to build and verify 0.1.17 (1),
+commit the versioned DMG and delivery records, copy the verified installer to
+Downloads, and publish the package branch through a normal PR plus an annotated
+`v0.1.17` tag after Main's independent RO04 package review. Work is isolated on
+`codex/release-0.1.17-package` from `b8a21539383dedbce9d6b6f9844849f7568203d5`.
+BuildAgent owns this scoped ledger update. Installation remains on hold; app
+launch, notarization, GitHub Release creation, main merge, configuration and
+application/catalog state changes remain excluded. Existing installers stay intact.
 
 Outcome 3 assessment work is complete. It does not authorize a local or remote
 `main` merge, runtime implementation, configuration, application state, or
@@ -201,11 +203,11 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 ## Next eligible work
 
-Package preparation is the next release step only after relevant owner
-authorization; this ledger correction grants none. Any later package work must
-complete its applicable release checks and independent package review.
-Installation remains on hold until an explicit owner resume. Existing 0.1.16
-installation and rollback DMGs remain preserved. Outcome 3 is not reopened.
+Complete the authorized native Release package, direct non-launch identity/signing
+and DMG checks, and independent package review, then publish the branch/PR and
+version tag. The existing version XCTest is app-hosted and cannot run within the
+no-launch boundary; report direct checks and zero XCTest execution explicitly.
+Installation remains on hold until an explicit owner resume. Outcome 3 is not reopened.
 
 Inspect the current application binding/catalog status without changing it, then
 present any exact required binding or catalog acceptance mutation for owner

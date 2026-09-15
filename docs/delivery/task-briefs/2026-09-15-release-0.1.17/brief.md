@@ -3,14 +3,11 @@
 Main authorized this release on September 15, 2026 under the standing local
 release workflow. Current state remains in [progress](../../progress.md).
 
-Current assignment is documentation-only: record the owner-confirmed native
-setup in [the existing developer entry point](../../../README.md#native-developer-setup),
-correct this brief/evidence/ledger, run documentation checks and make a scoped
-local documentation commit. Main arranges correction review through release
-reviewer `01a0a48a`. No native builds, configuration/startup-file edits or build
-logic changes are released by this assignment. **Installation is on hold** on
-the owner's later instruction; prior standing delivery language below does not
-clear that hold.
+Current assignment: the owner explicitly authorized the designated BuildAgent to
+build and verify 0.1.17, persist the DMG in Git and Downloads, and publish its
+branch through a normal PR plus an annotated version tag after independent
+package review. **Installation remains on hold.** App launch, notarization,
+GitHub Release creation, main merge and application-state mutations are excluded.
 
 ## Objective, scope and dependencies
 
@@ -26,15 +23,15 @@ tests is required absent a concrete behavior change.
 
 ## Assignment and boundaries
 
-Single release writer: Sol/high, branch `codex/cache-containment-patch-release`,
-root `/Users/jroberts/.codex/worktrees/d7aa/release_radar`, exact baseline above.
-Main owns independent-review dispatch; installation requires an explicit owner
-resume after the hold and the required independent review.
-Escalation ceiling remains the assigned profile; request only concrete runtime
-permission gates. Use direct Xcode Git with command-local disabled global/system
-configuration and optional locks, and worktree-local command-scoped temporary
-and compiler caches. Preserve canonical-main state, unrelated work, preservation
-references and existing installers. Old `63ab` residue inspection is read-only.
+Single release writer: the standing BuildAgent task, branch
+`codex/release-0.1.17-package`, root
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar/build/release-0.1.17-package-worktree`,
+committed baseline `b8a21539383dedbce9d6b6f9844849f7568203d5`.
+The current task's model/effort setting is not exposed to the delivery worker;
+no model escalation is requested. Main dispatches the independent RO04 package
+review. Use the existing Xcode staging workflow with command-local Git isolation,
+temporary/compiler caches and default SwiftPM sandboxing. Preserve canonical-main
+state, governing files, existing installers and historical tags.
 
 ## Risks, checks and acceptance
 
@@ -42,12 +39,14 @@ Risks are version/digest drift, installer collision, nested signing or entitleme
 drift, package identity mismatch and replacing active installed processes. Use
 the established `script/build_and_run.sh stage-release-no-launch` workflow;
 verify all nested code, Hardened Runtime and approved entitlements. Run focused
-existing version/capability checks and the repository documentation check. Build
+non-launch version/digest/capability checks and the repository documentation check.
+The existing version XCTest uses the app as TEST_HOST; it is not run under the
+no-app-launch boundary. Report this limitation and the actual test count. Build
 an APFS DMG containing `ReleaseRadar.app` and an `Applications` link, verify its
 payload, SHA-256 and matching Downloads copy, and preserve exact source provenance.
-Main arranges one fresh read-only metadata/package review before installation.
-After Main releases installation, use the existing non-launch install operation
-and verify installed version, signature and matching staged identity. Do not
+Main arranges one fresh independent review of exact package identity, signing,
+source/version provenance, DMG contents and delivery documentation before publication.
+Do not
 claim notarization, general-distribution trust, app acceptance or owner-data
 verification. No persistence migration or public contract change is intended.
 [ADR-001](../../../architecture/ADR-001-release-radar-boundaries.md) and
@@ -56,12 +55,11 @@ architecture/security boundaries; existing lifecycle consumers remain compatible
 
 ## Delivery endpoint
 
-Scoped local release commit, consistent patch metadata, new annotated local
-`v0.1.17` tag on that release commit, verified signed
-`dist/ReleaseRadar-0.1.17.dmg`, matching
-`/Users/jroberts/Downloads/ReleaseRadar-0.1.17.dmg`, and verified installation at
-`/Applications/ReleaseRadar.app` after independent review. Never move an existing
-tag or overwrite an existing installer. No push, tag push, PR, merge, public
-release, notarization, app launch, database access, binding, catalog acceptance,
-configuration or owner-data mutation. Catalog changes remain pending application
-acceptance; repository and package checks do not establish synchronization.
+Scoped release commit containing verified `dist/ReleaseRadar-0.1.17.dmg` and
+accurate delivery records; matching `/Users/jroberts/Downloads/ReleaseRadar-0.1.17.dmg`;
+new annotated `v0.1.17` tag on the release commit; branch and tag pushed after
+independent review; normal PR against `main`. Never move an existing tag or
+overwrite an installer. Installation, app launch, main merge, GitHub Release,
+notarization, database access, binding, catalog acceptance and configuration
+changes remain excluded. Repository/package checks do not establish application
+synchronization. No version bump beyond the existing 0.1.17 (1) is authorized.
