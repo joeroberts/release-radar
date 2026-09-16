@@ -174,9 +174,7 @@ profile's nested-apply limitation remains and is not a profile fix.
 PR #67's worker and reviewer are archived. Branch and tracking readback found
 the expected registration state (`e8f2` path registration absent), no retained
 scratch artifact, and the superseded PR #66 `d7aa` worktree removed. Existing
-catalog identities, paths, lifecycle and index sections remain unchanged. The
-catalog remains pending application acceptance; no managed application readback
-or synchronization is claimed.
+catalog identities, paths, lifecycle and index sections remain unchanged.
 
 Authority-reconciliation candidate
 `f39aae7cf9a2bdfd4adedcd96b1ef73f64014572` passed the repository-native
@@ -222,11 +220,19 @@ retains the exact limitation. A separately provisioned GUI account or VM remains
 future work requiring its own authorization; the owner's live helper must not be
 used to manufacture the stale precondition.
 
-The repository cleanup did not perform application inventory, binding/catalog
-acceptance or managed readback. The last recorded inventory was `bindingMissing`, `isComplete:false`
-for `project-fffdc0e0b15b9b86`; repository checks cannot establish current managed
-application synchronization. The changed catalog remains pending application
-acceptance; no acceptance has been recorded for this repository correction.
+The fresh read-only managed readback at `2026-09-16T00:21:05Z` reports the exact
+canonical root `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar`
+bound to project `project-fffdc0e0b15b9b86`, root
+`project-fffdc0e0b15b9b86-root-0`, and repository
+`e7475429-ef51-4368-ad9e-61d9073d5a4f`. Bookmark status is `NOT STALE` and the
+inventory is complete with zero evidence rows. The read-only
+`ReleaseRadarDocumentationTool` 0.1.18 `(1)` `diagnose --root` check passed with
+catalog version `1` and digest
+`112beed626b832915e31d1296baa3ce1f8355ce84d16db086c2321c459302369`, matching
+the exact accepted snapshot. No binding or catalog acceptance mutation was
+needed or performed. These facts are scoped to this root and snapshot only;
+they do not establish all-project or ticket completion, later catalog state, or
+broader owner manual acceptance.
 
 The saved `TEST` search-value diagnosis remains unresolved as to initiator; the
 retained audit used only the generic actor. No preference was changed. Details,
@@ -239,11 +245,10 @@ PR #70 merge, source/package review, direct checks, branch/PR and annotated tag
 publication are complete. Installation stays on hold; no live recovery journey is
 claimed by this closeout. Outcome 3 remains unopened.
 
-Inspect the current application binding/catalog status without changing it, then
-present any exact required binding or catalog acceptance mutation for owner
-approval. This follow-up is not authorized by the completed outcome 1 task. The
-last recorded missing binding must not be treated as fresh
-application state or repaired by editing SQLite. Broader owner manual
+The exact canonical root is currently bound and its catalog snapshot is
+accepted; no binding or catalog mutation is pending for this root/snapshot.
+This read-only status does not authorize changes to other projects, ticket
+completion, later catalogs, SQLite, or application state. Broader owner manual
 acceptance remains outstanding under the existing guide. No product slice,
 paused task, stopped metrics work, live recovery or Phase 8 environment
 provisioning is released by this closeout. GitHub protection/CI planning remains
