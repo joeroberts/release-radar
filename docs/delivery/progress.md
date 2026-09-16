@@ -2,6 +2,54 @@
 
 ## Current outcome
 
+
+**September 16 — Outcome 3 remains open: onboarding/worktree integration plan.**
+The owner approved documenting deterministic project execution setup during
+onboarding, RR-owned project/task worktrees, per-worker checkout scope, and use of
+the existing RR plugin installation pattern. See the
+[bounded contract and implementation sequence](../design/outcome3-runtime-enforcement-assessment.md#september-16-onboarding-and-worktree-integration-contract).
+Main prepared this documentation under a one-time owner exception after Restricted
+coordinator 02 reported provisioning denied. Source baseline is c8dd3c2 on
+codex/outcome3-onboarding-worktree-contract. The separately reviewed standalone plugin
+is a component result, not Outcome 3 completion. Packaging identity and RR provisioning ownership are selected below; implementation
+compatibility and sandboxed API access remain to be established.
+**Owner clarification: hooks remain in Outcome 3.** RR must configure hooks
+deterministically for each onboarded project, including assigned-worktree behavior
+and lifecycle/recovery while preserving unrelated hooks. The native pilot is
+complete; product hook integration is not established as complete. Next reconcile
+the original requirements and validate the configuration contract against official
+documentation and existing code; persist it in the
+[same onboarding plan](../design/outcome3-runtime-enforcement-assessment.md#owner-clarification-project-hook-configuration-remains-in-outcome-3).
+The [packaging/provisioning follow-up](../design/outcome3-runtime-enforcement-assessment.md#packaging-and-provisioning-decision--september-16-follow-up)
+selects the existing single plugin, project-local hook registration and native RR
+onboarding ownership, preserving the fixed installer helper. In-process libgit2 is recommended for Git provisioning, subject to dependency
+review. The [admission/trust disposition](../design/outcome3-runtime-enforcement-assessment.md#admission-rule-and-trust-disposition--september-16)
+now defines assignment-based admission and STOP/recovery. The
+[verified worktree-trust correction](../design/outcome3-runtime-enforcement-assessment.md#verified-hook-trust-across-linked-worktrees--september-16)
+supersedes the earlier claimed automatic-trust gap: installed desktop Trust uses
+config/batchWrite on hooks.state, and one isolated approval carried across two
+existing linked worktrees and one created afterward. Only the primary repository
+had a project trust entry; every checkout resolved its same hook key/hash/source.
+RR should register once at the primary repository and apply/read back only its
+verified definition under onboarding consent. The proposed mandatory Codex UI
+handoff is withdrawn. This is installed-version evidence, not completed RR
+integration or universal compatibility. Independent correction review
+`01a0ac06-941c-7ec1-8c19-89cdf89e3172` (Sol/high, rr-project-ro) passed with
+no Required findings. Documentation and diff checks passed.
+The following earlier reviews predate and do not establish this correction.
+Admission/trust review `01a0abf8-4099-76f3-bdf6-a5e823e854fc` (Sol/high,
+rr-project-ro) passed with no Required or Optional findings and is archived. It reviewed repository
+sources and attributed official-source/schema findings; Main inspected those
+sources directly. Documentation and diff checks passed. The follow-up received independent PASS with no Required findings from
+`01a0abf3-7ace-7a22-a2b2-e04a8bba7679` (Sol/high, rr-project-ro); source-fetch
+limitation is recorded in the assessment. Reviewer archived. Documentation/diff checks passed.
+Main used the existing bounded documentation exception after RO04 could not target
+the assigned checkout. No product/configuration changes or commits were made.
+Independent read-only review by task `01a0abd1-ea2a-7231-a9fb-8766329cb6b3`
+passed with no Required findings and is archived. Repository documentation and diff checks passed;
+catalog metadata and generated indexes are unchanged. No product code, profiles,
+installed plugins, existing worktrees, app data or accepted ADRs are changed.
+
 The signed-helper verification fix and 0.1.18 Git delivery are complete through
 [PR #70](https://github.com/joeroberts/release-radar/pull/70), merged into `main`
 at `f7e07b88296f7ef24747f4bb7bff66ee5d6f4ba8` from PR head
