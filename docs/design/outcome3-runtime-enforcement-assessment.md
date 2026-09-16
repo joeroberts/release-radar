@@ -3,7 +3,17 @@
 Date: September 14, 2026. **Proposed; supporting; candidate for independent
 review.** This document grants no implementation or configuration authority.
 
-## Recommendation
+## Current reading guidance — September 16
+
+Read [the retained App Server findings](#september-16-app-server-findings) and
+[the onboarding/worktree integration contract](#september-16-onboarding-and-worktree-integration-contract)
+for the current follow-up. The original recommendation below is retained as an
+attributed September 14 assessment. Its desktop-visibility and VM alternatives
+are not requirements for the approved coordinator plugin or this follow-up.
+Outcome 3 remains open; a reviewed standalone component does not complete RR
+integration. The catalog identity remains proposed/supporting.
+
+## Original September 14 recommendation
 
 Retain the owner's selected native Codex desktop, local App Server and named
 profiles direction, but do not implement a purported complete enforcement mode
@@ -479,3 +489,467 @@ synchronization claim is made. The coordinator owns that distinction and the rev
 and brief closeout. All new files in this task are durable repository documentation;
 no temporary file was created. Existing fixtures and temporary artifacts remain
 untouched.
+
+## September 16 App Server findings
+
+The owner authorized retaining this research, not the proposed expansion into
+RR-owned execution. This artifact remains **proposed/supporting**, with its
+existing catalog identity. The findings correct assumptions in the earlier
+assessment; they do not adopt its VM, runtime-manager or provisioning proposals.
+
+### Documented contracts
+
+- **Connection:** a client can launch `codex app-server` and communicate through
+  its stdin/stdout using `initialize`, `initialized`, `thread/start` and
+  `turn/start`. **Inference from that documented launch sequence:** this
+  arrangement does not require attaching to the desktop's existing process or
+  finding its control socket.
+- **Launch settings:** named permissions can be selected explicitly rather than
+  inferred from a coordinator's settings. `config/read` is documented to resolve
+  configuration on disk. **Inference about evidence scope:** that result should
+  not be treated as a readback of every live worker setting.
+- **Approvals and results:** the client receives identified approval requests
+  and returns decisions. Turn events distinguish completion, interruption and
+  failure. Transport loss alone establishes none of those outcomes; clients must
+  retain uncertainty rather than report successful completion or cancellation.
+
+These contracts come from the official
+[App Server documentation](https://learn.chatgpt.com/docs/app-server).
+They are implementation inputs, not behaviors that need a separate proof harness.
+
+Permission profiles constrain local sandboxed commands, not all retrieval paths.
+MCP servers, plugins, apps, web search and browser/computer-use capabilities have
+separate controls. MCP server/tool allowlists and plugin-server controls are
+documented; a selected filesystem profile is not an all-tool isolation claim.
+Sources: [permission scope](https://learn.chatgpt.com/docs/permissions#scope-and-enforcement),
+[MCP configuration](https://learn.chatgpt.com/docs/extend/mcp), and
+[configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
+
+### Installed interface and observed behavior
+
+The bundled CLI reported `0.154.0-alpha.6.2`. Its generated experimental schema
+includes `cwd`, `permissions`, `config`, `approvalPolicy` and `approvalsReviewer`
+in `ThreadStartParams`. `ThreadStartResponse` includes resolved cwd, approval
+settings and sandbox, plus optional `activePermissionProfile` identity. That
+optional identity is not a complete inventory of effective filesystem/tool rules.
+
+A short-lived separate App Server successfully initialized, listed the configured
+RO/restricted profiles as allowed, read effective repository configuration and
+read Main coordination's existing task metadata. It reported that task as
+`notLoaded`; its loaded-task list remained empty. The inspection process was
+stopped without starting or resuming a task. This establishes API connectivity
+and stored-task access, not shared control of the desktop's live tasks.
+
+The desktop process used stdio. The default control-socket proxy failed because
+its socket was absent. That is a bounded connection finding, not proof that all
+desktop integration is impossible. Worker creation, effective tool restrictions,
+desktop synchronization and execution through the signed RR app were not tested
+by this inspection. The desktop `create_thread` wrapper's missing profile selector
+must not be presented as a missing App Server capability.
+
+### Outcome 3 scope and remaining limitations
+
+Outcome 3 remains the native hook pilot, correct worker startup, ordinary-worker
+history exclusion with deliberate coordinator retrieval, and delivery-record
+closeout. The native pilot is complete; these findings do not complete history
+exclusion or reopen the pilot. They do not authorize another denied-path probe.
+
+RR-owned worker execution, run/approval UI and execution hosting are **outside
+this outcome and are not authorized by these findings**. The current
+[dashboard design](agent-driven-delivery-dashboard-design.md) requires bounded
+observation; [I7 in the full-product plan](../delivery/plans/2026-09-06-full-product-architecture-and-delivery-plan.md#integrations-presentation-and-execution-reliability)
+leaves app-owned execution as a separate decision. Existing-desktop observation
+and client-owned execution must not be conflated.
+
+If app-owned execution is separately pursued, its macOS hosting boundary requires
+a specific design. RR is sandboxed, and its plugin lifecycle helper is confined
+to fixed plugin operations under [ADR-002](../architecture/ADR-002-codex-plugin-lifecycle.md).
+Apple documents that sandbox inheritance does not automatically carry dynamic
+file-access grants to child processes. A terminal connection therefore does not
+establish signed-app compatibility. Source:
+[Apple App Sandbox inheritance](https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html).
+This limitation is not a requirement to build a helper, VM or prototype now.
+
+Trust documented behavior. Reserve any future narrow experiment for a consequential
+question left unanswered by sources or an observed implementation mismatch.
+
+## September 16 onboarding and worktree integration contract
+
+### Assignment and evidence
+
+Owner-approved scope: map RR's existing onboarding and plugin installation to
+project-owned worktrees and per-worker checkout permissions, identify the necessary
+plugin interface changes, and persist a bounded implementation plan. This is design
+and documentation only. No installation, runtime/configuration change, worktree
+migration, new shared-Git work, or product implementation is authorized here.
+The owner granted Main a one-time documentation provisioning/writing exception
+because Restricted coordinator 02 cannot provision under its current runtime.
+
+Source baseline: remote main c8dd3c2a99dc7e5f6fa76414a5247f51ffd9a8be, in branch
+codex/outcome3-onboarding-worktree-contract. Shared-execution/1 applies; installed
+0.1.18 skills declare standard 1. Source inspection, documentation checks and one
+independent architecture/permission-boundary review are sufficient for this plan;
+no native build or runtime prototype is required. The standalone coordinator plugin
+0.1.0 remains a separate reviewed, uncommitted candidate on
+codex/coordinator-app-server-plugin; this branch does not import or alter it.
+
+### Existing implementation to extend
+
+| Responsibility | Source evidence | Integration consequence |
+| --- | --- | --- |
+| Project identity and authorized folders | [FolderProjectOnboarding](../../ReleaseRadarCore/Onboarding/ProjectOnboarding.swift), `inspect`, `prepare`, `finish`, `authorizeWorktree` | Reuse existing registration identity, bookmark authorization and pending/completed setup flow. Today external worktrees are separately authorized; onboarding does not provision execution permissions. |
+| Onboarding completion and errors | [OnboardingView](../../ReleaseRadar/Projects/OnboardingView.swift), `finish` | Attach deterministic execution setup to the existing onboarding completion path, preserving pending/error recovery rather than sending an LLM a setup prompt. |
+| Plugin lifecycle and user intent | [CodexPluginLifecycleCoordinator](../../ReleaseRadarCore/CodexPlugin/CodexPluginLifecycle.swift), `install`, `update`, `reinstall`; [AppModel](../../ReleaseRadar/App/AppModel.swift), plugin actions | Reuse installation/update/removal and modification-preservation behavior. Do not introduce a parallel installer or require marketplace commands from the user. |
+| Privileged operation boundary | [CodexPluginLifecycleClient](../../ReleaseRadarIntegration/CodexPluginLifecycleClient.swift) and [helper](../../ReleaseRadarPluginLifecycleHelper/main.swift) | Existing typed operations are status/install/remove/reinstall for a fixed plugin. They are not permission-profile or Git-worktree operations. |
+| Package recognition | [PluginDigester](../../ReleaseRadarPluginLifecycleHelper/PluginDigester.swift) | Fixed release-radar identity, exact package inventory and MCP shape currently exclude the standalone coordinator-workers package. Reuse requires an explicit packaging change, not copying additional files into the current cache. |
+
+[ADR-002](../architecture/ADR-002-codex-plugin-lifecycle.md) remains unchanged. It
+establishes the fixed plugin/helper boundary and Codex ownership of installed state.
+The app's [entitlements](../../ReleaseRadar/ReleaseRadar.entitlements) and existing
+bookmark flow do not establish a general-purpose project provisioning service.
+Any required change to that accepted boundary needs a new explicit decision before
+implementation; this plan neither grants the existing helper new authority nor
+creates another helper.
+
+### Ownership and permission contract
+
+1. Onboarding is the user's agreement to the project's execution workflow. RR
+   application code establishes the corresponding project execution policy
+   deterministically, using the existing project identity and authorized repository.
+   No LLM generates policy, edits permission tables or configures host environment
+   variables. Provisioning failure remains visible in setup; it is not reported as
+   execution-ready merely because registration exists.
+2. RR owns creation, assignment and cleanup of its worktrees under
+   `<RR worktree root>/<stable project identity>/<task identity>/`. The stable ID
+   controls identity; a readable project name may be a label. The actual base path
+   comes from RR's platform storage policy, not a user's copied absolute path.
+   This does not move existing worktrees or take ownership of Codex-managed ones.
+3. Project-level management authority belongs to RR and its authorized coordinator
+   route. An ordinary worker receives one assigned checkout as its runtime root,
+   a role-specific permission profile, the bounded assignment and model/effort.
+   It does not inherit the coordinator's project-parent grant or sibling roots.
+   Existing historical and shared-Git exclusions are unchanged constraints, not
+   new work in this follow-up.
+4. Future worktrees reuse onboarding's rules; creation produces an assignment,
+   not another hand-authored permission configuration. The launch path validates
+   that the checkout belongs to this project/task and that effective roots and
+   grants do not expose siblings. RR owns the project association; an LLM-supplied
+   path or role string alone is not authority.
+5. Install/update remains the existing RR plugin lifecycle user experience. Machine
+   executable paths and configuration delivery are implementation details of that
+   integration. Manual JSON editing, shell startup files and environment-variable
+   setup are not the product acceptance criteria. Existing explicit removal and
+   modification-preservation semantics must survive adoption.
+
+Codex documents changing its overall Worktree root in Settings, but the inspected
+public interfaces do not establish a per-project `<project>/<task>` layout. RR-owned
+Git worktrees followed by explicit App Server checkout selection provide the chosen
+ownership model; no change to Codex's managed layout is required.
+[Official worktree documentation](https://learn.chatgpt.com/docs/environments/git-worktrees).
+Codex combines runtime roots with profile-defined roots, so merely passing a narrow
+cwd cannot cancel a broader grant. Workspace-relative rules apply to each effective
+root and can be reused across assignments.
+[Official permission documentation](https://learn.chatgpt.com/docs/permissions).
+The inspected installed App Server schema exposes cwd, runtimeWorkspaceRoots and
+named permissions; the plugin has already exercised explicit checkout/profile
+startup. [Official App Server documentation](https://learn.chatgpt.com/docs/app-server).
+
+### Necessary changes to the standalone plugin interface
+
+The current candidate expects COORDINATOR_WORKERS_POLICY to select an owner-maintained
+JSON file containing the executable and static assignments of cwd, profile, allowed
+models and excluded paths. This works for the reviewed development candidate but
+leaves new task/worktree assignments and per-computer setup outside RR.
+
+Retain its bounded App Server lifecycle, approval identity and unknown-outcome
+handling. Replace manual configuration ownership with deterministic RR-provided
+project policy and current assignments. The public worker launch should identify
+an authorized assignment; it must not accept arbitrary permission/config overrides.
+RR's producer and the plugin's consumer need one explicit delivery/read contract
+with protection from worker modification. A file-based contract may suffice; a new
+service/database is not required by this plan. Do not select transport or cache
+placement by assuming the current environment-variable interface is permanent.
+
+Before integration implementation, resolve these two concrete boundary decisions:
+
+- **Packaging:** choose whether coordinator capability joins the existing RR plugin
+  or is a second fixed managed package. Recommendation: preserve the existing RR
+  installation experience and identity where compatible, but first verify how the
+  coordinator-only tool exposure is retained. Update the exact package inventory,
+  MCP validation and version recognition accordingly; do not relax integrity checks
+  or introduce arbitrary plugin installation.
+- **Provisioning ownership:** identify the permitted RR code path for producing
+  project policy/assignment data and managing Git worktrees under macOS folder
+  authorization. The current lifecycle helper is not that path. Specify exact typed
+  operations and storage access if an existing boundary must change; obtain the
+  architectural decision before implementing it. No generic shell executor is
+  implied, and onboarding consent does not itself supply macOS filesystem access.
+
+These are defined implementation prerequisites, not claims that unsupported
+operations already work. Outcome 3 cannot close on a standalone-plugin PASS while
+this product contract remains unimplemented or these decisions unresolved.
+
+### Owner clarification: project hook configuration remains in Outcome 3
+
+The owner explicitly confirmed that hooks belong to Outcome 3 and that RR must
+configure them deterministically for each onboarded project. Native pilot
+completion establishes the tested behavior, not completed product integration.
+App Server, permissions and worktree provisioning do not replace this requirement.
+
+Before implementation proceeds, reconcile the original Outcome 3 hook requirements
+with delivered behavior and validate the supported configuration contract against
+official Codex documentation and RR's existing implementation. The same onboarding
+plan must specify required hooks, configuration ownership and location, applicability
+to the project and assigned worktrees, installation/update/readiness verification,
+preservation of unrelated user hooks, and failure recovery, disablement and removal.
+Manual configuration and LLM-generated setup are not the intended user workflow.
+
+This is a persisted owner requirement and pending investigation, not a claim that
+these mechanisms are already designed, reviewed or implemented. It does not reopen
+settled shared-Git work or authorize configuration changes. Outcome 3 closeout must
+account for hook integration as well as the remaining worker-startup and historical
+context requirements. This clarification postdates the independent review recorded
+for the earlier onboarding/worktree plan.
+
+### Packaging and provisioning decision — September 16 follow-up
+
+This section resolves ownership and packaging direction for implementation planning;
+it does not authorize implementation or claim the remaining readiness gaps solved.
+The earlier two alternatives are superseded by the choices below. The same named
+branch and documentation-only assignment apply.
+
+**Packaging:** retain the single `release-radar` plugin and existing RR installation,
+update, removal and reinstall flow. Integrate coordinator launch capability into
+that package; do not introduce a separately installed coordinator product. Update
+its fixed inventory and MCP validation deliberately, preserving integrity and user
+removal/modification semantics. The reviewed development plugin remains a separate
+candidate until integrated. Package hook handler code as a signed RR application
+resource, registered through project configuration rather than plugin-only hooks.
+No second installer is needed. The exact callable coordinator transport must retain
+assignment authorization; packaging a tool is not proof that its caller is Main.
+
+**Why project registration:** the current standalone adapter's `worker_overrides`
+disables `features.plugins` and configured MCP servers for ordinary workers. Keep
+that isolation. Plugin-only hook discovery cannot be assumed to survive it.
+A project-local command hook avoids requiring coordinator tools or a live MCP
+connection in workers. Do not register the same RR handler in both sources.
+The native pilot used `UserPromptSubmit` with session/root scoping; its synthetic
+BLOCK tokens and hard-coded session must not become production admission policy.
+The original brief asked where hooks help, not an unbounded set of lifecycle hooks.
+The remaining product definition is the real admission predicate and required
+context, not another transport proof or an invented Stop/retry automation loop.
+
+**Application owner:** extend the existing native onboarding path
+`FolderProjectOnboarding.prepare/finish`, with a narrowly typed execution-setup
+operation in RR's integration layer. RR owns project identity, consent, policy
+materialization, assignment records and readiness. Complete setup only after its
+required checks; reuse pending registration/recovery rather than a second workflow
+engine. The lifecycle helper remains the fixed four-operation installer from
+ADR-002; it receives no project provisioning, Git or generic command authority.
+
+RR performs authorized project-file writes in-process using its existing folder
+bookmark access. Store RR-owned task worktrees under the existing app-owned storage
+root, grouped by stable project/task ID. Coordinator assignment delivery must expose
+only the needed generated policy through a typed interface or protected file;
+workers cannot modify it. Reading the current `GitWorktreeDiscovery.runGit` is not
+proof that Git writes will work from the sandbox: it only launches discovery.
+Apple explicitly distinguishes static inherited sandbox rights from access acquired
+after launch. Therefore do not implement provisioning by assuming an ordinary Git
+child inherits the application's selected-folder grant.
+[Apple sandbox inheritance](https://developer.apple.com/library/archive/documentation/Miscellaneous/Reference/EntitlementKeyReference/Chapters/EnablingAppSandbox.html).
+
+For Git provisioning, recommend in-process libgit2 behind the same typed RR
+integration operation, while RR holds its repository bookmark access. Its documented
+worktree API accepts an explicit destination and reference; this avoids a child
+process and grant-transfer machinery. This is a new dependency recommendation,
+not an installed dependency or runtime verification. Pinning, license/security
+assessment, existing-repository compatibility and focused signed-app tests belong
+to its implementation review; preserve ordinary Git interoperability and dirty
+worktree refusal. Do not hand-write Git metadata or widen the lifecycle helper.
+[libgit2 worktree creation](https://libgit2.org/docs/reference/main/worktree/git_worktree_add.html),
+[reference selection](https://libgit2.org/docs/reference/main/worktree/git_worktree_add_options.html),
+[pruning safeguards](https://libgit2.org/docs/reference/main/worktree/git_worktree_prune.html).
+This selects an implementable application boundary without introducing a new
+privileged service. Dependency adoption still needs inclusion in the approved
+implementation scope; no library or entitlement was changed here.
+
+**Per-project hook lifecycle:** onboarding prepares RR's registration in the
+trusted checkout's `.codex/hooks.json` (or the existing inline hooks representation
+when that is already used), pointing to the installed signed handler. Derive the
+path from the installed app, not a developer path or shell environment variable.
+Use a bounded merge that preserves other definitions and detects conflicts; never
+replace the entire user file. Register once at the primary repository. For each new assigned linked worktree,
+verify that Codex resolves the expected primary registration before its first turn;
+do not duplicate it into every checkout. The cross-worktree evidence below
+supersedes the earlier unverified per-checkout registration proposal. Guard execution by registered project/assignment;
+an unregistered project receives no RR workflow enforcement. The generated
+configuration and handler must be protected from ordinary worker changes.
+
+RR updates/removes only its own unchanged registration. A conflicting edit stays
+visible for recovery. Disabling/removing the RR workflow stops new governed worker
+launches and removes or disables only RR's registration; it must not disable all
+Codex hooks or silently re-enable an owner's disabled hook. Existing worktrees are
+not migrated by this design task. Updating a handler requires RR package-integrity
+verification independently of Codex's definition trust.
+
+**Readiness boundary:** require project configuration trust and exact-definition
+hook trust, and inspect discovery, enablement and trust before worker launch.
+The initial claim that no programmatic trust route existed was incorrect: the
+installed desktop uses `config/batchWrite` for `hooks.state`. The verified
+cross-worktree result and resulting onboarding contract are recorded below.
+[Official hooks documentation](https://learn.chatgpt.com/docs/hooks) and
+[App Server configuration API](https://learn.chatgpt.com/docs/app-server) supply
+public contracts; the concrete state-key use is installed-version evidence.
+Outcome 3 remains open for implementation; this is not a signed-RR runtime pass.
+
+Source basis: current remote-main baseline c8dd3c2; inspected onboarding,
+GitWorktreeDiscovery, app entitlements, PluginDigester and accepted ADR-002; supplied
+pilot brief in the primary checkout; inspected standalone adapter/policy candidate;
+official documentation fetched September 16 and installed App Server generated
+schema. No hook, profile, trust, installation or application state was changed.
+Independent reviewer `01a0abf3-7ace-7a22-a2b2-e04a8bba7679` (Sol/high,
+verified rr-project-ro) returned PASS with no Required findings. Review used current
+repository sources and cited excerpts; external DNS failed, so it did not independently
+fetch official sources. Main fetched those sources directly. Documentation and diff
+checks passed. This review does not establish implementation readiness.
+
+### Admission rule and trust disposition — September 16
+
+This resolves the preceding admission/trust investigation at design level. It
+supersedes “predicate remains undefined”; it does not claim implemented enforcement
+or silently relax the all-in-RR onboarding requirement.
+
+**Admission rule:** ordinary work proceeds only for a current, owner-authorized
+assignment whose project registration, exact checkout, role, selected current
+context and permission configuration match the launcher's verified assignment.
+Use the existing assignment/lifecycle record, not an agent-written ledger or a
+prompt assertion. A stopped, revoked, superseded, unverified or unknown assignment
+cannot authorize another work turn. A follow-up cannot broaden role, roots, tools,
+model permissions or historical access; a changed assignment must be re-established
+through the coordinator. Main's deliberate historical retrieval remains separate.
+This translates the original current-context/worker-isolation requirements; it does
+not introduce a task-completion engine, proof ledger or general prompt classifier.
+
+| Situation | Launcher decision | Hook behavior |
+| --- | --- | --- |
+| Current verified assignment, matching checkout/session and current context | Admit bounded work | Continue; no synthetic token required. |
+| Known RR worker with revoked/stopped/superseded assignment or mismatching checkout/session | Refuse new work | Block an ordinary submitted work prompt with a concise reason and recovery action. |
+| Known RR worker whose assignment cannot be read or validated | Refuse new work; report unavailable | Return an explicit block when the handler can execute and identify the managed worker. A crash/timeout/disabled hook is not a reliable block. |
+| User changes task scope or asks for broader access | Return to coordinator for a new authorized assignment; do not mutate policy from prompt text | Do not infer authorization or permissions from natural-language claims. |
+| Main/coordinator or an unrelated session outside RR's worker assignment | Apply its own separately authorized workflow | Do not apply ordinary-worker blocking globally. |
+| STOP, cancellation, approval wait or recovery | Interrupt/pause through the control path; no work turn is required | Never demand more work, auto-retry, or prevent disablement. Recovery changes state outside the blocked worker. |
+
+The production `UserPromptSubmit` handler checks assigned session/checkout and
+assignment status, not arbitrary shell command strings or transcript contents.
+It receives only the minimal worker-specific read-only assignment snapshot; parent
+project policy and sibling assignments stay inaccessible. Protect that snapshot
+and the hook definition against worker writes. Establish the session binding from
+runtime identity before the first ordinary turn; never copy the pilot's hard-coded
+ID or treat an agent-supplied ID as authority. The launcher owns this binding and
+checks admission before first and subsequent turns. No LLM infers eligibility.
+
+The hook cannot independently attest the full sandbox, loaded context or all tool
+routes from its event payload. Those checks remain in the controlled launcher and
+runtime permission boundary. Unknown native/manual sessions are not silently
+adopted as RR workers; universal control of arbitrary desktop sessions is not
+claimed. `UserPromptSubmit` does not substitute for in-flight revocation or tool
+permissions. STOP uses the independent interrupt/control route, with confirmation
+from runtime completion; no Stop continuation hook is added. Malformed events and
+handler failure are readiness failures, never proof that work was blocked.
+
+### Verified hook trust across linked worktrees — September 16
+
+**Correction:** the earlier “no persistent external trust mutation established”
+conclusion searched for a dedicated hooks/trust endpoint and missed how the
+installed desktop actually implements Trust. No Codex-only approval handoff is
+required by the evidence now available. The all-in-RR onboarding objective is
+retained, not replaced with the previously proposed UX compromise.
+
+**Installed implementation:** ChatGPT.app's `app.asar` contains
+`webview/assets/hooks-settings-1700361090d3.js`, whose Trust action submits
+`{key: hook.key, trustedHash: hook.currentHash}`. Its imported mutation in
+`webview/assets/app-initial-4d7ea7f81c2d.js` calls `config/batchWrite` with
+`keyPath: "hooks.state"`, `mergeStrategy: "upsert"` and a value mapping that key
+to `{trusted_hash: currentHash}`; it requests configuration reload. This is the
+application's own use of the documented configuration API, not a private database
+write, a fabricated hooks/trust method, or an invocation bypass. It is evidence
+for installed Codex 0.154.0-alpha.6.2; the specific hooks.state representation is
+not independently promised as a stable public hook-trust API.
+
+**Controlled check:** one synthetic Git repository, separate fixture-only Codex
+home, two linked worktrees A/B, and a third linked worktree C created after the
+trust write. Only the primary repository had `projects.<root>.trust_level =
+"trusted"`; no A/B/C project trust entries were supplied. Its tracked hooks.json
+contained one UserPromptSubmit command `/usr/bin/true`. Hooks were listed only:
+no hook was executed, no model turn started, and no real Codex configuration,
+project hook, credentials, installation or application store was changed.
+
+| Check | Actual result |
+| --- | --- |
+| Before hook approval: primary, A and B | All discovered the same hook from the primary repository's `.codex/hooks.json`; all reported untrusted. No discovery warnings/errors. |
+| Identity | Every row used `<primary>/.codex/hooks.json:user_prompt_submit:0:0` and identical definition hash, rather than a worktree-specific key. |
+| Single trust write, selecting A's returned key/hash | `config/batchWrite` returned `ok` and the isolated config file path/version. |
+| After that write: primary, A and B | All reported trusted with the same source path/key/hash. |
+| C, created after approval | Discovered the same primary hook and reported trusted without another project-trust or hook-trust write. |
+| Persistence | Fixture config.toml contains only the primary project trust entry and the single hooks.state key with trusted_hash. |
+
+Thus both project configuration discovery and hook approval carried across the
+existing and subsequently created linked worktrees in this installed-version
+check. This does not assert inheritance for independent clones, moved primary
+repositories, conflicting configuration/trust overrides, changed hook definitions,
+other Codex versions or every possible linked-worktree topology. Definition hashes
+remain relevant; unchanged source identity does not approve a changed definition.
+No additional probe is needed to establish the tested result.
+
+**RR onboarding implication:** configure the exact RR hook once in the registered
+primary repository, preserving unrelated hooks. Derive its command from installed
+signed RR resources. Under onboarding's explicit workflow consent, inspect the
+resolved hook, verify it is the exact RR-owned definition and handler, then apply
+its returned key/hash through the same configuration API. Upsert only RR's entry;
+never trust the entire discovered inventory. Read back that definition's enabled
+and trusted status. Do not claim that writing a hash proves handler integrity.
+The signed package and RR verification own that separate property.
+
+Subsequent linked worktrees use the primary registration; validate expected source
+and trust when preparing each assignment rather than ask for approval by default.
+A changed or conflicting definition is a recovery state, not automatic permission
+to approve arbitrary content. Preserve explicit disable/removal and unrelated
+configuration. Scope/version checks and configuration concurrency handling belong
+to the integration; no direct trust-store edit or bypass flag is needed.
+
+This resolves the worktree-trust uncertainty and withdraws the proposed mandatory
+Codex UI handoff. It does not prove the sandboxed RR app can yet invoke the API:
+that remains implementation work through its approved integration boundary, not
+new authority for the fixed plugin installer helper. No library, service, hook or
+permission implementation was added by this investigation. The admission rule
+above remains the design contract; Outcome 3 remains open.
+
+Sources: installed files named above; generated installed App Server schema;
+[official hook trust semantics](https://learn.chatgpt.com/docs/hooks);
+[documented config/batchWrite and hooks/list](https://learn.chatgpt.com/docs/app-server).
+Main directly inspected source and ran the isolated check. This result supersedes
+the earlier negative trust findings and their reviews. Documentation checks and
+one independent review cover this correction; no runtime hook enforcement is
+claimed from a discovery/trust-state test.
+
+### Separate delivery sequence and acceptance
+
+1. Implement the selected packaging and provisioning boundaries above against the
+   existing installer and project authorization code, resolving implementation
+   compatibility and sandboxed API access. Keep the reviewed standalone plugin change separate.
+2. Deliver deterministic onboarding/worktree ownership and RR-to-plugin assignment
+   integration in bounded implementation changes, with focused authorization and
+   failure/retry checks. Reuse registration/setup state and current app-owned storage;
+   do not add an execution dashboard, general task database or reconciliation engine.
+3. Deliver packaging through the existing install/update/reinstall path. Verify on
+   a second computer that installation and project onboarding require no manual
+   path/profile/JSON/environment editing; a new task gets the assigned checkout,
+   the existing exclusions apply, sibling checkout access is absent, and setup
+   failures recover through RR. This future validation is not claimed by today's
+   source inspection and requires separately authorized implementation/installation.
+
+Current documentation endpoint: source-backed plan plus independent review and
+repository documentation validation. Outcome 3 remains open. Runtime work, commits,
+push/PR, installation, migration and application catalog acceptance are not performed
+by this follow-up. Catalog identity/authority/lifecycle are unchanged; this mutable
+assessment has no checksum. No new durable document or competing ledger is created.
