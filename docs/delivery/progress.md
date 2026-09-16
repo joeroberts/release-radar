@@ -7,8 +7,9 @@
 `superpowers_<original-folder>_<filename>`. Copies retain the original bytes;
 new catalog identities classify them as archived/non-authoritative. The
 [archive index](archive/README.md#superpowers-records-preserved-september-16)
-records provenance. Originals will be removed only after verified committed
-preservation; the ignored `.superpowers/sdd/.gitignore` is outside this move.
+records provenance. After verifying all 14 committed copies in `2286c53` against their source bytes,
+Main removed exactly those original Markdown files. The ignored
+`.superpowers/sdd/.gitignore` remains outside this move.
 Independent metadata/disposition review passed with no Required findings
 (task `01a0aca2-2d99-71c1-bb20-ddad18d06d91`); Main directly verified bytes.
 Documentation and scoped metadata diff checks passed. This does not reopen the
