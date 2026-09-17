@@ -79,14 +79,41 @@ bounded verifier/promotion fixture cases with actual function bodies, stubbed co
 and real filesystem/plist operations. The strict new-candidate/legacy-prior distinction
 is verified; this is expressly not production signature proof. The same reviewer
 cleared P1 with no remaining Required or Optional findings; correction validation is
-terminal. Source remains frozen, ready for Main→BuildAgent's scoped local commit.
-No new commit is claimed. Temporary `build/promotion-p1-fixtures` remains retained
+terminal. Main confirmed the scoped package commit
+`05f99ef26cf479221b289d03275148a0194b973f` on the same assigned branch/worktree. Temporary `build/promotion-p1-fixtures` remains retained
 and excluded; no cleanup is authorized. Shipping package bytes and
 digest remain unchanged; checkpoint 18's unchanged checks remain terminal.
 No native red run is claimed. Main→BuildAgent owns trusted Git. No real install,
 packaging run or live
 state mutation is included. Runtime/UI, production boundaries, portability and catalog
 application acceptance remain open; source identity is not complete acceptance.
+
+Main/BuildAgent checkpoint 19 ran the reviewed stage-release-no-launch path.
+Release build succeeded, but the stage gate rejected actual coordinator signing
+identifier `ReleaseRadarCoordinator` instead of required
+`com.rekonlabs.ReleaseRadarCoordinator`. Strict app deep/helper signatures, hardened
+runtime and exact group-only entitlements passed without XCTest extras; app version
+was 0.1.19. Processes exited with no staging promotion, installation or launch.
+Temporary `build/production-stage-019-19.log` remains retained and excluded.
+
+Main released only the project-source signing correction from `05f99ef`: generate
+and embed the coordinator's Info.plist in Debug/Release, matching existing
+command-line helpers and retaining its required product bundle identifier.
+The verifier, signing authority, entitlement structure and helper authority are
+unchanged. Corrected checkpoint 19's `stage-release-no-launch` exited 0: Release build,
+strict app/coordinator signing, copy and promotion passed. Coordinator identifier is
+exactly `com.rekonlabs.ReleaseRadarCoordinator`, hardened runtime passed and its sole
+entitlement is application-groups `[2UA854NLX4.com.rekonlabs.ReleaseRadar]`. Built and
+staged plugin version 0.1.19 and normalized digest match the registered pair above.
+Reviewer `01a0af8d` cleared the bounded signing correction over `05f99ef` with no
+Required or Optional findings; checks/review are terminal. Temporary corrected log
+`build/production-stage-019-19-corrected.log` remains retained and excluded. Source/docs
+remain frozen for Main→BuildAgent documentation/diff checks and scoped commit.
+No new commit, installation, launch or overall acceptance is claimed. Shipping package
+bytes/digest remain unchanged; package guidance/version checks remain closed.
+No worker native/build/Git/live actions are included. The current authorized direct
+endpoint is stage-only; production packaging completion, installation, runtime/UI,
+portability and live catalog acceptance remain open.
 
 Abrupt coordinator process loss without a retained worker handle or exit proof remains
 an unresolved recovery barrier. Existing configuration-handle replacement requires old

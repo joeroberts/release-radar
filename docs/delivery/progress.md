@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**Outcome 3 — package promotion P1 cleared; source candidate ready for scoped local commit; complete acceptance open.**
+**Outcome 3 — production coordinator signing correction verified/reviewed; frozen for scoped commit; complete acceptance open.**
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
@@ -48,12 +48,40 @@ bounded verifier/promotion fixture cases using the actual function bodies, stubb
 codesign and real filesystem/plist operations. The strict new-candidate/legacy-prior
 distinction is verified; these fixtures are expressly not production signature proof.
 The same reviewer cleared P1 with no remaining Required or Optional findings;
-correction checks/review are terminal. Source remains frozen and ready for
-Main→BuildAgent's scoped local commit; no new commit or real install is claimed.
+correction checks/review are terminal. Main confirmed the scoped package commit
+`05f99ef26cf479221b289d03275148a0194b973f` on the same assigned branch/worktree.
+The published-package/guidance/version checks remain closed for unchanged behavior.
 Temporary `build/promotion-p1-fixtures` remains retained and excluded; cleanup is
 not authorized. The shipping
 package bytes and registered digest remain unchanged, so checkpoint 18's app/package
 test results remain terminal for unchanged behavior. No native red run is claimed.
+
+Main/BuildAgent checkpoint 19 ran the reviewed stage-release-no-launch path:
+Release build succeeded, but the stage gate rejected the production coordinator's
+actual signing identifier `ReleaseRadarCoordinator` instead of required
+`com.rekonlabs.ReleaseRadarCoordinator`. Strict app deep/helper signatures, hardened
+runtime and exact group-only entitlements passed, without XCTest extras; app version
+was 0.1.19. Native processes exited; no staging promotion, installation or launch
+occurred. The log `build/production-stage-019-19.log` remains temporary/retained/excluded.
+
+Main released only the project-source signing correction from `05f99ef`.
+The coordinator's Debug/Release configurations now generate and embed their Info.plist
+(`GENERATE_INFOPLIST_FILE=YES`, `CREATE_INFOPLIST_SECTION_IN_BINARY=YES`), following
+existing command-line helper configuration and retaining its required product bundle
+identifier. Verifier requirements, signing authority, entitlements and helper authority
+are unchanged. Corrected checkpoint 19's `stage-release-no-launch` exited 0: Release
+build, strict app/coordinator signing, copy and promotion passed. Coordinator identifier
+is exactly `com.rekonlabs.ReleaseRadarCoordinator`, hardened runtime passed and its sole
+entitlement is application-groups `[2UA854NLX4.com.rekonlabs.ReleaseRadar]`. Built and
+staged plugin version 0.1.19 and normalized digest match the registered pair above.
+Reviewer `01a0af8d` cleared the bounded signing correction over `05f99ef` with no
+Required or Optional findings; checks/review are terminal. Corrected log
+`build/production-stage-019-19-corrected.log` is temporary, retained and excluded.
+Source/docs remain frozen for Main→BuildAgent documentation/diff checks and scoped
+commit. No new commit, installation, launch or overall acceptance is claimed.
+Shipping package bytes/digest remain unchanged; no worker native/build/Git/live action
+was performed. Production packaging completion, installation, runtime/UI, portability
+and live catalog acceptance remain open.
 
 Onboarding authority carries only existing registered work scope; no repeated
 per-worker consent is introduced, and genuine runtime approval gates remain.
@@ -64,8 +92,8 @@ no universal reconnect/cleanup claim is made. Runtime/UI acceptance, actual prod
 sandbox/bookmark/executable boundaries, portability and application catalog acceptance
 remain open. The source release identity is not installation or full Outcome 3
 acceptance. No live app/configuration, bookmark grant, SQLite/catalog acceptance,
-tag, packaging run, installation, release or external mutation is authorized in
-this slice. Main owns native checks and trusted Git.
+tag, installation, release or external mutation is authorized for this worker.
+Main owns the explicitly released stage-only retry, native checks and trusted Git.
 
 Source/tests/docs are durable repository inputs. Existing temporary reference plugin,
 stopped fixture and native build/check outputs remain retained and excluded; no deletion

@@ -1479,8 +1479,8 @@ cases using the actual function bodies, stubbed codesign and real filesystem/pli
 operations. The strict new-candidate/legacy-prior distinction is verified; these
 fixtures are expressly not production signature proof. The same reviewer cleared
 P1 with no remaining Required or Optional findings; correction validation is terminal.
-Source remains frozen, ready for Main→BuildAgent's scoped local commit. No new commit
-is claimed. Temporary `build/promotion-p1-fixtures` remains retained and excluded;
+Main confirmed the scoped package commit
+`05f99ef26cf479221b289d03275148a0194b973f` on the same assigned branch/worktree. Temporary `build/promotion-p1-fixtures` remains retained and excluded;
 cleanup is not authorized. Shipping package bytes
 and the exact registered digest remain unchanged; checkpoint 18's unchanged
 app/package checks remain terminal. No native red run is claimed.
@@ -1521,3 +1521,41 @@ Abrupt coordinator process loss without the worker handle or proof of exit leave
 unresolved barrier. No universal reconnect/recoverability claim, process registry or new
 execution engine is introduced. Runtime/UI comparison, production sandbox/bookmark and
 executable identity checks, portability and application catalog acceptance remain open.
+
+## Production coordinator signing correction — checkpoint 19
+
+Main/BuildAgent ran the reviewed stage-release-no-launch path from committed
+`05f99ef26cf479221b289d03275148a0194b973f`. The Release build succeeded, but the
+stage gate rejected actual signing identifier `ReleaseRadarCoordinator`; the approved
+identifier remains `com.rekonlabs.ReleaseRadarCoordinator`. Strict app deep/helper
+signatures, hardened runtime and exact group-only entitlements passed without
+XCTest-injected extras; app version was 0.1.19. This establishes the production
+signing-identifier defect, distinct from checkpoint 18's qualified test-built evidence.
+Native processes exited; no staging promotion, installation or launch occurred.
+Temporary log `build/production-stage-019-19.log` remains retained and excluded.
+
+The coordinator target already declares the required product bundle identifier but
+lacked the generated, embedded Info.plist settings used by existing command-line
+helpers. Main released only the source correction: its Debug/Release configurations
+now set `GENERATE_INFOPLIST_FILE=YES` and `CREATE_INFOPLIST_SECTION_IN_BINARY=YES`,
+providing generated bundle identity in the executable for normal build/signing.
+The strict verifier is unchanged; no manual re-signing workaround, signing-authority
+change, entitlement or helper-authority expansion is included.
+
+Corrected checkpoint 19's `stage-release-no-launch` exited 0. Release build, strict
+app/coordinator signing, copy and promotion passed. Coordinator signing identifier is
+exactly `com.rekonlabs.ReleaseRadarCoordinator`; hardened runtime passed and its sole
+entitlement is application-groups `[2UA854NLX4.com.rekonlabs.ReleaseRadar]`. Both built
+and staged plugin version 0.1.19 and normalized digest
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35` match the
+registered pair. Reviewer `01a0af8d` cleared the bounded signing correction over
+`05f99ef` with no Required or Optional findings; checks/review are terminal. Temporary
+log `build/production-stage-019-19-corrected.log` remains retained and excluded.
+Source/docs are frozen for Main→BuildAgent documentation/diff checks and scoped commit.
+No new commit, installation, launch, live mutation or overall acceptance is claimed.
+Shipping package bytes and registered normalized digest remain unchanged;
+prior package guidance/version/assertion checks and promotion P1 review remain
+terminal. Production packaging completion, installation, runtime/UI, portability
+and live catalog acceptance remain open. The source worker performed no native,
+build, Git or live action. Catalog identity/lifecycle and collection purpose remain
+unchanged; no new durable artifact is added.
