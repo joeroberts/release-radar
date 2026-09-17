@@ -1,9 +1,11 @@
 import Foundation
+import OSLog
 import ReleaseRadarCore
 import Security
 
 /// The app's bounded configuration client. The installer keeps its four operations.
 actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
+    private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "ExecutionSetup")
     private let plugin: CodexPluginLifecycleCoordinator?
     private let bundle: URL
     private var transport: AppServerTransport?
@@ -208,21 +210,41 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             let projects = raw["projects"] as? [String: Any] ?? [:]
             let trust = (projects[primaryRoot] as? [String: Any])?["trust_level"] as? String
             if trust != "trusted" {
-                guard permitOwnedTrust, trust == nil else { throw ProjectExecutionError.hookNotReady }
+                guard permitOwnedTrust, trust == nil else {
+                    logger.error("Hook verification failed: exact primary project trust is not ready")
+                    throw ProjectExecutionError.hookNotReady
+                }
                 try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(primaryRoot) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
                 layer = try userLayer(await read(primaryRoot, readback: true))
                 let readback = layer["config"] as? [String: Any] ?? [:]
-                guard ((readback["projects"] as? [String: Any])?[primaryRoot] as? [String: Any])?["trust_level"] as? String == "trusted" else { throw ProjectExecutionError.hookNotReady }
+                guard ((readback["projects"] as? [String: Any])?[primaryRoot] as? [String: Any])?["trust_level"] as? String == "trusted" else {
+                    logger.error("Hook verification failed: primary project trust readback is not ready")
+                    throw ProjectExecutionError.hookNotReady
+                }
             }
             let reply = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]))
-            let owned = try ProjectExecutionHookReadiness.resolve(reply.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: !permitOwnedTrust, inline: inline)
+            let owned: ProjectExecutionHookReadiness
+            do {
+                owned = try ProjectExecutionHookReadiness.resolve(reply.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: !permitOwnedTrust, inline: inline)
+            } catch let error as ProjectExecutionError {
+                if error == .hookNotReady { logger.error("Hook verification failed: first hooks/list readiness check") }
+                throw error
+            }
             if owned.trustStatus != "trusted" {
-                guard permitOwnedTrust else { throw ProjectExecutionError.hookNotReady }
+                guard permitOwnedTrust else {
+                    logger.error("Hook verification failed: owned hook trust is not ready")
+                    throw ProjectExecutionError.hookNotReady
+                }
                 layer = try userLayer(await read(primaryRoot))
                 try await writeUser(root: primaryRoot, layer: layer, key: "hooks.state." + quoted(owned.key), value: ["trusted_hash": owned.currentHash], beforeWrite: beforeWrite)
             }
             let readback = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]), readback: true)
-            _ = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: true, inline: inline)
+            do {
+                _ = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: true, inline: inline)
+            } catch let error as ProjectExecutionError {
+                if error == .hookNotReady { logger.error("Hook verification failed: hooks/list readiness readback") }
+                throw error
+            }
             try await beforeWrite()
     }
 

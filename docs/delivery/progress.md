@@ -350,8 +350,42 @@ fresh independent reviewer `01a0b145` cleared the frozen three-file patch over `
 with no Required or Optional findings. Main released the five-file scoped commit and
 strict stage/verify/no-rebuild install/launch of the approved 0.1.19 acceptance candidate,
 with no version bump/tag/DMG/push/PR or plugin change. BuildAgent checks the actual main
-process and AgentTools byte identity without assuming host restart. Exact request replay
-remains held. Why the real effective default was absent and actual startup stay unresolved.
+process and AgentTools byte identity without assuming host restart. Source commit
+`45b611479fd8f9f193cf40181db51233abcbeade` passed strict stage 48 and no-rebuild install/
+launch 49 as `/Applications/ReleaseRadar.app` 0.1.19/build 1; exact main-process readback
+confirmed PID 33495. Installed identity/stage hashes/signing/runtime/Coordinator entitlement
+checks passed. AgentTools binary bytes and source/staged/installed plugin digest are
+unchanged; no host restart was performed. Main's post-install 49 exact replay returned
+`appUnavailable`/empty IDs/no worker. RR PID 33495 is alive; broker logs around replay
+show tools peer 26466 rejected by the XPC code-signing requirement. That peer maps
+retained helper inode 41311803 versus installed 41331855 under ChatGPT 25954; inode
+causality and callback registration remain unproven. No BuildAgent replay/restart/relaunch,
+manual kill/config/SQLite change or publication occurred. After owner refresh/resume,
+Main confirmed RR 33495 alive and fresh helpers 35207/35566 mapping installed inode
+41331855; the next exact request returned `execution.hookNotReady`/empty IDs/no worker
+start. Existing logs show fresh tools peer 35566 activation at 17:56:00.462, with no
+specific hook discovery/trust/root failure in the bounded info/debug capture. Previous
+signing/config errors were not returned; effective profile success is not independently
+established. Main's read-only UI confirms the exact project at current guidance v3 /
+Compatible V1 and its synthetic assignment present in `preparing` state; no assignment
+ID was exposed and no Update/Resume/Retire action was clicked. Other partial resources
+remain unverified. Main selected fixed OSLog messages at existing hook-readiness failure
+guards in two source files; exact `hookNotReady` wire response and predicates stay unchanged.
+No callback/reason-enum/classifier/harness/schema or new state/API is added. After freeze,
+checkpoint 50 passed all six specified existing readiness/setup tests in the signed host
+with coverage disabled: 6/6, zero failures/unexpected, Xcode exit 0; target/callsites compiled,
+scoped diff/documentation checks passed. This covers existing gates/error/receipt/cleanup,
+not exact encoded wire runtime behavior; enum/mapping unchanged. No log-string tests,
+new harness or unaffected native repeat. Independent reviewer
+`01a0b164-a653-70b2-ab9a-8b6cb8611dd1` completed the exact frozen two-file review over
+`45b6114`: Required none, Optional none; literal-only logging preserves guard/error/RPC/
+trust-write/cleanup/partial-state behavior. Main released the scoped four-file source/docs
+commit and strict stage/verify/install/launch of the 0.1.19 acceptance candidate; checkpoint
+50 remains terminal. No tag/DMG/push/PR/cleanup, worker start or assignment mutation is
+released. Original request and partial `preparing` state remain unchanged; no hook-trust
+mutation or replay occurred.
+Exact request, hook readiness and actual startup remain pending; why the prior real
+effective default was absent also remains unresolved.
 Temporary outputs remain retained. Worker preparation and full Outcome 3 acceptance
 remain open.
 Main retains serialized live operations and all native/Git work; the source worker

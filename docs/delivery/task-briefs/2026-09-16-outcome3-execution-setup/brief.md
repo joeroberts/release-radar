@@ -567,6 +567,64 @@ No version bump, tag, DMG, push, PR or plugin change is released. BuildAgent ver
 the actual installed main process and whether AgentTools bytes changed, without assuming
 a host restart is needed. Original exact request replay remains held; this is the setup
 management-selector correction, not completed actual worker startup.
+The five-file source commit is `45b611479fd8f9f193cf40181db51233abcbeade`.
+Checkpoint 48 passed strict Release staging; checkpoint 49 passed no-rebuild strict
+installation and explicit launch as `/Applications/ReleaseRadar.app` 0.1.19/build 1.
+Exact process readback confirms installed main PID 33495. Installed app/helpers and
+signed resource manifest match stage; signing identifiers/team, hardened runtime and
+Coordinator's sole existing application-group entitlement passed. App CDHash is
+`705ed186ef2370991e3bf9d74092b59d1e0bbd70`; Coordinator is
+`d68ca55d6fdd982b0d790c5a93cd8d235aa3598a`. AgentTools bytes did not change from the
+prior installation; source/staged/installed plugin digest also remains unchanged.
+During BuildAgent delivery, no host restart, original exact-request replay, manual
+config/SQLite change or release publication occurred. Temporary stage/install logs remain
+retained.
+Main's post-install 49 exact request replay returned `appUnavailable`/empty entity IDs,
+with no assignment/worker start. Current read-only diagnosis confirms RR PID 33495 alive.
+Around that replay, broker 33502 logs tools peer 26466 rejected at 17:49:18.941:
+"Received message forbidden due to code signing requirement: <private>". Peer 26466
+maps retained helper inode 41311803 versus installed 41331855, under app-server 26105 /
+ChatGPT 25954. The rejection establishes a tools XPC signing-gate failure; private
+signing detail does not establish inode mismatch as its cause. App bridge peer activation
+is logged, but callback registration is not directly confirmed. No automatic restart,
+relaunch, manual kill or further BuildAgent replay is released. The unchanged request,
+unknown partial resources and actual startup acceptance remain pending.
+
+After the owner refreshed the host and resumed, Main confirmed RR PID 33495 running
+and fresh AgentTools PIDs 35207/35566 mapping installed inode 41331855. Main's next
+unchanged request returned `execution.hookNotReady`, empty entity IDs and no worker
+start. Existing logs show new tools peer 35566 activation on broker 33502 at
+17:56:00.462 and concurrent RR activity. The bounded 17:55:45–17:56:30 info/debug
+capture exposes no specific hook discovery, project-trust or root failure; the earlier
+17:49 signing rejection belongs to old peer 26466. No signing/config error was returned
+on the latest attempt, which does not independently prove effective permission-profile
+success. Main's subsequent read-only UI inspection confirmed the exact project has
+current guidance v3 / Compatible V1 and Manage Project Worker resources shows the
+synthetic assignment in `preparing` state. A partial assignment is therefore present;
+the UI exposed no assignment ID, and other partial resources remain unverified. No
+Update, Resume or Retire action was clicked. The exact request is preserved; hook
+readiness and startup remain pending. Main selected fixed OSLog messages at the existing
+hook-readiness failure guards in two source files, preserving the exact `hookNotReady`
+wire response and guard predicates. No callback, reason enum, classifier, harness or
+schema is added. The worker froze the two-file patch; checkpoint 50 ran the three
+existing `ProjectExecutionReadinessTests` and the pending-owned-hook, recovered-binding
+and conflicting-pending-edit setup tests in the established signed host with coverage
+disabled: 6/6 passed, zero failures/unexpected, Xcode exit 0. Current target/callsites
+compiled; scoped diff and documentation checks passed. This verifies existing readiness,
+safety, error/receipt and cleanup behavior, not exact encoded wire behavior at runtime;
+the wire enum/mapping is untouched. No log-string tests, new harness or unaffected
+Producer regression repeat was added. Independent reviewer
+`01a0b164-a653-70b2-ab9a-8b6cb8611dd1` completed review of the exact frozen two-file
+patch over `45b611479fd8f9f193cf40181db51233abcbeade`: Required none, Optional none;
+literal-only logging preserves predicate order, typed errors, RPC/trust writes, cleanup
+and partial state. Main released the scoped four-file source/docs commit and established
+strict staging, verification, installation and launch of the 0.1.19 acceptance candidate.
+Checkpoint 50 remains terminal; no repeated tests. No tag, DMG, push, PR or cleanup is
+released. The saved request and UI-confirmed partial `preparing` assignment remain
+unchanged; BuildAgent does not start a worker or mutate an assignment. Temporary native
+log/result bundle and checker profile are retained. No new state/API, hook-trust mutation
+or request replay is released.
+BuildAgent performed no replay or live/config/SQLite mutation.
 
 Checkpoint 46 established attributable RED with the original setup arguments: only
 `testSetupTransportReadsPermissionTablesWithoutChangingOwnerDefault` ran in the existing
