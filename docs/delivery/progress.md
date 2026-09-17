@@ -294,9 +294,9 @@ revision 1); Project Plan readback shows Draft revision 1, 0/1 covered. The
 confirms plan/finalization committed at revision 2. Main UI and fresh complete inventory
 confirm In delivery at lifecycle revision 2; task-plan revision 1 remains Pending and
 the ticket backlog. The [exact assignment request](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#pending-synthetic-assignment-request)
-was executed once and failed with the permissions/default-precedence error recorded
+initially failed with the permissions/default-precedence error recorded
 in the brief. No assignment/worker ID or worker start followed; partial resources
-remain unverified and the unchanged request is not released for retry. Main verified
+remain unverified and BuildAgent has no request replay release. Main verified
 the real host config is valid; the actual failing RPC and config layer remain unknown.
 Existing diagnostics cannot recover them. Only the bounded existing setup error-context
 correction is approved through Restricted02/sourceworker, preserving operation,
@@ -311,11 +311,24 @@ refrozen correction with only the affected operation/known-target test, includin
 current target/callsites compiled and scoped diff check passed, coverage disabled.
 Previous payload/cleanup/recovery passes stand. Main reports independent reviewer
 `01a0b10e` completed the correction check through RO04, cleared P2 and is idle, with no
-remaining Required or Optional findings. Main released the five-file scoped commit and
+remaining Required or Optional findings; Main reports the cleared reviewer is archived.
+Main released the five-file scoped commit and
 strict staging/verification/installation/launch of the approved 0.1.19 acceptance
 candidate. No version bump, tag, DMG, push, PR or plugin change is released. BuildAgent
-retains the exact original request without replay or manual config change; Main resumes
-its supported route only after installation confirmation. Temporary outputs remain
+retains the exact original request without replay or manual config change. Scoped
+commit `1efc304ddc869caf4aa20d6890fa67a26a5e2c11` was strictly staged at checkpoint 44
+and installed/launched at checkpoint 45 as `/Applications/ReleaseRadar.app` 0.1.19/build
+1 (observed PID 24876). Installed app/helpers and signed resource manifest match stage;
+identifiers, team, hardened runtime and Coordinator entitlement checks passed. Source,
+staged and installed plugin digests agree and remain unchanged. Installation is
+confirmed. Main subsequently replayed the unchanged `f481e256` request once and received
+`isError: true`, `error.appUnavailable: {}`, `entityIDs: []`; no assignment/worker ID
+or worker start followed. App PID 24876 is running; existing AgentTools processes map
+pre-install inode 41264196 versus installed 41311803, under app-server PID 9217 / ChatGPT
+host PID 9048. This does not establish causality or restart necessity. The owner has
+been asked to refresh ChatGPT before Main's next supported exact replay. Refresh,
+request and unknown partial-resource state remain pending; BuildAgent performs no
+restart/relaunch, manual config change or further replay. Temporary outputs remain
 retained.
 These checks do not establish the original failing RPC/layer or actual startup. Worker
 preparation and full Outcome 3 acceptance remain open.

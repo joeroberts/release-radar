@@ -466,14 +466,14 @@ No completion is asserted.
 
 ### Pending synthetic assignment request
 
-Main executed `release_radar_prepare_execution_assignment` once with the unchanged
-envelope below. It returned `isError: true`, `entityIDs: []` and
+Main initially executed `release_radar_prepare_execution_assignment` once with the
+unchanged envelope below. It returned `isError: true`, `entityIDs: []` and
 `error.internalFailure._0`:
 
 > failed to resolve feature override precedence: config defines `[permissions]` profiles but does not set `default_permissions`
 
 No assignment or worker ID was returned and no `worker_start` was issued. Partial
-resources remain unverified; preserve the exact request without retry. Preparation
+resources remain unverified; BuildAgent preserves the exact request without replay. Preparation
 and startup acceptance remain unresolved.
 
 Main verified the real host config is valid, with `default_permissions` set to
@@ -487,7 +487,7 @@ Main approved only a bounded existing setup error-context correction through
 Restricted02/sourceworker: preserve the operation, any already-known target path and
 failure/unknown semantics, without sensitive payload or error data. No new diagnostic
 endpoint, harness, engine or global config change is released. No original assignment
-retry is authorized.
+retry is authorized for BuildAgent.
 
 Native checkpoint 41 established attributable RED against the no-op formatter: the
 two error-context tests compiled and executed, with 12 expected assertion failures and
@@ -510,15 +510,37 @@ handshake labels for both unknown-outcome values: 1/1 passed, zero failures, exi
 current target/callsites compiled and scoped diff check passed, coverage disabled.
 Previous payload/cleanup/recovery checks stand. Main reports the same independent
 reviewer `01a0b10e` completed the correction check through RO04, cleared P2 and is idle,
-with no remaining Required or Optional findings. Main released a scoped commit of the
+with no remaining Required or Optional findings; Main reports the cleared reviewer
+is archived. Main released a scoped commit of the
 three reviewed source/test files and two owned documents, followed by strict staging,
 verification, installation and launch of the approved 0.1.19 acceptance candidate.
 No version bump, tag, DMG, push, PR or plugin change is released for this intermediate
 candidate. BuildAgent retains the exact original request without replay or manual
-configuration changes; Main will resume its supported route only after installation
-is confirmed. Actual failing RPC/layer and worker startup remain
-unresolved; this is error-context verification, not root-cause resolution or full
-Outcome 3 acceptance.
+configuration changes; Main owns resuming the supported request route.
+
+The five-file scoped commit is `1efc304ddc869caf4aa20d6890fa67a26a5e2c11`.
+Checkpoint 44 passed strict Release staging; checkpoint 45 passed no-rebuild strict
+installation and launched `/Applications/ReleaseRadar.app` as version 0.1.19/build 1
+(observed PID 24876). Installed app/helpers and signed resource manifest match the
+staged candidate. App CDHash is `84a77c3db64953cefa48821e739c7a8700b71698`;
+Coordinator CDHash is `73c0a0d76d91ec279ca63cde7c7305d84cca10e1`, with hardened runtime
+and only the existing application-group entitlement. Source, staged and installed
+plugin digests agree and remain unchanged. Temporary stage/install logs are retained.
+During BuildAgent delivery, no version/tag/DMG/push/PR, plugin lifecycle, manual config
+change or original request replay occurred. Candidate installation is confirmed.
+
+Main subsequently replayed the exact saved `f481e256-3332-43aa-88e1-4c3dd2c6368a`
+request once: `isError: true`, `error.appUnavailable: {}`, `entityIDs: []`. No assignment
+or worker ID was returned and no worker start followed. The request remains unchanged
+and pending; partial resources and preparation/startup remain unresolved.
+Read-only diagnosis confirms app PID 24876 is running. Five AgentTools processes still
+map pre-install inode 41264196 at the prior backup path; installed inode is 41311803.
+Their parent is app-server PID 9217 under ChatGPT host PID 9048. These mappings do not
+prove the cause of `appUnavailable` or that a restart is needed; AgentTools code identity
+was unchanged across installations and the failed connection is not individually
+identified. The owner has been asked to refresh ChatGPT before Main's next supported
+exact-request replay. That refresh remains pending; BuildAgent performs no restart,
+relaunch, manual config change or further replay. Full Outcome 3 acceptance remains open.
 
 ```json
 {
