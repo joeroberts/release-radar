@@ -249,7 +249,7 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
               Set(fields.keys).isSubset(of: ["projectID", "ticketID", "taskID", "expectedTaskPlanRevision", "expectedPhaseRevision", "reviewOfAssignmentID", "baselineFromAssignmentID"]) else { return false }
         if let registration = object["expectedRegistration"] as? [String: Any] {
             guard Set(registration.keys) == ["projectID", "registrationID", "requestGeneration"],
-                  let project = registration["projectID"] as? [String: Any], Set(project.keys) == ["rawValue"] else { return false }
+                  registration["projectID"] is String else { return false }
         }
         return true
     }

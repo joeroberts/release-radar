@@ -229,7 +229,7 @@ private struct MCPServer {
         if suppliedRegistrationFields.count == registrationFields.count {
             let generation = try positiveRevision("requestGeneration", in: arguments)
             envelope["expectedRegistration"] = [
-                "projectID": ["rawValue": try taskString("registrationProjectID", in: arguments, maximumBytes: 256)],
+                "projectID": try taskString("registrationProjectID", in: arguments, maximumBytes: 256),
                 "registrationID": try taskString("registrationID", in: arguments, maximumBytes: 128),
                 "requestGeneration": generation,
             ]

@@ -632,6 +632,102 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         await afterReplyGate.entered.wait()
     }
 
+    func testPackagedRegistrationToolsReachTheTypedCallbackWithoutChangingIdentity() async throws {
+        let fixture = try await makeTransportFixture()
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-1"), registrationID: UUID().uuidString.lowercased(), requestGeneration: 1)
+        try await fixture.store.transact(actor: .init(id: "fixture"), reason: "Seed registered transport fixture") { c in
+            try c.execute("INSERT INTO project_registrations(project_id,registration_id,request_generation,setup_state) VALUES ('project-1',?,1,'complete')", bindings: [.text(registration.registrationID)])
+        }
+        let guidance = fixture.projectRoot.appendingPathComponent("AGENTS.md")
+        try Data("# Fixture owner instructions\n".utf8).write(to: guidance)
+        let evidenceEntered = ThreadSafeFlag()
+        let preparationEntered = ThreadSafeFlag()
+        let appDelegate = AppDelegate()
+        let host = try await appDelegate.startAgentBridge(databaseURL: fixture.databaseURL, beforeDispatch: { envelope in
+            XCTAssertEqual(envelope.expectedRegistration, registration)
+            if case .addEvidence = envelope.command { evidenceEntered.set() }
+            if case .prepareExecutionAssignment = envelope.command { preparationEntered.set() }
+        })
+        defer { host.disconnectCallback(); try? host.unregister() }
+        let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ReleaseRadarAgentTools")
+        let requestID = UUID().uuidString.lowercased()
+        let evidenceID = "release-radar-handoff:v1:fixture-" + UUID().uuidString.lowercased()
+        let base: [String: Any] = ["version": 1, "requestID": requestID, "projectRoot": fixture.projectRoot.path,
+            "reason": "Verify registration serialization", "registrationProjectID": registration.projectID.rawValue,
+            "registrationID": registration.registrationID, "requestGeneration": registration.requestGeneration]
+        let response = try Self.runTool(helper, tool: "release_radar_add_evidence", arguments: base.merging([
+            "id": evidenceID, "path": guidance.path,
+        ]) { _, new in new })
+        let audited = try decodeCommandResult(response)
+        XCTAssertTrue(evidenceEntered.value)
+        XCTAssertNil(audited.error)
+        XCTAssertNotNil(audited.auditEventID)
+        let replay = try Self.runTool(helper, tool: "release_radar_add_evidence", arguments: base.merging([
+            "id": evidenceID, "path": guidance.path,
+        ]) { _, new in new })
+        XCTAssertEqual(try decodeCommandResult(replay), audited)
+        let preparation = try Self.runTool(helper, tool: "release_radar_prepare_execution_assignment", arguments: base.merging([
+            "requestID": UUID().uuidString.lowercased(), "projectID": registration.projectID.rawValue,
+            "ticketID": "RR-03", "taskID": "unassigned-fixture-task", "expectedTaskPlanRevision": 1, "expectedPhaseRevision": 1,
+        ]) { _, new in new })
+        XCTAssertTrue(preparationEntered.value)
+        XCTAssertNotNil(try decodeCommandResult(preparation).error, "Decoding must not grant execution authority")
+        let evidenceCount = try await fixture.store.read { try $0.scalarInt("SELECT COUNT(*) FROM evidence WHERE id=?", bindings: [.text(evidenceID)]) }
+        XCTAssertEqual(evidenceCount, 1)
+    }
+
+    func testExecutionCallbackAcceptsStringRegistrationAndRejectsNestedOrExtraFields() async throws {
+        let fixture = try await makeTransportFixture()
+        let dispatcher = AgentCommandDispatcher(store: fixture.store, projectRegistry: PersistedAuthorizedProjectRegistry(store: fixture.store))
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-1"), registrationID: "not-the-fixture-registration", requestGeneration: 1)
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: fixture.projectRoot.path,
+            expectedRegistration: registration, reason: "Validate execution registration decoding",
+            command: .prepareExecutionAssignment(projectID: "project-1", ticketID: "RR-03", taskID: "unassigned-fixture-task",
+                expectedTaskPlanRevision: 1, expectedPhaseRevision: 1, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        let encoded = try JSONEncoder().encode(request)
+        let validObject = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+        let entered = ThreadSafeFlag()
+        let callback = AgentBridgeAppCallback(dispatcher: dispatcher, queries: AgentQueryDispatcher(store: fixture.store),
+            beforeDispatch: { _ in entered.set() }, afterDispatchBeforeReply: { _, _ in }, afterReply: { _, _ in })
+        let data = await withCheckedContinuation { continuation in
+            callback.dispatch(ReleaseRadarBridgeTransport.wireVersion, envelope: encoded,
+                admissionDeadline: Date().addingTimeInterval(10).timeIntervalSince1970) { continuation.resume(returning: $0) }
+        }
+        let result = try JSONDecoder().decode(AgentCommandResult.self, from: data)
+        XCTAssertTrue(entered.value)
+        XCTAssertEqual(result.error, .staleProjectRegistration, "Valid decoding must retain the actual registration authorization gate")
+        for invalidProject: Any in [["rawValue": "project-1"], true] {
+            var object = validObject
+            var fields = object["expectedRegistration"] as! [String: Any]
+            fields["projectID"] = invalidProject
+            object["expectedRegistration"] = fields
+            let rejectedEntry = ThreadSafeFlag()
+            let rejectedCallback = AgentBridgeAppCallback(dispatcher: dispatcher, queries: AgentQueryDispatcher(store: fixture.store),
+                beforeDispatch: { _ in rejectedEntry.set() }, afterDispatchBeforeReply: { _, _ in }, afterReply: { _, _ in })
+            let rejectedData = try JSONSerialization.data(withJSONObject: object)
+            let reply = await withCheckedContinuation { continuation in
+                rejectedCallback.dispatch(ReleaseRadarBridgeTransport.wireVersion, envelope: rejectedData,
+                    admissionDeadline: Date().addingTimeInterval(10).timeIntervalSince1970) { continuation.resume(returning: $0) }
+            }
+            XCTAssertEqual(try JSONDecoder().decode(AgentCommandResult.self, from: reply).error, .appUnavailable)
+            XCTAssertFalse(rejectedEntry.value)
+        }
+        var extraObject = validObject
+        var extraRegistration = extraObject["expectedRegistration"] as! [String: Any]
+        extraRegistration["role"] = "main"
+        extraObject["expectedRegistration"] = extraRegistration
+        let extraEntry = ThreadSafeFlag()
+        let extraCallback = AgentBridgeAppCallback(dispatcher: dispatcher, queries: AgentQueryDispatcher(store: fixture.store),
+            beforeDispatch: { _ in extraEntry.set() }, afterDispatchBeforeReply: { _, _ in }, afterReply: { _, _ in })
+        let extraData = try JSONSerialization.data(withJSONObject: extraObject)
+        let extraReply = await withCheckedContinuation { continuation in
+            extraCallback.dispatch(ReleaseRadarBridgeTransport.wireVersion, envelope: extraData,
+                admissionDeadline: Date().addingTimeInterval(10).timeIntervalSince1970) { continuation.resume(returning: $0) }
+        }
+        XCTAssertEqual(try JSONDecoder().decode(AgentCommandResult.self, from: extraReply).error, .appUnavailable)
+        XCTAssertFalse(extraEntry.value)
+    }
+
     func testMalformedNumbersAndPresentNonStringOptionalsRejectBeforeTransportOrWrite() async throws {
         let fixture = try await makeTransportFixture()
         let packagedTool = Bundle.main.bundleURL

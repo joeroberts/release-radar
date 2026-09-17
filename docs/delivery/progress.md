@@ -239,9 +239,40 @@ that test now uses the registered project and matching request tuple; production
 unchanged. Checkpoint 34 passed the corrected lifecycle test (one test, zero failures,
 terminal exit 0); the prior 11 passes remain valid. Documentation/index/diff checks
 passed. Fresh reviewer `01a0b063-6d28` cleared the complete six-file patch with no
-Required or Optional findings. Actual installed bootstrap/bind/handoff readback remains
-pending. Main transferred document ownership to BuildAgent for scoped commit and staging;
-there is no concurrent writer.
+Required or Optional findings; that reviewer is archived after preservation of its result.
+Checkpoint 36 verified installed revision `dce76787`, app `0.1.19`, CDHash
+`f4253fb07991ad47593322e93afd1b4c17df6aad`, PID 96004. Main opened the saved disposable
+project. The owner added `Outcome3Acceptance`; exact-root Local bootstrap task
+`01a0b081` appended the exact staging v1 block while preserving the original 332 bytes
+of instructions (final 1192 bytes). The packaged check passed; catalog bytes remained
+unchanged. The authorized root is
+`/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project`.
+Main observed staged v1 in installed `dce76787`, previewed the same project/root0,
+repository/catalog/digest above and confirmed binding. The UI reports owner action
+committed and audited as `9A68179F-2B10-4268-AA7C-24837A0BAD8D`. Exact-root bootstrap
+and initial binding are now verified; the prior root/binding blockers are resolved.
+Handoff task `01a0b086` wrote the exact v3 span, preserving 334 outside-span bytes,
+the 175-byte ledger, catalog, indexes and README; packaged checking passed. Its single
+`release_radar_add_evidence` call returned `appUnavailable` with empty entity IDs,
+without success or retry. Main's UI remains responsive and reports managed handoff
+incomplete v3. BuildAgent established a serialization defect: the helper emits an
+object-shaped registration project ID while `ProjectID` Codable expects a string,
+so callback decoding returns `appUnavailable` before mutation. No permission/socket/
+signature failure is established. Checkpoint 37 compiled/executed the direct callback
+regression: one test, two expected assertion failures, terminal exit 65. Production
+was unchanged for RED. The helper now emits the string and the coupled preparation
+guard accepts that shape, still rejecting obsolete objects/extra fields and retaining
+all identity/authorization checks. Checkpoint 38 passed all five targeted tests,
+including both new regressions, the signed-helper path, malformed inputs, lost reply
+and exact replay; `TEST SUCCEEDED`, exit 0. Documentation/index and six-file diff
+checks passed. Fresh reviewer `01a0b09b-4e49` cleared the six-file patch with no
+Required or Optional findings. Main transferred the owning documents to BuildAgent
+for scoped commit and signed staging. Installed fix and original audit replay remain
+pending; the same installed `dce76787` app was reopened.
+The [pending exact audit request](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#pending-disposable-handoff-audit)
+is preserved once in the existing brief. Replay belongs to the original task only
+after availability is established. Audit and full acceptance remain pending; only
+these three owning documents are updated and refrozen, with no overall completion claim.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/

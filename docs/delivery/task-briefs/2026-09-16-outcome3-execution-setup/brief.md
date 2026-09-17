@@ -278,10 +278,59 @@ rejected by identity gates. Only that fixture now uses the registered project an
 matching request tuple; production is unchanged. Checkpoint 34 passed the corrected
 lifecycle test (one test, zero failures, terminal exit 0); the prior 11 passes remain
 valid. Documentation/index/diff checks passed. Fresh reviewer `01a0b063-6d28` cleared
-the complete six-file patch with no Required or Optional findings. Actual installed
-bootstrap/bind/handoff readback remains pending. Main transferred document ownership
-to BuildAgent for scoped commit and staging; worker native/Git/live
-actions remain exclusively with Main/BuildAgent.
+the complete six-file patch with no Required or Optional findings; that reviewer is
+archived after its result was preserved. Checkpoint 36 verified installed `dce76787`,
+app `0.1.19`; exact package identity/CDHash/PID are recorded in progress. Main opened
+the saved disposable project. After the owner added `Outcome3Acceptance`, exact-root
+Local bootstrap task `01a0b081` appended the exact staging v1 block, preserving all
+332 original instruction bytes (final 1192). Packaged checking passed and catalog
+bytes were unchanged. The authorized root is
+`/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project`.
+Main observed staged v1, previewed the same exact project/root0/repository/catalog/
+digest and confirmed binding in installed `dce76787`; the UI reports committed owner
+audit `9A68179F-2B10-4268-AA7C-24837A0BAD8D`. Bootstrap and initial binding are verified,
+resolving the previous root/binding blockers. Handoff task `01a0b086` wrote the exact
+v3 span, preserving 334 outside-span bytes, the 175-byte ledger, catalog, indexes and
+README; packaged checking passed. Its single audit call returned `appUnavailable`
+with empty entity IDs, without success or retry. Main's responsive UI reports managed
+handoff incomplete v3. BuildAgent established that helper registration serialization
+uses an object project ID although `ProjectID` Codable expects a string, causing
+callback decode failure before mutation. No permission/socket/signature defect is
+established. Checkpoint 37 compiled/executed the direct callback regression with the
+expected two assertion failures (one test, terminal exit 65), before production edits.
+The helper now emits the string; the coupled preparation guard accepts strings and
+retains exact registration keys, rejecting obsolete objects/extra fields. Existing
+authorization/identity validation and public arguments remain unchanged. Scope is
+these three documents, helper emitter, application callback guard and existing
+transport tests; no new harness. Checkpoint 38 passed all five targeted tests,
+including both new regressions, signed-helper integration, malformed inputs, lost
+reply and exact replay (`TEST SUCCEEDED`, exit 0). Documentation/index and six-file
+diff checks passed. Fresh reviewer `01a0b09b-4e49` cleared the six-file patch with no
+Required or Optional findings. Main transferred the owning documents to BuildAgent
+for scoped commit and signed staging. The same installed `dce76787` app was reopened. Installation and
+unchanged original audit replay remain pending through Main; no replay before the
+installed fix. Native/Git/live operations remain exclusively with Main/BuildAgent.
+
+### Pending disposable handoff audit
+
+Preserve this one request unchanged for `release_radar_add_evidence`. Omit `ticketID`
+and `assertedThreadID`; runtime caller is original task `01a0b086`. Do not regenerate
+identities or replay blindly. Resume the original task only after availability is
+established; the failed response does not establish an audit or completion.
+
+```json
+{
+  "version": 1,
+  "id": "release-radar-handoff:v1:50073b59-4c94-40c0-8879-0d3dc503dd68",
+  "path": "AGENTS.md",
+  "projectRoot": "/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project",
+  "reason": "Upgrade the exact staged v1 Release Radar guidance span to shipped v3 in the separately owner-authorized disposable project; preserve unrelated instructions and the delivery ledger.",
+  "registrationID": "60089feb-7d4a-4503-9543-0c281be6b8fc",
+  "registrationProjectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+  "requestGeneration": 1,
+  "requestID": "836c2e20-3f6e-481e-8c38-1dec8cbcfab1"
+}
+```
 
 Abrupt coordinator process loss without a retained worker handle or exit proof remains
 an unresolved recovery barrier. Existing configuration-handle replacement requires old
