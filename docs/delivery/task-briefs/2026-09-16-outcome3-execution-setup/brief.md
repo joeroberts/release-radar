@@ -673,8 +673,54 @@ and unchanged admission/error behavior; checkpoint 53's four passing tests are a
 without rerunning. Main released the exact three-file source/docs commit and strict
 0.1.19 acceptance stage/install/launch. No tag, DMG, push, PR, main mutation or cleanup
 is released. Frozen patch, original request, partial assignment and owner config remain
-preserved; Main owns replay. Temporary
-native log/result bundle are retained. No request replay or config/trust mutation occurred.
+preserved; Main owns replay. Scoped three-file commit
+`4e4ccd4d27e8ff8d63ea44318746f5f4fe810ec7` passed strict Release stage 54 and no-rebuild
+install 55, both exit 0. Installed `/Applications/ReleaseRadar.app` 0.1.19/build 1 launched
+as exact main PID 50402; app CDHash is `26184fb348222a4fd5bdd0e5467c64df0d6b64bc`.
+Installed main/Core/helper/resource-manifest hashes match stage; signing identity/team,
+hardened runtime and Coordinator's sole existing application-group entitlement passed.
+AgentTools/Coordinator bytes remain unchanged; source/staged/installed plugin digest
+remains `6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35`.
+The refined literal ExecutionSetup logs are installed for Main's saved request. No
+BuildAgent replay, host restart, worker start, assignment/owner-config/SQLite mutation,
+release publication or cleanup occurred. Main's post-install 55 exact request replay
+returned `appUnavailable`, `entityIDs: []`; no worker start. Main observed bridge PID
+50424 signing rejection at 18:33:47.907: "Received message forbidden due to code signing
+requirement: <private>"; no ExecutionSetup failure was reached. Main reported recurrence
+of the post-replacement host/helper connection issue and requested host refresh; the
+private signing cause remains unestablished. After the owner restarted Codex, Main's
+next exact saved request reached RR PID 51330 and returned `hookNotReady`, empty entity
+IDs and no worker start. Direct logs at 18:35:44.555 report "Hook readiness failed: no
+hooks were discovered", followed by "Hook verification failed: first hooks/list readiness
+check". Empty hooks is the current confirmed blocker, rather than an identity-field or
+duplicate mismatch. Primary project trust and response checkout/errors/warnings guards
+passed; later readiness gates were not reached. Restricted02/sourceworker are assigned
+narrow producer/discovery diagnosis. Main reports tagged 0.154 discovery is filesystem/
+trust based; a later Homebrew Git execution denial is not a demonstrated cause of empty
+hooks. Main authorized one best-effort `config/read` of the execution checkout through
+the same retained setup child only after the first supported empty-hooks failure, with
+fixed feature true/false/unspecified and checkout-project-layer/inline-presence categories;
+no effective-default, managed-only or root-mapping inference. The frozen one-file
+`ProjectExecutionSetupClient.swift` patch adds 59 lines, preserving the original error;
+no matcher/API/config/trust mutation, endpoint, fixture or harness change.
+Checkpoint 56 ran the existing pending-owned-hook/same-consent and conflicting-pending-
+edit/close setup tests once in the signed host, coverage disabled: 2/2 passed, zero
+failures/unexpected, Xcode exit 0. The new async branch/current callsites compiled and
+scoped one-file diff check passed. Main reconciled parallel dispatch to this single run;
+unchanged readiness tests at checkpoint 53 remain terminal. These protocol-fake tests
+verify baseline gates/consent/cleanup and do not dynamically exercise the new production
+observation. No log-string tests or new fixtures were added. Independent reviewer
+`01a0b18b` cleared the exact 59-line SetupClient patch over `4e4ccd4d`: Required none,
+Optional none; privacy/literal projection, first-empty trigger, same-child read, original
+`hookNotReady` and cleanup are preserved. The added read uses the existing transport's
+30-second deadline and may delay cancellation/cleanup up to that response wait; this
+existing timeout design was acknowledged without a new Required defect. Actual production
+observation remains pending. Main released the exact SetupClient/two-doc scoped commit and
+strict 0.1.19 acceptance stage/install/launch, with no tag/DMG/push/PR/main mutation or
+unrelated cleanup. Checkpoint 56 remains terminal; Main owns the exact-request replay.
+Temporary native log/result bundle are retained. Source `4e4ccd4` and checkpoint 53 remain terminal; exact request and
+partial assignment stay preserved. Actual hook readiness/startup remain pending. Temporary stage/install logs,
+native log/result bundle and checker profiles are retained.
 The saved request and partial `preparing` assignment are preserved; readiness and startup
 remain pending. Stage/install
 logs are temporary and retained. Temporary native

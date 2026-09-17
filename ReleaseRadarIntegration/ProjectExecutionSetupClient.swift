@@ -228,6 +228,65 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                 owned = try ProjectExecutionHookReadiness.resolve(reply.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: !permitOwnedTrust, inline: inline)
             } catch let error as ProjectExecutionError {
                 if error == .hookNotReady { logger.error("Hook verification failed: first hooks/list readiness check") }
+                if error == .hookNotReady,
+                   let result = try? JSONSerialization.jsonObject(with: reply.data) as? [String: Any],
+                   let entries = result["data"] as? [[String: Any]],
+                   let entry = entries.first(where: { $0["cwd"] as? String == checkout }),
+                   let hooks = entry["hooks"] as? [[String: Any]], hooks.isEmpty {
+                    do {
+                        let observation = try await read(checkout)
+                        if let config = observation["config"] as? [String: Any],
+                           let enabled = (config["features"] as? [String: Any])?["hooks"] as? Bool {
+                            if enabled {
+                                logger.error("Empty hook observation: checkout config hooks feature is explicitly true")
+                            } else {
+                                logger.error("Empty hook observation: checkout config hooks feature is explicitly false")
+                            }
+                        } else {
+                            logger.error("Empty hook observation: checkout config hooks feature is unspecified or unsupported")
+                        }
+                        if let layers = observation["layers"] as? [[String: Any]] {
+                            let supported = layers.allSatisfy { layer in
+                                guard let name = layer["name"] as? [String: Any], let type = name["type"] as? String else { return false }
+                                return type != "project" || name["dotCodexFolder"] is String
+                            }
+                            let projectLayers = layers.filter { layer in
+                                let name = layer["name"] as? [String: Any]
+                                return name?["type"] as? String == "project" && name?["dotCodexFolder"] as? String == checkout + "/.codex"
+                            }
+                            if !supported {
+                                logger.error("Empty hook observation: checkout project layer metadata is unsupported")
+                            } else if projectLayers.isEmpty {
+                                logger.error("Empty hook observation: exact checkout project layer is absent")
+                            } else if projectLayers.count > 1 {
+                                logger.error("Empty hook observation: exact checkout project layer is duplicated")
+                            } else if let layer = projectLayers.first {
+                                if layer["disabledReason"] is NSNull {
+                                    logger.error("Empty hook observation: exact checkout project layer is enabled")
+                                } else if layer["disabledReason"] is String {
+                                    logger.error("Empty hook observation: exact checkout project layer is disabled")
+                                } else {
+                                    logger.error("Empty hook observation: checkout project layer enablement is unsupported")
+                                }
+                                if let config = layer["config"] as? [String: Any] {
+                                    if config["hooks"] is [String: Any] {
+                                        logger.error("Empty hook observation: checkout project layer has inline hook declarations")
+                                    } else if config["hooks"] == nil {
+                                        logger.error("Empty hook observation: checkout project layer has no inline hook declarations")
+                                    } else {
+                                        logger.error("Empty hook observation: checkout inline hook declaration shape is unsupported")
+                                    }
+                                } else {
+                                    logger.error("Empty hook observation: checkout project layer config shape is unsupported")
+                                }
+                            }
+                        } else {
+                            logger.error("Empty hook observation: checkout project layers are unavailable")
+                        }
+                    } catch {
+                        logger.error("Empty hook observation unavailable: checkout config/read failed")
+                    }
+                }
                 throw error
             }
             if owned.trustStatus != "trusted" {

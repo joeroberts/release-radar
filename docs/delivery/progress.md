@@ -415,8 +415,38 @@ actual reviewer `01a0b17a-2321-7f60-9715-5a0f0ba12400`; task readback confirms c
 unchanged admission-error behavior. Task-list omission was not a setup failure. Checkpoint
 53 stays terminal, no reruns. Main released exact three-file source/docs commit and strict
 0.1.19 acceptance stage/install/launch, with no tag/DMG/push/PR/main mutation/cleanup.
-Frozen patch/request/partial assignment/owner config preserved; Main owns replay.
-Original request and partial `preparing` state remain unchanged. Hook readiness
+Scoped three-file commit `4e4ccd4d27e8ff8d63ea44318746f5f4fe810ec7` passed strict stage
+54 and no-rebuild install 55 (exit 0), then launched installed 0.1.19/build 1 as exact PID
+50402. Installed main/Core/helper/resource hashes match stage; signing/runtime/Coordinator
+entitlement checks passed. AgentTools/Coordinator bytes and source/staged/installed plugin
+digest remain unchanged. Refined literal ExecutionSetup logs are installed for Main's
+saved request. No BuildAgent replay/host restart/worker start/assignment/config/SQLite
+mutation/publication/cleanup occurred. Main's post-install 55 exact replay returned
+`appUnavailable`/empty IDs/no worker start; Main observed bridge 50424 code-signing
+rejection at 18:33:47.907 and no ExecutionSetup failure reached; private cause remains
+unestablished. After owner Codex restart, Main's next exact saved request reached RR
+51330 and returned `hookNotReady`/empty IDs/no worker start. Direct logs at 18:35:44.555
+identify no hooks discovered at the first `hooks/list` readiness check: empty hooks is
+confirmed, not identity-field/duplicate mismatch. Primary trust and response checkout/
+errors/warnings passed; later gates were not reached. Restricted02/sourceworker perform
+narrow producer/discovery diagnosis. Main reports tagged 0.154 discovery is filesystem/
+trust based, so later Homebrew Git execution denial is not a demonstrated empty-hooks
+cause. Main authorized one same-child checkout `config/read` after the first supported
+empty-hooks failure, fixed feature/project-layer/inline categories only, best-effort and
+original error preserved; no default/managed-only/root-mapping claims or mutations.
+Frozen SetupClient-only patch adds 59 lines. Checkpoint 56 passed the two existing setup
+tests (pending-owned-hook/consent and conflicting-edit/close): 2/2, zero failures/unexpected,
+signed host/coverage disabled, Xcode exit 0; new async branch/callsites compiled, scoped
+diff check passed. Main reconciled dispatch to one run; readiness tests 53 stay terminal.
+Protocol fakes do not dynamically cover the production observation; no new fixture/harness/
+API/config/trust change. Reviewer `01a0b18b` cleared the exact 59-line patch over
+`4e4ccd4d`: no Required/Optional findings; literal privacy/first-empty/same-child/original-
+error/cleanup preserved. The existing 30-second transport deadline may delay cancellation/
+cleanup by that response wait, acknowledged with no Required defect. Production observation
+is pending. Main released exact SetupClient/two-doc commit and strict 0.1.19 acceptance
+stage/install/launch, no tag/DMG/push/PR/main mutation/unrelated cleanup; no repeated tests.
+Original request, partial `preparing` assignment and owner config remain preserved;
+Main owns replay. Hook readiness
 and actual startup remain pending; why the prior real
 effective default was absent also remains unresolved.
 Temporary outputs remain retained. Worker preparation and full Outcome 3 acceptance
