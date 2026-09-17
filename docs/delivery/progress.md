@@ -188,10 +188,31 @@ Source review is complete/archived through Main; source/tests remain frozen. The
 results establish focused/source checks, not runtime UI correctness. Native UI/QA must
 verify pending/success/error feedback beside both initial and resumed controls at relevant
 window sizes against the reference; the core regression does not establish visual
-correctness and no new UI harness is added. Main is awaiting the owner's Finish
-Initialization result; no actual retry success/failure or complete acceptance is claimed.
-The existing ledger/brief/design result update is refrozen; Main→BuildAgent routes the
-scoped commit after runner status resolves. No additional check, retry or review is added.
+correctness and no new UI harness is added. Main subsequently reports the owner completed
+initial test-project onboarding; full runtime feedback/Outcome 3 acceptance is not claimed.
+The next actual blocker is documentation preview on the saved `/var` root. Main/BuildAgent
+checkpoint 26 passed full validation/index checking on the same fixture through
+`/private/var`; checkpoint 28 used the same installed helper through `/var` and exited 1
+with `unsafeFileType`. This is causal path-spelling evidence. Checkpoint 27's attempted
+XCTest alias fixture was invalid because the sandboxed host uses container temporary
+storage; it is not causal evidence, and that test edit was removed.
+
+Main released the bounded reader correction: verify only the actual root-owned macOS
+`/var` alias and its non-writable privileged parent, require its exact `private/var`
+target and stable link metadata, then traverse the target and all remaining components
+with existing no-follow and identity checks. Saved/request root identity is unchanged;
+stable reopening uses the same checks. No general resolver, root migration, fixture
+infrastructure or permission change is introduced. Main/BuildAgent checkpoint 29 compiled
+the reader and reports 65 passing cases, including containment/replacement and managed
+setup/security-scope/generation checks. Seven existing preview fixtures fail creating
+`/Users/Shared` directories before reader execution (permission denied); the 72-case
+command exited 65, so overall suite success is not claimed. No permission workaround
+or unrelated fixture repair is included. The newly built helper passes full validation/
+index checking through both `/var` and `/private/var`. Two live-picker methods were
+explicitly excluded. Documentation/index and scoped diff checks passed. Independent Security/Privacy
+reviewer `01a0b049` cleared the exact reader patch with no Required or Optional findings.
+Installed-app preview/readback remains pending. The four-file candidate is refrozen;
+production/live completion is not claimed.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/

@@ -1658,12 +1658,50 @@ Source review is complete/archived through Main. Source/tests stay frozen; focus
 and source review do not establish runtime UI correctness. Actual pending/success/error feedback,
 accessibility and relevant-width visual comparison/QA remain pending through Main;
 core tests do not establish visual correctness and no UI harness is introduced.
-Main awaits the owner's Finish Initialization result. No actual retry success/failure,
-overall build pass or complete Outcome 3 acceptance is claimed. The existing documentation
-result update is refrozen for Main→BuildAgent scoped commit after runner status resolves;
-no new check, retry, artifact or review is added. The source
+Main subsequently reports the owner completed initial test-project onboarding. Full
+runtime feedback verification, checkpoint 24 overall build pass and complete Outcome 3
+acceptance are not inferred. The source
 worker performs no native/build/Git/live action. Shipping package bytes/digest,
 catalog identity/lifecycle and collection purpose remain unchanged; no new durable
 artifact, governing instruction or accepted ADR change. Existing temporary/reference/
 distribution material remains preserved, without cleanup. Prior unrelated validation
 remains terminal.
+
+### September 17 macOS documentation root-alias correction
+
+The next actual blocker is documentation preview on the registered `/var` root.
+Main/BuildAgent checkpoint 26 passed full catalog/file/index validation on the same
+fixture through `/private/var`; checkpoint 28 used the same installed helper through
+`/var` and exited 1 with `unsafeFileType`. The reader rejected the symbolic-link ancestor
+before catalog loading. Inventory maps that rejection to `unsafePath` and unavailable
+guidance; missing guidance is not a documentation-preview prerequisite.
+
+[Apple's NSURL documentation](https://developer.apple.com/documentation/foundation/nsurl/resolvingsymlinksinpath?changes=_1_8)
+states that symlink resolution can remove the `/private` prefix when the shorter path
+exists. Current onboarding, bookmark and authorized-project normalization uses this
+Foundation representation. A sandbox-specific failure is not required to explain it.
+Preserve the saved/request root identity rather than changing identities across roots,
+bindings, policies and assignments.
+
+Main released only a reader traversal correction for the actual macOS `/var` alias:
+require a root-owned symlink in a privileged non-writable parent, its exact `private/var`
+target and unchanged link metadata during inspection. Traverse `private/var` and every
+remaining component with existing no-follow metadata/open checks. Stable reopening
+repeats the alias verification and existing root-descriptor identity checks. Arbitrary
+user links, root links and document links remain rejected; there is no general resolver,
+identity migration, permission relaxation or accepted-ADR change.
+
+Checkpoint 27's attempted XCTest fixture assumed `/private/var` although the sandboxed
+host uses container temporary storage, so it supplied no causal proof and the test edit
+was removed. The actual helper pair supplies the regression; no fixture system or new
+write permission is introduced. Main/BuildAgent checkpoint 29 compiled the reader and
+reports 65 passing cases including containment/replacement and managed setup/security-
+scope/generation checks. Seven existing preview fixtures fail creating `/Users/Shared`
+directories before reader execution (permission denied); the 72-case command exited 65,
+so overall suite success is not claimed. Two live-picker methods were explicitly excluded;
+there is no permission workaround or unrelated fixture repair. The newly built helper
+passes full validation/index checking through both `/var` and `/private/var`, directly
+confirming corrected alias behavior. Documentation/index and scoped diff checks passed. Independent Security/Privacy
+reviewer `01a0b049` cleared the exact reader patch with no Required or Optional findings.
+Installed-app preview/readback remains pending through Main. The four-file candidate
+is refrozen; production/live completion is not claimed.
