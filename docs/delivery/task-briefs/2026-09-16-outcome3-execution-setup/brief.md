@@ -39,6 +39,40 @@ provisioning boundary, protected assignment contract and focused failure/retry
 behavior. Continue in coherent bounded changes toward the complete outcome;
 checkpoints do not authorize omitting required behavior.
 
+Current bounded slice starts from Main's trusted commit `f0866b7` after terminal
+cleanup and hook corrections. Recover registration generation changes, primary-root
+replacement and removal/re-add in existing onboarding/settings. Preserve exact
+current registration/bookmark/protected receipts, explicit disablement, original
+stopped/unknown outcomes and modified resources. Safe replacement after lost
+configuration handles must remain distinct from completed original retirement.
+Old repository cleanup requires an explicit exact-folder access grant through the
+existing owner action; source work does not perform that grant or any live mutation.
+Main→BuildAgent owns direct checks/Git; a fresh independent architecture/security/code
+review follows the frozen coherent candidate through Main→RO04. UI/QA and runtime
+acceptance remain separate open requirements.
+
+Main/BuildAgent's initial checkpoint 16 failed compilation before any tests ran;
+the bounded escaping callback declaration and structured-JSON fixture corrections
+are included in the corrected run. App build, all 51 affected tests and
+documentation/index/diff checks passed, with no BuildAgent edits. Product source
+remains frozen for fresh Main→RO04 independent review. No new commit or complete
+acceptance is claimed; runtime/UI, portability, package identity and live catalog
+acceptance remain open. This result record is documentation only.
+
+Fresh reviewer `01a0ad8a` found one Required P2 in historical predecessor retirement,
+with no other Required/Optional findings. Main released the bounded identity/binding
+fix and a combined generation/root replacement → removal/re-add → retirement
+regression. Exact stored assignment, retained registration identity, nonfuture
+generation, owner-granted original root and pinned owned resources remain required;
+current and predecessor policies are pinned, the predecessor stays disabled and
+original unknown outcomes stay truthful. Main/BuildAgent checkpoint 17 passed the
+app build, all 14 producer tests and documentation/index/diff checks. The same
+reviewer cleared P2 with no remaining Required or Optional findings; validation
+is terminal. Product source stays frozen, ready for Main→BuildAgent's scoped local
+commit. No new commit or complete acceptance is claimed; runtime/UI, actual production
+boundaries, portability, package identity and live catalog acceptance remain open.
+Prior terminal reviews stay closed. This result update changes documentation only.
+
 ## Material risks and compatibility
 
 Protect assignment/session/root identity, worker-readable snapshot integrity,

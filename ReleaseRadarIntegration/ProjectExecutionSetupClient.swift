@@ -165,6 +165,10 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     }
 
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws {
+        try await removeWorkerProfile(primaryRoot: primaryRoot, profileID: profileID, expected: expected, beforeWrite: {})
+    }
+
+    func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws {
         try ProjectExecutionPaths.component(profileID)
         let layer = try userLayer(await read(primaryRoot))
         let raw = layer["config"] as? [String: Any] ?? [:]
@@ -175,13 +179,14 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             guard let name = layer["name"] as? [String: Any], let file = name["file"] as? String,
                   let version = layer["version"] as? String else { throw ProjectExecutionError.unavailable }
             _ = try await rpc("config/batchWrite", RPCObject(["filePath": file, "expectedVersion": version,
-                "edits": [["keyPath": "permissions", "value": profiles, "mergeStrategy": "replace"]], "reloadUserConfig": true]))
+                "edits": [["keyPath": "permissions", "value": profiles, "mergeStrategy": "replace"]], "reloadUserConfig": true]), beforeWrite: beforeWrite)
         }
         let readback = try userLayer(await read(primaryRoot))
         let config = readback["config"] as? [String: Any] ?? [:]
         guard config["permissions"] == nil || config["permissions"] is [String: Any] else { throw ProjectExecutionError.conflict }
         let actual = config["permissions"] as? [String: Any] ?? [:]
         guard actual[profileID] == nil, NSDictionary(dictionary: actual).isEqual(to: profiles) else { throw ProjectExecutionError.conflict }
+        try await beforeWrite()
     }
 
     func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {

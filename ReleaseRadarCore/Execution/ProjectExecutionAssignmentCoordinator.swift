@@ -21,7 +21,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         let policy = try store.policy(projectID: project.projectID.rawValue)
         let value = try store.assignment(projectID: project.projectID.rawValue, taskID: assignmentID)
         let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: assignmentID)
-        guard policy.registration == project.registration, policy.enabled, policy.consent == ProjectExecutionPolicy.Consent(),
+        guard policy.registration == project.registration, policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(),
               value.registration == project.registration, value.checkoutPath == paths.checkout.path else { throw ProjectExecutionError.assignmentNotAuthorized }
         return value
     }
@@ -37,7 +37,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         let store = try ProjectExecutionFileStore(root: root(), create: false)
         let policy = try store.policy(projectID: value.registration.projectID.rawValue)
         guard value.state == .preparing, value.sessionID == nil, value.launchReserved != true, value.uncertainOutcome != true,
-              value.preparedPolicyDigest == (try Self.policyDigest(policy)), policy.enabled,
+              value.preparedPolicyDigest == (try Self.policyDigest(policy)), policy.enabled, policy.bindingRecoveryPending != true,
               policy.registration == value.registration, policy.handlerPath == handlerPath,
               policy.hookReceipt?.installed == true,
               try store.assignment(projectID: value.registration.projectID.rawValue, taskID: value.id) == value else { throw ProjectExecutionError.assignmentNotAuthorized }
@@ -88,13 +88,18 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         let policy = try store.policy(projectID: project.projectID.rawValue)
         guard policy.version == 1, policy.registration == registration, policy.primaryRoot == project.canonicalRoot.path,
               policy.handlerPath == handlerPath, policy.appServerExecutable == CodexExecutionIdentity.executable,
-              policy.enabled, policy.consent == ProjectExecutionPolicy.Consent(), policy.hookReceipt?.installed == true,
+              policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(), policy.hookReceipt?.installed == true,
               policy.hookReceipt?.command == "\"" + handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
         try await configuration.validateInstallation(handlerPath: handlerPath)
         let role: ProjectExecutionAssignment.Role = reviewOfAssignmentID == nil ? .delivery : .review
         let id = role.rawValue + "-" + requestID.uuidString.lowercased()
         let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: id)
         let inventory = try store.assignments(projectID: project.projectID.rawValue)
+        let historical = try (policy.previousProjectIDs ?? []).flatMap { try store.assignments(projectID: $0) } + inventory.filter { $0.registration != registration }
+        guard !historical.contains(where: {
+            $0.retirement?.completed != true && $0.retirement?.replacementAllowed != true &&
+            ($0.uncertainOutcome == true || $0.state == .unknown || ($0.sessionID != nil || $0.launchReserved == true) && $0.connectionClosed != true && $0.state != .closed)
+        }) else { throw StoreError.unavailable("Close and explicitly retire the previous registration's worker resources in project settings before preparing replacement work. Its unresolved outcome is preserved.") }
         if let existing = inventory.first(where: { $0.id == id }) {
             guard existing.work == work, existing.registration == registration, existing.role == role,
                   existing.reviewOfAssignmentID == reviewOfAssignmentID, existing.baselineFromAssignmentID == baselineFromAssignmentID,
@@ -112,7 +117,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         // Another request identity cannot silently replace an uncertain/live worker.
         guard !inventory.contains(where: {
             $0.registration == registration && $0.work?.ticketID == work.ticketID && $0.work?.taskID == work.taskID && $0.role == role
-                && !($0.state == .superseded && $0.retirement?.completed == true)
+                && !($0.state == .superseded && $0.retirement?.completed == true || $0.retirement?.replacementAllowed == true)
                 && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped || $0.uncertainOutcome == true || $0.finalizationFailed == true || $0.retirement != nil || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed))
         }) else { throw ProjectExecutionError.conflict }
         let source: URL

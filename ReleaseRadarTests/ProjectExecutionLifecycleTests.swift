@@ -63,6 +63,19 @@ final class ProjectExecutionLifecycleTests: XCTestCase {
         XCTAssertEqual(try f.files.assignment(projectID: "project-one", taskID: "assignment-one").state, .revoked)
     }
 
+    func testArchiveDisablesPolicyEvenWithoutAssignedWorkAndPreservesUncertainty() async throws {
+        let f = try await fixture()
+        var uncertain = f.assignment; uncertain.state = .unknown; uncertain.launchReserved = true; uncertain.uncertainOutcome = true
+        try f.files.saveAssignment(uncertain, expected: f.assignment)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Archive current project", auditScope: .init(projectID: f.scope.projectID, entityType: .project, entityID: "project-one")) { c in
+            try c.execute("UPDATE projects SET lifecycle='archived' WHERE id='project-one'")
+        }
+        XCTAssertFalse(try f.files.policy(projectID: "project-one").enabled)
+        let retained = try f.files.assignment(projectID: "project-one", taskID: "assignment-one")
+        XCTAssertTrue(retained.uncertainOutcome == true)
+        XCTAssertTrue(retained.launchReserved == true)
+    }
+
     func testSqlRollbackNeverReauthorizesRevokedFilesystemLease() async throws {
         let f = try await fixture()
         do {

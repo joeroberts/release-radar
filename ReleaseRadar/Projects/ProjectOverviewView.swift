@@ -22,7 +22,7 @@ struct ProjectOverviewView: View {
     var saveProjectSettings: ((ProjectRegistration, String, Set<String>) async throws -> ProjectSettingsSnapshot)? = nil
     var manageExecutionHook: ((ProjectRegistration, ProjectExecutionHookAction) async throws -> Void)? = nil
     var loadExecutionAssignments: ((ProjectRegistration) async throws -> [ProjectExecutionAssignment])? = nil
-    var retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)? = nil
+    var retireExecutionAssignment: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
     var reauthorizeProjectHealth: ((URL, DocumentationObservationIdentity) async throws -> ProjectHealthSnapshot)? = nil
@@ -216,7 +216,9 @@ struct ProjectOverviewView: View {
                                           { operation in try await action(settings.registration, operation) }
                                       }, loadExecutionAssignments: loadExecutionAssignments.map { load in
                                           { try await load(settings.registration) }
-                                      }, retireExecutionAssignment: retireExecutionAssignment) { name, excluded in
+                                      }, retireExecutionAssignment: retireExecutionAssignment.map { retire in
+                                          { expected in try await retire(settings.registration, expected) }
+                                      }) { name, excluded in
                     let updated = try await saveProjectSettings(settings.registration, name, excluded)
                     self.settings = updated
                     refreshHealth()

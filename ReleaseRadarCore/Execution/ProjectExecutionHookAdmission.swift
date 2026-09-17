@@ -14,7 +14,7 @@ public enum ProjectExecutionHookAdmission {
         let task = try ProjectExecutionPaths.component(String(parts[1]))
         let policy = try store.policy(projectID: project)
         let assignment = try store.assignment(projectID: project, taskID: task)
-        guard policy.version == 1, policy.enabled, policy.consent == ProjectExecutionPolicy.Consent(),
+        guard policy.version == 1, policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(),
               policy.hookReceipt?.installed == true,
               policy.hookReceipt?.command == "\"" + policy.handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
         try assignment.admit(registration: policy.registration, checkoutPath: checkout.path,

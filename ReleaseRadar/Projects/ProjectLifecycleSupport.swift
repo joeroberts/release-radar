@@ -278,7 +278,12 @@ struct ProjectSettingsEditor: View {
             defer { isSaving = false }
             do {
                 try await retireExecutionAssignment(expected)
-                executionMessage = "Resources retired. Replacement work requires a fresh current assignment; the prior outcome remains recorded."
+                await refreshExecutionAssignments()
+                if executionAssignments.first(where: { $0.registration.projectID == expected.registration.projectID && $0.id == expected.id })?.retirement?.replacementAllowed == true {
+                    executionMessage = "Replacement work is allowed with a fresh assignment. The original configuration connection's closure remains unknown; its retirement is still incomplete."
+                } else {
+                    executionMessage = "Resources retired. Replacement work requires a fresh current assignment; the prior outcome remains recorded."
+                }
             } catch { executionFailed = true; executionMessage = error.localizedDescription }
             await refreshExecutionAssignments()
         }

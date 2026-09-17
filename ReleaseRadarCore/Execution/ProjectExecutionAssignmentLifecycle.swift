@@ -12,9 +12,24 @@ enum ProjectExecutionAssignmentLifecycle {
         }
         let assignments = try ProjectExecutionFileStore(root: root, create: false)
         for projectID in projectIDs {
-            let policy = try assignments.policyIfPresent(projectID: projectID.rawValue)
+            var policy = try assignments.policyIfPresent(projectID: projectID.rawValue)
+            if let existing = policy, existing.enabled {
+                do { try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection) }
+                catch is ProjectLifecycleError {
+                    var disabled = existing; disabled.enabled = false
+                    try assignments.savePolicy(disabled, expected: existing); policy = disabled
+                }
+            }
             for value in try assignments.assignments(projectID: projectID.rawValue) {
-                guard [.authorized, .preparing, .unknown].contains(value.state), let work = value.work else { continue }
+                guard [.authorized, .preparing, .unknown].contains(value.state) else { continue }
+                guard let work = value.work else {
+                    if policy?.enabled != true, [.authorized, .preparing].contains(value.state) {
+                        var revoked = value; revoked.state = .revoked
+                        if value.sessionID != nil { revoked.launchReserved = true }
+                        try assignments.saveAssignment(revoked, expected: value)
+                    }
+                    continue
+                }
                 let current: ProjectExecutionWork?
                 do {
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: projectID, registration: value.registration, connection: connection)

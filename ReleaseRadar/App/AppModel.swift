@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import ReleaseRadarCore
@@ -2220,8 +2221,17 @@ final class AppModel {
         try await projectOnboarding.executionAssignments(registration: registration, resources: executionResourcesForOwner())
     }
 
-    func retireExecutionAssignment(_ expected: ProjectExecutionAssignment) async throws {
-        try await projectOnboarding.retireExecutionAssignment(expected: expected, resources: executionResourcesForOwner())
+    func retireExecutionAssignment(registration: ProjectRegistration, expected: ProjectExecutionAssignment) async throws {
+        let folder: URL?
+        if try await projectOnboarding.executionResourcesNeedOriginalFolder(registration: registration, expected: expected) {
+            guard let originalRoot = expected.worktree?.primaryRoot else { throw ProjectExecutionError.invalidAssignment }
+            let panel = ProjectFolderAccessPanel.make()
+            panel.message = "Restore access to this worker's exact original repository to retire its owned resources: \(originalRoot). The project's current folder will remain unchanged."
+            panel.prompt = "Authorize Cleanup"
+            guard panel.runModal() == .OK, let selected = panel.url else { throw StoreError.unavailable("Resource retirement was cancelled. The old resources and outcome were preserved.") }
+            folder = selected
+        } else { folder = nil }
+        try await projectOnboarding.retireExecutionAssignment(registration: registration, expected: expected, resourceFolder: folder, resources: executionResourcesForOwner())
         _ = await reloadProjectProjections()
     }
 

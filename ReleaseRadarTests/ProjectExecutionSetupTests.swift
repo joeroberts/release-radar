@@ -55,6 +55,122 @@ final class ProjectExecutionSetupTests: XCTestCase {
                 AuthorizedProject(registration: registration, canonicalRoot: repository, authorizedRoots: [repository]))
     }
 
+    func testOwnerUpdateRecoversNewGenerationWithoutReauthorizingOldAssignment() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let registration = ProjectRegistration(projectID: project.projectID, registrationID: "registration-one", requestGeneration: 2)
+        let current = AuthorizedProject(registration: registration, canonicalRoot: repository, authorizedRoots: [repository])
+        let files = try ProjectExecutionFileStore(root: root, create: false)
+        let old = ProjectExecutionAssignment(id: "old-worker", registration: try XCTUnwrap(project.registration),
+            checkoutPath: root.appendingPathComponent("Worktrees/project-one/old-worker").path,
+            role: .delivery, permissionProfile: "old-profile", model: "gpt-5.6-terra", effort: "medium", authorization: "Existing scoped work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"])
+        try files.saveAssignment(old, expected: nil)
+        let hook = try ProjectExecutionFileStore(root: repository, create: false).hookConfiguration()
+        try await setup.update(project: current)
+        XCTAssertEqual(try files.policy(projectID: "project-one").registration, registration)
+        XCTAssertEqual(try files.assignment(projectID: "project-one", taskID: "old-worker").state, .revoked)
+        XCTAssertEqual(try ProjectExecutionFileStore(root: repository, create: false).hookConfiguration(), hook)
+    }
+
+    func testOwnerRootReplacementRegistersNewRootAndPreservesOldHook() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let oldHook = try ProjectExecutionFileStore(root: repository, create: false).hookConfiguration()
+        let replacement = repository.deletingLastPathComponent().appendingPathComponent("Replacement")
+        try FileManager.default.createDirectory(at: replacement, withIntermediateDirectories: true)
+        let current = AuthorizedProject(registration: try XCTUnwrap(project.registration), canonicalRoot: replacement, authorizedRoots: [replacement])
+        try await setup.update(project: current)
+        XCTAssertEqual(try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one").primaryRoot, replacement.path)
+        XCTAssertNotNil(try ProjectExecutionFileStore(root: replacement, create: false).hookConfiguration())
+        XCTAssertEqual(try ProjectExecutionFileStore(root: repository, create: false).hookConfiguration(), oldHook)
+    }
+
+    func testRelocatedRootUsesExactOwnedHookAndPreservesConflictingDefinition() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let hook = try XCTUnwrap(ProjectExecutionFileStore(root: repository, create: false).hookConfiguration())
+        let replacement = repository.deletingLastPathComponent().appendingPathComponent("Replacement")
+        try FileManager.default.createDirectory(at: replacement, withIntermediateDirectories: true)
+        let files = try ProjectExecutionFileStore(root: replacement, create: false)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: hook) as? [String: Any])
+        var hooks = try XCTUnwrap(object["hooks"] as? [String: Any])
+        var groups = try XCTUnwrap(hooks[ProjectExecutionHookRegistration.event] as? [[String: Any]])
+        var commands = try XCTUnwrap(groups[0]["hooks"] as? [[String: Any]])
+        commands[0]["timeout"] = 11; groups[0]["hooks"] = commands
+        hooks[ProjectExecutionHookRegistration.event] = groups; object["hooks"] = hooks
+        let changed = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .prettyPrinted])
+        XCTAssertNotEqual(changed, hook)
+        try files.saveHookConfiguration(changed, expected: nil)
+        let current = AuthorizedProject(registration: try XCTUnwrap(project.registration), canonicalRoot: replacement, authorizedRoots: [replacement])
+        do { try await setup.update(project: current); XCTFail("A modified relocated hook must be preserved") } catch {}
+        XCTAssertEqual(try files.hookConfiguration(), changed)
+        try files.saveHookConfiguration(hook, expected: changed)
+        try await setup.update(project: current)
+        XCTAssertEqual(try files.hookConfiguration(), hook)
+        let policy = try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one")
+        XCTAssertNil(policy.bindingRecoveryPending); XCTAssertNil(policy.relocatedHookReceipt)
+    }
+
+    func testBindingRecoveryPreservesExplicitDisablementAndRejectsGenerationRollback() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        try await setup.removeHook(project: project)
+        let registration = ProjectRegistration(projectID: project.projectID, registrationID: "registration-one", requestGeneration: 2)
+        let current = AuthorizedProject(registration: registration, canonicalRoot: repository, authorizedRoots: [repository])
+        do { try await setup.update(project: current); XCTFail("Rebinding must not resume an explicit disablement") } catch {}
+        let files = try ProjectExecutionFileStore(root: root, create: false)
+        XCTAssertFalse(try files.policy(projectID: "project-one").enabled)
+        try await setup.resume(project: current)
+        XCTAssertTrue(try files.policy(projectID: "project-one").enabled)
+        do { try await setup.update(project: project); XCTFail("Old registration cannot replace current authority") } catch {}
+        XCTAssertEqual(try files.policy(projectID: "project-one").registration, registration)
+    }
+
+    func testRecoveredBindingRemainsPendingUntilReadinessAndCurrentRegistrationReadback() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let registration = ProjectRegistration(projectID: project.projectID, registrationID: "registration-one", requestGeneration: 2)
+        let current = AuthorizedProject(registration: registration, canonicalRoot: repository, authorizedRoots: [repository])
+        let gate = Gate(); await configuration.pauseTrust(gate)
+        let operation = Task { try await setup.update(project: current) }
+        await gate.waitUntilEntered()
+        let files = try ProjectExecutionFileStore(root: root, create: false)
+        let pending = try files.policy(projectID: "project-one")
+        XCTAssertEqual(pending.bindingRecoveryPending, true)
+        var disabled = pending; disabled.enabled = false; try files.savePolicy(disabled, expected: pending)
+        await gate.resume()
+        do { try await operation.value; XCTFail("Concurrent disablement must prevent readiness") } catch {}
+        XCTAssertEqual(try files.policy(projectID: "project-one"), disabled)
+    }
+
+    func testReaddAdoptsOnlyAppVerifiedRemovedRegistrationHook() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let files = try ProjectExecutionFileStore(root: root, create: false)
+        let prior = try files.policy(projectID: "project-one")
+        var removed = prior; removed.enabled = false; try files.savePolicy(removed, expected: prior)
+        let registration = ProjectRegistration(projectID: .init(rawValue: "readded-project"), registrationID: "new-registration", requestGeneration: 1)
+        let current = AuthorizedProject(registration: registration, canonicalRoot: repository, authorizedRoots: [repository])
+        do { try await setup.prepare(project: current); XCTFail("A lookalike hook is not ownership evidence") } catch {}
+        try await setup.prepare(project: current, removedRegistrations: [try XCTUnwrap(project.registration)], beforeWrite: {})
+        XCTAssertEqual(try files.policy(projectID: "readded-project").hookReceipt?.installed, true)
+        XCTAssertEqual(try files.policy(projectID: "project-one"), removed)
+    }
+
     func testPendingOwnedHookResumesSameConsentAndPreservesUnrelatedGroups() async throws {
         let (root, repository, project) = try fixture()
         let files = try ProjectExecutionFileStore(root: repository, create: false)

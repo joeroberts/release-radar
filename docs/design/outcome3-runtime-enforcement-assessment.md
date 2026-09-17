@@ -1349,3 +1349,102 @@ The candidate is ready for Main→BuildAgent's scoped local commit, with product
 frozen and no commit yet claimed. Runtime/UI acceptance, registration/root replacement
 and re-add recovery, and application catalog acceptance remain open. Outcome 3 is
 not complete; this result update performs no product or live configuration changes.
+
+## Current binding and re-add recovery slice
+
+Main confirmed scoped commit `f0866b7` (parent `c1968a4`) after terminal cleanup
+checks/review and released the next unresolved lifecycle slice to the same worker.
+The following current source contract supersedes the lost-handle limitation above;
+native checks passed as recorded below; fresh independent review and acceptance remain pending.
+
+Existing onboarding and owner Update/Resume actions verify the application's exact
+current registration, primary bookmark, repository context and protected policy at
+mutation boundaries. A generation advance or primary-root change replaces policy
+binding while revoking old authorized/preparing leases. Original stopped/unknown
+outcomes and resources stay unchanged. `bindingRecoveryPending` blocks preparation,
+final admission and hook/worker admission until current hook trust/readiness and
+owner-context readback complete. Explicit disablement survives binding changes;
+only existing explicit Resume can restore it. Generation rollback and changed
+registration identity cannot replace authority.
+
+A relocated root receives fresh local hook intent/trust. When it contains a carried
+hook, the protected original installed receipt permits only the exact unchanged
+owned command/group; absence permits fresh registration in the new root. Modified
+definitions conflict and unrelated groups remain preserved. No old folder write or
+trust grant is inferred from the new bookmark.
+
+Archive/removal disables protected policy before the application SQL commit. Re-add
+creates new project/registration identities; onboarding may hand off an unchanged
+owned hook only from protected policy whose exact historical registration is proven
+removed and inactive by the application, rechecked before every write. Protected
+`previousProjectIDs` retain the predecessor chain and owner cleanup visibility.
+Preparation blocks unresolved previous runtimes/outcomes across bindings; ordinary
+workers gain no sibling authority from that app-only inventory.
+
+Settings inventory retains earlier generations/predecessors. Retirement remains
+exact-snapshot/request based and does not advance an old lease. If root relocation
+removed old folder access, the existing owner retirement action requests the exact
+original folder through the existing picker. Its one-off security-scoped bookmark
+is held alongside current project access throughout cleanup; cancellation/wrong
+folder/stale current context preserves resources. Current root binding stays intact.
+Only pinned original profiles and exact owned clean worktrees are removed; dirty,
+ignored, modified and referenced resources remain protected.
+
+Loss of the original configuration connection handle never proves its closure.
+The explicit matching owner retirement retry may reconcile only an exact owned
+profile with versioned write/readback through a new configuration helper, then
+confirm that new helper's closure. With old worker closure and resource cleanup
+confirmed, `replacementAllowed` permits a fresh independently admitted assignment.
+Original configuration closure remains unknown, retirement remains incomplete,
+and original stopped/unknown state/outcome stay recorded. New helper closure never
+clears the original outstanding marker. No unknown old work is redispatched.
+
+Optional fields preserve version-one decoding. Focused tests cover generation/root
+replacement, carried-hook conflicts, disablement/rollback, pending readback,
+application removal/re-add, predecessor isolation/cleanup, exact old-root grants,
+lost-handle safe replacement and profile conflicts. Native results are recorded below;
+no runtime/UI acceptance is claimed. Main→BuildAgent owns direct checks/Git;
+Main→RO04 owns fresh architecture/security/code review. UI/QA, actual production
+permission/bookmark boundaries, coordinated package identity and application catalog
+acceptance remain open. This source work performs no live bookmark/configuration,
+app/SQLite/catalog-acceptance, installation, release or external mutation.
+
+Main/BuildAgent checkpoint 16 passed pre-attempt documentation/diff checks, then
+failed compilation because the handle-loss validator captured a nonescaping
+`beforeWrite` parameter. Zero tests ran; the native process exited. Main released
+only the minimal escaping callback declaration along the retirement call chain,
+preserving validation semantics. The previously identified test-only JSON formatting
+fixture correction is included in the corrected checkpoint 16: Main/BuildAgent
+passed the app build and all 51 selected tests (setup 22, producer 13, execution
+onboarding 2, lifecycle 5, admission 1, hook 3, assignment 5), plus documentation/index
+and diff checks. BuildAgent made no edits. Product source remains frozen for fresh
+independent architecture/security/code review through Main→RO04. No new commit,
+independent-review pass or complete acceptance is claimed. Runtime/UI, production
+permission/bookmark boundaries, portability, package identity and live catalog
+acceptance remain open. This result update changes documentation only.
+
+The fresh reviewer `01a0ad8a` subsequently found one Required P2, with no other
+Required/Optional findings: disabled predecessor policy retained its latest binding,
+so historical assignment generation/root equality prevented cleanup after generation
+and root changes followed by removal/re-add. Main released only that correction.
+Retirement now identifies the retained project incarnation by exact project and
+registration IDs and a nonfuture historical generation. The exact stored assignment,
+owner-granted original folder, recorded worktree and pinned profile still define
+resource ownership; latest policy binding is never substituted into that record.
+Both current-owner policy and resource-project policy are pinned at mutation
+boundaries; a predecessor must remain disabled and linked to the current owner.
+Historical cleanup does not restore an old lease or rewrite its original outcome.
+
+The combined regression exercises generation and root replacement, disabled removal
+state, native re-add hook handoff and historical retirement. It checks missing old-root
+grant and unclosed-worker refusal before successful exact cleanup, preserved original
+unknown outcome and unchanged current/predecessor policy bindings. The test preceded
+the bounded core fix; no native red run is claimed. Main/BuildAgent checkpoint 17
+passed the app build, all 14 producer tests and documentation/index/diff checks.
+The same reviewer cleared P2 with no remaining Required or Optional findings;
+that validation is terminal. Prior 51-case evidence and other terminal reviews
+remain valid for unchanged behavior. Product source stays frozen, ready for
+Main→BuildAgent's scoped local commit. Runtime/UI, actual production boundaries,
+portability, package identity and application catalog acceptance remain open;
+full Outcome 3 is incomplete. This result update is documentation only; no live
+mutation, worker native command/Git operation or new commit is claimed.

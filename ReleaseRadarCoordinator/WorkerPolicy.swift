@@ -12,7 +12,7 @@ struct WorkerPolicy {
         self.store = store
         policy = try store.policy(projectID: projectID)
         assignment = try store.assignment(projectID: projectID, taskID: taskID)
-        guard policy.version == 1, policy.enabled, policy.consent == ProjectExecutionPolicy.Consent(),
+        guard policy.version == 1, policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(),
               policy.hookReceipt?.installed == true, policy.appServerExecutable == CodexExecutionIdentity.executable,
               policy.registration == assignment.registration,
               assignment.state == .authorized, assignment.uncertainOutcome != true,

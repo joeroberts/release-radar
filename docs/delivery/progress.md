@@ -2,7 +2,61 @@
 
 ## Current outcome
 
-**Current cleanup corrections — checks and review passed; ready for scoped local candidate commit.**
+**Registration/root and removal/re-add recovery — checks/review passed; ready for scoped local commit.**
+Main confirmed trusted scoped commit `f0866b7d6b3bf9c16321e56abf3acc8217d510d5`
+(parent `c1968a4`) on the assigned branch/worktree, with a clean tracked tree and
+temporary material preserved/excluded. Its app build, all 17 affected cleanup tests,
+documentation/diff checks and independent cleanup correction review passed; hook P1
+and R1–R4 checks/reviews remain terminal. Main released this same worker, Sol/high,
+for the unresolved lifecycle recovery slice in the controlling brief/design.
+
+The source candidate uses existing onboarding and Update/Resume controls to bind
+the exact current bookmark/registration. Protected pending recovery blocks admission
+until hook readiness and current-context readback. Old leases are revoked without
+changing stopped/unknown outcomes. Archive/removal disables policy before SQL commit;
+re-add uses new identities and may hand off only an exact owned hook from an app-proven
+removed registration. Protected predecessor links retain old cleanup visibility and
+block unresolved old runtime replacement. Old resources require their exact original
+folder grant; the existing retirement action offers one-off folder access after root
+relocation. Dirty/modified or unrelated resources remain preserved.
+
+An explicit retirement retry after loss of the original configuration handle may
+allow a fresh assignment only after old worker closure and exact owned resource
+cleanup/readback. The original connection remains unknown and retirement incomplete;
+a new client is never evidence of its closure. Focused regressions preceded the
+initial source changes; no native red run is claimed. Main/BuildAgent checkpoint 16
+passed documentation/diff checks before its compile attempt, then failed compilation
+at ResourceLifecycle line 109: an escaping validator captured nonescaping `beforeWrite`.
+Zero tests executed and the native process exited. Main released only the minimal
+callback lifetime/signature correction. The retirement call chain now declares that
+validator escaping while preserving every current-context/policy check. The earlier
+structured-JSON fixture correction is included in Main/BuildAgent's corrected
+checkpoint 16: app build and all 51 affected tests passed, with documentation/index
+and diff checks passing and no BuildAgent edits. Counts: setup 22, producer 13,
+execution onboarding 2, lifecycle 5, admission 1, hook 3 and assignment 5. Product
+source was reviewed by fresh reviewer `01a0ad8a`, which found one Required P2 and
+no other Required or Optional findings. Retirement required the disabled predecessor's
+latest generation/root to equal the historical assignment, making older resources
+unretirable after generation/root replacement followed by removal/re-add.
+Main released only this bounded correction. Its combined regression precedes the fix;
+no native red run is claimed. Retirement now requires the same retained project and
+registration identity with a nonfuture generation, exact stored assignment and exact
+owner-granted original root, while pinning both current-owner and predecessor policies.
+It preserves pinned-profile/worktree checks, disabled predecessor isolation and original
+unknown outcomes. Main/BuildAgent checkpoint 17 passed the app build, all 14 producer
+tests and documentation/index/diff checks. The same reviewer cleared P2 with no
+remaining Required or Optional findings; this correction validation is terminal.
+The prior 51-case checkpoint remains direct evidence for unchanged behavior.
+Product source remains frozen and the candidate is ready for Main→BuildAgent's scoped
+local commit; no new commit or complete acceptance is yet claimed. Main owns native
+checks/Git; previous reviews remain terminal. This update changes documentation only.
+Runtime/UI acceptance, portability, coordinated package identity and application catalog acceptance
+remain open. No live app/configuration, bookmark grant, SQLite/catalog acceptance,
+installation, release or external mutation was performed. All changed source/tests/docs
+are durable repository inputs; existing temporary files remain retained/excluded,
+with no deletion authorized. Outcome 3 remains incomplete.
+
+**Prior cleanup checkpoint — committed as `f0866b7`; terminal checks and review.**
 Main/BuildAgent checkpoint 15 passed the app build, 16 of 17 selected tests and
 documentation/diff checks; native processes exited. Worktree 4 (including actual
 ignored-content preservation), assignment 5 and producer 7 of 8 passed. The sole
@@ -20,10 +74,10 @@ for the fixture correction. The cleanup review gate is cleared; reviewer
 `01a0ad5f-6db0-7ed0-bde6-0f274bb35353` returned PASS with no remaining Required
 or Optional findings in either correction. App build, all 17 affected tests after
 fixture correction, and documentation/diff checks passed. This validation is terminal.
-The candidate is ready for Main→BuildAgent's scoped local commit; no commit is yet
-claimed. Product source remains frozen. Runtime/UI acceptance, registration/root
-replacement and re-add recovery, and application catalog acceptance remain open;
-this does not complete Outcome 3. This update changes documentation only.
+Main→BuildAgent subsequently committed this checkpoint as `f0866b7`; its prior
+source freeze is released only for the active bounded recovery slice above.
+Runtime/UI and application catalog acceptance remain open; this does not complete
+Outcome 3. The recorded checkpoint introduced no live mutation.
 Main/BuildAgent checkpoint 14 passed the app build, all 23 selected tests and
 documentation/diff checks; native processes exited. The same hook reviewer found
 no remaining Required or Optional issues. Hook P1 and R1–R4 validation are terminal.

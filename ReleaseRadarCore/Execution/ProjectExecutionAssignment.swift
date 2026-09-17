@@ -61,6 +61,7 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
         public var profileRemoved: Bool = false
         public var completed: Bool = false
         public var connectionCloseUncertain: Bool? = nil
+        public var replacementAllowed: Bool? = nil
         public init(requestID: UUID, priorState: State) { self.requestID = requestID; self.priorState = priorState }
     }
     public struct Context: Codable, Equatable, Sendable {
@@ -125,6 +126,7 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
         }
         if let retirement {
             guard state != .authorized, state != .preparing,
+                  retirement.replacementAllowed != true || (retirement.worktreeRemoved && retirement.profileRemoved && (connectionClosed == true || state == .closed || sessionID == nil && launchReserved != true)),
                   !retirement.completed || (state == .superseded && retirement.worktreeRemoved && retirement.profileRemoved && retirement.connectionCloseUncertain != true) else { throw ProjectExecutionError.invalidAssignment }
         }
         for source in context {
@@ -225,6 +227,9 @@ public struct ProjectExecutionPolicy: Codable, Equatable, Sendable {
     public var consent: Consent?
     public var hookReceipt: HookReceipt?
     public var hookRemovalReceipt: HookRemovalReceipt?
+    public var previousProjectIDs: [String]? = nil
+    public var bindingRecoveryPending: Bool? = nil
+    public var relocatedHookReceipt: HookReceipt? = nil
     public init(registration: ProjectRegistration, primaryRoot: String, appServerExecutable: String, handlerPath: String, enabled: Bool = true) {
         version = 1; self.registration = registration; self.primaryRoot = primaryRoot
         self.appServerExecutable = appServerExecutable; self.handlerPath = handlerPath; self.enabled = enabled
@@ -233,5 +238,13 @@ public struct ProjectExecutionPolicy: Codable, Equatable, Sendable {
 
 public protocol ProjectExecutionSettingUp: Sendable {
     func prepare(project: AuthorizedProject) async throws
+    func prepare(project: AuthorizedProject, removedRegistrations: [ProjectRegistration], beforeWrite: @escaping @Sendable () async throws -> Void) async throws
     func verify(project: AuthorizedProject) async throws
+}
+
+public extension ProjectExecutionSettingUp {
+    func prepare(project: AuthorizedProject, removedRegistrations: [ProjectRegistration], beforeWrite: @escaping @Sendable () async throws -> Void) async throws {
+        try await beforeWrite()
+        try await prepare(project: project)
+    }
 }
