@@ -445,7 +445,18 @@ error/cleanup preserved. The existing 30-second transport deadline may delay can
 cleanup by that response wait, acknowledged with no Required defect. Production observation
 is pending. Main released exact SetupClient/two-doc commit and strict 0.1.19 acceptance
 stage/install/launch, no tag/DMG/push/PR/main mutation/unrelated cleanup; no repeated tests.
-Original request, partial `preparing` assignment and owner config remain preserved;
+Scoped commit `2b038cc161bb38761fe2bab4beb4849e34a71c76` passed strict stage 57 and
+no-rebuild install 58 (exit 0), then launched installed 0.1.19/build 1 as exact PID 58011.
+Installed main/Core/helper/resource hashes match stage; signing/runtime/Coordinator
+entitlement passed. AgentTools/Coordinator bytes and all three plugin digests remain
+unchanged. First-empty same-child observation is installed, not dynamically verified;
+no BuildAgent replay/host restart/worker start/assignment/config/SQLite/publication/cleanup.
+Main's post-install 58 original request replay returned `appUnavailable`/empty IDs/no worker
+start; Main observed bridge 58033 signing rejection at 18:53:42.601 (private detail), no
+ExecutionSetup logs. Recurring post-replacement connection blocker is current; private
+cause unestablished, production observation pending. No unchanged retry/new checks/build/
+install. Main confirmed reviewer `01a0b18b` idle/completed and archived after `2b038cc`
+result preservation. Original request, partial `preparing` assignment and owner config remain preserved;
 Main owns replay. Hook readiness
 and actual startup remain pending; why the prior real
 effective default was absent also remains unresolved.
