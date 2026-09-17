@@ -191,6 +191,42 @@ change. This documentation-only checkpoint claims no overall acceptance; source/
 stay frozen and prior unrelated validation remains terminal.
 No worker product edit, retry, native/build/Git/live action or cleanup is included.
 
+### Current bounded onboarding feedback correction
+
+From Main's reported current source `ec860984` on the same branch/worktree, the owner
+reports Resume Execution Setup appears inactive in the saved initialization flow.
+Source confirms the button invokes prepare, preserves the saved preview and catches
+errors; no silent saved-preview return was found. The confirmed feedback defect is
+no in-progress indication, stale prior saved status and result/errors after the long
+Codex prompt. No native failure or actual retry outcome is inferred. Main explicitly
+released local progress/result/error feedback beside initial and resumed setup controls,
+placing saved setup controls before the prompt and distinguishing a successful attempt.
+Finish Initialization still verifies before completing. Core authority, registration,
+preparation/finish and trust/security gates are unchanged.
+
+The existing failed-setup regression now retries a still-failing saved preview and
+asserts propagated detail, the same pending registration and refusal to finish until
+recovery; it precedes UI changes, with no native red run claimed. Main/BuildAgent
+checkpoint 24 reports individual passes for all 38 cases, app compilation and
+documentation/index/diff checks. xcodebuild PID 77788 hung over ten minutes in
+XCTHRuntimeProfileGenerationCoordinator runtime-profile directory enumeration;
+the result bundle is unfinalized, with no TEST SUCCEEDED. BuildAgent terminated
+the verified runner with SIGTERM; it exited 143 during runtime-profile finalization.
+Logs/results are preserved. Overall command success is not claimed. Independent source reviewer
+`01a0b001-e970` cleared the five-file candidate with no Required defects, finding inline
+feedback, stale-status clearing, retry, success and error behavior consistent. Source
+review is complete/archived through Main; source/tests remain frozen. Focused/source
+checks do not prove runtime UI correctness. The onboarding-state mockup was inspected;
+actual progress/success/error, accessibility and relevant-width visual comparison/QA
+remain pending through Main's serialized runtime route. Core tests cannot prove visual
+correctness; no new UI harness is added. Main awaits the owner's Finish Initialization
+result, and no actual retry success/failure, overall build pass or overall acceptance
+is claimed. The existing documentation result update is refrozen for Main→BuildAgent
+scoped commit after runner status resolves; no additional check, retry or review is added.
+No worker native/build/Git/live action, new artifact or cleanup.
+Shipping plugin bytes/digest and catalog identities/purpose remain unchanged; prior
+unrelated checks/reviews remain terminal.
+
 Abrupt coordinator process loss without a retained worker handle or exit proof remains
 an unresolved recovery barrier. Existing configuration-handle replacement requires old
 worker closure and exact owned resource cleanup and cannot prove an unknown worker exit.

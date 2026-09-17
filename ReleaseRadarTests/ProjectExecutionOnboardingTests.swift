@@ -56,6 +56,17 @@ final class ProjectExecutionOnboardingTests: XCTestCase {
         }
         let pending = try await onboarding.inspect(folder: root)
         XCTAssertEqual(pending.pendingProjectID, preview.registration.projectID)
+        let resumedDecision = OnboardingDecision(preview: pending, projectName: "Execution fixture", enableExecutionSetup: true)
+        do { _ = try await onboarding.prepare(resumedDecision); XCTFail("A repeated failed resume must report its outcome.") }
+        catch let error as OnboardingPreparationError {
+            guard case let .executionSetupFailedAfterSave(savedID, detail) = error else { return XCTFail("Wrong retry error") }
+            XCTAssertEqual(savedID, preview.registration.projectID)
+            XCTAssertEqual(detail, ProjectExecutionError.hookNotReady.localizedDescription)
+        }
+        let stillPending = try await onboarding.inspect(folder: root)
+        XCTAssertEqual(stillPending.registration, pending.registration)
+        XCTAssertEqual(stillPending.pendingProjectID, pending.pendingProjectID)
+        XCTAssertNil(stillPending.completedProjectID)
         do { _ = try await onboarding.finish(decision); XCTFail("Unverified setup must not finish") }
         catch { XCTAssertEqual(error as? ProjectExecutionError, .hookNotReady) }
         await setup.recover()
@@ -64,6 +75,6 @@ final class ProjectExecutionOnboardingTests: XCTestCase {
         let completed = try await onboarding.finish(decision)
         XCTAssertEqual(completed, prepared)
         let counts = await (setup.prepareCount, setup.verifyCount)
-        XCTAssertEqual(counts.0, 2); XCTAssertEqual(counts.1, 2)
+        XCTAssertEqual(counts.0, 3); XCTAssertEqual(counts.1, 2)
     }
 }

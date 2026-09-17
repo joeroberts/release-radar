@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**Outcome 3 — MCP loading defect resolved after installation; actual-flow acceptance paused/open.**
+**Outcome 3 — confirmed onboarding feedback correction frozen for checks/review; actual-flow acceptance open.**
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
@@ -157,14 +157,45 @@ the exact disposable folder in NSOpenPanel. Clicking Choose Project returned CUA
 "Sky Computer Use native pipe closed before response"; readback and session reset/
 reconnect failed identically. BuildAgent's read-only check found the same RR PID 71305
 alive with no recent crash. AppKit negative-geometry logs are not proven related.
-The folder-click outcome is unknown: do not retry initialization or claim registration.
-The current blocker is CUA transport, not owner authorization or a confirmed RR crash.
-Acceptance operator remains on hold; no further live changes occur and Main actions
-remain serialized pending readback. This status correction adds no overall acceptance
-claim.
-Source/tests remain frozen; prior
-unrelated validation remains terminal; this worker performs no native/build/Git/live
-action, product change, retry or cleanup.
+That automation folder-click outcome remained unknown; its readback was not inferred
+from process liveness. The owner subsequently reported clicking Resume Execution Setup
+in the saved initialization flow and seeing no change. Main released bounded source
+inspection from its reported current revision `ec860984`, same assigned branch/worktree.
+The handler calls prepare with the saved preview; no silent saved-preview return was
+found. The confirmed defect is feedback: it cleared prior failure and disabled controls
+without progress, leaving saved status stale and eventual errors after the long prompt.
+No native readiness/transport failure or live retry outcome is inferred from that gap.
+
+Main explicitly released the minimum UI correction. Initial confirmation and saved
+setup controls now show progress and result/error locally; saved setup controls precede
+the long prompt. Each attempt clears stale status, and a successful prepare reports
+checks completed with Finish Initialization still verifying before opening. Core
+preparation/finish, saved-registration identity, security/trust gates and authorization
+remain unchanged. The existing failed-setup regression now retries a still-failing saved
+preview, asserts the same registration/pending ID and propagated detail, then verifies
+Finish refuses until recovery. This test precedes UI changes; no native red run is claimed.
+The onboarding-state mockup was inspected; running UI comparison is still pending.
+
+Main/BuildAgent checkpoint 24 reports individual passes for all 38 focused cases,
+app compilation and documentation/index/diff checks. xcodebuild PID 77788 hung for
+over ten minutes in XCTHRuntimeProfileGenerationCoordinator runtime-profile directory
+enumeration. The result bundle is unfinalized, with no TEST SUCCEEDED. BuildAgent terminated
+the verified runner with SIGTERM; it exited 143 during runtime-profile finalization.
+Logs/results are preserved. Overall command success is not claimed. Independent
+source reviewer `01a0b001-e970` cleared the five-file candidate with no Required defects:
+inline feedback, stale-status clearing, retry, success and error behavior were consistent.
+Source review is complete/archived through Main; source/tests remain frozen. These
+results establish focused/source checks, not runtime UI correctness. Native UI/QA must
+verify pending/success/error feedback beside both initial and resumed controls at relevant
+window sizes against the reference; the core regression does not establish visual
+correctness and no new UI harness is added. Main is awaiting the owner's Finish
+Initialization result; no actual retry success/failure or complete acceptance is claimed.
+The existing ledger/brief/design result update is refrozen; Main→BuildAgent routes the
+scoped commit after runner status resolves. No additional check, retry or review is added.
+Main retains serialized live operations and all native/Git work; the source worker
+performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
+bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/
+reference/distribution files remain preserved, with no cleanup.
 
 Onboarding authority carries only existing registered work scope; no repeated
 per-worker consent is introduced, and genuine runtime approval gates remain.

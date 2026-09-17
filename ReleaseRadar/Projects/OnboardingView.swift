@@ -332,22 +332,8 @@ struct OnboardingView: View {
                     attachmentWorkflow
                 }
 
-                if let statusMessage {
-                    Text(statusMessage)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel(statusMessage)
-                }
-
-                if let failurePresentation {
-                    if attachmentCommittedNeedsReload {
-                        FailureStateView(
-                            presentation: failurePresentation,
-                            actionTitle: "Reload",
-                            action: reloadAttachedProject
-                        )
-                    } else {
-                        FailureStateView(presentation: failurePresentation)
-                    }
+                if !showsInitializationFeedbackInline {
+                    onboardingFeedback
                 }
             }
             .padding(32)
@@ -355,6 +341,34 @@ struct OnboardingView: View {
         }
         .navigationTitle(navigationTitle)
         .interactiveDismissDisabled(isInitializeCommitInFlight || isAttachmentCommitInFlight)
+    }
+
+    private var showsInitializationFeedbackInline: Bool {
+        guard case .initialize = workflow else { return false }
+        return preview != nil && preview?.completedProjectID == nil
+    }
+
+    @ViewBuilder
+    private var onboardingFeedback: some View {
+        if isInitializeCommitInFlight {
+            ProgressView(enableExecutionSetup
+                ? (projectID == nil ? "Initializing project tracking and checking execution setup…" : "Checking execution setup for the saved project…")
+                : "Initializing project tracking…")
+                .accessibilityIdentifier("onboarding-initialization-progress")
+        }
+        if let statusMessage {
+            Text(statusMessage)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(statusMessage)
+                .accessibilityIdentifier("onboarding-status")
+        }
+        if let failurePresentation {
+            if attachmentCommittedNeedsReload {
+                FailureStateView(presentation: failurePresentation, actionTitle: "Reload", action: reloadAttachedProject)
+            } else {
+                FailureStateView(presentation: failurePresentation)
+            }
+        }
     }
 
     private var landing: some View {
@@ -485,6 +499,7 @@ struct OnboardingView: View {
                         .keyboardShortcut(.defaultAction)
                         .disabled(isWorking)
                         .accessibilityIdentifier("onboarding-initialize-confirm")
+                    onboardingFeedback
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -496,6 +511,21 @@ struct OnboardingView: View {
 
     private var codexHandoff: some View {
         VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                if executionSetupAvailable && enableExecutionSetup {
+                    Button("Resume Execution Setup", action: initializeProject)
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .disabled(isWorking)
+                        .accessibilityIdentifier("onboarding-resume-execution")
+                }
+                Button("Finish Initialization", action: finish)
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isWorking)
+                    .accessibilityIdentifier("onboarding-finish-initialization")
+            }
+            onboardingFeedback
+
             GroupBox("Continue in Codex") {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Project tracking is saved. Paste this prompt into a Codex task rooted at this exact project folder.")
@@ -541,20 +571,6 @@ struct OnboardingView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            HStack {
-                if executionSetupAvailable && enableExecutionSetup {
-                    Button("Resume Execution Setup", action: initializeProject)
-                        .buttonStyle(RekonSecondaryButtonStyle())
-                        .disabled(isWorking)
-                        .accessibilityIdentifier("onboarding-resume-execution")
-                }
-                Button("Finish Initialization", action: finish)
-                    .buttonStyle(RekonPrimaryButtonStyle())
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(isWorking)
-                    .accessibilityIdentifier("onboarding-finish-initialization")
             }
         }
     }
@@ -834,6 +850,7 @@ struct OnboardingView: View {
         guard let decision = decision() else { return }
         isWorking = true
         isInitializeCommitInFlight = true
+        statusMessage = nil
         failurePresentation = nil
         promptCopyResult = nil
         Task {
@@ -844,7 +861,9 @@ struct OnboardingView: View {
             do {
                 let preparedID = try await onboarding.prepare(decision)
                 projectID = preparedID
-                statusMessage = "Project tracking is saved and ready to finish."
+                statusMessage = enableExecutionSetup
+                    ? "Execution setup checks completed. Finish Initialization will verify and open the project."
+                    : "Project tracking is saved and ready to finish."
                 failurePresentation = nil
             } catch let preparationError as OnboardingPreparationError {
                 switch preparationError {
@@ -870,6 +889,7 @@ struct OnboardingView: View {
                     )
                 }
             } catch {
+                statusMessage = projectID == nil ? nil : "Project tracking is saved; this setup attempt did not complete."
                 failurePresentation = failure(for: error)
             }
         }

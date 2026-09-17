@@ -1620,3 +1620,50 @@ native/build/Git/live action or cleanup. Prior unrelated checks/reviews remain t
 isolation/STOP/recovery, UI, portability and live catalog acceptance remain open. Existing
 temporary/reference/distribution files remain retained and excluded, without cleanup.
 Catalog identity/lifecycle and collection purpose remain unchanged; no new durable artifact.
+
+## Saved execution setup feedback correction
+
+The owner reports that Resume Execution Setup appears to do nothing in the saved
+initialization flow. Main released bounded source inspection/correction from reported
+current revision `ec860984`, same branch/worktree. The button calls initializeProject;
+its saved preview supplies the same registration to prepare. Prepare/finish retain
+their readiness and security gates, and both typed setup and generic failures are caught.
+No silent saved-preview return or concrete native failure was established. The confirmed
+UI defect is invisible progress and stale saved status, with eventual status/error below
+the long Codex prompt. That is not evidence a live retry succeeded or failed.
+
+Main explicitly released the minimum feedback correction. The existing status/failure
+view is reused locally beside initial confirmation and saved setup controls, with an
+accessible progress indicator during preparation and no duplicate global feedback.
+Saved Resume/Finish controls and their feedback precede the prompt. Each prepare attempt
+clears stale status; success reports completed checks and tells the owner that Finish
+Initialization verifies before opening. Generic failure clears the in-progress message.
+Core preparation/finish, identity, consent, security and trust gates remain unchanged.
+The approved `docs/design/mockups/onboarding_state.png` reference was inspected: local
+visible recovery feedback follows its no-silent-recovery intent while retaining existing
+components and styles. There is no architectural deviation or shared-library change.
+
+The existing failed-setup regression now repeats preparation using the still-failing
+saved preview, checks propagated detail and unchanged pending registration, and retains
+Finish refusal until recovery. This precedes UI edits; no native red run is claimed.
+Main/BuildAgent checkpoint 24 reports individual passes for all 38 focused cases,
+app compilation and documentation/index/diff checks. xcodebuild PID 77788 hung for
+over ten minutes in XCTHRuntimeProfileGenerationCoordinator runtime-profile directory
+enumeration. The result bundle is unfinalized, with no TEST SUCCEEDED. BuildAgent
+terminated the verified runner with SIGTERM; it exited 143 during runtime-profile
+finalization. Logs/results are preserved. Overall command success is not claimed. Independent source
+reviewer `01a0b001-e970` cleared the five-file candidate with no Required defects, finding
+inline feedback, stale-status clearing, retry, success and error behavior consistent.
+Source review is complete/archived through Main. Source/tests stay frozen; focused cases
+and source review do not establish runtime UI correctness. Actual pending/success/error feedback,
+accessibility and relevant-width visual comparison/QA remain pending through Main;
+core tests do not establish visual correctness and no UI harness is introduced.
+Main awaits the owner's Finish Initialization result. No actual retry success/failure,
+overall build pass or complete Outcome 3 acceptance is claimed. The existing documentation
+result update is refrozen for Main→BuildAgent scoped commit after runner status resolves;
+no new check, retry, artifact or review is added. The source
+worker performs no native/build/Git/live action. Shipping package bytes/digest,
+catalog identity/lifecycle and collection purpose remain unchanged; no new durable
+artifact, governing instruction or accepted ADR change. Existing temporary/reference/
+distribution material remains preserved, without cleanup. Prior unrelated validation
+remains terminal.
