@@ -17,6 +17,18 @@ temporary originals were not deleted. `SHA256SUMS` preserves the accepted origin
 identifies each artifact's applicable checksum policy; newer historical plans
 and delivery records do not add checksums for mutable working documents.
 
+## Superpowers records preserved September 16
+
+The 14 `superpowers_*.md` files in this directory preserve the original Markdown
+from `.superpowers/sdd/<folder>/<filename>` unchanged. The flat name is
+`superpowers_<folder>_<filename>`; the original folder is the dated project name.
+They are historical, non-authoritative drafts, intermediate status records,
+implementation/QA reports, and review patches. Their old instructions, links,
+paths, approval claims, and test results describe their original context and do
+not authorize current work. Original internal references remain unchanged for
+provenance; use the catalog entries below to locate these preserved records.
+The existing `sdd/` archive and accepted checksum manifest are unchanged.
+
 ## Layout
 
 - `sdd/`: former ignored SDD briefs, reports, review packages, and local
@@ -87,6 +99,20 @@ The live progress artifact retains its original ID and path.
 | rr-phase6-delivery-history-2026-09-11 | [docs/delivery/archive/2026-09-11-phase6-delivery-history.md](2026-09-11-phase6-delivery-history.md) | document | nonAuthoritative | archived | none | none |
 | 9f08525c-3dbb-487d-9a70-24ebff25443c | [docs/delivery/archive/README.md](README.md) | collectionIndex | nonAuthoritative | active | none | none |
 | 31277e5a-3a64-4c1f-bc15-26d6f4a935d4 | [docs/delivery/archive/SHA256SUMS](SHA256SUMS) | checksumManifest | nonAuthoritative | archived | none | none |
+| 7083d512-96d6-4cab-b368-19dacc95e146 | [docs/delivery/archive/superpowers&#95;2026-08-27-codex-plugin-lifecycle&#95;task-1-brief.md](superpowers_2026-08-27-codex-plugin-lifecycle_task-1-brief.md) | document | nonAuthoritative | archived | none | none |
+| 8eb93f63-de4b-46fd-8ce0-4dc5105f6fab | [docs/delivery/archive/superpowers&#95;2026-08-29-delivery-goals-roadmap-readiness&#95;ledger.md](superpowers_2026-08-29-delivery-goals-roadmap-readiness_ledger.md) | document | nonAuthoritative | archived | none | none |
+| 2bfc8d3a-cc0e-4c0d-8aec-550c850f9150 | [docs/delivery/archive/superpowers&#95;2026-08-29-delivery-goals-roadmap-readiness&#95;task-1-plan-excerpt.md](superpowers_2026-08-29-delivery-goals-roadmap-readiness_task-1-plan-excerpt.md) | document | nonAuthoritative | archived | none | none |
+| 21d45764-5c45-43f9-8558-9f4caef52d31 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;progress.md](superpowers_2026-08-29-release-radar-active-phase-selection_progress.md) | document | nonAuthoritative | archived | none | none |
+| cefe1892-1e54-4c85-9622-c4596a0910ca | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-1-report.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-1-report.md) | document | nonAuthoritative | archived | none | none |
+| d2c18c2f-3a8c-47c5-a18b-4f53c38a048c | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-1-review-package.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-1-review-package.md) | document | nonAuthoritative | archived | none | none |
+| 4fb1edbe-ae63-4e9a-9576-e07b6d9eac10 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-2-report.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-2-report.md) | document | nonAuthoritative | archived | none | none |
+| 54664d1a-baec-411f-ad83-a5e9f0e05964 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-2-review-fix-1-package.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-2-review-fix-1-package.md) | document | nonAuthoritative | archived | none | none |
+| ebc51db7-644b-4c49-8ff2-7014567cbab6 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-2-review-package.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-2-review-package.md) | document | nonAuthoritative | archived | none | none |
+| a65071c5-cf5e-462f-b652-c2a47823f4b0 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-2-security-fix-package.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-2-security-fix-package.md) | document | nonAuthoritative | archived | none | none |
+| 4916dbc4-f1c1-4062-9311-b7f558431bea | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-3-report.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-3-report.md) | document | nonAuthoritative | archived | none | none |
+| d03f7510-32c3-4efe-8d01-4f74de43b785 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-3-test-host-isolation-correction-report.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-3-test-host-isolation-correction-report.md) | document | nonAuthoritative | archived | none | none |
+| 014e1944-481f-4ad3-a3fe-d125f6280661 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-3-test-host-isolation-correction-review-package.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-3-test-host-isolation-correction-review-package.md) | document | nonAuthoritative | archived | none | none |
+| 110f1f5f-b5a8-4531-a6f3-ba9b6476a7c2 | [docs/delivery/archive/superpowers&#95;2026-08-29-release-radar-active-phase-selection&#95;task-3-test-host-isolation-qa-report.md](superpowers_2026-08-29-release-radar-active-phase-selection_task-3-test-host-isolation-qa-report.md) | document | nonAuthoritative | archived | none | none |
 
 ### Children
 

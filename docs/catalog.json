@@ -7053,6 +7053,216 @@
       "checksum": {
         "policy": "notApplicable"
       }
+    },
+    {
+      "artifactID": "7083d512-96d6-4cab-b368-19dacc95e146",
+      "path": "docs/delivery/archive/superpowers_2026-08-27-codex-plugin-lifecycle_task-1-brief.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "8eb93f63-de4b-46fd-8ce0-4dc5105f6fab",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-delivery-goals-roadmap-readiness_ledger.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "2bfc8d3a-cc0e-4c0d-8aec-550c850f9150",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-delivery-goals-roadmap-readiness_task-1-plan-excerpt.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "21d45764-5c45-43f9-8558-9f4caef52d31",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_progress.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "cefe1892-1e54-4c85-9622-c4596a0910ca",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-1-report.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "d2c18c2f-3a8c-47c5-a18b-4f53c38a048c",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-1-review-package.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "4fb1edbe-ae63-4e9a-9576-e07b6d9eac10",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-2-report.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "54664d1a-baec-411f-ad83-a5e9f0e05964",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-2-review-fix-1-package.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "ebc51db7-644b-4c49-8ff2-7014567cbab6",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-2-review-package.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "a65071c5-cf5e-462f-b652-c2a47823f4b0",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-2-security-fix-package.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "4916dbc4-f1c1-4062-9311-b7f558431bea",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-3-report.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "d03f7510-32c3-4efe-8d01-4f74de43b785",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-3-test-host-isolation-correction-report.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "014e1944-481f-4ad3-a3fe-d125f6280661",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-3-test-host-isolation-correction-review-package.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "110f1f5f-b5a8-4531-a6f3-ba9b6476a7c2",
+      "path": "docs/delivery/archive/superpowers_2026-08-29-release-radar-active-phase-selection_task-3-test-host-isolation-qa-report.md",
+      "kind": "document",
+      "lifecycle": "archived",
+      "authorityLevel": "nonAuthoritative",
+      "parentCollection": "delivery.archive",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     }
   ]
 }
