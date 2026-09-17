@@ -617,11 +617,67 @@ Producer regression repeat was added. Independent reviewer
 `01a0b164-a653-70b2-ab9a-8b6cb8611dd1` completed review of the exact frozen two-file
 patch over `45b611479fd8f9f193cf40181db51233abcbeade`: Required none, Optional none;
 literal-only logging preserves predicate order, typed errors, RPC/trust writes, cleanup
-and partial state. Main released the scoped four-file source/docs commit and established
+and partial state. Main confirmed the reviewer idle and archived after preserving the
+result in `51b8909`. Main released the scoped four-file source/docs commit and established
 strict staging, verification, installation and launch of the 0.1.19 acceptance candidate.
 Checkpoint 50 remains terminal; no repeated tests. No tag, DMG, push, PR or cleanup is
 released. The saved request and UI-confirmed partial `preparing` assignment remain
-unchanged; BuildAgent does not start a worker or mutate an assignment. Temporary native
+unchanged; BuildAgent does not start a worker or mutate an assignment.
+Scoped four-file commit `51b89098312e24f52a4d6d36bfd81ee3cbac9464` passed strict Release
+staging at checkpoint 51 and no-rebuild installation at checkpoint 52, both exit 0.
+The installed `/Applications/ReleaseRadar.app` is 0.1.19/build 1 and launched as exact
+main PID 42674. Installed main/Core/helpers/resource-manifest hashes match stage;
+identifiers/team, hardened runtime and Coordinator's sole application-group entitlement
+passed. AgentTools and Coordinator binary bytes remain unchanged; source/staged/installed
+plugin digest remains `6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35`.
+The fixed `com.rekonlabs.ReleaseRadar` / `ExecutionSetup` logs are installed for Main's
+exact saved request. No host restart, BuildAgent request replay, worker start, assignment
+mutation, owner config/SQLite change or release publication occurred.
+Main's post-install 52 replay of the exact original request returned `isError: true`,
+`appUnavailable`, `entityIDs: []`; no `worker_start` followed. Main's fresh read-only
+inspection confirms app PID 42674 alive and bridge PID 42696 logging at
+2026-09-17 18:15:11.324: "Received message forbidden due to code signing requirement:
+<private>". AgentTools PID 35566 still maps
+`/Applications/.ReleaseRadar.backup.41978.26095/Contents/Helpers/ReleaseRadarAgentTools`,
+inode 41331855, versus installed current inode 41345698. This confirms recurrence of a
+retained helper executable after replacement alongside a signing rejection; the private
+signing cause is not established. At that attempt Main observed no ExecutionSetup hook
+log and requested a host restart, with no bypass. After the owner confirmed Codex restart,
+Main replayed the exact saved request: it reached installed RR PID 42674 and returned
+`hookNotReady`, `entityIDs: []`; no worker start. Main observed at 18:20:33.021,
+subsystem `com.rekonlabs.ReleaseRadar`, category `ExecutionSetup`:
+"Hook readiness failed: owned hook identity or handler is missing, mismatched or duplicated",
+then "Hook verification failed: first hooks/list readiness check". The current connection
+blocker is cleared; the first `hooks/list` owned identity/handler matching is the current
+failure, with the exact failing predicate not yet identified. Main reports the sourceworker's
+tagged 0.154 official App Server schema/discovery inspection agrees with the existing
+matcher; this does not establish the runtime cause and warrants no semantic fix.
+Main authorized refinement only of existing matcher failure logs to distinguish empty or
+duplicate hooks and field mismatch, using literals only. No new test fixture, harness,
+API, config or trust change is authorized. The one-file `ProjectExecutionHookReadiness.swift`
+refinement froze with only the candidate-count failure branch changed (24 insertions,
+one deletion); the original filter/order/count and `hookNotReady` remain unchanged.
+Checkpoint 53 ran all three existing readiness tests plus
+`testPendingOwnedHookResumesSameConsentAndPreservesUnrelatedGroups` in the signed host,
+coverage disabled: 4/4 passed, zero failures/unexpected, Xcode exit 0. Target/callsites
+compiled and scoped diff check passed; no log-string tests, harness or unrelated repeat.
+This verifies existing readiness/safety/consent behavior, not exact encoded wire runtime
+coverage or the live failing predicate. Main reports the same-outcome reviewer
+`01a0b164` restore failed with a fatal missing-`AGENTS.md` environment error; no file
+state is inferred beyond that error. RO04 rearchived it. Main subsequently correlated
+queued client `d634035e-4c79-4e7c-8247-65ce972b3b0a` through local Codex logs to actual
+reviewer `01a0b17a-2321-7f60-9715-5a0f0ba12400`; task readback confirms review completed
+at 18:26:24 in worktree `614e`, with no Required findings. The task-list omission was not
+a setup failure. Review confirmed literal-only privacy, progressive-prefix correctness
+and unchanged admission/error behavior; checkpoint 53's four passing tests are attributed
+without rerunning. Main released the exact three-file source/docs commit and strict
+0.1.19 acceptance stage/install/launch. No tag, DMG, push, PR, main mutation or cleanup
+is released. Frozen patch, original request, partial assignment and owner config remain
+preserved; Main owns replay. Temporary
+native log/result bundle are retained. No request replay or config/trust mutation occurred.
+The saved request and partial `preparing` assignment are preserved; readiness and startup
+remain pending. Stage/install
+logs are temporary and retained. Temporary native
 log/result bundle and checker profile are retained. No new state/API, hook-trust mutation
 or request replay is released.
 BuildAgent performed no replay or live/config/SQLite mutation.

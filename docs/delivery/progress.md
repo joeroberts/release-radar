@@ -379,12 +379,45 @@ not exact encoded wire runtime behavior; enum/mapping unchanged. No log-string t
 new harness or unaffected native repeat. Independent reviewer
 `01a0b164-a653-70b2-ab9a-8b6cb8611dd1` completed the exact frozen two-file review over
 `45b6114`: Required none, Optional none; literal-only logging preserves guard/error/RPC/
-trust-write/cleanup/partial-state behavior. Main released the scoped four-file source/docs
+trust-write/cleanup/partial-state behavior. Main confirmed the reviewer idle/archived
+after the result was preserved in `51b8909`. Main released the scoped four-file source/docs
 commit and strict stage/verify/install/launch of the 0.1.19 acceptance candidate; checkpoint
 50 remains terminal. No tag/DMG/push/PR/cleanup, worker start or assignment mutation is
-released. Original request and partial `preparing` state remain unchanged; no hook-trust
-mutation or replay occurred.
-Exact request, hook readiness and actual startup remain pending; why the prior real
+released. Scoped commit `51b89098312e24f52a4d6d36bfd81ee3cbac9464` passed strict stage 51
+and no-rebuild install 52 (exit 0), then launched installed 0.1.19/build 1 as exact PID 42674.
+Installed identity/main/Core/helper/resource hashes match stage; signing/runtime and
+Coordinator entitlement checks passed. AgentTools/Coordinator bytes and source/staged/
+installed plugin digest remain unchanged. Fixed ExecutionSetup logs are installed for
+Main's exact saved request; no host restart or BuildAgent worker/assignment/config/SQLite
+mutation/replay occurred. Main's post-install 52 exact request replay returned
+`appUnavailable`/empty IDs; no worker start. Main confirms app 42674 alive, bridge 42696
+logging a code-signing rejection at 2026-09-17 18:15:11.324, and AgentTools 35566 mapping
+retained backup inode 41331855 versus installed 41345698. Retained helper recurrence and
+signing rejection are confirmed; the private signing cause is not. That attempt exposed
+no ExecutionSetup hook log. After owner-confirmed Codex restart, Main's next exact replay
+reached installed RR 42674 and returned `hookNotReady`/empty IDs/no worker start. At
+18:20:33.021 the installed ExecutionSetup logs identify owned hook identity/handler
+missing, mismatched or duplicated at the first `hooks/list` readiness check. The current
+connection blocker is cleared; the exact failing predicate remains unidentified. Main
+reports sourceworker tagged 0.154 schema/discovery agreement with the existing matcher,
+not an established runtime cause; no semantic fix is warranted. Main authorized literal-only
+refinement of existing matcher failure logs for empty/duplicate hooks or field mismatch;
+no new fixture/harness/API/config/trust change. The one-file candidate-count failure-log
+refinement froze (24 insertions/one deletion); original filter/order/count/error unchanged.
+Checkpoint 53 passed the three existing readiness tests plus pending-owned-hook setup:
+4/4, zero failures/unexpected, signed host/coverage disabled, Xcode exit 0; target/callsites
+compiled and scoped diff check passed. No log-string tests or unrelated repeat; exact wire
+runtime/live-predicate coverage is not claimed. Main reports reviewer `01a0b164` restore
+failed with fatal missing-`AGENTS.md` environment error (no file state inferred); RO04
+rearchived it. Main correlated replacement client `d634035e` through local Codex logs to
+actual reviewer `01a0b17a-2321-7f60-9715-5a0f0ba12400`; task readback confirms completed
+18:26:24 in `614e`, no Required findings, literal privacy/progressive-prefix correctness/
+unchanged admission-error behavior. Task-list omission was not a setup failure. Checkpoint
+53 stays terminal, no reruns. Main released exact three-file source/docs commit and strict
+0.1.19 acceptance stage/install/launch, with no tag/DMG/push/PR/main mutation/cleanup.
+Frozen patch/request/partial assignment/owner config preserved; Main owns replay.
+Original request and partial `preparing` state remain unchanged. Hook readiness
+and actual startup remain pending; why the prior real
 effective default was absent also remains unresolved.
 Temporary outputs remain retained. Worker preparation and full Outcome 3 acceptance
 remain open.

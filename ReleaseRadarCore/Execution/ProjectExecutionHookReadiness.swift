@@ -25,7 +25,30 @@ public struct ProjectExecutionHookReadiness: Sendable {
                 && $0["handlerType"] as? String == "command" && ($0["async"] as? Bool ?? false) == false
         }
         guard candidates.count == 1, let hook = candidates.first else {
-            logger.error("Hook readiness failed: owned hook identity or handler is missing, mismatched or duplicated")
+            if hooks.isEmpty {
+                logger.error("Hook readiness failed: no hooks were discovered")
+            } else if candidates.count > 1 {
+                logger.error("Hook readiness failed: duplicate full owned hook matches")
+            } else {
+                let sourceMatches = hooks.filter { $0["source"] as? String == "project" }
+                let pathMatches = sourceMatches.filter { $0["sourcePath"] as? String == primaryRoot + (inline ? "/.codex/config.toml" : "/.codex/hooks.json") }
+                let eventMatches = pathMatches.filter { $0["eventName"] as? String == "userPromptSubmit" }
+                let commandMatches = eventMatches.filter { $0["command"] as? String == command }
+                let handlerMatches = commandMatches.filter { $0["handlerType"] as? String == "command" }
+                if sourceMatches.isEmpty {
+                    logger.error("Hook readiness failed: project source mismatch")
+                } else if pathMatches.isEmpty {
+                    logger.error("Hook readiness failed: owned sourcePath mismatch")
+                } else if eventMatches.isEmpty {
+                    logger.error("Hook readiness failed: owned eventName mismatch")
+                } else if commandMatches.isEmpty {
+                    logger.error("Hook readiness failed: owned command mismatch")
+                } else if handlerMatches.isEmpty {
+                    logger.error("Hook readiness failed: owned handlerType mismatch")
+                } else {
+                    logger.error("Hook readiness failed: owned async mismatch")
+                }
+            }
             throw ProjectExecutionError.hookNotReady
         }
         guard hook["enabled"] as? Bool == true, hook["timeoutSec"] as? Int == 10,
