@@ -457,9 +457,15 @@ ExecutionSetup logs. Recurring post-replacement connection blocker is current; p
 cause unestablished, production observation pending. No unchanged retry/new checks/build/
 install. Main confirmed reviewer `01a0b18b` idle/completed and archived after `2b038cc`
 result preservation. Original request, partial `preparing` assignment and owner config remain preserved;
-Main owns replay. Hook readiness
-and actual startup remain pending; why the prior real
-effective default was absent also remains unresolved.
+Main owns replay. Under explicit owner checkpoint-publication authorization, source/
+evidence checkpoint `ef2ead0c7af0840882804dc1a80d9bbe72692109` was pushed normally and
+[PR #88 — Add project execution setup, admission, and owned recovery](https://github.com/joeroberts/release-radar/pull/88)
+was verified open, non-draft, targeting `main`. Installed source remains `2b038cc`;
+publication does not establish live acceptance. Outcome 3 remains open with the known
+connection/empty-hooks and startup/isolation/recovery/portability limitations documented
+in the PR. If the next refreshed-host acceptance fails, halt further diagnostic patches
+and have the chief architect assess integration/refactor needs. Hook readiness and actual
+startup remain pending; why the prior real effective default was absent is also unresolved.
 Temporary outputs remain retained. Worker preparation and full Outcome 3 acceptance
 remain open.
 Main retains serialized live operations and all native/Git work; the source worker
