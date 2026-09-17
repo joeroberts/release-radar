@@ -4,6 +4,90 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class WorkerAdapterTests: XCTestCase {
+    final class StoreProbe: @unchecked Sendable {
+        let root: URL
+        private let lock = NSLock()
+        private var attempts = 0
+        init(root: URL) { self.root = root }
+        var count: Int { lock.withLock { attempts } }
+        func adapter() throws -> WorkerAdapter {
+            lock.withLock { attempts += 1 }
+            return WorkerAdapter(store: try ProjectExecutionFileStore(root: root, create: false),
+                serverFactory: { _, _, _ in
+                    XCTFail("An unavailable execution store must not launch a worker.")
+                    throw ProjectExecutionError.unavailable
+                })
+        }
+    }
+
+    func testMCPDiscoveryWithoutExecutionStoreDoesNotProvisionOrAuthorizeWork() async throws {
+        let parent = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let invalid = parent.appendingPathComponent("invalid-store")
+        try Data("not a directory".utf8).write(to: invalid)
+        let missing = parent.appendingPathComponent("missing-store")
+        let calls: [(String, [String: String])] = [
+            ("worker_start", ["projectId": "project-one", "assignmentId": "task-one", "prompt": "Begin"]),
+            ("worker_status", ["workerId": "unknown"]),
+            ("worker_follow_up", ["workerId": "unknown", "prompt": "Continue"]),
+            ("worker_interrupt", ["workerId": "unknown"]),
+            ("worker_respond", ["workerId": "unknown", "requestKey": "unknown", "decision": "accept"]),
+            ("worker_close", ["workerId": "unknown"]),
+        ]
+        for root in [missing, invalid] {
+            let probe = StoreProbe(root: root)
+            let service = CoordinatorMCP(adapterFactory: { try probe.adapter() })
+            let initialized = try await service.dispatch(RPCObject(["method": "initialize"])).object()
+            XCTAssertEqual((initialized["serverInfo"] as? [String: String])?["name"], "release_radar_coordinator")
+            let listed = try await service.dispatch(RPCObject(["method": "tools/list"])).object()
+            let names = try XCTUnwrap(listed["tools"] as? [[String: Any]]).compactMap { $0["name"] as? String }
+            XCTAssertEqual(Set(names), Set(calls.map { $0.0 }))
+            XCTAssertEqual(probe.count, 0, "Discovery must not resolve or open execution storage.")
+            for (name, arguments) in calls {
+                do {
+                    _ = try await service.dispatch(RPCObject([
+                        "method": "tools/call", "params": ["name": name, "arguments": arguments],
+                    ]))
+                    XCTFail("Unavailable execution storage must fail closed for \(name).")
+                } catch {
+                    XCTAssertEqual(error as? ProjectExecutionError, .unavailable)
+                }
+            }
+            XCTAssertEqual(probe.count, calls.count)
+            _ = try await service.dispatch(RPCObject(["method": "initialize"]))
+            _ = try await service.dispatch(RPCObject(["method": "tools/list"]))
+            try await service.disconnect()
+            XCTAssertEqual(probe.count, calls.count, "Discovery and unused disconnect must not provision storage.")
+            XCTAssertFalse(FileManager.default.fileExists(atPath: missing.path))
+            XCTAssertEqual(try Data(contentsOf: invalid), Data("not a directory".utf8))
+        }
+    }
+
+    func testMCPUsesTheSameVerifiedAdapterForWorkAndDisconnect() async throws {
+        let fixture = try fixture(); let peer = Peer(policy: fixture.policy)
+        let adapter = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in peer })
+        let service = CoordinatorMCP(adapterFactory: { adapter })
+        _ = try await service.dispatch(RPCObject(["method": "initialize"]))
+        _ = try await service.dispatch(RPCObject(["method": "tools/list"]))
+        XCTAssertTrue(peer.calls.isEmpty)
+        let result = try await service.dispatch(RPCObject([
+            "method": "tools/call", "params": ["name": "worker_start", "arguments": [
+                "projectId": "project-one", "assignmentId": "task-one", "prompt": "Begin the approved work",
+            ]],
+        ])).object()
+        let text = try XCTUnwrap((result["content"] as? [[String: String]])?.first?["text"])
+        let started = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+        let workerID = try XCTUnwrap(started["workerId"] as? String)
+        _ = try await service.dispatch(RPCObject([
+            "method": "tools/call", "params": ["name": "worker_status", "arguments": ["workerId": workerID]],
+        ]))
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/start" }.count, 1)
+        try await service.disconnect()
+        XCTAssertEqual(peer.closeCount, 1)
+        XCTAssertEqual(try fixture.store.assignment(projectID: "project-one", taskID: "task-one").connectionClosed, true)
+    }
+
     actor Gate {
         private var entered = false
         private var waiter: CheckedContinuation<Void, Never>?

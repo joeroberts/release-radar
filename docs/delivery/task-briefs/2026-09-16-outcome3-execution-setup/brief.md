@@ -131,8 +131,11 @@ ledger/brief update and read-only existing-fixture/UI/tool entry-point inspectio
 with no fixture creation, product edit or process artifact. Existing terminal
 checks/reviews remain closed; unrelated data, migration and publication are excluded.
 
-Main's live inventory lacks assignment preparation/worker tools; fresh task loading
-of the updated native plugin inventory is a prerequisite, not a source failure.
+The earlier stale inventory needed fresh task loading. Main's fresh task exposes
+assignment preparation but worker MCP remains absent: initialization connection closed.
+BuildAgent's single installed initialization exchange exited 1 with empty stdout and
+execution-setup-unavailable stderr. CoordinatorMain eagerly opened execution storage
+before initialization; this is an observed source defect, distinct from stale inventory.
 Main reports rejected UI automation clicks while the app was changing. Actual
 onboarding/worker/isolation/STOP/recovery acceptance remains open. No task, fixture,
 harness or process artifact is created here. The retained transport-only fixture
@@ -148,8 +151,37 @@ and `worker_status` → independent `worker_interrupt` → confirmed completion 
 `worker_close`; Manage Project hook update/remove/resume and selected Worker resources
 retirement. Genuine OS authentication/privacy prompts or inaccessible controls need
 owner participation; folder selection is required grant UI, not per-worker consent.
-This result update changes only ledger/brief, then freezes them for Main's existing
-documentation/diff route; no added investigation, product edit or live action.
+Main released only the pre-provisioning MCP discovery correction from committed
+baseline `338ca6e1954aa9f9a0e9bd7deffa429036b6e191`, same branch/worktree and model/effort.
+Live writes are paused during source correction. The existing MCP service defers
+adapter/store construction until a validated worker tool call, caches the same adapter
+per connection and disconnects only an opened adapter. Initialization/ping/tools-list
+never provision execution storage. Every worker operation retains create:false storage
+access and all authority/root/assignment/profile/trust/readiness gates. The existing
+service definition moves to the already test-compiled WorkerAdapter file, without new
+harness, engine, file, profile or configuration workaround. Shipping package bytes/digest
+remain unchanged. Two existing-suite regressions precede source correction: missing/invalid
+storage permits initialization/discovery but all tools fail closed without provisioning;
+verified work/status/disconnect retain one adapter, launch and physical close. No native
+red run is claimed. Main/BuildAgent checkpoint 21 passed app/coordinator build,
+all 14 WorkerAdapter tests and documentation/index/diff checks. Actual Debug MCP
+initialization/tool listing returned six tools, with EOF exit 0 and empty stderr.
+Production checkpoint 22 passed stage-release-no-launch strict signing/copy/promotion,
+exact coordinator identifier, hardened runtime and sole approved application-group
+entitlement. Staged Release initialization IDs 1/2 and six-tool listing passed,
+with EOF exit 0 and empty stderr. Plugin 0.1.19 and registered digest remain unchanged.
+Temporary `build/coordinator-startup-21.log`, associated `.xcresult` and
+`build/coordinator-startup-release-22.log` are retained/excluded. Reviewer `01a0afd4`
+cleared the complete six-file patch over `338ca6e` with no Required or Optional findings:
+no-store discovery, lazy create:false gates, atomic cache, independent STOP during
+awaited calls and cached EOF physical cleanup are preserved. Checkpoints 21/22 remain
+attributed; direct checks/review are terminal, with results preserved for reviewer
+archive. Later factual pass annotations were not independently reviewed; they add no
+design change and need no additional review. Source/tests/docs remain frozen for
+Main→BuildAgent scoped commit/installation
+under existing live-acceptance authorization. No commit, installed correction or actual
+worker/onboarding pass is yet claimed; prior unrelated validation stays terminal.
+No worker product edit, retry, native/build/Git/live action or cleanup is included.
 
 Abrupt coordinator process loss without a retained worker handle or exit proof remains
 an unresolved recovery barrier. Existing configuration-handle replacement requires old

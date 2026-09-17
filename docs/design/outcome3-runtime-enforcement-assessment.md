@@ -1559,3 +1559,57 @@ terminal. Production packaging completion, installation, runtime/UI, portability
 and live catalog acceptance remain open. The source worker performed no native,
 build, Git or live action. Catalog identity/lifecycle and collection purpose remain
 unchanged; no new durable artifact is added.
+
+## Pre-provisioning MCP discovery correction
+
+Main's fresh-task acceptance exposes assignment preparation but no worker MCP tools;
+Codex logs initialization connection closed. BuildAgent's single installed initialization
+exchange exited 1 with empty stdout and execution-setup-unavailable stderr. The source
+opened ProjectExecutionFileStore.applicationRoot()/create:false storage before responding
+to initialize. The native management server consequently could not advertise its tools
+until project setup had already provisioned storage. This is an observed runtime defect,
+distinct from the earlier stale task inventory; no complete actual-flow acceptance follows.
+
+Main released the minimal correction from committed baseline
+`338ca6e1954aa9f9a0e9bd7deffa429036b6e191`, same branch/worktree. The existing MCP service
+now defers adapter/store construction until a validated worker-tool call. Its actor
+serializes and caches the connection's adapter without blocking independent status/STOP
+when a worker call awaits transport. Initialization/ping/tools-list do not resolve, open
+or create execution storage; disconnect does nothing if no adapter opened. Missing or
+invalid storage fails actual worker operations closed using the unchanged create:false
+constructor. No authority, root, assignment, profile, hook/trust or readiness gate is
+weakened, and discovery does not imply readiness. WorkerAdapter operations and hook mode
+remain unchanged. The existing service definition moved into WorkerAdapter.swift, already
+compiled by the test target, so direct regressions exercise its actual dispatch code.
+No new engine, harness, source file, profile, configuration workaround or helper authority
+is added; shipping plugin bytes and normalized digest remain unchanged.
+
+Two WorkerAdapterTests regressions precede the correction: absent/invalid execution
+storage permits initialization and exact six-tool discovery while all worker calls fail
+closed and create nothing; verified start/status/disconnect retains one adapter, one
+launch and physical close. No native red run is claimed. Main/BuildAgent checkpoint 21
+passed app/coordinator build, all 14 WorkerAdapter tests and documentation/index/diff
+checks. Actual Debug initialization/tool listing returned all six tools, with EOF
+exit 0 and empty stderr. Production checkpoint 22 passed stage-release-no-launch strict
+signing, copy and promotion; coordinator identifier is exactly
+`com.rekonlabs.ReleaseRadarCoordinator`, hardened runtime passed and its sole entitlement
+is application-groups `[2UA854NLX4.com.rekonlabs.ReleaseRadar]`. Staged Release
+initialization IDs 1/2 and six-tool listing passed, with EOF exit 0 and empty stderr.
+Plugin version 0.1.19 and normalized digest
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35` remain unchanged.
+Temporary `build/coordinator-startup-21.log`, associated `.xcresult` and
+`build/coordinator-startup-release-22.log` remain retained/excluded. Reviewer `01a0afd4`
+cleared the complete six-file correction over `338ca6e` with no Required or Optional
+findings, confirming no-store discovery, lazy create:false worker gates, atomic cache,
+independent STOP during awaited calls and cached EOF physical cleanup. Native checkpoints
+21/22 remain attributed; checks/review are terminal. Later factual pass annotations
+were not independently reviewed; they add no design change and need no additional
+review. The result is
+preserved for Main's reviewer archive. Source/tests/docs remain frozen for Main→BuildAgent
+scoped commit/installation under existing live-acceptance authorization. No commit,
+installed correction or actual worker/onboarding pass is yet claimed. This worker
+performs no product edit, retry,
+native/build/Git/live action or cleanup. Prior unrelated checks/reviews remain terminal. Actual-flow,
+isolation/STOP/recovery, UI, portability and live catalog acceptance remain open. Existing
+temporary/reference/distribution files remain retained and excluded, without cleanup.
+Catalog identity/lifecycle and collection purpose remain unchanged; no new durable artifact.

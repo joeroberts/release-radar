@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**Outcome 3 — signing correction committed; authorized actual-flow acceptance pending.**
+**Outcome 3 — MCP discovery correction verified/reviewed; frozen for scoped commit/install; actual-flow acceptance open.**
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
@@ -101,18 +101,54 @@ those actions; it owns only the requested documentation update and bounded read-
 entry-point/fixture inspection. No disposable fixture was created here. Existing
 terminal checks/reviews remain closed and no product/process artifact is added.
 
-Main's live tool inventory still lacks assignment preparation and worker tools.
-Fresh task loading of the updated native plugin inventory is a prerequisite, not
-evidence of a source failure. Main reports UI automation clicks were rejected while
+The earlier stale inventory required fresh task loading. Main's fresh task now exposes
+assignment preparation but not worker MCP tools: Codex logs MCP initialization connection
+closed. BuildAgent's single installed initialize-only exchange exited 1, with empty stdout
+and stderr reporting execution setup unavailable. Unlike the prior stale inventory,
+this is an observed source defect: CoordinatorMain eagerly opens the execution store
+before protocol initialization. No complete actual-flow acceptance is claimed.
+Main reports UI automation clicks were rejected while
 the app was changing; onboarding/worker/isolation/STOP/recovery remain unverified.
 No task or fixture is created here. The transport-only fixture is unsuitable for
 actual onboarding; recommend a fresh disposable Git repository outside owner
 repositories/app storage with committed current guidance/progress, valid catalog/indexes
 and app-owned governed pending work. Use existing UI/tools only. Genuine OS
 authentication/privacy prompts or inaccessible controls remain owner-mediated;
-folder selection is required grant UI, not a new per-worker consent gate. This result
-update changes only ledger/brief, then freezes them for Main's existing documentation/
-diff route. No added investigation, product edit or live action is included.
+folder selection is required grant UI, not a new per-worker consent gate.
+Main released the minimal source correction from committed baseline
+`338ca6e1954aa9f9a0e9bd7deffa429036b6e191` on the same assigned branch/worktree;
+no live writes are released while correcting source. The existing MCP service now defers
+adapter/store creation until a validated worker tool call, caches the same adapter
+per connection, and closes only an adapter actually opened. Initialization, ping and
+tool discovery do not resolve, open or create execution storage. Actual worker operations
+retain create:false storage access and every existing authorization, assignment, root,
+profile and hook/readiness gate. The existing service definition moved into the already
+test-compiled WorkerAdapter file; no new harness, engine, source file or project setup.
+
+Two regressions in WorkerAdapterTests precede the correction: missing/invalid storage
+allows initialization/discovery while all six tools fail closed without provisioning,
+and verified work/status/disconnect use the same adapter with one launch and physical
+close. No native red run is claimed. Main/BuildAgent checkpoint 21 passed the app/
+coordinator build, all 14 WorkerAdapter tests and documentation/index/diff checks.
+Actual Debug initialization/tool listing returned all six tools, with EOF exit 0 and
+empty stderr. Production checkpoint 22 passed stage-release-no-launch strict signing,
+copy and promotion: exact coordinator identifier, hardened runtime and sole approved
+application-group entitlement passed. Staged Release initialization IDs 1/2 and six-tool
+listing passed, with EOF exit 0 and empty stderr. Plugin 0.1.19 and its registered
+normalized digest remain unchanged. Temporary `build/coordinator-startup-21.log`,
+associated `.xcresult` and `build/coordinator-startup-release-22.log` are retained/excluded.
+Reviewer `01a0afd4` cleared the complete six-file correction over `338ca6e` with no
+Required or Optional findings. Review confirmed discovery opens no storage, lazy
+create:false access preserves worker gates, cache admission is atomic, awaited calls
+retain independent STOP and EOF closes only the cached adapter. Native checkpoints
+21/22 are attributed above; review/checks are terminal. Later factual pass annotations
+were not independently reviewed; they add no design change and need no additional
+review. The result is preserved for
+Main's reviewer archive. Source/tests/docs remain frozen for Main→BuildAgent's scoped
+commit/installation under existing live-acceptance authorization. No commit, installed
+correction or actual worker/onboarding pass is yet claimed. Prior
+unrelated validation remains terminal; this worker performs no native/build/Git/live
+action, product change, retry or cleanup.
 
 Onboarding authority carries only existing registered work scope; no repeated
 per-worker consent is introduced, and genuine runtime approval gates remain.
