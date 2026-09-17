@@ -104,6 +104,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     private(set) var recoveryResumedAtLaunch = false
     private let codexPluginPackage: CodexPluginPackage?
     private var agentBridgeHost: AgentBridgeApplicationHost?
+    private var executionAssignmentPreparer: ProjectExecutionAssignmentCoordinator?
 
     private init() {
         let databaseURL = DeliveryStore.applicationSupportDatabaseURL()
@@ -116,7 +117,7 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         }
         recoveryStartupError = startupError
         let store = startupError == nil
-            ? DeliveryStore(databaseURL: databaseURL)
+            ? DeliveryStore(databaseURL: databaseURL, executionAssignmentRoot: ProjectExecutionFileStore.applicationRoot)
             : DeliveryStore(unavailableDatabaseURL: databaseURL, message: startupError!)
         let keychain = PushoverKeychainStore()
         self.store = store
@@ -155,8 +156,10 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
         agentBridgeHost = nil
     }
 
-    func adoptRecoveredStore(_ store: DeliveryStore) {
+    func adoptRecoveredStore(_ store: DeliveryStore) async throws {
+        try await store.observeExecutionAssignments(root: ProjectExecutionFileStore.applicationRoot)
         self.store = store
+        executionAssignmentPreparer = nil
         recoveryStartupError = nil
         recoveryResumedAtLaunch = false
         notificationCoordinator = AppNotificationCoordinator(
@@ -178,9 +181,14 @@ final class ReleaseRadarAppServices: @unchecked Sendable {
     func startSharedAgentBridge() async throws {
         guard recoveryStartupError == nil else { return }
         guard agentBridgeHost == nil else { return }
+        try await store.observeExecutionAssignments(root: ProjectExecutionFileStore.applicationRoot)
+        let preparer = executionAssignmentPreparer ?? ProjectExecutionSetupClient.assignments(plugin: codexPluginCoordinator)
+        executionAssignmentPreparer = preparer
         let coordinator = notificationCoordinator
         agentBridgeHost = try await AgentBridgeApplicationHost.start(
             databaseURL: DeliveryStore.applicationSupportDatabaseURL(),
+            executionAssignments: preparer,
+            executionAssignmentRoot: ProjectExecutionFileStore.applicationRoot,
             afterReply: { envelope, result in
                 await coordinator.dispatchAfterCommittedCommand(envelope, result: result)
             }

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import ReleaseRadarCore
@@ -118,6 +119,7 @@ final class AppModel {
     private let externalServicesSuppressed: Bool
     private let codexObserver: any CodexObserver
     private var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
+    private var executionResourceLifecycle: ProjectExecutionResourceLifecycle?
     let codexPluginShippedVersion: String
     private let codexPluginShippedCapability: RecognizedPluginCapability?
     private let pushoverKeychain: PushoverKeychainStore
@@ -1013,11 +1015,11 @@ final class AppModel {
         } else {
             await retiredStore.sealForRecovery()
         }
+        if let recoveryServices { try await recoveryServices.adoptRecoveredStore(result.store) }
         store = result.store
         recoveryStartupError = nil
         recoveryResumedAtLaunch = false
         if let recoveryServices {
-            recoveryServices.adoptRecoveredStore(result.store)
             notificationCoordinator = recoveryServices.notificationCoordinator
             codexPluginCoordinator = recoveryServices.codexPluginCoordinator
         } else {
@@ -2204,6 +2206,40 @@ final class AppModel {
                 title: $0.goal?.objective ?? $0.id
             )
         }
+    }
+
+    func executionSetupForOnboarding() -> ProjectExecutionSetupCoordinator {
+        ProjectExecutionSetupClient.setup(plugin: codexPluginCoordinator)
+    }
+
+    func manageExecutionHook(registration: ProjectRegistration, action: ProjectExecutionHookAction) async throws {
+        try await projectOnboarding.manageExecutionHook(registration: registration, action: action, setup: executionSetupForOnboarding())
+        _ = await reloadProjectProjections()
+    }
+
+    func executionAssignments(registration: ProjectRegistration) async throws -> [ProjectExecutionAssignment] {
+        try await projectOnboarding.executionAssignments(registration: registration, resources: executionResourcesForOwner())
+    }
+
+    func retireExecutionAssignment(registration: ProjectRegistration, expected: ProjectExecutionAssignment) async throws {
+        let folder: URL?
+        if try await projectOnboarding.executionResourcesNeedOriginalFolder(registration: registration, expected: expected) {
+            guard let originalRoot = expected.worktree?.primaryRoot else { throw ProjectExecutionError.invalidAssignment }
+            let panel = ProjectFolderAccessPanel.make()
+            panel.message = "Restore access to this worker's exact original repository to retire its owned resources: \(originalRoot). The project's current folder will remain unchanged."
+            panel.prompt = "Authorize Cleanup"
+            guard panel.runModal() == .OK, let selected = panel.url else { throw StoreError.unavailable("Resource retirement was cancelled. The old resources and outcome were preserved.") }
+            folder = selected
+        } else { folder = nil }
+        try await projectOnboarding.retireExecutionAssignment(registration: registration, expected: expected, resourceFolder: folder, resources: executionResourcesForOwner())
+        _ = await reloadProjectProjections()
+    }
+
+    private func executionResourcesForOwner() -> ProjectExecutionResourceLifecycle {
+        if let executionResourceLifecycle { return executionResourceLifecycle }
+        let resources = ProjectExecutionSetupClient.resources(plugin: codexPluginCoordinator)
+        executionResourceLifecycle = resources
+        return resources
     }
 
     func projectHealth(for projectID: ProjectID) async -> ProjectHealthSnapshot {

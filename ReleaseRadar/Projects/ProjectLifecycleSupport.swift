@@ -117,73 +117,123 @@ struct ProjectSettingsEditor: View {
     @Environment(\.dismiss) private var dismiss
     let initial: ProjectSettingsSnapshot
     let tasks: [CodexTaskDescriptor]
+    let manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?
+    let loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])?
+    let retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)?
     let save: (String, Set<String>) async throws -> ProjectSettingsSnapshot
 
     @State private var name: String
     @State private var excluded: Set<String>
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var executionMessage: String?
+    @State private var executionFailed = false
+    @State private var executionAssignments: [ProjectExecutionAssignment] = []
+    @State private var selectedAssignmentID = ""
 
     init(
         initial: ProjectSettingsSnapshot,
         tasks: [CodexTaskDescriptor],
+        manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)? = nil,
+        loadExecutionAssignments: (() async throws -> [ProjectExecutionAssignment])? = nil,
+        retireExecutionAssignment: ((ProjectExecutionAssignment) async throws -> Void)? = nil,
         save: @escaping (String, Set<String>) async throws -> ProjectSettingsSnapshot
     ) {
         self.initial = initial
         self.tasks = tasks
+        self.manageExecutionHook = manageExecutionHook
+        self.loadExecutionAssignments = loadExecutionAssignments
+        self.retireExecutionAssignment = retireExecutionAssignment
         self.save = save
         _name = State(initialValue: initial.projectName)
         _excluded = State(initialValue: initial.excludedTaskIDs)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("Project settings").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
-            TextField("Project name", text: $name)
-                .textFieldStyle(RekonQuietTextFieldStyle())
-                .accessibilityIdentifier("project-settings-name")
-            RekonCard {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Observed Codex tasks").font(.headline)
-                    if tasks.isEmpty && excluded.isEmpty {
-                        Text("No tasks currently match this project folder.")
-                            .foregroundStyle(RekonTheme.secondaryText)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Project settings").font(RekonTypography.screenTitle).foregroundStyle(RekonTheme.primaryText)
+                TextField("Project name", text: $name)
+                    .textFieldStyle(RekonQuietTextFieldStyle())
+                    .accessibilityIdentifier("project-settings-name")
+                RekonCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Observed Codex tasks").font(.headline)
+                        if tasks.isEmpty && excluded.isEmpty {
+                            Text("No tasks currently match this project folder.")
+                                .foregroundStyle(RekonTheme.secondaryText)
+                        }
+                        ForEach(taskRows, id: \.id) { task in
+                            RekonCheckbox(isOn: Binding(
+                                get: { !excluded.contains(task.id) },
+                                set: { include in
+                                    if include { excluded.remove(task.id) } else { excluded.insert(task.id) }
+                                }
+                            ), title: task.title, accessibilityLabel: task.title,
+                               accessibilityIdentifier: "project-settings-task-\(task.id)")
+                                .frame(height: 32, alignment: .leading)
+                        }
                     }
-                    ForEach(taskRows, id: \.id) { task in
-                        RekonCheckbox(isOn: Binding(
-                            get: { !excluded.contains(task.id) },
-                            set: { include in
-                                if include { excluded.remove(task.id) } else { excluded.insert(task.id) }
+                }
+                if manageExecutionHook != nil {
+                    RekonCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Project execution").font(.headline)
+                            Text("Update the verified Release Radar hook, or pause governed work and remove it. Close workers before removal. Conflicting edits are preserved.")
+                                .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 10) { executionButtons }
+                                VStack(alignment: .leading, spacing: 10) { executionButtons }
                             }
-                        ), title: task.title, accessibilityLabel: task.title,
-                           accessibilityIdentifier: "project-settings-task-\(task.id)")
-                            .frame(height: 32, alignment: .leading)
+                            if retireExecutionAssignment != nil, !executionAssignments.isEmpty {
+                                Picker("Worker resources", selection: $selectedAssignmentID) {
+                                    ForEach(executionAssignments, id: \.id) { assignment in
+                                        Text("\(assignment.work?.title ?? assignment.id) — \(assignment.state.rawValue)").tag(assignment.id)
+                                    }
+                                }
+                                .disabled(isSaving)
+                                .accessibilityIdentifier("project-settings-execution-assignment")
+                                Text("After closing this worker, retire its clean checkout and matching permission profile to allow replacement work. Committed branches remain. Uncertain outcomes stay recorded; retirement does not complete the task.")
+                                    .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                                Button("Retire resources and allow replacement") { performRetirement() }
+                                    .buttonStyle(RekonSecondaryButtonStyle())
+                                    .disabled(isSaving || selectedExecutionAssignment == nil)
+                                    .accessibilityIdentifier("project-settings-execution-retire")
+                            }
+                            if let executionMessage {
+                                RekonCallout(tone: executionFailed ? .danger : .information, systemImage: executionFailed ? "exclamationmark.triangle" : "checkmark.circle") {
+                                    Text(executionMessage)
+                                }
+                                .accessibilityIdentifier("project-settings-execution-result")
+                            }
+                        }
                     }
                 }
-            }
-            if let errorMessage {
-                RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
-                    Text("Settings were not saved").font(.headline)
-                    Text(errorMessage).foregroundStyle(RekonTheme.secondaryText)
+                if let errorMessage {
+                    RekonCallout(tone: .danger, systemImage: "exclamationmark.triangle") {
+                        Text("Settings were not saved").font(.headline)
+                        Text(errorMessage).foregroundStyle(RekonTheme.secondaryText)
+                    }
+                }
+                HStack {
+                    Spacer()
+                    Button("Cancel", action: { dismiss() })
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .keyboardShortcut(.cancelAction)
+                        .disabled(isSaving)
+                    Button(isSaving ? "Saving…" : "Save") { performSave() }
+                        .buttonStyle(RekonPrimaryButtonStyle())
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("project-settings-save")
                 }
             }
-            HStack {
-                Spacer()
-                Button("Cancel", action: { dismiss() })
-                    .buttonStyle(RekonSecondaryButtonStyle())
-                    .keyboardShortcut(.cancelAction)
-                    .disabled(isSaving)
-                Button(isSaving ? "Saving…" : "Save") { performSave() }
-                    .buttonStyle(RekonPrimaryButtonStyle())
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("project-settings-save")
-            }
+            .padding(28)
         }
-        .padding(28)
-        .frame(minWidth: 480, idealWidth: 580, minHeight: 380)
+        .frame(minWidth: 480, idealWidth: 580, minHeight: 380, idealHeight: 540, maxHeight: 700)
         .foregroundStyle(RekonTheme.primaryText)
         .background(RekonTheme.background)
+        .task { await refreshExecutionAssignments() }
     }
 
     private var taskRows: [CodexTaskDescriptor] {
@@ -195,6 +245,67 @@ struct ProjectSettingsEditor: View {
             rows[id] = .init(id: id, workingDirectory: URL(fileURLWithPath: "/"), title: "Excluded task \(id)")
         }
         return rows.values.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    @ViewBuilder private var executionButtons: some View {
+        Button("Update execution hook") { performExecution(.update) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-update")
+        Button("Remove execution hook") { performExecution(.remove) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-remove")
+        Button("Resume project workflow") { performExecution(.resume) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-resume")
+    }
+
+    private var selectedExecutionAssignment: ProjectExecutionAssignment? {
+        executionAssignments.first { $0.id == selectedAssignmentID }
+    }
+
+    private func refreshExecutionAssignments() async {
+        guard let loadExecutionAssignments else { return }
+        do {
+            executionAssignments = try await loadExecutionAssignments().filter { $0.retirement?.completed != true }
+            if !executionAssignments.contains(where: { $0.id == selectedAssignmentID }) { selectedAssignmentID = executionAssignments.first?.id ?? "" }
+        } catch { executionFailed = true; executionMessage = error.localizedDescription }
+    }
+
+    private func performRetirement() {
+        guard let retireExecutionAssignment, let expected = selectedExecutionAssignment else { return }
+        isSaving = true; executionMessage = nil; executionFailed = false
+        Task {
+            defer { isSaving = false }
+            do {
+                try await retireExecutionAssignment(expected)
+                await refreshExecutionAssignments()
+                if executionAssignments.first(where: { $0.registration.projectID == expected.registration.projectID && $0.id == expected.id })?.retirement?.replacementAllowed == true {
+                    executionMessage = "Replacement work is allowed with a fresh assignment. The original configuration connection's closure remains unknown; its retirement is still incomplete."
+                } else {
+                    executionMessage = "Resources retired. Replacement work requires a fresh current assignment; the prior outcome remains recorded."
+                }
+            } catch { executionFailed = true; executionMessage = error.localizedDescription }
+            await refreshExecutionAssignments()
+        }
+    }
+
+    private func performExecution(_ action: ProjectExecutionHookAction) {
+        guard let manageExecutionHook else { return }
+        isSaving = true; executionMessage = nil; executionFailed = false
+        Task {
+            defer { isSaving = false }
+            do {
+                try await manageExecutionHook(action)
+                switch action {
+                case .remove: executionMessage = "Release Radar's hook was removed. The workflow remains disabled."
+                case .update: executionMessage = "Execution hook update verified."
+                case .resume: executionMessage = "Project workflow restored. Stopped and uncertain workers remain blocked; replacement work requires a fresh assignment."
+                }
+            } catch {
+                executionFailed = true; executionMessage = error.localizedDescription
+            }
+            await refreshExecutionAssignments()
+        }
     }
 
     private func performSave() {

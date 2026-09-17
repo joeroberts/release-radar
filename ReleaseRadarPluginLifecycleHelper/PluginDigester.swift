@@ -13,6 +13,22 @@ enum PluginDigester {
     private static let legacyFiles = [".codex-plugin/plugin.json", ".mcp.json", "skills/release-radar/SKILL.md"]
     private static let files = legacyFiles + ["skills/shared-execution/SKILL.md"]
 
+    private static func validMCP(_ mcp: [String: Any]) -> Bool {
+        guard let server = mcp["release_radar"] as? [String: Any],
+              server["command"] is String, (server["args"] as? [Any])?.isEmpty == true else { return false }
+        // Retain the installed legacy shape. The new shape is exactly two fixed
+        // servers; neither accepts caller environment or working-directory data.
+        if mcp.count == 1 { return true }
+        guard Set(mcp.keys) == ["release_radar", "coordinator_workers"],
+              Set(server.keys) == ["command", "args"],
+              server["command"] as? String == "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools",
+              let coordinator = mcp["coordinator_workers"] as? [String: Any],
+              Set(coordinator.keys) == ["command", "args"],
+              coordinator["command"] as? String == "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator",
+              coordinator["args"] as? [String] == ["--mcp"] else { return false }
+        return true
+    }
+
     static func marketplacePackage(at root: URL) throws -> Package {
         let plugin = root.appendingPathComponent("plugins/release-radar", isDirectory: true)
         return try package(at: plugin, expectedVersion: nil)
@@ -77,8 +93,7 @@ enum PluginDigester {
         }
         guard let mcpData = contents[".mcp.json"],
               let mcp = try? JSONSerialization.jsonObject(with: mcpData) as? [String: Any],
-              mcp.count == 1, let server = mcp["release_radar"] as? [String: Any],
-              server["command"] is String, (server["args"] as? [Any])?.isEmpty == true else {
+              validMCP(mcp) else {
             throw LifecycleError.integrityInvalid
         }
         var hasher = SHA256()
@@ -305,8 +320,7 @@ enum PluginDigester {
         }
         let mcpData = try stableFile(root.appendingPathComponent(".mcp.json"))
         guard let mcp = try? JSONSerialization.jsonObject(with: mcpData) as? [String: Any],
-              mcp.count == 1, let server = mcp["release_radar"] as? [String: Any],
-              server["command"] is String, (server["args"] as? [Any])?.isEmpty == true else {
+              validMCP(mcp) else {
             throw LifecycleError.integrityInvalid
         }
         var hasher = SHA256()

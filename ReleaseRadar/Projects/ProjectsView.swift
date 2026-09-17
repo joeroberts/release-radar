@@ -7,6 +7,7 @@ struct ProjectsView: View {
     let projection: DashboardProjection
     let onboardingStore: DeliveryStore
     var codexTasks: [CodexTaskDescriptor] = []
+    var executionSetup: (any ProjectExecutionSettingUp)? = nil
     let openProject: (ProjectID) -> Void
     let openArchivedProject: (ProjectID) -> Void
     var openRemovedProject: (ProjectRemovalID) -> Void = { _ in }
@@ -18,6 +19,7 @@ struct ProjectsView: View {
             OnboardingView(
                 store: onboardingStore,
                 codexTasks: codexTasks,
+                executionSetup: executionSetup,
                 onOpenExisting: openProject
             ) { _ in
                 await onboardingFinished()

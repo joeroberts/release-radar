@@ -47,13 +47,42 @@ final class CodexPluginLifecycleAcceptanceTests: XCTestCase {
             rootURL: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
         )
 
-        XCTAssertEqual(package.version, "0.1.18")
+        XCTAssertEqual(package.version, "0.1.19")
         XCTAssertEqual(
             package.version,
             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         )
         XCTAssertEqual(package.relativeFiles, CodexPluginPackage.relativeFiles)
-        XCTAssertEqual(package.digest, "63f1f25156ff4738894aae72957e853936292e9c6f4299388a453e76701a1168")
+        XCTAssertEqual(package.digest, "6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35")
+        let capability = try XCTUnwrap(RecognizedPluginCapability.recognize(
+            manifestVersion: package.version,
+            normalizedPackageDigest: package.digest
+        ))
+        XCTAssertEqual(capability.sharedExecutionStandardVersions, [1])
+        XCTAssertEqual(
+            package.digest,
+            try PluginDigester.marketplacePackage(
+                at: repositoryRoot.appendingPathComponent("ReleaseRadar/CodexPluginMarketplace")
+            ).digest
+        )
+    }
+
+    func testPublished018RecognitionRemainsExactDuring019Update() throws {
+        let publishedDigest = "63f1f25156ff4738894aae72957e853936292e9c6f4299388a453e76701a1168"
+        let currentDigest = "6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35"
+        let published = try XCTUnwrap(RecognizedPluginCapability.recognize(
+            manifestVersion: "0.1.18",
+            normalizedPackageDigest: publishedDigest
+        ))
+        XCTAssertEqual(published.sharedExecutionStandardVersions, [1])
+        XCTAssertNil(RecognizedPluginCapability.recognize(
+            manifestVersion: "0.1.18",
+            normalizedPackageDigest: currentDigest
+        ))
+        XCTAssertNil(RecognizedPluginCapability.recognize(
+            manifestVersion: "0.1.19",
+            normalizedPackageDigest: publishedDigest
+        ))
     }
 
     func testBundledSkillDefinesOwnerAuthorizedAuditedRepositoryHandoff() throws {

@@ -78,11 +78,12 @@ public actor DeliveryStore {
     private var readOnlyFiles: ExistingDocumentationStoreFiles?
     public nonisolated let databaseURL: URL
     private var acceptsOperations = true
+    private var executionAssignmentRoot: (@Sendable () throws -> URL)?
     public private(set) var availability: DeliveryStoreAvailability
     public let schemaVersionForDocumentation: Int
 
-    public init(databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL()) {
-        self.init(databaseURL: databaseURL, createIfMissing: true)
+    public init(databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(), executionAssignmentRoot: (@Sendable () throws -> URL)? = nil) {
+        self.init(databaseURL: databaseURL, createIfMissing: true, executionAssignmentRoot: executionAssignmentRoot)
     }
 
     public init(unavailableDatabaseURL: URL, message: String) {
@@ -97,8 +98,9 @@ public actor DeliveryStore {
         ))
     }
 
-    private init(databaseURL: URL, createIfMissing: Bool) {
+    private init(databaseURL: URL, createIfMissing: Bool, executionAssignmentRoot: (@Sendable () throws -> URL)? = nil) {
         self.databaseURL = databaseURL
+        self.executionAssignmentRoot = executionAssignmentRoot
         schemaVersionForDocumentation = Int(StoreMigrations.currentVersion)
         let databaseExisted = FileManager.default.fileExists(atPath: databaseURL.path)
         let snapshotURL = Self.preMigrationSnapshotURL(for: databaseURL)
@@ -140,6 +142,21 @@ public actor DeliveryStore {
     public static func documentationMaintenance(databaseURL: URL) throws -> DeliveryStore {
         _ = try ExistingDocumentationStoreFiles(url: databaseURL)
         return DeliveryStore(databaseURL: databaseURL, createIfMissing: false)
+    }
+
+    public func observeExecutionAssignments(root: @escaping @Sendable () throws -> URL) throws {
+        let connection = try availableConnection()
+        let projectIDs = try connection.rows("SELECT id FROM projects", maximum: 10000).compactMap { row -> ProjectID? in
+            guard case let .text(id)? = row["id"] else { return nil }; return .init(rawValue: id)
+        }
+        try ProjectExecutionAssignmentLifecycle.reconcile(root: root(), projectIDs: projectIDs, connection: connection)
+        executionAssignmentRoot = root
+    }
+
+    private func reconcileExecutionAssignments(connection: SQLiteConnection, scope: AuditScope?) throws {
+        guard let executionAssignmentRoot, let scope,
+              [.project, .phase, .phaseLifecycle, .phasePlan, .ticket, .ticketTaskPlan, .deliveryGoal, .planChangeProposal].contains(scope.entityType) else { return }
+        try ProjectExecutionAssignmentLifecycle.reconcile(root: executionAssignmentRoot(), projectIDs: [scope.projectID], connection: connection)
     }
 
     public static func existingApplicationSupportDatabaseURL(fileManager: FileManager = .default) -> URL {
@@ -261,6 +278,7 @@ public actor DeliveryStore {
                     eventSnapshot.requestGeneration.map(SQLiteValue.integer) ?? .null,
                 ]
             )
+            try reconcileExecutionAssignments(connection: connection, scope: auditScope)
             try connection.execute("COMMIT")
             return result
         } catch {
@@ -354,6 +372,7 @@ public actor DeliveryStore {
                     snapshotAfter?.phaseID.map(SQLiteValue.text) ?? .null,
                 ]
             )
+            try reconcileExecutionAssignments(connection: connection, scope: auditScope)
             try connection.execute("COMMIT")
             return result
         } catch {

@@ -18,13 +18,17 @@ struct OnboardingWorkflowPresentation: Equatable, Sendable {
 struct InitializeProjectConfirmation: Equatable, Sendable {
     let projectName: String
     let folder: URL
+    var enableExecutionSetup = false
 
     var title: String {
         "Initialize \u{201c}\(projectName)\u{201d} from \u{201c}\(folder.lastPathComponent)\u{201d}?"
     }
 
     var detail: String {
-        "Release Radar tracking state and folder authorization will be saved locally. Initialization does not modify repository files."
+        if enableExecutionSetup {
+            return "Release Radar tracking state and folder authorization will be saved locally. Execution setup adds one project hook and records consent for controlled execution of existing authorized work. It may trust this project's owned hook in Codex; it preserves unrelated configuration and all runtime approval requirements."
+        }
+        return "Release Radar tracking state and folder authorization will be saved locally. Initialization does not modify repository files."
     }
 }
 
@@ -203,6 +207,7 @@ struct AddProjectWindowView: View {
         OnboardingView(
             store: model.onboardingStore,
             codexTasks: model.codexTasksForOnboarding(),
+            executionSetup: model.executionSetupForOnboarding(),
             navigationTitle: "Add Project",
             onCancel: close,
             onOpenExisting: { projectID in
@@ -240,6 +245,8 @@ struct OnboardingView: View {
     @State private var projectName = ""
     @State private var excludedTaskIDs: Set<String> = []
     @State private var importRecognizedArtifacts = false
+    @State private var enableExecutionSetup = false
+    private let executionSetupAvailable: Bool
     @State private var statusMessage: String?
     @State private var failurePresentation: FailureStatePresentation?
     @State private var isWorking = false
@@ -263,6 +270,7 @@ struct OnboardingView: View {
     init(
         store: DeliveryStore,
         codexTasks: [CodexTaskDescriptor] = [],
+        executionSetup: (any ProjectExecutionSettingUp)? = nil,
         navigationTitle: String = "Projects",
         onCancel: (() -> Void)? = nil,
         onOpenExisting: @escaping (ProjectID) -> Void,
@@ -277,7 +285,9 @@ struct OnboardingView: View {
         initialAttachmentFolder: URL? = nil,
         onFinished: @escaping @MainActor (ProjectID) async -> Void
     ) {
-        _onboarding = State(initialValue: FolderProjectOnboarding(store: store, codexTasks: codexTasks))
+        _onboarding = State(initialValue: FolderProjectOnboarding(store: store, codexTasks: codexTasks, executionSetup: executionSetup))
+        executionSetupAvailable = executionSetup != nil
+        _enableExecutionSetup = State(initialValue: executionSetup != nil)
         if let initialPreview {
             _preview = State(initialValue: initialPreview)
             _workflow = State(initialValue: .initialize)
@@ -322,22 +332,8 @@ struct OnboardingView: View {
                     attachmentWorkflow
                 }
 
-                if let statusMessage {
-                    Text(statusMessage)
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel(statusMessage)
-                }
-
-                if let failurePresentation {
-                    if attachmentCommittedNeedsReload {
-                        FailureStateView(
-                            presentation: failurePresentation,
-                            actionTitle: "Reload",
-                            action: reloadAttachedProject
-                        )
-                    } else {
-                        FailureStateView(presentation: failurePresentation)
-                    }
+                if !showsInitializationFeedbackInline {
+                    onboardingFeedback
                 }
             }
             .padding(32)
@@ -345,6 +341,34 @@ struct OnboardingView: View {
         }
         .navigationTitle(navigationTitle)
         .interactiveDismissDisabled(isInitializeCommitInFlight || isAttachmentCommitInFlight)
+    }
+
+    private var showsInitializationFeedbackInline: Bool {
+        guard case .initialize = workflow else { return false }
+        return preview != nil && preview?.completedProjectID == nil
+    }
+
+    @ViewBuilder
+    private var onboardingFeedback: some View {
+        if isInitializeCommitInFlight {
+            ProgressView(enableExecutionSetup
+                ? (projectID == nil ? "Initializing project tracking and checking execution setup…" : "Checking execution setup for the saved project…")
+                : "Initializing project tracking…")
+                .accessibilityIdentifier("onboarding-initialization-progress")
+        }
+        if let statusMessage {
+            Text(statusMessage)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(statusMessage)
+                .accessibilityIdentifier("onboarding-status")
+        }
+        if let failurePresentation {
+            if attachmentCommittedNeedsReload {
+                FailureStateView(presentation: failurePresentation, actionTitle: "Reload", action: reloadAttachedProject)
+            } else {
+                FailureStateView(presentation: failurePresentation)
+            }
+        }
     }
 
     private var landing: some View {
@@ -457,7 +481,8 @@ struct OnboardingView: View {
 
             let confirmation = InitializeProjectConfirmation(
                 projectName: projectName,
-                folder: preview.selectedFolder
+                folder: preview.selectedFolder,
+                enableExecutionSetup: enableExecutionSetup
             )
             GroupBox("Confirm initialization") {
                 VStack(alignment: .leading, spacing: 10) {
@@ -474,6 +499,7 @@ struct OnboardingView: View {
                         .keyboardShortcut(.defaultAction)
                         .disabled(isWorking)
                         .accessibilityIdentifier("onboarding-initialize-confirm")
+                    onboardingFeedback
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -485,6 +511,21 @@ struct OnboardingView: View {
 
     private var codexHandoff: some View {
         VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                if executionSetupAvailable && enableExecutionSetup {
+                    Button("Resume Execution Setup", action: initializeProject)
+                        .buttonStyle(RekonSecondaryButtonStyle())
+                        .disabled(isWorking)
+                        .accessibilityIdentifier("onboarding-resume-execution")
+                }
+                Button("Finish Initialization", action: finish)
+                    .buttonStyle(RekonPrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isWorking)
+                    .accessibilityIdentifier("onboarding-finish-initialization")
+            }
+            onboardingFeedback
+
             GroupBox("Continue in Codex") {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Project tracking is saved. Paste this prompt into a Codex task rooted at this exact project folder.")
@@ -530,14 +571,6 @@ struct OnboardingView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            HStack {
-                Button("Finish Initialization", action: finish)
-                    .buttonStyle(RekonPrimaryButtonStyle())
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(isWorking)
-                    .accessibilityIdentifier("onboarding-finish-initialization")
             }
         }
     }
@@ -785,7 +818,9 @@ struct OnboardingView: View {
                         statusMessage = "This folder already belongs to an active project."
                         failurePresentation = nil
                     } else if resumedProjectID != nil {
-                        statusMessage = "Saved project setup is ready. Finish Initialization to open the project."
+                        statusMessage = enableExecutionSetup
+                            ? "Project tracking is saved. Resume Execution Setup to check or recover the existing setup, then finish initialization."
+                            : "Saved project tracking is ready. Finish Initialization to open the project."
                         failurePresentation = nil
                     } else {
                         statusMessage = result.recognizedArtifactPreview == nil
@@ -815,6 +850,7 @@ struct OnboardingView: View {
         guard let decision = decision() else { return }
         isWorking = true
         isInitializeCommitInFlight = true
+        statusMessage = nil
         failurePresentation = nil
         promptCopyResult = nil
         Task {
@@ -825,10 +861,22 @@ struct OnboardingView: View {
             do {
                 let preparedID = try await onboarding.prepare(decision)
                 projectID = preparedID
-                statusMessage = "Project tracking is saved and ready to finish."
+                statusMessage = enableExecutionSetup
+                    ? "Execution setup checks completed. Finish Initialization will verify and open the project."
+                    : "Project tracking is saved and ready to finish."
                 failurePresentation = nil
             } catch let preparationError as OnboardingPreparationError {
                 switch preparationError {
+                case let .executionSetupFailedAfterSave(savedProjectID, detail):
+                    projectID = savedProjectID
+                    statusMessage = "Project tracking is saved; execution setup needs recovery."
+                    failurePresentation = FailureStatePresentation(
+                        title: "Execution setup incomplete",
+                        detail: detail + " Use Resume Execution Setup to retry the same saved registration. Install or repair the Release Radar plugin in Settings if needed.",
+                        systemImage: "exclamationmark.triangle",
+                        tone: .warning,
+                        accessibilityID: "onboarding-execution-incomplete"
+                    )
                 case let .seedApplicationFailedAfterSave(savedProjectID):
                     projectID = savedProjectID
                     statusMessage = "Project tracking is saved and can be resumed."
@@ -841,6 +889,7 @@ struct OnboardingView: View {
                     )
                 }
             } catch {
+                statusMessage = projectID == nil ? nil : "Project tracking is saved; this setup attempt did not complete."
                 failurePresentation = failure(for: error)
             }
         }
@@ -957,7 +1006,8 @@ struct OnboardingView: View {
             preview: preview,
             projectName: projectName,
             excludedTaskIDs: excludedTaskIDs,
-            importRecognizedArtifacts: importRecognizedArtifacts
+            importRecognizedArtifacts: importRecognizedArtifacts,
+            enableExecutionSetup: enableExecutionSetup
         )
     }
 

@@ -953,3 +953,830 @@ repository documentation validation. Outcome 3 remains open. Runtime work, commi
 push/PR, installation, migration and application catalog acceptance are not performed
 by this follow-up. Catalog identity/authority/lifecycle are unchanged; this mutable
 assessment has no checksum. No new durable document or competing ledger is created.
+
+### Implementation checkpoint — September 16
+
+The owner separately released onboarding/plugin implementation, including production
+hooks, in the [controlling implementation brief](../delivery/task-briefs/2026-09-16-outcome3-execution-setup/brief.md).
+This grants no live configuration, trust/profile mutation, installation, merge,
+SQLite/application acceptance or publication. The original documentation-only
+assignment remains historical; the September 16 amendments govern this delivery.
+
+The implementation uses a native, signed, unprivileged plugin-side stdio adapter
+and hook mode, retaining the single managed plugin and the fixed four-operation
+installer helper. Main approved this native port to avoid a Python/manual-policy
+runtime prerequisite on another computer. The exact reviewed Python candidate was
+identified at `8cd8cd8` in the standalone source checkout and twelve source files
+were copied byte-for-byte through BuildAgent into this worktree before reuse; its
+prior PASS is attributed component evidence, not integrated runtime proof.
+
+Protected policy and task-specific assignment JSON live in the existing application
+group’s `Execution/Projects` and `Execution/Assignments`; worker checkouts live
+separately under `Execution/Worktrees/<project>/<task>`. The plugin launch accepts
+project/assignment identities and a bounded prompt, without role, path, profile,
+model or effort overrides. Application-produced assignments carry existing scoped
+owner authorization; host/runtime approval decisions remain separate. Durable
+unknown start intent prevents a replacement connection from repeating an uncertain
+launch. First and subsequent turns require current assignment/session/root/context
+and hook readiness. Unknown native/manual sessions are not adopted by the hook.
+
+The draft is checked against installed Codex 0.154.0-alpha.6.2’s exported static
+schema: `hooks/list` uses `cwds` and returns `data` entries, and `instructionSources`
+is an array of path strings. Discovery warnings/errors, disablement, modified
+trust, source/command mismatch or unsupported shapes fail readiness. No new runtime
+probe was needed for schema verification. Native/signed integration is unverified
+until Main/BuildAgent exercises the bounded candidate.
+
+The preliminary local libgit2 1.9.4 proposal was never adopted and was withdrawn
+after the owner identified CVE-2026-53587. The selected portable source pin is
+[upstream 1.9.5](https://github.com/libgit2/libgit2/releases/tag/v1.9.5), immutable
+`f7a4071c766ceea3915415e22134cbe3e581c420`, whose release explicitly fixes that
+vulnerability and related issues. Main authorized exact source procurement after
+the worker’s codeload access was denied. BuildAgent verified the tag/source and
+archive SHA-256 before handoff. The canonical source archive, upstream COPYING and
+notice accompany the app under `ReleaseRadar/ThirdPartyNotices`; the fixed
+`script/build_libgit2.sh` prepares a static library offline with network/auth
+transports off and system regcomp. CMake is development tooling only, configured
+through `CMAKE_EXECUTABLE`, with no product runtime/Homebrew requirement, source
+fetch during Xcode, host configuration or installer-helper authority expansion.
+The release security fix is not a blanket security clearance for all library APIs.
+
+Seven focused native assignment/hook tests and eight protected-store/onboarding
+retry/adapter/readiness tests passed through Main/BuildAgent. The initial
+missing-type baseline was not run. Offline arm64 library preparation and native
+app compilation passed. Both worktree tests stopped before product behavior:
+their Git subprocess fixture invoked sandbox-prohibited xcrun. The correction
+uses in-process libgit2 fixture operations, preserving app entitlements.
+
+The C dependency is an internal import and cannot appear in the provisioner's
+public Swift contracts. RRCore remains non-resilient, so its direct build consumers
+need the pinned module/header search paths. This follows
+[Swift's transitive-dependency contract](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0409-access-level-on-imports.md#transitive-dependency-loading)
+and avoids unsafe implementation-only hiding or changing the entire framework's
+library-evolution model. Native compilation of this correction passed.
+
+The owner authorized a minimal hosted test of the real App Server transport with
+isolated fixture HOME/CODEX_HOME and the fixed installed OpenAI-signed executable.
+No real home/configuration/trust or installation changes are included. Host
+signing, entitlements and execution context must be reported: a privileged runner
+is not app sandbox evidence, and a container fixture does not prove grants to an
+external bookmarked repository. The hosted check ran with appSandbox=true but
+Xcode-injected root-read/test-manager/get-task-allow entitlements; it is not
+production-equivalent. App Server spawned, then a response timed out with unknown
+RPC phase/outcome. No trust/configuration broadening is justified by this result.
+The source reader used Foundation's filling read(upToCount:) on a live short pipe;
+one bounded POSIX read per chunk corrected the hosted protocol check, which passed
+initialize/hooks-list/close with no residual process.
+Native close now waits for EOF, then bounded termination, exit and reader join;
+cleanup errors remain unknown and cannot produce a false closed result.
+
+The in-process worktree collision fixture passed. Clean removal failed because
+libgit2 requires PRUNE_VALID independently of PRUNE_WORKING_TREE. The correction
+adds that flag only after exact identity and clean-status checks; dirty removal
+remains prohibited. The corrected creation/removal case and four affected adapter
+checks passed. One tiny signed actual-source bare fixture subsequently compiled and
+passed exact app-entitlement/signature checks but trapped during sandbox initialization
+before main. It invoked no App Server and created no fixture home. Main stopped
+that unsuitable verification approach; it does not establish actual app/API
+incompatibility. The next production boundary check must exercise the actual built
+app under a separately resolved isolated-data launch authorization.
+
+The single plugin's existing MCP inventory now includes the fixed signed native
+coordinator beside AgentTools. Core and installer-helper validators require the
+same exact inventory and reject command/argument/environment near misses. No fifth
+helper operation, second managed plugin, environment setup or Python runtime is
+introduced. App/package version 0.1.18 and its published recognized digest are
+unchanged. The new candidate digest is deliberately unregistered until the
+coordinated release owner assigns release identity; this candidate is not claimed
+as an equal-version update. Checkpoint 7 passed 22 of 26 cases, with four failures
+at the published digest or pre-existing version expectations. The newly introduced
+test-fixture inventory defect was corrected, and both affected package tests passed
+at checkpoint 8.
+
+Native onboarding now records versioned owner consent and an owned hook edit intent
+in protected policy before modifying the primary project's fixed hook file. Pending
+retry accepts only its exact before/intended bytes, preserving conflicting edits
+and explicit disablement. Existing inline project hooks use version-checked App
+Server edits to their config.toml; no shadow hooks.json is created. Only the exact
+owned definition may receive hook trust, and completion requires trusted readback.
+Prepare/verify close configuration connections on all paths; failed cleanup remains
+unknown. Protected authority writers use stable per-file advisory locks plus expected
+JSON comparisons; primary owner hook edits retain conflict checks without claiming
+atomic cooperation from arbitrary external editors.
+
+Onboarding presents scoped execution consent and a resume action for saved pending
+setup. Checkpoint 9 app dependency build and all 16 focused setup/store/readiness/
+onboarding/hook checks passed, including failure, conflicting edits, inline storage
+and cleanup. The initial setup actor preceded its tests; no initial red native run
+is claimed. No arbitrary prompt authorization,
+role/path/profile/model inputs or new approval service are admitted. Production
+flow wiring, review-role assignments, owned update/removal, runtime acceptance,
+responsive mockup comparison and independent review remain incomplete; Outcome 3
+is not closed.
+
+#### Existing onboarding authority and assignment admission
+
+The owner said in the Main conversation:
+
+> When a user onboards a project into release radar, they are agreeing to the execution workflow. full stop. so configuring permissions for a project should be done at that time. This should not be left to an LLM to do, that would be overkill and my feeling is the results will vary wildly. Installing the pluging should follow a simiar pattern that we have already established in RR.
+
+The subsequent implementation approval was:
+
+> approved -- Outcome 3 implementation: integrate project execution setup into RR’s existing onboarding and plugin installation flows
+
+Main's implementation interpretation is that structured app-owned onboarding policy
+and current registered work identities carry scoped authority for delivery and
+independent review. Another per-assignment owner approval is not required; Main
+withdrew its earlier optional choice as a redundant, self-created gate. Phase
+eligibility or a natural-language Main assertion alone does not confer authority.
+Use the existing command envelope with exact root/registration, work identities
+and expected revisions; derive role, scope, context, baseline, checkout and worker
+settings in app code. Caller role/path/model/profile/authorization/prompt overrides
+are inadmissible. A signed management client is not cryptographic Main-task identity;
+association with Main is operational. Ordinary workers must have management tools
+disabled and management executables, shared Git/history and sibling storage excluded,
+with direct native boundary checks before acceptance. This source authorization
+does not permit live configuration, installation or owner/application-state mutations.
+
+#### Assignment production and conservative invalidation
+
+The unexposed native producer captures current registered work and expected task-plan
+and phase revisions. It derives the worker role and finite permission profile,
+records preparation before configuration, and resumes only the exact request.
+Uncertain worker launches cannot be replaced by another request. Independent review
+uses an opaque reference to a known closed delivery assignment and verifies that
+assignment's exact clean committed candidate in its assigned branch/worktree; the
+primary checkout's HEAD is not the review candidate. Review does not require prior
+task acceptance or completion. Context is bounded, read through stable descriptors
+and pinned to committed checkout bytes.
+
+Relevant app-store mutations reconcile current work against protected assignments
+before SQL COMMIT. Filesystem revocation and SQL are not atomic: if SQL later rolls
+back, the assignment stays revoked and requires explicit recovery. Failed revocation
+blocks the mutation. Unrelated evidence and notification scopes do not trigger this
+reconciliation. Production wiring must configure reconciliation before admitting
+execution; absent legacy/test injection grants no execution authority. A prompt hook
+checks the next turn and is not an instantaneous interruption mechanism; STOP still
+requires the independent interrupt operation. Lost connections remain unknown even
+if a late completion notification arrives.
+
+Corrected checkpoint 10 app compilation passed after an explicit execution-error
+recovery mapping and its focused regression. Of 29 tests, 26 passed, including
+producer, admission, profile, adapter and error presentation; all three lifecycle
+cases stopped before behavior at a new fixture's nonexistent bookmark `id` column.
+The fixture insert now uses the repository's current composite-key schema, with no
+production schema changes; all three corrected lifecycle tests passed. The first
+coherent source candidate now wires the single app-owned preparer and exact protected
+root into the production bridge. The app's primary store observes relevant mutations
+from construction, and both stores reconcile before execution admission. Recovery
+reconciles before adopting the replacement store. Legacy/test bridge defaults and
+documentation maintenance have no preparer and cannot authorize execution.
+
+AgentTools publishes the bounded preparation command with mandatory registration,
+work IDs, expected revisions and optional opaque candidate/correction reference.
+Unknown role/path/model/profile/authorization/prompt/baseline fields are rejected
+at the tool and callback boundaries. Replay reads current assignment state instead
+of reauthorizing a stopped assignment. This route does not launch or commit code.
+Ordinary workers retain Git/history denial; Main's authorized trusted route commits
+the exact delivery worktree before a fresh review assignment verifies its candidate.
+New production wiring and route tests await native checks and independent review;
+sources and documentation are frozen for the first scoped commit checkpoint.
+Producer/lifecycle source initially preceded its tests; no red baseline
+is claimed. Production sandbox/configuration access, actual worker boundaries,
+owned update/removal, UI QA and independent candidate review remain open.
+
+The pinned libgit2 source archive, license/notices, dependency lock, module headers
+and offline build script are durable reproducible inputs. The copied standalone
+Python plugin under `plugins/coordinator-workers/` is temporary reference material,
+not shipped product source. The stopped `script/fixtures/execution_app_server.swift`
+is temporary abandoned verification material. Both are excluded from the source
+candidate; no deletion is authorized. Generated `.build` tools/dependencies and
+`build` logs/results are temporary native-check outputs, retained pending owner
+disposition. No durable deliverable is assigned to those temporary paths.
+
+#### Required corrections and owned hook lifecycle checkpoint
+
+The first scoped source candidate is `ffdd65601bd36852b801d79a2061a68f4c7548cc`.
+Its direct checks passed, but fresh independent review returned four Required
+findings; it is unaccepted. The following correction source passed Main/BuildAgent's
+checkpoint 12 app dependency build and 34 focused tests after a missing-`await`
+compile correction. Documentation/index and diff checks passed. These source checks
+do not establish runtime UI or production boundaries; the correction candidate
+remains unaccepted pending the same review assignment. The delivery ledger owns the
+current result and remaining work.
+
+Configuration preparation now leaves a protected assignment in `preparing`.
+After awaited preparation, the app rechecks deadline, exact registration/root,
+current work and exact request receipt before synchronous protected admission
+inside its final store transaction. Failure revokes that exact preparation. An
+unlaunched finalization failure may resume only the same request; another UUID
+cannot bypass its recovery barrier. Filesystem authority and SQL are not atomic;
+failed SQL finalization invokes protected revocation and reports any failure of
+that revocation rather than claiming completion.
+
+Startup records a non-admissible reservation and uncertainty before contacting
+the runtime. Relevant work mutations invalidate reservations as well as admitted
+assignments. Binding checks the exact reserved snapshot and policy, so a stale
+response cannot restore authorization. Unknown outcomes remain barriers after
+revocation. An uncertain approval or follow-up response also revokes new work
+admission. Independently, STOP may address only the adapter's known thread/turn
+on its owned connection. Confirmed physical connection closure is recorded
+separately from task outcome; unknown, stopped and revoked records never become
+delivered review candidates merely because cleanup succeeded. Follow-up reserves
+the operation before awaited readiness, rejects concurrent follow-up/close and
+rechecks admission after readiness returns.
+
+Existing project settings provide Update execution hook and Remove execution
+hook actions. They hold the exact registered bookmark/root, recheck registration
+before writes and record owner intent/completion through the app store. Updates
+replace only a verified unchanged RR-owned definition and preserve unrelated
+configuration and owner removal. Removal disables policy before configuration
+edits, refuses unresolved live/unknown workers, records before/intended digests,
+and removes only the unchanged owned definition using its existing JSON or inline
+storage. Conflicts retain owner edits and the disabled policy. No shadow hook file,
+file deletion, automatic re-enable, installer authority expansion or agent mutation
+endpoint is added. Removal verifies the current signed app/handler without requiring
+the plugin to be reinstalled after an explicit plugin removal.
+
+The settings mockup was inspected for this presentation change. Running visual,
+responsive and accessibility comparison and independent UX/QA remain open; source
+inspection does not establish them. Most hook/producer/adapter regressions preceded
+their bounded corrections, while command-route pause/deadline and owner-wrapper
+tests followed source; no initial native red run is claimed. Remaining owned profile/
+worktree lifecycle, explicit owner recovery, actual production sandbox/worker
+boundaries and coordinated release identity remain required future slices.
+
+#### Owned resource retirement and explicit owner restoration checkpoint
+
+Main/BuildAgent committed the prior corrections as
+`c1968a4dd99ad27f772fd9fd238abb325c74c350` after the app build, all 34 focused tests,
+documentation/index and diff checks passed. The independent R1–R4 correction review
+has no remaining Required findings and is terminal for that validation. Its new
+hook-source review is separate and pending; neither establishes runtime UI or the
+production sandbox boundary. Main/BuildAgent checkpoint 13 passed the next lifecycle
+candidate's app build and all 50 focused tests: setup 13, producer 7, profile 2,
+worktree 3, assignment 5, adapter 12, lifecycle 4 and execution routes 4. Documentation/
+index and diff checks passed; BuildAgent regenerated only the task-brief index.
+Product source remains frozen for the fresh independent cleanup review through RO04
+and Main's scoped commit route. These direct results cover selected native behaviors
+and do not establish production permission boundaries, running UI or Outcome 3 acceptance.
+
+Existing settings allow the owner to select an exact current assignment and explicitly
+retire its resources to allow replacement. The app holds the registered root bookmark,
+rechecks registration/root and records intent/completion. Retirement requires confirmed
+runtime closure or a never-launched assignment; an uncertain launch without closure
+proof remains blocked. It records an exact request identity and prior state before
+external effects. It refuses referenced candidates and prunes only the exact clean
+owned checkout after branch/common-Git/root verification. Dirty and untracked data
+remain untouched. libgit2 retains the branch and committed history; no branch deletion,
+history rewrite or generic filesystem removal is introduced. Known already-pruned
+worktrees can read back as absent only when both lookup and checkout agree.
+
+New preparation pins the finite profile definition before configuration. Retirement
+removes only a semantically identical owned profile, honoring prior removal and
+preserving every unrelated profile through a version-checked replacement/readback of
+the existing permissions map. Legacy assignments without a definition use the current
+finite derived definition and refuse drift. Worktree removal precedes profile edits,
+so dirty checkout refusal changes no profile. Protected receipts record successful
+steps; an edited profile leaves a pending exact-request retry without repeating the
+confirmed worktree removal. These external effects and receipts are not atomic; no
+automatic repair or overwrite is claimed.
+
+Only completed owner retirement marks the old assignment superseded and permits
+another request to prepare replacement work. It retains the prior stopped/revoked/
+unknown state in its receipt and preserves the unknown-outcome flag. It does not
+complete or accept the task, authorize an old turn, or skip new current-work checks.
+An assignment under retirement cannot serve as a new review/correction baseline.
+
+The owner may separately choose Resume project workflow after verified removal.
+Restoration accepts only the unchanged removal result or its exact pending restoration
+intent, preserves conflicts, and holds policy disabled until exact hook readiness/trust
+readback. Onboarding and update retries cannot resume it. Before enabling policy it
+revokes any remaining authorized/preparing records; stopped and unknown records remain
+blocked. This action restores the project workflow and never launches a worker. The
+existing settings sheet scrolls and retains accessible action/result identifiers;
+actual responsive and visual QA remain unverified. Handler identity validation has
+an explicit async protocol implementation; no default-overload dispatch is assumed.
+
+Optional definition/retirement fields retain legacy decoding and introduce no automatic
+existing-worktree migration. Lifecycle tests preceded core implementation; expanded
+migration/owner-restoration tests followed source, with no initial native red run
+claimed. Actual signed-app API/bookmark access, ordinary-worker authority/history
+boundaries, running UI QA and coordinated release identity remain open for acceptance.
+Registration/root replacement or re-add recovery is also unresolved. This bounded
+same-registration lifecycle refuses stale identities; it does not silently rebind
+old policy/assignment authority to a new registration or root.
+
+#### Required hook mutation-boundary correction
+
+Independent hook reviewer `01a0ad4c-9745-70d2-9366-153d4d6500c6` found a Required
+P1 on `c1968a4`: the exact owner registration check preceded awaited configuration/
+trust reads, allowing stale trust or inline-hook edits before completion detected
+the change. The bounded correction passes the current registration/root validator
+and pinned protected policy through the configuration client. Inline hook edits,
+project trust and exact hook-hash trust writes revalidate after their reads and any
+connection initialization, immediately before dispatch. Readback and installed/
+removal receipts revalidate again. Concurrent disablement or registration changes
+therefore produce conflict/stale recovery rather than a ready receipt. Already
+dispatched external writes cannot be made atomic with SQLite; this does not claim
+rollback of in-flight RPC effects or authorize replay after uncertain results.
+
+Three regressions change or revoke registration during suspended trust discovery,
+inline removal and readiness readback. They precede the bounded core correction;
+no native red run is claimed. Main/BuildAgent checkpoint 14 passed the app build,
+all 23 selected tests and documentation/diff checks; native processes exited. The
+same hook reviewer found no remaining Required or Optional issues, terminal for
+that correction. Protocol witness and
+read-only producer call changes are signature adaptations only. Cleanup/retirement
+implementation, UI and its separate independent review remain frozen. R1–R4 are
+closed and are not reopened. Main owns affected native checks, scoped commit and
+the same hook review correction route. Runtime boundaries/UI and Outcome 3 acceptance
+remain open; this source-only correction performs no live configuration operation.
+
+#### Required ignored-content and connection-close corrections
+
+Cleanup reviewer `01a0ad5f-6db0-7ed0-bde6-0f274bb35353` identified Required P1
+ignored owner files being omitted by default status checks before prune, and P2
+retirement completing before configuration connection closure. Retirement now
+requests ignored files and ignored-directory recursion explicitly, in addition to
+its exact branch/common-Git/root and ordinary cleanliness checks. A native regression
+places content in an ignored `.env`, attempts prune and reads back the unchanged
+content, checkout and committed head. Creation/candidate cleanliness semantics are
+otherwise preserved.
+
+Resource steps return a pending receipt. Before profile RPCs, protected state marks
+configuration closure outstanding for that exact retirement request; failure keeps
+the receipt incomplete/visible and replacement blocked. Only confirmed closure and
+fresh owner/root/policy checks permit the superseded/completed transition. AppModel
+retains one lifecycle/client for owner resource operations, preserving its original
+connection. Operations serialize that shared connection. Only an explicit matching
+request may retry closure of the held original connection; unrelated requests do
+not close it. The client clears its cleanup failure only after successful close.
+Hook setup/producer close behavior is unchanged and cannot automatically invoke
+this owner recovery operation.
+
+An optional outstanding-close marker preserves legacy receipt decoding. A new client
+without the original handle refuses to complete an outstanding receipt, including
+after app lifetime loss; no durable process-exit proof is invented. Such lost-handle
+recovery remains a named limitation requiring separately supported resolution.
+Regression coverage checks visible incomplete state, blocked replacement, fresh-client
+refusal, wrong-request refusal and explicit successful retry on the same connection,
+without repeating resource removals. These regressions precede the fixes; no native
+red run or current passing result is claimed. Source/docs are frozen for Main's
+affected native checks, scoped commit and the same cleanup review correction route.
+Hook P1 and R1–R4 remain closed. No live configuration/data/install action or full
+Outcome 3 acceptance is claimed.
+
+Main/BuildAgent checkpoint 15 passed the app build, 16 of 17 selected tests and
+documentation/diff checks; native processes exited. All four native worktree cases,
+including ignored-content preservation, and all five assignment cases passed.
+Seven of eight producer cases passed. The sole failed close-retry case counted
+two closes instead of one before retry and three instead of two afterward. Its
+producer and retirement actor shared one configuration fixture; rejected producer
+preparation invokes finish, adding the unrelated close to that fixture. Production
+`assignments` and `resources` factories construct separate clients, with AppModel
+retaining the resource client. The bounded correction separates fixture clients,
+keeps the original close-count/same-identity expectations and verifies typed
+replacement conflict plus the producer's own finish. No production source changed.
+Main/BuildAgent's fixture-corrected checkpoint 15 passed all eight producer tests
+and documentation/diff checks. Prior app build, worktree 4 and assignment 5 passes
+remain valid and terminal unless a concrete defect appears. No production source
+changed for the fixture correction. The cleanup review gate is cleared; reviewer
+`01a0ad5f-6db0-7ed0-bde6-0f274bb35353` returned PASS with no remaining Required
+or Optional findings in either correction. App build, all 17 affected tests after
+fixture correction and documentation/diff checks passed; validation is terminal.
+The candidate is ready for Main→BuildAgent's scoped local commit, with product source
+frozen and no commit yet claimed. Runtime/UI acceptance, registration/root replacement
+and re-add recovery, and application catalog acceptance remain open. Outcome 3 is
+not complete; this result update performs no product or live configuration changes.
+
+## Current binding and re-add recovery slice
+
+Main confirmed scoped commit `f0866b7` (parent `c1968a4`) after terminal cleanup
+checks/review and released the next unresolved lifecycle slice to the same worker.
+The following current source contract supersedes the lost-handle limitation above;
+native checks passed as recorded below; fresh independent review and acceptance remain pending.
+
+Existing onboarding and owner Update/Resume actions verify the application's exact
+current registration, primary bookmark, repository context and protected policy at
+mutation boundaries. A generation advance or primary-root change replaces policy
+binding while revoking old authorized/preparing leases. Original stopped/unknown
+outcomes and resources stay unchanged. `bindingRecoveryPending` blocks preparation,
+final admission and hook/worker admission until current hook trust/readiness and
+owner-context readback complete. Explicit disablement survives binding changes;
+only existing explicit Resume can restore it. Generation rollback and changed
+registration identity cannot replace authority.
+
+A relocated root receives fresh local hook intent/trust. When it contains a carried
+hook, the protected original installed receipt permits only the exact unchanged
+owned command/group; absence permits fresh registration in the new root. Modified
+definitions conflict and unrelated groups remain preserved. No old folder write or
+trust grant is inferred from the new bookmark.
+
+Archive/removal disables protected policy before the application SQL commit. Re-add
+creates new project/registration identities; onboarding may hand off an unchanged
+owned hook only from protected policy whose exact historical registration is proven
+removed and inactive by the application, rechecked before every write. Protected
+`previousProjectIDs` retain the predecessor chain and owner cleanup visibility.
+Preparation blocks unresolved previous runtimes/outcomes across bindings; ordinary
+workers gain no sibling authority from that app-only inventory.
+
+Settings inventory retains earlier generations/predecessors. Retirement remains
+exact-snapshot/request based and does not advance an old lease. If root relocation
+removed old folder access, the existing owner retirement action requests the exact
+original folder through the existing picker. Its one-off security-scoped bookmark
+is held alongside current project access throughout cleanup; cancellation/wrong
+folder/stale current context preserves resources. Current root binding stays intact.
+Only pinned original profiles and exact owned clean worktrees are removed; dirty,
+ignored, modified and referenced resources remain protected.
+
+Loss of the original configuration connection handle never proves its closure.
+The explicit matching owner retirement retry may reconcile only an exact owned
+profile with versioned write/readback through a new configuration helper, then
+confirm that new helper's closure. With old worker closure and resource cleanup
+confirmed, `replacementAllowed` permits a fresh independently admitted assignment.
+Original configuration closure remains unknown, retirement remains incomplete,
+and original stopped/unknown state/outcome stay recorded. New helper closure never
+clears the original outstanding marker. No unknown old work is redispatched.
+
+Optional fields preserve version-one decoding. Focused tests cover generation/root
+replacement, carried-hook conflicts, disablement/rollback, pending readback,
+application removal/re-add, predecessor isolation/cleanup, exact old-root grants,
+lost-handle safe replacement and profile conflicts. Native results are recorded below;
+no runtime/UI acceptance is claimed. Main→BuildAgent owns direct checks/Git;
+Main→RO04 owns fresh architecture/security/code review. UI/QA, actual production
+permission/bookmark boundaries, coordinated package identity and application catalog
+acceptance remain open. This source work performs no live bookmark/configuration,
+app/SQLite/catalog-acceptance, installation, release or external mutation.
+
+Main/BuildAgent checkpoint 16 passed pre-attempt documentation/diff checks, then
+failed compilation because the handle-loss validator captured a nonescaping
+`beforeWrite` parameter. Zero tests ran; the native process exited. Main released
+only the minimal escaping callback declaration along the retirement call chain,
+preserving validation semantics. The previously identified test-only JSON formatting
+fixture correction is included in the corrected checkpoint 16: Main/BuildAgent
+passed the app build and all 51 selected tests (setup 22, producer 13, execution
+onboarding 2, lifecycle 5, admission 1, hook 3, assignment 5), plus documentation/index
+and diff checks. BuildAgent made no edits. Product source remains frozen for fresh
+independent architecture/security/code review through Main→RO04. No new commit,
+independent-review pass or complete acceptance is claimed. Runtime/UI, production
+permission/bookmark boundaries, portability, package identity and live catalog
+acceptance remain open. This result update changes documentation only.
+
+The fresh reviewer `01a0ad8a` subsequently found one Required P2, with no other
+Required/Optional findings: disabled predecessor policy retained its latest binding,
+so historical assignment generation/root equality prevented cleanup after generation
+and root changes followed by removal/re-add. Main released only that correction.
+Retirement now identifies the retained project incarnation by exact project and
+registration IDs and a nonfuture historical generation. The exact stored assignment,
+owner-granted original folder, recorded worktree and pinned profile still define
+resource ownership; latest policy binding is never substituted into that record.
+Both current-owner policy and resource-project policy are pinned at mutation
+boundaries; a predecessor must remain disabled and linked to the current owner.
+Historical cleanup does not restore an old lease or rewrite its original outcome.
+
+The combined regression exercises generation and root replacement, disabled removal
+state, native re-add hook handoff and historical retirement. It checks missing old-root
+grant and unclosed-worker refusal before successful exact cleanup, preserved original
+unknown outcome and unchanged current/predecessor policy bindings. The test preceded
+the bounded core fix; no native red run is claimed. Main/BuildAgent checkpoint 17
+passed the app build, all 14 producer tests and documentation/index/diff checks.
+The same reviewer cleared P2 with no remaining Required or Optional findings;
+that validation is terminal. Prior 51-case evidence and other terminal reviews
+remain valid for unchanged behavior. Main subsequently confirmed the scoped local
+commit `58d86bf05dac2456f7e52b0b325964b1fbdc0d13`. Runtime/UI, actual production
+boundaries, portability and application catalog acceptance remain open; full Outcome 3
+is incomplete. No live mutation or worker native command/Git operation is claimed.
+
+## Current 0.1.19 source package preparation
+
+Main released the same worker from `58d86bf` for the remaining bounded source package
+preparation and selected exact version 0.1.19 after BuildAgent confirmed v0.1.19 is
+absent locally. This is local availability only. The app's two marketing-version
+settings and the existing single plugin manifest align; published 0.1.18 recognition
+remains immutable. The normalized digest includes the shipping manifest, fixed two-server
+MCP configuration and both existing skills. No second plugin, schema or helper-authority
+expansion is included. BuildAgent's unchanged native
+`PluginDigester.marketplacePackage(at:)` returned version 0.1.19 and normalized digest
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35` (exit 0)
+against the frozen assigned source package. The exact standard-1 capability pair is
+registered; tests compare app/plugin version, core/helper digest agreement and current
+recognition and preserve exact published 0.1.18 recognition while rejecting crossed
+pairs. Tests preceded recognition changes; no native red run is claimed. Package
+bytes remain unchanged. Main/BuildAgent checkpoint 18 passed the app build and all
+36 affected tests: lifecycle acceptance 26, package 2, compatibility 6 and skill
+contract 2. Packaging-script `bash -n`, documentation and diff checks passed.
+The test-built coordinator passed strict signature and hardened-runtime checks,
+but identifier `ReleaseRadarCoordinator` and XCTest-injected entitlements are not
+exact production identity/entitlement evidence. Neither a production defect nor
+a production identity pass is inferred. Reviewer `01a0af6d` found one Required P1:
+promotion verifies the prior destination as well as the new candidate, and a valid
+older destination lacks the coordinator. No other Required findings remain;
+published 0.1.18 recognition and guidance review are terminal. Main released only
+the packaging-verifier correction described below. BuildAgent passed packaging-script
+`bash -n`, documentation/diff checks and all 13 bounded verifier/promotion fixture
+cases using the actual function bodies, stubbed codesign and real filesystem/plist
+operations. The strict new-candidate/legacy-prior distinction is verified; these
+fixtures are expressly not production signature proof. The same reviewer cleared
+P1 with no remaining Required or Optional findings; correction validation is terminal.
+Main confirmed the scoped package commit
+`05f99ef26cf479221b289d03275148a0194b973f` on the same assigned branch/worktree. Temporary `build/promotion-p1-fixtures` remains retained and excluded;
+cleanup is not authorized. Shipping package bytes
+and the exact registered digest remain unchanged; checkpoint 18's unchanged
+app/package checks remain terminal. No native red run is claimed.
+The source candidate is not a package, installation or complete runtime acceptance
+claim. Catalog identity/lifecycle and collection purpose remain unchanged.
+
+The existing shipping skill now gives the deterministic route from exact current
+registration/accepted catalog/governed work through preparation and native worker
+start/status, independent interruption, close and existing Settings/Manage Project
+recovery controls. Onboarding consent carries the already authorized scoped work;
+no per-worker consent or producer/profile choice is added. Genuine runtime approval
+requests retain their exact identity and require scoped owner authorization. Main's
+management association remains operational, not a cryptographic Main identity.
+Ordinary-worker history/sibling exclusions and deliberate authorized Main retrieval
+remain required; source guidance alone does not prove runtime enforcement.
+
+The existing packaging verification requires a regular executable at
+`Contents/Helpers/ReleaseRadarCoordinator`, rejects a symlinked helper/directory,
+verifies its approved signing authority/team and exact
+`com.rekonlabs.ReleaseRadarCoordinator` identifier, hardened runtime and exact approved
+application-group-only entitlement structure for every 0.1.19 candidate. Verification
+defaults to candidate role and requires exact version 0.1.19; promotion's initial
+and final candidate checks use that strict default. Only the existing prior-destination
+check before moving the old bundle passes an explicit prior-destination role.
+Supported older destination versions 0.1.7–0.1.18 may lack a coordinator while retaining
+all existing app/bridge/deep/signature/runtime/entitlement verification. Prior 0.1.19
+requires the coordinator, and a coordinator present in any older destination must
+pass the same strict checks. Unknown prior versions/roles are refused; there is no
+generic legacy bypass. Existing release modes and rollback identity checks remain
+unchanged. No packaging script is run by this source worker and no real install is
+included in the correction checks.
+
+Recovery remains bounded by existing controls. Known held worker connections support
+interrupt/close; STOP is not completion and unknown outcomes do not authorize redispatch.
+Configuration-handle safe replacement requires old worker closure and exact owned
+resource cleanup and does not establish closure of the original configuration connection.
+Abrupt coordinator process loss without the worker handle or proof of exit leaves an
+unresolved barrier. No universal reconnect/recoverability claim, process registry or new
+execution engine is introduced. Runtime/UI comparison, production sandbox/bookmark and
+executable identity checks, portability and application catalog acceptance remain open.
+
+## Production coordinator signing correction — checkpoint 19
+
+Main/BuildAgent ran the reviewed stage-release-no-launch path from committed
+`05f99ef26cf479221b289d03275148a0194b973f`. The Release build succeeded, but the
+stage gate rejected actual signing identifier `ReleaseRadarCoordinator`; the approved
+identifier remains `com.rekonlabs.ReleaseRadarCoordinator`. Strict app deep/helper
+signatures, hardened runtime and exact group-only entitlements passed without
+XCTest-injected extras; app version was 0.1.19. This establishes the production
+signing-identifier defect, distinct from checkpoint 18's qualified test-built evidence.
+Native processes exited; no staging promotion, installation or launch occurred.
+Temporary log `build/production-stage-019-19.log` remains retained and excluded.
+
+The coordinator target already declares the required product bundle identifier but
+lacked the generated, embedded Info.plist settings used by existing command-line
+helpers. Main released only the source correction: its Debug/Release configurations
+now set `GENERATE_INFOPLIST_FILE=YES` and `CREATE_INFOPLIST_SECTION_IN_BINARY=YES`,
+providing generated bundle identity in the executable for normal build/signing.
+The strict verifier is unchanged; no manual re-signing workaround, signing-authority
+change, entitlement or helper-authority expansion is included.
+
+Corrected checkpoint 19's `stage-release-no-launch` exited 0. Release build, strict
+app/coordinator signing, copy and promotion passed. Coordinator signing identifier is
+exactly `com.rekonlabs.ReleaseRadarCoordinator`; hardened runtime passed and its sole
+entitlement is application-groups `[2UA854NLX4.com.rekonlabs.ReleaseRadar]`. Both built
+and staged plugin version 0.1.19 and normalized digest
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35` match the
+registered pair. Reviewer `01a0af8d` cleared the bounded signing correction over
+`05f99ef` with no Required or Optional findings; checks/review are terminal. Temporary
+log `build/production-stage-019-19-corrected.log` remains retained and excluded.
+Source/docs are frozen for Main→BuildAgent documentation/diff checks and scoped commit.
+No new commit, installation, launch, live mutation or overall acceptance is claimed.
+Shipping package bytes and registered normalized digest remain unchanged;
+prior package guidance/version/assertion checks and promotion P1 review remain
+terminal. Production packaging completion, installation, runtime/UI, portability
+and live catalog acceptance remain open. The source worker performed no native,
+build, Git or live action. Catalog identity/lifecycle and collection purpose remain
+unchanged; no new durable artifact is added.
+
+## Pre-provisioning MCP discovery correction
+
+Main's fresh-task acceptance exposes assignment preparation but no worker MCP tools;
+Codex logs initialization connection closed. BuildAgent's single installed initialization
+exchange exited 1 with empty stdout and execution-setup-unavailable stderr. The source
+opened ProjectExecutionFileStore.applicationRoot()/create:false storage before responding
+to initialize. The native management server consequently could not advertise its tools
+until project setup had already provisioned storage. This is an observed runtime defect,
+distinct from the earlier stale task inventory; no complete actual-flow acceptance follows.
+
+Main released the minimal correction from committed baseline
+`338ca6e1954aa9f9a0e9bd7deffa429036b6e191`, same branch/worktree. The existing MCP service
+now defers adapter/store construction until a validated worker-tool call. Its actor
+serializes and caches the connection's adapter without blocking independent status/STOP
+when a worker call awaits transport. Initialization/ping/tools-list do not resolve, open
+or create execution storage; disconnect does nothing if no adapter opened. Missing or
+invalid storage fails actual worker operations closed using the unchanged create:false
+constructor. No authority, root, assignment, profile, hook/trust or readiness gate is
+weakened, and discovery does not imply readiness. WorkerAdapter operations and hook mode
+remain unchanged. The existing service definition moved into WorkerAdapter.swift, already
+compiled by the test target, so direct regressions exercise its actual dispatch code.
+No new engine, harness, source file, profile, configuration workaround or helper authority
+is added; shipping plugin bytes and normalized digest remain unchanged.
+
+Two WorkerAdapterTests regressions precede the correction: absent/invalid execution
+storage permits initialization and exact six-tool discovery while all worker calls fail
+closed and create nothing; verified start/status/disconnect retains one adapter, one
+launch and physical close. No native red run is claimed. Main/BuildAgent checkpoint 21
+passed app/coordinator build, all 14 WorkerAdapter tests and documentation/index/diff
+checks. Actual Debug initialization/tool listing returned all six tools, with EOF
+exit 0 and empty stderr. Production checkpoint 22 passed stage-release-no-launch strict
+signing, copy and promotion; coordinator identifier is exactly
+`com.rekonlabs.ReleaseRadarCoordinator`, hardened runtime passed and its sole entitlement
+is application-groups `[2UA854NLX4.com.rekonlabs.ReleaseRadar]`. Staged Release
+initialization IDs 1/2 and six-tool listing passed, with EOF exit 0 and empty stderr.
+Plugin version 0.1.19 and normalized digest
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35` remain unchanged.
+Temporary `build/coordinator-startup-21.log`, associated `.xcresult` and
+`build/coordinator-startup-release-22.log` remain retained/excluded. Reviewer `01a0afd4`
+cleared the complete six-file correction over `338ca6e` with no Required or Optional
+findings, confirming no-store discovery, lazy create:false worker gates, atomic cache,
+independent STOP during awaited calls and cached EOF physical cleanup. Native checkpoints
+21/22 remain attributed; checks/review are terminal. Later factual pass annotations
+were not independently reviewed; they add no design change and need no additional
+review. The result is
+preserved for Main's reviewer archive; reviewer `01a0afd4` is now archived. Main reported
+startup-fix commit `74d227ea3b2d811cd4029e5bf9da010dbfc9d86b`. BuildAgent installed
+corrected 0.1.19 without rebuilding and launched PID 71305. Installed native
+initialization/listing returned all six tools with EOF exit 0; package bytes/digest
+remain unchanged. Operator `01a0afcc` fresh-turn metadata exposes preparation and all
+six coordinator worker functions, with no loading error and zero operational calls.
+The loading defect is resolved; actual onboarding/worker isolation/STOP/recovery remain
+untested. Main UI is paused pending the owner's control response after concurrent-change
+click rejections; operator remains on hold, no permission change. This documentation-only
+checkpoint claims no overall acceptance and keeps source/tests frozen. This worker
+performs no product edit, retry,
+native/build/Git/live action or cleanup. Prior unrelated checks/reviews remain terminal. Actual-flow,
+isolation/STOP/recovery, UI, portability and live catalog acceptance remain open. Existing
+temporary/reference/distribution files remain retained and excluded, without cleanup.
+Catalog identity/lifecycle and collection purpose remain unchanged; no new durable artifact.
+
+## Saved execution setup feedback correction
+
+The owner reports that Resume Execution Setup appears to do nothing in the saved
+initialization flow. Main released bounded source inspection/correction from reported
+current revision `ec860984`, same branch/worktree. The button calls initializeProject;
+its saved preview supplies the same registration to prepare. Prepare/finish retain
+their readiness and security gates, and both typed setup and generic failures are caught.
+No silent saved-preview return or concrete native failure was established. The confirmed
+UI defect is invisible progress and stale saved status, with eventual status/error below
+the long Codex prompt. That is not evidence a live retry succeeded or failed.
+
+Main explicitly released the minimum feedback correction. The existing status/failure
+view is reused locally beside initial confirmation and saved setup controls, with an
+accessible progress indicator during preparation and no duplicate global feedback.
+Saved Resume/Finish controls and their feedback precede the prompt. Each prepare attempt
+clears stale status; success reports completed checks and tells the owner that Finish
+Initialization verifies before opening. Generic failure clears the in-progress message.
+Core preparation/finish, identity, consent, security and trust gates remain unchanged.
+The approved `docs/design/mockups/onboarding_state.png` reference was inspected: local
+visible recovery feedback follows its no-silent-recovery intent while retaining existing
+components and styles. There is no architectural deviation or shared-library change.
+
+The existing failed-setup regression now repeats preparation using the still-failing
+saved preview, checks propagated detail and unchanged pending registration, and retains
+Finish refusal until recovery. This precedes UI edits; no native red run is claimed.
+Main/BuildAgent checkpoint 24 reports individual passes for all 38 focused cases,
+app compilation and documentation/index/diff checks. xcodebuild PID 77788 hung for
+over ten minutes in XCTHRuntimeProfileGenerationCoordinator runtime-profile directory
+enumeration. The result bundle is unfinalized, with no TEST SUCCEEDED. BuildAgent
+terminated the verified runner with SIGTERM; it exited 143 during runtime-profile
+finalization. Logs/results are preserved. Overall command success is not claimed. Independent source
+reviewer `01a0b001-e970` cleared the five-file candidate with no Required defects, finding
+inline feedback, stale-status clearing, retry, success and error behavior consistent.
+Source review is complete/archived through Main. Source/tests stay frozen; focused cases
+and source review do not establish runtime UI correctness. Actual pending/success/error feedback,
+accessibility and relevant-width visual comparison/QA remain pending through Main;
+core tests do not establish visual correctness and no UI harness is introduced.
+Main subsequently reports the owner completed initial test-project onboarding. Full
+runtime feedback verification, checkpoint 24 overall build pass and complete Outcome 3
+acceptance are not inferred. The source
+worker performs no native/build/Git/live action. Shipping package bytes/digest,
+catalog identity/lifecycle and collection purpose remain unchanged; no new durable
+artifact, governing instruction or accepted ADR change. Existing temporary/reference/
+distribution material remains preserved, without cleanup. Prior unrelated validation
+remains terminal.
+
+### September 17 macOS documentation root-alias correction
+
+The next actual blocker is documentation preview on the registered `/var` root.
+Main/BuildAgent checkpoint 26 passed full catalog/file/index validation on the same
+fixture through `/private/var`; checkpoint 28 used the same installed helper through
+`/var` and exited 1 with `unsafeFileType`. The reader rejected the symbolic-link ancestor
+before catalog loading. Inventory maps that rejection to `unsafePath` and unavailable
+guidance; missing guidance is not a documentation-preview prerequisite.
+
+[Apple's NSURL documentation](https://developer.apple.com/documentation/foundation/nsurl/resolvingsymlinksinpath?changes=_1_8)
+states that symlink resolution can remove the `/private` prefix when the shorter path
+exists. Current onboarding, bookmark and authorized-project normalization uses this
+Foundation representation. A sandbox-specific failure is not required to explain it.
+Preserve the saved/request root identity rather than changing identities across roots,
+bindings, policies and assignments.
+
+Main released only a reader traversal correction for the actual macOS `/var` alias:
+require a root-owned symlink in a privileged non-writable parent, its exact `private/var`
+target and unchanged link metadata during inspection. Traverse `private/var` and every
+remaining component with existing no-follow metadata/open checks. Stable reopening
+repeats the alias verification and existing root-descriptor identity checks. Arbitrary
+user links, root links and document links remain rejected; there is no general resolver,
+identity migration, permission relaxation or accepted-ADR change.
+
+Checkpoint 27's attempted XCTest fixture assumed `/private/var` although the sandboxed
+host uses container temporary storage, so it supplied no causal proof and the test edit
+was removed. The actual helper pair supplies the regression; no fixture system or new
+write permission is introduced. Main/BuildAgent checkpoint 29 compiled the reader and
+reports 65 passing cases including containment/replacement and managed setup/security-
+scope/generation checks. Seven existing preview fixtures fail creating `/Users/Shared`
+directories before reader execution (permission denied); the 72-case command exited 65,
+so overall suite success is not claimed. Two live-picker methods were explicitly excluded;
+there is no permission workaround or unrelated fixture repair. The newly built helper
+passes full validation/index checking through both `/var` and `/private/var`, directly
+confirming corrected alias behavior. Documentation/index and scoped diff checks passed. Independent Security/Privacy
+reviewer `01a0b049` cleared the exact reader patch with no Required or Optional findings.
+Main checkpoint 31 confirms installed `b6dbefb7` fixed the actual preview: the same
+project's documentation check/plugin capability passed and preview returned repository
+`6fefe2e8-3a09-4fad-88cd-245061a67b65`, catalog v1 and digest
+`a09f5b2c8be9f2f1161ca56648600181648f579cbde97dd8567de91696186c50`.
+The subsequent explicit binding was not committed with `documentation.guidanceUnavailable`.
+This is the separate guidance gate: current binding requires managed v2/v3, while the
+actual bootstrap and shipping skill stage v1 then direct binding before audited upgrade.
+
+### September 17 staging-guidance binding sequence correction
+
+Main selected v1 bootstrap → explicit owner binding → separately authorized audited
+guidance upgrade. The owning mutable managed-documentation specification now permits
+only the initial binding command to additionally accept the exact shipped staging v1
+block with a fully validated catalog and exact target. Exact block inspection preserves
+unrelated surrounding instructions and rejects missing, modified, duplicate or malformed
+staging. Normal root/bookmark/registration/conflict checks, transaction revalidation,
+audit, replay and rollback remain. Global managed mode/snapshot gates and every other
+operation remain unchanged; v1 binding alone does not enable managed evidence, import
+or execution authority. The existing valid-staged-catalog update prompt already routes
+to the separately authorized audited guidance upgrade, so no UI/package/copy change
+or fixture preactivation is required. Accepted ADRs and governing instructions remain.
+
+The six-file scope is the existing dispatcher/tests, managed-documentation contract
+and Outcome 3 ledger/brief/design. Existing container-writable fixtures cover registered
+owner preview/bind, preserved legacy state and closed managed operations, separate
+audited upgrade, staging/target rejection and rollback/replay. Main/BuildAgent checkpoint
+32 compiled/executed the owner-sequence test and reached the exact
+`command(documentation.guidanceUnavailable)` failure before dispatcher edits (one
+unexpected failure, terminal exit 65). The bind-only correction now uses the existing
+exact staging-block inspector and full catalog/target checks; global managed
+snapshot/mode gates remain unchanged. Checkpoint 33 compiled the app and passed 11 of
+12 selected cases: both new rejection/target/rollback/replay cases and nine existing
+safeguards. Documentation/index/diff checks passed. Initial owner binding succeeds;
+the lifecycle test then incorrectly reused its legacy dispatcher after seeding a
+completed registration. Existing identity gates rejected those calls. Only the fixture
+now uses the registered project and matching request tuple; production is unchanged.
+Checkpoint 34 passed the corrected lifecycle test (one test, zero failures, terminal
+exit 0); the prior 11 passes remain valid. Documentation/index/diff checks passed.
+Fresh reviewer `01a0b063-6d28` cleared the complete six-file patch with no Required or
+Optional findings; that reviewer is archived after its result was preserved.
+Checkpoint 36 verified installed `dce76787`, app `0.1.19`; exact package identity/
+CDHash/PID are recorded in progress. Main opened the saved disposable project;
+the owner added `Outcome3Acceptance`, and exact-root Local bootstrap task `01a0b081`
+appended the exact staging v1 block while preserving all 332 original instruction
+bytes (final 1192). Packaged checking passed with unchanged catalog bytes. The
+authorized root is
+`/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project`.
+Main observed staged v1 in installed `dce76787`, previewed the same exact project/
+root0/repository/catalog/digest and confirmed binding. The UI reports owner action
+committed and audited as `9A68179F-2B10-4268-AA7C-24837A0BAD8D`. This verifies actual
+bootstrap and initial binding and resolves their prior blockers. The separately
+authorized handoff task `01a0b086` wrote the exact v3 span, preserving 334 outside-span
+bytes, the 175-byte ledger, catalog, indexes and README; packaged checking passed.
+Its single audit call returned `appUnavailable` with empty entity IDs, without success
+or retry. Main's UI remains responsive and reports managed handoff incomplete v3.
+BuildAgent established a registration serialization mismatch: the helper emits an
+object project ID, but the unchanged `ProjectID` Codable contract requires a string.
+Callback decoding fails before mutation; no permission/socket/signature failure is
+established. Checkpoint 37 compiled/executed the direct callback regression before
+production edits (one test, two expected assertion failures, terminal exit 65). The
+helper now emits the string and the directly coupled preparation guard accepts it
+with unchanged exact-key and authorization/identity checks. Obsolete objects and
+extra fields remain rejected. Public arguments, permissions and other behavior
+are unchanged; existing transport tests exercise real helper/callback decoding.
+Checkpoint 38 passed all five targeted tests, including both new regressions,
+signed-helper integration, malformed inputs, lost reply and exact replay
+(`TEST SUCCEEDED`, exit 0). Documentation/index and six-file diff checks passed.
+Fresh reviewer `01a0b09b-4e49` cleared the six-file patch with no Required or Optional
+findings. Main transferred the owning documents to BuildAgent for scoped commit and
+signed staging. The same installed `dce76787` app was reopened; installed fix and live
+replay remain pending through Main.
+The [original pending audit request](../delivery/task-briefs/2026-09-16-outcome3-execution-setup/brief.md#pending-disposable-handoff-audit)
+is preserved once in the existing brief, for unchanged replay by the original task
+only after availability is established. Audit/full acceptance remain pending;
+the three-document status update is refrozen. No source/test/contract or
+catalog identity/index change; the worker performs no native/Git/live/config/SQLite
+operation or cleanup.

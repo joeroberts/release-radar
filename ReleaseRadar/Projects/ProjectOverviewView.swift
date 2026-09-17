@@ -20,6 +20,9 @@ struct ProjectOverviewView: View {
     var onRepositoryRelocated: () async -> Void = {}
     var loadProjectSettings: (() async throws -> ProjectSettingsSnapshot)? = nil
     var saveProjectSettings: ((ProjectRegistration, String, Set<String>) async throws -> ProjectSettingsSnapshot)? = nil
+    var manageExecutionHook: ((ProjectRegistration, ProjectExecutionHookAction) async throws -> Void)? = nil
+    var loadExecutionAssignments: ((ProjectRegistration) async throws -> [ProjectExecutionAssignment])? = nil
+    var retireExecutionAssignment: ((ProjectRegistration, ProjectExecutionAssignment) async throws -> Void)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
     var reauthorizeProjectHealth: ((URL, DocumentationObservationIdentity) async throws -> ProjectHealthSnapshot)? = nil
@@ -208,7 +211,14 @@ struct ProjectOverviewView: View {
         }
         .sheet(isPresented: $showsSettings) {
             if let settings, let saveProjectSettings {
-                ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks) { name, excluded in
+                ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks,
+                                      manageExecutionHook: manageExecutionHook.map { action in
+                                          { operation in try await action(settings.registration, operation) }
+                                      }, loadExecutionAssignments: loadExecutionAssignments.map { load in
+                                          { try await load(settings.registration) }
+                                      }, retireExecutionAssignment: retireExecutionAssignment.map { retire in
+                                          { expected in try await retire(settings.registration, expected) }
+                                      }) { name, excluded in
                     let updated = try await saveProjectSettings(settings.registration, name, excluded)
                     self.settings = updated
                     refreshHealth()

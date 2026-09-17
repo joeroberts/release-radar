@@ -29,6 +29,9 @@ public struct AgentCommandEnvelope: Codable, Equatable, Sendable {
 }
 
 public enum AgentCommand: Codable, Equatable, Sendable {
+    case prepareExecutionAssignment(projectID: String, ticketID: String, taskID: String,
+        expectedTaskPlanRevision: Int64, expectedPhaseRevision: Int64,
+        reviewOfAssignmentID: String?, baselineFromAssignmentID: String?)
     case transitionPhaseLifecycle(
         projectID: String,
         phaseID: String,
@@ -100,6 +103,7 @@ public enum DependencyKind: String, Codable, Equatable, Sendable {
 }
 
 public enum AgentCommandError: Codable, Equatable, Sendable {
+    case execution(ProjectExecutionError)
     case unsupportedVersion(found: Int, supported: Int)
     case invalidEnvelope(String)
     case unauthorizedProjectRoot
@@ -162,6 +166,7 @@ public enum AgentCommandError: Codable, Equatable, Sendable {
 }
 
 public struct AgentCommandResult: Codable, Equatable, Sendable {
+    public var executionAssignment: ProjectExecutionAssignment?
     public let entityIDs: [String]
     public let auditEventID: AuditEventID?
     public let error: AgentCommandError?

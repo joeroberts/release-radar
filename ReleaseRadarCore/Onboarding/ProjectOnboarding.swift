@@ -70,17 +70,20 @@ public struct OnboardingDecision: Equatable, Sendable {
     public let projectName: String
     public let excludedTaskIDs: Set<String>
     public let importRecognizedArtifacts: Bool
+    public let enableExecutionSetup: Bool
 
     public init(
         preview: OnboardingPreview,
         projectName: String,
         excludedTaskIDs: Set<String> = [],
-        importRecognizedArtifacts: Bool = false
+        importRecognizedArtifacts: Bool = false,
+        enableExecutionSetup: Bool = false
     ) {
         self.preview = preview
         self.projectName = projectName
         self.excludedTaskIDs = excludedTaskIDs
         self.importRecognizedArtifacts = importRecognizedArtifacts
+        self.enableExecutionSetup = enableExecutionSetup
     }
 }
 
@@ -157,9 +160,12 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
 
 public enum OnboardingPreparationError: Error, LocalizedError, Equatable, Sendable {
     case seedApplicationFailedAfterSave(ProjectID)
+    case executionSetupFailedAfterSave(ProjectID, String)
 
     public var errorDescription: String? {
         switch self {
+        case let .executionSetupFailedAfterSave(_, detail):
+            "Project tracking is saved, but execution setup is incomplete. Resume this project in Release Radar. \(detail)"
         case .seedApplicationFailedAfterSave:
             "Project tracking was initialized, but the recognized seed could not be applied. Resume setup and try again."
         }
@@ -272,6 +278,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     private let bookmarkStore: any ProjectBookmarkStoring
     private let worktreeDiscovery: any GitWorktreeDiscovering
     private let codexTasks: [CodexTaskDescriptor]
+    private let executionSetup: (any ProjectExecutionSettingUp)?
     private var separatelyAuthorizedWorktreePaths: Set<String> = []
     private nonisolated let documentationAuthorizationLifetime = DocumentationAuthorizationLifetime()
 
@@ -279,12 +286,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         store: DeliveryStore,
         bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(),
         worktreeDiscovery: any GitWorktreeDiscovering = GitWorktreeDiscovery(),
-        codexTasks: [CodexTaskDescriptor] = []
+        codexTasks: [CodexTaskDescriptor] = [],
+        executionSetup: (any ProjectExecutionSettingUp)? = nil
     ) {
         self.store = store
         self.bookmarkStore = bookmarkStore
         self.worktreeDiscovery = worktreeDiscovery
         self.codexTasks = codexTasks
+        self.executionSetup = executionSetup
     }
 
     public func inspect(folder: URL) async throws -> OnboardingPreview {
@@ -656,7 +665,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let projectID = registration.projectID
         let roots = [decision.preview.selectedFolder] + decision.preview.authorizedWorktreeURLs
         let bookmarks = try roots.map { try bookmarkStore.makeBookmark(for: $0) }
-        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Prepare folder-backed project onboarding") { connection in
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Prepare folder-backed project onboarding", auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)) { connection in
             for root in roots {
                 let path = Self.canonical(root).path
                 if let ownerID = try connection.scalarText(
@@ -739,6 +748,33 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 throw OnboardingPreparationError.seedApplicationFailedAfterSave(projectID)
             }
         }
+        if decision.enableExecutionSetup {
+            do {
+                guard let executionSetup else { throw ProjectExecutionError.unavailable }
+                let context = try await executionOwnerContext(registration: registration)
+                let records = try await ProjectRemovalManager(store: store).records()
+                let removed = records.map(\.registration)
+                guard removed.count <= 1000 else { throw ProjectExecutionError.unavailable }
+                let validate: @Sendable () async throws -> Void = { [store] in
+                    try await store.documentationRead { connection in
+                        try ProjectLifecycleManager.requireCurrentAuthorization(projectID: projectID, registration: registration, connection: connection)
+                        try context.verifyPersisted(connection)
+                        for previous in removed {
+                            guard try connection.scalarInt("SELECT COUNT(*) FROM projects WHERE id=?", bindings: [.text(previous.projectID.rawValue)]) == 0,
+                                  try connection.scalarInt("SELECT COUNT(*) FROM removed_projects WHERE historical_project_id=? AND registration_id=? AND request_generation=?",
+                                    bindings: [.text(previous.projectID.rawValue), .text(previous.registrationID), .integer(previous.requestGeneration)]) == 1 else { throw OnboardingError.staleRegistration }
+                        }
+                    }
+                }
+                try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
+                    try context.verifyAuthorization(resolved)
+                    let project = AuthorizedProject(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url])
+                    try await executionSetup.prepare(project: project, removedRegistrations: removed, beforeWrite: validate)
+                }
+            } catch {
+                throw OnboardingPreparationError.executionSetupFailedAfterSave(projectID, error.localizedDescription)
+            }
+        }
         return projectID
     }
 
@@ -762,7 +798,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let registration = decision.preview.registration
         let projectID = registration.projectID
         let included = decision.preview.includedTaskDescriptors.filter { !decision.excludedTaskIDs.contains($0.id) }
-        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding") { connection in
+        if decision.enableExecutionSetup {
+            guard let executionSetup else { throw ProjectExecutionError.unavailable }
+            try await withAuthorizedProject(projectID: projectID) { project in
+                guard project.registration == registration else { throw OnboardingError.staleRegistration }
+                try await executionSetup.verify(project: project)
+            }
+        }
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding", auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)) { connection in
             try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             guard try connection.scalarInt(
                 "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'pending'",
@@ -832,6 +875,102 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 projectName: projectName,
                 excludedTaskIDs: try Self.excludedTaskIDs(projectID: projectID, connection: connection)
             )
+        }
+    }
+
+    public func manageExecutionHook(registration: ProjectRegistration, action: ProjectExecutionHookAction,
+                                    setup: ProjectExecutionSetupCoordinator) async throws {
+        let authorization = try await persistedProjectAuthorization(for: registration.projectID)
+        guard authorization.registration == registration, let path = authorization.rootPath else { throw OnboardingError.staleRegistration }
+        let context = try await store.documentationRead {
+            try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+            return try DocumentationRootContext.read($0, path: path, projectID: registration.projectID.rawValue, schemaVersion: Int(StoreMigrations.currentVersion))
+        }
+        let validate: @Sendable () async throws -> Void = { [store] in
+            try await store.documentationRead {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+        try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { [store] resolved in
+            try context.verifyAuthorization(resolved)
+            let project = AuthorizedProject(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url])
+            let scope = AuditScope(projectID: registration.projectID, entityType: .project, entityID: registration.projectID.rawValue)
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: "Execution hook \(action.rawValue) requested", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+            switch action {
+            case .update: try await setup.update(project: project, beforeWrite: validate)
+            case .remove: try await setup.removeHook(project: project, beforeWrite: validate)
+            case .resume: try await setup.resume(project: project, beforeWrite: validate)
+            }
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: action == .remove ? "Execution hook removed; workflow remains disabled" : "Execution hook \(action.rawValue) verified", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+    }
+
+    public func executionAssignments(registration: ProjectRegistration, resources: ProjectExecutionResourceLifecycle) async throws -> [ProjectExecutionAssignment] {
+        let context = try await executionOwnerContext(registration: registration)
+        return try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
+            try context.verifyAuthorization(resolved)
+            return try await resources.assignments(project: .init(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url]))
+        }
+    }
+
+    public func executionResourcesNeedOriginalFolder(registration: ProjectRegistration, expected: ProjectExecutionAssignment) async throws -> Bool {
+        let context = try await executionOwnerContext(registration: registration)
+        return expected.worktree?.primaryRoot != context.root.path
+    }
+
+    public func retireExecutionAssignment(registration: ProjectRegistration, expected: ProjectExecutionAssignment, resourceFolder: URL? = nil, resources: ProjectExecutionResourceLifecycle) async throws {
+        let context = try await executionOwnerContext(registration: registration)
+        let resourceBookmark: Data?
+        if let resourceFolder {
+            guard Self.canonical(resourceFolder).path == expected.worktree?.primaryRoot else { throw DocumentationOperationError.rootMismatch }
+            resourceBookmark = try bookmarkStore.makeBookmark(for: resourceFolder)
+        } else { resourceBookmark = nil }
+        let validate: @Sendable () async throws -> Void = { [store] in
+            try await store.documentationRead {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+        try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { [store, bookmarkStore] resolved in
+            try context.verifyAuthorization(resolved)
+            let scope = AuditScope(projectID: registration.projectID, entityType: .project, entityID: expected.id)
+            let requestID = expected.retirement?.requestID ?? UUID()
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: "Execution resources retirement requested: \(expected.id), request \(requestID.uuidString)", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+            let result: ProjectExecutionAssignment
+            if let resourceBookmark {
+                result = try await bookmarkStore.withSecurityScopedAccess(bookmark: resourceBookmark) { original in
+                    guard !original.isStale, original.url.path == expected.worktree?.primaryRoot else { throw DocumentationOperationError.rootMismatch }
+                    return try await resources.retire(project: .init(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url, original.url]),
+                        expected: expected, requestID: requestID, beforeWrite: validate)
+                }
+            } else {
+                result = try await resources.retire(project: .init(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url]),
+                    expected: expected, requestID: requestID, beforeWrite: validate)
+            }
+            let outcome = result.retirement?.completed == true ? "resources retired" : "replacement allowed; original configuration closure remains unknown"
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: "Execution \(outcome): \(expected.registration.projectID.rawValue)/\(expected.id), request \(requestID.uuidString); replacement requires new current-work admission", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+    }
+
+    private func executionOwnerContext(registration: ProjectRegistration) async throws -> DocumentationRootContext {
+        let authorization = try await persistedProjectAuthorization(for: registration.projectID)
+        guard authorization.registration == registration, let path = authorization.rootPath else { throw OnboardingError.staleRegistration }
+        return try await store.documentationRead {
+            try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+            return try DocumentationRootContext.read($0, path: path, projectID: registration.projectID.rawValue, schemaVersion: Int(StoreMigrations.currentVersion))
         }
     }
 
@@ -1195,7 +1334,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     }
 
     private func markBookmarkStale(projectID: ProjectID, path: String) async throws {
-        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Mark unavailable project bookmark") { connection in
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Mark unavailable project bookmark", auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)) { connection in
             try connection.execute(
                 "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ? AND path = ?",
                 bindings: [.text(projectID.rawValue), .text(path)]

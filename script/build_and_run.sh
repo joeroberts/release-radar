@@ -180,6 +180,20 @@ expected_bridge_entitlements() {
         '</plist>'
 }
 
+expected_coordinator_entitlements() {
+    printf '%s\n' \
+        '<?xml version="1.0" encoding="UTF-8"?>' \
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+        '<plist version="1.0">' \
+        '<dict>' \
+        '<key>com.apple.security.application-groups</key>' \
+        '<array>' \
+        "<string>$APP_GROUP</string>" \
+        '</array>' \
+        '</dict>' \
+        '</plist>'
+}
+
 assert_exact_entitlements() {
     local code_path="$1"
     local entitlement_description="$2"
@@ -249,7 +263,12 @@ bundle_resource_manifest_sha256() {
 
 verify_bundle() {
     local bundle="$1"
+    local role="${2:-candidate}"
+    local version
+    local requires_coordinator=true
     local bridge_agent="$bundle/Contents/Resources/ReleaseRadarBridgeAgent"
+    local coordinator="$bundle/Contents/Helpers/ReleaseRadarCoordinator"
+    local coordinator_metadata
     local executable
     local framework
 
@@ -279,7 +298,22 @@ verify_bundle() {
         return 1
     fi
     if ! require_value "$(bundle_identifier "$bundle")" "$BUNDLE_ID" "bundle identifier"; then return 1; fi
-    if [[ -z "$(bundle_version "$bundle")" ]]; then report_error "missing bundle version"; return 1; fi
+    if ! version="$(bundle_version "$bundle")" || [[ -z "$version" ]]; then report_error "missing bundle version"; return 1; fi
+    case "$role" in
+        candidate)
+            if ! require_value "$version" "0.1.19" "candidate version"; then return 1; fi
+            ;;
+        prior-destination)
+            case "$version" in
+                0.1.7|0.1.8|0.1.9|0.1.10|0.1.11|0.1.12|0.1.13|0.1.14|0.1.15|0.1.16|0.1.17|0.1.18)
+                    requires_coordinator=false
+                    ;;
+                0.1.19) ;;
+                *) report_error "unsupported prior destination version $version"; return 1 ;;
+            esac
+            ;;
+        *) report_error "unsupported bundle verification role $role"; return 1 ;;
+    esac
     if [[ -z "$(bundle_build "$bundle")" ]]; then report_error "missing bundle build"; return 1; fi
     if [[ -z "$(bundle_cdhash "$bundle")" ]]; then report_error "missing CodeDirectory hash"; return 1; fi
 
@@ -290,6 +324,24 @@ verify_bundle() {
     if ! verify_signed_code "$bridge_agent"; then return 1; fi
     if ! verify_hardened_runtime "$bridge_agent"; then return 1; fi
     if ! assert_bridge_entitlements "$bridge_agent"; then return 1; fi
+
+    if [[ "$requires_coordinator" == true || -e "$coordinator" || -L "$coordinator" ]]; then
+        if [[ ! -f "$coordinator" || ! -x "$coordinator" || -L "$coordinator" || -L "$bundle/Contents/Helpers" ]]; then
+            report_error "missing regular coordinator executable at $coordinator"
+            return 1
+        fi
+        if ! verify_signed_code "$coordinator"; then return 1; fi
+        if ! coordinator_metadata="$(signing_metadata "$coordinator")"; then
+            report_error "could not inspect coordinator identity at $coordinator"
+            return 1
+        fi
+        if ! grep -Fxq 'Identifier=com.rekonlabs.ReleaseRadarCoordinator' <<<"$coordinator_metadata"; then
+            report_error "coordinator identifier mismatch at $coordinator"
+            return 1
+        fi
+        if ! verify_hardened_runtime "$coordinator"; then return 1; fi
+        if ! assert_exact_entitlements "$coordinator" "Coordinator" "$(expected_coordinator_entitlements)"; then return 1; fi
+    fi
 
     while IFS= read -r -d '' executable; do
         if ! verify_signed_code "$executable"; then return 1; fi
@@ -392,7 +444,7 @@ promote_verified_bundle() {
     fi
 
     if [[ -e "$final_bundle" ]]; then
-        if ! verify_bundle "$final_bundle"; then
+        if ! verify_bundle "$final_bundle" "prior-destination"; then
             report_error "prior final bundle failed verification at $final_bundle; refusing replacement"
             return 1
         fi

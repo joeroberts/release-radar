@@ -525,6 +525,11 @@ public struct RecognizedPluginCapability: Equatable, Sendable {
             normalizedPackageDigest: "63f1f25156ff4738894aae72957e853936292e9c6f4299388a453e76701a1168",
             sharedExecutionStandardVersions: [1]
         ),
+        Self(
+            manifestVersion: "0.1.19",
+            normalizedPackageDigest: "6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35",
+            sharedExecutionStandardVersions: [1]
+        ),
     ]
 
     public static func recognize(
@@ -588,11 +593,18 @@ public struct CodexPluginPackage: Equatable, Sendable {
 
         let mcpData = files["plugins/release-radar/.mcp.json"]!
         let mcp = try Self.object(from: mcpData, error: .invalidMCP)
-        guard mcp.count == 1,
-              let server = mcp["release_radar"] as? [String: Any],
+        guard let server = mcp["release_radar"] as? [String: Any],
               server["command"] as? String == "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools",
               (server["args"] as? [Any])?.isEmpty == true
         else { throw CodexPluginPackageError.invalidMCP }
+        if mcp.count != 1 {
+            guard Set(mcp.keys) == ["release_radar", "coordinator_workers"],
+                  Set(server.keys) == ["command", "args"],
+                  let coordinator = mcp["coordinator_workers"] as? [String: Any],
+                  Set(coordinator.keys) == ["command", "args"],
+                  coordinator["command"] as? String == "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator",
+                  coordinator["args"] as? [String] == ["--mcp"] else { throw CodexPluginPackageError.invalidMCP }
+        }
 
         digest = Self.digest(files: files, relativeFiles: relativeFiles)
     }

@@ -251,6 +251,7 @@ struct SidebarView: View {
                     projection: dashboard,
                     onboardingStore: model.onboardingStore,
                     codexTasks: model.codexTasksForOnboarding(),
+                    executionSetup: model.executionSetupForOnboarding(),
                     openProject: { projectID in
                         Task { await model.openProject(projectID) }
                     },
@@ -357,6 +358,11 @@ struct SidebarView: View {
                                 excludedTaskIDs: exclusions
                             )
                         },
+                        manageExecutionHook: { registration, action in
+                            try await model.manageExecutionHook(registration: registration, action: action)
+                        },
+                        loadExecutionAssignments: { registration in try await model.executionAssignments(registration: registration) },
+                        retireExecutionAssignment: { registration, expected in try await model.retireExecutionAssignment(registration: registration, expected: expected) },
                         availableCodexTasks: model.codexTasks(for: projectID),
                         loadProjectHealth: { await model.projectHealth(for: projectID) },
                         reauthorizeProjectHealth: { folder, identity in

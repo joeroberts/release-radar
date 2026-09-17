@@ -4,6 +4,138 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    private actor ExecutionPreparer: ProjectExecutionAssignmentPreparing {
+        private final class Storage: @unchecked Sendable {
+            let lock = NSLock()
+            var value: ProjectExecutionAssignment?
+        }
+        private nonisolated let storage = Storage()
+        var prepares = 0
+        var gate: DocumentationCommitGate?
+        var value: ProjectExecutionAssignment? {
+            get { storage.lock.withLock { storage.value } }
+            set { storage.lock.withLock { storage.value = newValue } }
+        }
+        func setGate(_ gate: DocumentationCommitGate) { self.gate = gate }
+        func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
+            prepares += 1
+            guard reviewOfAssignmentID == nil, baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
+            if let gate { await gate.enterAndWait(); self.gate = nil }
+            var assignment = ProjectExecutionAssignment(id: "delivery-" + requestID.uuidString.lowercased(), registration: project.registration!,
+                checkoutPath: "/Fixture/Checkout", role: .delivery, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
+                authorization: "Existing bounded work", context: contextPaths.map { .init(path: $0, digest: String(repeating: "a", count: 64)) },
+                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work)
+            assignment.state = .preparing; value = assignment; return assignment
+        }
+        nonisolated func admitPrepared(_ assignment: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
+            try storage.lock.withLock {
+                guard storage.value == assignment, assignment.state == .preparing else { throw ProjectExecutionError.assignmentNotAuthorized }
+                var admitted = assignment; admitted.state = .authorized; storage.value = admitted; return admitted
+            }
+        }
+        nonisolated func revokePreparation(_ assignment: ProjectExecutionAssignment) throws {
+            try storage.lock.withLock {
+                guard var current = storage.value, current.id == assignment.id, current.work == assignment.work else { throw ProjectExecutionError.identityMismatch }
+                current.state = .revoked; current.finalizationFailed = true; storage.value = current
+            }
+        }
+        func readCurrent(project: AuthorizedProject, assignmentID: String) throws -> ProjectExecutionAssignment {
+            guard let value, value.id == assignmentID, value.registration == project.registration else { throw ProjectExecutionError.identityMismatch }; return value
+        }
+        func stop() { value?.state = .stopped }
+    }
+
+    private func executionFixture() async throws -> (DeliveryStore, URL, ProjectRegistration, AgentCommandDispatcher, ExecutionPreparer) {
+        let f = try await makeFixture()
+        let registration = ProjectRegistration(projectID: .init(rawValue: "p"), registrationID: "execution-registration", requestGeneration: 1)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed authorized execution work") { c in
+            try c.execute("INSERT INTO project_registrations(project_id,registration_id,request_generation,setup_state) VALUES ('p','execution-registration',1,'complete')")
+            try DeliveryPlanningPolicy.upsertPhase(projectID: registration.projectID, phaseID: .init(rawValue: "phase"), name: "Phase", mode: .governed, connection: c)
+            try c.execute("UPDATE phase_lifecycles SET lifecycle='in_delivery',revision=2 WHERE project_id='p' AND phase_id='phase'")
+            try c.execute("INSERT INTO tickets(id,project_id,phase_id,outcome,lane) VALUES ('ticket','p','phase','Bounded outcome','in_progress')")
+            _ = try TicketTaskPlanningPolicy.revisePlan(projectID: registration.projectID, ticketID: .init(rawValue: "ticket"), expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "task"), label: "A", title: "Approved task", sortOrder: 0)], definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let registry = PersistedAuthorizedProjectRegistry(store: f.store)
+        let preparer = ExecutionPreparer()
+        let dispatcher = AgentCommandDispatcher(store: f.store, projectRegistry: registry, bookmarkStore: bookmarks(f.root), executionAssignments: preparer)
+        let binding = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: f.root.path, expectedRegistration: registration,
+            reason: "Bind fixture catalog", command: .bindDocumentationRepository(target: try target(f.root))))
+        XCTAssertNil(binding.error)
+        return (f.store, f.root, registration, dispatcher, preparer)
+    }
+
+    func testExecutionCommandAuditsExactRequestAndReplayReadsCurrentStoppedAuthority() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Existing authorized work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        let result = await dispatcher.dispatch(request)
+        XCTAssertNil(result.error); XCTAssertNotNil(result.auditEventID)
+        XCTAssertEqual(result.executionAssignment?.work?.title, "Approved task")
+        XCTAssertEqual(result.executionAssignment?.role, .delivery)
+        await preparer.stop()
+        let replay = await dispatcher.dispatch(request)
+        XCTAssertNil(replay.error); XCTAssertEqual(replay.auditEventID, result.auditEventID)
+        XCTAssertEqual(replay.executionAssignment?.state, .stopped)
+        let count = await preparer.prepares; XCTAssertEqual(count, 1)
+        let audits = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id=?", bindings: [.text(result.auditEventID!.rawValue)]) }
+        XCTAssertEqual(audits, 1)
+        let changed = AgentCommandEnvelope(version: 1, requestID: request.requestID, projectRoot: root.path, expectedRegistration: registration, reason: "Changed request", command: request.command)
+        let reused = await dispatcher.dispatch(changed); XCTAssertEqual(reused.error, .requestIDReused)
+    }
+
+    func testExecutionCommandRejectsMissingProducerStaleWorkRootAndUnknownReviewCandidate() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let command = AgentCommand.prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil)
+        let missing = AgentCommandDispatcher(store: store, projectRegistry: PersistedAuthorizedProjectRegistry(store: store), bookmarkStore: bookmarks(root))
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Main assertion alone", command: command)
+        let unavailable = await missing.dispatch(request); XCTAssertEqual(unavailable.error, .execution(.unavailable))
+        let wrongRoot = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path + "-other", expectedRegistration: registration, reason: "Wrong root", command: command))
+        XCTAssertEqual(wrongRoot.error, .unauthorizedProjectRoot)
+        let stale = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Stale work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 2, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil)))
+        XCTAssertEqual(stale.error, .execution(.assignmentNotAuthorized))
+        let count = await preparer.prepares; XCTAssertEqual(count, 0)
+        let review = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Unknown review candidate",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: "delivery-unknown", baselineFromAssignmentID: nil)))
+        XCTAssertEqual(review.error, .execution(.assignmentNotAuthorized))
+    }
+
+    func testPausedPreparationCannotPublishAuthorityAfterWorkChangedBeforeAssignmentExists() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let gate = DocumentationCommitGate(); await preparer.setGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Existing work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        let operation = Task { await dispatcher.dispatch(request) }
+        await gate.waitUntilEntered()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change work during installation validation",
+            auditScope: .init(projectID: registration.projectID, entityType: .ticketTaskPlan, entityID: "ticket")) {
+            try $0.execute("UPDATE ticket_tasks SET title='Changed task' WHERE project_id='p' AND ticket_id='ticket'")
+        }
+        await gate.release()
+        let result = await operation.value
+        XCTAssertEqual(result.error, .execution(.assignmentNotAuthorized))
+        let value = await preparer.value; XCTAssertEqual(value?.state, .revoked)
+        XCTAssertNil(result.executionAssignment)
+    }
+
+    func testExpiredFinalAdmissionRevokesPreparedAuthorityAndExactRequestCanRecover() async throws {
+        let (_, root, registration, dispatcher, preparer) = try await executionFixture()
+        let gate = DocumentationCommitGate(); await preparer.setGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Existing work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        let deadline = Date().addingTimeInterval(5).timeIntervalSince1970
+        let operation = Task { await dispatcher.dispatch(request, admissionDeadline: deadline) }
+        await gate.waitUntilEntered()
+        try await Task.sleep(nanoseconds: UInt64(max(0, deadline - Date().timeIntervalSince1970 + 0.05) * 1_000_000_000))
+        await gate.release()
+        let result = await operation.value
+        XCTAssertEqual(result.error, .execution(.unavailable))
+        let value = await preparer.value; XCTAssertEqual(value?.state, .revoked)
+        let recovered = await dispatcher.dispatch(request)
+        XCTAssertNil(recovered.error); XCTAssertEqual(recovered.executionAssignment?.state, .authorized)
+    }
+
     func testManagedEvidenceWriterRejectsCompletedTicketAssociation() async throws {
         let fixture = try await makeFixture()
         let documentation = try target(fixture.root)
@@ -110,6 +242,117 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         XCTAssertEqual(after.0, 1)
         XCTAssertEqual(after.1, 1)
         XCTAssertEqual(after.2, "release-radar-owner")
+    }
+
+    func testStagedLifecycleBindingPreservesLegacyAuthorityUntilAuditedGuidanceUpgrade() async throws {
+        let f = try await makeFixture()
+        let ownerInstructions = "# Owner instructions\n\nPreserve this content.\n\n"
+        let guidance = f.root.appendingPathComponent("AGENTS.md")
+        let staged = Data((ownerInstructions + RepositoryDocumentContract.legacyManagedGuidanceBlock).utf8)
+        try staged.write(to: guidance)
+        let catalog = try Data(contentsOf: f.root.appendingPathComponent("docs/catalog.json"))
+        let registration = ProjectRegistration(projectID: .init(rawValue: "p"), registrationID: UUID().uuidString.lowercased(), requestGeneration: 1)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed lifecycle registration") { c in
+            try c.execute("INSERT INTO project_registrations(project_id,registration_id,request_generation,setup_state) VALUES ('p',?,1,'complete')", bindings: [.text(registration.registrationID)])
+        }
+        let registeredProject = AuthorizedProject(registration: registration, canonicalRoot: f.root, authorizedRoots: [f.root])
+        let dispatcher = AgentCommandDispatcher(store: f.store,
+            projectRegistry: InMemoryAuthorizedProjectRegistry(projects: [registeredProject]), bookmarkStore: bookmarks(f.root))
+        func request(_ command: AgentCommand) -> AgentCommandEnvelope {
+            .init(version: 1, requestID: UUID(), projectRoot: f.root.path, expectedRegistration: registration,
+                  reason: "Authorized lifecycle fixture documentation", command: command)
+        }
+        let coordinator = ProjectDocumentationSetupCoordinator(store: f.store, bookmarkStore: bookmarks(f.root))
+        let initial = await inventory(f.store, f.root)
+        let before = try XCTUnwrap(initial)
+        let preview = try await coordinator.preview(registration: registration)
+        XCTAssertEqual(preview.action, .bind)
+        let performed = try await coordinator.perform(preview)
+        let audit = try XCTUnwrap(performed)
+        let boundResult = await inventory(f.store, f.root)
+        let bound = try XCTUnwrap(boundResult)
+        XCTAssertTrue(bound.isComplete)
+        XCTAssertNotNil(bound.binding)
+        XCTAssertEqual(bound.catalog.guidance, .legacy)
+        XCTAssertEqual(bound.evidence, before.evidence)
+        XCTAssertEqual(bound.roots, before.roots)
+        XCTAssertEqual(bound.preservation.filter { $0.key != "project.bindingsV13" }, before.preservation.filter { $0.key != "project.bindingsV13" })
+        XCTAssertEqual(bound.audits.count, before.audits.count + 1)
+        XCTAssertEqual(bound.receipts.count, before.receipts.count + 1)
+        let actor = try await f.store.read { try $0.scalarText("SELECT actor_id FROM audit_events WHERE id=?", bindings: [.text(audit.rawValue)]) }
+        XCTAssertEqual(actor, "release-radar-owner")
+        XCTAssertEqual(try Data(contentsOf: guidance), staged)
+        XCTAssertEqual(try Data(contentsOf: f.root.appendingPathComponent("docs/catalog.json")), catalog)
+
+        for command in [AgentCommand.addManagedEvidence(target: preview.target, id: "managed", ticketID: nil, artifactID: "draft"),
+                        .acceptDocumentationCatalog(target: preview.target, priorCatalogVersion: preview.target.catalogVersion, priorCatalogDigest: preview.target.catalogDigest)] {
+            let denied = await dispatcher.dispatch(request(command))
+            XCTAssertEqual(denied.error, .documentation(.guidanceUnavailable))
+        }
+        let afterDenied = await inventory(f.store, f.root)
+        XCTAssertEqual(afterDenied, bound)
+
+        // Model the separately authorized guidance handoff after owner binding.
+        try Data((ownerInstructions + RepositoryDocumentContract.managedGuidanceBlock).utf8).write(to: guidance)
+        let handoff = request(.addEvidence(id: "release-radar-handoff:v1:staged", ticketID: nil, path: guidance.path))
+        let upgraded = await dispatcher.dispatchDocumentationMaintenance(handoff)
+        XCTAssertNil(upgraded.error)
+        XCTAssertNotNil(upgraded.auditEventID)
+        let replay = await dispatcher.dispatchDocumentationMaintenance(handoff)
+        XCTAssertEqual(replay, upgraded)
+        let currentResult = await inventory(f.store, f.root)
+        let current = try XCTUnwrap(currentResult)
+        XCTAssertTrue(current.isComplete)
+        XCTAssertEqual(current.catalog.guidance, .managedV3)
+        XCTAssertEqual(current.binding, bound.binding)
+        XCTAssertEqual(current.evidence.map { $0.evidence.id.rawValue }, ["release-radar-handoff:v1:staged"])
+        XCTAssertEqual(try Data(contentsOf: guidance), Data((ownerInstructions + RepositoryDocumentContract.managedGuidanceBlock).utf8))
+    }
+
+    func testStagedBindingRejectsMissingModifiedAndMalformedGuidanceWithoutEffects() async throws {
+        let legacy = RepositoryDocumentContract.legacyManagedGuidanceBlock
+        for contents in [nil, "# Owner instructions\n", legacy.replacingOccurrences(of: "durable", with: "modified"),
+                         legacy + "\n" + legacy, "<!-- release-radar-guidance:v1:start -->\n<!-- release-radar-guidance:end -->"] as [String?] {
+            let f = try await makeFixture()
+            let guidance = f.root.appendingPathComponent("AGENTS.md")
+            if let contents { try Data(contents.utf8).write(to: guidance) }
+            else { try FileManager.default.removeItem(at: guidance) }
+            let before = await inventory(f.store, f.root)
+            let result = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: try target(f.root))))
+            XCTAssertEqual(result.error, .documentation(.guidanceUnavailable))
+            let after = await inventory(f.store, f.root)
+            XCTAssertEqual(after, before)
+        }
+    }
+
+    func testStagedBindingRetainsExactCatalogTargetRollbackAndReplayChecks() async throws {
+        let f = try await makeFixture()
+        try Data(RepositoryDocumentContract.legacyManagedGuidanceBlock.utf8).write(to: f.root.appendingPathComponent("AGENTS.md"))
+        let valid = try target(f.root)
+        for invalid in [DocumentationTarget(projectID: valid.projectID, rootID: valid.rootID, repositoryID: UUID().uuidString.lowercased(), catalogVersion: valid.catalogVersion, catalogDigest: valid.catalogDigest),
+                        .init(projectID: valid.projectID, rootID: valid.rootID, repositoryID: valid.repositoryID, catalogVersion: valid.catalogVersion, catalogDigest: String(repeating: "a", count: 64))] {
+            let before = await inventory(f.store, f.root)
+            let rejected = await f.dispatcher.dispatch(envelope(f.root, .bindDocumentationRepository(target: invalid)))
+            XCTAssertEqual(rejected.error, .documentation(.catalogUnaccepted))
+            let after = await inventory(f.store, f.root)
+            XCTAssertEqual(after, before)
+        }
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Inject staged binding receipt failure") { c in
+            try c.execute("CREATE TRIGGER staged_fail_receipt BEFORE INSERT ON agent_command_requests BEGIN SELECT RAISE(ABORT, 'Injected receipt failure'); END")
+        }
+        let before = await inventory(f.store, f.root)
+        let request = envelope(f.root, .bindDocumentationRepository(target: valid))
+        let failed = await f.dispatcher.dispatch(request)
+        XCTAssertNotNil(failed.error)
+        XCTAssertNotEqual(failed.error, .documentation(.guidanceUnavailable))
+        let after = await inventory(f.store, f.root)
+        XCTAssertEqual(after, before)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Remove fixture receipt failure") { try $0.execute("DROP TRIGGER staged_fail_receipt") }
+        let committed = await f.dispatcher.dispatch(request)
+        XCTAssertNil(committed.error)
+        XCTAssertNotNil(committed.auditEventID)
+        let replay = await f.dispatcher.dispatch(request)
+        XCTAssertEqual(replay, committed)
     }
 
     func testDocumentationSetupRejectsGenerationChangedBetweenPreviewAndTransactionalCommit() async throws {

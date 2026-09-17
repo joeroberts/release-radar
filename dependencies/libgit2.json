@@ -1,0 +1,8 @@
+{
+  "name": "libgit2",
+  "version": "1.9.5",
+  "revision": "f7a4071c766ceea3915415e22134cbe3e581c420",
+  "archive": "ReleaseRadar/ThirdPartyNotices/libgit2-source.tar.gz",
+  "sha256": "ce61c6a669de14f8dd3f9f17affe371e69d2e43bdd8e6a3df58c413807266323",
+  "license": "GPL-2.0-only with the exact upstream libgit2 linking exception"
+}

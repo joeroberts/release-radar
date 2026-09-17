@@ -57,7 +57,39 @@ final class RepositoryDocumentReader {
         var descriptor = open("/", O_SEARCH | O_CLOEXEC)
         guard descriptor >= 0 else { throw RepositoryDocumentError(.readFailed) }
         do {
-            for component in path.split(separator: "/") {
+            var components = path.split(separator: "/").map(String.init)
+            // Foundation may remove /private when resolving macOS file URLs.
+            // Preserve that authorized spelling, but traverse the verified system
+            // /var alias through its physical target without following user links.
+            if components.first == "var" {
+                var alias = stat()
+                guard fstatat(descriptor, "var", &alias, AT_SYMLINK_NOFOLLOW) == 0 else {
+                    throw RepositoryDocumentError(.readFailed)
+                }
+                if alias.st_mode & S_IFMT == S_IFLNK {
+                    var parent = stat()
+                    guard alias.st_uid == 0, fstat(descriptor, &parent) == 0,
+                          parent.st_uid == 0, parent.st_mode & 0o022 == 0 else {
+                        throw RepositoryDocumentError(.unsafeFileType)
+                    }
+                    var target = [UInt8](repeating: 0, count: 32)
+                    let count = target.withUnsafeMutableBytes { bytes in
+                        readlinkat(descriptor, "var", bytes.baseAddress!.assumingMemoryBound(to: CChar.self), bytes.count)
+                    }
+                    guard count > 0, count < target.count else { throw RepositoryDocumentError(.unsafeFileType) }
+                    let destination = String(decoding: target.prefix(count), as: UTF8.self)
+                    guard destination == "private/var" || destination == "/private/var" else {
+                        throw RepositoryDocumentError(.unsafeFileType)
+                    }
+                    var currentAlias = stat()
+                    guard fstatat(descriptor, "var", &currentAlias, AT_SYMLINK_NOFOLLOW) == 0,
+                          Stamp(currentAlias) == Stamp(alias) else {
+                        throw RepositoryDocumentError(.changedDuringRead)
+                    }
+                    components = ["private", "var"] + Array(components.dropFirst())
+                }
+            }
+            for component in components {
                 guard component != ".", component != ".." else { throw RepositoryDocumentError(.unsafePath) }
                 var info = stat()
                 guard fstatat(descriptor, String(component), &info, AT_SYMLINK_NOFOLLOW) == 0 else {

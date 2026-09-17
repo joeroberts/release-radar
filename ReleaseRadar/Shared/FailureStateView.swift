@@ -253,6 +253,25 @@ struct FailureStatePresentation: Equatable, Sendable {
 
     init?(agentError: AgentCommandError) {
         switch agentError {
+        case let .execution(error):
+            switch error {
+            case .unavailable, .hookNotReady:
+                self.init(title: "Execution setup needed", detail: error.localizedDescription,
+                          systemImage: "gearshape.badge.exclamationmark", tone: .warning,
+                          accessibilityID: "failure-execution-setup")
+            case .assignmentNotAuthorized:
+                self.init(title: "Execution assignment stopped", detail: error.localizedDescription,
+                          systemImage: "hand.raised", tone: .warning,
+                          accessibilityID: "failure-execution-stopped")
+            case .invalidAssignment, .identityMismatch:
+                self.init(title: "Execution assignment rejected", detail: error.localizedDescription,
+                          systemImage: "lock.trianglebadge.exclamationmark", tone: .error,
+                          accessibilityID: "failure-execution-identity")
+            case .conflict:
+                self.init(title: "Execution setup conflict", detail: error.localizedDescription,
+                          systemImage: "exclamationmark.triangle", tone: .warning,
+                          accessibilityID: "failure-execution-conflict")
+            }
         case .phaseLifecycleOwnerAuthorityRequired:
             self.init(
                 title: "Owner action required",
