@@ -39,39 +39,59 @@ provisioning boundary, protected assignment contract and focused failure/retry
 behavior. Continue in coherent bounded changes toward the complete outcome;
 checkpoints do not authorize omitting required behavior.
 
-Current bounded slice starts from Main's trusted commit `f0866b7` after terminal
-cleanup and hook corrections. Recover registration generation changes, primary-root
-replacement and removal/re-add in existing onboarding/settings. Preserve exact
-current registration/bookmark/protected receipts, explicit disablement, original
-stopped/unknown outcomes and modified resources. Safe replacement after lost
-configuration handles must remain distinct from completed original retirement.
-Old repository cleanup requires an explicit exact-folder access grant through the
-existing owner action; source work does not perform that grant or any live mutation.
-Main→BuildAgent owns direct checks/Git; a fresh independent architecture/security/code
-review follows the frozen coherent candidate through Main→RO04. UI/QA and runtime
-acceptance remain separate open requirements.
+Main confirmed committed recovery baseline
+`58d86bf05dac2456f7e52b0b325964b1fbdc0d13`. Corrected checkpoint 16 passed the
+app build, all 51 affected tests and documentation/index/diff checks. After the
+fresh reviewer's sole Required P2, the bounded historical-retirement correction
+passed checkpoint 17's app build, all 14 producer tests and documentation/index/diff
+checks. Reviewer `01a0ad8a` cleared P2 with no remaining Required or Optional findings;
+these validations and prior terminal reviews remain closed for unchanged behavior.
 
-Main/BuildAgent's initial checkpoint 16 failed compilation before any tests ran;
-the bounded escaping callback declaration and structured-JSON fixture corrections
-are included in the corrected run. App build, all 51 affected tests and
-documentation/index/diff checks passed, with no BuildAgent edits. Product source
-remains frozen for fresh Main→RO04 independent review. No new commit or complete
-acceptance is claimed; runtime/UI, portability, package identity and live catalog
-acceptance remain open. This result record is documentation only.
+The current released slice prepares the source package only: concise deterministic
+prepare/start/stop/recovery guidance in the existing shipping skill; require the native
+coordinator and verify its identifier, hardened runtime and exact approved group-only
+entitlements in the existing packaging verifier; align app/plugin version 0.1.19 and
+register its normalized package digest without changing any published 0.1.18 pair.
+Main/BuildAgent confirmed v0.1.19 is unused locally only; no remote availability is
+claimed. Preserve the single native plugin, existing schema and helper authority.
+BuildAgent's unchanged native digester returned 0.1.19 digest
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35` (exit 0).
+The exact pair is now registered and shipping acceptance assertions updated; tests
+preceded recognition changes, with no native red run claimed. Package bytes remain
+unchanged since readback. The complete source/tests/docs candidate is frozen.
+Main/BuildAgent checkpoint 18 passed the app build, all 36 affected tests (lifecycle
+acceptance 26, package 2, compatibility 6 and skill contract 2), packaging-script
+`bash -n`, documentation and diff checks. The test-built coordinator passed strict
+signature and hardened-runtime checks, but identifier `ReleaseRadarCoordinator`
+and XCTest-injected entitlements do not establish exact production identity. This
+is neither production defect evidence nor a production identity pass. Reviewer
+`01a0af6d` found one Required P1: unconditional coordinator verification also rejects
+valid older prior destinations during promotion. No other Required findings remain;
+published 0.1.18 recognition and guidance review are terminal. Main released only
+the verifier correction. The default candidate role requires exact 0.1.19 and strict
+coordinator checks. Only the pre-promotion prior destination uses explicit
+prior-destination role, allowing supported 0.1.7–0.1.18 without a coordinator while
+preserving existing app/bridge/deep/signature/runtime/entitlement verification.
+Prior 0.1.19 and any present coordinator require strict coordinator checks; unknown
+prior versions/roles refuse. Initial and promoted candidates cannot be legacy.
+BuildAgent passed packaging-script `bash -n`, documentation/diff checks and all 13
+bounded verifier/promotion fixture cases with actual function bodies, stubbed codesign
+and real filesystem/plist operations. The strict new-candidate/legacy-prior distinction
+is verified; this is expressly not production signature proof. The same reviewer
+cleared P1 with no remaining Required or Optional findings; correction validation is
+terminal. Source remains frozen, ready for Main→BuildAgent's scoped local commit.
+No new commit is claimed. Temporary `build/promotion-p1-fixtures` remains retained
+and excluded; no cleanup is authorized. Shipping package bytes and
+digest remain unchanged; checkpoint 18's unchanged checks remain terminal.
+No native red run is claimed. Main→BuildAgent owns trusted Git. No real install,
+packaging run or live
+state mutation is included. Runtime/UI, production boundaries, portability and catalog
+application acceptance remain open; source identity is not complete acceptance.
 
-Fresh reviewer `01a0ad8a` found one Required P2 in historical predecessor retirement,
-with no other Required/Optional findings. Main released the bounded identity/binding
-fix and a combined generation/root replacement → removal/re-add → retirement
-regression. Exact stored assignment, retained registration identity, nonfuture
-generation, owner-granted original root and pinned owned resources remain required;
-current and predecessor policies are pinned, the predecessor stays disabled and
-original unknown outcomes stay truthful. Main/BuildAgent checkpoint 17 passed the
-app build, all 14 producer tests and documentation/index/diff checks. The same
-reviewer cleared P2 with no remaining Required or Optional findings; validation
-is terminal. Product source stays frozen, ready for Main→BuildAgent's scoped local
-commit. No new commit or complete acceptance is claimed; runtime/UI, actual production
-boundaries, portability, package identity and live catalog acceptance remain open.
-Prior terminal reviews stay closed. This result update changes documentation only.
+Abrupt coordinator process loss without a retained worker handle or exit proof remains
+an unresolved recovery barrier. Existing configuration-handle replacement requires old
+worker closure and exact owned resource cleanup and cannot prove an unknown worker exit.
+This slice adds no reconnect engine, process registry or universal recovery claim.
 
 ## Material risks and compatibility
 
@@ -115,10 +135,11 @@ candidate; add UX coverage if guidance changes. Only Required findings block.
 
 ## Delivery endpoint and shared execution
 
-Endpoint: source, affected documentation, focused direct checks, independent review
+Endpoint: source (including the explicitly released 0.1.19 app/plugin version and
+normalized digest), affected documentation, focused direct checks, independent review
 and scoped local commit through trusted Git. Live configuration/trust/profile
 changes, installation, app/SQLite/catalog-acceptance mutations, merge/main writes,
-release metadata/tags, push/PR and other external mutations are excluded.
+release tags, push/PR and other external mutations are excluded.
 
 `shared-execution/1` applies. Installed shared-execution and tracking skill reads
 were denied by the effective restricted filesystem; packaged source skill declares

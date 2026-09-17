@@ -2,59 +2,74 @@
 
 ## Current outcome
 
-**Registration/root and removal/re-add recovery — checks/review passed; ready for scoped local commit.**
-Main confirmed trusted scoped commit `f0866b7d6b3bf9c16321e56abf3acc8217d510d5`
-(parent `c1968a4`) on the assigned branch/worktree, with a clean tracked tree and
-temporary material preserved/excluded. Its app build, all 17 affected cleanup tests,
-documentation/diff checks and independent cleanup correction review passed; hook P1
-and R1–R4 checks/reviews remain terminal. Main released this same worker, Sol/high,
-for the unresolved lifecycle recovery slice in the controlling brief/design.
+**Outcome 3 — package promotion P1 cleared; source candidate ready for scoped local commit; complete acceptance open.**
+Main confirmed the registration/root and removal/re-add recovery commit
+`58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
+Corrected checkpoint 16 passed the app build, all 51 affected tests and
+documentation/index/diff checks; checkpoint 17 passed the app build, all 14
+producer tests and documentation/index/diff checks. Fresh reviewer `01a0ad8a`
+cleared its sole Required P2 after the bounded historical-retirement correction,
+with no remaining Required or Optional findings. Those checks/reviews and prior
+hook/cleanup/R1–R4 validation remain terminal for unchanged behavior.
 
-The source candidate uses existing onboarding and Update/Resume controls to bind
-the exact current bookmark/registration. Protected pending recovery blocks admission
-until hook readiness and current-context readback. Old leases are revoked without
-changing stopped/unknown outcomes. Archive/removal disables policy before SQL commit;
-re-add uses new identities and may hand off only an exact owned hook from an app-proven
-removed registration. Protected predecessor links retain old cleanup visibility and
-block unresolved old runtime replacement. Old resources require their exact original
-folder grant; the existing retirement action offers one-off folder access after root
-relocation. Dirty/modified or unrelated resources remain preserved.
+Main released this same Sol/high worker from `58d86bf` for source package preparation:
+concise prepare/start/stop/recovery guidance in the existing shipping skill,
+coordinator presence/identifier/hardened-runtime/approved-group checks in the existing
+packaging verifier, and exact app/plugin version 0.1.19 with its normalized digest.
+BuildAgent confirmed only local availability: tags through v0.1.18 exist and
+v0.1.19 is absent. Published 0.1.18 recognition remains unchanged. There is one native
+plugin and no helper authority expansion. BuildAgent computed the frozen 0.1.19 package digest using the unchanged native
+`PluginDigester.marketplacePackage(at:)` at the assigned source root (exit 0):
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35`.
+The exact pair is registered for standard 1; acceptance assertions compare app/plugin
+version, core/helper digest agreement and recognized capability and preserve the
+published 0.1.18 pair while rejecting crossed version/digest pairs. Tests preceded
+the recognition change; no native red run is claimed. The entire source/tests/docs
+candidate remains frozen for fresh scoped independent review through Main→RO04.
+Main/BuildAgent checkpoint 18 passed the app build and all 36 affected tests:
+lifecycle acceptance 26, package 2, compatibility 6 and skill contract 2.
+Packaging-script `bash -n`, documentation and diff checks passed. The test-built
+coordinator passed strict signature and hardened-runtime checks, but its identifier
+was `ReleaseRadarCoordinator` and its entitlements included XCTest-injected rights.
+That is not exact production identity/entitlement evidence and establishes neither
+a production defect nor a production identity pass. Reviewer `01a0af6d` found one
+Required P1: promotion verifies both the new candidate and prior destination, so
+unconditionally requiring a coordinator also rejects valid older destinations.
+There were no other Required findings; published 0.1.18 recognition and guidance
+review are terminal. Main released only this packaging-verifier correction.
+Verification now defaults to candidate role and requires exact version 0.1.19 plus
+all strict coordinator checks. Only the existing pre-promotion destination call
+uses prior-destination role: supported versions 0.1.7–0.1.18 may omit the coordinator,
+while every existing app/bridge/signature/runtime/entitlement check remains.
+Prior 0.1.19 and any present coordinator retain strict coordinator verification;
+unknown destination versions/roles are refused. Promoted candidates remain strict.
+BuildAgent passed packaging-script `bash -n`, documentation/diff checks and all 13
+bounded verifier/promotion fixture cases using the actual function bodies, stubbed
+codesign and real filesystem/plist operations. The strict new-candidate/legacy-prior
+distinction is verified; these fixtures are expressly not production signature proof.
+The same reviewer cleared P1 with no remaining Required or Optional findings;
+correction checks/review are terminal. Source remains frozen and ready for
+Main→BuildAgent's scoped local commit; no new commit or real install is claimed.
+Temporary `build/promotion-p1-fixtures` remains retained and excluded; cleanup is
+not authorized. The shipping
+package bytes and registered digest remain unchanged, so checkpoint 18's app/package
+test results remain terminal for unchanged behavior. No native red run is claimed.
 
-An explicit retirement retry after loss of the original configuration handle may
-allow a fresh assignment only after old worker closure and exact owned resource
-cleanup/readback. The original connection remains unknown and retirement incomplete;
-a new client is never evidence of its closure. Focused regressions preceded the
-initial source changes; no native red run is claimed. Main/BuildAgent checkpoint 16
-passed documentation/diff checks before its compile attempt, then failed compilation
-at ResourceLifecycle line 109: an escaping validator captured nonescaping `beforeWrite`.
-Zero tests executed and the native process exited. Main released only the minimal
-callback lifetime/signature correction. The retirement call chain now declares that
-validator escaping while preserving every current-context/policy check. The earlier
-structured-JSON fixture correction is included in Main/BuildAgent's corrected
-checkpoint 16: app build and all 51 affected tests passed, with documentation/index
-and diff checks passing and no BuildAgent edits. Counts: setup 22, producer 13,
-execution onboarding 2, lifecycle 5, admission 1, hook 3 and assignment 5. Product
-source was reviewed by fresh reviewer `01a0ad8a`, which found one Required P2 and
-no other Required or Optional findings. Retirement required the disabled predecessor's
-latest generation/root to equal the historical assignment, making older resources
-unretirable after generation/root replacement followed by removal/re-add.
-Main released only this bounded correction. Its combined regression precedes the fix;
-no native red run is claimed. Retirement now requires the same retained project and
-registration identity with a nonfuture generation, exact stored assignment and exact
-owner-granted original root, while pinning both current-owner and predecessor policies.
-It preserves pinned-profile/worktree checks, disabled predecessor isolation and original
-unknown outcomes. Main/BuildAgent checkpoint 17 passed the app build, all 14 producer
-tests and documentation/index/diff checks. The same reviewer cleared P2 with no
-remaining Required or Optional findings; this correction validation is terminal.
-The prior 51-case checkpoint remains direct evidence for unchanged behavior.
-Product source remains frozen and the candidate is ready for Main→BuildAgent's scoped
-local commit; no new commit or complete acceptance is yet claimed. Main owns native
-checks/Git; previous reviews remain terminal. This update changes documentation only.
-Runtime/UI acceptance, portability, coordinated package identity and application catalog acceptance
-remain open. No live app/configuration, bookmark grant, SQLite/catalog acceptance,
-installation, release or external mutation was performed. All changed source/tests/docs
-are durable repository inputs; existing temporary files remain retained/excluded,
-with no deletion authorized. Outcome 3 remains incomplete.
+Onboarding authority carries only existing registered work scope; no repeated
+per-worker consent is introduced, and genuine runtime approval gates remain.
+Lost configuration handles permit safe replacement only after proven old worker
+closure and exact owned resource cleanup. Abrupt coordinator process loss without
+a retained worker handle or proof of exit remains an unresolved recovery barrier;
+no universal reconnect/cleanup claim is made. Runtime/UI acceptance, actual production
+sandbox/bookmark/executable boundaries, portability and application catalog acceptance
+remain open. The source release identity is not installation or full Outcome 3
+acceptance. No live app/configuration, bookmark grant, SQLite/catalog acceptance,
+tag, packaging run, installation, release or external mutation is authorized in
+this slice. Main owns native checks and trusted Git.
+
+Source/tests/docs are durable repository inputs. Existing temporary reference plugin,
+stopped fixture and native build/check outputs remain retained and excluded; no deletion
+is authorized. No new temporary artifact was created for this preparation.
 
 **Prior cleanup checkpoint — committed as `f0866b7`; terminal checks and review.**
 Main/BuildAgent checkpoint 15 passed the app build, 16 of 17 selected tests and

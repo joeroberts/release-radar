@@ -1443,8 +1443,81 @@ the bounded core fix; no native red run is claimed. Main/BuildAgent checkpoint 1
 passed the app build, all 14 producer tests and documentation/index/diff checks.
 The same reviewer cleared P2 with no remaining Required or Optional findings;
 that validation is terminal. Prior 51-case evidence and other terminal reviews
-remain valid for unchanged behavior. Product source stays frozen, ready for
-Main→BuildAgent's scoped local commit. Runtime/UI, actual production boundaries,
-portability, package identity and application catalog acceptance remain open;
-full Outcome 3 is incomplete. This result update is documentation only; no live
-mutation, worker native command/Git operation or new commit is claimed.
+remain valid for unchanged behavior. Main subsequently confirmed the scoped local
+commit `58d86bf05dac2456f7e52b0b325964b1fbdc0d13`. Runtime/UI, actual production
+boundaries, portability and application catalog acceptance remain open; full Outcome 3
+is incomplete. No live mutation or worker native command/Git operation is claimed.
+
+## Current 0.1.19 source package preparation
+
+Main released the same worker from `58d86bf` for the remaining bounded source package
+preparation and selected exact version 0.1.19 after BuildAgent confirmed v0.1.19 is
+absent locally. This is local availability only. The app's two marketing-version
+settings and the existing single plugin manifest align; published 0.1.18 recognition
+remains immutable. The normalized digest includes the shipping manifest, fixed two-server
+MCP configuration and both existing skills. No second plugin, schema or helper-authority
+expansion is included. BuildAgent's unchanged native
+`PluginDigester.marketplacePackage(at:)` returned version 0.1.19 and normalized digest
+`6275628c3b9e8b47e924b7b015c6532c31652fb7907638f372a2342d3a1bdf35` (exit 0)
+against the frozen assigned source package. The exact standard-1 capability pair is
+registered; tests compare app/plugin version, core/helper digest agreement and current
+recognition and preserve exact published 0.1.18 recognition while rejecting crossed
+pairs. Tests preceded recognition changes; no native red run is claimed. Package
+bytes remain unchanged. Main/BuildAgent checkpoint 18 passed the app build and all
+36 affected tests: lifecycle acceptance 26, package 2, compatibility 6 and skill
+contract 2. Packaging-script `bash -n`, documentation and diff checks passed.
+The test-built coordinator passed strict signature and hardened-runtime checks,
+but identifier `ReleaseRadarCoordinator` and XCTest-injected entitlements are not
+exact production identity/entitlement evidence. Neither a production defect nor
+a production identity pass is inferred. Reviewer `01a0af6d` found one Required P1:
+promotion verifies the prior destination as well as the new candidate, and a valid
+older destination lacks the coordinator. No other Required findings remain;
+published 0.1.18 recognition and guidance review are terminal. Main released only
+the packaging-verifier correction described below. BuildAgent passed packaging-script
+`bash -n`, documentation/diff checks and all 13 bounded verifier/promotion fixture
+cases using the actual function bodies, stubbed codesign and real filesystem/plist
+operations. The strict new-candidate/legacy-prior distinction is verified; these
+fixtures are expressly not production signature proof. The same reviewer cleared
+P1 with no remaining Required or Optional findings; correction validation is terminal.
+Source remains frozen, ready for Main→BuildAgent's scoped local commit. No new commit
+is claimed. Temporary `build/promotion-p1-fixtures` remains retained and excluded;
+cleanup is not authorized. Shipping package bytes
+and the exact registered digest remain unchanged; checkpoint 18's unchanged
+app/package checks remain terminal. No native red run is claimed.
+The source candidate is not a package, installation or complete runtime acceptance
+claim. Catalog identity/lifecycle and collection purpose remain unchanged.
+
+The existing shipping skill now gives the deterministic route from exact current
+registration/accepted catalog/governed work through preparation and native worker
+start/status, independent interruption, close and existing Settings/Manage Project
+recovery controls. Onboarding consent carries the already authorized scoped work;
+no per-worker consent or producer/profile choice is added. Genuine runtime approval
+requests retain their exact identity and require scoped owner authorization. Main's
+management association remains operational, not a cryptographic Main identity.
+Ordinary-worker history/sibling exclusions and deliberate authorized Main retrieval
+remain required; source guidance alone does not prove runtime enforcement.
+
+The existing packaging verification requires a regular executable at
+`Contents/Helpers/ReleaseRadarCoordinator`, rejects a symlinked helper/directory,
+verifies its approved signing authority/team and exact
+`com.rekonlabs.ReleaseRadarCoordinator` identifier, hardened runtime and exact approved
+application-group-only entitlement structure for every 0.1.19 candidate. Verification
+defaults to candidate role and requires exact version 0.1.19; promotion's initial
+and final candidate checks use that strict default. Only the existing prior-destination
+check before moving the old bundle passes an explicit prior-destination role.
+Supported older destination versions 0.1.7–0.1.18 may lack a coordinator while retaining
+all existing app/bridge/deep/signature/runtime/entitlement verification. Prior 0.1.19
+requires the coordinator, and a coordinator present in any older destination must
+pass the same strict checks. Unknown prior versions/roles are refused; there is no
+generic legacy bypass. Existing release modes and rollback identity checks remain
+unchanged. No packaging script is run by this source worker and no real install is
+included in the correction checks.
+
+Recovery remains bounded by existing controls. Known held worker connections support
+interrupt/close; STOP is not completion and unknown outcomes do not authorize redispatch.
+Configuration-handle safe replacement requires old worker closure and exact owned
+resource cleanup and does not establish closure of the original configuration connection.
+Abrupt coordinator process loss without the worker handle or proof of exit leaves an
+unresolved barrier. No universal reconnect/recoverability claim, process registry or new
+execution engine is introduced. Runtime/UI comparison, production sandbox/bookmark and
+executable identity checks, portability and application catalog acceptance remain open.
