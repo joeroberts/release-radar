@@ -108,12 +108,48 @@ staged plugin version 0.1.19 and normalized digest match the registered pair abo
 Reviewer `01a0af8d` cleared the bounded signing correction over `05f99ef` with no
 Required or Optional findings; checks/review are terminal. Temporary corrected log
 `build/production-stage-019-19-corrected.log` remains retained and excluded. Source/docs
-remain frozen for Main→BuildAgent documentation/diff checks and scoped commit.
-No new commit, installation, launch or overall acceptance is claimed. Shipping package
+remain frozen. Main reported signing commit `e1282b1` and that reviewer `01a0af8d`
+is completed and archived; this worker performed no Git operation. Main subsequently
+reports BuildAgent installed and launched `/Applications/ReleaseRadar.app` 0.1.19
+from source `e1282b1` without rebuilding. Installed shipped and cached plugins both
+match the registered normalized digest via the unchanged native digester. Main's
+Connections UI reads Installed 0.1.19 matching shipped; no redundant plugin update is
+needed. Overall acceptance is not claimed. Shipping package
 bytes/digest remain unchanged; package guidance/version checks remain closed.
-No worker native/build/Git/live actions are included. The current authorized direct
-endpoint is stage-only; production packaging completion, installation, runtime/UI,
-portability and live catalog acceptance remain open.
+No worker native/build/Git/live actions are included. Production packaging completion,
+actual-flow/runtime/UI, portability and live catalog acceptance remain open.
+
+Main subsequently reports explicit owner authorization for verified 0.1.19 installation
+and launch, plugin update, and disposable-project actual onboarding, hook trust,
+worker permissions, STOP and recovery, including necessary live app/configuration
+state. This is an attributed Main report, not a verbatim owner quotation.
+Installation/launch and installed/cached plugin identity are verified as reported
+above; disposable-project actual-flow acceptance remains pending.
+Main serializes all live writes and releases dependent actions after prerequisite
+readback. This source worker performs none: its current assignment is a bounded
+ledger/brief update and read-only existing-fixture/UI/tool entry-point inspection,
+with no fixture creation, product edit or process artifact. Existing terminal
+checks/reviews remain closed; unrelated data, migration and publication are excluded.
+
+Main's live inventory lacks assignment preparation/worker tools; fresh task loading
+of the updated native plugin inventory is a prerequisite, not a source failure.
+Main reports rejected UI automation clicks while the app was changing. Actual
+onboarding/worker/isolation/STOP/recovery acceptance remains open. No task, fixture,
+harness or process artifact is created here. The retained transport-only fixture
+does not exercise onboarding; recommend a fresh disposable Git repository outside
+owner repositories/app storage with committed current guidance/progress, valid
+catalog/indexes and app-owned governed pending work. Exact existing routes are
+Settings → Connections → Release Radar Codex Plugin status; Initialize Project
+Tracking → Choose Project Folder… → Confirm initialization → Initialize Project
+Tracking → Resume Execution Setup if pending → Finish Initialization; project
+Preview Documentation Action → Bind This Repository/Accept This Catalog; exact
+`release_radar_prepare_execution_assignment` → `coordinator_workers.worker_start`
+and `worker_status` → independent `worker_interrupt` → confirmed completion and
+`worker_close`; Manage Project hook update/remove/resume and selected Worker resources
+retirement. Genuine OS authentication/privacy prompts or inaccessible controls need
+owner participation; folder selection is required grant UI, not per-worker consent.
+This result update changes only ledger/brief, then freezes them for Main's existing
+documentation/diff route; no added investigation, product edit or live action.
 
 Abrupt coordinator process loss without a retained worker handle or exit proof remains
 an unresolved recovery barrier. Existing configuration-handle replacement requires old
@@ -134,7 +170,8 @@ independent interrupt/control path without continuation hooks or automatic retry
 Assignment and package consumers require an explicit producer/read contract and
 version compatibility; report migration/recovery implications in the owning
 mutable design as implementation decisions become concrete. No existing worktree
-migration or owner-state mutation is authorized.
+migration is authorized. Only the disposable-project and necessary app/configuration
+mutations reported by Main above are released through its serialized live route.
 
 ## Tests and acceptance
 
@@ -144,7 +181,8 @@ routes native tests/builds to BuildAgent and documentation generation/checks to 
 trusted route. Onboarding guidance changes require approved mockup comparison,
 responsive/accessibility runtime checks and independent UX/QA coverage; source
 inspection alone cannot establish them. Runtime/install/live-configuration checks
-remain unavailable unless separately authorized and must be reported honestly.
+follow Main's separately reported live authorization above; unavailable inspection
+and incomplete acceptance must be reported honestly.
 
 Focused acceptance includes the reported repeated-delegation failure: an authorized
 coordinator launches an in-scope worker through the integrated plugin/documented
@@ -164,9 +202,11 @@ candidate; add UX coverage if guidance changes. Only Required findings block.
 
 Endpoint: source (including the explicitly released 0.1.19 app/plugin version and
 normalized digest), affected documentation, focused direct checks, independent review
-and scoped local commit through trusted Git. Live configuration/trust/profile
-changes, installation, app/SQLite/catalog-acceptance mutations, merge/main writes,
-release tags, push/PR and other external mutations are excluded.
+and scoped local commit through trusted Git. The source worker performs no live action.
+Main's subsequent owner-authorized installation/launch, plugin update and disposable
+actual-flow acceptance follow the serialized route above. Direct SQLite writes,
+unrelated owner-data changes, merge/main writes, release tags, push/PR and publication
+remain excluded; Release Radar alone performs supported typed application mutations.
 
 `shared-execution/1` applies. Installed shared-execution and tracking skill reads
 were denied by the effective restricted filesystem; packaged source skill declares

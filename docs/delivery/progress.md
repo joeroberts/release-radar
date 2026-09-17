@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**Outcome 3 — production coordinator signing correction verified/reviewed; frozen for scoped commit; complete acceptance open.**
+**Outcome 3 — signing correction committed; authorized actual-flow acceptance pending.**
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
@@ -77,11 +77,42 @@ staged plugin version 0.1.19 and normalized digest match the registered pair abo
 Reviewer `01a0af8d` cleared the bounded signing correction over `05f99ef` with no
 Required or Optional findings; checks/review are terminal. Corrected log
 `build/production-stage-019-19-corrected.log` is temporary, retained and excluded.
-Source/docs remain frozen for Main→BuildAgent documentation/diff checks and scoped
-commit. No new commit, installation, launch or overall acceptance is claimed.
+Main reported signing commit `e1282b1` and that reviewer `01a0af8d` is completed and
+archived. This records Main's trusted result; this worker performed no Git operation.
+Main subsequently reports BuildAgent installed and launched
+`/Applications/ReleaseRadar.app` 0.1.19 from source `e1282b1` without rebuilding.
+The installed shipped and cached plugins both match the registered normalized digest,
+verified using the unchanged native digester. Main's Connections UI reads Installed
+0.1.19 matching shipped; no redundant plugin update is needed. Overall acceptance is
+not claimed.
 Shipping package bytes/digest remain unchanged; no worker native/build/Git/live action
-was performed. Production packaging completion, installation, runtime/UI, portability
+was performed. Production packaging completion, actual-flow/runtime/UI, portability
 and live catalog acceptance remain open.
+
+Main reports that the owner explicitly authorized verified 0.1.19 installation and
+launch, plugin update, and disposable-project actual onboarding, hook trust, worker
+permissions, STOP and recovery, including necessary live application/configuration
+state changes. This is attributed to Main's authorization report, not an invented
+owner quotation. Installation/launch and installed/cached plugin identity are verified
+as reported above; disposable-project actual-flow acceptance remains pending. Main
+serializes all live writers and releases
+dependent steps after prerequisite readback. This source worker performs none of
+those actions; it owns only the requested documentation update and bounded read-only
+entry-point/fixture inspection. No disposable fixture was created here. Existing
+terminal checks/reviews remain closed and no product/process artifact is added.
+
+Main's live tool inventory still lacks assignment preparation and worker tools.
+Fresh task loading of the updated native plugin inventory is a prerequisite, not
+evidence of a source failure. Main reports UI automation clicks were rejected while
+the app was changing; onboarding/worker/isolation/STOP/recovery remain unverified.
+No task or fixture is created here. The transport-only fixture is unsuitable for
+actual onboarding; recommend a fresh disposable Git repository outside owner
+repositories/app storage with committed current guidance/progress, valid catalog/indexes
+and app-owned governed pending work. Use existing UI/tools only. Genuine OS
+authentication/privacy prompts or inaccessible controls remain owner-mediated;
+folder selection is required grant UI, not a new per-worker consent gate. This result
+update changes only ledger/brief, then freezes them for Main's existing documentation/
+diff route. No added investigation, product edit or live action is included.
 
 Onboarding authority carries only existing registered work scope; no repeated
 per-worker consent is introduced, and genuine runtime approval gates remain.
@@ -93,7 +124,8 @@ sandbox/bookmark/executable boundaries, portability and application catalog acce
 remain open. The source release identity is not installation or full Outcome 3
 acceptance. No live app/configuration, bookmark grant, SQLite/catalog acceptance,
 tag, installation, release or external mutation is authorized for this worker.
-Main owns the explicitly released stage-only retry, native checks and trusted Git.
+Main owns the reported live-acceptance authorization, serialized dispatch, native
+checks and trusted Git; this does not authorize unrelated owner data or publication.
 
 Source/tests/docs are durable repository inputs. Existing temporary reference plugin,
 stopped fixture and native build/check outputs remain retained and excluded; no deletion
