@@ -124,6 +124,23 @@ final class FailureStatePresentationTests: XCTestCase {
         XCTAssertTrue(evidence.detail.contains("T-3")); XCTAssertTrue(evidence.detail.contains("Restore"))
     }
 
+    func testExecutionErrorsPreserveStoppedAuthorityAndOfferExactSetupRecovery() throws {
+        let stopped = try XCTUnwrap(FailureStatePresentation(agentError: .execution(.assignmentNotAuthorized)))
+        XCTAssertEqual(stopped.title, "Execution assignment stopped")
+        XCTAssertTrue(stopped.detail.contains("no work turn is authorized"))
+        for error in [ProjectExecutionError.unavailable, .hookNotReady] {
+            let setup = try XCTUnwrap(FailureStatePresentation(agentError: .execution(error)))
+            XCTAssertEqual(setup.title, "Execution setup needed")
+            XCTAssertTrue(setup.detail.contains("setup in Release Radar"))
+        }
+        for error in [ProjectExecutionError.invalidAssignment, .identityMismatch] {
+            let invalid = try XCTUnwrap(FailureStatePresentation(agentError: .execution(error)))
+            XCTAssertEqual(invalid.title, "Execution assignment rejected")
+        }
+        let conflict = try XCTUnwrap(FailureStatePresentation(agentError: .execution(.conflict)))
+        XCTAssertTrue(conflict.detail.contains("Preserve the edit"))
+    }
+
     func testTypedAgentValidationAndUnknownOutcomeNeverClaimPartialState() throws {
         let validation = try XCTUnwrap(FailureStatePresentation(
             agentError: .invalidReference("Ticket MISSING was not found")

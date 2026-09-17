@@ -70,17 +70,20 @@ public struct OnboardingDecision: Equatable, Sendable {
     public let projectName: String
     public let excludedTaskIDs: Set<String>
     public let importRecognizedArtifacts: Bool
+    public let enableExecutionSetup: Bool
 
     public init(
         preview: OnboardingPreview,
         projectName: String,
         excludedTaskIDs: Set<String> = [],
-        importRecognizedArtifacts: Bool = false
+        importRecognizedArtifacts: Bool = false,
+        enableExecutionSetup: Bool = false
     ) {
         self.preview = preview
         self.projectName = projectName
         self.excludedTaskIDs = excludedTaskIDs
         self.importRecognizedArtifacts = importRecognizedArtifacts
+        self.enableExecutionSetup = enableExecutionSetup
     }
 }
 
@@ -157,9 +160,12 @@ public enum OnboardingError: Error, LocalizedError, Equatable, Sendable {
 
 public enum OnboardingPreparationError: Error, LocalizedError, Equatable, Sendable {
     case seedApplicationFailedAfterSave(ProjectID)
+    case executionSetupFailedAfterSave(ProjectID, String)
 
     public var errorDescription: String? {
         switch self {
+        case let .executionSetupFailedAfterSave(_, detail):
+            "Project tracking is saved, but execution setup is incomplete. Resume this project in Release Radar. \(detail)"
         case .seedApplicationFailedAfterSave:
             "Project tracking was initialized, but the recognized seed could not be applied. Resume setup and try again."
         }
@@ -272,6 +278,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     private let bookmarkStore: any ProjectBookmarkStoring
     private let worktreeDiscovery: any GitWorktreeDiscovering
     private let codexTasks: [CodexTaskDescriptor]
+    private let executionSetup: (any ProjectExecutionSettingUp)?
     private var separatelyAuthorizedWorktreePaths: Set<String> = []
     private nonisolated let documentationAuthorizationLifetime = DocumentationAuthorizationLifetime()
 
@@ -279,12 +286,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         store: DeliveryStore,
         bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(),
         worktreeDiscovery: any GitWorktreeDiscovering = GitWorktreeDiscovery(),
-        codexTasks: [CodexTaskDescriptor] = []
+        codexTasks: [CodexTaskDescriptor] = [],
+        executionSetup: (any ProjectExecutionSettingUp)? = nil
     ) {
         self.store = store
         self.bookmarkStore = bookmarkStore
         self.worktreeDiscovery = worktreeDiscovery
         self.codexTasks = codexTasks
+        self.executionSetup = executionSetup
     }
 
     public func inspect(folder: URL) async throws -> OnboardingPreview {
@@ -656,7 +665,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let projectID = registration.projectID
         let roots = [decision.preview.selectedFolder] + decision.preview.authorizedWorktreeURLs
         let bookmarks = try roots.map { try bookmarkStore.makeBookmark(for: $0) }
-        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Prepare folder-backed project onboarding") { connection in
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Prepare folder-backed project onboarding", auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)) { connection in
             for root in roots {
                 let path = Self.canonical(root).path
                 if let ownerID = try connection.scalarText(
@@ -739,6 +748,17 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
                 throw OnboardingPreparationError.seedApplicationFailedAfterSave(projectID)
             }
         }
+        if decision.enableExecutionSetup {
+            do {
+                guard let executionSetup else { throw ProjectExecutionError.unavailable }
+                try await withAuthorizedProject(projectID: projectID) { project in
+                    guard project.registration == registration else { throw OnboardingError.staleRegistration }
+                    try await executionSetup.prepare(project: project)
+                }
+            } catch {
+                throw OnboardingPreparationError.executionSetupFailedAfterSave(projectID, error.localizedDescription)
+            }
+        }
         return projectID
     }
 
@@ -762,7 +782,14 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         let registration = decision.preview.registration
         let projectID = registration.projectID
         let included = decision.preview.includedTaskDescriptors.filter { !decision.excludedTaskIDs.contains($0.id) }
-        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding") { connection in
+        if decision.enableExecutionSetup {
+            guard let executionSetup else { throw ProjectExecutionError.unavailable }
+            try await withAuthorizedProject(projectID: projectID) { project in
+                guard project.registration == registration else { throw OnboardingError.staleRegistration }
+                try await executionSetup.verify(project: project)
+            }
+        }
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Finish folder-backed project onboarding", auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)) { connection in
             try ProjectLifecycleManager.requireActive(projectID: projectID, connection: connection)
             guard try connection.scalarInt(
                 "SELECT COUNT(*) FROM project_registrations WHERE project_id = ? AND registration_id = ? AND request_generation = ? AND setup_state = 'pending'",
@@ -1195,7 +1222,7 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
     }
 
     private func markBookmarkStale(projectID: ProjectID, path: String) async throws {
-        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Mark unavailable project bookmark") { connection in
+        try await store.transact(actor: .init(id: "release-radar-onboarding"), reason: "Mark unavailable project bookmark", auditScope: .init(projectID: projectID, entityType: .project, entityID: projectID.rawValue)) { connection in
             try connection.execute(
                 "UPDATE project_bookmarks SET is_stale = 1 WHERE project_id = ? AND path = ?",
                 bindings: [.text(projectID.rawValue), .text(path)]

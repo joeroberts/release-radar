@@ -4,6 +4,22 @@
   "retiredArtifactIDs": [],
   "collections": [
     {
+      "collectionID": "delivery.task-briefs.2026-09-16-outcome3-execution-setup",
+      "path": "docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup",
+      "parentCollection": "delivery.task-briefs",
+      "purpose": "Outcome 3 deterministic project execution setup; progress controls authorization",
+      "allowedContents": [
+        "Controlling implementation brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
+      "isLeaf": true,
+      "firstRead": "rr-outcome3-execution-setup-brief-2026-09-16",
+      "archiveDestination": "delivery.archive"
+    },
+    {
       "collectionID": "delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix",
       "path": "docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix",
       "parentCollection": "delivery.task-briefs",
@@ -938,6 +954,22 @@
 
   ],
   "artifacts": [
+    {
+      "artifactID": "rr-outcome3-execution-setup-brief-2026-09-16",
+      "path": "docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/brief.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "controlling",
+      "authorityRole": "delivery.outcome3-execution-setup",
+      "parentCollection": "delivery.task-briefs.2026-09-16-outcome3-execution-setup",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
     {
       "artifactID": "rr-plugin-verification-sandbox-fix-brief-2026-09-15",
       "path": "docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix/brief.md",

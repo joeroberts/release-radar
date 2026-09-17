@@ -953,3 +953,203 @@ repository documentation validation. Outcome 3 remains open. Runtime work, commi
 push/PR, installation, migration and application catalog acceptance are not performed
 by this follow-up. Catalog identity/authority/lifecycle are unchanged; this mutable
 assessment has no checksum. No new durable document or competing ledger is created.
+
+### Implementation checkpoint — September 16
+
+The owner separately released onboarding/plugin implementation, including production
+hooks, in the [controlling implementation brief](../delivery/task-briefs/2026-09-16-outcome3-execution-setup/brief.md).
+This grants no live configuration, trust/profile mutation, installation, merge,
+SQLite/application acceptance or publication. The original documentation-only
+assignment remains historical; the September 16 amendments govern this delivery.
+
+The implementation uses a native, signed, unprivileged plugin-side stdio adapter
+and hook mode, retaining the single managed plugin and the fixed four-operation
+installer helper. Main approved this native port to avoid a Python/manual-policy
+runtime prerequisite on another computer. The exact reviewed Python candidate was
+identified at `8cd8cd8` in the standalone source checkout and twelve source files
+were copied byte-for-byte through BuildAgent into this worktree before reuse; its
+prior PASS is attributed component evidence, not integrated runtime proof.
+
+Protected policy and task-specific assignment JSON live in the existing application
+group’s `Execution/Projects` and `Execution/Assignments`; worker checkouts live
+separately under `Execution/Worktrees/<project>/<task>`. The plugin launch accepts
+project/assignment identities and a bounded prompt, without role, path, profile,
+model or effort overrides. Application-produced assignments carry existing scoped
+owner authorization; host/runtime approval decisions remain separate. Durable
+unknown start intent prevents a replacement connection from repeating an uncertain
+launch. First and subsequent turns require current assignment/session/root/context
+and hook readiness. Unknown native/manual sessions are not adopted by the hook.
+
+The draft is checked against installed Codex 0.154.0-alpha.6.2’s exported static
+schema: `hooks/list` uses `cwds` and returns `data` entries, and `instructionSources`
+is an array of path strings. Discovery warnings/errors, disablement, modified
+trust, source/command mismatch or unsupported shapes fail readiness. No new runtime
+probe was needed for schema verification. Native/signed integration is unverified
+until Main/BuildAgent exercises the bounded candidate.
+
+The preliminary local libgit2 1.9.4 proposal was never adopted and was withdrawn
+after the owner identified CVE-2026-53587. The selected portable source pin is
+[upstream 1.9.5](https://github.com/libgit2/libgit2/releases/tag/v1.9.5), immutable
+`f7a4071c766ceea3915415e22134cbe3e581c420`, whose release explicitly fixes that
+vulnerability and related issues. Main authorized exact source procurement after
+the worker’s codeload access was denied. BuildAgent verified the tag/source and
+archive SHA-256 before handoff. The canonical source archive, upstream COPYING and
+notice accompany the app under `ReleaseRadar/ThirdPartyNotices`; the fixed
+`script/build_libgit2.sh` prepares a static library offline with network/auth
+transports off and system regcomp. CMake is development tooling only, configured
+through `CMAKE_EXECUTABLE`, with no product runtime/Homebrew requirement, source
+fetch during Xcode, host configuration or installer-helper authority expansion.
+The release security fix is not a blanket security clearance for all library APIs.
+
+Seven focused native assignment/hook tests and eight protected-store/onboarding
+retry/adapter/readiness tests passed through Main/BuildAgent. The initial
+missing-type baseline was not run. Offline arm64 library preparation and native
+app compilation passed. Both worktree tests stopped before product behavior:
+their Git subprocess fixture invoked sandbox-prohibited xcrun. The correction
+uses in-process libgit2 fixture operations, preserving app entitlements.
+
+The C dependency is an internal import and cannot appear in the provisioner's
+public Swift contracts. RRCore remains non-resilient, so its direct build consumers
+need the pinned module/header search paths. This follows
+[Swift's transitive-dependency contract](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0409-access-level-on-imports.md#transitive-dependency-loading)
+and avoids unsafe implementation-only hiding or changing the entire framework's
+library-evolution model. Native compilation of this correction passed.
+
+The owner authorized a minimal hosted test of the real App Server transport with
+isolated fixture HOME/CODEX_HOME and the fixed installed OpenAI-signed executable.
+No real home/configuration/trust or installation changes are included. Host
+signing, entitlements and execution context must be reported: a privileged runner
+is not app sandbox evidence, and a container fixture does not prove grants to an
+external bookmarked repository. The hosted check ran with appSandbox=true but
+Xcode-injected root-read/test-manager/get-task-allow entitlements; it is not
+production-equivalent. App Server spawned, then a response timed out with unknown
+RPC phase/outcome. No trust/configuration broadening is justified by this result.
+The source reader used Foundation's filling read(upToCount:) on a live short pipe;
+one bounded POSIX read per chunk corrected the hosted protocol check, which passed
+initialize/hooks-list/close with no residual process.
+Native close now waits for EOF, then bounded termination, exit and reader join;
+cleanup errors remain unknown and cannot produce a false closed result.
+
+The in-process worktree collision fixture passed. Clean removal failed because
+libgit2 requires PRUNE_VALID independently of PRUNE_WORKING_TREE. The correction
+adds that flag only after exact identity and clean-status checks; dirty removal
+remains prohibited. The corrected creation/removal case and four affected adapter
+checks passed. One tiny signed actual-source bare fixture subsequently compiled and
+passed exact app-entitlement/signature checks but trapped during sandbox initialization
+before main. It invoked no App Server and created no fixture home. Main stopped
+that unsuitable verification approach; it does not establish actual app/API
+incompatibility. The next production boundary check must exercise the actual built
+app under a separately resolved isolated-data launch authorization.
+
+The single plugin's existing MCP inventory now includes the fixed signed native
+coordinator beside AgentTools. Core and installer-helper validators require the
+same exact inventory and reject command/argument/environment near misses. No fifth
+helper operation, second managed plugin, environment setup or Python runtime is
+introduced. App/package version 0.1.18 and its published recognized digest are
+unchanged. The new candidate digest is deliberately unregistered until the
+coordinated release owner assigns release identity; this candidate is not claimed
+as an equal-version update. Checkpoint 7 passed 22 of 26 cases, with four failures
+at the published digest or pre-existing version expectations. The newly introduced
+test-fixture inventory defect was corrected, and both affected package tests passed
+at checkpoint 8.
+
+Native onboarding now records versioned owner consent and an owned hook edit intent
+in protected policy before modifying the primary project's fixed hook file. Pending
+retry accepts only its exact before/intended bytes, preserving conflicting edits
+and explicit disablement. Existing inline project hooks use version-checked App
+Server edits to their config.toml; no shadow hooks.json is created. Only the exact
+owned definition may receive hook trust, and completion requires trusted readback.
+Prepare/verify close configuration connections on all paths; failed cleanup remains
+unknown. Protected authority writers use stable per-file advisory locks plus expected
+JSON comparisons; primary owner hook edits retain conflict checks without claiming
+atomic cooperation from arbitrary external editors.
+
+Onboarding presents scoped execution consent and a resume action for saved pending
+setup. Checkpoint 9 app dependency build and all 16 focused setup/store/readiness/
+onboarding/hook checks passed, including failure, conflicting edits, inline storage
+and cleanup. The initial setup actor preceded its tests; no initial red native run
+is claimed. No arbitrary prompt authorization,
+role/path/profile/model inputs or new approval service are admitted. Production
+flow wiring, review-role assignments, owned update/removal, runtime acceptance,
+responsive mockup comparison and independent review remain incomplete; Outcome 3
+is not closed.
+
+#### Existing onboarding authority and assignment admission
+
+The owner said in the Main conversation:
+
+> When a user onboards a project into release radar, they are agreeing to the execution workflow. full stop. so configuring permissions for a project should be done at that time. This should not be left to an LLM to do, that would be overkill and my feeling is the results will vary wildly. Installing the pluging should follow a simiar pattern that we have already established in RR.
+
+The subsequent implementation approval was:
+
+> approved -- Outcome 3 implementation: integrate project execution setup into RR’s existing onboarding and plugin installation flows
+
+Main's implementation interpretation is that structured app-owned onboarding policy
+and current registered work identities carry scoped authority for delivery and
+independent review. Another per-assignment owner approval is not required; Main
+withdrew its earlier optional choice as a redundant, self-created gate. Phase
+eligibility or a natural-language Main assertion alone does not confer authority.
+Use the existing command envelope with exact root/registration, work identities
+and expected revisions; derive role, scope, context, baseline, checkout and worker
+settings in app code. Caller role/path/model/profile/authorization/prompt overrides
+are inadmissible. A signed management client is not cryptographic Main-task identity;
+association with Main is operational. Ordinary workers must have management tools
+disabled and management executables, shared Git/history and sibling storage excluded,
+with direct native boundary checks before acceptance. This source authorization
+does not permit live configuration, installation or owner/application-state mutations.
+
+#### Assignment production and conservative invalidation
+
+The unexposed native producer captures current registered work and expected task-plan
+and phase revisions. It derives the worker role and finite permission profile,
+records preparation before configuration, and resumes only the exact request.
+Uncertain worker launches cannot be replaced by another request. Independent review
+uses an opaque reference to a known closed delivery assignment and verifies that
+assignment's exact clean committed candidate in its assigned branch/worktree; the
+primary checkout's HEAD is not the review candidate. Review does not require prior
+task acceptance or completion. Context is bounded, read through stable descriptors
+and pinned to committed checkout bytes.
+
+Relevant app-store mutations reconcile current work against protected assignments
+before SQL COMMIT. Filesystem revocation and SQL are not atomic: if SQL later rolls
+back, the assignment stays revoked and requires explicit recovery. Failed revocation
+blocks the mutation. Unrelated evidence and notification scopes do not trigger this
+reconciliation. Production wiring must configure reconciliation before admitting
+execution; absent legacy/test injection grants no execution authority. A prompt hook
+checks the next turn and is not an instantaneous interruption mechanism; STOP still
+requires the independent interrupt operation. Lost connections remain unknown even
+if a late completion notification arrives.
+
+Corrected checkpoint 10 app compilation passed after an explicit execution-error
+recovery mapping and its focused regression. Of 29 tests, 26 passed, including
+producer, admission, profile, adapter and error presentation; all three lifecycle
+cases stopped before behavior at a new fixture's nonexistent bookmark `id` column.
+The fixture insert now uses the repository's current composite-key schema, with no
+production schema changes; all three corrected lifecycle tests passed. The first
+coherent source candidate now wires the single app-owned preparer and exact protected
+root into the production bridge. The app's primary store observes relevant mutations
+from construction, and both stores reconcile before execution admission. Recovery
+reconciles before adopting the replacement store. Legacy/test bridge defaults and
+documentation maintenance have no preparer and cannot authorize execution.
+
+AgentTools publishes the bounded preparation command with mandatory registration,
+work IDs, expected revisions and optional opaque candidate/correction reference.
+Unknown role/path/model/profile/authorization/prompt/baseline fields are rejected
+at the tool and callback boundaries. Replay reads current assignment state instead
+of reauthorizing a stopped assignment. This route does not launch or commit code.
+Ordinary workers retain Git/history denial; Main's authorized trusted route commits
+the exact delivery worktree before a fresh review assignment verifies its candidate.
+New production wiring and route tests await native checks and independent review;
+sources and documentation are frozen for the first scoped commit checkpoint.
+Producer/lifecycle source initially preceded its tests; no red baseline
+is claimed. Production sandbox/configuration access, actual worker boundaries,
+owned update/removal, UI QA and independent candidate review remain open.
+
+The pinned libgit2 source archive, license/notices, dependency lock, module headers
+and offline build script are durable reproducible inputs. The copied standalone
+Python plugin under `plugins/coordinator-workers/` is temporary reference material,
+not shipped product source. The stopped `script/fixtures/execution_app_server.swift`
+is temporary abandoned verification material. Both are excluded from the source
+candidate; no deletion is authorized. Generated `.build` tools/dependencies and
+`build` logs/results are temporary native-check outputs, retained pending owner
+disposition. No durable deliverable is assigned to those temporary paths.

@@ -2,6 +2,68 @@
 
 ## Current outcome
 
+**September 16 — Outcome 3 execution setup implementation is authorized and in progress.** The
+owner explicitly authorized the assigned worker’s onboarding/plugin implementation,
+including production hook integration, on `codex/outcome3-execution-setup` at
+Main/BuildAgent-verified clean baseline `805d210784e0004220d4d1f903fb6edac42e14ba`.
+The [controlling implementation brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md)
+records complete scope, exclusions, checks and review. Worker
+`01a0acb5-bc87-72b3-a06e-8821cb18bfc9` exclusively owns this delivery’s ledger/catalog.
+First checkpoint is exact package recognition, native provisioning boundary and
+protected assignments with focused failure/retry behavior. Installed skill reads
+are denied; repository-local fallbacks apply. Named permission label is unexposed;
+Main confirmed effective restrictions and actual Sol/high. Git/native checks and
+documentation history traversal use Main’s trusted route. No live configuration,
+trust/profile/install, SQLite/application acceptance, release, push/PR, merge or
+main mutation is released. Source implementation, direct checks, independent
+RO04 review and trusted scoped local commit are authorized. Catalog changes are
+pending application acceptance. Main/BuildAgent passed seven assignment/hook tests
+and eight protected-store/onboarding-retry/readiness/adapter tests. The initial
+missing-type baseline was not run. Offline arm64 libgit2 preparation and the native
+app build passed. The corrected in-process collision fixture passed. Clean-worktree
+removal exposed a missing libgit2 PRUNE_VALID flag; the bounded correction passed.
+The initial isolated signed App Server test timed out with unknown RPC outcome;
+its Xcode-injected root-read/test-manager entitlements are not production-equivalent
+sandbox evidence. The corrected failed worktree case, four affected adapter tests
+and hosted real transport initialize/hooks-list/close check passed six of six;
+no extra test process remained. Prior unchanged checks are terminal. Main authorized
+one actual-source fixture with exact existing app entitlements. It compiled and
+passed signature/entitlement checks, then trapped in sandbox initialization before
+main; it invoked no App Server and created no fixture home. Main stopped that
+unsuitable bare-executable approach. This is not evidence that the actual app's
+configuration API is incompatible. Package checkpoint 7 passed 22 of 26 cases;
+the four failed cases included a new fixture-inventory defect, the frozen published
+package digest, and stale version/registry expectations. The fixture defect was corrected; checkpoint 8
+passed both package tests. App/package release metadata remains unchanged, and the
+new candidate digest is intentionally unregistered pending coordinated delivery.
+Checkpoint 9 app dependency build passed and all 16 focused setup/store/readiness/
+onboarding/hook checks passed. Source freeze is released. The new setup actor
+preceded its tests; no initial red native run is claimed. Main resolved the redundant
+producer-choice gate: existing explicit onboarding/workflow direction authorizes
+app-owned bounded assignment production without repeated per-worker consent.
+Producer, hook-layout and profile wiring continue under the same scope. Actual app sandbox/external bookmark access, complete
+integration, running UI QA and independent review remain unverified.
+
+Corrected checkpoint 10 app build and 26 checks passed; after correcting a new
+fixture's nonexistent bookmark `id` column, lifecycle retesting passed all three
+cases. No production schema change was made. The
+unexposed producer selects review from a known closed delivery assignment's exact
+clean commit. Relevant SQL mutations conservatively revoke obsolete assignments
+before COMMIT; rollback does not reauthorize, and failed revocation blocks mutation.
+Connection loss persists unknown and late completion cannot create a review candidate.
+The first coherent source candidate now includes production observer/preparer wiring
+and a strict bounded AgentTools route. After the explicit Sendable fixture correction,
+checkpoint 11 passed the app dependency build and all 29 selected tests: public route 2,
+callback/schema 2, construction observer 1, bridge schema 2, and recovery 22.
+Repository documentation and diff checks passed. Main authorized a scoped local
+candidate commit to enable a fresh independent review worktree; the candidate is
+unaccepted and awaiting independent review. No push, installation or release is authorized. New producer and
+lifecycle source preceded its tests; no initial red run is claimed. Outcome 3 remains
+open for actual app/worker boundary verification, UI QA, owned update/removal and
+coordinated package release identity. Copied Python reference material and the
+stopped bare fixture are temporary and excluded from the source candidate; retained
+dependency source/license/pin and offline integration are durable inputs.
+
 **September 16 — historical Superpowers archive.** Owner authorized preserving
 14 ignored Markdown records directly in `docs/delivery/archive/`, named
 `superpowers_<original-folder>_<filename>`. Copies retain the original bytes;
@@ -94,8 +156,8 @@ into `main` at historical integration `f4e77542`. Outcome 2 specifications, Shar
 Execution V1 guidance, and the Outcome 3 assessment are integrated into remote
 `main`. The [preserved assessment](../design/outcome3-runtime-enforcement-assessment.md)
 records the remaining native attachment, pre-turn admission, and persistent
-all-tool enforcement gaps. Runtime implementation remains unopened and requires
-separate owner authorization.
+all-tool enforcement gaps. The assessment’s original runtime boundary remains attributed; the September 16
+onboarding/plugin implementation is now released under the brief above.
 
 Main is the sole delegator to the standing Restricted and RO04 coordinators.
 Restricted provisions named branches and worktrees, then launches read-write
@@ -138,7 +200,7 @@ any ADR bytes. Publication is tracked in
 [PR #58](https://github.com/joeroberts/release-radar/pull/58); GitHub is the source
 for its live review and merge state. Outcome 2's delivered specifications, Shared
 Execution V1 guidance, and Outcome 3's assessment are integrated into `main`;
-Outcome 3 runtime implementation remains unopened.
+Outcome 3 onboarding/plugin implementation is now released under the brief above.
 
 The last directly verified installed release is **0.1.17 (1)**. Published tags `v0.1.14`–`v0.1.16`
 remain unchanged; `v0.1.16` targets `76cce40cc810d0e8f35af70f05b9d8ea5d884727`.
@@ -165,6 +227,26 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
+**September 16 — Outcome 3 execution setup implementation is released.** The
+owner explicitly authorized the assigned worker’s onboarding/plugin implementation,
+including production hook integration, on `codex/outcome3-execution-setup` at
+Main/BuildAgent-verified clean baseline `805d210784e0004220d4d1f903fb6edac42e14ba`.
+The [controlling implementation brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md)
+records complete scope, exclusions, checks and review. Worker
+`01a0acb5-bc87-72b3-a06e-8821cb18bfc9` exclusively owns this delivery’s ledger/catalog.
+First checkpoint is exact package recognition, native provisioning boundary and
+protected assignments with focused failure/retry behavior. Installed skill reads
+are denied; repository-local fallbacks apply. Named permission label is unexposed;
+Main confirmed effective restrictions and actual Sol/high. Git/native checks and
+documentation history traversal use Main’s trusted route. No live configuration,
+trust/profile/install, SQLite/application acceptance, release, push/PR, merge or
+main mutation is released. Source implementation, direct checks, independent
+RO04 review and trusted scoped local commit are authorized. Catalog changes are
+pending application acceptance. Main/BuildAgent’s focused native assignment/hook run passed seven tests on the
+working tree; tests were authored first, the initial missing-type baseline was not
+run. The protected store and native adapter are not yet checked. Independent
+review and complete onboarding/plugin integration remain pending.
+
 The owner authorized the completed 0.1.18 (1) metadata, signed package/Downloads
 delivery, tracked staged app and DMG commits, independent package review, branch
 push/normal PR and annotated version-tag push. The current closeout is limited to
@@ -174,9 +256,8 @@ Installation, app launch, live helper restart/reinstall/registration, owner plug
 writes, notarization, GitHub Release, main merge and application/catalog mutations
 remain excluded. Preserve earlier installers and tags.
 
-Outcome 3 assessment work is complete. It does not authorize a local or remote
-`main` merge, runtime implementation, configuration, application state, or
-publication.
+Outcome 3 assessment work is complete. Present implementation authority is the
+September 16 release above; the assessment alone grants no authority.
 
 The following paragraph records historical Outcome 1 operative-authority
 reconciliation authorization only; it does not authorize present actions. The
@@ -308,13 +389,15 @@ the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#se
 
 PR #70 merge, source/package review, direct checks, branch/PR and annotated tag
 publication are complete. Installation stays on hold; no live recovery journey is
-claimed by this closeout. Outcome 3 remains unopened.
+claimed by this closeout. Continue the released Outcome 3 implementation from its
+controlling brief; report concrete boundary decisions and candidate checkpoints
+to Main/coordinator02, route checks and independent review through Main.
 
 The exact canonical root is currently bound and its catalog snapshot is
 accepted; no binding or catalog mutation is pending for this root/snapshot.
 This read-only status does not authorize changes to other projects, ticket
 completion, later catalogs, SQLite, or application state. Broader owner manual
-acceptance remains outstanding under the existing guide. No product slice,
-paused task, stopped metrics work, live recovery or Phase 8 environment
-provisioning is released by this closeout. GitHub protection/CI planning remains
+acceptance remains outstanding under the existing guide. The closeout itself releases no product slice, paused task, stopped metrics work,
+live recovery or Phase 8 environment provisioning. Outcome 3’s separate explicit
+release above controls its bounded implementation. GitHub protection/CI planning remains
 in issue #55 and is not a prerequisite for these follow-ups.

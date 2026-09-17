@@ -255,6 +255,30 @@ private struct MCPServer {
         arguments: [String: Any]
     ) throws -> (String, [String: Any]) {
         switch tool {
+        case "release_radar_prepare_execution_assignment":
+            try requireTaskFields(arguments, allowed: ["projectID", "ticketID", "taskID", "expectedTaskPlanRevision", "expectedPhaseRevision", "reviewOfAssignmentID", "baselineFromAssignmentID"])
+            for field in ["registrationProjectID", "registrationID", "requestGeneration"] {
+                guard arguments[field] != nil else { throw ToolFailure.invalidRequest("Execution preparation requires exact project registration") }
+            }
+            var value: [String: Any] = [
+                "projectID": try taskString("projectID", in: arguments, maximumBytes: 256),
+                "ticketID": try taskString("ticketID", in: arguments, maximumBytes: 256),
+                "taskID": try taskString("taskID", in: arguments, maximumBytes: 256),
+                "expectedTaskPlanRevision": try positiveRevision("expectedTaskPlanRevision", in: arguments),
+                "expectedPhaseRevision": try positiveRevision("expectedPhaseRevision", in: arguments),
+            ]
+            for field in ["reviewOfAssignmentID", "baselineFromAssignmentID"] {
+                if let reference = try optionalString(field, in: arguments) {
+                    guard reference.utf8.count <= 160, reference.range(of: #"^[a-zA-Z0-9][a-zA-Z0-9_-]*$"#, options: .regularExpression) != nil else {
+                        throw ToolFailure.invalidRequest("\(field) must be an opaque assignment identity")
+                    }
+                    value[field] = reference
+                }
+            }
+            guard value["reviewOfAssignmentID"] == nil || value["baselineFromAssignmentID"] == nil else {
+                throw ToolFailure.invalidRequest("Choose a review candidate or correction baseline reference")
+            }
+            return try boundedTaskCommand("prepareExecutionAssignment", value: value)
         case "release_radar_save_plan_change_proposal":
             try requireTaskFields(
                 arguments,
@@ -1362,6 +1386,15 @@ private struct MCPServer {
                 required: ["ticketID", "taskID", "expectedRevision"],
                 fields: ["ticketID": taskID, "taskID": taskID, "expectedRevision": taskRevision],
                 description: "Complete one ticket task at the exact current plan revision and return the audited committed revision. This does not move the ticket or a Delivery Goal."
+            ),
+            definition(
+                "release_radar_prepare_execution_assignment",
+                required: ["projectID", "ticketID", "taskID", "expectedTaskPlanRevision", "expectedPhaseRevision", "registrationProjectID", "registrationID", "requestGeneration"],
+                fields: ["projectID": taskID, "ticketID": taskID, "taskID": taskID,
+                         "expectedTaskPlanRevision": taskRevision, "expectedPhaseRevision": taskRevision,
+                         "reviewOfAssignmentID": ["type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"],
+                         "baselineFromAssignmentID": ["type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"]],
+                description: "Prepare one app-owned execution assignment for exact current registered work. Onboarding carries scoped authority. The app derives role, checkout, committed baseline, context and worker settings. Review references a known closed delivery assignment's clean committed candidate; correction may reference a closed prior assignment. Preserve the exact request ID across uncertain preparation. This does not launch or commit worker code."
             ),
             definition(
                 "release_radar_apply_phase_plan_revision",

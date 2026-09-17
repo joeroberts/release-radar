@@ -885,7 +885,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
         let session = try Self.runToolSession(helper, tool: "release_radar_finalize_phase_plan", arguments: ["version": true])
         let result = try XCTUnwrap(session.list["result"] as? [String: Any])
         let tools = try XCTUnwrap(result["tools"] as? [[String: Any]])
-        XCTAssertEqual(tools.count, 37)
+        XCTAssertEqual(tools.count, 38)
         let deliveryInventory = try XCTUnwrap(
             tools.first { $0["name"] as? String == "release_radar_delivery_inventory" }
         )
@@ -1508,7 +1508,7 @@ final class AgentBridgeTransportAcceptanceTests: XCTestCase {
     nonisolated private static func hasTypedToolSchema(_ response: [String: Any]) -> Bool {
         guard let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]],
-              tools.count == 37,
+              tools.count == 38,
               hasDeliveryInventoryToolSchema(tools),
               hasTicketTaskToolSchemas(tools),
               hasDeliveryEvidenceToolSchemas(tools),

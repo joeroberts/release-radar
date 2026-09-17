@@ -1013,11 +1013,11 @@ final class AppModel {
         } else {
             await retiredStore.sealForRecovery()
         }
+        if let recoveryServices { try await recoveryServices.adoptRecoveredStore(result.store) }
         store = result.store
         recoveryStartupError = nil
         recoveryResumedAtLaunch = false
         if let recoveryServices {
-            recoveryServices.adoptRecoveredStore(result.store)
             notificationCoordinator = recoveryServices.notificationCoordinator
             codexPluginCoordinator = recoveryServices.codexPluginCoordinator
         } else {
@@ -2204,6 +2204,10 @@ final class AppModel {
                 title: $0.goal?.objective ?? $0.id
             )
         }
+    }
+
+    func executionSetupForOnboarding() -> ProjectExecutionSetupCoordinator {
+        ProjectExecutionSetupClient.setup(plugin: codexPluginCoordinator)
     }
 
     func projectHealth(for projectID: ProjectID) async -> ProjectHealthSnapshot {

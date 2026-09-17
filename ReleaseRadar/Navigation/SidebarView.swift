@@ -251,6 +251,7 @@ struct SidebarView: View {
                     projection: dashboard,
                     onboardingStore: model.onboardingStore,
                     codexTasks: model.codexTasksForOnboarding(),
+                    executionSetup: model.executionSetupForOnboarding(),
                     openProject: { projectID in
                         Task { await model.openProject(projectID) }
                     },

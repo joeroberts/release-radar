@@ -71,7 +71,14 @@ final class DocumentationCallbackTests: XCTestCase {
         XCTAssertTrue(names.contains("release_radar_add_evidence"))
         XCTAssertTrue(names.contains("release_radar_revise_ticket_task_plan"))
         XCTAssertTrue(names.contains("release_radar_complete_ticket_task"))
-        XCTAssertEqual(names.count, 37)
+        XCTAssertEqual(names.count, 38)
+        let execution = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_prepare_execution_assignment" })
+        let executionSchema = try XCTUnwrap(execution["inputSchema"] as? [String: Any])
+        let executionFields = try XCTUnwrap(executionSchema["properties"] as? [String: Any])
+        for forbidden in ["role", "checkoutPath", "model", "effort", "permissionProfile", "authorization", "prompt", "baseline"] {
+            XCTAssertNil(executionFields[forbidden])
+        }
+        XCTAssertTrue(Set(executionSchema["required"] as? [String] ?? []).isSuperset(of: ["registrationProjectID", "registrationID", "requestGeneration", "expectedTaskPlanRevision", "expectedPhaseRevision"]))
         XCTAssertFalse(names.contains("release_radar_transition_phase_lifecycle"))
         let inventory = try XCTUnwrap(tools.first { $0["name"] as? String == "release_radar_inventory_evidence" })
         XCTAssertEqual((inventory["inputSchema"] as? [String: Any])?["required"] as? [String], ["version", "projectRoot"])
@@ -101,6 +108,22 @@ final class DocumentationCallbackTests: XCTestCase {
             ["version", "requestID", "projectRoot", "reason", "proposalID", "expectedPreviousVersion", "rationale", "operations"]
         )
     }
+    func testExecutionCallbackRejectsCallerAuthorityAndRoleOverridesBeforeDispatch() async throws {
+        let f = try await fixture()
+        let callback = AgentBridgeAppCallback(dispatcher: f.dispatcher, queries: f.queries,
+            beforeDispatch: { _ in XCTFail("Caller overrides must not enter dispatch") }, afterDispatchBeforeReply: { _, _ in }, afterReply: { _, _ in })
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: f.root.path, reason: "Existing authorized work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 1, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        for field in ["role", "checkoutPath", "model", "effort", "permissionProfile", "authorization", "prompt", "baseline"] {
+            var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as! [String: Any]
+            var commands = object["command"] as! [String: Any]
+            var command = commands["prepareExecutionAssignment"] as! [String: Any]
+            command[field] = "caller override"; commands["prepareExecutionAssignment"] = command; object["command"] = commands
+            let result = try await send(callback, data: JSONSerialization.data(withJSONObject: object))
+            XCTAssertEqual(result.error, .appUnavailable, field)
+        }
+    }
+
     private func send(_ callback: AgentBridgeAppCallback, data: Data) async throws -> AgentCommandResult {
         let response = await withCheckedContinuation { continuation in
             callback.dispatch(ReleaseRadarBridgeTransport.wireVersion, envelope: data, admissionDeadline: Date().addingTimeInterval(10).timeIntervalSince1970) { continuation.resume(returning: $0) }

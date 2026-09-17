@@ -4,6 +4,80 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
+    private actor ExecutionPreparer: ProjectExecutionAssignmentPreparing {
+        var prepares = 0
+        var value: ProjectExecutionAssignment?
+        func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) throws -> ProjectExecutionAssignment {
+            prepares += 1
+            guard reviewOfAssignmentID == nil, baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
+            let assignment = ProjectExecutionAssignment(id: "delivery-" + requestID.uuidString.lowercased(), registration: project.registration!,
+                checkoutPath: "/Fixture/Checkout", role: .delivery, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
+                authorization: "Existing bounded work", context: contextPaths.map { .init(path: $0, digest: String(repeating: "a", count: 64)) },
+                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work)
+            value = assignment; return assignment
+        }
+        func readCurrent(project: AuthorizedProject, assignmentID: String) throws -> ProjectExecutionAssignment {
+            guard let value, value.id == assignmentID, value.registration == project.registration else { throw ProjectExecutionError.identityMismatch }; return value
+        }
+        func stop() { value?.state = .stopped }
+    }
+
+    private func executionFixture() async throws -> (DeliveryStore, URL, ProjectRegistration, AgentCommandDispatcher, ExecutionPreparer) {
+        let f = try await makeFixture()
+        let registration = ProjectRegistration(projectID: .init(rawValue: "p"), registrationID: "execution-registration", requestGeneration: 1)
+        try await f.store.transact(actor: .init(id: "fixture"), reason: "Seed authorized execution work") { c in
+            try c.execute("INSERT INTO project_registrations(project_id,registration_id,request_generation,setup_state) VALUES ('p','execution-registration',1,'complete')")
+            try DeliveryPlanningPolicy.upsertPhase(projectID: registration.projectID, phaseID: .init(rawValue: "phase"), name: "Phase", mode: .governed, connection: c)
+            try c.execute("UPDATE phase_lifecycles SET lifecycle='in_delivery',revision=2 WHERE project_id='p' AND phase_id='phase'")
+            try c.execute("INSERT INTO tickets(id,project_id,phase_id,outcome,lane) VALUES ('ticket','p','phase','Bounded outcome','in_progress')")
+            _ = try TicketTaskPlanningPolicy.revisePlan(projectID: registration.projectID, ticketID: .init(rawValue: "ticket"), expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "task"), label: "A", title: "Approved task", sortOrder: 0)], definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let registry = PersistedAuthorizedProjectRegistry(store: f.store)
+        let preparer = ExecutionPreparer()
+        let dispatcher = AgentCommandDispatcher(store: f.store, projectRegistry: registry, bookmarkStore: bookmarks(f.root), executionAssignments: preparer)
+        let binding = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: f.root.path, expectedRegistration: registration,
+            reason: "Bind fixture catalog", command: .bindDocumentationRepository(target: try target(f.root))))
+        XCTAssertNil(binding.error)
+        return (f.store, f.root, registration, dispatcher, preparer)
+    }
+
+    func testExecutionCommandAuditsExactRequestAndReplayReadsCurrentStoppedAuthority() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Existing authorized work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        let result = await dispatcher.dispatch(request)
+        XCTAssertNil(result.error); XCTAssertNotNil(result.auditEventID)
+        XCTAssertEqual(result.executionAssignment?.work?.title, "Approved task")
+        XCTAssertEqual(result.executionAssignment?.role, .delivery)
+        await preparer.stop()
+        let replay = await dispatcher.dispatch(request)
+        XCTAssertNil(replay.error); XCTAssertEqual(replay.auditEventID, result.auditEventID)
+        XCTAssertEqual(replay.executionAssignment?.state, .stopped)
+        let count = await preparer.prepares; XCTAssertEqual(count, 1)
+        let audits = try await store.read { try $0.scalarInt("SELECT COUNT(*) FROM audit_events WHERE id=?", bindings: [.text(result.auditEventID!.rawValue)]) }
+        XCTAssertEqual(audits, 1)
+        let changed = AgentCommandEnvelope(version: 1, requestID: request.requestID, projectRoot: root.path, expectedRegistration: registration, reason: "Changed request", command: request.command)
+        let reused = await dispatcher.dispatch(changed); XCTAssertEqual(reused.error, .requestIDReused)
+    }
+
+    func testExecutionCommandRejectsMissingProducerStaleWorkRootAndUnknownReviewCandidate() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let command = AgentCommand.prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil)
+        let missing = AgentCommandDispatcher(store: store, projectRegistry: PersistedAuthorizedProjectRegistry(store: store), bookmarkStore: bookmarks(root))
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Main assertion alone", command: command)
+        let unavailable = await missing.dispatch(request); XCTAssertEqual(unavailable.error, .execution(.unavailable))
+        let wrongRoot = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path + "-other", expectedRegistration: registration, reason: "Wrong root", command: command))
+        XCTAssertEqual(wrongRoot.error, .unauthorizedProjectRoot)
+        let stale = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Stale work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 2, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil)))
+        XCTAssertEqual(stale.error, .execution(.assignmentNotAuthorized))
+        let count = await preparer.prepares; XCTAssertEqual(count, 0)
+        let review = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Unknown review candidate",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: "delivery-unknown", baselineFromAssignmentID: nil)))
+        XCTAssertEqual(review.error, .execution(.assignmentNotAuthorized))
+    }
+
     func testManagedEvidenceWriterRejectsCompletedTicketAssociation() async throws {
         let fixture = try await makeFixture()
         let documentation = try target(fixture.root)

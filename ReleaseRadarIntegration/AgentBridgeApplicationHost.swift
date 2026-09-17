@@ -55,14 +55,19 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
 
     static func start(
         databaseURL: URL = DeliveryStore.applicationSupportDatabaseURL(),
+        executionAssignments: (any ProjectExecutionAssignmentPreparing)? = nil,
+        executionAssignmentRoot: (@Sendable () throws -> URL)? = nil,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void = { _ in },
         afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in },
         afterReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void = { _, _ in }
     ) async throws -> AgentBridgeApplicationHost {
-        let store = DeliveryStore(databaseURL: databaseURL)
+        guard executionAssignments == nil || executionAssignmentRoot != nil else { throw ProjectExecutionError.unavailable }
+        let store = DeliveryStore(databaseURL: databaseURL, executionAssignmentRoot: executionAssignmentRoot)
+        if let executionAssignmentRoot { try await store.observeExecutionAssignments(root: executionAssignmentRoot) }
         let dispatcher = AgentCommandDispatcher(
             store: store,
-            projectRegistry: PersistedAuthorizedProjectRegistry(store: store)
+            projectRegistry: PersistedAuthorizedProjectRegistry(store: store),
+            executionAssignments: executionAssignments
         )
         let host = AgentBridgeApplicationHost(
             dispatcher: dispatcher,
@@ -235,6 +240,20 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
         self.afterReply = afterReply
     }
 
+    private static func permitsExecutionEnvelopeFields(_ data: Data) -> Bool {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let commands = object["command"] as? [String: Any],
+              let fields = commands["prepareExecutionAssignment"] as? [String: Any] else { return true }
+        guard commands.count == 1,
+              Set(object.keys).isSubset(of: ["version", "requestID", "projectRoot", "assertedThreadID", "expectedRegistration", "reason", "command"]),
+              Set(fields.keys).isSubset(of: ["projectID", "ticketID", "taskID", "expectedTaskPlanRevision", "expectedPhaseRevision", "reviewOfAssignmentID", "baselineFromAssignmentID"]) else { return false }
+        if let registration = object["expectedRegistration"] as? [String: Any] {
+            guard Set(registration.keys) == ["projectID", "registrationID", "requestGeneration"],
+                  let project = registration["projectID"] as? [String: Any], Set(project.keys) == ["rawValue"] else { return false }
+        }
+        return true
+    }
+
     func dispatch(
         _ wireVersion: Int,
         envelope data: Data,
@@ -269,6 +288,7 @@ final class AgentBridgeAppCallback: NSObject, ReleaseRadarAppCallbackXPC, @unche
               admissionDeadline > now,
               admissionDeadline - now <= ReleaseRadarBridgeTransport.maximumDeadlineInterval,
               ReleaseRadarBridgeTransport.envelopeVersion(in: data) == ReleaseRadarBridgeTransport.commandEnvelopeVersion,
+              Self.permitsExecutionEnvelopeFields(data),
               let envelope = try? JSONDecoder().decode(AgentCommandEnvelope.self, from: data)
         else {
             if let found = ReleaseRadarBridgeTransport.envelopeVersion(in: data),

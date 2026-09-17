@@ -11,11 +11,13 @@ public actor AgentCommandDispatcher {
     private let store: DeliveryStore
     private let projectRegistry: any AuthorizedProjectRegistry
     private let bookmarkStore: any ProjectBookmarkStoring
+    private let executionAssignments: (any ProjectExecutionAssignmentPreparing)?
 
-    public init(store: DeliveryStore, projectRegistry: any AuthorizedProjectRegistry, bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore()) {
+    public init(store: DeliveryStore, projectRegistry: any AuthorizedProjectRegistry, bookmarkStore: any ProjectBookmarkStoring = ProjectBookmarkStore(), executionAssignments: (any ProjectExecutionAssignmentPreparing)? = nil) {
         self.store = store
         self.projectRegistry = projectRegistry
         self.bookmarkStore = bookmarkStore
+        self.executionAssignments = executionAssignments
     }
 
     /// Fixed maintenance admits documentation operations and the existing exact
@@ -124,6 +126,12 @@ public actor AgentCommandDispatcher {
         }
         guard await registrationScopeIsCurrent(envelope, project: project, origin: origin) else {
             return .init(entityIDs: [], auditEventID: nil, error: .staleProjectRegistration)
+        }
+        if case .prepareExecutionAssignment = envelope.command {
+            guard let executionAssignments, envelope.expectedRegistration == project.registration,
+                  envelope.projectRoot == project.canonicalRoot.path else { return .init(entityIDs: [], auditEventID: nil, error: .execution(.unavailable)) }
+            return await ProjectExecutionAssignmentCommandDispatcher(store: store, bookmarkStore: bookmarkStore, preparer: executionAssignments)
+                .dispatch(envelope, project: project, origin: origin, admissionDeadline: admissionDeadline)
         }
         let proposalSourcePreflight = await planChangeProposalSourcePreflight(
             command: envelope.command,
@@ -325,6 +333,11 @@ public actor AgentCommandDispatcher {
         }
         let commandFieldsAreValid: Bool
         switch envelope.command {
+        case let .prepareExecutionAssignment(project, ticket, task, taskRevision, phaseRevision, review, baseline):
+            commandFieldsAreValid = valid(project, maximum: 256) && valid(ticket, maximum: 256) && valid(task, maximum: 256)
+                && taskRevision > 0 && phaseRevision > 0 && (review == nil || baseline == nil)
+                && review.map { (try? ProjectExecutionPaths.component($0)) != nil } != false
+                && baseline.map { (try? ProjectExecutionPaths.component($0)) != nil } != false
         case let .transitionPhaseLifecycle(projectID, phaseID, revision, action, baselineDigest):
             commandFieldsAreValid = valid(projectID, maximum: 256) && !projectID.contains("\0")
                 && valid(phaseID, maximum: 256) && !phaseID.contains("\0")
@@ -572,6 +585,8 @@ public actor AgentCommandDispatcher {
         phaseLifecycle: PhaseLifecycleRecord?
     ) -> AgentCommandResult {
         switch command {
+        case .prepareExecutionAssignment:
+            return .init(entityIDs: [], auditEventID: nil, error: .execution(.unavailable))
         case let .transitionPhaseLifecycle(_, phaseID, _, _, _):
             return .init(
                 entityIDs: [phaseID], auditEventID: auditEventID, error: nil,
@@ -645,6 +660,7 @@ public actor AgentCommandDispatcher {
 
     private static func auditScope(for command: AgentCommand, projectID: ProjectID) -> AuditScope {
         let entity: (AuditEntityType, String) = switch command {
+        case let .prepareExecutionAssignment(_, ticket, _, _, _, _, _): (.ticketTaskPlan, ticket)
         case let .transitionPhaseLifecycle(_, phaseID, _, _, _): (.phaseLifecycle, phaseID)
         case let .savePlanChangeProposal(proposalID, _, _, _),
              let .decidePlanChangeProposal(proposalID, _, _, _, _),
@@ -685,6 +701,8 @@ public actor AgentCommandDispatcher {
     ) throws -> Int64? {
         let projectID = project.projectID
         switch command {
+        case .prepareExecutionAssignment:
+            throw ProjectExecutionError.unavailable
         case let .transitionPhaseLifecycle(assertedProjectID, phaseID, expectedRevision, action, planningBaselineDigest):
             guard Data(assertedProjectID.utf8) == Data(projectID.rawValue.utf8) else {
                 throw CommandValidation.crossProject("The phase lifecycle belongs to another project.")

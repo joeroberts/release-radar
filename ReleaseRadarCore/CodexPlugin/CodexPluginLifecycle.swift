@@ -588,11 +588,18 @@ public struct CodexPluginPackage: Equatable, Sendable {
 
         let mcpData = files["plugins/release-radar/.mcp.json"]!
         let mcp = try Self.object(from: mcpData, error: .invalidMCP)
-        guard mcp.count == 1,
-              let server = mcp["release_radar"] as? [String: Any],
+        guard let server = mcp["release_radar"] as? [String: Any],
               server["command"] as? String == "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools",
               (server["args"] as? [Any])?.isEmpty == true
         else { throw CodexPluginPackageError.invalidMCP }
+        if mcp.count != 1 {
+            guard Set(mcp.keys) == ["release_radar", "coordinator_workers"],
+                  Set(server.keys) == ["command", "args"],
+                  let coordinator = mcp["coordinator_workers"] as? [String: Any],
+                  Set(coordinator.keys) == ["command", "args"],
+                  coordinator["command"] as? String == "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator",
+                  coordinator["args"] as? [String] == ["--mcp"] else { throw CodexPluginPackageError.invalidMCP }
+        }
 
         digest = Self.digest(files: files, relativeFiles: relativeFiles)
     }
