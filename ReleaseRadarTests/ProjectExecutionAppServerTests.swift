@@ -4,6 +4,50 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionAppServerTests: XCTestCase {
+    func testSetupTransportReadsPermissionTablesWithoutChangingOwnerDefault() async throws {
+        let home = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
+        let codex = home.appendingPathComponent("codex")
+        let project = home.appendingPathComponent("project")
+        try FileManager.default.createDirectory(at: codex, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        let configFile = codex.appendingPathComponent("config.toml")
+        let original = Data("""
+        [permissions.fixture-readonly.filesystem]
+        ":root" = "deny"
+        ":minimal" = "read"
+        [permissions.fixture-readonly.filesystem.":workspace_roots"]
+        "." = "read"
+        [permissions.fixture-readonly.network]
+        enabled = false
+        """.utf8)
+        try original.write(to: configFile)
+        let sandbox = SecTaskCreateFromSelf(nil).flatMap {
+            SecTaskCopyValueForEntitlement($0, "com.apple.security.app-sandbox" as CFString, nil)
+        }
+        XCTAssertEqual(sandbox as? Bool, true, "A privileged XCTest runner is not sandbox evidence")
+        let transport = try AppServerTransport(fixtureHome: home, onMessage: { _ in })
+        defer {
+            do { try transport.close() }
+            catch { XCTFail("Setup transport cleanup failed: \(error.localizedDescription)") }
+        }
+        _ = try await transport.call("initialize", RPCObject(["clientInfo": ["name": "release-radar-setup-fixture", "version": "1"], "capabilities": ["experimentalApi": true]]))
+        try transport.send(["method": "initialized"])
+        do {
+            let response = try await transport.call("config/read", RPCObject(["cwd": project.path, "includeLayers": true])).object()
+            let config = try XCTUnwrap(response["config"] as? [String: Any])
+            XCTAssertEqual(config["default_permissions"] as? String, ":read-only")
+            let profiles = try XCTUnwrap(config["permissions"] as? [String: Any])
+            let profile = try XCTUnwrap(profiles["fixture-readonly"] as? [String: Any])
+            XCTAssertEqual((profile["network"] as? [String: Any])?["enabled"] as? Bool, false)
+            XCTAssertEqual((profile["filesystem"] as? [String: Any])?[":root"] as? String, "deny")
+        } catch let failure as AppServerTransportError {
+            XCTAssertTrue(failure.message.contains("failed to resolve feature override precedence"), "Unexpected configuration failure: \(failure.localizedDescription)")
+            XCTAssertTrue(failure.message.contains("does not set `default_permissions`"))
+            XCTFail("Setup config/read must resolve an explicit process-local profile: \(failure.localizedDescription)")
+        }
+        XCTAssertEqual(try Data(contentsOf: configFile), original, "Setup must preserve the owner configuration bytes")
+    }
+
     func testExecutionSetupErrorContextIdentifiesOperationAndKnownTarget() throws {
         let failure = "failed to resolve feature override precedence: configuration rejected"
         let root = "/fixture/project"

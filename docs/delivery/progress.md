@@ -323,15 +323,37 @@ identifiers, team, hardened runtime and Coordinator entitlement checks passed. S
 staged and installed plugin digests agree and remain unchanged. Installation is
 confirmed. Main subsequently replayed the unchanged `f481e256` request once and received
 `isError: true`, `error.appUnavailable: {}`, `entityIDs: []`; no assignment/worker ID
-or worker start followed. App PID 24876 is running; existing AgentTools processes map
-pre-install inode 41264196 versus installed 41311803, under app-server PID 9217 / ChatGPT
-host PID 9048. This does not establish causality or restart necessity. The owner has
-been asked to refresh ChatGPT before Main's next supported exact replay. Refresh,
-request and unknown partial-resource state remain pending; BuildAgent performs no
-restart/relaunch, manual config change or further replay. Temporary outputs remain
-retained.
-These checks do not establish the original failing RPC/layer or actual startup. Worker
-preparation and full Outcome 3 acceptance remain open.
+or worker start followed. Prior diagnosis found retained pre-install helper inode
+41264196 under ChatGPT host 9048, without establishing causality. The owner resumed
+after refreshing ChatGPT; Main confirmed old host/app-server PIDs absent and its next
+exact replay still returned `appUnavailable`/empty IDs/no worker. Fresh helpers map
+installed inode 41311803 under app-server 26105 / ChatGPT host 25954, while RR was absent.
+BuildAgent launched the approved installed candidate under conditional authorization
+(observed PID 27316); existing logs show prior callback exit and fresh tools activation,
+without establishing a blocked XPC handshake. No rebuild/install, manual config/SQLite
+action or BuildAgent request replay occurred. The unchanged request and unknown partial
+resources remain pending. Main's next exact replay after launch restored the route and
+returned `internalFailure` at the first `config/read` for the exact saved `/var` fixture
+root after initialization, with the same permissions/default-precedence error. Empty
+entity IDs/no worker start; no config write was reached on this attempt. Effective
+failing config layer remains unknown. Main released a bounded source candidate through
+Restricted02: setup AppServer per-run `-c default_permissions=":read-only"`, without
+owner-config edits or worker-role expansion. Official references and their moving-main /
+installed-source limitation are recorded in the brief. Checkpoint 46 reproduced the
+exact missing-default rejection in the existing actual-Codex isolated-home signed-host
+test (one expected failure, exit 65). Checkpoint 47 passed that same test with the
+process-local selector (1/1, zero failures, exit 0): initialization/config read succeeded,
+effective default was `:read-only`, fixture profile values and config bytes were preserved.
+Coverage disabled; current target/callsites compiled and scoped diff checks passed.
+No duplicate/extra initialization run; prior context/cleanup checks stand. Main reports
+fresh independent reviewer `01a0b145` cleared the frozen three-file patch over `797a2046`,
+with no Required or Optional findings. Main released the five-file scoped commit and
+strict stage/verify/no-rebuild install/launch of the approved 0.1.19 acceptance candidate,
+with no version bump/tag/DMG/push/PR or plugin change. BuildAgent checks the actual main
+process and AgentTools byte identity without assuming host restart. Exact request replay
+remains held. Why the real effective default was absent and actual startup stay unresolved.
+Temporary outputs remain retained. Worker preparation and full Outcome 3 acceptance
+remain open.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/

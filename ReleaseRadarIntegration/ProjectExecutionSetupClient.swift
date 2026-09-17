@@ -69,7 +69,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         if let cleanupFailure { throw cleanupFailure }
         if transport == nil {
             let connection = try AppServerTransport(executable: CodexExecutionIdentity.executable,
-                arguments: ["app-server", "--listen", "stdio://"], onMessage: { _ in })
+                arguments: AppServerTransport.executionSetupArguments, onMessage: { _ in })
             transport = connection
             var handshakeOperation = "initialize"
             do {

@@ -44,6 +44,7 @@ protocol ExecutionPeer: Sendable {
 
 /// Newline JSON transport. Correlation IDs do not authorize replay of a mutation.
 final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
+    static let executionSetupArguments = ["app-server", "--listen", "stdio://", "-c", "default_permissions=\":read-only\""]
     private let process = Process()
     private let input = Pipe()
     private let output = Pipe()
@@ -65,7 +66,7 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
         guard fixtureHome.isFileURL, fixtureHome.resolvingSymlinksInPath().path == fixtureHome.path else {
             throw ProjectExecutionError.identityMismatch
         }
-        try self.init(executable: CodexExecutionIdentity.executable, arguments: ["app-server", "--listen", "stdio://"],
+        try self.init(executable: CodexExecutionIdentity.executable, arguments: Self.executionSetupArguments,
             environment: ["HOME": fixtureHome.path, "CODEX_HOME": fixtureHome.appendingPathComponent("codex").path, "PATH": "/usr/bin:/bin"], onMessage: onMessage)
     }
     #endif

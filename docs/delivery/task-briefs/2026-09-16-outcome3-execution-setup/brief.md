@@ -533,14 +533,68 @@ Main subsequently replayed the exact saved `f481e256-3332-43aa-88e1-4c3dd2c6368a
 request once: `isError: true`, `error.appUnavailable: {}`, `entityIDs: []`. No assignment
 or worker ID was returned and no worker start followed. The request remains unchanged
 and pending; partial resources and preparation/startup remain unresolved.
-Read-only diagnosis confirms app PID 24876 is running. Five AgentTools processes still
-map pre-install inode 41264196 at the prior backup path; installed inode is 41311803.
-Their parent is app-server PID 9217 under ChatGPT host PID 9048. These mappings do not
-prove the cause of `appUnavailable` or that a restart is needed; AgentTools code identity
-was unchanged across installations and the failed connection is not individually
-identified. The owner has been asked to refresh ChatGPT before Main's next supported
-exact-request replay. That refresh remains pending; BuildAgent performs no restart,
-relaunch, manual config change or further replay. Full Outcome 3 acceptance remains open.
+At that time, read-only diagnosis found app PID 24876 running and five AgentTools
+processes mapping pre-install inode 41264196 at the prior backup path, versus installed
+inode 41311803, under app-server PID 9217 / ChatGPT host PID 9048. Those mappings did
+not establish the failure cause; AgentTools code identity was unchanged and the failed
+connection was not individually identified. The owner was asked to refresh ChatGPT.
+
+The owner explicitly resumed after that refresh. Main confirmed old host/app-server
+PIDs were absent and replayed the exact unchanged request again; it still returned
+`appUnavailable` with empty entity IDs and no assignment/worker/start. Fresh read-only
+diagnosis found RR absent; helpers 26466 and 26941 both map current installed inode
+41311803 under app-server 26105 / ChatGPT host 25954. Existing logs show the prior RR
+callback connection cancelled/exited at 17:18:44 and a fresh tools connection activated
+at 17:19:50; no fresh helper mismatch or blocked XPC handshake is established.
+Under Main's conditional launch authorization, BuildAgent rechecked exact RR absence
+and launched the approved installed candidate (observed PID 27316). No install,
+rebuild, manual config/SQLite action or request replay was performed by BuildAgent.
+After that launch, Main replayed the exact unchanged request through the supported
+route. It returned `internalFailure` with `Execution setup config/read (cwd: ...):`
+for the exact saved `/var` fixture root, followed by the same permissions/default
+precedence error recorded above. Entity IDs were empty and no worker start followed.
+This identifies the first `config/read` after successful initialization, not readback;
+no config write was reached on this attempt. The effective failing config layer is
+not established. Main released the next bounded source candidate through Restricted02:
+the RR setup AppServer subprocess explicitly selects `default_permissions=":read-only"`
+with the supported per-run `-c` override. It does not authorize owner-config edits or
+expand worker-role permissions. Main reports fresh independent reviewer `01a0b145`
+cleared the frozen three-file patch over `797a2046`, with no Required or Optional findings.
+Owner config, versioned writes, cleanup and explicit worker roles remain preserved;
+GREEN checkpoint 47 is terminal. Main released the five-file scoped commit and strict
+stage/verify/no-rebuild install/launch of this approved 0.1.19 acceptance candidate.
+No version bump, tag, DMG, push, PR or plugin change is released. BuildAgent verifies
+the actual installed main process and whether AgentTools bytes changed, without assuming
+a host restart is needed. Original exact request replay remains held; this is the setup
+management-selector correction, not completed actual worker startup.
+
+Checkpoint 46 established attributable RED with the original setup arguments: only
+`testSetupTransportReadsPermissionTablesWithoutChangingOwnerDefault` ran in the existing
+signed/sandboxed host against actual verified Codex with isolated HOME/CODEX_HOME. Its
+first `config/read` reproduced the exact feature-override/missing-default rejection;
+one expected failure, zero unexpected, exit 65. Checkpoint 47 ran the same test once
+with the process-local selector: 1/1 passed, zero failures, exit 0. Initialization and
+`config/read` succeeded, effective `default_permissions` was `:read-only`, the existing
+fixture profile retained root denial/network disabled, and fixture config bytes stayed
+identical. Current target/callsites compiled and scoped diff checks passed; coverage was
+disabled. Main confirmed this covers the immediate shared-arguments boundary and
+withdrew the optional second initialization run. Prior context/cleanup checks remain
+terminal. Temporary logs/results are retained; alias/untrusted-project advisories did
+not cause test failures and no trust/config workaround was applied. This verifies the
+isolated candidate, not the missing real effective default or actual worker startup.
+
+Official references checked on September 17, 2026:
+[App Server configuration API](https://learn.chatgpt.com/docs/app-server) documents
+layered effective `config/read`; [per-run configuration overrides](https://learn.chatgpt.com/docs/config-file/config-advanced#one-off-overrides-from-the-cli)
+document arbitrary `-c` overrides with TOML values. Current upstream
+[config processor](https://github.com/openai/codex/blob/main/codex-rs/app-server/src/request_processors/config_processor.rs)
+reads config layers before loading runtime Config and adds the observed feature-override
+prefix to runtime-load failures. [Core configuration](https://github.com/openai/codex/blob/main/codex-rs/core/src/config/mod.rs)
+rejects profiles with no selected default. This supports the diagnosis; it does not prove
+which installed config layer failed. These upstream URLs track moving `main`; no pinned
+revision or installed-binary source equivalence has been established.
+The unchanged request and unknown partial resources remain preserved; preparation/startup
+and full Outcome 3 acceptance stay open.
 
 ```json
 {
