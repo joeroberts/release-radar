@@ -47,6 +47,11 @@ public struct ProjectExecutionPaths: Sendable {
 public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public enum State: String, Codable, Sendable { case authorized, preparing, stopped, revoked, superseded, unknown, closed }
     public enum Role: String, Codable, Sendable { case delivery, review }
+    public var connectionClosed: Bool? = nil
+    public var launchReserved: Bool? = nil
+    public var finalizationFailed: Bool? = nil
+    public var preparedPolicyDigest: String? = nil
+    public var uncertainOutcome: Bool? = nil
     public struct Context: Codable, Equatable, Sendable {
         public let path: String
         public let digest: String
@@ -96,6 +101,10 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
               Set(context.map(\.path)).count == context.count,
               [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"].allSatisfy(excludedPaths.contains)
         else { throw ProjectExecutionError.invalidAssignment }
+        if connectionClosed == true, ![State.closed, .stopped, .revoked, .superseded, .unknown].contains(state) {
+            throw ProjectExecutionError.invalidAssignment
+        }
+        if let preparedPolicyDigest, preparedPolicyDigest.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) == nil { throw ProjectExecutionError.invalidAssignment }
         for source in context {
             guard !source.path.hasPrefix("/"), !source.path.split(separator: "/", omittingEmptySubsequences: false).contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }),
                   source.digest.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) != nil,
@@ -125,7 +134,7 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public func admit(registration expected: ProjectRegistration, checkoutPath: String,
                       sessionID: String, boundSessionID: String?) throws {
         try validated()
-        guard state == .authorized else { throw ProjectExecutionError.assignmentNotAuthorized }
+        guard state == .authorized, uncertainOutcome != true, connectionClosed != true else { throw ProjectExecutionError.assignmentNotAuthorized }
         guard registration == expected, self.checkoutPath == checkoutPath,
               !sessionID.isEmpty, boundSessionID == sessionID else { throw ProjectExecutionError.identityMismatch }
     }
@@ -155,6 +164,17 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
 }
 
 public struct ProjectExecutionPolicy: Codable, Equatable, Sendable {
+    public struct HookRemovalReceipt: Codable, Equatable, Sendable {
+        public let command: String
+        public let inline: Bool
+        public let beforeDigest: String?
+        public let intendedDigest: String?
+        public var completed: Bool
+        public init(command: String, inline: Bool, beforeDigest: String?, intendedDigest: String?, completed: Bool = false) {
+            self.command = command; self.inline = inline; self.beforeDigest = beforeDigest
+            self.intendedDigest = intendedDigest; self.completed = completed
+        }
+    }
     public struct Consent: Codable, Equatable, Sendable {
         public enum Source: String, Codable, Sendable { case onboardingOwner }
         public let source: Source
@@ -182,6 +202,7 @@ public struct ProjectExecutionPolicy: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var consent: Consent?
     public var hookReceipt: HookReceipt?
+    public var hookRemovalReceipt: HookRemovalReceipt?
     public init(registration: ProjectRegistration, primaryRoot: String, appServerExecutable: String, handlerPath: String, enabled: Bool = true) {
         version = 1; self.registration = registration; self.primaryRoot = primaryRoot
         self.appServerExecutable = appServerExecutable; self.handlerPath = handlerPath; self.enabled = enabled

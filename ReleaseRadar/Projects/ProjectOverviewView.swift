@@ -20,6 +20,7 @@ struct ProjectOverviewView: View {
     var onRepositoryRelocated: () async -> Void = {}
     var loadProjectSettings: (() async throws -> ProjectSettingsSnapshot)? = nil
     var saveProjectSettings: ((ProjectRegistration, String, Set<String>) async throws -> ProjectSettingsSnapshot)? = nil
+    var manageExecutionHook: ((ProjectRegistration, ProjectExecutionHookAction) async throws -> Void)? = nil
     var availableCodexTasks: [CodexTaskDescriptor] = []
     var loadProjectHealth: (() async -> ProjectHealthSnapshot)? = nil
     var reauthorizeProjectHealth: ((URL, DocumentationObservationIdentity) async throws -> ProjectHealthSnapshot)? = nil
@@ -208,7 +209,10 @@ struct ProjectOverviewView: View {
         }
         .sheet(isPresented: $showsSettings) {
             if let settings, let saveProjectSettings {
-                ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks) { name, excluded in
+                ProjectSettingsEditor(initial: settings, tasks: availableCodexTasks,
+                                      manageExecutionHook: manageExecutionHook.map { action in
+                                          { operation in try await action(settings.registration, operation) }
+                                      }) { name, excluded in
                     let updated = try await saveProjectSettings(settings.registration, name, excluded)
                     self.settings = updated
                     refreshHealth()

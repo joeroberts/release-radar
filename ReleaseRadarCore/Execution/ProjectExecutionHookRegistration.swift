@@ -52,4 +52,17 @@ public enum ProjectExecutionHookRegistration {
         groups.remove(at: owned[0]); hooks[event] = groups; object["hooks"] = hooks
         return try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .prettyPrinted])
     }
+
+    public static func removeIfPresent(_ data: Data?, previousCommand: String) throws -> Data? {
+        guard let data else { return nil }
+        let object = try decode(data)
+        let hooks = object["hooks"] as? [String: Any] ?? [:]
+        guard hooks[event] == nil || hooks[event] is [[String: Any]] else { throw ProjectExecutionError.conflict }
+        let groups = hooks[event] as? [[String: Any]] ?? []
+        let commands = groups.flatMap { $0["hooks"] as? [[String: Any]] ?? [] }
+        // An owner-removed definition remains absent. A modified lookalike using
+        // our command is a conflict, never permission to delete that owner's edit.
+        if !commands.contains(where: { $0["command"] as? String == previousCommand }) { return data }
+        return try remove(data, previousCommand: previousCommand)
+    }
 }

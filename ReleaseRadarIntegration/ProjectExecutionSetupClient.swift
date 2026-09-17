@@ -27,11 +27,8 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     }
 
     func validateInstallation(handlerPath: String) async throws {
-        guard handlerPath == bundle.appendingPathComponent("Contents/Helpers/ReleaseRadarCoordinator").path,
-              bundle.resolvingSymlinksInPath().path == bundle.path,
-              let plugin else { throw ProjectExecutionError.unavailable }
-        try verifyCode(bundle, identifier: "com.rekonlabs.ReleaseRadar")
-        try verifyCode(URL(fileURLWithPath: handlerPath), identifier: "com.rekonlabs.ReleaseRadarCoordinator")
+        try await validateHandlerIdentity(handlerPath: handlerPath)
+        guard let plugin else { throw ProjectExecutionError.unavailable }
         let package = try CodexPluginPackage(rootURL: bundle.appendingPathComponent("Contents/Resources/CodexPluginMarketplace"))
         let observation = await plugin.recoveryStatus()
         guard observation.error == nil,
@@ -41,6 +38,14 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
               receipt.managedVersion == version, receipt.managedDigest == digest else {
             throw ProjectExecutionError.unavailable
         }
+    }
+
+    func validateHandlerIdentity(handlerPath: String) throws {
+        guard handlerPath == bundle.appendingPathComponent("Contents/Helpers/ReleaseRadarCoordinator").path,
+              bundle.resolvingSymlinksInPath().path == bundle.path else { throw ProjectExecutionError.unavailable }
+        try verifyCode(bundle, identifier: "com.rekonlabs.ReleaseRadar")
+        try verifyCode(URL(fileURLWithPath: handlerPath), identifier: "com.rekonlabs.ReleaseRadarCoordinator")
+        _ = try CodexPluginPackage(rootURL: bundle.appendingPathComponent("Contents/Resources/CodexPluginMarketplace"))
     }
 
     private func verifyCode(_ url: URL, identifier: String) throws {

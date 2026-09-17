@@ -1153,3 +1153,55 @@ is temporary abandoned verification material. Both are excluded from the source
 candidate; no deletion is authorized. Generated `.build` tools/dependencies and
 `build` logs/results are temporary native-check outputs, retained pending owner
 disposition. No durable deliverable is assigned to those temporary paths.
+
+#### Required corrections and owned hook lifecycle checkpoint
+
+The first scoped source candidate is `ffdd65601bd36852b801d79a2061a68f4c7548cc`.
+Its direct checks passed, but fresh independent review returned four Required
+findings; it is unaccepted. The following correction source passed Main/BuildAgent's
+checkpoint 12 app dependency build and 34 focused tests after a missing-`await`
+compile correction. Documentation/index and diff checks passed. These source checks
+do not establish runtime UI or production boundaries; the correction candidate
+remains unaccepted pending the same review assignment. The delivery ledger owns the
+current result and remaining work.
+
+Configuration preparation now leaves a protected assignment in `preparing`.
+After awaited preparation, the app rechecks deadline, exact registration/root,
+current work and exact request receipt before synchronous protected admission
+inside its final store transaction. Failure revokes that exact preparation. An
+unlaunched finalization failure may resume only the same request; another UUID
+cannot bypass its recovery barrier. Filesystem authority and SQL are not atomic;
+failed SQL finalization invokes protected revocation and reports any failure of
+that revocation rather than claiming completion.
+
+Startup records a non-admissible reservation and uncertainty before contacting
+the runtime. Relevant work mutations invalidate reservations as well as admitted
+assignments. Binding checks the exact reserved snapshot and policy, so a stale
+response cannot restore authorization. Unknown outcomes remain barriers after
+revocation. An uncertain approval or follow-up response also revokes new work
+admission. Independently, STOP may address only the adapter's known thread/turn
+on its owned connection. Confirmed physical connection closure is recorded
+separately from task outcome; unknown, stopped and revoked records never become
+delivered review candidates merely because cleanup succeeded. Follow-up reserves
+the operation before awaited readiness, rejects concurrent follow-up/close and
+rechecks admission after readiness returns.
+
+Existing project settings provide Update execution hook and Remove execution
+hook actions. They hold the exact registered bookmark/root, recheck registration
+before writes and record owner intent/completion through the app store. Updates
+replace only a verified unchanged RR-owned definition and preserve unrelated
+configuration and owner removal. Removal disables policy before configuration
+edits, refuses unresolved live/unknown workers, records before/intended digests,
+and removes only the unchanged owned definition using its existing JSON or inline
+storage. Conflicts retain owner edits and the disabled policy. No shadow hook file,
+file deletion, automatic re-enable, installer authority expansion or agent mutation
+endpoint is added. Removal verifies the current signed app/handler without requiring
+the plugin to be reinstalled after an explicit plugin removal.
+
+The settings mockup was inspected for this presentation change. Running visual,
+responsive and accessibility comparison and independent UX/QA remain open; source
+inspection does not establish them. Most hook/producer/adapter regressions preceded
+their bounded corrections, while command-route pause/deadline and owner-wrapper
+tests followed source; no initial native red run is claimed. Remaining owned profile/
+worktree lifecycle, explicit owner recovery, actual production sandbox/worker
+boundaries and coordinated release identity remain required future slices.

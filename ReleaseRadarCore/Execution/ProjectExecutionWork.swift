@@ -43,6 +43,8 @@ public struct ProjectExecutionWork: Codable, Equatable, Sendable {
 }
 
 public protocol ProjectExecutionAssignmentPreparing: Sendable {
+    func admitPrepared(_ assignment: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment
+    func revokePreparation(_ assignment: ProjectExecutionAssignment) throws
     func readCurrent(project: AuthorizedProject, assignmentID: String) async throws -> ProjectExecutionAssignment
     func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
                  reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment

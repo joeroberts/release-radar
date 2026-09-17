@@ -63,20 +63,30 @@ struct ProjectExecutionAssignmentCommandDispatcher: Sendable {
                 }
                 let assignment = try await preparer.prepare(project: project, work: capture.0, requestID: envelope.requestID,
                     reviewOfAssignmentID: review, baselineFromAssignmentID: baseline, contextPaths: paths)
-                var result = AgentCommandResult(entityIDs: [projectID, assignment.id], auditEventID: .init(rawValue: UUID().uuidString), error: nil)
-                result.executionAssignment = assignment
-                let completed = result
-                return try await store.transact(actor: actor, reason: "Project execution assignment prepared",
-                    auditEventID: result.auditEventID!, auditScope: .init(projectID: project.projectID, entityType: .ticketTaskPlan, entityID: ticketID)) { c in
+                let auditID = AuditEventID(rawValue: UUID().uuidString)
+                do {
+                    return try await store.transact(actor: actor, reason: "Project execution assignment prepared",
+                    auditEventID: auditID, auditScope: .init(projectID: project.projectID, entityType: .ticketTaskPlan, entityID: ticketID)) { c in
                     try checkDeadline(admissionDeadline)
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: project.projectID, registration: registration, connection: c)
                     try context.verifyPersisted(c)
                     guard try ProjectExecutionWork.read(projectID: project.projectID, ticketID: ticketID, taskID: taskID,
                         taskPlanRevision: taskRevision, phaseRevision: phaseRevision, connection: c) == capture.0,
                           try replay(c, envelope: envelope, body: body, registration: registration)?.error == .outcomeUnknown else { throw ProjectExecutionError.assignmentNotAuthorized }
+                    let admitted = try preparer.admitPrepared(assignment)
+                    var completed = AgentCommandResult(entityIDs: [projectID, admitted.id], auditEventID: auditID, error: nil)
+                    completed.executionAssignment = admitted
                     try c.execute("UPDATE agent_command_requests SET result_data=? WHERE request_id=? AND request_body=?",
                         bindings: [.blob(try JSONEncoder().encode(completed)), .text(envelope.requestID.uuidString), .blob(body)])
                     return completed
+                    }
+                } catch {
+                    let failure = error
+                    do { try preparer.revokePreparation(assignment) }
+                    catch {
+                        throw StoreError.unavailable("Execution finalization failed: \(failure.localizedDescription). Protected revocation failed: \(error.localizedDescription). Do not launch; recover the exact request.")
+                    }
+                    throw failure
                 }
             }
         } catch Control.reused { return .init(entityIDs: [], auditEventID: nil, error: .requestIDReused) }

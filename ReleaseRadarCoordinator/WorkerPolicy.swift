@@ -15,7 +15,8 @@ struct WorkerPolicy {
         guard policy.version == 1, policy.enabled, policy.consent == ProjectExecutionPolicy.Consent(),
               policy.hookReceipt?.installed == true, policy.appServerExecutable == CodexExecutionIdentity.executable,
               policy.registration == assignment.registration,
-              assignment.state == .authorized else { throw ProjectExecutionError.assignmentNotAuthorized }
+              assignment.state == .authorized, assignment.uncertainOutcome != true,
+              assignment.connectionClosed != true else { throw ProjectExecutionError.assignmentNotAuthorized }
         let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: projectID, taskID: taskID)
         guard assignment.checkoutPath == paths.checkout.path,
               paths.checkout.resolvingSymlinksInPath().path == paths.checkout.path else { throw ProjectExecutionError.identityMismatch }
@@ -31,7 +32,7 @@ struct WorkerPolicy {
         let currentPolicy = try store.policy(projectID: assignment.registration.projectID.rawValue)
         let current = try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
         guard currentPolicy == policy else { throw ProjectExecutionError.assignmentNotAuthorized }
-        var original = assignment; original.sessionID = sessionID
+        var original = assignment; original.sessionID = sessionID; original.launchReserved = true
         guard current == original else { throw ProjectExecutionError.assignmentNotAuthorized }
         try current.admit(registration: policy.registration, checkoutPath: assignment.checkoutPath, sessionID: sessionID, boundSessionID: current.sessionID)
         try verifyContext()
@@ -39,22 +40,34 @@ struct WorkerPolicy {
     }
 
     func reserve() throws {
-        var intent = assignment; intent.state = .unknown
+        guard try store.policy(projectID: assignment.registration.projectID.rawValue) == policy else { throw ProjectExecutionError.assignmentNotAuthorized }
+        var intent = assignment; intent.state = .unknown; intent.launchReserved = true; intent.uncertainOutcome = true
         try store.saveAssignment(intent, expected: assignment)
     }
 
     func bind(sessionID: String) throws {
         guard assignment.sessionID == nil else { throw ProjectExecutionError.conflict }
-        var bound = assignment; bound.sessionID = sessionID
-        var intent = assignment; intent.state = .unknown
+        guard try store.policy(projectID: assignment.registration.projectID.rawValue) == policy else { throw ProjectExecutionError.assignmentNotAuthorized }
+        var bound = assignment; bound.sessionID = sessionID; bound.launchReserved = true
+        var intent = assignment; intent.state = .unknown; intent.launchReserved = true; intent.uncertainOutcome = true
         try store.saveAssignment(bound, expected: intent)
     }
 
-    func mark(_ state: ProjectExecutionAssignment.State, sessionID: String?, from allowed: [ProjectExecutionAssignment.State]) throws {
+    func mark(_ state: ProjectExecutionAssignment.State, sessionID: String?, from allowed: [ProjectExecutionAssignment.State], connectionClosed: Bool = false) throws {
         let current = try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
-        guard current.registration == assignment.registration, current.sessionID == sessionID else { throw ProjectExecutionError.identityMismatch }
+        guard current.registration == assignment.registration,
+              current.sessionID == sessionID || (connectionClosed && current.sessionID == nil && current.launchReserved == true && current.state != .authorized) else { throw ProjectExecutionError.identityMismatch }
         guard allowed.contains(current.state) else { return } // Preserve owner revocation/STOP.
         var changed = current; changed.state = state
+        if current.state == .unknown { changed.state = .unknown }
+        if state == .unknown { changed.uncertainOutcome = true }
+        if connectionClosed {
+            // Physical connection cleanup is independent of authorization. A
+            // stopped/revoked assignment never becomes a delivered candidate.
+            if [.stopped, .revoked, .superseded].contains(current.state) { changed.state = current.state }
+            changed.connectionClosed = true
+            if current.sessionID == nil { changed.sessionID = sessionID }
+        }
         try store.saveAssignment(changed, expected: current)
     }
 

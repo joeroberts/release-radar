@@ -4,6 +4,20 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class WorkerAdapterTests: XCTestCase {
+    actor Gate {
+        private var entered = false
+        private var waiter: CheckedContinuation<Void, Never>?
+        private var observers: [CheckedContinuation<Void, Never>] = []
+        func pause() async {
+            entered = true; observers.forEach { $0.resume() }; observers.removeAll()
+            await withCheckedContinuation { waiter = $0 }
+        }
+        func waitUntilEntered() async {
+            if entered { return }
+            await withCheckedContinuation { observers.append($0) }
+        }
+        func release() { waiter?.resume(); waiter = nil }
+    }
     final class Peer: ExecutionPeer, @unchecked Sendable {
         let policy: WorkerPolicy
         var calls: [(String, RPCObject)] = []
@@ -13,9 +27,18 @@ final class WorkerAdapterTests: XCTestCase {
         var broadRead = false
         var completesImmediately = false
         var closeFailure = false
+        var closeCount = 0
+        var sendFailure = false
+        var lostFollowup = false
+        var delayedHooks: Gate?
+        var delayedThreadStart: Gate?
         init(policy: WorkerPolicy) { self.policy = policy }
-        func send(_ object: [String: Any]) throws { sent.append(try RPCObject(object)) }
+        func send(_ object: [String: Any]) throws {
+            if sendFailure { throw AppServerTransportError(message: "Fixture uncertain approval response", outcomeUnknown: true) }
+            sent.append(try RPCObject(object))
+        }
         func close() throws {
+            closeCount += 1
             if closeFailure { throw AppServerTransportError(message: "Fixture residual process", outcomeUnknown: true) }
         }
         func call(_ method: String, _ parameters: RPCObject) async throws -> RPCObject {
@@ -29,6 +52,7 @@ final class WorkerAdapterTests: XCTestCase {
                 return try RPCObject(["config": ["permissions": [selected.permissionProfile: ["filesystem": fs, "network": ["enabled": false]]]]])
             }
             if method == "thread/start" {
+                if let delayedThreadStart { self.delayedThreadStart = nil; await delayedThreadStart.pause() }
                 if lostStart { throw AppServerTransportError(message: "Unknown start", outcomeUnknown: true) }
                 return try RPCObject(["thread": ["id": "session-one"], "cwd": selected.checkoutPath,
                     "runtimeWorkspaceRoots": [selected.checkoutPath], "model": selected.model, "reasoningEffort": selected.effort,
@@ -37,9 +61,13 @@ final class WorkerAdapterTests: XCTestCase {
             }
             if method == "mcpServerStatus/list" { return try RPCObject(["data": []]) }
             if method == "hooks/list" {
+                if let delayedHooks { self.delayedHooks = nil; await delayedHooks.pause() }
                 return try RPCObject(["data": [["cwd": selected.checkoutPath, "errors": [], "warnings": [], "hooks": [["command": "\"" + policy.policy.handlerPath + "\" --hook", "handlerType": "command", "source": "project", "sourcePath": "/Primary/.codex/hooks.json", "eventName": "userPromptSubmit", "enabled": true, "timeoutSec": 10, "trustStatus": "trusted", "key": "owned-key", "currentHash": "owned-hash"]]]]])
             }
-            if method == "turn/start" { return try RPCObject(["turn": ["id": "turn-one", "status": completesImmediately ? "completed" : "inProgress"]]) }
+            if method == "turn/start" {
+                if lostFollowup { throw AppServerTransportError(message: "Fixture uncertain follow-up", outcomeUnknown: true) }
+                return try RPCObject(["turn": ["id": "turn-one", "status": completesImmediately ? "completed" : "inProgress"]])
+            }
             return try RPCObject([:])
         }
     }
@@ -141,6 +169,108 @@ final class WorkerAdapterTests: XCTestCase {
         let status = try await adapter.status(workerID: id).object()
         XCTAssertEqual(status["status"] as? String, "unknown")
         XCTAssertEqual(try valid.store.assignment(projectID: "project-one", taskID: "task-one").state, .unknown)
-        do { _ = try await adapter.close(workerID: id); XCTFail("Unknown process cannot become a closed review candidate") } catch {}
+        _ = try await adapter.close(workerID: id)
+        let closed = try valid.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(closed.state, .unknown); XCTAssertEqual(closed.connectionClosed, true)
+    }
+
+    func testConfirmedClosePreservesStopAndRecordsClosureForOwnedCleanup() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy)
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        let id = try XCTUnwrap(started["workerId"] as? String)
+        _ = try await adapter.interrupt(workerID: id)
+        await adapter.event(id, try RPCObject(["method": "turn/completed", "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
+        _ = try await adapter.close(workerID: id)
+        let stopped = try valid.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(stopped.state, .stopped)
+        XCTAssertEqual(stopped.connectionClosed, true)
+        XCTAssertThrowsError(try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))
+    }
+
+    func testDelayedReadinessReservesFollowupBeforeAwaitAndBlocksConcurrentClose() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        let id = try XCTUnwrap(started["workerId"] as? String)
+        let gate = Gate(); peer.delayedHooks = gate
+        let first = Task { try await adapter.followUp(workerID: id, prompt: "Continue") }
+        await gate.waitUntilEntered()
+        do { _ = try await adapter.followUp(workerID: id, prompt: "Duplicate"); XCTFail("Concurrent followup must be rejected before readiness") } catch {}
+        do { _ = try await adapter.close(workerID: id); XCTFail("Close must not race the reserved followup") } catch {}
+        XCTAssertEqual(peer.closeCount, 0)
+        await gate.release(); _ = try await first.value
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/start" }.count, 2)
+    }
+
+    func testKnownUncertainApprovalRunCanBeStoppedAndPhysicallyClosedWithoutClaimingOutcome() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy)
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        let id = try XCTUnwrap(started["workerId"] as? String)
+        await adapter.event(id, try RPCObject(["id": 42, "method": "item/commandExecution/requestApproval", "params": ["threadId": "session-one", "turnId": "turn-one", "availableDecisions": ["accept", "decline", "cancel"]]]))
+        let pending = try await adapter.status(workerID: id).object()
+        let key = try XCTUnwrap((pending["pendingRequests"] as? [[String: Any]])?.first?["requestKey"] as? String)
+        peer.sendFailure = true
+        do { _ = try await adapter.respond(workerID: id, requestKey: key, decision: "accept"); XCTFail("Lost approval send must remain uncertain") } catch {}
+        let stopped = try await adapter.interrupt(workerID: id).object()
+        XCTAssertEqual(stopped["status"] as? String, "unknown")
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/interrupt" }.count, 1)
+        XCTAssertEqual(try valid.store.assignment(projectID: "project-one", taskID: "task-one").state, .unknown)
+        _ = try await adapter.close(workerID: id)
+        let snapshot = try valid.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(snapshot.state, .unknown); XCTAssertEqual(snapshot.connectionClosed, true)
+        XCTAssertThrowsError(try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))
+    }
+
+    func testWorkMutationDuringPausedThreadStartRevokesReservationAndPreventsFirstTurn() async throws {
+        let valid = try fixture()
+        let sql = DeliveryStore(databaseURL: valid.store.root.appendingPathComponent("startup.sqlite"))
+        try await sql.transact(actor: .init(id: "fixture"), reason: "Seed current startup work") { c in
+            try c.execute("INSERT INTO projects(id,name) VALUES ('project-one','Fixture')")
+            try c.execute("INSERT INTO project_roots(id,project_id,path) VALUES ('root-one','project-one','/Primary')")
+            try c.execute("INSERT INTO project_bookmarks(project_id,path,bookmark_data,is_stale) VALUES ('project-one','/Primary',?,0)", bindings: [.blob(Data([1]))])
+            try c.execute("INSERT INTO project_registrations(project_id,registration_id,request_generation,setup_state) VALUES ('project-one','registration-one',1,'complete')")
+            try DeliveryPlanningPolicy.upsertPhase(projectID: .init(rawValue: "project-one"), phaseID: .init(rawValue: "phase-one"), name: "Phase", mode: .governed, connection: c)
+            try c.execute("UPDATE phase_lifecycles SET lifecycle='in_delivery',revision=2 WHERE project_id='project-one' AND phase_id='phase-one'")
+            try c.execute("INSERT INTO tickets(id,project_id,phase_id,outcome,lane) VALUES ('ticket-one','project-one','phase-one','Approved outcome','in_progress')")
+            _ = try TicketTaskPlanningPolicy.revisePlan(projectID: .init(rawValue: "project-one"), ticketID: .init(rawValue: "ticket-one"), expectedRevision: nil,
+                additions: [.init(id: .init(rawValue: "work-one"), label: "A", title: "Approved task", sortOrder: 0)], definitionRevisions: [], supersededTaskIDs: [], connection: c)
+        }
+        let work = try await sql.read { try ProjectExecutionWork.read(projectID: .init(rawValue: "project-one"), ticketID: "ticket-one", taskID: "work-one", taskPlanRevision: 1, phaseRevision: 2, connection: $0) }
+        let initial = valid.policy.assignment
+        let assigned = ProjectExecutionAssignment(id: initial.id, registration: initial.registration, checkoutPath: initial.checkoutPath, role: initial.role,
+            permissionProfile: initial.permissionProfile, model: initial.model, effort: initial.effort, authorization: initial.authorization,
+            context: initial.context, excludedPaths: initial.excludedPaths, worktree: initial.worktree, work: work)
+        try valid.store.saveAssignment(assigned, expected: initial)
+        let root = valid.store.root; try await sql.observeExecutionAssignments(root: { root })
+        let peer = Peer(policy: try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))
+        let gate = Gate(); peer.delayedThreadStart = gate
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let operation = Task { try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin") }
+        await gate.waitUntilEntered()
+        try await sql.transact(actor: .init(id: "fixture"), reason: "Revise work during thread start",
+            auditScope: .init(projectID: assigned.registration.projectID, entityType: .ticketTaskPlan, entityID: "ticket-one")) {
+            try $0.execute("UPDATE ticket_tasks SET title='Changed task' WHERE project_id='project-one' AND ticket_id='ticket-one'")
+        }
+        await gate.release(); _ = try await operation.value
+        let revoked = try valid.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(revoked.state, .revoked); XCTAssertEqual(revoked.launchReserved, true)
+        XCTAssertEqual(revoked.uncertainOutcome, true)
+        XCTAssertFalse(peer.calls.contains { $0.0 == "turn/start" })
+    }
+
+    func testUncertainFollowupRevokesAdmissionWithoutPreventingKnownRunStop() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        let id = try XCTUnwrap(started["workerId"] as? String)
+        peer.lostFollowup = true
+        do { _ = try await adapter.followUp(workerID: id, prompt: "Continue"); XCTFail("Lost follow-up must remain uncertain") } catch {}
+        let snapshot = try valid.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertEqual(snapshot.state, .unknown); XCTAssertEqual(snapshot.uncertainOutcome, true)
+        XCTAssertThrowsError(try valid.policy.current(sessionID: "session-one"))
+        _ = try await adapter.interrupt(workerID: id)
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/interrupt" }.count, 1)
     }
 }

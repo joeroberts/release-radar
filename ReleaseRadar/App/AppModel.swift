@@ -2210,6 +2210,11 @@ final class AppModel {
         ProjectExecutionSetupClient.setup(plugin: codexPluginCoordinator)
     }
 
+    func manageExecutionHook(registration: ProjectRegistration, action: ProjectExecutionHookAction) async throws {
+        try await projectOnboarding.manageExecutionHook(registration: registration, action: action, setup: executionSetupForOnboarding())
+        _ = await reloadProjectProjections()
+    }
+
     func projectHealth(for projectID: ProjectID) async -> ProjectHealthSnapshot {
         let checkedAt = Date()
         guard case .available = await store.availability else {

@@ -117,20 +117,25 @@ struct ProjectSettingsEditor: View {
     @Environment(\.dismiss) private var dismiss
     let initial: ProjectSettingsSnapshot
     let tasks: [CodexTaskDescriptor]
+    let manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)?
     let save: (String, Set<String>) async throws -> ProjectSettingsSnapshot
 
     @State private var name: String
     @State private var excluded: Set<String>
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var executionMessage: String?
+    @State private var executionFailed = false
 
     init(
         initial: ProjectSettingsSnapshot,
         tasks: [CodexTaskDescriptor],
+        manageExecutionHook: ((ProjectExecutionHookAction) async throws -> Void)? = nil,
         save: @escaping (String, Set<String>) async throws -> ProjectSettingsSnapshot
     ) {
         self.initial = initial
         self.tasks = tasks
+        self.manageExecutionHook = manageExecutionHook
         self.save = save
         _name = State(initialValue: initial.projectName)
         _excluded = State(initialValue: initial.excludedTaskIDs)
@@ -158,6 +163,25 @@ struct ProjectSettingsEditor: View {
                         ), title: task.title, accessibilityLabel: task.title,
                            accessibilityIdentifier: "project-settings-task-\(task.id)")
                             .frame(height: 32, alignment: .leading)
+                    }
+                }
+            }
+            if manageExecutionHook != nil {
+                RekonCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Project execution").font(.headline)
+                        Text("Update the verified Release Radar hook, or pause governed work and remove it. Close workers before removal. Conflicting edits are preserved.")
+                            .font(.caption).foregroundStyle(RekonTheme.secondaryText)
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 10) { executionButtons }
+                            VStack(alignment: .leading, spacing: 10) { executionButtons }
+                        }
+                        if let executionMessage {
+                            RekonCallout(tone: executionFailed ? .danger : .information, systemImage: executionFailed ? "exclamationmark.triangle" : "checkmark.circle") {
+                                Text(executionMessage)
+                            }
+                            .accessibilityIdentifier("project-settings-execution-result")
+                        }
                     }
                 }
             }
@@ -195,6 +219,29 @@ struct ProjectSettingsEditor: View {
             rows[id] = .init(id: id, workingDirectory: URL(fileURLWithPath: "/"), title: "Excluded task \(id)")
         }
         return rows.values.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    @ViewBuilder private var executionButtons: some View {
+        Button("Update execution hook") { performExecution(.update) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-update")
+        Button("Remove execution hook") { performExecution(.remove) }
+            .buttonStyle(RekonSecondaryButtonStyle()).disabled(isSaving)
+            .accessibilityIdentifier("project-settings-execution-remove")
+    }
+
+    private func performExecution(_ action: ProjectExecutionHookAction) {
+        guard let manageExecutionHook else { return }
+        isSaving = true; executionMessage = nil; executionFailed = false
+        Task {
+            defer { isSaving = false }
+            do {
+                try await manageExecutionHook(action)
+                executionMessage = action == .remove ? "Release Radar's hook was removed. The workflow remains disabled." : "Execution hook update verified."
+            } catch {
+                executionFailed = true; executionMessage = error.localizedDescription
+            }
+        }
     }
 
     private func performSave() {

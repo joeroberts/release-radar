@@ -2,6 +2,32 @@
 
 ## Current outcome
 
+**Current candidate checkpoint — direct checks passed; unaccepted pending independent correction review.**
+First scoped commit `ffdd65601bd36852b801d79a2061a68f4c7548cc` is unaccepted;
+its fresh independent review returned four Required findings. This bounded correction
+candidate keeps preparation non-admissible until the final app current-work check,
+revokes failed finalization with exact-request recovery, revokes stale startup
+reservations without losing uncertainty barriers, permits independent STOP/physical
+cleanup of known uncertain runs, and reserves follow-up operations before awaited
+readiness. It also adds owner-only update/removal controls in existing project settings,
+exact registration/root audit checks, conflict-preserving hook edits, and disabled-policy
+removal receipts. Removal retains the admission hook when worker cleanup is unresolved.
+Main/BuildAgent checkpoint 12 initially failed compilation on a missing `await`;
+no tests ran. After the same worker corrected that call, the app dependency build
+and all 34 focused tests passed: setup 10, adapter 12, producer 4, lifecycle 4 and
+execution routes 4. The installed documentation checker passed after regenerating
+the stale task-brief index; diff checks passed. These results apply to the frozen
+working-tree correction candidate based on `ffdd656`, using `xcodebuild` and the
+repository-native test filters. Temporary results remain in
+`build/execution-review-corrections-12-corrected.log` and its `.xcresult` bundle;
+this ledger retains the durable result. Main authorized the scoped local candidate
+commit, unaccepted pending the same independent review of Required corrections. This checkpoint does not complete Outcome 3. Actual app/worker
+permission boundaries, running responsive/accessibility UI QA, remaining owned profile/
+worktree lifecycle and explicit owner recovery, and coordinated package identity remain
+open. No live configuration, installation, application acceptance or external action is
+released. Temporary reference plugin, stopped fixture and native build outputs remain
+retained and excluded from staging; no deletion is authorized.
+
 **September 16 — Outcome 3 execution setup implementation is authorized and in progress.** The
 owner explicitly authorized the assigned worker’s onboarding/plugin implementation,
 including production hook integration, on `codex/outcome3-execution-setup` at
@@ -57,7 +83,7 @@ checkpoint 11 passed the app dependency build and all 29 selected tests: public 
 callback/schema 2, construction observer 1, bridge schema 2, and recovery 22.
 Repository documentation and diff checks passed. Main authorized a scoped local
 candidate commit to enable a fresh independent review worktree; the candidate is
-unaccepted and awaiting independent review. No push, installation or release is authorized. New producer and
+unaccepted; its subsequent independent review and correction status are recorded above. No push, installation or release is authorized. New producer and
 lifecycle source preceded its tests; no initial red run is claimed. Outcome 3 remains
 open for actual app/worker boundary verification, UI QA, owned update/removal and
 coordinated package release identity. Copied Python reference material and the

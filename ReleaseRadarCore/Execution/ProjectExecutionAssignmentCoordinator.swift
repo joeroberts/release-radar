@@ -26,6 +26,44 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         return value
     }
 
+    private nonisolated static func policyDigest(_ policy: ProjectExecutionPolicy) throws -> String {
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
+        return SHA256.hash(data: try encoder.encode(policy)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Called synchronously by the app while its final current-work transaction
+    /// is held. Configuration preparation alone never makes an assignment usable.
+    public nonisolated func admitPrepared(_ value: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
+        let store = try ProjectExecutionFileStore(root: root(), create: false)
+        let policy = try store.policy(projectID: value.registration.projectID.rawValue)
+        guard value.state == .preparing, value.sessionID == nil, value.launchReserved != true, value.uncertainOutcome != true,
+              value.preparedPolicyDigest == (try Self.policyDigest(policy)), policy.enabled,
+              policy.registration == value.registration, policy.handlerPath == handlerPath,
+              policy.hookReceipt?.installed == true,
+              try store.assignment(projectID: value.registration.projectID.rawValue, taskID: value.id) == value else { throw ProjectExecutionError.assignmentNotAuthorized }
+        try value.verifyContext()
+        var admitted = value; admitted.state = .authorized; admitted.finalizationFailed = nil
+        try store.saveAssignment(admitted, expected: value)
+        return admitted
+    }
+
+    public nonisolated func revokePreparation(_ value: ProjectExecutionAssignment) throws {
+        let store = try ProjectExecutionFileStore(root: root(), create: false)
+        let current = try store.assignment(projectID: value.registration.projectID.rawValue, taskID: value.id)
+        guard current.id == value.id, current.registration == value.registration, current.work == value.work,
+              current.checkoutPath == value.checkoutPath, current.role == value.role,
+              current.permissionProfile == value.permissionProfile, current.model == value.model,
+              current.effort == value.effort, current.authorization == value.authorization,
+              current.excludedPaths == value.excludedPaths,
+              current.context == value.context, current.worktree == value.worktree,
+              current.reviewOfAssignmentID == value.reviewOfAssignmentID, current.baselineFromAssignmentID == value.baselineFromAssignmentID else { throw ProjectExecutionError.identityMismatch }
+        guard [.preparing, .authorized, .unknown].contains(current.state) else { return }
+        var revoked = current; revoked.state = .revoked
+        revoked.finalizationFailed = current.state != .unknown && current.sessionID == nil && current.launchReserved != true
+        if current.state == .unknown { revoked.launchReserved = true; revoked.uncertainOutcome = true }
+        try store.saveAssignment(revoked, expected: current)
+    }
+
     public func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID,
                         reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
         let key = work.projectID.rawValue + "/" + work.ticketID + "/" + work.taskID
@@ -60,16 +98,21 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         if let existing = inventory.first(where: { $0.id == id }) {
             guard existing.work == work, existing.registration == registration, existing.role == role,
                   existing.reviewOfAssignmentID == reviewOfAssignmentID, existing.baselineFromAssignmentID == baselineFromAssignmentID,
-                  existing.state == .authorized || existing.state == .preparing else { throw ProjectExecutionError.assignmentNotAuthorized }
+                  existing.uncertainOutcome != true,
+                  existing.state == .preparing || (existing.state == .revoked && existing.finalizationFailed == true && existing.sessionID == nil && existing.launchReserved != true) else { throw ProjectExecutionError.assignmentNotAuthorized }
             try existing.verifyContext()
-            if existing.state == .authorized { return existing }
             guard let tree = existing.worktree, try provisioning.candidateRevision(worktree: tree) == tree.baseline else { throw ProjectExecutionError.identityMismatch }
-            return try await configure(existing, paths: paths, policy: policy, store: store)
+            var pending = existing
+            if pending.state == .revoked {
+                pending.state = .preparing; pending.finalizationFailed = nil; pending.preparedPolicyDigest = nil
+                try store.saveAssignment(pending, expected: existing)
+            }
+            return try await configure(pending, paths: paths, policy: policy, store: store)
         }
         // Another request identity cannot silently replace an uncertain/live worker.
         guard !inventory.contains(where: {
             $0.registration == registration && $0.work?.ticketID == work.ticketID && $0.work?.taskID == work.taskID && $0.role == role
-                && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped)
+                && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped || $0.uncertainOutcome == true || $0.finalizationFailed == true || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed))
         }) else { throw ProjectExecutionError.conflict }
         let source: URL
         let baseline: String
@@ -122,8 +165,8 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                   let tree = parent.worktree, try provisioning.candidateRevision(worktree: tree) == assignment.worktree?.baseline else { throw ProjectExecutionError.assignmentNotAuthorized }
         }
         guard try store.policy(projectID: assignment.registration.projectID.rawValue) == policy else { throw ProjectExecutionError.assignmentNotAuthorized }
-        var authorized = assignment; authorized.state = .authorized
-        try store.saveAssignment(authorized, expected: assignment)
-        return authorized
+        var prepared = assignment; prepared.preparedPolicyDigest = try Self.policyDigest(policy)
+        try store.saveAssignment(prepared, expected: assignment)
+        return prepared
     }
 }

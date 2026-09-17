@@ -14,7 +14,7 @@ enum ProjectExecutionAssignmentLifecycle {
         for projectID in projectIDs {
             let policy = try assignments.policyIfPresent(projectID: projectID.rawValue)
             for value in try assignments.assignments(projectID: projectID.rawValue) {
-                guard [.authorized, .preparing].contains(value.state), let work = value.work else { continue }
+                guard [.authorized, .preparing, .unknown].contains(value.state), let work = value.work else { continue }
                 let current: ProjectExecutionWork?
                 do {
                     try ProjectLifecycleManager.requireCurrentAuthorization(projectID: projectID, registration: value.registration, connection: connection)
@@ -28,6 +28,8 @@ enum ProjectExecutionAssignmentLifecycle {
                 } catch is ProjectLifecycleError { current = nil }
                 if current != work {
                     var revoked = value; revoked.state = .revoked
+                    if value.state == .unknown || value.sessionID != nil { revoked.launchReserved = true }
+                    if value.state == .unknown { revoked.uncertainOutcome = true }
                     try assignments.saveAssignment(revoked, expected: value)
                 }
             }

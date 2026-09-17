@@ -358,6 +358,9 @@ struct SidebarView: View {
                                 excludedTaskIDs: exclusions
                             )
                         },
+                        manageExecutionHook: { registration, action in
+                            try await model.manageExecutionHook(registration: registration, action: action)
+                        },
                         availableCodexTasks: model.codexTasks(for: projectID),
                         loadProjectHealth: { await model.projectHealth(for: projectID) },
                         reauthorizeProjectHealth: { folder, identity in

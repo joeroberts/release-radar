@@ -862,6 +862,39 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
         }
     }
 
+    public func manageExecutionHook(registration: ProjectRegistration, action: ProjectExecutionHookAction,
+                                    setup: ProjectExecutionSetupCoordinator) async throws {
+        let authorization = try await persistedProjectAuthorization(for: registration.projectID)
+        guard authorization.registration == registration, let path = authorization.rootPath else { throw OnboardingError.staleRegistration }
+        let context = try await store.documentationRead {
+            try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+            return try DocumentationRootContext.read($0, path: path, projectID: registration.projectID.rawValue, schemaVersion: Int(StoreMigrations.currentVersion))
+        }
+        let validate: @Sendable () async throws -> Void = { [store] in
+            try await store.documentationRead {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+        try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { [store] resolved in
+            try context.verifyAuthorization(resolved)
+            let project = AuthorizedProject(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url])
+            let scope = AuditScope(projectID: registration.projectID, entityType: .project, entityID: registration.projectID.rawValue)
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: action == .remove ? "Execution hook removal requested" : "Execution hook update requested", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+            switch action {
+            case .update: try await setup.update(project: project, beforeWrite: validate)
+            case .remove: try await setup.removeHook(project: project, beforeWrite: validate)
+            }
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: action == .remove ? "Execution hook removed; workflow remains disabled" : "Execution hook update verified", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+    }
+
     public func updateProjectSettings(
         registration: ProjectRegistration,
         projectName: String,

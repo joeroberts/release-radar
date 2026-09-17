@@ -58,7 +58,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         XCTAssertEqual(pending.state, .preparing)
         await configuration.setFailure(false)
         let resumed = try await producer.prepare(project: project, work: work, requestID: request, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
-        XCTAssertEqual(resumed.id, pending.id); XCTAssertEqual(resumed.state, .authorized)
+        XCTAssertEqual(resumed.id, pending.id); XCTAssertEqual(resumed.state, .preparing)
+        XCTAssertThrowsError(try resumed.admit(registration: project.registration!, checkoutPath: resumed.checkoutPath, sessionID: "session", boundSessionID: "session"))
+        let admitted = try producer.admitPrepared(resumed)
+        XCTAssertEqual(admitted.state, .authorized)
         XCTAssertEqual(try store.assignments(projectID: "project-one").count, 1)
         let finishes = await configuration.finishes; XCTAssertEqual(finishes, 2)
     }
@@ -68,8 +71,9 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let configuration = Configuration()
         let deliveryProducer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration, handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
         let delivery = try await deliveryProducer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
-        var closed = delivery; closed.state = .closed; closed.sessionID = "author-session"
-        try store.saveAssignment(closed, expected: delivery)
+        let admitted = try deliveryProducer.admitPrepared(delivery)
+        var closed = admitted; closed.state = .closed; closed.sessionID = "author-session"
+        try store.saveAssignment(closed, expected: admitted)
         let candidate = URL(fileURLWithPath: delivery.checkoutPath)
         let reviewProducer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration, handlerPath: handler, provisioning: Provisioning(source: source, candidate: candidate))
         let review = try await reviewProducer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: closed.id, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
@@ -92,5 +96,20 @@ final class ProjectExecutionProducerTests: XCTestCase {
         do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("A new request must not replace an unknown launch") }
         catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
         XCTAssertEqual(try store.assignments(projectID: "project-one").count, 1)
+    }
+
+    func testRevokedFinalizationCanResumeOnlyExactUnlaunchedRequest() async throws {
+        let (root, source, project, work, store) = try fixture()
+        let configuration = Configuration()
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration, handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+        let request = UUID()
+        let prepared = try await producer.prepare(project: project, work: work, requestID: request, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+        try producer.revokePreparation(prepared)
+        let revoked = try store.assignment(projectID: "project-one", taskID: prepared.id)
+        XCTAssertEqual(revoked.state, .revoked)
+        do { _ = try await producer.prepare(project: project, work: work, requestID: UUID(), reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"]); XCTFail("A different request cannot replace failed finalization") }
+        catch { XCTAssertEqual(error as? ProjectExecutionError, .conflict) }
+        let resumed = try await producer.prepare(project: project, work: work, requestID: request, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+        XCTAssertEqual(resumed.id, prepared.id); XCTAssertEqual(resumed.state, .preparing)
     }
 }

@@ -5,16 +5,39 @@ import XCTest
 
 final class ManagedDocumentationOperationsTests: XCTestCase {
     private actor ExecutionPreparer: ProjectExecutionAssignmentPreparing {
+        private final class Storage: @unchecked Sendable {
+            let lock = NSLock()
+            var value: ProjectExecutionAssignment?
+        }
+        private nonisolated let storage = Storage()
         var prepares = 0
-        var value: ProjectExecutionAssignment?
-        func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) throws -> ProjectExecutionAssignment {
+        var gate: DocumentationCommitGate?
+        var value: ProjectExecutionAssignment? {
+            get { storage.lock.withLock { storage.value } }
+            set { storage.lock.withLock { storage.value = newValue } }
+        }
+        func setGate(_ gate: DocumentationCommitGate) { self.gate = gate }
+        func prepare(project: AuthorizedProject, work: ProjectExecutionWork, requestID: UUID, reviewOfAssignmentID: String?, baselineFromAssignmentID: String?, contextPaths: [String]) async throws -> ProjectExecutionAssignment {
             prepares += 1
             guard reviewOfAssignmentID == nil, baselineFromAssignmentID == nil else { throw ProjectExecutionError.assignmentNotAuthorized }
-            let assignment = ProjectExecutionAssignment(id: "delivery-" + requestID.uuidString.lowercased(), registration: project.registration!,
+            if let gate { await gate.enterAndWait(); self.gate = nil }
+            var assignment = ProjectExecutionAssignment(id: "delivery-" + requestID.uuidString.lowercased(), registration: project.registration!,
                 checkoutPath: "/Fixture/Checkout", role: .delivery, permissionProfile: "rr-fixture", model: "gpt-5.6-terra", effort: "medium",
                 authorization: "Existing bounded work", context: contextPaths.map { .init(path: $0, digest: String(repeating: "a", count: 64)) },
                 excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], work: work)
-            value = assignment; return assignment
+            assignment.state = .preparing; value = assignment; return assignment
+        }
+        nonisolated func admitPrepared(_ assignment: ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
+            try storage.lock.withLock {
+                guard storage.value == assignment, assignment.state == .preparing else { throw ProjectExecutionError.assignmentNotAuthorized }
+                var admitted = assignment; admitted.state = .authorized; storage.value = admitted; return admitted
+            }
+        }
+        nonisolated func revokePreparation(_ assignment: ProjectExecutionAssignment) throws {
+            try storage.lock.withLock {
+                guard var current = storage.value, current.id == assignment.id, current.work == assignment.work else { throw ProjectExecutionError.identityMismatch }
+                current.state = .revoked; current.finalizationFailed = true; storage.value = current
+            }
         }
         func readCurrent(project: AuthorizedProject, assignmentID: String) throws -> ProjectExecutionAssignment {
             guard let value, value.id == assignmentID, value.registration == project.registration else { throw ProjectExecutionError.identityMismatch }; return value
@@ -76,6 +99,41 @@ final class ManagedDocumentationOperationsTests: XCTestCase {
         let review = await dispatcher.dispatch(.init(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Unknown review candidate",
             command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: "delivery-unknown", baselineFromAssignmentID: nil)))
         XCTAssertEqual(review.error, .execution(.assignmentNotAuthorized))
+    }
+
+    func testPausedPreparationCannotPublishAuthorityAfterWorkChangedBeforeAssignmentExists() async throws {
+        let (store, root, registration, dispatcher, preparer) = try await executionFixture()
+        let gate = DocumentationCommitGate(); await preparer.setGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Existing work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        let operation = Task { await dispatcher.dispatch(request) }
+        await gate.waitUntilEntered()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change work during installation validation",
+            auditScope: .init(projectID: registration.projectID, entityType: .ticketTaskPlan, entityID: "ticket")) {
+            try $0.execute("UPDATE ticket_tasks SET title='Changed task' WHERE project_id='p' AND ticket_id='ticket'")
+        }
+        await gate.release()
+        let result = await operation.value
+        XCTAssertEqual(result.error, .execution(.assignmentNotAuthorized))
+        let value = await preparer.value; XCTAssertEqual(value?.state, .revoked)
+        XCTAssertNil(result.executionAssignment)
+    }
+
+    func testExpiredFinalAdmissionRevokesPreparedAuthorityAndExactRequestCanRecover() async throws {
+        let (_, root, registration, dispatcher, preparer) = try await executionFixture()
+        let gate = DocumentationCommitGate(); await preparer.setGate(gate)
+        let request = AgentCommandEnvelope(version: 1, requestID: UUID(), projectRoot: root.path, expectedRegistration: registration, reason: "Existing work",
+            command: .prepareExecutionAssignment(projectID: "p", ticketID: "ticket", taskID: "task", expectedTaskPlanRevision: 1, expectedPhaseRevision: 2, reviewOfAssignmentID: nil, baselineFromAssignmentID: nil))
+        let deadline = Date().addingTimeInterval(5).timeIntervalSince1970
+        let operation = Task { await dispatcher.dispatch(request, admissionDeadline: deadline) }
+        await gate.waitUntilEntered()
+        try await Task.sleep(nanoseconds: UInt64(max(0, deadline - Date().timeIntervalSince1970 + 0.05) * 1_000_000_000))
+        await gate.release()
+        let result = await operation.value
+        XCTAssertEqual(result.error, .execution(.unavailable))
+        let value = await preparer.value; XCTAssertEqual(value?.state, .revoked)
+        let recovered = await dispatcher.dispatch(request)
+        XCTAssertNil(recovered.error); XCTAssertEqual(recovered.executionAssignment?.state, .authorized)
     }
 
     func testManagedEvidenceWriterRejectsCompletedTicketAssociation() async throws {

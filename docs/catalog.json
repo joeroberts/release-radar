@@ -7,7 +7,7 @@
       "collectionID": "delivery.task-briefs.2026-09-16-outcome3-execution-setup",
       "path": "docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup",
       "parentCollection": "delivery.task-briefs",
-      "purpose": "Outcome 3 deterministic project execution setup; progress controls authorization",
+      "purpose": "Outcome 3 deterministic project execution setup and owned lifecycle; progress controls authorization",
       "allowedContents": [
         "Controlling implementation brief"
       ],

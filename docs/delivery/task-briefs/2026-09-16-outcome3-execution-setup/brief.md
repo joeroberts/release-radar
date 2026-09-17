@@ -137,12 +137,27 @@ sandbox/bookmark access and complete integration/review remain unverified.
 
 Main/BuildAgent corrected checkpoint 10 app build passed, with 26 focused checks
 passing; the three lifecycle cases passed after a bounded fixture-schema correction.
-The candidate now includes production observer/preparer injection, recovery
+The first candidate includes production observer/preparer injection, recovery
 reconciliation and the strict registered AgentTools preparation route, with focused
-route tests written before that wiring. Its new checks, independent architecture/
-security/code review and scoped local commit remain pending. Source and delivery
-documentation are frozen for Main's trusted check/review/commit route; Outcome 3
-is not complete. Subsequent coherent validated/reviewed slices should be committed
+route tests written before that wiring. Checkpoint 11 app build and 29 focused tests,
+documentation and diff checks passed before Main/BuildAgent made scoped commit
+`ffdd65601bd36852b801d79a2061a68f4c7548cc`. Its fresh independent review returned
+four Required findings; it remains unaccepted. The bounded correction candidate adds
+non-admissible preparation/final admission with exact-request revocation recovery,
+startup reservation invalidation, independent known-run STOP/cleanup after uncertain
+responses, and operation reservation before awaited follow-up readiness. Existing
+project settings now expose owner-only hook update/removal with exact registration
+audit, conflict preservation and a disabled workflow until deliberate recovery.
+Main/BuildAgent checkpoint 12 passed the app dependency build and 34 focused tests
+after the worker corrected one missing `await`; the initial compile failure ran no
+tests. Documentation/index and diff checks passed. The scoped local correction
+candidate remains unaccepted pending the same independent review; the current
+result and limitations are recorded in the delivery ledger. Most focused hook/producer/adapter regressions preceded
+their bounded corrections; command-route pause/deadline and owner-wrapper tests
+followed their source, and no initial native red run is claimed. Runtime UI, actual
+worker boundaries and the remaining profile/worktree lifecycle and explicit owner
+recovery retain the complete original scope. Outcome 3 is not complete.
+Subsequent coherent validated/reviewed slices should be committed
 without waiting for whole-outcome completion, as the owner directed through Main.
 
 Durable inputs include the pinned libgit2 source/license/notices/lock, module headers
