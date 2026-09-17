@@ -41,7 +41,12 @@ final class ExecutionWorktreeTests: XCTestCase {
         XCTAssertEqual(try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline), tree)
         try provisioner.remove(primaryRoot: fixture.root, worktree: tree, projectID: "project-one", taskID: "task-one")
         XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.checkout.path))
+        try provisioner.remove(primaryRoot: fixture.root, worktree: tree, projectID: "project-one", taskID: "task-one")
         XCTAssertEqual(try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline), tree)
+        let wrongIdentity = ExecutionWorktree(checkout: tree.checkout, baseline: tree.baseline, branch: "codex/unowned",
+            commonGitDirectory: tree.commonGitDirectory, primaryRoot: tree.primaryRoot)
+        XCTAssertThrowsError(try provisioner.remove(primaryRoot: fixture.root, worktree: wrongIdentity, projectID: "project-one", taskID: "task-one"))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.checkout.path))
         try Data("owner edit".utf8).write(to: fixture.checkout.appendingPathComponent("source.txt"))
         XCTAssertThrowsError(try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline))
         XCTAssertThrowsError(try provisioner.remove(primaryRoot: fixture.root, worktree: tree, projectID: "project-one", taskID: "task-one"))
@@ -54,5 +59,30 @@ final class ExecutionWorktreeTests: XCTestCase {
         XCTAssertThrowsError(try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline))
         XCTAssertThrowsError(try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: "main~1"))
         XCTAssertEqual(try String(contentsOf: fixture.checkout.appendingPathComponent("owner.txt"), encoding: .utf8), "keep")
+    }
+
+    func testUntrackedDataAndWrongCommonGitIdentityCannotBePruned() throws {
+        let fixture = try fixture(); let provisioner = LibGit2WorktreeProvisioner()
+        let tree = try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline)
+        let wrong = ExecutionWorktree(checkout: tree.checkout, baseline: tree.baseline, branch: tree.branch,
+            commonGitDirectory: tree.commonGitDirectory + "-other", primaryRoot: tree.primaryRoot)
+        XCTAssertThrowsError(try provisioner.remove(primaryRoot: fixture.root, worktree: wrong, projectID: "project-one", taskID: "task-one"))
+        try Data("untracked owner data".utf8).write(to: fixture.checkout.appendingPathComponent("owner.txt"))
+        XCTAssertThrowsError(try provisioner.remove(primaryRoot: fixture.root, worktree: tree, projectID: "project-one", taskID: "task-one"))
+        XCTAssertEqual(try String(contentsOf: fixture.checkout.appendingPathComponent("owner.txt"), encoding: .utf8), "untracked owner data")
+    }
+
+    func testIgnoredOwnerContentBlocksPruningAndRemainsIntact() throws {
+        let fixture = try fixture(); let provisioner = LibGit2WorktreeProvisioner()
+        let tree = try provisioner.prepare(primaryRoot: fixture.root, checkout: fixture.checkout, projectID: "project-one", taskID: "task-one", baseline: fixture.baseline)
+        try FileManager.default.createDirectory(at: fixture.root.appendingPathComponent(".git/info"), withIntermediateDirectories: true)
+        try Data(".env\nignored-data/\n".utf8).write(to: fixture.root.appendingPathComponent(".git/info/exclude"))
+        let ignored = fixture.checkout.appendingPathComponent(".env")
+        let contents = Data("fixture owner content, not credentials".utf8)
+        try contents.write(to: ignored)
+        XCTAssertThrowsError(try provisioner.remove(primaryRoot: fixture.root, worktree: tree, projectID: "project-one", taskID: "task-one"))
+        XCTAssertEqual(try Data(contentsOf: ignored), contents)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.checkout.path))
+        XCTAssertEqual(try head(at: fixture.checkout).revision, fixture.baseline)
     }
 }

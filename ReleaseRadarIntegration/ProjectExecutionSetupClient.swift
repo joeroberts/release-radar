@@ -26,6 +26,10 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             handlerPath: bundle.appendingPathComponent("Contents/Helpers/ReleaseRadarCoordinator").path)
     }
 
+    static func resources(plugin: CodexPluginLifecycleCoordinator?) -> ProjectExecutionResourceLifecycle {
+        .init(configuration: ProjectExecutionSetupClient(plugin: plugin))
+    }
+
     func validateInstallation(handlerPath: String) async throws {
         try await validateHandlerIdentity(handlerPath: handlerPath)
         guard let plugin else { throw ProjectExecutionError.unavailable }
@@ -40,7 +44,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         }
     }
 
-    func validateHandlerIdentity(handlerPath: String) throws {
+    func validateHandlerIdentity(handlerPath: String) async throws {
         guard handlerPath == bundle.appendingPathComponent("Contents/Helpers/ReleaseRadarCoordinator").path,
               bundle.resolvingSymlinksInPath().path == bundle.path else { throw ProjectExecutionError.unavailable }
         try verifyCode(bundle, identifier: "com.rekonlabs.ReleaseRadar")
@@ -61,7 +65,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         }
     }
 
-    private func rpc(_ method: String, _ params: RPCObject) async throws -> RPCObject {
+    private func rpc(_ method: String, _ params: RPCObject, beforeWrite: @Sendable () async throws -> Void = {}) async throws -> RPCObject {
         if let cleanupFailure { throw cleanupFailure }
         if transport == nil {
             let connection = try AppServerTransport(executable: CodexExecutionIdentity.executable,
@@ -81,6 +85,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             }
         }
         guard let transport else { throw ProjectExecutionError.unavailable }
+        try await beforeWrite()
         return try await transport.call(method, params)
     }
 
@@ -105,11 +110,11 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         String(decoding: try JSONSerialization.data(withJSONObject: key, options: [.fragmentsAllowed]), as: UTF8.self)
     }
 
-    private func writeUser(root: String, layer: [String: Any], key: String, value: Any) async throws {
+    private func writeUser(root: String, layer: [String: Any], key: String, value: Any, beforeWrite: @Sendable () async throws -> Void = {}) async throws {
         guard let name = layer["name"] as? [String: Any], let file = name["file"] as? String,
               let version = layer["version"] as? String else { throw ProjectExecutionError.unavailable }
         _ = try await rpc("config/batchWrite", RPCObject(["filePath": file, "expectedVersion": version,
-            "edits": [["keyPath": key, "value": value, "mergeStrategy": "upsert"]], "reloadUserConfig": true]))
+            "edits": [["keyPath": key, "value": value, "mergeStrategy": "upsert"]], "reloadUserConfig": true]), beforeWrite: beforeWrite)
     }
 
     func hookStorage(primaryRoot: String) async throws -> ProjectExecutionHookStorage {
@@ -126,7 +131,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         return .projectFile
     }
 
-    func saveInlineHook(primaryRoot: String, data: Data, expected: Data) async throws {
+    func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws {
         guard case let .inline(current) = try await hookStorage(primaryRoot: primaryRoot), current == expected,
               let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let hooks = object["hooks"] as? [String: Any] else { throw ProjectExecutionError.conflict }
@@ -139,8 +144,9 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
               let raw = layer["config"] as? [String: Any], let old = raw["hooks"],
               try JSONSerialization.data(withJSONObject: ["hooks": old], options: [.sortedKeys, .prettyPrinted]) == expected else { throw ProjectExecutionError.conflict }
         _ = try await rpc("config/batchWrite", RPCObject(["filePath": primaryRoot + "/.codex/config.toml", "expectedVersion": version,
-            "edits": [["keyPath": "hooks", "value": hooks, "mergeStrategy": "replace"]], "reloadUserConfig": true]))
+            "edits": [["keyPath": "hooks", "value": hooks, "mergeStrategy": "replace"]], "reloadUserConfig": true]), beforeWrite: beforeWrite)
         guard case let .inline(actual) = try await hookStorage(primaryRoot: primaryRoot), actual == data else { throw ProjectExecutionError.conflict }
+        try await beforeWrite()
     }
 
     func prepareWorkerProfile(primaryRoot: String, profile: ProjectExecutionPermissionProfile) async throws {
@@ -158,7 +164,27 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
               NSDictionary(dictionary: actual).isEqual(to: desired) else { throw ProjectExecutionError.conflict }
     }
 
-    func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool) async throws {
+    func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws {
+        try ProjectExecutionPaths.component(profileID)
+        let layer = try userLayer(await read(primaryRoot))
+        let raw = layer["config"] as? [String: Any] ?? [:]
+        guard raw["permissions"] == nil || raw["permissions"] is [String: Any] else { throw ProjectExecutionError.conflict }
+        let existing = raw["permissions"] as? [String: Any] ?? [:]
+        let profiles = try ProjectExecutionPermissionProfile.removingOwnedProfile(id: profileID, expected: expected, from: existing)
+        if existing[profileID] != nil {
+            guard let name = layer["name"] as? [String: Any], let file = name["file"] as? String,
+                  let version = layer["version"] as? String else { throw ProjectExecutionError.unavailable }
+            _ = try await rpc("config/batchWrite", RPCObject(["filePath": file, "expectedVersion": version,
+                "edits": [["keyPath": "permissions", "value": profiles, "mergeStrategy": "replace"]], "reloadUserConfig": true]))
+        }
+        let readback = try userLayer(await read(primaryRoot))
+        let config = readback["config"] as? [String: Any] ?? [:]
+        guard config["permissions"] == nil || config["permissions"] is [String: Any] else { throw ProjectExecutionError.conflict }
+        let actual = config["permissions"] as? [String: Any] ?? [:]
+        guard actual[profileID] == nil, NSDictionary(dictionary: actual).isEqual(to: profiles) else { throw ProjectExecutionError.conflict }
+    }
+
+    func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {
             let inline: Bool
             switch try await hookStorage(primaryRoot: primaryRoot) {
             case .projectFile: inline = false
@@ -170,7 +196,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             let trust = (projects[primaryRoot] as? [String: Any])?["trust_level"] as? String
             if trust != "trusted" {
                 guard permitOwnedTrust, trust == nil else { throw ProjectExecutionError.hookNotReady }
-                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(primaryRoot) + ".trust_level", value: "trusted")
+                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(primaryRoot) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
                 layer = try userLayer(await read(primaryRoot))
                 let readback = layer["config"] as? [String: Any] ?? [:]
                 guard ((readback["projects"] as? [String: Any])?[primaryRoot] as? [String: Any])?["trust_level"] as? String == "trusted" else { throw ProjectExecutionError.hookNotReady }
@@ -180,10 +206,11 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             if owned.trustStatus != "trusted" {
                 guard permitOwnedTrust else { throw ProjectExecutionError.hookNotReady }
                 layer = try userLayer(await read(primaryRoot))
-                try await writeUser(root: primaryRoot, layer: layer, key: "hooks.state." + quoted(owned.key), value: ["trusted_hash": owned.currentHash])
+                try await writeUser(root: primaryRoot, layer: layer, key: "hooks.state." + quoted(owned.key), value: ["trusted_hash": owned.currentHash], beforeWrite: beforeWrite)
             }
             let readback = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]))
             _ = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: true, inline: inline)
+            try await beforeWrite()
     }
 
     func finishConfiguration() throws {
@@ -193,6 +220,18 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         catch {
             let failure = AppServerTransportError(message: "Execution setup cleanup failed: \(error.localizedDescription)", outcomeUnknown: true)
             cleanupFailure = failure; throw failure
+        }
+    }
+
+    func recoverConfigurationConnection() async throws {
+        guard let cleanupFailure else { return }
+        guard let current = transport else { throw cleanupFailure }
+        do {
+            try current.close() // Explicit owner retry on the retained original connection.
+            transport = nil; self.cleanupFailure = nil
+        } catch {
+            let failure = AppServerTransportError(message: "Execution setup connection recovery remains incomplete: \(error.localizedDescription)", outcomeUnknown: true)
+            self.cleanupFailure = failure; throw failure
         }
     }
 }

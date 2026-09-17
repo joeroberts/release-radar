@@ -52,6 +52,17 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public var finalizationFailed: Bool? = nil
     public var preparedPolicyDigest: String? = nil
     public var uncertainOutcome: Bool? = nil
+    public var permissionProfileDefinition: Data? = nil
+    public var retirement: Retirement? = nil
+    public struct Retirement: Codable, Equatable, Sendable {
+        public let requestID: UUID
+        public let priorState: State
+        public var worktreeRemoved: Bool = false
+        public var profileRemoved: Bool = false
+        public var completed: Bool = false
+        public var connectionCloseUncertain: Bool? = nil
+        public init(requestID: UUID, priorState: State) { self.requestID = requestID; self.priorState = priorState }
+    }
     public struct Context: Codable, Equatable, Sendable {
         public let path: String
         public let digest: String
@@ -105,6 +116,17 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
             throw ProjectExecutionError.invalidAssignment
         }
         if let preparedPolicyDigest, preparedPolicyDigest.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) == nil { throw ProjectExecutionError.invalidAssignment }
+        if let definition = permissionProfileDefinition {
+            guard definition.count <= 32_768,
+                  let object = try JSONSerialization.jsonObject(with: definition) as? [String: Any],
+                  Set(object.keys) == ["filesystem", "network"], object["filesystem"] is [String: Any],
+                  let network = object["network"] as? [String: Any], Set(network.keys) == ["enabled"],
+                  network["enabled"] as? Bool == false else { throw ProjectExecutionError.invalidAssignment }
+        }
+        if let retirement {
+            guard state != .authorized, state != .preparing,
+                  !retirement.completed || (state == .superseded && retirement.worktreeRemoved && retirement.profileRemoved && retirement.connectionCloseUncertain != true) else { throw ProjectExecutionError.invalidAssignment }
+        }
         for source in context {
             guard !source.path.hasPrefix("/"), !source.path.split(separator: "/", omittingEmptySubsequences: false).contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }),
                   source.digest.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) != nil,

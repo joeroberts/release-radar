@@ -10,17 +10,21 @@ public protocol ProjectExecutionConfiguring: Sendable {
     func validateInstallation(handlerPath: String) async throws
     func validateHandlerIdentity(handlerPath: String) async throws
     func hookStorage(primaryRoot: String) async throws -> ProjectExecutionHookStorage
-    func saveInlineHook(primaryRoot: String, data: Data, expected: Data) async throws
-    func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool) async throws
+    func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws
+    func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws
     func finishConfiguration() async throws
+    func recoverConfigurationConnection() async throws
     func prepareWorkerProfile(primaryRoot: String, profile: ProjectExecutionPermissionProfile) async throws
+    func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws
 }
 
 public extension ProjectExecutionConfiguring {
     func validateHandlerIdentity(handlerPath: String) async throws { try await validateInstallation(handlerPath: handlerPath) }
+    func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws { throw ProjectExecutionError.unavailable }
+    func recoverConfigurationConnection() async throws { try await finishConfiguration() }
 }
 
-public enum ProjectExecutionHookAction: String, Sendable { case update, remove }
+public enum ProjectExecutionHookAction: String, Sendable { case update, remove, resume }
 
 public enum ProjectExecutionHookRemovalError: Error, LocalizedError {
     case workersNotClosed
@@ -68,8 +72,8 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         try await configuration.finishConfiguration()
     }
 
-    private func prepareOperation(project: AuthorizedProject, permitHandlerUpdate: Bool = false,
-                                  beforeWrite: @Sendable () async throws -> Void = {}) async throws {
+    private func prepareOperation(project: AuthorizedProject, permitHandlerUpdate: Bool = false, permitOwnerResume: Bool = false,
+                                  beforeWrite: @escaping @Sendable () async throws -> Void = {}) async throws {
         let registration = try identity(project)
         try await configuration.validateInstallation(handlerPath: handlerPath)
         try await beforeWrite()
@@ -78,9 +82,15 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         guard handlerPath.hasPrefix("/"), !handlerPath.contains("\""), !handlerPath.contains("\n") else { throw ProjectExecutionError.invalidAssignment }
         var policy: ProjectExecutionPolicy
         if let existing = try store.policyIfPresent(projectID: project.projectID.rawValue) {
+            if permitOwnerResume {
+                guard !existing.enabled else { throw StoreError.unavailable("The project workflow is already enabled. Existing stopped or uncertain workers still require their own recovery.") }
+                guard existing.hookRemovalReceipt?.completed == true else { throw StoreError.unavailable("Finish hook removal and resolve its conflicting edits before resuming the project workflow.") }
+            }
             guard existing.registration == registration, existing.primaryRoot == project.canonicalRoot.path,
                   (existing.handlerPath == handlerPath || permitHandlerUpdate), existing.appServerExecutable == CodexExecutionIdentity.executable,
-                  existing.enabled, existing.hookRemovalReceipt == nil, existing.consent == ProjectExecutionPolicy.Consent() else { throw ProjectExecutionError.assignmentNotAuthorized }
+                  !permitOwnerResume || !existing.enabled,
+                  (existing.enabled && existing.hookRemovalReceipt == nil || permitOwnerResume && !existing.enabled && existing.hookRemovalReceipt?.completed == true),
+                  existing.consent == ProjectExecutionPolicy.Consent() else { throw ProjectExecutionError.assignmentNotAuthorized }
             policy = existing
             if existing.handlerPath != handlerPath {
                 guard existing.hookReceipt?.installed == true,
@@ -91,6 +101,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
                 try store.savePolicy(policy, expected: existing)
             }
         } else {
+            guard !permitOwnerResume else { throw ProjectExecutionError.assignmentNotAuthorized }
             policy = .init(registration: registration, primaryRoot: project.canonicalRoot.path,
                            appServerExecutable: CodexExecutionIdentity.executable, handlerPath: handlerPath)
             policy.consent = ProjectExecutionPolicy.Consent()
@@ -107,7 +118,15 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         try await beforeWrite()
         guard try store.policy(projectID: project.projectID.rawValue) == policy else { throw ProjectExecutionError.conflict }
         let output: Data
-        if let receipt = policy.hookReceipt, !receipt.installed {
+        if permitOwnerResume, let removal = policy.hookRemovalReceipt,
+           policy.hookReceipt?.beforeDigest != removal.intendedDigest {
+            guard removal.inline == inline, digest(current) == removal.intendedDigest,
+                  try ProjectExecutionHookRegistration.removeIfPresent(current, previousCommand: removal.command) == current else { throw ProjectExecutionError.conflict }
+            output = try ProjectExecutionHookRegistration.merge(current, command: command, previousCommand: nil)
+            var intent = policy
+            intent.hookReceipt = .init(command: command, inline: inline, beforeDigest: digest(current), intendedDigest: digest(output)!)
+            try store.savePolicy(intent, expected: policy); policy = intent
+        } else if let receipt = policy.hookReceipt, !receipt.installed {
             guard receipt.inline == inline, receipt.command == command else { throw ProjectExecutionError.conflict }
             if digest(current) == receipt.intendedDigest {
                 // Confirm the exact owned definition, not merely a matching path.
@@ -126,32 +145,53 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
             intent.hookReceipt = .init(command: command, inline: inline, beforeDigest: digest(current), intendedDigest: digest(output)!, previousCommand: policy.hookReceipt?.command)
             try store.savePolicy(intent, expected: policy); policy = intent
         }
+        let writePolicy = policy
+        let validateMutation: @Sendable () async throws -> Void = {
+            try await beforeWrite()
+            guard try store.policy(projectID: project.projectID.rawValue) == writePolicy else { throw ProjectExecutionError.conflict }
+        }
+        try await validateMutation()
         if current != output {
             if inline {
                 guard let current else { throw ProjectExecutionError.conflict }
-                try await configuration.saveInlineHook(primaryRoot: policy.primaryRoot, data: output, expected: current)
+                try await configuration.saveInlineHook(primaryRoot: policy.primaryRoot, data: output, expected: current, beforeWrite: validateMutation)
             } else { try repository.saveHookConfiguration(output, expected: current) }
         }
-        try await configuration.verifyHook(primaryRoot: policy.primaryRoot, checkout: policy.primaryRoot, command: command, permitOwnedTrust: true)
+        try await configuration.verifyHook(primaryRoot: policy.primaryRoot, checkout: policy.primaryRoot, command: command, permitOwnedTrust: true, beforeWrite: validateMutation)
+        try await validateMutation()
         // Preserve a concurrent disablement or identity change instead of marking it ready.
         guard try store.policy(projectID: project.projectID.rawValue) == policy else { throw ProjectExecutionError.conflict }
+        if permitOwnerResume {
+            for value in try store.assignments(projectID: project.projectID.rawValue) where [.authorized, .preparing].contains(value.state) {
+                var revoked = value; revoked.state = .revoked; revoked.finalizationFailed = nil
+                if value.sessionID != nil { revoked.launchReserved = true }
+                try store.saveAssignment(revoked, expected: value)
+            }
+        }
         var installed = policy; installed.hookReceipt?.installed = true
+        if permitOwnerResume { installed.enabled = true; installed.hookRemovalReceipt = nil }
         try store.savePolicy(installed, expected: policy)
     }
 
-    public func update(project: AuthorizedProject, beforeWrite: @Sendable () async throws -> Void = {}) async throws {
+    public func update(project: AuthorizedProject, beforeWrite: @escaping @Sendable () async throws -> Void = {}) async throws {
         do { try await prepareOperation(project: project, permitHandlerUpdate: true, beforeWrite: beforeWrite) }
         catch { let failure = error; try await configuration.finishConfiguration(); throw failure }
         try await configuration.finishConfiguration()
     }
 
-    public func removeHook(project: AuthorizedProject, beforeWrite: @Sendable () async throws -> Void = {}) async throws {
+    public func removeHook(project: AuthorizedProject, beforeWrite: @escaping @Sendable () async throws -> Void = {}) async throws {
         do { try await removeHookOperation(project: project, beforeWrite: beforeWrite) }
         catch { let failure = error; try await configuration.finishConfiguration(); throw failure }
         try await configuration.finishConfiguration()
     }
 
-    private func removeHookOperation(project: AuthorizedProject, beforeWrite: @Sendable () async throws -> Void) async throws {
+    public func resume(project: AuthorizedProject, beforeWrite: @escaping @Sendable () async throws -> Void = {}) async throws {
+        do { try await prepareOperation(project: project, permitOwnerResume: true, beforeWrite: beforeWrite) }
+        catch { let failure = error; try await configuration.finishConfiguration(); throw failure }
+        try await configuration.finishConfiguration()
+    }
+
+    private func removeHookOperation(project: AuthorizedProject, beforeWrite: @escaping @Sendable () async throws -> Void) async throws {
         let registration = try identity(project)
         try await beforeWrite()
         let store = try store()
@@ -166,7 +206,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         // Keep the admission hook until known sessions are closed. Removing it
         // while an uncertain/live task remains would open an unmanaged prompt route.
         guard try store.assignments(projectID: project.projectID.rawValue).allSatisfy({ value in
-            value.state != .unknown && value.uncertainOutcome != true && (value.state == .closed || value.connectionClosed == true || value.sessionID == nil)
+            (value.state != .unknown && value.uncertainOutcome != true || value.state == .superseded && value.retirement?.completed == true) && (value.state == .closed || value.connectionClosed == true || value.sessionID == nil && value.launchReserved != true)
         }) else { throw ProjectExecutionHookRemovalError.workersNotClosed }
         try await configuration.validateHandlerIdentity(handlerPath: handlerPath)
         let mode = try await configuration.hookStorage(primaryRoot: policy.primaryRoot)
@@ -197,13 +237,19 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
             try store.savePolicy(intent, expected: policy); policy = intent
         }
         guard try store.assignments(projectID: project.projectID.rawValue).allSatisfy({ value in
-            value.state != .unknown && value.uncertainOutcome != true && (value.state == .closed || value.connectionClosed == true || value.sessionID == nil)
+            (value.state != .unknown && value.uncertainOutcome != true || value.state == .superseded && value.retirement?.completed == true) && (value.state == .closed || value.connectionClosed == true || value.sessionID == nil && value.launchReserved != true)
         }) else { throw ProjectExecutionHookRemovalError.workersNotClosed }
+        let writePolicy = policy
+        let validateMutation: @Sendable () async throws -> Void = {
+            try await beforeWrite()
+            guard try store.policy(projectID: project.projectID.rawValue) == writePolicy else { throw ProjectExecutionError.conflict }
+        }
+        try await validateMutation()
         if current != output {
             guard let output else { throw ProjectExecutionError.conflict }
             if owned.inline {
                 guard let current else { throw ProjectExecutionError.conflict }
-                try await configuration.saveInlineHook(primaryRoot: policy.primaryRoot, data: output, expected: current)
+                try await configuration.saveInlineHook(primaryRoot: policy.primaryRoot, data: output, expected: current, beforeWrite: validateMutation)
             } else { try repository.saveHookConfiguration(output, expected: current) }
         }
         let actual: Data?
@@ -211,7 +257,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
             guard case let .inline(data) = try await configuration.hookStorage(primaryRoot: policy.primaryRoot) else { throw ProjectExecutionError.conflict }
             actual = data
         } else { actual = try repository.hookConfiguration() }
-        try await beforeWrite()
+        try await validateMutation()
         guard actual == output, try store.policy(projectID: project.projectID.rawValue) == policy else { throw ProjectExecutionError.conflict }
         var removed = policy; removed.hookReceipt?.installed = false; removed.hookRemovalReceipt?.completed = true
         try store.savePolicy(removed, expected: policy)
@@ -235,7 +281,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         guard policy.registration == registration, policy.primaryRoot == project.canonicalRoot.path,
               policy.enabled, policy.consent == ProjectExecutionPolicy.Consent(), let receipt = policy.hookReceipt, receipt.installed,
               receipt.command == "\"" + handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
-        try await configuration.verifyHook(primaryRoot: policy.primaryRoot, checkout: policy.primaryRoot, command: receipt.command, permitOwnedTrust: false)
+        try await configuration.verifyHook(primaryRoot: policy.primaryRoot, checkout: policy.primaryRoot, command: receipt.command, permitOwnedTrust: false, beforeWrite: {})
         guard try store.policy(projectID: project.projectID.rawValue) == policy else { throw ProjectExecutionError.conflict }
     }
 }

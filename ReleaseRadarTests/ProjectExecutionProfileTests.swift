@@ -3,6 +3,20 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionProfileTests: XCTestCase {
+    func testOwnedProfileRemovalPreservesUnrelatedProfilesAndOwnerRemovalButRefusesEdits() throws {
+        let owned: [String: Any] = ["filesystem": [":root": "deny"], "network": ["enabled": false]]
+        let expected = try JSONSerialization.data(withJSONObject: owned, options: [.sortedKeys])
+        let other: [String: Any] = ["filesystem": ["/Owner": "read"], "network": ["enabled": true]]
+        let remaining = try ProjectExecutionPermissionProfile.removingOwnedProfile(id: "rr-owned", expected: expected,
+            from: ["rr-owned": owned, "owner-profile": other])
+        XCTAssertNil(remaining["rr-owned"])
+        XCTAssertTrue(NSDictionary(dictionary: remaining).isEqual(to: ["owner-profile": other]))
+        XCTAssertTrue(NSDictionary(dictionary: try ProjectExecutionPermissionProfile.removingOwnedProfile(id: "rr-owned", expected: expected,
+            from: remaining)).isEqual(to: remaining))
+        XCTAssertThrowsError(try ProjectExecutionPermissionProfile.removingOwnedProfile(id: "rr-owned", expected: expected,
+            from: ["rr-owned": other, "owner-profile": other]))
+    }
+
     func testDeliveryAndReviewProfilesGrantOnlyExactAuthorityReadsAndOwnedCheckout() throws {
         let root = URL(fileURLWithPath: "/Execution")
         let paths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: "task-one")

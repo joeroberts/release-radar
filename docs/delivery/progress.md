@@ -2,7 +2,96 @@
 
 ## Current outcome
 
-**Current candidate checkpoint — direct checks passed; unaccepted pending independent correction review.**
+**Current cleanup corrections — checks and review passed; ready for scoped local candidate commit.**
+Main/BuildAgent checkpoint 15 passed the app build, 16 of 17 selected tests and
+documentation/diff checks; native processes exited. Worktree 4 (including actual
+ignored-content preservation), assignment 5 and producer 7 of 8 passed. The sole
+same-connection regression observed close counts 2 versus expected 1, then 3 versus
+expected 2. Source diagnosis found its producer shared the retirement configuration
+fixture; the producer's rejected preparation calls its own finish operation, adding
+a close to the shared fixture. Production factories allocate separate clients.
+The bounded test correction separates those clients, retains the original one/two
+close expectations and additionally asserts typed replacement conflict and the
+producer's independent finish call. No production source or behavior changed.
+Main/BuildAgent's fixture-corrected checkpoint 15 passed all eight producer tests
+and documentation/diff checks. The prior app build, worktree 4 and assignment 5
+passes remain valid and terminal absent a defect; no production change was made
+for the fixture correction. The cleanup review gate is cleared; reviewer
+`01a0ad5f-6db0-7ed0-bde6-0f274bb35353` returned PASS with no remaining Required
+or Optional findings in either correction. App build, all 17 affected tests after
+fixture correction, and documentation/diff checks passed. This validation is terminal.
+The candidate is ready for Main→BuildAgent's scoped local commit; no commit is yet
+claimed. Product source remains frozen. Runtime/UI acceptance, registration/root
+replacement and re-add recovery, and application catalog acceptance remain open;
+this does not complete Outcome 3. This update changes documentation only.
+Main/BuildAgent checkpoint 14 passed the app build, all 23 selected tests and
+documentation/diff checks; native processes exited. The same hook reviewer found
+no remaining Required or Optional issues. Hook P1 and R1–R4 validation are terminal.
+Cleanup reviewer `01a0ad5f-6db0-7ed0-bde6-0f274bb35353` identified two Required
+findings: default cleanliness could omit ignored owner files before pruning (P1),
+and retirement became complete before configuration connection closure (P2).
+The bounded fixes explicitly include ignored content in retirement status checks
+and defer superseded/completed until confirmed close. A protected outstanding-close
+marker keeps the exact request visible and blocks replacement. AppModel retains the
+same lifecycle/client; only an explicit matching request retries its held connection.
+A new client without the original handle refuses completion. Native ignored-content
+preservation and close failure/same-handle retry regressions preceded these fixes;
+no initial native red run is claimed. Checkpoint 15 and its bounded fixture correction
+are recorded above. Main owns affected
+native checks, scoped commit and the same cleanup reviewer’s correction route.
+No live state/configuration/install or external action is released; temporary material
+remains retained and excluded from staging.
+
+**Prior hook correction — direct checks and independent correction review passed.**
+Independent hook reviewer `01a0ad4c-9745-70d2-9366-153d4d6500c6` found a Required
+P1 on `c1968a4`: registration could change during configuration/trust reads before
+stale writes or an installed receipt. The bounded correction carries the exact
+current registration/root validator and pinned protected policy to inline hook edits,
+project trust and exact hook-hash trust writes, after intervening reads/connection
+initialization, and rechecks before installed/removal receipts. Three new regressions
+change/revoke registration during suspended trust discovery, inline removal and
+readiness readback. These tests preceded the bounded core correction; no initial
+native red run is claimed. Checkpoint 14 and terminal review are recorded above. Protocol witnesses/read-only
+producer calls receive only the required signature adaptation. Cleanup source and
+UI behavior remain frozen for their separate independent review; R1–R4 stay closed.
+Main/BuildAgent own the app build, affected tests and documentation/diff checks,
+scoped commit and same hook review correction route. No live action is released.
+
+**Prior lifecycle checkpoint — direct checks passed; cleanup behavior frozen for independent review.**
+Committed correction candidate `c1968a4dd99ad27f772fd9fd238abb325c74c350`
+passed the app build, all 34 focused tests, documentation/index and diff checks.
+The independent R1–R4 correction review has no remaining Required findings; that
+validation is terminal. Independent review of its new hook source is separately
+pending and does not establish runtime permission or UI acceptance.
+
+The next bounded source slice implements owner-selected resource retirement and
+explicit workflow restoration in existing project settings. It requires the exact
+registered snapshot and confirmed runtime closure (or a never-launched assignment),
+preserves dirty/untracked work and referenced candidates, prunes only the exact
+owned worktree while retaining its committed branch, and removes only the matching
+owned permission profile with versioned configuration/readback. Protected retirement
+receipts retain exact request identity, prior state and completed steps for retry.
+An explicit completed retirement permits replacement preparation, preserves unknown
+outcome history and never admits the old worker. Explicit workflow restoration keeps
+policy disabled until its unchanged owned hook is restored/trusted, refuses conflicts,
+and leaves stopped/unknown assignments blocked. No automatic resume is added.
+Main/BuildAgent checkpoint 13 passed the app build and all 50 selected tests: setup
+13, producer 7, profile 2, worktree 3, assignment 5, adapter 12, lifecycle 4 and execution
+routes 4. Documentation/index and diff checks passed; BuildAgent regenerated only
+the task-brief index. These results establish the selected native behaviors, not
+production permission boundaries or UI acceptance. Product source remains frozen
+for the fresh independent cleanup review through RO04 and Main's scoped commit route.
+This update records verified results only; no new source or live action is released.
+Independent architecture/security/code and UX/QA coverage remains required. Actual app/
+worker boundaries, running UI comparison and coordinated package identity remain open.
+Registration/root replacement or re-add recovery remains separately unresolved;
+this slice deliberately refuses stale identities rather than rebinding old authority.
+Application catalog acceptance and every live configuration/data/install/external
+action remain excluded. Durable source/tests/docs remain repository inputs; temporary
+reference plugin, stopped fixture and native outputs remain retained and excluded from
+staging, with no deletion authorized.
+
+**Prior correction checkpoint — committed direct evidence.**
 First scoped commit `ffdd65601bd36852b801d79a2061a68f4c7548cc` is unaccepted;
 its fresh independent review returned four Required findings. This bounded correction
 candidate keeps preparation non-admissible until the final app current-work check,
@@ -21,7 +110,7 @@ working-tree correction candidate based on `ffdd656`, using `xcodebuild` and the
 repository-native test filters. Temporary results remain in
 `build/execution-review-corrections-12-corrected.log` and its `.xcresult` bundle;
 this ledger retains the durable result. Main authorized the scoped local candidate
-commit, unaccepted pending the same independent review of Required corrections. This checkpoint does not complete Outcome 3. Actual app/worker
+commit `c1968a4dd99ad27f772fd9fd238abb325c74c350`; correction review and current slice are recorded above. This checkpoint does not complete Outcome 3. Actual app/worker
 permission boundaries, running responsive/accessibility UI QA, remaining owned profile/
 worktree lifecycle and explicit owner recovery, and coordinated package identity remain
 open. No live configuration, installation, application acceptance or external action is

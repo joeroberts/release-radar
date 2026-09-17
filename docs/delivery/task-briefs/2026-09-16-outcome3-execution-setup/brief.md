@@ -151,7 +151,9 @@ audit, conflict preservation and a disabled workflow until deliberate recovery.
 Main/BuildAgent checkpoint 12 passed the app dependency build and 34 focused tests
 after the worker corrected one missing `await`; the initial compile failure ran no
 tests. Documentation/index and diff checks passed. The scoped local correction
-candidate remains unaccepted pending the same independent review; the current
+candidate is committed as `c1968a4dd99ad27f772fd9fd238abb325c74c350`; independent
+R1–R4 correction review has no remaining Required findings. Its new hook-source
+review remains separately pending; the current
 result and limitations are recorded in the delivery ledger. Most focused hook/producer/adapter regressions preceded
 their bounded corrections; command-route pause/deadline and owner-wrapper tests
 followed their source, and no initial native red run is claimed. Runtime UI, actual
@@ -159,6 +161,77 @@ worker boundaries and the remaining profile/worktree lifecycle and explicit owne
 recovery retain the complete original scope. Outcome 3 is not complete.
 Subsequent coherent validated/reviewed slices should be committed
 without waiting for whole-outcome completion, as the owner directed through Main.
+
+## Owned lifecycle and explicit owner recovery checkpoint
+
+The next coherent slice retires only owner-selected exact registered assignments
+whose runtime connection is confirmed closed or never launched. It preserves dirty/
+untracked work and referenced candidates, retains committed branches, and removes
+only matching permission profiles through versioned configuration/readback. Protected
+receipts retain the exact request, prior outcome state and completed steps for retry.
+Unknown outcomes remain recorded after explicit retirement; replacement still needs
+a fresh current-work admission. The owner may explicitly restore an unchanged removed
+hook in existing settings; policy remains disabled until trusted verification, and
+old stopped/unknown workers are not readmitted. Ordinary onboarding/update cannot
+perform this resume. Exact registration/root intent and completion use app audit
+operations. No new dashboard, generic command, live mutation or authorization engine
+is introduced. Main/BuildAgent checkpoint 13 passed the app build and all 50 selected
+tests (setup 13, producer 7, profile 2, worktree 3, assignment 5, adapter 12, lifecycle
+4 and execution routes 4). Documentation/index and diff checks passed; BuildAgent
+regenerated only the task-brief index. Product source/tests remain frozen for the
+fresh independent cleanup review through RO04 and Main's scoped commit route.
+Native results do not establish production permission or runtime UI acceptance. Lifecycle
+regressions preceded their core source; expanded migration/owner-restoration checks
+followed source, with no initial native red run claimed. Runtime responsive/accessibility
+UI QA and actual app/worker boundaries remain open. Optional receipt fields preserve
+legacy decoding; existing worktrees are not automatically migrated or retired.
+Registration/root replacement or re-add recovery remains open; these operations
+refuse stale identities and do not silently rebind prior authority.
+
+## Required hook mutation-boundary correction
+
+Fresh hook review of `c1968a4` by `01a0ad4c-9745-70d2-9366-153d4d6500c6`
+identified a Required P1: registration changes during awaited configuration/trust
+reads could precede stale trust/inline writes or an installed receipt. Carry the
+existing exact registration/root validator to each actual hook configuration/trust
+write after reads and connection initialization, pin the protected policy, and
+recheck before receipts. Three focused suspended-call regressions precede this
+bounded correction. Main/BuildAgent checkpoint 14 passed the app build and all 23
+selected tests plus documentation/diff checks; native processes exited. The same
+hook reviewer found no remaining Required or Optional issues, terminal for this
+correction. Cleanup behavior
+and its separate review remain frozen; R1–R4 are terminal and not reopened. No new
+authority, runtime side effect or whole-outcome acceptance is claimed.
+
+## Required cleanup corrections
+
+Cleanup reviewer `01a0ad5f-6db0-7ed0-bde6-0f274bb35353` identified Required P1
+ignored-file pruning risk and P2 premature completion before configuration closure.
+Explicitly include ignored content in retirement cleanliness checks. Keep retirement
+incomplete until closure is confirmed, retain its exact outstanding request/connection
+marker and the app's original lifecycle/client, and allow only an explicit same-request
+retry of that held connection. A missing original handle remains blocked rather than
+claiming closure from a fresh client. Native content-preservation and close failure/
+same-handle retry regressions precede the fixes; no native red run is claimed. Source/
+docs are frozen for Main's affected checks, scoped commit and the same cleanup
+reviewer's correction route. Main/BuildAgent checkpoint 15 passed the app build,
+16 of 17 tests and documentation/diff checks; native processes exited. Worktree 4
+and assignment 5 passed; producer 7 of 8 passed. The only failure observed close
+counts 2/3 against expected 1/2. Its fixture shared a configuration object with the
+producer, whose rejection path also calls finish, unlike separate production clients.
+Correct the fixture ownership, retain 1/2 assertions and verify typed replacement
+conflict and independent producer finish. No production code changes are required;
+Main/BuildAgent's fixture-corrected checkpoint 15 passed producer 8/8 and
+documentation/diff checks. Prior app/worktree 4/assignment 5 passes remain valid;
+no production source changed for that correction. The cleanup review gate is cleared;
+reviewer `01a0ad5f-6db0-7ed0-bde6-0f274bb35353` returned PASS with no remaining
+Required or Optional findings in either correction. App build, all 17 affected tests
+after fixture correction and documentation/diff checks passed; validation is terminal.
+The candidate is ready for Main→BuildAgent's scoped local commit; product source
+remains frozen and no commit is yet claimed. Runtime/UI acceptance, registration/root
+replacement and re-add recovery, and application catalog acceptance remain open.
+Outcome 3 remains incomplete. Hook P1 and R1–R4 remain
+closed; no other feature, new recovery engine or live mutation is released.
 
 Durable inputs include the pinned libgit2 source/license/notices/lock, module headers
 and offline build script. Copied `plugins/coordinator-workers/` Python reference

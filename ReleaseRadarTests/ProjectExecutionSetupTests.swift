@@ -3,22 +3,46 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionSetupTests: XCTestCase {
+    actor Gate {
+        private var entered = false
+        private var arrival: CheckedContinuation<Void, Never>?
+        private var release: CheckedContinuation<Void, Never>?
+        func pause() async {
+            entered = true; arrival?.resume(); arrival = nil
+            await withCheckedContinuation { release = $0 }
+        }
+        func waitUntilEntered() async { if !entered { await withCheckedContinuation { arrival = $0 } } }
+        func resume() { release?.resume(); release = nil }
+    }
     actor Configuration: ProjectExecutionConfiguring {
         var inline: Data?
         var failReadiness = true
         var finishes = 0
+        var trustWrites = 0
+        var beforeTrust: Gate?
+        var afterTrust: Gate?
+        var beforeInline: Gate?
         init(inline: Data? = nil) { self.inline = inline }
         func validateInstallation(handlerPath: String) {}
         func hookStorage(primaryRoot: String) -> ProjectExecutionHookStorage { inline.map(ProjectExecutionHookStorage.inline) ?? .projectFile }
-        func saveInlineHook(primaryRoot: String, data: Data, expected: Data) throws {
+        func saveInlineHook(primaryRoot: String, data: Data, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws {
+            if let beforeInline { self.beforeInline = nil; await beforeInline.pause() }
+            try await beforeWrite()
             guard inline == expected else { throw ProjectExecutionError.conflict }; inline = data
         }
-        func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool) throws {
+        func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {
+            if let beforeTrust { self.beforeTrust = nil; await beforeTrust.pause() }
+            try await beforeWrite()
             if failReadiness { throw ProjectExecutionError.hookNotReady }
+            if permitOwnedTrust { trustWrites += 1 }
+            if let afterTrust { self.afterTrust = nil; await afterTrust.pause() }
         }
+        func pauseTrust(_ gate: Gate, after: Bool = false) { if after { afterTrust = gate } else { beforeTrust = gate } }
+        func pauseInline(_ gate: Gate) { beforeInline = gate }
         func finishConfiguration() { finishes += 1 }
         func prepareWorkerProfile(primaryRoot: String, profile: ProjectExecutionPermissionProfile) {}
         func recover() { failReadiness = false }
+        func setReadinessFailure(_ value: Bool) { failReadiness = value }
         func result() -> (Data?, Int) { (inline, finishes) }
     }
 
@@ -212,5 +236,123 @@ final class ProjectExecutionSetupTests: XCTestCase {
         let auditReasons = try await store.read { try $0.rows("SELECT reason,actor_id,project_id FROM audit_events WHERE reason LIKE 'Execution hook%'") }
         XCTAssertEqual(auditReasons.count, 2)
         for row in auditReasons { XCTAssertEqual(row["actor_id"], .text("release-radar-owner")); XCTAssertEqual(row["project_id"], .text("project-one")) }
+    }
+
+    func testOnlyExplicitOwnerResumeRestoresRemovedHookAndDoesNotReadmitOldAssignment() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let store = try ProjectExecutionFileStore(root: root, create: false)
+        let paths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: "stopped-one")
+        var stopped = ProjectExecutionAssignment(id: "stopped-one", registration: project.registration!, checkoutPath: paths.checkout.path,
+            role: .delivery, permissionProfile: "rr-stopped", model: "gpt-5.6-terra", effort: "medium", authorization: "Existing bounded work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))], excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], state: .stopped, sessionID: "stopped-session")
+        stopped.connectionClosed = true; try store.saveAssignment(stopped, expected: nil)
+        try await setup.removeHook(project: project)
+        do { try await setup.prepare(project: project); XCTFail("Onboarding retry cannot resume disabled workflow") } catch {}
+        try await setup.resume(project: project)
+        let policy = try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one")
+        XCTAssertTrue(policy.enabled); XCTAssertNil(policy.hookRemovalReceipt); XCTAssertEqual(policy.hookReceipt?.installed, true)
+        XCTAssertNotNil(try ProjectExecutionFileStore(root: repository, create: false).hookConfiguration())
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: "stopped-one"), stopped)
+    }
+
+    func testExplicitResumeRefusesConflictingEditAndLeavesWorkflowDisabled() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project); try await setup.removeHook(project: project)
+        let files = try ProjectExecutionFileStore(root: repository, create: false)
+        let before = try files.hookConfiguration()
+        let edit = Data(#"{"hooks":{},"ownerEdit":true}"#.utf8)
+        try files.saveHookConfiguration(edit, expected: before)
+        do { try await setup.resume(project: project); XCTFail("Explicit resume still preserves conflicting edits") } catch {}
+        XCTAssertEqual(try files.hookConfiguration(), edit)
+        XCTAssertFalse(try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one").enabled)
+    }
+
+    func testFailedExplicitResumeStaysDisabledAndExactOwnedIntentCanRetry() async throws {
+        let (root, _, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project); try await setup.removeHook(project: project)
+        await configuration.setReadinessFailure(true)
+        do { try await setup.resume(project: project); XCTFail("Unverified restoration must remain disabled") } catch {}
+        let store = try ProjectExecutionFileStore(root: root, create: false)
+        let pending = try store.policy(projectID: "project-one")
+        XCTAssertFalse(pending.enabled); XCTAssertEqual(pending.hookReceipt?.installed, false)
+        XCTAssertEqual(pending.hookRemovalReceipt?.completed, true)
+        do { try await setup.prepare(project: project); XCTFail("Onboarding cannot retry owner restoration") } catch {}
+        await configuration.recover(); try await setup.resume(project: project)
+        XCTAssertTrue(try store.policy(projectID: "project-one").enabled)
+        XCTAssertNil(try store.policy(projectID: "project-one").hookRemovalReceipt)
+    }
+
+    private func ownerMutationFixture() async throws -> (URL, AuthorizedProject, DeliveryStore, FolderProjectOnboarding) {
+        let (root, repository, project) = try fixture()
+        let store = DeliveryStore(databaseURL: repository.deletingLastPathComponent().appendingPathComponent("registration-race.sqlite"))
+        try await store.transact(actor: .init(id: "fixture"), reason: "Seed current owner registration") { c in
+            try c.execute("INSERT INTO projects(id,name) VALUES ('project-one','Fixture')")
+            try c.execute("INSERT INTO project_roots(id,project_id,path) VALUES ('root-one','project-one',?)", bindings: [.text(repository.path)])
+            try c.execute("INSERT INTO project_bookmarks(project_id,path,bookmark_data,is_stale) VALUES ('project-one',?,?,0)", bindings: [.text(repository.path), .blob(Data([1]))])
+            try c.execute("INSERT INTO project_registrations(project_id,registration_id,request_generation,setup_state) VALUES ('project-one','registration-one',1,'complete')")
+        }
+        let bookmarks = ProjectBookmarkStore(resolver: { _ in .init(url: repository, isStale: false) }, startAccessing: { _ in true }, stopAccessing: { _ in })
+        return (root, project, store, FolderProjectOnboarding(store: store, bookmarkStore: bookmarks))
+    }
+
+    func testRegistrationChangeDuringTrustReadPreventsTrustWriteAndInstalledReceipt() async throws {
+        let (root, project, store, onboarding) = try await ownerMutationFixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let priorWrites = await configuration.trustWrites
+        let gate = Gate(); await configuration.pauseTrust(gate)
+        let operation = Task { try await onboarding.manageExecutionHook(registration: project.registration!, action: .update, setup: setup) }
+        await gate.waitUntilEntered()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change registration during trust discovery") {
+            try $0.execute("UPDATE project_registrations SET request_generation=2 WHERE project_id='project-one'")
+        }
+        await gate.resume()
+        do { try await operation.value; XCTFail("Stale registration cannot write trust") } catch {}
+        let writes = await configuration.trustWrites; XCTAssertEqual(writes, priorWrites)
+        XCTAssertEqual(try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one").hookReceipt?.installed, false)
+    }
+
+    func testRegistrationChangeDuringInlineRemovalReadPreservesConfigurationAndPendingReceipt() async throws {
+        let (root, project, store, onboarding) = try await ownerMutationFixture()
+        let configuration = Configuration(inline: Data(#"{"hooks":{}}"#.utf8)); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let installed = await configuration.result().0
+        let gate = Gate(); await configuration.pauseInline(gate)
+        let operation = Task { try await onboarding.manageExecutionHook(registration: project.registration!, action: .remove, setup: setup) }
+        await gate.waitUntilEntered()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Change registration during inline configuration read") {
+            try $0.execute("UPDATE project_registrations SET request_generation=2 WHERE project_id='project-one'")
+        }
+        await gate.resume()
+        do { try await operation.value; XCTFail("Stale registration cannot remove inline hook") } catch {}
+        let actual = await configuration.result().0; XCTAssertEqual(actual, installed)
+        let policy = try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one")
+        XCTAssertFalse(policy.enabled); XCTAssertEqual(policy.hookRemovalReceipt?.completed, false)
+        XCTAssertEqual(policy.hookReceipt?.installed, true)
+    }
+
+    func testRegistrationChangeDuringReadbackCannotMarkHookInstalled() async throws {
+        let (root, project, store, onboarding) = try await ownerMutationFixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let gate = Gate(); await configuration.pauseTrust(gate, after: true)
+        let operation = Task { try await onboarding.manageExecutionHook(registration: project.registration!, action: .update, setup: setup) }
+        await gate.waitUntilEntered()
+        try await store.transact(actor: .init(id: "fixture"), reason: "Revoke registration during readiness readback") {
+            try $0.execute("DELETE FROM project_registrations WHERE project_id='project-one'")
+        }
+        await gate.resume()
+        do { try await operation.value; XCTFail("Readback cannot install a revoked registration") } catch {}
+        XCTAssertEqual(try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one").hookReceipt?.installed, false)
     }
 }

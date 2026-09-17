@@ -118,6 +118,7 @@ final class AppModel {
     private let externalServicesSuppressed: Bool
     private let codexObserver: any CodexObserver
     private var codexPluginCoordinator: CodexPluginLifecycleCoordinator?
+    private var executionResourceLifecycle: ProjectExecutionResourceLifecycle?
     let codexPluginShippedVersion: String
     private let codexPluginShippedCapability: RecognizedPluginCapability?
     private let pushoverKeychain: PushoverKeychainStore
@@ -2213,6 +2214,22 @@ final class AppModel {
     func manageExecutionHook(registration: ProjectRegistration, action: ProjectExecutionHookAction) async throws {
         try await projectOnboarding.manageExecutionHook(registration: registration, action: action, setup: executionSetupForOnboarding())
         _ = await reloadProjectProjections()
+    }
+
+    func executionAssignments(registration: ProjectRegistration) async throws -> [ProjectExecutionAssignment] {
+        try await projectOnboarding.executionAssignments(registration: registration, resources: executionResourcesForOwner())
+    }
+
+    func retireExecutionAssignment(_ expected: ProjectExecutionAssignment) async throws {
+        try await projectOnboarding.retireExecutionAssignment(expected: expected, resources: executionResourcesForOwner())
+        _ = await reloadProjectProjections()
+    }
+
+    private func executionResourcesForOwner() -> ProjectExecutionResourceLifecycle {
+        if let executionResourceLifecycle { return executionResourceLifecycle }
+        let resources = ProjectExecutionSetupClient.resources(plugin: codexPluginCoordinator)
+        executionResourceLifecycle = resources
+        return resources
     }
 
     func projectHealth(for projectID: ProjectID) async -> ProjectHealthSnapshot {

@@ -98,7 +98,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         if let existing = inventory.first(where: { $0.id == id }) {
             guard existing.work == work, existing.registration == registration, existing.role == role,
                   existing.reviewOfAssignmentID == reviewOfAssignmentID, existing.baselineFromAssignmentID == baselineFromAssignmentID,
-                  existing.uncertainOutcome != true,
+                  existing.uncertainOutcome != true, existing.retirement == nil,
                   existing.state == .preparing || (existing.state == .revoked && existing.finalizationFailed == true && existing.sessionID == nil && existing.launchReserved != true) else { throw ProjectExecutionError.assignmentNotAuthorized }
             try existing.verifyContext()
             guard let tree = existing.worktree, try provisioning.candidateRevision(worktree: tree) == tree.baseline else { throw ProjectExecutionError.identityMismatch }
@@ -112,14 +112,15 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         // Another request identity cannot silently replace an uncertain/live worker.
         guard !inventory.contains(where: {
             $0.registration == registration && $0.work?.ticketID == work.ticketID && $0.work?.taskID == work.taskID && $0.role == role
-                && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped || $0.uncertainOutcome == true || $0.finalizationFailed == true || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed))
+                && !($0.state == .superseded && $0.retirement?.completed == true)
+                && ($0.state == .authorized || $0.state == .preparing || $0.state == .unknown || $0.state == .stopped || $0.uncertainOutcome == true || $0.finalizationFailed == true || $0.retirement != nil || ($0.launchReserved == true && $0.connectionClosed != true && $0.state != .closed))
         }) else { throw ProjectExecutionError.conflict }
         let source: URL
         let baseline: String
         if let parentID = reviewOfAssignmentID ?? baselineFromAssignmentID {
             let parent = try store.assignment(projectID: project.projectID.rawValue, taskID: parentID)
             let parentPaths = try ProjectExecutionPaths(storageRoot: store.root, projectID: project.projectID.rawValue, taskID: parentID)
-            guard parent.registration == registration, parent.work == work, parent.state == .closed, parent.sessionID != nil,
+            guard parent.registration == registration, parent.work == work, parent.state == .closed, parent.retirement == nil, parent.sessionID != nil,
                   parent.checkoutPath == parentPaths.checkout.path, let tree = parent.worktree,
                   tree.primaryRoot == policy.primaryRoot, reviewOfAssignmentID == nil || parent.role == .delivery else { throw ProjectExecutionError.assignmentNotAuthorized }
             baseline = try provisioning.candidateRevision(worktree: tree)
@@ -153,15 +154,22 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
 
     private func configure(_ intent: ProjectExecutionAssignment, paths: ProjectExecutionPaths,
                            policy: ProjectExecutionPolicy, store: ProjectExecutionFileStore) async throws -> ProjectExecutionAssignment {
-        let assignment = intent
+        var assignment = intent
         let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
+        let definition = try profile.definition
+        if let prior = assignment.permissionProfileDefinition {
+            guard prior == definition else { throw ProjectExecutionError.conflict }
+        } else {
+            assignment.permissionProfileDefinition = definition
+            try store.saveAssignment(assignment, expected: intent)
+        }
         try await configuration.prepareWorkerProfile(primaryRoot: policy.primaryRoot, profile: profile)
         try await configuration.verifyHook(primaryRoot: policy.primaryRoot, checkout: paths.checkout.path,
-            command: "\"" + handlerPath + "\" --hook", permitOwnedTrust: false)
+            command: "\"" + handlerPath + "\" --hook", permitOwnedTrust: false, beforeWrite: {})
         try assignment.verifyContext()
         if let parentID = assignment.reviewOfAssignmentID ?? assignment.baselineFromAssignmentID {
             let parent = try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: parentID)
-            guard parent.state == .closed, parent.registration == assignment.registration, parent.work == assignment.work,
+            guard parent.state == .closed, parent.retirement == nil, parent.registration == assignment.registration, parent.work == assignment.work,
                   let tree = parent.worktree, try provisioning.candidateRevision(worktree: tree) == assignment.worktree?.baseline else { throw ProjectExecutionError.assignmentNotAuthorized }
         }
         guard try store.policy(projectID: assignment.registration.projectID.rawValue) == policy else { throw ProjectExecutionError.assignmentNotAuthorized }

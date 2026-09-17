@@ -36,4 +36,21 @@ public struct ProjectExecutionPermissionProfile: Equatable, Sendable {
         for (path, access) in absolute { result[path] = access }
         return result
     }
+
+    public var definition: Data {
+        get throws {
+            try JSONSerialization.data(withJSONObject: ["filesystem": filesystemObject, "network": ["enabled": false]], options: [.sortedKeys])
+        }
+    }
+
+    public static func removingOwnedProfile(id: String, expected: Data, from profiles: [String: Any]) throws -> [String: Any] {
+        try ProjectExecutionPaths.component(id)
+        guard let desired = try JSONSerialization.jsonObject(with: expected) as? [String: Any] else { throw ProjectExecutionError.invalidAssignment }
+        var remaining = profiles
+        if let existing = remaining[id] {
+            guard let object = existing as? [String: Any], NSDictionary(dictionary: object).isEqual(to: desired) else { throw ProjectExecutionError.conflict }
+            remaining.removeValue(forKey: id)
+        }
+        return remaining
+    }
 }

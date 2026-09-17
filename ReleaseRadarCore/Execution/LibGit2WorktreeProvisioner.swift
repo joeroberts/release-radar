@@ -22,9 +22,13 @@ public struct LibGit2WorktreeProvisioner: ExecutionWorktreeProvisioning, Sendabl
         try ProjectExecutionPaths.component(projectID); try ProjectExecutionPaths.component(taskID)
         return "rr-\(projectID)-\(taskID)"
     }
-    private func clean(_ repository: OpaquePointer) throws {
+    private func clean(_ repository: OpaquePointer, includingIgnored: Bool = false) throws {
         var list: OpaquePointer?
-        try check(git_status_list_new(&list, repository, nil))
+        if includingIgnored {
+            var options = git_status_options(); try check(git_status_options_init(&options, 1))
+            options.flags |= UInt32(GIT_STATUS_OPT_INCLUDE_IGNORED.rawValue | GIT_STATUS_OPT_RECURSE_IGNORED_DIRS.rawValue)
+            try check(git_status_list_new(&list, repository, &options))
+        } else { try check(git_status_list_new(&list, repository, nil)) }
         defer { git_status_list_free(list) }
         guard git_status_list_entrycount(list) == 0 else { throw ProjectExecutionError.conflict }
     }
@@ -98,14 +102,22 @@ public struct LibGit2WorktreeProvisioner: ExecutionWorktreeProvisioning, Sendabl
     }
 
     public func remove(primaryRoot: URL, worktree: ExecutionWorktree, projectID: String, taskID: String) throws {
-        guard worktree.primaryRoot == primaryRoot.path else { throw ProjectExecutionError.identityMismatch }
+        let worktreeName = try name(projectID: projectID, taskID: taskID)
+        guard worktree.primaryRoot == primaryRoot.path, worktree.branch == "codex/" + worktreeName,
+              URL(fileURLWithPath: worktree.checkout).resolvingSymlinksInPath().path == worktree.checkout else { throw ProjectExecutionError.identityMismatch }
         try check(git_libgit2_init()); defer { git_libgit2_shutdown() }
         let repo = try repository(primaryRoot); defer { git_repository_free(repo) }
-        var tree: OpaquePointer?; try check(git_worktree_lookup(&tree, repo, try name(projectID: projectID, taskID: taskID)))
+        guard git_repository_is_worktree(repo) == 0, git_repository_is_bare(repo) == 0,
+              git_repository_workdir(repo).map({ URL(fileURLWithPath: String(cString: $0)).standardizedFileURL.path }) == worktree.primaryRoot,
+              git_repository_commondir(repo).map({ URL(fileURLWithPath: String(cString: $0)).standardizedFileURL.path }) == worktree.commonGitDirectory else { throw ProjectExecutionError.identityMismatch }
+        var tree: OpaquePointer?; let lookup = git_worktree_lookup(&tree, repo, worktreeName)
         defer { git_worktree_free(tree) }
+        if lookup == GIT_ENOTFOUND.rawValue, !FileManager.default.fileExists(atPath: worktree.checkout) { return }
+        try check(lookup)
         guard git_worktree_path(tree).map({ URL(fileURLWithPath: String(cString: $0)).standardizedFileURL.path }) == worktree.checkout else { throw ProjectExecutionError.identityMismatch }
+        _ = try candidateRevision(worktree: worktree) // Exact branch/common Git and clean, including untracked data.
         let linked = try repository(URL(fileURLWithPath: worktree.checkout)); defer { git_repository_free(linked) }
-        try clean(linked) // Never discard dirty or untracked owner/worker data.
+        try clean(linked, includingIgnored: true) // Ignored files can still contain owner data.
         var options = git_worktree_prune_options(); try check(git_worktree_prune_options_init(&options, 1))
         options.flags = UInt32(GIT_WORKTREE_PRUNE_VALID.rawValue | GIT_WORKTREE_PRUNE_WORKING_TREE.rawValue | GIT_WORKTREE_PRUNE_LOCKED.rawValue)
         guard git_worktree_is_prunable(tree, &options) == 1 else { throw ProjectExecutionError.conflict }

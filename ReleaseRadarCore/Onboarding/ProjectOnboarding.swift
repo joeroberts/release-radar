@@ -880,18 +880,62 @@ public actor FolderProjectOnboarding: ProjectOnboarding {
             try context.verifyAuthorization(resolved)
             let project = AuthorizedProject(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url])
             let scope = AuditScope(projectID: registration.projectID, entityType: .project, entityID: registration.projectID.rawValue)
-            try await store.transact(actor: .init(id: "release-radar-owner"), reason: action == .remove ? "Execution hook removal requested" : "Execution hook update requested", auditScope: scope) {
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: "Execution hook \(action.rawValue) requested", auditScope: scope) {
                 try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
                 try context.verifyPersisted($0)
             }
             switch action {
             case .update: try await setup.update(project: project, beforeWrite: validate)
             case .remove: try await setup.removeHook(project: project, beforeWrite: validate)
+            case .resume: try await setup.resume(project: project, beforeWrite: validate)
             }
-            try await store.transact(actor: .init(id: "release-radar-owner"), reason: action == .remove ? "Execution hook removed; workflow remains disabled" : "Execution hook update verified", auditScope: scope) {
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: action == .remove ? "Execution hook removed; workflow remains disabled" : "Execution hook \(action.rawValue) verified", auditScope: scope) {
                 try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
                 try context.verifyPersisted($0)
             }
+        }
+    }
+
+    public func executionAssignments(registration: ProjectRegistration, resources: ProjectExecutionResourceLifecycle) async throws -> [ProjectExecutionAssignment] {
+        let context = try await executionOwnerContext(registration: registration)
+        return try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { resolved in
+            try context.verifyAuthorization(resolved)
+            return try await resources.assignments(project: .init(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url]))
+        }
+    }
+
+    public func retireExecutionAssignment(expected: ProjectExecutionAssignment, resources: ProjectExecutionResourceLifecycle) async throws {
+        let registration = expected.registration
+        let context = try await executionOwnerContext(registration: registration)
+        let validate: @Sendable () async throws -> Void = { [store] in
+            try await store.documentationRead {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+        try await bookmarkStore.withSecurityScopedAccess(bookmark: context.bookmark) { [store] resolved in
+            try context.verifyAuthorization(resolved)
+            let scope = AuditScope(projectID: registration.projectID, entityType: .project, entityID: expected.id)
+            let requestID = expected.retirement?.requestID ?? UUID()
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: "Execution resources retirement requested: \(expected.id), request \(requestID.uuidString)", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+            _ = try await resources.retire(project: .init(registration: registration, canonicalRoot: resolved.url, authorizedRoots: [resolved.url]),
+                expected: expected, requestID: requestID, beforeWrite: validate)
+            try await store.transact(actor: .init(id: "release-radar-owner"), reason: "Execution resources retired: \(expected.id), request \(requestID.uuidString); replacement requires new current-work admission", auditScope: scope) {
+                try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+                try context.verifyPersisted($0)
+            }
+        }
+    }
+
+    private func executionOwnerContext(registration: ProjectRegistration) async throws -> DocumentationRootContext {
+        let authorization = try await persistedProjectAuthorization(for: registration.projectID)
+        guard authorization.registration == registration, let path = authorization.rootPath else { throw OnboardingError.staleRegistration }
+        return try await store.documentationRead {
+            try ProjectLifecycleManager.requireCurrentAuthorization(projectID: registration.projectID, registration: registration, connection: $0)
+            return try DocumentationRootContext.read($0, path: path, projectID: registration.projectID.rawValue, schemaVersion: Int(StoreMigrations.currentVersion))
         }
     }
 

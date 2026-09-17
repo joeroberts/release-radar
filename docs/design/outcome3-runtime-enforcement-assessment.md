@@ -1205,3 +1205,147 @@ their bounded corrections, while command-route pause/deadline and owner-wrapper
 tests followed source; no initial native red run is claimed. Remaining owned profile/
 worktree lifecycle, explicit owner recovery, actual production sandbox/worker
 boundaries and coordinated release identity remain required future slices.
+
+#### Owned resource retirement and explicit owner restoration checkpoint
+
+Main/BuildAgent committed the prior corrections as
+`c1968a4dd99ad27f772fd9fd238abb325c74c350` after the app build, all 34 focused tests,
+documentation/index and diff checks passed. The independent R1–R4 correction review
+has no remaining Required findings and is terminal for that validation. Its new
+hook-source review is separate and pending; neither establishes runtime UI or the
+production sandbox boundary. Main/BuildAgent checkpoint 13 passed the next lifecycle
+candidate's app build and all 50 focused tests: setup 13, producer 7, profile 2,
+worktree 3, assignment 5, adapter 12, lifecycle 4 and execution routes 4. Documentation/
+index and diff checks passed; BuildAgent regenerated only the task-brief index.
+Product source remains frozen for the fresh independent cleanup review through RO04
+and Main's scoped commit route. These direct results cover selected native behaviors
+and do not establish production permission boundaries, running UI or Outcome 3 acceptance.
+
+Existing settings allow the owner to select an exact current assignment and explicitly
+retire its resources to allow replacement. The app holds the registered root bookmark,
+rechecks registration/root and records intent/completion. Retirement requires confirmed
+runtime closure or a never-launched assignment; an uncertain launch without closure
+proof remains blocked. It records an exact request identity and prior state before
+external effects. It refuses referenced candidates and prunes only the exact clean
+owned checkout after branch/common-Git/root verification. Dirty and untracked data
+remain untouched. libgit2 retains the branch and committed history; no branch deletion,
+history rewrite or generic filesystem removal is introduced. Known already-pruned
+worktrees can read back as absent only when both lookup and checkout agree.
+
+New preparation pins the finite profile definition before configuration. Retirement
+removes only a semantically identical owned profile, honoring prior removal and
+preserving every unrelated profile through a version-checked replacement/readback of
+the existing permissions map. Legacy assignments without a definition use the current
+finite derived definition and refuse drift. Worktree removal precedes profile edits,
+so dirty checkout refusal changes no profile. Protected receipts record successful
+steps; an edited profile leaves a pending exact-request retry without repeating the
+confirmed worktree removal. These external effects and receipts are not atomic; no
+automatic repair or overwrite is claimed.
+
+Only completed owner retirement marks the old assignment superseded and permits
+another request to prepare replacement work. It retains the prior stopped/revoked/
+unknown state in its receipt and preserves the unknown-outcome flag. It does not
+complete or accept the task, authorize an old turn, or skip new current-work checks.
+An assignment under retirement cannot serve as a new review/correction baseline.
+
+The owner may separately choose Resume project workflow after verified removal.
+Restoration accepts only the unchanged removal result or its exact pending restoration
+intent, preserves conflicts, and holds policy disabled until exact hook readiness/trust
+readback. Onboarding and update retries cannot resume it. Before enabling policy it
+revokes any remaining authorized/preparing records; stopped and unknown records remain
+blocked. This action restores the project workflow and never launches a worker. The
+existing settings sheet scrolls and retains accessible action/result identifiers;
+actual responsive and visual QA remain unverified. Handler identity validation has
+an explicit async protocol implementation; no default-overload dispatch is assumed.
+
+Optional definition/retirement fields retain legacy decoding and introduce no automatic
+existing-worktree migration. Lifecycle tests preceded core implementation; expanded
+migration/owner-restoration tests followed source, with no initial native red run
+claimed. Actual signed-app API/bookmark access, ordinary-worker authority/history
+boundaries, running UI QA and coordinated release identity remain open for acceptance.
+Registration/root replacement or re-add recovery is also unresolved. This bounded
+same-registration lifecycle refuses stale identities; it does not silently rebind
+old policy/assignment authority to a new registration or root.
+
+#### Required hook mutation-boundary correction
+
+Independent hook reviewer `01a0ad4c-9745-70d2-9366-153d4d6500c6` found a Required
+P1 on `c1968a4`: the exact owner registration check preceded awaited configuration/
+trust reads, allowing stale trust or inline-hook edits before completion detected
+the change. The bounded correction passes the current registration/root validator
+and pinned protected policy through the configuration client. Inline hook edits,
+project trust and exact hook-hash trust writes revalidate after their reads and any
+connection initialization, immediately before dispatch. Readback and installed/
+removal receipts revalidate again. Concurrent disablement or registration changes
+therefore produce conflict/stale recovery rather than a ready receipt. Already
+dispatched external writes cannot be made atomic with SQLite; this does not claim
+rollback of in-flight RPC effects or authorize replay after uncertain results.
+
+Three regressions change or revoke registration during suspended trust discovery,
+inline removal and readiness readback. They precede the bounded core correction;
+no native red run is claimed. Main/BuildAgent checkpoint 14 passed the app build,
+all 23 selected tests and documentation/diff checks; native processes exited. The
+same hook reviewer found no remaining Required or Optional issues, terminal for
+that correction. Protocol witness and
+read-only producer call changes are signature adaptations only. Cleanup/retirement
+implementation, UI and its separate independent review remain frozen. R1–R4 are
+closed and are not reopened. Main owns affected native checks, scoped commit and
+the same hook review correction route. Runtime boundaries/UI and Outcome 3 acceptance
+remain open; this source-only correction performs no live configuration operation.
+
+#### Required ignored-content and connection-close corrections
+
+Cleanup reviewer `01a0ad5f-6db0-7ed0-bde6-0f274bb35353` identified Required P1
+ignored owner files being omitted by default status checks before prune, and P2
+retirement completing before configuration connection closure. Retirement now
+requests ignored files and ignored-directory recursion explicitly, in addition to
+its exact branch/common-Git/root and ordinary cleanliness checks. A native regression
+places content in an ignored `.env`, attempts prune and reads back the unchanged
+content, checkout and committed head. Creation/candidate cleanliness semantics are
+otherwise preserved.
+
+Resource steps return a pending receipt. Before profile RPCs, protected state marks
+configuration closure outstanding for that exact retirement request; failure keeps
+the receipt incomplete/visible and replacement blocked. Only confirmed closure and
+fresh owner/root/policy checks permit the superseded/completed transition. AppModel
+retains one lifecycle/client for owner resource operations, preserving its original
+connection. Operations serialize that shared connection. Only an explicit matching
+request may retry closure of the held original connection; unrelated requests do
+not close it. The client clears its cleanup failure only after successful close.
+Hook setup/producer close behavior is unchanged and cannot automatically invoke
+this owner recovery operation.
+
+An optional outstanding-close marker preserves legacy receipt decoding. A new client
+without the original handle refuses to complete an outstanding receipt, including
+after app lifetime loss; no durable process-exit proof is invented. Such lost-handle
+recovery remains a named limitation requiring separately supported resolution.
+Regression coverage checks visible incomplete state, blocked replacement, fresh-client
+refusal, wrong-request refusal and explicit successful retry on the same connection,
+without repeating resource removals. These regressions precede the fixes; no native
+red run or current passing result is claimed. Source/docs are frozen for Main's
+affected native checks, scoped commit and the same cleanup review correction route.
+Hook P1 and R1–R4 remain closed. No live configuration/data/install action or full
+Outcome 3 acceptance is claimed.
+
+Main/BuildAgent checkpoint 15 passed the app build, 16 of 17 selected tests and
+documentation/diff checks; native processes exited. All four native worktree cases,
+including ignored-content preservation, and all five assignment cases passed.
+Seven of eight producer cases passed. The sole failed close-retry case counted
+two closes instead of one before retry and three instead of two afterward. Its
+producer and retirement actor shared one configuration fixture; rejected producer
+preparation invokes finish, adding the unrelated close to that fixture. Production
+`assignments` and `resources` factories construct separate clients, with AppModel
+retaining the resource client. The bounded correction separates fixture clients,
+keeps the original close-count/same-identity expectations and verifies typed
+replacement conflict plus the producer's own finish. No production source changed.
+Main/BuildAgent's fixture-corrected checkpoint 15 passed all eight producer tests
+and documentation/diff checks. Prior app build, worktree 4 and assignment 5 passes
+remain valid and terminal unless a concrete defect appears. No production source
+changed for the fixture correction. The cleanup review gate is cleared; reviewer
+`01a0ad5f-6db0-7ed0-bde6-0f274bb35353` returned PASS with no remaining Required
+or Optional findings in either correction. App build, all 17 affected tests after
+fixture correction and documentation/diff checks passed; validation is terminal.
+The candidate is ready for Main→BuildAgent's scoped local commit, with product source
+frozen and no commit yet claimed. Runtime/UI acceptance, registration/root replacement
+and re-add recovery, and application catalog acceptance remain open. Outcome 3 is
+not complete; this result update performs no product or live configuration changes.

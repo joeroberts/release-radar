@@ -45,4 +45,21 @@ final class ProjectExecutionAssignmentTests: XCTestCase {
         XCTAssertEqual(paths.assignment.path, "/Execution/Assignments/project-one/task-one/assignment.json")
         XCTAssertFalse(paths.assignment.path.hasPrefix(paths.checkout.path + "/"))
     }
+
+    func testOptionalResourceReceiptsPreserveLegacyDecodingAndCannotReadmitRetiredWork() throws {
+        let original = assignment()
+        let legacy = try JSONEncoder().encode(original)
+        XCTAssertEqual(try JSONDecoder().decode(ProjectExecutionAssignment.self, from: legacy), original)
+        var retired = assignment(state: .unknown)
+        retired.connectionClosed = true; retired.uncertainOutcome = true
+        retired.retirement = .init(requestID: UUID(), priorState: .unknown)
+        retired.retirement?.worktreeRemoved = true; retired.retirement?.profileRemoved = true; retired.retirement?.completed = true
+        XCTAssertThrowsError(try retired.validated())
+        retired.state = .superseded
+        try retired.validated()
+        XCTAssertEqual(try JSONDecoder().decode(ProjectExecutionAssignment.self, from: JSONEncoder().encode(retired)), retired)
+        XCTAssertThrowsError(try retired.admit(registration: registration, checkoutPath: retired.checkoutPath, sessionID: "old", boundSessionID: "old"))
+        retired.retirement?.connectionCloseUncertain = true
+        XCTAssertThrowsError(try retired.validated())
+    }
 }
