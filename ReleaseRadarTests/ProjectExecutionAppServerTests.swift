@@ -4,6 +4,49 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionAppServerTests: XCTestCase {
+    func testExecutionSetupErrorContextIdentifiesOperationAndKnownTarget() throws {
+        let failure = "failed to resolve feature override precedence: configuration rejected"
+        let root = "/fixture/project"
+        let file = "/fixture/codex/config.toml"
+        let cases: [(String, RPCObject?, Bool, String)] = [
+            ("initialize", nil, false, "Execution setup initialize: " + failure),
+            ("initialized", nil, false, "Execution setup initialized: " + failure),
+            ("config/read", try RPCObject(["cwd": root]), false, "Execution setup config/read (cwd: \(root)): " + failure),
+            ("config/batchWrite", try RPCObject(["filePath": file]), false, "Execution setup config/batchWrite (file: \(file)): " + failure),
+            ("config/read", try RPCObject(["cwd": root]), true, "Execution setup config/read readback (cwd: \(root)): " + failure),
+        ]
+        for (method, parameters, readback, expected) in cases {
+            for unknown in [false, true] {
+                let error = AppServerTransportError(message: failure, outcomeUnknown: unknown)
+                    .addingSetupContext(method: method, parameters: parameters, readback: readback)
+                XCTAssertEqual(error.localizedDescription, expected)
+                XCTAssertEqual(error.outcomeUnknown, unknown)
+            }
+        }
+    }
+
+    func testExecutionSetupErrorContextExcludesSensitivePayloadsAndUnknownTargets() throws {
+        let secret = "sensitive-payload-must-not-appear"
+        let parameters = try RPCObject([
+            "filePath": "/fixture/codex/config.toml", "cwd": secret,
+            "edits": [["value": secret]], "config": ["token": secret],
+            "environment": ["HOME": secret], "prompt": secret, "hooks": ["command": secret],
+        ])
+        let error = AppServerTransportError(message: "Original failure", outcomeUnknown: true)
+            .addingSetupContext(method: "config/batchWrite", parameters: parameters)
+        XCTAssertEqual(error.message, "Execution setup config/batchWrite (file: /fixture/codex/config.toml): Original failure")
+        XCTAssertFalse(error.message.contains(secret))
+        let missing = AppServerTransportError(message: "Original failure", outcomeUnknown: false)
+            .addingSetupContext(method: "config/read", parameters: try RPCObject(["config": ["cwd": secret]]))
+        XCTAssertEqual(missing.message, "Execution setup config/read: Original failure")
+        XCTAssertFalse(missing.message.contains(secret))
+        for target in ["relative/config.toml", "/fixture/config.toml\n" + secret] {
+            let invalid = AppServerTransportError(message: "Original failure", outcomeUnknown: true)
+                .addingSetupContext(method: "config/batchWrite", parameters: try RPCObject(["filePath": target]))
+            XCTAssertEqual(invalid.message, "Execution setup config/batchWrite: Original failure")
+        }
+    }
+
     func testSignedHostedAppCanInitializeRealTransportWithIsolatedHome() async throws {
         // Container fixture proves only this launch/protocol boundary, not access
         // to an external repository under a security-scoped bookmark.

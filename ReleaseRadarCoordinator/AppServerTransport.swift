@@ -17,6 +17,23 @@ struct AppServerTransportError: Error, LocalizedError, Sendable {
     let message: String
     let outcomeUnknown: Bool
     var errorDescription: String? { message }
+
+    func addingSetupContext(method: String, parameters: RPCObject? = nil, readback: Bool = false) -> Self {
+        let operation: String
+        switch method {
+        case "initialize", "initialized", "config/read", "config/batchWrite", "hooks/list": operation = method
+        default: operation = "request"
+        }
+        let object = try? parameters?.object()
+        let targetKey = method == "config/read" ? "cwd" : method == "config/batchWrite" ? "filePath" : nil
+        var target = ""
+        if let targetKey, let path = object?[targetKey] as? String,
+           path.hasPrefix("/"), path.rangeOfCharacter(from: .controlCharacters) == nil {
+            target = " (\(targetKey == "cwd" ? "cwd" : "file"): \(path))"
+        }
+        return Self(message: "Execution setup \(operation)\(readback ? " readback" : "")\(target): \(message)",
+                    outcomeUnknown: outcomeUnknown)
+    }
 }
 
 protocol ExecutionPeer: Sendable {

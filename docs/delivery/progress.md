@@ -278,6 +278,47 @@ passed. Shipped v3 preserves 334 outside-span bytes (333 prefix, one suffix); th
 The [completed exact audit request](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#completed-disposable-handoff-audit)
 is retained as the recovery record. Disposable handoff is complete; next is actual
 worker setup/isolation acceptance. Full Outcome 3 acceptance remains open.
+The disposable fixture baseline is committed as `c14efa2e5fb43ee1e634dfd015e1eb6277c69f8e`
+on `codex/outcome3-acceptance`, changing only `AGENTS.md` to retain the earlier authorized
+v3 guidance and exact installed shared-execution v1 declaration. Fresh reviewer
+`01a0b0f8-8df3` found no Required findings; Main's UI readback confirms Compatible with
+V1. Packaged documentation and scoped diff checks passed. Existing README, ledger,
+catalog, generated indexes and historical isolation sentinel are unchanged; live
+`.codex/hooks.json` and `default.profraw` remain untracked and excluded. Next is actual
+registered synthetic work/assignment startup and isolation acceptance; full Outcome 3
+remains open. The [three committed registration requests](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#committed-synthetic-work-registration-requests)
+retain their exact envelopes and audits. Complete inventory confirms one Unassessed
+phase (lifecycle revision 0), one backlog ticket and one Active Pending task (task-plan
+revision 1); Project Plan readback shows Draft revision 1, 0/1 covered. The
+[phase-plan recovery record](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#committed-synthetic-phase-plan-request)
+confirms plan/finalization committed at revision 2. Main UI and fresh complete inventory
+confirm In delivery at lifecycle revision 2; task-plan revision 1 remains Pending and
+the ticket backlog. The [exact assignment request](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#pending-synthetic-assignment-request)
+was executed once and failed with the permissions/default-precedence error recorded
+in the brief. No assignment/worker ID or worker start followed; partial resources
+remain unverified and the unchanged request is not released for retry. Main verified
+the real host config is valid; the actual failing RPC and config layer remain unknown.
+Existing diagnostics cannot recover them. Only the bounded existing setup error-context
+correction is approved through Restricted02/sourceworker, preserving operation,
+already-known target path and failure/unknown semantics without sensitive payload.
+No new endpoint, harness, engine or global config change is released. Native checkpoint
+41 established RED (two tests, 12 expected failures, exit 65); checkpoint 42 passed the
+two error-context and two existing cleanup checks (4/4, zero failures, exit 0), with
+coverage disabled. Documentation/index and scoped diff checks passed. Main now reports
+the same fresh review required a handshake-label correction. Checkpoint 43 verified the
+refrozen correction with only the affected operation/known-target test, including
+`initialized` for both unknown-outcome values: 1/1 passed, zero failures, exit 0;
+current target/callsites compiled and scoped diff check passed, coverage disabled.
+Previous payload/cleanup/recovery passes stand. Main reports independent reviewer
+`01a0b10e` completed the correction check through RO04, cleared P2 and is idle, with no
+remaining Required or Optional findings. Main released the five-file scoped commit and
+strict staging/verification/installation/launch of the approved 0.1.19 acceptance
+candidate. No version bump, tag, DMG, push, PR or plugin change is released. BuildAgent
+retains the exact original request without replay or manual config change; Main resumes
+its supported route only after installation confirmation. Temporary outputs remain
+retained.
+These checks do not establish the original failing RPC/layer or actual startup. Worker
+preparation and full Outcome 3 acceptance remain open.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/

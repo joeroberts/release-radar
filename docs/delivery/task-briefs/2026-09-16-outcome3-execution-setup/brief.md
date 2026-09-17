@@ -311,7 +311,15 @@ checkpoint 40 verified 0.1.19 installation and launch. After the hosting ChatGPT
 process restarted, Main verified fresh helpers mapped installed inode 41264196.
 Original task `01a0b086-4199-7233-9911-879d7b9caa5a` replayed the unchanged request once:
 `isError=false`, audit `54096E50-DB79-4838-8049-867FC9DA9C76`. It is idle/completed.
-Next is actual worker setup/isolation acceptance; full Outcome 3 remains open.
+The disposable fixture baseline is committed as `c14efa2e5fb43ee1e634dfd015e1eb6277c69f8e`
+on `codex/outcome3-acceptance`, changing only `AGENTS.md` to retain the earlier authorized
+v3 guidance and exact installed shared-execution v1 declaration. Fresh reviewer
+`01a0b0f8-8df3` found no Required findings; Main's UI readback confirms Compatible with
+V1. Packaged documentation and scoped diff checks passed. Existing README, ledger,
+catalog, generated indexes and historical isolation sentinel are unchanged; live
+`.codex/hooks.json` and `default.profraw` remain untracked and excluded. Next is actual
+registered synthetic work/assignment startup and isolation acceptance; full Outcome 3
+remains open.
 Native/Git/live operations remain with Main/BuildAgent.
 
 <a id="pending-disposable-handoff-audit"></a>
@@ -338,6 +346,194 @@ README and indexes are unchanged. No further replay is pending.
   "registrationProjectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
   "requestGeneration": 1,
   "requestID": "836c2e20-3f6e-481e-8c38-1dec8cbcfab1"
+}
+```
+
+<a id="pending-synthetic-work-registration-requests"></a>
+
+### Committed synthetic work registration requests
+
+Main executed the following unchanged envelopes in order. Audits: phase
+`0443110C-4BCF-4EF4-8AF8-7607C3D71001`, ticket
+`F6C39032-E855-4244-BDF2-6C854EBE9148`, task plan
+`2788193E-4C72-45CB-99DA-49FEC0ED6E8E`, returning task-plan revision 1. Fresh complete
+inventory confirms one Unassessed phase at lifecycle revision 0, one backlog ticket
+and one Active Pending task at revision 1, with unchanged registration. Main's Project
+Plan readback shows Draft plan revision 1, 0/1 covered. These completed recovery
+requests assert no task completion or whole Outcome 3 acceptance.
+
+```json
+[
+  {
+    "method": "release_radar_upsert_phase",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project",
+      "registrationID": "60089feb-7d4a-4503-9543-0c281be6b8fc",
+      "registrationProjectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+      "requestGeneration": 1,
+      "phaseID": "outcome3-acceptance-phase",
+      "name": "Outcome 3 synthetic execution acceptance",
+      "reason": "Create the sole synthetic phase for the owner-authorized disposable Outcome 3 worker startup, isolation, STOP and recovery acceptance.",
+      "requestID": "af7eb713-3062-4b36-abd6-992d9d4eacf5"
+    }
+  },
+  {
+    "method": "release_radar_upsert_ticket",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project",
+      "registrationID": "60089feb-7d4a-4503-9543-0c281be6b8fc",
+      "registrationProjectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+      "requestGeneration": 1,
+      "phaseID": "outcome3-acceptance-phase",
+      "ticketID": "outcome3-acceptance-worker",
+      "lane": "backlog",
+      "outcome": "Verify RR-owned worker startup in the assigned checkout, role permissions, history and sibling exclusion, production hook admission, STOP and recovery using only synthetic fixture data.",
+      "reason": "Register bounded synthetic work required by the approved disposable Outcome 3 acceptance; no product delivery completion is asserted.",
+      "requestID": "9b5f63b3-efbe-4ec9-9b93-415c89e621e6"
+    }
+  },
+  {
+    "method": "release_radar_revise_ticket_task_plan",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project",
+      "registrationID": "60089feb-7d4a-4503-9543-0c281be6b8fc",
+      "registrationProjectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+      "requestGeneration": 1,
+      "ticketID": "outcome3-acceptance-worker",
+      "additions": [
+        {
+          "id": "outcome3-acceptance-worker-task",
+          "label": "Execution acceptance",
+          "title": "Verify RR-owned worker startup in the assigned checkout, role permissions, history and sibling exclusion, production hook admission, STOP and recovery using only synthetic fixture data.",
+          "sortOrder": 0
+        }
+      ],
+      "reason": "Define one Pending task for the approved synthetic execution acceptance so RR can derive a protected assignment. No task completion is asserted.",
+      "requestID": "d16e06cb-54aa-4e31-89bf-1d10e32ea89f"
+    }
+  }
+]
+```
+
+<a id="pending-synthetic-phase-plan-request"></a>
+
+### Committed synthetic phase plan request
+
+Main applied the unchanged envelope below: revision 2, audit
+`BF4346E4-E786-48D9-917B-BE6A7CDC796B`. Finalize request
+`8524f69f-e714-445a-b2e9-25c56ef06824` committed revision 2, audit
+`1D8139C9-CA0E-4DC5-B69F-AA5BCB18B8C4`. Main's UI moved the synthetic phase through
+Upcoming to In delivery. Fresh complete supported inventory confirms lifecycle
+revision 2 / `in_delivery`, task-plan revision 1 with Pending task and backlog ticket.
+No completion is asserted.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project",
+  "registrationID": "60089feb-7d4a-4503-9543-0c281be6b8fc",
+  "registrationProjectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+  "requestGeneration": 1,
+  "requestID": "50556aa6-2f8b-49f6-91c2-621d75a7676d",
+  "projectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+  "phaseID": "outcome3-acceptance-phase",
+  "expectedRevision": 1,
+  "reason": "Define the sole synthetic acceptance goal and ticket coverage for the approved disposable worker lifecycle test.",
+  "goalUpserts": [
+    {
+      "id": "outcome3-acceptance-goal",
+      "title": "Verify controlled synthetic execution",
+      "outcome": "Establish actual worker startup, scoped permissions, hook admission, STOP and recovery without accessing owner data.",
+      "doneCriteria": [
+        "The assigned checkout and effective worker permissions are verified.",
+        "Historical and sibling isolation and deliberate Main retrieval are exercised with synthetic data.",
+        "STOP and supported recovery are observed without claiming unknown outcomes succeeded."
+      ],
+      "sortOrder": 0
+    }
+  ],
+  "assignments": [
+    {
+      "goalID": "outcome3-acceptance-goal",
+      "ticketID": "outcome3-acceptance-worker"
+    }
+  ]
+}
+```
+
+### Pending synthetic assignment request
+
+Main executed `release_radar_prepare_execution_assignment` once with the unchanged
+envelope below. It returned `isError: true`, `entityIDs: []` and
+`error.internalFailure._0`:
+
+> failed to resolve feature override precedence: config defines `[permissions]` profiles but does not set `default_permissions`
+
+No assignment or worker ID was returned and no `worker_start` was issued. Partial
+resources remain unverified; preserve the exact request without retry. Preparation
+and startup acceptance remain unresolved.
+
+Main verified the real host config is valid, with `default_permissions` set to
+`:workspace`, three owner profiles and no legacy sandbox settings. The actual failing
+RPC and selected config layer are not established. Existing diagnostics retain only
+the error message; the app's stderr resolves to `/dev/null`. The container config
+read stalled and was cancelled without contents or explicit denial; do not retry that
+file or route around access. This is not evidence that its contents caused the failure.
+
+Main approved only a bounded existing setup error-context correction through
+Restricted02/sourceworker: preserve the operation, any already-known target path and
+failure/unknown semantics, without sensitive payload or error data. No new diagnostic
+endpoint, harness, engine or global config change is released. No original assignment
+retry is authorized.
+
+Native checkpoint 41 established attributable RED against the no-op formatter: the
+two error-context tests compiled and executed, with 12 expected assertion failures and
+`xcodebuild` exit 65. Checkpoint 42 verified the frozen three-file correction: the same
+two tests plus existing conflict/close and uncertain-close/same-connection checks passed
+4/4, zero failures, `xcodebuild` exit 0. Both runs used the established signed-host
+runner with coverage disabled. Assertions cover operation/readback and known safe target,
+original failure and both unknown-outcome flags, sensitive-payload exclusion and omitted
+missing/relative/control-character targets. The cleanup checks use local mock-config
+fixtures; no live App Server/home or original assignment request was exercised.
+Documentation/index and scoped diff checks passed. Temporary native logs, result bundles
+and checker profiles remain retained. Initial reviewer creation returned only
+`client-new-thread:cd018a57-af90-47a8-b41c-6049aae5caa8`, without an actual task ID,
+status or error; Main could not initially confirm a running review and asked the owner
+for visible setup status without creating a duplicate. Main now reports the same review
+required a handshake-label correction. The refrozen client advances from `initialize`
+to `initialized` only after successful initialization, before sending the notification.
+Checkpoint 43 ran only the directly affected operation/known-target test, including both
+handshake labels for both unknown-outcome values: 1/1 passed, zero failures, exit 0;
+current target/callsites compiled and scoped diff check passed, coverage disabled.
+Previous payload/cleanup/recovery checks stand. Main reports the same independent
+reviewer `01a0b10e` completed the correction check through RO04, cleared P2 and is idle,
+with no remaining Required or Optional findings. Main released a scoped commit of the
+three reviewed source/test files and two owned documents, followed by strict staging,
+verification, installation and launch of the approved 0.1.19 acceptance candidate.
+No version bump, tag, DMG, push, PR or plugin change is released for this intermediate
+candidate. BuildAgent retains the exact original request without replay or manual
+configuration changes; Main will resume its supported route only after installation
+is confirmed. Actual failing RPC/layer and worker startup remain
+unresolved; this is error-context verification, not root-cause resolution or full
+Outcome 3 acceptance.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/var/folders/g8/tb13s4dd31vbnlx91kq133j40000gn/T/rr-outcome3-acceptance-019-3b0aa292-15a6-4de7-bd88-ae30ee890695/project",
+  "registrationID": "60089feb-7d4a-4503-9543-0c281be6b8fc",
+  "registrationProjectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+  "requestGeneration": 1,
+  "projectID": "project-124ab921-e9da-4b92-8034-3feccb0afcd2",
+  "ticketID": "outcome3-acceptance-worker",
+  "taskID": "outcome3-acceptance-worker-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 2,
+  "requestID": "f481e256-3332-43aa-88e1-4c3dd2c6368a",
+  "reason": "Prepare the owner-authorized synthetic worker assignment from the committed disposable fixture to verify startup, permissions, isolation, STOP and recovery."
 }
 ```
 

@@ -65,14 +65,16 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         }
     }
 
-    private func rpc(_ method: String, _ params: RPCObject, beforeWrite: @Sendable () async throws -> Void = {}) async throws -> RPCObject {
+    private func rpc(_ method: String, _ params: RPCObject, readback: Bool = false, beforeWrite: @Sendable () async throws -> Void = {}) async throws -> RPCObject {
         if let cleanupFailure { throw cleanupFailure }
         if transport == nil {
             let connection = try AppServerTransport(executable: CodexExecutionIdentity.executable,
                 arguments: ["app-server", "--listen", "stdio://"], onMessage: { _ in })
             transport = connection
+            var handshakeOperation = "initialize"
             do {
                 _ = try await connection.call("initialize", RPCObject(["clientInfo": ["name": "release-radar-setup", "version": "1"], "capabilities": ["experimentalApi": true]]))
+                handshakeOperation = "initialized"
                 try connection.send(["method": "initialized"])
             } catch {
                 do { try connection.close() }
@@ -81,16 +83,22 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                     cleanupFailure = failure; throw failure
                 }
                 transport = nil
+                if let failure = error as? AppServerTransportError {
+                    throw failure.addingSetupContext(method: handshakeOperation)
+                }
                 throw error
             }
         }
         guard let transport else { throw ProjectExecutionError.unavailable }
         try await beforeWrite()
-        return try await transport.call(method, params)
+        do { return try await transport.call(method, params) }
+        catch let failure as AppServerTransportError {
+            throw failure.addingSetupContext(method: method, parameters: params, readback: readback)
+        }
     }
 
-    private func read(_ root: String) async throws -> [String: Any] {
-        try await rpc("config/read", RPCObject(["cwd": root, "includeLayers": true])).object()
+    private func read(_ root: String, readback: Bool = false) async throws -> [String: Any] {
+        try await rpc("config/read", RPCObject(["cwd": root, "includeLayers": true]), readback: readback).object()
     }
 
     private func userLayer(_ result: [String: Any]) throws -> [String: Any] {
@@ -158,7 +166,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         } else {
             try await writeUser(root: primaryRoot, layer: layer, key: "permissions." + quoted(profile.id), value: desired)
         }
-        let readback = try userLayer(await read(primaryRoot))
+        let readback = try userLayer(await read(primaryRoot, readback: true))
         let config = readback["config"] as? [String: Any] ?? [:]
         guard let actual = (config["permissions"] as? [String: Any])?[profile.id] as? [String: Any],
               NSDictionary(dictionary: actual).isEqual(to: desired) else { throw ProjectExecutionError.conflict }
@@ -181,7 +189,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             _ = try await rpc("config/batchWrite", RPCObject(["filePath": file, "expectedVersion": version,
                 "edits": [["keyPath": "permissions", "value": profiles, "mergeStrategy": "replace"]], "reloadUserConfig": true]), beforeWrite: beforeWrite)
         }
-        let readback = try userLayer(await read(primaryRoot))
+        let readback = try userLayer(await read(primaryRoot, readback: true))
         let config = readback["config"] as? [String: Any] ?? [:]
         guard config["permissions"] == nil || config["permissions"] is [String: Any] else { throw ProjectExecutionError.conflict }
         let actual = config["permissions"] as? [String: Any] ?? [:]
@@ -202,7 +210,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             if trust != "trusted" {
                 guard permitOwnedTrust, trust == nil else { throw ProjectExecutionError.hookNotReady }
                 try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(primaryRoot) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
-                layer = try userLayer(await read(primaryRoot))
+                layer = try userLayer(await read(primaryRoot, readback: true))
                 let readback = layer["config"] as? [String: Any] ?? [:]
                 guard ((readback["projects"] as? [String: Any])?[primaryRoot] as? [String: Any])?["trust_level"] as? String == "trusted" else { throw ProjectExecutionError.hookNotReady }
             }
@@ -213,7 +221,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                 layer = try userLayer(await read(primaryRoot))
                 try await writeUser(root: primaryRoot, layer: layer, key: "hooks.state." + quoted(owned.key), value: ["trusted_hash": owned.currentHash], beforeWrite: beforeWrite)
             }
-            let readback = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]))
+            let readback = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]), readback: true)
             _ = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: true, inline: inline)
             try await beforeWrite()
     }
