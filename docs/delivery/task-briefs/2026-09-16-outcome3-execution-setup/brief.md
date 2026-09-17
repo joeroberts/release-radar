@@ -178,9 +178,17 @@ awaited calls and cached EOF physical cleanup are preserved. Checkpoints 21/22 r
 attributed; direct checks/review are terminal, with results preserved for reviewer
 archive. Later factual pass annotations were not independently reviewed; they add no
 design change and need no additional review. Source/tests/docs remain frozen for
-Main→BuildAgent scoped commit/installation
-under existing live-acceptance authorization. No commit, installed correction or actual
-worker/onboarding pass is yet claimed; prior unrelated validation stays terminal.
+Main's existing live-acceptance route. Main reported commit
+`74d227ea3b2d811cd4029e5bf9da010dbfc9d86b` and archived reviewer `01a0afd4`.
+BuildAgent installed corrected 0.1.19 without rebuilding and launched PID 71305;
+installed native initialization/listing returned six tools with EOF exit 0. Package
+bytes/digest remain unchanged. Operator `01a0afcc` fresh-turn metadata now exposes
+preparation and all six coordinator worker functions with no loading error and zero
+operational calls. The loading defect is resolved; actual onboarding/worker isolation/
+STOP/recovery remain untested. Main UI is paused pending the owner's control response
+after concurrent-change click rejections; operator remains on hold, no permission
+change. This documentation-only checkpoint claims no overall acceptance; source/tests
+stay frozen and prior unrelated validation remains terminal.
 No worker product edit, retry, native/build/Git/live action or cleanup is included.
 
 Abrupt coordinator process loss without a retained worker handle or exit proof remains

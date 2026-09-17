@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**Outcome 3 — MCP discovery correction verified/reviewed; frozen for scoped commit/install; actual-flow acceptance open.**
+**Outcome 3 — MCP loading defect resolved after installation; actual-flow acceptance paused/open.**
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
@@ -143,10 +143,26 @@ create:false access preserves worker gates, cache admission is atomic, awaited c
 retain independent STOP and EOF closes only the cached adapter. Native checkpoints
 21/22 are attributed above; review/checks are terminal. Later factual pass annotations
 were not independently reviewed; they add no design change and need no additional
-review. The result is preserved for
-Main's reviewer archive. Source/tests/docs remain frozen for Main→BuildAgent's scoped
-commit/installation under existing live-acceptance authorization. No commit, installed
-correction or actual worker/onboarding pass is yet claimed. Prior
+review. The result is preserved for the reviewer archive. Main archived reviewer
+`01a0afd4` and reported startup-fix commit
+`74d227ea3b2d811cd4029e5bf9da010dbfc9d86b`. BuildAgent installed corrected 0.1.19
+without rebuilding and launched PID 71305. Installed native initialization/listing
+returned all six tools, with EOF exit 0; package bytes/digest remain unchanged.
+Acceptance operator `01a0afcc` now exposes preparation and all six coordinator worker
+functions in fresh-turn metadata, without a loading error and with zero operational
+calls. The Codex loading defect is resolved. Actual onboarding/worker isolation/STOP/
+recovery remain untested. The prior owner-control hold is obsolete: Main successfully
+resumed UI control after relaunch, opened Add Project → Initialize Tracking and selected
+the exact disposable folder in NSOpenPanel. Clicking Choose Project returned CUA error
+"Sky Computer Use native pipe closed before response"; readback and session reset/
+reconnect failed identically. BuildAgent's read-only check found the same RR PID 71305
+alive with no recent crash. AppKit negative-geometry logs are not proven related.
+The folder-click outcome is unknown: do not retry initialization or claim registration.
+The current blocker is CUA transport, not owner authorization or a confirmed RR crash.
+Acceptance operator remains on hold; no further live changes occur and Main actions
+remain serialized pending readback. This status correction adds no overall acceptance
+claim.
+Source/tests remain frozen; prior
 unrelated validation remains terminal; this worker performs no native/build/Git/live
 action, product change, retry or cleanup.
 
