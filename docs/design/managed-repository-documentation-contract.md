@@ -391,7 +391,11 @@ Release Radar presents one coherent documentation mode:
 1. **Legacy v1** — current guidance behavior; no catalog is required.
 2. **Staged catalog under v1** — valid catalog v1 may be inspected and
    validated read-only, but cannot change import identity, evidence identity,
-   availability, or delivery state.
+   availability, or delivery state. For current Outcome 3 onboarding, only an
+   exact shipped staging v1 guidance block additionally permits the initial
+   explicit repository-binding command. That command accepts the exact authorized
+   root/catalog snapshot in its normal audited, idempotent transaction; it does
+   not activate managed guidance or enable any other managed operation.
 3. **Managed v2** — exact guidance v2 plus a valid compatible catalog v1;
    managed operations and artifact identity are enabled.
 4. **Managed unavailable** — guidance v2 is readable, but its catalog is
@@ -453,7 +457,13 @@ It therefore:
   or identity inference.
 
 Activation and adoption are separate and later. Under v1, catalog preview and
-candidate inventory remain read-only and unbound. Managed v2 first uses
+candidate inventory remain read-only and never imply a binding. Current Outcome 3
+onboarding separately permits initial binding with the exact shipped staging v1
+block and validated catalog, before the separately authorized audited guidance
+upgrade. Missing, modified or malformed staging guidance does not permit binding.
+All existing target, folder authorization, registration, conflict, audit, replay and
+rollback checks remain; catalog acceptance and other managed operations retain
+their managed-guidance gates. Existing managed v2 activation uses
 `release_radar_bind_documentation_repository` to bind an unbound project to
 its exact authorized root row, `repositoryID`, and accepted canonical catalog
 snapshot/version/digest in one store-owned audit/receipt transaction. It never

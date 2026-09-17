@@ -248,8 +248,40 @@ reader (permission denied); the 72-case command exited 65, not an overall suite 
 Two live-picker methods were explicitly excluded. No permission workaround or unrelated
 fixture repair is included. Documentation/index and scoped diff checks passed. Independent Security/Privacy
 reviewer `01a0b049` cleared the exact reader patch with no Required or Optional findings.
-Installed-app preview/readback remains pending through Main's serialized route. The four-file
-candidate is refrozen; no worker native/Git/live actions.
+Main checkpoint 31 confirms actual preview after installing reviewed `b6dbefb7`:
+repository `6fefe2e8-3a09-4fad-88cd-245061a67b65`, catalog v1, digest
+`a09f5b2c8be9f2f1161ca56648600181648f579cbde97dd8567de91696186c50`;
+documentation check/plugin capability passed. The separate binding was not committed
+with `documentation.guidanceUnavailable`, exposing the v1-bootstrap/managed-binding
+sequencing mismatch rather than another preview defect.
+
+### Current bounded staging-guidance binding correction
+
+Main selected the mutable specification amendment: exact shipped staging v1 permits
+only the initial explicit binding before the separately authorized audited guidance
+upgrade. Preserve fully validated matching catalog/root/registration, conflicts,
+audit/replay/rollback and all other managed-operation gates. No global mode change,
+preactivated fixture, governing instruction, accepted ADR, packaged skill/copy or
+package identity change. Scope is the dispatcher, existing managed-operation tests,
+managed-documentation contract and these three Outcome 3 documents.
+Test-first existing container-writable fixtures cover owner preview/bind, legacy
+preservation/closed managed operations, audited upgrade, bad staging/targets and
+rollback/replay. Main/BuildAgent checkpoint 32 compiled/executed the owner-sequence test
+and reached the exact `command(documentation.guidanceUnavailable)` failure before
+dispatcher edits (one unexpected failure, terminal exit 65). The bind-only correction
+now reuses exact staging inspection and full catalog/target checks; global managed
+snapshot/mode gates are unchanged. Checkpoint 33 compiled the app and passed 11 of 12
+selected cases, including the two other new cases and nine existing safeguards;
+documentation/index/diff checks passed. Initial binding succeeds. The lifecycle test
+then used its legacy fixture registry after registering the project and was correctly
+rejected by identity gates. Only that fixture now uses the registered project and
+matching request tuple; production is unchanged. Checkpoint 34 passed the corrected
+lifecycle test (one test, zero failures, terminal exit 0); the prior 11 passes remain
+valid. Documentation/index/diff checks passed. Fresh reviewer `01a0b063-6d28` cleared
+the complete six-file patch with no Required or Optional findings. Actual installed
+bootstrap/bind/handoff readback remains pending. Main transferred document ownership
+to BuildAgent for scoped commit and staging; worker native/Git/live
+actions remain exclusively with Main/BuildAgent.
 
 Abrupt coordinator process loss without a retained worker handle or exit proof remains
 an unresolved recovery barrier. Existing configuration-handle replacement requires old

@@ -211,8 +211,37 @@ or unrelated fixture repair is included. The newly built helper passes full vali
 index checking through both `/var` and `/private/var`. Two live-picker methods were
 explicitly excluded. Documentation/index and scoped diff checks passed. Independent Security/Privacy
 reviewer `01a0b049` cleared the exact reader patch with no Required or Optional findings.
-Installed-app preview/readback remains pending. The four-file candidate is refrozen;
-production/live completion is not claimed.
+Main/BuildAgent installed the reviewed correction as `b6dbefb7`. Main checkpoint 31
+confirms the same project's documentation check/plugin capability passed and the actual
+preview returned repository `6fefe2e8-3a09-4fad-88cd-245061a67b65`, catalog v1 and digest
+`a09f5b2c8be9f2f1161ca56648600181648f579cbde97dd8567de91696186c50`.
+The preview defect is resolved. The separate owner binding attempt was not committed:
+`documentation.guidanceUnavailable`. Source confirms the bootstrap stages v1 but
+binding currently requires managed v2/v3 guidance, preventing the instructed sequence.
+
+Main selected the six-file correction: only initial explicit binding may additionally
+accept the exact shipped staging v1 block with a fully validated matching catalog.
+The mutable managed-documentation specification now records that bounded exception;
+other managed operations, root/registration authority, audit/replay and rollback gates
+remain unchanged. Packaged bootstrap/copy stays v1; no fixture preactivation is included.
+Existing container-writable fixtures cover the registered owner sequence, closed v1
+managed operations, separate audited upgrade, staging/target rejection and rollback/
+replay. Main/BuildAgent checkpoint 32 compiled and executed the owner-sequence test;
+it failed with exactly `command(documentation.guidanceUnavailable)`, one unexpected
+failure and terminal exit 65, before dispatcher edits. The bind-only correction now
+uses the existing exact staging-block inspector and full catalog/target validation;
+global managed snapshot/mode gates are unchanged. The six-file candidate is frozen.
+Checkpoint 33 compiled the app; 11 of 12 selected cases passed, including staging/
+target rejection, rollback/replay and nine existing safeguards. Initial owner binding
+now succeeds. The lifecycle test's later calls used its legacy fixture registry after
+seeding a completed registration; identity gates rejected that stale fixture. Only
+that test now uses the registered project and matching request tuple; production is
+unchanged. Checkpoint 34 passed the corrected lifecycle test (one test, zero failures,
+terminal exit 0); the prior 11 passes remain valid. Documentation/index/diff checks
+passed. Fresh reviewer `01a0b063-6d28` cleared the complete six-file patch with no
+Required or Optional findings. Actual installed bootstrap/bind/handoff readback remains
+pending. Main transferred document ownership to BuildAgent for scoped commit and staging;
+there is no concurrent writer.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/

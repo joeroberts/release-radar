@@ -1703,5 +1703,45 @@ there is no permission workaround or unrelated fixture repair. The newly built h
 passes full validation/index checking through both `/var` and `/private/var`, directly
 confirming corrected alias behavior. Documentation/index and scoped diff checks passed. Independent Security/Privacy
 reviewer `01a0b049` cleared the exact reader patch with no Required or Optional findings.
-Installed-app preview/readback remains pending through Main. The four-file candidate
-is refrozen; production/live completion is not claimed.
+Main checkpoint 31 confirms installed `b6dbefb7` fixed the actual preview: the same
+project's documentation check/plugin capability passed and preview returned repository
+`6fefe2e8-3a09-4fad-88cd-245061a67b65`, catalog v1 and digest
+`a09f5b2c8be9f2f1161ca56648600181648f579cbde97dd8567de91696186c50`.
+The subsequent explicit binding was not committed with `documentation.guidanceUnavailable`.
+This is the separate guidance gate: current binding requires managed v2/v3, while the
+actual bootstrap and shipping skill stage v1 then direct binding before audited upgrade.
+
+### September 17 staging-guidance binding sequence correction
+
+Main selected v1 bootstrap → explicit owner binding → separately authorized audited
+guidance upgrade. The owning mutable managed-documentation specification now permits
+only the initial binding command to additionally accept the exact shipped staging v1
+block with a fully validated catalog and exact target. Exact block inspection preserves
+unrelated surrounding instructions and rejects missing, modified, duplicate or malformed
+staging. Normal root/bookmark/registration/conflict checks, transaction revalidation,
+audit, replay and rollback remain. Global managed mode/snapshot gates and every other
+operation remain unchanged; v1 binding alone does not enable managed evidence, import
+or execution authority. The existing valid-staged-catalog update prompt already routes
+to the separately authorized audited guidance upgrade, so no UI/package/copy change
+or fixture preactivation is required. Accepted ADRs and governing instructions remain.
+
+The six-file scope is the existing dispatcher/tests, managed-documentation contract
+and Outcome 3 ledger/brief/design. Existing container-writable fixtures cover registered
+owner preview/bind, preserved legacy state and closed managed operations, separate
+audited upgrade, staging/target rejection and rollback/replay. Main/BuildAgent checkpoint
+32 compiled/executed the owner-sequence test and reached the exact
+`command(documentation.guidanceUnavailable)` failure before dispatcher edits (one
+unexpected failure, terminal exit 65). The bind-only correction now uses the existing
+exact staging-block inspector and full catalog/target checks; global managed
+snapshot/mode gates remain unchanged. Checkpoint 33 compiled the app and passed 11 of
+12 selected cases: both new rejection/target/rollback/replay cases and nine existing
+safeguards. Documentation/index/diff checks passed. Initial owner binding succeeds;
+the lifecycle test then incorrectly reused its legacy dispatcher after seeding a
+completed registration. Existing identity gates rejected those calls. Only the fixture
+now uses the registered project and matching request tuple; production is unchanged.
+Checkpoint 34 passed the corrected lifecycle test (one test, zero failures, terminal
+exit 0); the prior 11 passes remain valid. Documentation/index/diff checks passed.
+Fresh reviewer `01a0b063-6d28` cleared the complete six-file patch with no Required or
+Optional findings. Actual installed bootstrap/binding/handoff readback remains pending.
+Main transferred document ownership to BuildAgent for scoped commit and staging; the
+worker performs no native/Git/live/config/SQLite operation or cleanup.

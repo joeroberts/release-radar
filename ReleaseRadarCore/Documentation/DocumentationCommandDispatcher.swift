@@ -142,7 +142,23 @@ struct DocumentationCommandDispatcher: Sendable {
             try catalog.reader.verifyStable()
             return catalog.snapshot
         }
-        let snapshot = try catalog.managedSnapshot(target: command.documentationTarget)
+        let snapshot: RepositoryDocumentSnapshot
+        if case .bindDocumentationRepository = command, catalog.mode == .legacy {
+            let contents = (try? catalog.reader.read(RepositoryDocumentContract.guidancePath))
+                .flatMap { String(data: $0, encoding: .utf8) }
+            guard ProjectGuidanceInspection.inspect(contents: contents) == .outdated(
+                installed: RepositoryDocumentContract.legacyGuidanceVersion,
+                current: RepositoryDocumentContract.guidanceVersion
+            ) else { throw DocumentationOperationError.guidanceUnavailable }
+            guard let staged = catalog.snapshot else { throw DocumentationOperationError.catalogInvalid }
+            guard let target = command.documentationTarget,
+                  target.repositoryID == staged.catalog.repositoryID.lowercased(),
+                  target.catalogVersion == staged.version,
+                  target.catalogDigest == staged.digest else { throw DocumentationOperationError.catalogUnaccepted }
+            snapshot = staged
+        } else {
+            snapshot = try catalog.managedSnapshot(target: command.documentationTarget)
+        }
         switch command {
         case .bindDocumentationRepository:
             guard context.binding == nil else { throw DocumentationOperationError.bindingConflict }
