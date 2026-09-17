@@ -306,17 +306,26 @@ transport tests; no new harness. Checkpoint 38 passed all five targeted tests,
 including both new regressions, signed-helper integration, malformed inputs, lost
 reply and exact replay (`TEST SUCCEEDED`, exit 0). Documentation/index and six-file
 diff checks passed. Fresh reviewer `01a0b09b-4e49` cleared the six-file patch with no
-Required or Optional findings. Main transferred the owning documents to BuildAgent
-for scoped commit and signed staging. The same installed `dce76787` app was reopened. Installation and
-unchanged original audit replay remain pending through Main; no replay before the
-installed fix. Native/Git/live operations remain exclusively with Main/BuildAgent.
+Required or Optional findings. The correction is committed as `bcdb869543b4bd2648e9bc2023dcb12123cf6a8b`;
+checkpoint 40 verified 0.1.19 installation and launch. After the hosting ChatGPT
+process restarted, Main verified fresh helpers mapped installed inode 41264196.
+Original task `01a0b086-4199-7233-9911-879d7b9caa5a` replayed the unchanged request once:
+`isError=false`, audit `54096E50-DB79-4838-8049-867FC9DA9C76`. It is idle/completed.
+Next is actual worker setup/isolation acceptance; full Outcome 3 remains open.
+Native/Git/live operations remain with Main/BuildAgent.
 
-### Pending disposable handoff audit
+<a id="pending-disposable-handoff-audit"></a>
 
-Preserve this one request unchanged for `release_radar_add_evidence`. Omit `ticketID`
-and `assertedThreadID`; runtime caller is original task `01a0b086`. Do not regenerate
-identities or replay blindly. Resume the original task only after availability is
-established; the failed response does not establish an audit or completion.
+### Completed disposable handoff audit
+
+The unchanged `release_radar_add_evidence` request below is the completed recovery
+record. Supported inventory is complete and managedV3, matching repository
+`6fefe2e8-3a09-4fad-88cd-245061a67b65`, catalog version 1 and digest
+`a09f5b2c8be9f2f1161ca56648600181648f579cbde97dd8567de91696186c50`, with the
+unchanged accepted binding and exactly one available ticketless evidence row resolving
+the saved `/var` root's `AGENTS.md`. Packaged checking passed; shipped v3 preserves
+334 outside-span bytes (333 prefix, one suffix), and the 175-byte ledger, catalog,
+README and indexes are unchanged. No further replay is pending.
 
 ```json
 {

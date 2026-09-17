@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**Outcome 3 — confirmed onboarding feedback correction frozen for checks/review; actual-flow acceptance open.**
+**Outcome 3 — disposable managed handoff complete; worker setup/isolation acceptance next.**
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
@@ -266,13 +266,18 @@ all identity/authorization checks. Checkpoint 38 passed all five targeted tests,
 including both new regressions, the signed-helper path, malformed inputs, lost reply
 and exact replay; `TEST SUCCEEDED`, exit 0. Documentation/index and six-file diff
 checks passed. Fresh reviewer `01a0b09b-4e49` cleared the six-file patch with no
-Required or Optional findings. Main transferred the owning documents to BuildAgent
-for scoped commit and signed staging. Installed fix and original audit replay remain
-pending; the same installed `dce76787` app was reopened.
-The [pending exact audit request](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#pending-disposable-handoff-audit)
-is preserved once in the existing brief. Replay belongs to the original task only
-after availability is established. Audit and full acceptance remain pending; only
-these three owning documents are updated and refrozen, with no overall completion claim.
+Required or Optional findings. The correction is committed as `bcdb869543b4bd2648e9bc2023dcb12123cf6a8b`;
+checkpoint 40 verified installation and launch of 0.1.19. After the hosting ChatGPT
+process restarted, Main verified fresh helpers mapped installed inode 41264196.
+The original task replayed the unchanged request once, successfully recording audit
+`54096E50-DB79-4838-8049-867FC9DA9C76`. Complete supported inventory confirmed managedV3,
+the unchanged accepted repository/catalog binding and exactly one available ticketless
+handoff evidence row resolving the saved `/var` root's `AGENTS.md`. The packaged checker
+passed. Shipped v3 preserves 334 outside-span bytes (333 prefix, one suffix); the
+175-byte ledger, catalog, README and indexes remain unchanged. The task is idle/completed.
+The [completed exact audit request](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#completed-disposable-handoff-audit)
+is retained as the recovery record. Disposable handoff is complete; next is actual
+worker setup/isolation acceptance. Full Outcome 3 acceptance remains open.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/
