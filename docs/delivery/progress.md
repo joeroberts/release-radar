@@ -32,7 +32,13 @@ confirmed closure. Prior unknown state, launch reservation, uncertainty and null
 session remain recorded. The exact checkout is absent and its committed branch
 remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Fresh supported inventory
 readback succeeded with unchanged registration, phase and task-plan revisions.
-BA performed no mutation, new preparation or startup.
+BA performed no retirement mutation. Main then released fresh preparation-only
+request `4fd11768-738e-44cd-9216-f5babc3d63d8`; its exact envelope was committed before
+submission, without baseline/review/asserted-thread fields. Fresh installed helper
+verified current inventory and submitted once. Audit `9DA9D44A-634C-4BC8-A6A8-274081574B53`
+returned authorized delivery assignment with Terra/medium and the bounded profile;
+saved assignment exactly matches the response and its real checkout exists. No
+worker started. Main owns the next bounded prompt; the owning brief records identity.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.
 Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`

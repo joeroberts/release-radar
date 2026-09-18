@@ -8,7 +8,22 @@ submission, verify current complete inventory, and submit once through fresh ins
 normal AgentTools. Preserve the request and body on uncertainty. No worker start,
 baseline/review override or asserted-thread field is authorized in this step.
 
-Disposition: **pending submission**.
+Disposition: **prepared successfully once**. Exact envelope was committed in
+`97f43792` before submission. Fresh installed AgentTools PID 89658 verified complete
+current inventory, submitted the persisted body once, and exited 0. Audited result
+`9DA9D44A-634C-4BC8-A6A8-274081574B53` returned authorized assignment
+`delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`; protected saved JSON exactly matches
+the returned assignment. Assigned role/model/effort are delivery / `gpt-5.6-terra` /
+medium, profile `rr-delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`, context
+`9D0895C1-C51D-4D47-8DAC-C80499F6678C`. Policy digest remains
+`3c693206d541d6b072cd1feeee32a60f247a544b537450a1088a3b04f496589c`;
+registration/generation, work incarnation and phase/task-plan revisions match.
+No session or launch-reservation/uncertainty/closed flags are present. Assigned
+settings are not runtime verification. Exact real checkout and `.codex` exist at
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`.
+Baseline is `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`; branch is
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`.
+No worker was started; Main owns the next bounded prompt.
 
 ```json
 {
