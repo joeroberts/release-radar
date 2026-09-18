@@ -45,13 +45,14 @@ filesystem-grant readback. No runtime approval was automatically answered.
 }
 ```
 
-The reported global source `/Users/jroberts/.codex/AGENTS.md` lies outside the
-recorded checkout-context set. Source diagnosis through Restricted02 owns the
-precise failing guard and instruction-source semantics; this record preserves the
-returned values without treating a mismatch as an authorized contract correction. Same-connection supported `worker_close` returned confirmed
+The exact rejected guard is `verifyInstructionSources`: reported global source
+`/Users/jroberts/.codex/AGENTS.md` lies outside the recorded checkout-context set.
+Omitted progress is not itself rejected by that subset guard. Restricted02 owns
+instruction-source semantics and any contract correction; none is authorized by
+this factual readback. Same-connection supported `worker_close` returned confirmed
 closure and the known thread ID. Saved assignment is unknown, launch-reserved and
-uncertain, connection-closed with that session ID retained. Idle Coordinator remains
-open pending Main's EOF direction. No turn/readme observation, retry, replacement,
+uncertain, connection-closed with that session ID retained. Main then released normal EOF: idle Coordinator MCP session 46497 exited 0,
+and its fresh process exit was confirmed. Older Coordinator processes were untouched. No turn/readme observation, retry, replacement,
 configuration change or guard weakening followed. Full startup/isolation/STOP and
 recovery remain unverified; Main/Restricted own the instruction-source contract
 and recovery decision.

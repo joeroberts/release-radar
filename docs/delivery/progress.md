@@ -72,12 +72,13 @@ started during preparation. Main then released one startup observation, persiste
 before submission. Worker `22E6A7FD-104A-490A-BB45-D2A4673EC3CF` reached thread
 `01a0b476-d219-7ce1-b30a-1879979c125a` with exact cwd/roots/Terra/medium/profile,
 network disabled, on-request approval and auto-review reviewer, then failed identity
-admission. Reported global `/Users/jroberts/.codex/AGENTS.md` is outside the recorded
-checkout-context set; Restricted02's source diagnosis owns the precise guard and
-instruction-source semantics. No turn/messages/requests occurred.
+admission. Exact `verifyInstructionSources` guard rejects global
+`/Users/jroberts/.codex/AGENTS.md` outside the recorded checkout-context set; omitted
+progress is not the subset guard's rejection condition. Restricted02 owns semantics
+and any separately authorized contract correction. No turn/messages/requests occurred.
 Same-connection supported closure confirmed physical cleanup; assignment remains
 unknown/reserved/uncertain and connection-closed with known session ID retained.
-Idle Coordinator remains open pending Main direction. No retry, new preparation,
+Main released normal EOF; idle Coordinator exited 0 and its fresh process ended. No retry, new preparation,
 configuration edit or guard weakening followed. Startup and remaining acceptance
 remain unverified; Main/Restricted own contract/recovery sequencing.
 
