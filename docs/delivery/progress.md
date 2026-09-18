@@ -25,9 +25,14 @@ returned a complete fixture delivery inventory and exited 0; its registration,
 phase revision and task-plan revision remain unchanged. Temporary native/staging
 outputs and reviewer evidence remain retained and excluded from commits. No
 version/tag/DMG/push/PR/merge, Codex restart or worker replay occurred.
-The owner has now explicitly approved exact assignment 88116 retirement through
-Main's Manage Project UI. Installation is verified and UI mutation is released;
-retirement has not been performed by BA or verified in this record.
+Main completed the explicitly owner-approved exact assignment 88116 retirement
+through Manage Project. Read-only receipt `BDAF89BC-7B17-4774-A31A-6A670D067313`
+confirms superseded state, completed retirement, checkout/profile removal and
+confirmed closure. Prior unknown state, launch reservation, uncertainty and null
+session remain recorded. The exact checkout is absent and its committed branch
+remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Fresh supported inventory
+readback succeeded with unchanged registration, phase and task-plan revisions.
+BA performed no mutation, new preparation or startup.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.
 Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`
@@ -42,9 +47,9 @@ Its exact envelope and readback are in the controlling brief. Main then released
 one startup observation through a fresh installed Coordinator. Worker
 `C0FD425E-1355-47DD-A255-F52231276F32` failed with `invalidAssignment` after
 `transportReached: true`; effective settings, thread/turn IDs and approval requests
-were absent. Same-connection supported close confirmed physical cleanup. Replacement
-assignment remains unknown, launch-reserved and uncertain, connection-closed with
-null session. Read-only source/log diagnosis rules out the observed reservation/
+were absent. Same-connection supported close confirmed physical cleanup. Before
+owner-approved retirement, replacement assignment was unknown, launch-reserved and
+uncertain, connection-closed with null session. Read-only source/log diagnosis rules out the observed reservation/
 handoff transition. An authorized effective-config read identified the first
 rejection: the target network profile has `enabled: false` plus 12 optional fields
 serialized as null, while `WorkerPolicy.validate` requires only `enabled`. Its

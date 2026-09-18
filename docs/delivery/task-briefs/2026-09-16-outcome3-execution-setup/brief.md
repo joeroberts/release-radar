@@ -18,8 +18,8 @@ settings, messages and pending requests, no access-failure stage and no thread/t
 IDs. Thus runtime settings were unavailable and no model-turn observation occurred.
 The signed handoff reached App Server transport; complete startup is not verified.
 Supported `worker_close` on that same connection returned `connectionClosed` and
-null thread ID. Saved assignment remains unknown, launch-reserved and uncertain,
-now connection-closed with null session. No retry, replacement, runtime approval or
+null thread ID. Before subsequent owner-approved retirement, saved assignment was
+unknown, launch-reserved and uncertain, connection-closed with null session. No retry, replacement, runtime approval or
 manual configuration/flag change followed. After bounded read-only log capture,
 normal EOF closed MCP session 10016 with exit 0; PID 83913 exit was confirmed.
 Logs and source order establish reservation/handoff validation reached child
@@ -61,8 +61,15 @@ worker start/preparation or retirement occurred. Unknown reserved, uncertain and
 closed assignment 88116 remains preserved; worker startup, isolation, STOP and
 recovery remain unverified. Main retains runtime acceptance ownership.
 The owner subsequently explicitly approved exact assignment 88116 retirement via
-approval reply 1. Main owns that Manage Project UI action; BA released UI mutation
-after installed identity/readback checks, without performing or claiming retirement.
+approval reply 1. Main performed the Manage Project UI action once after verified
+installation. Read-only protected receipt `BDAF89BC-7B17-4774-A31A-6A670D067313`
+confirms superseded state, completed retirement, worktree/profile removal and no
+connection-close uncertainty. Connection remains closed; prior unknown state,
+launch reservation, uncertain outcome and null session remain preserved. The exact
+checkout is absent; its branch remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`.
+Fresh installed AgentTools PID 89373 returned complete supported delivery inventory
+and exited 0, with unchanged registration/generation and phase/task-plan revisions.
+BA performed no mutation, new preparation or startup; Main owns the next request.
 
 ```json
 {
