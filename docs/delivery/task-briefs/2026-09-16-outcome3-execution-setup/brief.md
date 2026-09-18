@@ -1,5 +1,33 @@
 # Outcome 3 project execution setup
 
+## September 18 installed global-guidance replacement preparation
+
+After verified exact 9d42 retirement, Main closed settings with Cancel without Save,
+retaining generation 2, then selected this preparation-only request under existing
+acceptance authorization. Persist exact envelope before one fresh installed AgentTools
+submission; verify complete inventory first. No asserted-thread/review/baseline
+fields, other state mutation or worker start is included. Preserve body and request
+identity on uncertainty; Main owns the subsequent bounded prompt.
+
+Disposition: **pending submission**.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd",
+  "reason": "Prepare replacement after exact 9d42 retirement to verify reviewed installed global-guidance startup correction.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
 ## September 18 loaded instruction-source correction
 
 Main authorizes the same-outcome source-identity correction in writer task
