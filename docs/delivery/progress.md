@@ -30,8 +30,14 @@ After complete current inventory matched the expected identities/revisions, Main
 fresh preparation-only request `88116e60-6d46-4939-8828-a3825ebffe89` succeeded once,
 audit `B54F9A7C-2102-41DA-8E4A-EBD2A403CAC2`. Saved replacement assignment is authorized,
 Terra/medium with the bounded delivery profile, no launch reservation or session.
-Its exact envelope and readback are in the controlling brief. No worker start is
-released or claimed. Retain the writer and checkout for downstream work.
+Its exact envelope and readback are in the controlling brief. Main then released
+one startup observation through a fresh installed Coordinator. Worker
+`C0FD425E-1355-47DD-A255-F52231276F32` failed with `invalidAssignment` after
+`transportReached: true`; effective settings, thread/turn IDs and approval requests
+were absent. Same-connection supported close confirmed physical cleanup. Replacement
+assignment remains unknown, launch-reserved and uncertain, connection-closed with
+null session. No retry or new preparation followed; full startup/isolation/STOP
+and recovery remain unverified. Retain the writer and checkout for downstream work.
 
 **September 18 — hook discovery verified live; worker folder access remains blocked.**
 After owner restart, Main's read-only inventory succeeded. Exact preparation

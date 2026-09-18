@@ -9,7 +9,20 @@ status, interrupt and physical close. Do not approve runtime requests, repeat an
 uncertain start or prepare another assignment. Normal account/config/launch checks
 are authorized; additional worker instructions remain Main-owned.
 
-Disposition: **pending; not started**.
+Disposition: **started once; failed; same-connection physical cleanup confirmed**.
+Exact prompt/start identities were persisted in `f056d972` before launch.
+Fresh installed Coordinator MCP session 10016 returned worker
+`C0FD425E-1355-47DD-A255-F52231276F32`, status failed, `invalidAssignment`,
+`transportReached: true`. Same-connection status readback had empty effective
+settings, messages and pending requests, no access-failure stage and no thread/turn
+IDs. Thus runtime settings were unavailable and no model-turn observation occurred.
+The signed handoff reached App Server transport; complete startup is not verified.
+Supported `worker_close` on that same connection returned `connectionClosed` and
+null thread ID. Saved assignment remains unknown, launch-reserved and uncertain,
+now connection-closed with null session. No retry, replacement, runtime approval or
+manual configuration/flag change followed. The idle MCP process handle is retained;
+further diagnosis and recovery remain Main-owned. An ignored `tools.view_image`
+setting warning was emitted, but its relationship to the failure is unverified.
 
 ```json
 {
@@ -49,7 +62,7 @@ and project-layer directory exist at:
 `/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-88116e60-6d46-4939-8828-a3825ebffe89`.
 Baseline is `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`, branch
 `codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-88116e60-6d46-4939-8828-a3825ebffe89`.
-The retired prior assignment still preserves uncertainty. No worker was started.
+The retired prior assignment still preserves uncertainty. Preparation launched no worker.
 
 ```json
 {
