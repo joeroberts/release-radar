@@ -4,7 +4,7 @@
 
 Owner sequencing decision: defer onboarding Release Radar’s own repository into RR until disposable-project acceptance and a stable merged release. Its existing repository catalog and ledger remain authoritative; Main will flag the appropriate time. No Pursuit or self-onboarding action is authorized.
 
-**September 18 — reviewed global-guidance correction installed; startup acceptance pending.**
+**September 18 — reviewed global-guidance correction installed; startup blocked by documentation validation.**
 Correction `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` admits documented global
 guidance only from the protected selected Codex home, separately from pinned
 repository context. Causal RED reproduced the rejection; all 37 distinct current
@@ -34,7 +34,7 @@ settings without Save and selected fresh request `b3b1ed9b-9cd8-4e97-8f44-780c44
 Its exact envelope was committed before one fresh-helper submission, after complete
 inventory matched. Audit `42B6FEF4-8085-4C3E-BB49-0509050264B0` returned authorized
 delivery/Terra/medium assignment with exact saved-response match and real checkout.
-No worker started during preparation. Main has now released one exact startup observation, persisted in the owning brief before submission. Runtime approvals remain unanswered; retain a successful completed connection for subsequent acceptance. Full startup/model turn, isolation,
+No worker started during preparation. Main then released one exact startup observation, committed in 4003248a before submission. One start reached transport and known thread 01a0b4b4-0ec6-7a40-ac60-e84d35e9d8a6 with the expected runtime settings, then failed with Repository documentation validation failed (unsafeFileType), no turn ID/messages/pending requests. The unsafe artifact is unverified. Same-worker supported close returned connectionClosed; saved state remains unknown/reserved/uncertain with that known session and confirmed closure. Main authorized normal EOF after confirmed closure; Coordinator 64159 exited 0. No retry, replacement or runtime approval occurred. Full startup/model turn, isolation,
 STOP and recovery acceptance remain pending. No worker replay,
 version/tag/DMG/push/PR/merge, permission change or BA-initiated Codex restart occurred.
 Temporary build/review outputs and worktrees remain retained and excluded from commits.
