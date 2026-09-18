@@ -10,7 +10,25 @@ retain the same request/body on uncertainty. No baseline/review/asserted-thread
 fields or worker startup are included. Native admission remains fail closed on any
 unexposed request-receipt conflict; no raw database inspection is needed.
 
-Disposition: **pending submission**.
+Disposition: **prepared successfully once**. Recovery facts and exact envelope
+were committed in `c89db7c2` before submission. Fresh installed AgentTools PID 92027
+verified complete current generation-2 inventory, submitted once and exited 0.
+Audit `579713CC-D726-481B-A49D-A879DF32202D` returned authorized delivery assignment
+`delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`, model `gpt-5.6-terra`, effort medium,
+profile `rr-delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`, selected context
+`9D0895C1-C51D-4D47-8DAC-C80499F6678C`, policy digest
+`bae5733cce2b714e7cf8dfec8ef615bbf762b737c171f0197a891aa57ec824f9`.
+Registration generation 2, work incarnation and phase/task-plan revisions match.
+Protected saved assignment exactly matches the response, with no session/reservation/
+uncertainty/closed flags. Assigned settings do not establish runtime enforcement.
+Real checkout and `.codex` exist at
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`.
+Baseline `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`; branch
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`.
+Old 4fd11768 remains revoked at generation 1 with its checkout retained and no
+retirement or launch/session/uncertainty. No worker start occurred; Main owns the
+next bounded prompt. Successful admission resolved any possible unknown-preparation
+receipt conflict for this exact submitted work; no database probe was needed.
 
 ```json
 {

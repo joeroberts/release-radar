@@ -61,7 +61,14 @@ selected context/root and phase/task-plan revisions remain unchanged. Fresh supp
 inventory succeeded. Old never-started 4fd11768 stays revoked at generation 1 with
 its checkout retained. Only the three known assignment records exist; known preparation
 results succeeded, while supported inventory cannot certify absence of an orphan
-unknown request receipt. No new preparation or worker start followed this readback.
+unknown request receipt directly. Main then selected generation-2 preparation
+request `9d42ef30-dc25-4b12-9e9e-0dba9729de41`. Exact envelope and recovery facts were
+committed before one submission; fresh complete inventory matched. Audit
+`579713CC-D726-481B-A49D-A879DF32202D` returned authorized delivery/Terra/medium
+assignment, saved response exactly matches and its real checkout exists. Successful
+native admission establishes no conflicting unknown-preparation receipt blocked
+this exact work. Old revoked generation-1 resources remain retained. No worker
+started; Main owns the next bounded prompt and runtime acceptance.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.
 Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`
