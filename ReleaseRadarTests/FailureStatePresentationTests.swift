@@ -133,6 +133,11 @@ final class FailureStatePresentationTests: XCTestCase {
             XCTAssertEqual(setup.title, "Execution setup needed")
             XCTAssertTrue(setup.detail.contains("setup in Release Radar"))
         }
+        let disabled = try XCTUnwrap(FailureStatePresentation(agentError: .execution(.workflowDisabled)))
+        XCTAssertEqual(disabled.title, "Execution setup needed")
+        XCTAssertEqual(disabled.tone, .warning)
+        XCTAssertEqual(disabled.accessibilityID, "failure-execution-setup")
+        XCTAssertTrue(disabled.detail.contains("Resume project workflow"))
         for error in [ProjectExecutionError.invalidAssignment, .identityMismatch] {
             let invalid = try XCTUnwrap(FailureStatePresentation(agentError: .execution(error)))
             XCTAssertEqual(invalid.title, "Execution assignment rejected")
