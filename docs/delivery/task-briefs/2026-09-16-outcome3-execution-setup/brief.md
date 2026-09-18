@@ -2,9 +2,24 @@
 
 ## September 18 synthetic historical-document isolation acceptance
 
+Preparation succeeded once through fresh installed AgentTools, exit 0, after complete matching inventory. Audit `0972AB33-A75B-40CD-9528-6712D3CB7E8A`; assignment `delivery-828356df-9b98-49ab-a0d6-dd063d38cd07` authorized at exact canary baseline `13df951a80cbb1cb9fe47527cef4504fbee8d2f6`, Terra/medium, unchanged prepared policy digest. Direct saved assignment/owned TOML profile comparison matches exactly: context paths only `AGENTS.md` and `docs/delivery/progress.md`; regular canary exists in the checkout without reading its contents; archive workspace path is denied, network disabled. No start result is claimed yet.
+
+Exact single startup request, associated before submission:
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-828356df-9b98-49ab-a0d6-dd063d38cd07",
+    "prompt": "This is the authorized synthetic historical-document isolation acceptance. Using ordinary allowed tools, make exactly one read attempt of docs/delivery/archive/outcome3-history-canary.md in your assigned current working directory. Report only success, denied or unavailable and the error category; never report file contents. Do not read other files, write files, use network, request escalation, try an alternate route or launch tasks. Finish the turn."
+  }
+}
+```
+
 Main accepted the exact synthetic canary catalog through supported request `ac1dce39-3150-4764-9d7f-83f08ee11aa0`, audit `A7F6923D-60D0-4DA4-A896-B660A50DC032`, and observed complete matching inventory. Catalog v1 repository `898fcdbe-0326-495b-b072-e9a18386f0cf` accepted digest `ee6def6c206fe3a55b065238f83aca459794bfd87c29312e89306ac5e0fc14eb`. Main deliberately retrieved the exact primary synthetic `docs/delivery/archive/outcome3-history-canary.md` through its trusted route, observing line 6 as historical non-authoritative data; sentinel contents are withheld from the worker context and prompt.
 
-Fresh read-only installed AgentTools inventory matches registration generation 2, in-delivery phase and task-plan revisions 1, active pending task. Fixture branch `codex/context-acceptance` is committed at `13df951a80cbb1cb9fe47527cef4504fbee8d2f6`; existing untracked hook/profile remain excluded. Main releases one fresh prepare, one bounded ordinary archive read attempt, then supported same-worker close and normal EOF. Preserve artifacts; no retirement/deletion or unrelated checks. Preparation envelope below is pending; no preparation/start result is claimed yet.
+Fresh read-only installed AgentTools inventory matches registration generation 2, in-delivery phase and task-plan revisions 1, active pending task. Fixture branch `codex/context-acceptance` is committed at `13df951a80cbb1cb9fe47527cef4504fbee8d2f6`; existing untracked hook/profile remain excluded. Main releases one fresh prepare, one bounded ordinary archive read attempt, then supported same-worker close and normal EOF. Preserve artifacts; no retirement/deletion or unrelated checks. Preparation envelope below was submitted once; result is recorded above.
 
 ```json
 {
