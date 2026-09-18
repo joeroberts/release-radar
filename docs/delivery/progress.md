@@ -111,14 +111,20 @@ branch `codex/context-acceptance`, clean initial commit
 `3eea725181907fb8ed89d8c43fd143c568e63b81`. Main reached Initialize Project Tracking
 and the exact folder picker, but Choose Project failed "Sky Computer Use native pipe
 closed before response". Reacquisition and one CUA reset reproduced the transport
-failure; RR executable remains PID19590. Onboarding is unconfirmed: no Initialize
-confirmation or worker start was issued. BA's completed read-only diagnosis found
-PID19590 alive (state S), installed identity unchanged, normal recent bookmark/UI/XPC
-logs and no termination/panic/assertion or current September 18 crash event. This
-supports an automation pipe/session failure rather than RR crash evidence; the exact
-internal cause and onboarding outcome remain unproven. No acceptance success is
-established. This recording
-does not authorize further live actions; f481 and retained artifacts remain preserved.
+failure while RR remained running; no Initialize confirmation or worker start was issued.
+Main subsequently inspected `SkyComputerUseService-2026-09-18-022451.ips`,
+`-022609.ips` and matching `-015953.ips`: EXC_BREAKPOINT/SIGTRAP with Swift
+`_assertionFailure` → `Array.remove(at:)`. The helper crash caused native pipe closure;
+the exact helper defect remains unresolved. This is not an RR crash or full fix.
+After isolated RR/helper relaunch, Main verified `cua.getApp` and `rrApp.getAXState`
+succeeded; full AX showed Add Project with Initialize Project Tracking and Attach
+Folder to Existing Project. The fresh fixture was not initialized. BA then gracefully
+terminated only RR27079 and relaunched installed RR28281 with signed helper28289;
+Codex was not restarted. Normal-window automation recovered; native picker reliability,
+onboarding and startup acceptance remain unproven. Main's reports and temporary samples
+`/tmp/rr-picker-27079.sample.txt`, `/tmp/rr-cua-27052.sample.txt` and
+`/tmp/rr-openpanel-27136.sample.txt` are preserved. This recording performs no additional
+diagnosis/live action; f481, fixture and stage/artifacts remain unchanged and retained.
 
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.

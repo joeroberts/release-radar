@@ -163,14 +163,21 @@ BA created the separate clean README-only fixture at
 branch `codex/context-acceptance`, initial commit `3eea725181907fb8ed89d8c43fd143c568e63b81`.
 Main reached Initialize Project Tracking and its exact new folder picker. Choose
 Project failed "Sky Computer Use native pipe closed before response"; reacquisition
-and one CUA reset reproduced the transport failure. RR executable remains PID19590,
-but onboarding is unconfirmed. No Initialize confirmation or worker start was issued.
-BA's completed read-only diagnosis found PID19590 alive (state S), installed identity
-unchanged, normal recent logs and no current September 18 crash event or termination/
-panic/assertion evidence. This supports an automation pipe/session failure; its exact
-internal cause remains unproven. No onboarding or acceptance success is claimed.
-The old f481 record and stage/artifacts are preserved; this evidence
-update authorizes no implementation, additional live action or cleanup.
+and one CUA reset reproduced the transport failure while RR remained running.
+Main inspected `SkyComputerUseService-2026-09-18-022451.ips`, `-022609.ips` and
+matching `-015953.ips`, showing EXC_BREAKPOINT/SIGTRAP and Swift `_assertionFailure`
+→ `Array.remove(at:)`: the helper crash caused pipe closure, with its exact defect
+unresolved. After isolated RR/helper relaunch, Main verified `cua.getApp` and full
+`rrApp.getAXState` succeeded, showing Add Project with Initialize Project Tracking
+and Attach Folder to Existing Project; the fresh fixture was not initialized.
+BA subsequently gracefully terminated only RR27079 and relaunched installed RR28281
+with signed helper28289. Codex was not restarted. Normal-window automation recovered;
+the native picker remains unreliable. No full fix, onboarding or startup acceptance
+is claimed; no Initialize confirmation or worker start was issued. Preserve Main's
+reports and temporary samples `/tmp/rr-picker-27079.sample.txt`,
+`/tmp/rr-cua-27052.sample.txt` and `/tmp/rr-openpanel-27136.sample.txt`.
+The old f481 record, fixture and stage/artifacts are preserved; this result recording
+performs no diagnosis, implementation, tests/review, additional live action or cleanup.
 
 ## Scope, authority and dependencies
 
