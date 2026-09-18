@@ -353,7 +353,7 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let newCloses = await recoveryConfiguration.closedConnections; XCTAssertEqual(newCloses.count, 2)
         XCTAssertEqual(provisioning.removals, 1)
     }
-    private func fixture() throws -> (URL, URL, AuthorizedProject, ProjectExecutionWork, ProjectExecutionFileStore) {
+    private func fixture(bindContext: Bool = true) throws -> (URL, URL, AuthorizedProject, ProjectExecutionWork, ProjectExecutionFileStore) {
         let base = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let source = base.appendingPathComponent("Repository")
         try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
@@ -362,10 +362,27 @@ final class ProjectExecutionProducerTests: XCTestCase {
         let store = try ProjectExecutionFileStore(root: root, create: true)
         let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
         var policy = ProjectExecutionPolicy(registration: registration, primaryRoot: source.path, appServerExecutable: CodexExecutionIdentity.executable, handlerPath: handler)
+        if bindContext {
+            let context = try CodexExecutionContext(home: root, bookmark: Data([1]))
+            try store.saveCodexContext(context, expected: nil)
+            policy.codexContextID = context.id
+        }
         policy.consent = .init(); policy.hookReceipt = .init(command: "\"" + handler + "\" --hook", inline: false, beforeDigest: nil, intendedDigest: String(repeating: "a", count: 64), installed: true)
         try store.savePolicy(policy, expected: nil)
         let work = ProjectExecutionWork(projectID: registration.projectID, ticketID: "ticket-one", taskID: "work-one", outcome: "Bounded outcome", title: "Approved task", taskPlanRevision: 1, phaseID: "phase-one", phaseRevision: 2)
         return (root, source, .init(registration: registration, canonicalRoot: source, authorizedRoots: [source]), work, store)
+    }
+
+    func testFinalAdmissionRejectsUnboundLegacyPreparationAndPreservesIt() async throws {
+        let (root, source, project, work, store) = try fixture(bindContext: false)
+        let configuration = Configuration()
+        let producer = ProjectExecutionAssignmentCoordinator(root: { root }, configuration: configuration,
+            handlerPath: handler, provisioning: Provisioning(source: source, candidate: nil))
+        let prepared = try await producer.prepare(project: project, work: work, requestID: UUID(),
+            reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["AGENTS.md"])
+        XCTAssertNil(prepared.codexContextID)
+        XCTAssertThrowsError(try producer.admitPrepared(prepared), "Historical unbound preparation cannot become authority")
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: prepared.id), prepared)
     }
 
     func testFailedProfilePreparationResumesSameAssignmentWithoutAuthorizingLaunch() async throws {

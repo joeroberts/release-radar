@@ -7,7 +7,10 @@ onboarding and plugin installation flows, including project-scoped worktrees,
 protected assignments and production hook admission from verified assignments.
 Preserve ordinary-worker history/sibling exclusion and deliberate Main retrieval.
 
-### Worker startup configuration investigation (pre-correction)
+### Current worker startup configuration investigation
+
+This section records the pre-correction investigation; the approved source release
+is recorded below. Its original heading is retained for existing references.
 
 Objective: finish actual RR-owned linked-worktree hook readiness and affected
 worker startup without widening permission or trust boundaries. The prior
@@ -55,7 +58,9 @@ Fresh Chief Architecture task `01a0b25e-bdfc-7b20-bac9-14b5b53f7862` investigate
 the supported complete correction read-only, requested Astra/high (not exposed),
 without owner config/credential inspection or live operations. Its recommendation
 must preserve original Outcome 3 scope and classify necessary changes and unknowns.
-At that investigation checkpoint product implementation and another live attempt were held. The approved source release below supersedes that implementation hold; live attempts remain held.
+At that investigation checkpoint product implementation and another live attempt
+were held. The approved source release below supersedes that implementation hold;
+live attempts remain held.
 
 Direct checks remain repository-native; the next material implementation requires
 focused boundary tests and one appropriate independent review. BuildAgent owns

@@ -76,4 +76,55 @@ final class CodexExecutionContextTests: XCTestCase {
         XCTAssertThrowsError(try CodexExecutionContext(home: root, bookmark: Data([1])))
         XCTAssertFalse(FileManager.default.fileExists(atPath: root.path))
     }
+
+    func testRetainedAssignmentBlocksDifferentHomeButAllowsSameHomeRecovery() throws {
+        let (store, context) = try fixture()
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
+        var assignment = ProjectExecutionAssignment(id: "retained-one", registration: registration,
+            checkoutPath: store.root.appendingPathComponent("checkout").path, role: .delivery, permissionProfile: "rr-retained",
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Approved bounded work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], state: .unknown)
+        assignment.codexContextID = context.id; assignment.launchReserved = true; assignment.uncertainOutcome = true
+        try store.saveAssignment(assignment, expected: nil)
+        let other = store.root.appendingPathComponent("other-existing-home")
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        let replacement = try CodexExecutionContext(home: other, bookmark: Data([2]), previousContextID: context.id)
+        XCTAssertThrowsError(try store.saveCodexContext(replacement, expected: context))
+        XCTAssertEqual(try store.codexContext(), context)
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: assignment.id), assignment)
+        let recovered = try CodexExecutionContext(home: URL(fileURLWithPath: context.homePath), bookmark: Data([3]), id: context.id)
+        try store.saveCodexContext(recovered, expected: context)
+        XCTAssertEqual(try store.codexContext()?.id, context.id)
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: assignment.id), assignment)
+        var retired = assignment; retired.state = .superseded; retired.connectionClosed = true
+        retired.retirement = .init(requestID: UUID(), priorState: assignment.state)
+        retired.retirement?.worktreeRemoved = true; retired.retirement?.profileRemoved = true; retired.retirement?.completed = true
+        try store.saveAssignment(retired, expected: assignment)
+        try store.saveCodexContext(replacement, expected: recovered)
+        XCTAssertEqual(try store.codexContext(), replacement)
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: assignment.id), retired)
+    }
+
+    func testInstalledHookBlocksDifferentHomeUntilOwnedHookIsRemoved() throws {
+        let (store, context) = try fixture()
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
+        var policy = ProjectExecutionPolicy(registration: registration, primaryRoot: store.root.path,
+            appServerExecutable: CodexExecutionIdentity.executable, handlerPath: "/fixture/coordinator")
+        policy.codexContextID = context.id
+        policy.hookReceipt = .init(command: "owned-hook", inline: false, beforeDigest: nil,
+            intendedDigest: String(repeating: "a", count: 64), installed: true)
+        try store.savePolicy(policy, expected: nil)
+        let other = store.root.appendingPathComponent("other-existing-home")
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        let replacement = try CodexExecutionContext(home: other, bookmark: Data([2]))
+        XCTAssertThrowsError(try store.saveCodexContext(replacement, expected: context)) {
+            XCTAssertEqual($0 as? CodexExecutionContextError, .resourcesRetained)
+        }
+        XCTAssertEqual(try store.codexContext(), context)
+        var removed = policy; removed.hookReceipt?.installed = false
+        try store.savePolicy(removed, expected: policy)
+        try store.saveCodexContext(replacement, expected: context)
+        XCTAssertEqual(try store.codexContext(), replacement)
+    }
 }

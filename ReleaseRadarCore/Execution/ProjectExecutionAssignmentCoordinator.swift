@@ -42,9 +42,8 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
               policy.registration == value.registration, policy.handlerPath == handlerPath,
               policy.hookReceipt?.installed == true,
               try store.assignment(projectID: value.registration.projectID.rawValue, taskID: value.id) == value else { throw ProjectExecutionError.assignmentNotAuthorized }
-        if let contextID = value.codexContextID {
-            guard try store.codexContext()?.id == contextID else { throw CodexExecutionContextError.changed }
-        }
+        guard let contextID = value.codexContextID,
+              try store.codexContext()?.id == contextID else { throw CodexExecutionContextError.changed }
         try value.verifyContext()
         var admitted = value; admitted.state = .authorized; admitted.finalizationFailed = nil
         try store.saveAssignment(admitted, expected: value)

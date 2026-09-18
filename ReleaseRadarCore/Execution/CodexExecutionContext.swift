@@ -2,12 +2,14 @@ import Darwin
 import Foundation
 
 public enum CodexExecutionContextError: Error, LocalizedError, Equatable, Sendable {
-    case selectionRequired, accessRequired, changed, subscriptionRequired
+    case selectionRequired, accessRequired, changed, subscriptionRequired, routingUnsupported, resourcesRetained
     public var errorDescription: String? {
         switch self {
         case .selectionRequired: "Select your existing Codex home in Settings → Connections before setting up execution. Use the folder belonging to your current ChatGPT account."
         case .accessRequired: "Codex folder access could not be restored. In Settings → Connections, select the same existing Codex home again. Its authentication and history are preserved."
         case .subscriptionRequired: "The selected Codex context has no available ChatGPT account. In Settings → Connections, select the existing Codex folder used by your signed-in account. Release Radar does not copy credentials or change your login."
+        case .routingUnsupported: "The selected Codex context routes workers through an unsupported provider or endpoint. Release Radar requires the built-in OpenAI provider with your ChatGPT account. Review the selected context's provider settings; no generation was started and its configuration was preserved."
+        case .resourcesRetained: "Keep the current Codex folder until its execution resources are retired. Close known workers, retire retained assignments in project execution settings, and remove installed execution hooks before selecting a different folder. You can reselect the same folder to restore access. Reserved or uncertain assignments remain blocked."
         case .changed: "The selected Codex context changed or no longer matches this operation. Close known workers, restore the original folder in Settings → Connections, and review project execution setup. Reserved or uncertain assignments cannot be replayed."
         }
     }

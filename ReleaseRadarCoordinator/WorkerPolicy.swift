@@ -81,6 +81,11 @@ struct WorkerPolicy {
     }
 
     func validate(config: [String: Any]) throws {
+        guard config["model_provider"] == nil || config["model_provider"] is NSNull || config["model_provider"] as? String == "openai",
+              Self.defaultEndpoint(config["openai_base_url"], expected: "https://api.openai.com/v1"),
+              Self.defaultEndpoint(config["chatgpt_base_url"], expected: "https://chatgpt.com/backend-api/") else {
+            throw CodexExecutionContextError.routingUnsupported
+        }
         guard let profiles = config["permissions"] as? [String: Any],
               let profile = profiles[assignment.permissionProfile] as? [String: Any],
               Set(profile.keys).isSubset(of: ["description", "extends", "workspace_roots", "filesystem", "network"]),
@@ -95,6 +100,10 @@ struct WorkerPolicy {
 
     private static func emptyMetadata(_ value: Any?) -> Bool {
         value == nil || value is NSNull || (value as? [String])?.isEmpty == true
+    }
+
+    private static func defaultEndpoint(_ value: Any?, expected: String) -> Bool {
+        value == nil || value is NSNull || value as? String == expected
     }
 
     func overrides(config: [String: Any]) throws -> [String: Any] {

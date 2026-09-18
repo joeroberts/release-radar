@@ -119,6 +119,7 @@ actor WorkerAdapter {
             ])
             guard let thread = result["thread"] as? [String: Any], let threadID = thread["id"] as? String else { throw ProjectExecutionError.identityMismatch }
             workers[id]?.threadID = threadID
+            guard thread["modelProvider"] as? String == "openai" else { throw CodexExecutionContextError.routingUnsupported }
             workers[id]?.effective = result.filter { ["cwd", "runtimeWorkspaceRoots", "model", "reasoningEffort", "activePermissionProfile", "sandbox", "approvalPolicy", "approvalsReviewer", "instructionSources"].contains($0.key) }
             guard result["cwd"] as? String == selected.assignment.checkoutPath,
                   result["runtimeWorkspaceRoots"] as? [String] == [selected.assignment.checkoutPath],

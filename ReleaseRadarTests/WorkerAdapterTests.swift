@@ -110,6 +110,8 @@ final class WorkerAdapterTests: XCTestCase {
         var broadWrite = false
         var broadRead = false
         var accountType = "chatgpt"
+        var modelProvider = "openai"
+        var returnedModelProvider = "openai"
         var completesImmediately = false
         var closeFailure = false
         var closeCount = 0
@@ -135,12 +137,12 @@ final class WorkerAdapterTests: XCTestCase {
                 var fs = try ProjectExecutionPermissionProfile(assignment: selected, policy: policy.policy, paths: paths).filesystemObject
                 if broadWrite { fs[policy.store.root.path] = "write" }
                 if broadRead { fs["/Users"] = "read" }
-                return try RPCObject(["config": ["permissions": [selected.permissionProfile: ["filesystem": fs, "network": ["enabled": false]]]]])
+                return try RPCObject(["config": ["model_provider": modelProvider, "permissions": [selected.permissionProfile: ["filesystem": fs, "network": ["enabled": false]]]]])
             }
             if method == "thread/start" {
                 if let delayedThreadStart { self.delayedThreadStart = nil; await delayedThreadStart.pause() }
                 if lostStart { throw AppServerTransportError(message: "Unknown start", outcomeUnknown: true) }
-                return try RPCObject(["thread": ["id": "session-one"], "cwd": selected.checkoutPath,
+                return try RPCObject(["thread": ["id": "session-one", "modelProvider": returnedModelProvider], "cwd": selected.checkoutPath,
                     "runtimeWorkspaceRoots": [selected.checkoutPath], "model": selected.model, "reasoningEffort": selected.effort,
                     "activePermissionProfile": ["id": selected.permissionProfile], "sandbox": ["networkAccess": false],
                     "approvalPolicy": "on-request", "instructionSources": [selected.checkoutPath + "/AGENTS.md"]])
@@ -200,6 +202,14 @@ final class WorkerAdapterTests: XCTestCase {
         XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: broadened]]))
         var addedRoot = fs; addedRoot["/Users"] = "read"; broadened = normalized; broadened["filesystem"] = addedRoot
         XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: broadened]]))
+        for routing in [["model_provider": "custom"], ["openai_base_url": "https://provider.invalid/v1"],
+                        ["chatgpt_base_url": "https://provider.invalid/backend-api/"]] {
+            var config: [String: Any] = ["permissions": [assignment.permissionProfile: normalized]]
+            for (key, value) in routing { config[key] = value }
+            XCTAssertThrowsError(try fixture.policy.validate(config: config)) {
+                XCTAssertEqual($0 as? CodexExecutionContextError, .routingUnsupported)
+            }
+        }
     }
 
     func testSelectedContextCannotSilentlySwitchWorkerToApiBilling() async throws {
@@ -212,6 +222,27 @@ final class WorkerAdapterTests: XCTestCase {
         XCTAssertEqual(account["refreshToken"] as? Bool, false)
         _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
         XCTAssertThrowsError(try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))
+    }
+
+    func testChatGPTAccountWithCustomProviderCannotStartThreadOrGeneration() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.modelProvider = "custom"
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        XCTAssertEqual(started["status"] as? String, "failed")
+        XCTAssertFalse(peer.calls.contains { $0.0 == "thread/start" || $0.0 == "turn/start" })
+        XCTAssertEqual(try valid.store.assignment(projectID: "project-one", taskID: "task-one").uncertainOutcome, true)
+        _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+    }
+
+    func testReturnedProviderMismatchCannotBindAssignmentOrStartGeneration() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.returnedModelProvider = "custom"
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        XCTAssertEqual(started["status"] as? String, "failed")
+        XCTAssertFalse(peer.calls.contains { $0.0 == "turn/start" })
+        let retained = try valid.store.assignment(projectID: "project-one", taskID: "task-one")
+        XCTAssertNil(retained.sessionID); XCTAssertEqual(retained.uncertainOutcome, true)
+        _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
     }
 
     func testCanonicalPrimarySourceIsUsedForWorkerStartupAndFollowup() async throws {

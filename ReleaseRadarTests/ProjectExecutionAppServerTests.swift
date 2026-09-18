@@ -43,12 +43,13 @@ final class ProjectExecutionAppServerTests: XCTestCase {
     func testSelectedContextEnvironmentRemovesInheritedAuthenticationAndStateOverrides() {
         let original = ["HOME": "/sandbox-home", "CODEX_HOME": "/wrong-home", "CODEX_SQLITE_HOME": "/wrong-state",
             "CODEX_API_KEY": "fixture-secret", "OPENAI_API_KEY": "fixture-secret", "CODEX_ACCESS_TOKEN": "fixture-secret",
-            "OPENAI_IDENTITY_TOKEN_FILE": "/wrong-token", "OPENAI_FEDERATION_RULE_ID": "fixture-rule", "PATH": "/usr/bin:/bin"]
+            "OPENAI_IDENTITY_TOKEN_FILE": "/wrong-token", "OPENAI_FEDERATION_RULE_ID": "fixture-rule",
+            "OPENAI_BASE_URL": "https://provider.invalid/v1", "PATH": "/usr/bin:/bin"]
         let environment = AppServerTransport.selectedContextEnvironment(homePath: "/existing-codex", inherited: original)
         XCTAssertEqual(environment["CODEX_HOME"], "/existing-codex")
         XCTAssertEqual(environment["HOME"], original["HOME"])
         XCTAssertEqual(environment["PATH"], original["PATH"])
-        for key in ["CODEX_SQLITE_HOME", "CODEX_API_KEY", "OPENAI_API_KEY", "CODEX_ACCESS_TOKEN", "OPENAI_IDENTITY_TOKEN_FILE", "OPENAI_FEDERATION_RULE_ID"] {
+        for key in ["CODEX_SQLITE_HOME", "CODEX_API_KEY", "OPENAI_API_KEY", "OPENAI_BASE_URL", "CODEX_ACCESS_TOKEN", "OPENAI_IDENTITY_TOKEN_FILE", "OPENAI_FEDERATION_RULE_ID"] {
             XCTAssertNil(environment[key])
         }
         XCTAssertEqual(original["CODEX_HOME"], "/wrong-home", "No persistent environment/config mutation")

@@ -57,7 +57,22 @@ no longer matched the real fixture root introduced for canonical-source testing.
 The fixture now binds its generated root; production authorization/revocation guards
 are unchanged. All 82 passes, including normalized ceiling rejection assertions,
 context lifecycle, setup/retirement and legacy decoding, are terminal. The one affected
-case/compilation and one fresh RO04 architecture/security/UX review remain pending. Main owns
+case passed at checkpoint78 (one test, zero failures); required compilation,
+documentation/index/diff checks passed. Main authorized the local checkpoint commit
+`28db1e4ea6bc7c89a960ff6abadf30d48af5a14c` (24 files); BA reported a clean tree.
+The one fresh independent review of that immutable candidate identified three required
+corrections, released by Main: nonnil final admission, effective/returned provider
+agreement, and preventing a different-home switch from stranding retained resources.
+Native79 compiled and genuinely failed the unbound-admission regression; native80
+passed all 16 producer and one admission tests, compilation and documentation/diff checks.
+Native81 compiled and genuinely failed all three provider/switch regressions; cleanup
+errors were downstream of unwanted actions in synthetic peers, not live usage.
+The corrections now require default built-in OpenAI routing and returned agreement
+before generation, and reject different-home saves while unretired assignments or
+installed hooks remain. Same-home identity/access recovery and uncertain records are
+preserved. The complete correction is frozen for affected native checks; the same
+reviewer's correction check remains pending.
+The existing brief anchor is restored with explicit historical labeling. Main owns
 later actual signed-app/grant/account/config/hooks/bookmark checks; no live retry,
 reprepare/new assignment, login/refresh, config mutation, installation or cleanup is
 released here. Old unbound/uncertain/reserved assignments and exact f481 partial state

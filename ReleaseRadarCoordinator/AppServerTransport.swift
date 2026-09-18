@@ -59,7 +59,7 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
 
     static func selectedContextEnvironment(homePath: String, inherited: [String: String]) -> [String: String] {
         var environment = inherited
-        for key in ["CODEX_SQLITE_HOME", "CODEX_API_KEY", "OPENAI_API_KEY", "CODEX_ACCESS_TOKEN",
+        for key in ["CODEX_SQLITE_HOME", "CODEX_API_KEY", "OPENAI_API_KEY", "OPENAI_BASE_URL", "CODEX_ACCESS_TOKEN",
                     "OPENAI_IDENTITY_TOKEN_FILE", "OPENAI_FEDERATION_RULE_ID", "OPENAI_WORKLOAD_IDENTITY_CONTEXT"] {
             environment.removeValue(forKey: key)
         }

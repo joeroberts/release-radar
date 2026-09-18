@@ -1828,10 +1828,19 @@ The bounded source stores a selection receipt (identity, selection time, prior i
 folder fingerprint and bookmark) in protected execution storage; only UUID bindings
 enter policies/assignments. Owner selection records an application audit intent before
 saving the protected receipt. No receipt includes account/token/credential content.
-Same-physical-folder reselection restores access with the same identity; a different
-folder gets a new identity. Existing connections compare their exact saved receipt and
+Same-physical-folder reselection restores access with the same identity. A different
+folder gets a new identity only after retained assignments are retired and installed
+execution hooks are removed; protected inventory and selection share the native writer
+lock with policy/assignment saves. Refusal preserves the receipt and resource records,
+with existing Connections error guidance to close/retire resources or restore the same
+folder. Existing connections compare their exact saved receipt and
 retain the original grant until physical close. Stop/close remain available after loss.
 Production setup opens the grant before lifecycle mutations, and account admission
-uses `account/read(refreshToken:false)` requiring ChatGPT; inherited auth/state overrides
-are removed only from the child environment. This does not prove the selected account
+uses `account/read(refreshToken:false)` requiring ChatGPT. Workers additionally require
+the effective built-in `openai` provider and default OpenAI/ChatGPT endpoints before
+thread creation, then require returned `thread.modelProvider == openai` before binding
+or generation. Custom routing fails closed without editing unrelated configuration.
+Inherited auth/state/base-URL overrides are removed only from the child environment.
+Final preparation admission requires a nonnil identity matching policy and selection;
+legacy records remain readable and are preserved on refusal. This does not prove the selected account
 or credential backend is accessible to the signed production child.
