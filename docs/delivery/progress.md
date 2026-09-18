@@ -16,10 +16,17 @@ RR readback confirms project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac`,
 registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 1, accepted
 repository `898fcdbe-0326-495b-b072-e9a18386f0cf`, catalog v1 and digest
 `b9096b02ecd0379864dc2d224fae178ca5c5326b6c5b02fb84bfb78bf07f24bb`.
-Delivery inventory contains no phases or tickets. The completed bootstrap task
-is archived; a fresh task owns only the managed-guidance handoff and its audit.
-Main will then register the authorized synthetic work and exercise actual
-assignment/startup, isolation, STOP and recovery. These remain unverified.
+The managed-v3 guidance handoff is committed as `ecb738e`, audit
+`0AA578DF-3972-42AC-8120-8353194713FB`; Main independently read back the complete
+inventory and available handoff evidence. Both bounded fixture tasks are archived.
+Main registered one synthetic Backlog ticket and Pending task, finalized its
+fully covered phase plan at revision 2, and used Begin delivery. Complete readback
+confirms `in_delivery` lifecycle revision 1 and task-plan revision 1.
+Exact preparation `67a32c8b-11fd-430e-b916-439046da4531` returned
+`execution.hookNotReady`, with no entity IDs. No worker started or retry occurred.
+The exact requests and successful registration audits are retained in the existing
+brief. Build Agent is diagnosing this request's readiness reason and partial state
+read-only. Actual startup, isolation, STOP and recovery remain unverified.
 
 The previous source checkout `dd18` is absent. Build Agent restored committed
 `34622e44` into branch `codex/outcome3-context-acceptance-closeout` at

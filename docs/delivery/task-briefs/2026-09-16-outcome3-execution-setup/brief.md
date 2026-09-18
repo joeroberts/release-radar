@@ -1,6 +1,160 @@
 # Outcome 3 project execution setup
 
+## September 18 fresh-fixture acceptance commands
+
+The owner-authorized disposable acceptance continues after successful restart recovery.
+The fresh fixture guidance handoff is committed as `ecb738e`; Main independently
+read back managedV3 and available handoff evidence, audit
+`0AA578DF-3972-42AC-8120-8353194713FB`. Catalog identity is unchanged.
+The following new requests target only the fresh Documents fixture, not old f481.
+They register one phase, one Backlog ticket and one Pending task; none asserts completion.
+Disposition: all three committed. Phase audit `8B9B3A0B-7947-4A09-A9DC-00BFECA14D54`,
+ticket audit `6C51E64F-4B8A-4331-BD39-C02DDB21C62E`, task-plan audit
+`E9AFF258-7EC6-4499-B79F-96291D9ADD59`, task-plan revision 1.
+Complete delivery inventory confirms one Pending task in Backlog; UI shows Draft
+phase-plan revision 1 and lifecycle Unassessed revision 0. No completion is asserted.
+
+```json
+[
+  {
+    "tool": "release_radar_upsert_phase",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+      "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+      "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+      "requestID": "f8483e75-2243-478f-bd86-cab000e05e24",
+      "phaseID": "context-acceptance-20260918-phase",
+      "name": "Outcome 3 current-context execution acceptance",
+      "reason": "Create the single synthetic phase for the owner-authorized disposable worker startup, isolation, STOP and recovery acceptance."
+    }
+  },
+  {
+    "tool": "release_radar_upsert_ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+      "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+      "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+      "requestID": "8c04f52d-7113-4d93-b9a0-6859f50a2fc2",
+      "phaseID": "context-acceptance-20260918-phase",
+      "ticketID": "context-acceptance-20260918-worker",
+      "lane": "backlog",
+      "outcome": "Verify RR-owned worker startup in the assigned checkout, role permissions, history and sibling exclusion, production hook admission, STOP and recovery using only synthetic fixture data.",
+      "reason": "Register the single synthetic worker test under existing disposable acceptance authorization; no delivery completion is asserted."
+    }
+  },
+  {
+    "tool": "release_radar_revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+      "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+      "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+      "requestID": "1aed3da7-3876-48df-ac14-9e564ecec7c7",
+      "ticketID": "context-acceptance-20260918-worker",
+      "additions": [
+        {
+          "id": "context-acceptance-20260918-task",
+          "label": "Execution acceptance",
+          "title": "Verify RR-owned worker startup in the assigned checkout, role permissions, history and sibling exclusion, production hook admission, STOP and recovery using only synthetic fixture data.",
+          "sortOrder": 0
+        }
+      ],
+      "reason": "Define one Pending task for the authorized synthetic worker test so RR can derive its protected assignment; no completion is asserted."
+    }
+  }
+]
+```
+
+
 ## Objective and outcome
+
+Phase plan committed at revision 2, audit `277685F0-BA6F-40AC-81D8-A4BE430D57DA`.
+Finalization committed at revision 2, audit `E1DF398D-5267-42CC-A2ED-D5F5164923C2`.
+Exact finalization envelope:
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "a9dc1078-407e-46e6-9ca8-2ef4ffe80871",
+  "reason": "Finalize the fully covered synthetic acceptance plan for the authorized disposable worker test.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "phaseID": "context-acceptance-20260918-phase",
+  "expectedRevision": 2
+}
+```
+Main used the supported Begin delivery UI with the authorized synthetic-test reason.
+Complete delivery inventory confirms lifecycle `in_delivery`, lifecycle revision 1,
+and task-plan revision 1 with one Pending task. Expected phase revision below means
+lifecycle revision, as enforced by `ProjectExecutionWork.read`.
+Exact preparation returned `execution.hookNotReady`, with no entity IDs. No worker
+start or second preparation was issued. Build Agent is diagnosing this exact
+request's hook-readiness reason and partial resources read-only. Preserve the
+envelope below; do not substitute a new assignment or replay old f481.
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "67a32c8b-11fd-430e-b916-439046da4531",
+  "reason": "Prepare the authorized fresh synthetic assignment from the committed fixture for worker startup, permissions, isolation, STOP and recovery acceptance.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+Fresh phase-plan request (committed, retained for identity):
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "f1adca83-3dee-4f42-ab20-d23a3e50a428",
+  "reason": "Define the sole synthetic acceptance goal and ticket coverage under existing disposable worker lifecycle authorization.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "phaseID": "context-acceptance-20260918-phase",
+  "expectedRevision": 1,
+  "goalUpserts": [
+    {
+      "id": "context-acceptance-20260918-goal",
+      "title": "Verify controlled synthetic execution",
+      "outcome": "Establish actual worker startup, scoped permissions, hook admission, STOP and recovery without accessing owner data.",
+      "doneCriteria": [
+        "Assigned checkout and effective worker permissions are verified.",
+        "Historical and sibling isolation and deliberate Main retrieval are exercised with synthetic data.",
+        "STOP and supported recovery are observed without claiming unknown outcomes succeeded."
+      ],
+      "sortOrder": 0
+    }
+  ],
+  "assignments": [
+    {
+      "goalID": "context-acceptance-20260918-goal",
+      "ticketID": "context-acceptance-20260918-worker"
+    }
+  ]
+}
+```
 
 Integrate deterministic project execution setup into Release Radar’s existing
 onboarding and plugin installation flows, including project-scoped worktrees,
