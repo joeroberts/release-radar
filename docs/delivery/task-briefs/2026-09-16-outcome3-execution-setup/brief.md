@@ -1,5 +1,21 @@
 # Outcome 3 project execution setup
 
+## September 18 same-worker STOP acceptance
+
+Main releases one bounded inert follow-up, then one supported interrupt after actual inProgress/known turn ID. Observe terminal result and saved stopped admission state; if natural completion races STOP, report it rather than repeat. Supported close and normal EOF after confirmed closure are authorized; retirement is not. Preserve marker/default.profraw, thread/history/outcome and unchanged configuration/permissions.
+
+Exact follow-up, committed before submission:
+
+```json
+{
+  "name": "worker_follow_up",
+  "arguments": {
+    "workerId": "978206F4-3732-401B-B86A-3DB4B40B239A",
+    "prompt": "This is the authorized synthetic STOP acceptance. Run only a 30-second sleep using the ordinary command tool, then report waiting completed. Do not read or write files, access network, launch tasks or request escalation. The coordinator may interrupt this turn."
+  }
+}
+```
+
 ## September 18 same-worker synthetic permission acceptance
 
 Result: the single follow-up completed on same worker/thread, turn `01a0b4d2-70f3-7030-9daf-ff90baf96c72`, with no error/pending approvals. Prompt was committed in abbbadcf. The connection PTY initially held only an unfinished 1024-character line; clearing that unsubmitted line and switching only this terminal to noncanonical/no-echo allowed one acknowledged id5 follow-up, with no second turn or worker/config permission change.
