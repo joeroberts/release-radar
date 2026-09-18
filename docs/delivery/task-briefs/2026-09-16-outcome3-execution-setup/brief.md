@@ -1,5 +1,28 @@
 # Outcome 3 project execution setup
 
+## September 18 synthetic historical-document isolation acceptance
+
+Main accepted the exact synthetic canary catalog through supported request `ac1dce39-3150-4764-9d7f-83f08ee11aa0`, audit `A7F6923D-60D0-4DA4-A896-B660A50DC032`, and observed complete matching inventory. Catalog v1 repository `898fcdbe-0326-495b-b072-e9a18386f0cf` accepted digest `ee6def6c206fe3a55b065238f83aca459794bfd87c29312e89306ac5e0fc14eb`. Main deliberately retrieved the exact primary synthetic `docs/delivery/archive/outcome3-history-canary.md` through its trusted route, observing line 6 as historical non-authoritative data; sentinel contents are withheld from the worker context and prompt.
+
+Fresh read-only installed AgentTools inventory matches registration generation 2, in-delivery phase and task-plan revisions 1, active pending task. Fixture branch `codex/context-acceptance` is committed at `13df951a80cbb1cb9fe47527cef4504fbee8d2f6`; existing untracked hook/profile remain excluded. Main releases one fresh prepare, one bounded ordinary archive read attempt, then supported same-worker close and normal EOF. Preserve artifacts; no retirement/deletion or unrelated checks. Preparation envelope below is pending; no preparation/start result is claimed yet.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "828356df-9b98-49ab-a0d6-dd063d38cd07",
+  "reason": "Verify synthetic historical archive isolation after accepted canary catalog, and Main deliberate trusted retrieval.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
 ## September 18 fresh-assignment post-STOP recovery acceptance
 
 Final supported retirement readback: Main retired selected closed598fa3e0 once, then canceled settings without Save. Exact receipt `24B66151-BF37-473D-98E5-64A3D463421F` confirms superseded/completed, priorState closed, checkout/profile removed and no connection-close uncertainty. Exact resources are absent; baseline branch, known new session, reservation/confirmed closure and outcome history remain, uncertainty absent. All three fixture-side preserved profile/marker copies remain retained. Fresh installed AgentTools PID 14266 returned complete inventory and exited 0, registration generation 2 and phase/task-plan revisions 1 unchanged, synthetic task still active/pending. No new prepare/start or tracking completion was performed.
