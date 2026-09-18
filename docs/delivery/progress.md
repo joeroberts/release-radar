@@ -68,7 +68,18 @@ committed before one submission; fresh complete inventory matched. Audit
 assignment, saved response exactly matches and its real checkout exists. Successful
 native admission establishes no conflicting unknown-preparation receipt blocked
 this exact work. Old revoked generation-1 resources remain retained. No worker
-started; Main owns the next bounded prompt and runtime acceptance.
+started during preparation. Main then released one startup observation, persisted
+before submission. Worker `22E6A7FD-104A-490A-BB45-D2A4673EC3CF` reached thread
+`01a0b476-d219-7ce1-b30a-1879979c125a` with exact cwd/roots/Terra/medium/profile,
+network disabled, on-request approval and auto-review reviewer, then failed identity
+admission. Reported global `/Users/jroberts/.codex/AGENTS.md` is outside the recorded
+checkout-context set; Restricted02's source diagnosis owns the precise guard and
+instruction-source semantics. No turn/messages/requests occurred.
+Same-connection supported closure confirmed physical cleanup; assignment remains
+unknown/reserved/uncertain and connection-closed with known session ID retained.
+Idle Coordinator remains open pending Main direction. No retry, new preparation,
+configuration edit or guard weakening followed. Startup and remaining acceptance
+remain unverified; Main/Restricted own contract/recovery sequencing.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.
 Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`

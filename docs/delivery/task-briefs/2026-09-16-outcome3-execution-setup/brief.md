@@ -9,7 +9,52 @@ auto-approve runtime requests, change project settings/configuration, replay a s
 or prepare new work after failure. Capture failure stage and use supported closure
 with the known handle when applicable. Assigned settings are not runtime evidence.
 
-Disposition: **pending startup**.
+Disposition: **started once; failed identity admission; physical closure confirmed**.
+Exact prompt was committed in `9553e3bb` before the fresh installed Coordinator
+MCP session 46497 start. Returned worker `22E6A7FD-104A-490A-BB45-D2A4673EC3CF` reached transport
+and thread `01a0b476-d219-7ce1-b30a-1879979c125a`, then failed identity admission with no turn,
+messages or pending runtime requests. Returned effective settings are below; these
+verify the reported profile identity/sandbox summary, not a complete runtime
+filesystem-grant readback. No runtime approval was automatically answered.
+
+```json
+{
+  "activePermissionProfile": {
+    "extends": null,
+    "id": "rr-delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41"
+  },
+  "approvalPolicy": "on-request",
+  "approvalsReviewer": "auto_review",
+  "cwd": "/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41",
+  "instructionSources": [
+    "/Users/jroberts/.codex/AGENTS.md",
+    "/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41/AGENTS.md"
+  ],
+  "model": "gpt-5.6-terra",
+  "reasoningEffort": "medium",
+  "runtimeWorkspaceRoots": [
+    "/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41"
+  ],
+  "sandbox": {
+    "excludeSlashTmp": true,
+    "excludeTmpdirEnvVar": true,
+    "networkAccess": false,
+    "type": "workspaceWrite",
+    "writableRoots": []
+  }
+}
+```
+
+The reported global source `/Users/jroberts/.codex/AGENTS.md` lies outside the
+recorded checkout-context set. Source diagnosis through Restricted02 owns the
+precise failing guard and instruction-source semantics; this record preserves the
+returned values without treating a mismatch as an authorized contract correction. Same-connection supported `worker_close` returned confirmed
+closure and the known thread ID. Saved assignment is unknown, launch-reserved and
+uncertain, connection-closed with that session ID retained. Idle Coordinator remains
+open pending Main's EOF direction. No turn/readme observation, retry, replacement,
+configuration change or guard weakening followed. Full startup/isolation/STOP and
+recovery remain unverified; Main/Restricted own the instruction-source contract
+and recovery decision.
 
 ```json
 {
