@@ -21,8 +21,13 @@ registration generation 2 and phase/task-plan revisions 1 unchanged.
 Read-only exact 9d42 pre-retirement records show unknown/reserved/uncertain with
 confirmed closure and known session; its checkout is clean and owned profile matches
 the saved definition. The owner explicitly approved exact 9d42 retirement via reply 1;
-Main's supported UI action is now released after installation checks. BA has not
-performed retirement or verified its result. Full startup/model turn, isolation,
+Main performed the supported UI retirement once. Read-only receipt
+`DD704FDC-4624-44BA-B6BC-BA7E0DB2BB72` confirms superseded state, completed retirement,
+checkout/profile removal and confirmed closure. Exact checkout/profile are absent;
+branch remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Prior unknown state,
+reservation, uncertainty and known session `01a0b476-d219-7ce1-b30a-1879979c125a`
+remain recorded. Fresh supported inventory remains complete at generation 2, unchanged
+phase/task-plan revisions 1. BA performed no retirement mutation or fresh preparation. Full startup/model turn, isolation,
 STOP and recovery acceptance remain pending. No worker replay, new preparation,
 version/tag/DMG/push/PR/merge, permission change or BA-initiated Codex restart occurred.
 Temporary build/review outputs and worktrees remain retained and excluded from commits.

@@ -53,8 +53,15 @@ reservation and uncertainty, `connectionClosed: true` and known session
 was present and clean; exact owned profile was present and matched the saved raw
 definition. These facts establish resource readiness, not removal authorization.
 The owner subsequently explicitly approved exact 9d42 retirement via reply 1. Main
-owns that supported UI action; BA released it after installed checks without retiring
-resources or claiming an outcome. No worker start/replay, new preparation, version/
+performed that supported UI action once after installed checks. Read-only exact
+receipt `DD704FDC-4624-44BA-B6BC-BA7E0DB2BB72` confirms superseded state, completed
+retirement, worktree/profile removal and no connection-close uncertainty. Physical
+checkout and exact profile are absent. Branch/history remain at baseline
+`ecb738e87ba16e0bca55f74e486f1c6a2aaee769`; prior unknown state, reservation,
+uncertainty and session `01a0b476-d219-7ce1-b30a-1879979c125a` remain preserved.
+Fresh installed AgentTools PID 1984 returned complete inventory and exited 0,
+registration generation 2 and phase/task-plan revisions 1 unchanged. BA performed
+no retirement mutation or new preparation; Main owns any fresh request. No worker start/replay, new preparation, version/
 tag/DMG/push/PR/merge, manual configuration/permission change or BA Codex restart
 occurred. Worktrees and temporary build/review artifacts remain preserved.
 
