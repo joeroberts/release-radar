@@ -5,6 +5,9 @@
 Owner sequencing decision: defer onboarding Release Radar’s own repository into RR until disposable-project acceptance and a stable merged release. Its existing repository catalog and ledger remain authoritative; Main will flag the appropriate time. No Pursuit or self-onboarding action is authorized.
 
 **September 18 — reviewed global-guidance correction installed; startup blocked by documentation validation.**
+
+Owner decision: replace `/Users/jroberts/.codex/AGENTS.md` symlink with a regular file rather than pursue product symlink support now. Main reports its fresh stat still identifies a Symbolic Link; owner replacement is pending, with no verified changed condition or resolved startup. Chief and Restricted/writer are instructed to hold investigation; no product correction is authorized. Existing b3b1 failure remains confirmed closed, unknown/reserved/uncertain with its known session retained. Any subsequent acceptance requires Main’s explicit recovery sequencing and authorization; no retry, retirement or new assignment is released by this decision. Global instructions, configuration and permissions are untouched by BA.
+
 Correction `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` admits documented global
 guidance only from the protected selected Codex home, separately from pinned
 repository context. Causal RED reproduced the rejection; all 37 distinct current

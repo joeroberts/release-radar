@@ -2,7 +2,9 @@
 
 ## September 18 global-guidance startup acceptance
 
-Main authorizes one startup observation for the prepared generation-2 b3b1 assignment through a fresh installed Coordinator. Read-only saved assignment/policy match; fresh installed AgentTools PID 3559 returned complete current inventory and exited 0, generation 2 and phase/task-plan revisions 1 unchanged. No worker has started for this assignment. Commit the exact request below before one worker_start; leave runtime approvals unanswered and retain a successfully completed connection for Main's next acceptance step. On failure, preserve evidence and use supported same-worker closure where a handle exists; no replacement or repeated start.
+Owner decision: replace `/Users/jroberts/.codex/AGENTS.md` symlink with a regular file rather than pursue product symlink support now. Main reports its fresh stat still identifies a Symbolic Link; owner replacement is pending, with no verified changed condition or resolved startup. Chief and Restricted/writer are instructed to hold investigation; no product correction is authorized. Existing b3b1 failure remains confirmed closed, unknown/reserved/uncertain with its known session retained. Any subsequent acceptance requires Main’s explicit recovery sequencing and authorization; no retry, retirement or new assignment is released by this decision. Global instructions, configuration and permissions are untouched by BA.
+
+Main authorizes one startup observation for the prepared generation-2 b3b1 assignment through a fresh installed Coordinator. Read-only saved assignment/policy match; fresh installed AgentTools PID 3559 returned complete current inventory and exited 0, generation 2 and phase/task-plan revisions 1 unchanged. At prompt commitment, no worker had started for this assignment. Commit the exact request below before one worker_start; leave runtime approvals unanswered and retain a successfully completed connection for Main's next acceptance step. On failure, preserve evidence and use supported same-worker closure where a handle exists; no replacement or repeated start.
 
 ```json
 {
