@@ -270,6 +270,30 @@ final class ProjectExecutionSetupTests: XCTestCase {
         XCTAssertEqual(try store.policy(projectID: "project-one"), disabled)
     }
 
+    func testUpdateAfterRemovalReportsEligibleProjectWorkflowRecovery() async throws {
+        let (root, repository, project) = try fixture()
+        let configuration = Configuration(); await configuration.recover()
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        try await setup.removeHook(project: project)
+
+        do {
+            try await setup.update(project: project)
+            XCTFail("A disabled project workflow must not be restored by Update")
+        } catch {
+            XCTAssertEqual(
+                error.localizedDescription,
+                "This project workflow is disabled. Choose Resume project workflow to restore the verified hook. Stopped and uncertain workers remain blocked; replacement work requires a fresh assignment."
+            )
+        }
+
+        let policy = try ProjectExecutionFileStore(root: root, create: false).policy(projectID: "project-one")
+        XCTAssertFalse(policy.enabled)
+        XCTAssertTrue(policy.hookRemovalReceipt?.completed == true)
+        let hookConfiguration = try ProjectExecutionFileStore(root: repository, create: false).hookConfiguration()
+        XCTAssertFalse(String(decoding: hookConfiguration ?? Data(), as: UTF8.self).contains("/RR/handler"))
+    }
+
     func testOwnedHookUpdateReplacesOnlyVerifiedPriorHandlerAndPreservesOwnerRemoval() async throws {
         let (root, repository, project) = try fixture()
         let configuration = Configuration(); await configuration.recover()
