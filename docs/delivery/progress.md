@@ -22,11 +22,16 @@ still maps the prior binary. Codex was not restarted. Temporary native/staging
 outputs remain excluded from commits and retained; no version/tag/DMG was created.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.
-Assignment `delivery-67a32c8b-11fd-430e-b916-439046da4531` remains unknown,
-launch-reserved, uncertain and connection-closed with no session. Main inspected
-the supported Retire resources UI and requested explicit owner cleanup authority;
-that request is unanswered. No retirement, replacement, replay or worker start
-followed this installation. Retain the writer and checkout for downstream work.
+Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`
+completed under request `CF0D11FD-CD4B-4206-AE6A-37ABB74EE64E`: exact clean checkout
+and owned profile removed, configuration closure confirmed, state superseded.
+Prior unknown state, launch reservation, uncertainty and null session remain recorded.
+After complete current inventory matched the expected identities/revisions, Main's
+fresh preparation-only request `88116e60-6d46-4939-8828-a3825ebffe89` succeeded once,
+audit `B54F9A7C-2102-41DA-8E4A-EBD2A403CAC2`. Saved replacement assignment is authorized,
+Terra/medium with the bounded delivery profile, no launch reservation or session.
+Its exact envelope and readback are in the controlling brief. No worker start is
+released or claimed. Retain the writer and checkout for downstream work.
 
 **September 18 — hook discovery verified live; worker folder access remains blocked.**
 After owner restart, Main's read-only inventory succeeded. Exact preparation

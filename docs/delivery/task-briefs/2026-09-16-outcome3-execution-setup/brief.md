@@ -14,7 +14,20 @@ the exact registration/generation, in-delivery phase lifecycle revision 1, task-
 revision 1 and active Pending task below. Main releases preparation only. No worker
 start is authorized by this record; preserve this exact envelope on uncertain outcome.
 
-Disposition: **pending; not submitted**.
+Disposition: **committed**. Submitted once through fresh installed production
+AgentTools after persisting the pending envelope in local commit `43c6308a`.
+Audited result `B54F9A7C-2102-41DA-8E4A-EBD2A403CAC2` returned authorized
+assignment `delivery-88116e60-6d46-4939-8828-a3825ebffe89`; saved readback matches
+the exact registration/context/work revisions. Model `gpt-5.6-terra`, effort medium,
+delivery role and profile `rr-delivery-88116e60-6d46-4939-8828-a3825ebffe89` are
+assigned settings, not verified worker runtime settings. Network remains disabled;
+root, Git, context configuration, history/archive and sibling access remain denied.
+No launch reservation, uncertain outcome or session is present. The real checkout
+and project-layer directory exist at:
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-88116e60-6d46-4939-8828-a3825ebffe89`.
+Baseline is `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`, branch
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-88116e60-6d46-4939-8828-a3825ebffe89`.
+The retired prior assignment still preserves uncertainty. No worker was started.
 
 ```json
 {
