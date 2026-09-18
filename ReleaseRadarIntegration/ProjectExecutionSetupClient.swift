@@ -20,6 +20,11 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         return String(cString: resolved)
     }
 
+    nonisolated static func hookDiscoveryCheckout(primaryRoot: String, canonicalPrimaryRoot: String,
+                                                 checkout: String) -> String {
+        checkout == primaryRoot ? canonicalPrimaryRoot : checkout
+    }
+
     nonisolated static func needsProjectTrustWrite(primaryRoot: String, canonicalKey: String,
                                                   projects: [String: Any], permitOwnedTrust: Bool) throws -> Bool {
         for key in Set([primaryRoot, canonicalKey]) {
@@ -246,38 +251,40 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     }
 
     func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {
+            let canonicalPrimaryRoot = try Self.canonicalProjectTrustKey(primaryRoot: primaryRoot)
+            let discoveryCheckout = Self.hookDiscoveryCheckout(primaryRoot: primaryRoot,
+                canonicalPrimaryRoot: canonicalPrimaryRoot, checkout: checkout)
             let inline: Bool
-            switch try await hookStorage(primaryRoot: primaryRoot) {
+            switch try await hookStorage(primaryRoot: canonicalPrimaryRoot) {
             case .projectFile: inline = false
             case .inline: inline = true
             }
-            let canonicalTrustKey = try Self.canonicalProjectTrustKey(primaryRoot: primaryRoot)
             var layer = try userLayer(await read(primaryRoot))
             let raw = layer["config"] as? [String: Any] ?? [:]
             guard raw["projects"] == nil || raw["projects"] is [String: Any] else { throw ProjectExecutionError.hookNotReady }
             let projects = raw["projects"] as? [String: Any] ?? [:]
-            if try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalTrustKey,
+            if try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalPrimaryRoot,
                                               projects: projects, permitOwnedTrust: permitOwnedTrust) {
-                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(canonicalTrustKey) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
+                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(canonicalPrimaryRoot) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
                 layer = try userLayer(await read(primaryRoot, readback: true))
                 let readback = layer["config"] as? [String: Any] ?? [:]
                 guard readback["projects"] == nil || readback["projects"] is [String: Any] else { throw ProjectExecutionError.hookNotReady }
-                _ = try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalTrustKey,
+                _ = try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalPrimaryRoot,
                     projects: readback["projects"] as? [String: Any] ?? [:], permitOwnedTrust: false)
             }
-            let reply = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]))
+            let reply = try await rpc("hooks/list", RPCObject(["cwds": [discoveryCheckout]]))
             let owned: ProjectExecutionHookReadiness
             do {
-                owned = try ProjectExecutionHookReadiness.resolve(reply.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: !permitOwnedTrust, inline: inline)
+                owned = try ProjectExecutionHookReadiness.resolve(reply.data, checkout: discoveryCheckout, primaryRoot: canonicalPrimaryRoot, command: command, requireTrusted: !permitOwnedTrust, inline: inline)
             } catch let error as ProjectExecutionError {
                 if error == .hookNotReady { logger.error("Hook verification failed: first hooks/list readiness check") }
                 if error == .hookNotReady,
                    let result = try? JSONSerialization.jsonObject(with: reply.data) as? [String: Any],
                    let entries = result["data"] as? [[String: Any]],
-                   let entry = entries.first(where: { $0["cwd"] as? String == checkout }),
+                   let entry = entries.first(where: { $0["cwd"] as? String == discoveryCheckout }),
                    let hooks = entry["hooks"] as? [[String: Any]], hooks.isEmpty {
                     do {
-                        let observation = try await read(checkout)
+                        let observation = try await read(discoveryCheckout)
                         if let config = observation["config"] as? [String: Any],
                            let enabled = (config["features"] as? [String: Any])?["hooks"] as? Bool {
                             if enabled {
@@ -295,7 +302,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                             }
                             let projectLayers = layers.filter { layer in
                                 let name = layer["name"] as? [String: Any]
-                                return name?["type"] as? String == "project" && name?["dotCodexFolder"] as? String == checkout + "/.codex"
+                                return name?["type"] as? String == "project" && name?["dotCodexFolder"] as? String == discoveryCheckout + "/.codex"
                             }
                             if !supported {
                                 logger.error("Empty hook observation: checkout project layer metadata is unsupported")
@@ -307,7 +314,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                                 if layer["disabledReason"] is NSNull {
                                     logger.error("Empty hook observation: exact checkout project layer is enabled")
                                 } else if let disabledReason = layer["disabledReason"] as? String {
-                                    let diagnostic = Self.disabledReasonDiagnostic(disabledReason, checkout: checkout, primaryRoot: primaryRoot)
+                                    let diagnostic = Self.disabledReasonDiagnostic(disabledReason, checkout: discoveryCheckout, primaryRoot: primaryRoot)
                                     logger.error("Empty hook observation: exact checkout project layer is disabled (reason: \(diagnostic, privacy: .public))")
                                 } else {
                                     logger.error("Empty hook observation: checkout project layer enablement is unsupported")
@@ -341,9 +348,10 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                 layer = try userLayer(await read(primaryRoot))
                 try await writeUser(root: primaryRoot, layer: layer, key: "hooks.state." + quoted(owned.key), value: ["trusted_hash": owned.currentHash], beforeWrite: beforeWrite)
             }
-            let readback = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]), readback: true)
+            let readback = try await rpc("hooks/list", RPCObject(["cwds": [discoveryCheckout]]), readback: true)
             do {
-                _ = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: true, inline: inline)
+                let observed = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: discoveryCheckout, primaryRoot: canonicalPrimaryRoot, command: command, requireTrusted: true, inline: inline)
+                try owned.verifyTrustedReadback(observed)
             } catch let error as ProjectExecutionError {
                 if error == .hookNotReady { logger.error("Hook verification failed: hooks/list readiness readback") }
                 throw error

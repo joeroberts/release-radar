@@ -7,77 +7,77 @@ onboarding and plugin installation flows, including project-scoped worktrees,
 protected assignments and production hook admission from verified assignments.
 Preserve ordinary-worker history/sibling exclusion and deliberate Main retrieval.
 
-### Current bounded canonical project trust-key correction
+### Current bounded canonical hook source and definition-trust correction
 
-Main released this recovery/authority slice at BuildAgent-confirmed clean baseline
-`724a81af2dce993598d451ce764d98acb8406cc7`, attached to
-`codex/project-trust-canonical-key` in
-`/Users/jroberts/.codex/worktrees/89a5/release_radar`. Main acknowledged the bounded
-proposal and released source/tests within the exact four-file ownership below.
-Requested Sol/high is not exposed to this
-worker, nor is the named restricted profile; effective workspace-write restrictions
-and non-escalatable denied paths were reported. No subagents. BuildAgent exclusively
-owns all native checks/builds/Git/live operations. Installed shared-execution/tracking
-skill reads are denied; the repository-local authority, independent review,
-owner-acceptance and safety/recovery fallbacks apply without escalation.
+Main released this same Outcome 3 correction at BuildAgent-confirmed clean baseline
+`186c7aaf29cc29eaad765c9263e1ace0483530b3`, attached to
+`codex/hook-canonical-source` in
+`/Users/jroberts/.codex/worktrees/13f2/release_radar`. This fresh worker owns only
+the bounded source/tests and this existing brief/ledger. Requested Sol/high and the
+named restricted profile are unexposed. Effective workspace-write restrictions and
+non-escalatable `.git`, `.codegraph` and archive read denials were reported; none
+were probed. Installed tracking/shared-execution skill reads were denied; governing
+repository-local authority, independent review, owner acceptance and safety/recovery
+fallbacks apply without retries or escalation. No subagents. BuildAgent owns all
+native/direct/documentation/diff checks, builds, Git and live actions.
 
-Main's actual readiness evidence identifies a project trust-key mismatch: RR sees
-the saved `/var` primary alias as trusted, while Codex queries its `/private/var`
-filesystem canonical key, absent from RR's sandbox-container user configuration.
-Host user configuration has the opposite keys and is not the correction target.
-Main reports installed-version official-loader evidence that stored project keys
-remain literal, queried paths and linked roots resolve canonically. Baseline source
-checked/wrote only `projects[primaryRoot].trust_level`. Foundation URL resolution
-must not be assumed to preserve `/private`; BuildAgent's native68 existing-suite
-observation is Foundation `/var=/var` versus Darwin `realpath` canonical `/private/var`.
+Objective: the already verified `canonicalPrimaryRoot` must drive both exact owned
+hook source comparison and primary-root hook discovery/definition trust. Authorized
+setup and linked read-only verification must discover the same canonical definition,
+with its actual returned key/hash trusted and read back through the existing hooks
+state operation. Preserve registered primaryRoot, policy/assignment cwd, exact request
+identity and schemas. Reuse the existing realpath helper and fail closed on resolution
+failure. No alias fallback, manual hash transfer, global normalization, broad symlink
+acceptance, new endpoint/framework/diagnostic or weaker command/event/source/hash/trust,
+duplicate/exclusion/current-registration or `permitOwnedTrust` gates is authorized.
 
-Outcome: use Codex-compatible filesystem identity solely for the project trust key
-in `ProjectExecutionSetupClient`, through existing `config/read` user-layer selection
-and version-checked `config/batchWrite`. Main acknowledged source/test work with
-the decision restricted to the supplied primary key and its single canonical key;
-never traverse other configured project entries. Keep existing alias entries.
-Explicit non-trusted or malformed values in either relevant entry refuse readiness
-and new trust. Gate every trust write on `permitOwnedTrust` plus
-the existing current-registration `beforeWrite` check. Assignment verification with
-`permitOwnedTrust: false` remains read-only. Missing canonical trust recovers only
-through existing onboarding Resume Execution Setup; no automatic assignment repair.
-Registration, policy, checkout/root identities, schema, hook matching/hash trust,
-permissions and history protections remain unchanged. No global normalization,
-home/config migration or selection workaround, new endpoint, machinery or wider
-permissions is authorized. Accepted ADRs and governing files remain immutable.
+Main reports installed `186c7aa` and existing Update Execution Hook recovery repaired
+canonical project trust/readback; UI showed “Execution hook update verified”. The
+exact saved assignment retry at 22:04:53 failed RR readiness with “owned sourcePath
+mismatch”; no worker started. Separate read-only installed App Server probes under
+RR container CODEX_HOME found one owned hook for both canonical primary and linked
+checkout, no errors/warnings, identical key/hash and canonical `/private/.../.codex/hooks.json`
+source, correct command/event, enabled true, and both untrusted. These probes are
+comparison evidence, not actual RR-process acceptance or proof of the complete root
+cause. Primary canonical discovery should use the returned canonical key/hash in the
+existing owned trust write; linked verification remains read-only and requires actual
+trusted hash/readback, never acceptance of either alias interchangeably.
 
-Test-first acceptance uses existing `ProjectExecutionAppServerTests`: actual native
-alias-to-canonical resolution, alias-only trusted entry needing the canonical key,
-existing canonical trust without writes, relevant-key distrust/conflict/malformed
-refusal, absent-key refusal with non-permitted writes and resolution failure closed.
-Tests were authored before real helper/integration implementation; no preimplementation
-behavioral red was executed. Main explicitly withdrew the preimplementation native-red
-freeze and prohibited no-op scaffolding/missing-symbol builds. The actual helpers are
-wired into `verifyHook` for canonical lookup/write/readback with read-only refusal on
-missing canonical trust. Native `realpath` retains its returned filesystem spelling;
-resolver failure throws `hookNotReady`. Tests call the actual integrated decision and
-resolver, without a transport injection framework. Main reports BuildAgent native68
-passed all 11 App Server tests, app/test compilation and documentation/diff checks.
-Main received independent architecture/privacy/correctness reviewer `01a0b22f`'s
-direct final report: review complete, Required NONE and Optional NONE. Reviewer
-archive is not yet claimed. Native68 and independent review are terminal for unchanged
-behavior. Source/tests remain unchanged and frozen. Main authorized BuildAgent's
-scoped local commit after this factual documentation refreeze; no commit is yet
-claimed. This checkpoint does
-not imply acceptance or live permission. Native direct checks remain BuildAgent-owned;
-only directly affected required corrections repeat checks/review. No push, PR, merge,
-tag, release, installation or live retry is released.
-Preserve exact request `f481e256-3332-43aa-88e1-4c3dd2c6368a`, its full envelope below,
-the UI-confirmed partial `preparing` assignment and `worker_start: NONE`. No catalog
-ID/lifecycle/index or application acceptance change is included. Exact files are
-`ReleaseRadarIntegration/ProjectExecutionSetupClient.swift`,
-`ReleaseRadarTests/ProjectExecutionAppServerTests.swift`, this brief and
-`docs/delivery/progress.md`. The observed mismatch establishes only the current
-trust failure, not the complete root cause or a verified fix. Source/unit evidence
-does not prove live success: live canonical trust write/readback, actual RR hook
-discovery, the exact saved request and affected worker startup remain unverified and
-are still required through Main's separately released serialized live route; preserve
-any unknown next failure. Actual-flow acceptance is not yet claimed.
+Tests first in the existing native suites cover primary versus linked discovery cwd,
+strict response cwd, exact canonical source, actual definition trust/readback and
+read-only refusal while preserving all existing admission gates. BuildAgent alone
+runs focused native tests, app/test compilation and repository documentation/diff
+checks. Tests were authored before the real minimal implementation; no native red
+was run and no no-op scaffolding or transport seam was introduced. The client now
+derives production roots at runtime through the existing realpath helper, resolves
+canonicalPrimaryRoot before its hook-storage lookup, uses canonical primary
+discovery only when checkout equals the saved primary, keeps linked discovery cwd
+unchanged, and passes canonical expected source to the existing exact resolver.
+Existing owned trust writes use the discovered canonical key/currentHash; readback
+also requires the same key/hash and actual trusted status. Read-only verification,
+current-registration and all existing admission gates remain preserved. Main reports
+BuildAgent Native71 passed all 18 focused tests (12 App Server, 6 HookReadiness),
+app/test compilation and documentation/diff checks. Main received fresh independent
+architecture/privacy/correctness reviewer `01a0b24a`'s completed final report:
+Required NONE and Optional NONE. These checks/review are terminal for unchanged
+behavior; reviewer archive is not claimed. Source/tests remain unchanged and frozen;
+this factual documentation update is refrozen for BuildAgent documentation/diff checks.
+Repeat only directly affected required corrections.
+The delivery endpoint is a Main-authorized scoped local commit through BuildAgent
+after these checks/review; no local commit or complete actual-flow fix is yet claimed.
+Exact ownership is `ReleaseRadarIntegration/ProjectExecutionSetupClient.swift`,
+`ReleaseRadarCore/Execution/ProjectExecutionHookReadiness.swift`,
+`ReleaseRadarTests/ProjectExecutionAppServerTests.swift`,
+`ReleaseRadarTests/ProjectExecutionReadinessTests.swift`, this brief and
+`docs/delivery/progress.md`.
+
+Preserve the full exact `f481e256-3332-43aa-88e1-4c3dd2c6368a` request envelope below,
+UI-confirmed partial `preparing` assignment and `worker_start: NONE`. Catalog stable
+identities/lifecycle/indexes, accepted ADRs and governing files stay unchanged. No
+live configuration/trust/hook writes, installation, retry, restart, SQLite/app state,
+cleanup, version/tag/push/PR or release is authorized for this worker. Actual RR hook
+discovery plus affected worker startup remain required via Main's separately released
+serialized live route; source/unit passes cannot establish complete actual-flow acceptance.
 
 ## Scope, authority and dependencies
 

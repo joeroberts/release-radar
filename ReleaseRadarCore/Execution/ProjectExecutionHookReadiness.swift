@@ -68,4 +68,9 @@ public struct ProjectExecutionHookReadiness: Sendable {
     public var trustEdit: [String: Any] {
         ["keyPath": "hooks.state", "mergeStrategy": "upsert", "value": [key: ["trusted_hash": currentHash]]]
     }
+
+    public func verifyTrustedReadback(_ observed: Self) throws {
+        guard observed.key == key, observed.currentHash == currentHash,
+              observed.trustStatus == "trusted" else { throw ProjectExecutionError.hookNotReady }
+    }
 }

@@ -5,6 +5,18 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionAppServerTests: XCTestCase {
+    func testPrimaryHookDiscoveryUsesCanonicalRootAndLinkedDiscoveryKeepsActualCheckout() throws {
+        let primary = "/var"
+        let canonical = try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: primary)
+        XCTAssertEqual(ProjectExecutionSetupClient.hookDiscoveryCheckout(
+            primaryRoot: primary, canonicalPrimaryRoot: canonical, checkout: primary), "/private/var")
+        XCTAssertEqual(ProjectExecutionSetupClient.hookDiscoveryCheckout(
+            primaryRoot: canonical, canonicalPrimaryRoot: canonical, checkout: canonical), canonical)
+        let linked = "/var/linked-worker"
+        XCTAssertEqual(ProjectExecutionSetupClient.hookDiscoveryCheckout(
+            primaryRoot: primary, canonicalPrimaryRoot: canonical, checkout: linked), linked)
+    }
+
     func testProjectTrustKeyUsesFilesystemCanonicalSystemAlias() throws {
         let foundation = URL(fileURLWithPath: "/var").resolvingSymlinksInPath().path
         let canonical = try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: "/var")
