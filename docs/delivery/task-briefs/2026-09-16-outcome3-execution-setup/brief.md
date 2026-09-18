@@ -1,5 +1,28 @@
 # Outcome 3 project execution setup
 
+## September 18 regular-file replacement preparation and startup
+
+Main observed Resources retired and canceled settings without Save. Main releases one preparation and, only after exact successful saved assignment readback, one startup through fresh installed helpers. Preserve a successful connection; leave runtime approvals unanswered. Failure permits supported same-worker close and normal EOF after confirmed closure, with no automatic replacement/start loop. Reviewed installed product source remains 8b9b979c; no rebuild or source/global/config edits.
+
+Canonical preparation envelope, committed before the single submission:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f",
+  "reason": "Prepare replacement after confirmed b3b1 retirement and owner regular-file global guidance replacement for startup acceptance.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
 ## September 18 global-guidance startup acceptance
 
 Standing owner authorization, narrowly scoped to disposable acceptance: clean up failed disposable acceptance assignments only when their connections are confirmed closed and their checkouts clean, preserving branches and history. This covers b3b1 and subsequent failed acceptance attempts; it does not grant preparation/start, unrelated cleanup, configuration or governing-instruction changes.
