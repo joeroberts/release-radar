@@ -1,5 +1,20 @@
 # Outcome 3 project execution setup
 
+## September 18 global-guidance startup acceptance
+
+Main authorizes one startup observation for the prepared generation-2 b3b1 assignment through a fresh installed Coordinator. Read-only saved assignment/policy match; fresh installed AgentTools PID 3559 returned complete current inventory and exited 0, generation 2 and phase/task-plan revisions 1 unchanged. No worker has started for this assignment. Commit the exact request below before one worker_start; leave runtime approvals unanswered and retain a successfully completed connection for Main's next acceptance step. On failure, preserve evidence and use supported same-worker closure where a handle exists; no replacement or repeated start.
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
 ## September 18 installed global-guidance replacement preparation
 
 After verified exact 9d42 retirement, Main closed settings with Cancel without Save,

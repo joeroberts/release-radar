@@ -2,6 +2,8 @@
 
 ## Current outcome
 
+Owner sequencing decision: defer onboarding Release Radar’s own repository into RR until disposable-project acceptance and a stable merged release. Its existing repository catalog and ledger remain authoritative; Main will flag the appropriate time. No Pursuit or self-onboarding action is authorized.
+
 **September 18 — reviewed global-guidance correction installed; startup acceptance pending.**
 Correction `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` admits documented global
 guidance only from the protected selected Codex home, separately from pinned
@@ -32,7 +34,7 @@ settings without Save and selected fresh request `b3b1ed9b-9cd8-4e97-8f44-780c44
 Its exact envelope was committed before one fresh-helper submission, after complete
 inventory matched. Audit `42B6FEF4-8085-4C3E-BB49-0509050264B0` returned authorized
 delivery/Terra/medium assignment with exact saved-response match and real checkout.
-No worker started; Main owns the subsequent bounded prompt. Full startup/model turn, isolation,
+No worker started during preparation. Main has now released one exact startup observation, persisted in the owning brief before submission. Runtime approvals remain unanswered; retain a successful completed connection for subsequent acceptance. Full startup/model turn, isolation,
 STOP and recovery acceptance remain pending. No worker replay,
 version/tag/DMG/push/PR/merge, permission change or BA-initiated Codex restart occurred.
 Temporary build/review outputs and worktrees remain retained and excluded from commits.
