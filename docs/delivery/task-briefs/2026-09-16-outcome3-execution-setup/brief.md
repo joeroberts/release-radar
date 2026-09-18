@@ -1,5 +1,28 @@
 # Outcome 3 project execution setup
 
+## September 18 current-generation worker startup
+
+Main releases one startup observation for the authorized generation-2 assignment
+below. Persist before one fresh installed Coordinator call. Retain the exact
+connection and successful idle worker for Main's next bounded acceptance. Do not
+auto-approve runtime requests, change project settings/configuration, replay a start
+or prepare new work after failure. Capture failure stage and use supported closure
+with the known handle when applicable. Assigned settings are not runtime evidence.
+
+Disposition: **pending startup**.
+
+```json
+{
+  "tool": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
+
 ## September 18 current-generation replacement preparation
 
 Main's supported UI returned “Execution hook update verified”; settings were closed
