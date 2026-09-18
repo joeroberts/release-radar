@@ -43,8 +43,14 @@ observation, persisted before submission. It returned an immediate authorization
 rejection with no worker handle; read-only assignment is revoked with no reservation,
 session or uncertainty. Earlier preparation/saved readback had been authorized;
 the intervening revocation's cause is unverified. Source ordering rejects that state
-before worker allocation or child launch. Coordinator connection remains retained
-pending Main direction; no retry or replacement followed. Runtime startup and
+before worker allocation or child launch. Main released normal EOF and the idle Coordinator exited 0. Project History
+records “Update project settings” at 08:09:45 AM, actor `release-radar-owner`, audit
+`7093E9E0-1847-4865-AC22-D23C99DA60FD`, after preparation at 08:09:23 AM. Fresh
+supported inventory confirms current registration generation 2 versus the revoked
+assignment's generation 1, with unchanged phase/task-plan revisions. The audit
+exposes no changed-field diff or exact revocation reason; source diagnosis remains
+separately delegated. Narrow unified logs provide no further trigger entry. BA
+performed no retry, replacement or configuration mutation. Runtime startup and
 remaining acceptance are unverified. The owning brief records the exact prompt/result.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.

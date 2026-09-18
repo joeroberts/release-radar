@@ -20,9 +20,21 @@ with unchanged registration/work/context and no launch reservation, uncertainty,
 closed flag or session. The prepare response and its matching saved snapshot had
 been authorized; the intervening revocation's actor/cause is not established.
 `WorkerPolicy.init` rejects that state before worker allocation, handoff, reservation
-or transport. No worker-status/close request is possible without a handle; the idle
-Coordinator connection remains retained pending Main's closure/diagnosis direction.
-No retry, new preparation, auto-approval or configuration change followed. Startup,
+or transport. No worker-status/close request is possible without a handle. Main then released
+normal EOF: Coordinator session 8299 exited 0 and its fresh process ended; older
+Coordinator processes were untouched. Project History records preparation audit
+`9DA9D44A-634C-4BC8-A6A8-274081574B53` at 08:09:23 AM, actor `release-radar-agent`,
+followed by “Update project settings” audit `7093E9E0-1847-4865-AC22-D23C99DA60FD`
+at 08:09:45 AM, actor `release-radar-owner`. Both use the same registration ID.
+Fresh supported inventory via installed AgentTools PID 90728 confirms current
+request generation 2 while the revoked assignment retains generation 1; phase
+revision and task-plan revision remain 1, task active/Pending. UI audit exposes no
+changed-field diff or exact revocation reason. Narrow unified logs, including
+info/debug, show no assignment/revocation entries in the 08:09:00–08:11:45 interval.
+These are recorded facts, not attribution of the settings action to a particular
+human/tool or proof of its precise revocation path. Source diagnosis is delegated
+separately through Restricted02. BA performed no retry, new preparation, runtime
+auto-approval or configuration change. Startup,
 isolation, STOP and recovery remain unverified; Main owns recovery sequencing.
 
 ```json
