@@ -526,7 +526,10 @@ struct OnboardingView: View {
             }
             onboardingFeedback
 
-            GroupBox("Continue in Codex") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Continue in Codex")
+                    .font(.headline)
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Project tracking is saved. Paste this prompt into a Codex task rooted at this exact project folder.")
                         .foregroundStyle(.secondary)
@@ -572,6 +575,14 @@ struct OnboardingView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(12)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Continue in Codex")
         }
     }
 

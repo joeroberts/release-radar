@@ -141,8 +141,13 @@ helper fix, worker startup/STOP/recovery, or Outcome 3 completion.
 The installed experiment contains only the uncommitted Continue in Codex wrapper
 substitution over reviewed source `8656280`; latest prior documentation is `31e7f26`.
 That one-file source experiment remains frozen. Its heading/chrome differ from the
-saved baseline; shipping visual acceptance and independent wrapper review remain open.
-Main/RO04 own the fresh review dispatch. Current worker authorization is limited to
+saved baseline; shipping visual acceptance remains open. Main reports fresh independent
+reviewer `01a0b3a0-b137-73b3-915c-a55c71596049` cleared the exact 12-add/1-remove wrapper
+against `31e7f26` with no Required or Optional findings. Selectability, actions, identifiers
+and named containment are preserved; the heading/chrome change was not materially
+problematic. No styling correction or additional tests were requested. Main released
+BA's scoped local commit of the unchanged wrapper and two-document closeout.
+Current worker authorization is limited to
 this two-document evidence recording and BA's documentation-check/result-commit route;
 no further source/build/install/live action is released. All artifacts and old f481
 state/resources remain retained; no worker start occurred in this exercise.
