@@ -5,6 +5,97 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionAppServerTests: XCTestCase {
+    func testProjectTrustKeyUsesFilesystemCanonicalSystemAlias() throws {
+        let foundation = URL(fileURLWithPath: "/var").resolvingSymlinksInPath().path
+        let canonical = try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: "/var")
+        XCTAssertEqual(canonical, "/private/var")
+        XCTAssertEqual(try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: foundation), canonical)
+        XCTAssertEqual(try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: canonical), canonical)
+        print("RR trust-key resolver Foundation /var=\(foundation); filesystem canonical=\(canonical)")
+    }
+
+    func testProjectTrustKeyResolutionFailureRefusesReadiness() {
+        let missing = "/var/rr-missing-trust-root-" + UUID().uuidString
+        XCTAssertThrowsError(try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: missing)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+        }
+    }
+
+    func testCanonicalProjectTrustNeedsNoWriteAndKeepsAliasEntries() throws {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        let projects: [String: Any] = [primary: ["trust_level": "trusted"],
+                                      canonical: ["trust_level": "trusted"],
+                                      "/unrelated": ["trust_level": "untrusted"]]
+        for permitted in [false, true] {
+            XCTAssertFalse(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted))
+            XCTAssertFalse(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                primaryRoot: canonical, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted))
+        }
+        XCTAssertEqual((projects[primary] as? [String: String])?["trust_level"], "trusted")
+        XCTAssertEqual((projects["/unrelated"] as? [String: String])?["trust_level"], "untrusted")
+        XCTAssertFalse(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical,
+            projects: [canonical: ["trust_level": "trusted"]], permitOwnedTrust: false))
+    }
+
+    func testAliasOnlyTrustRequiresPermittedCanonicalWrite() throws {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        let projects: [String: Any] = [primary: ["trust_level": "trusted"]]
+        XCTAssertTrue(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: true))
+        XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: false)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+        }
+        XCTAssertTrue(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: [:], permitOwnedTrust: true))
+        XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: [:], permitOwnedTrust: false)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+        }
+        XCTAssertNil(projects[canonical], "Deciding whether a write is permitted must not mutate aliases or trust")
+    }
+
+    func testRelevantProjectDistrustAndConflictsAlwaysRefuseTrust() {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        for rejectedKey in [primary, canonical] {
+            for permitted in [false, true] {
+                var projects: [String: Any] = [primary: ["trust_level": "trusted"],
+                                               canonical: ["trust_level": "trusted"]]
+                projects[rejectedKey] = ["trust_level": "untrusted"]
+                XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                    primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted)) {
+                    XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+                }
+                projects.removeValue(forKey: rejectedKey == primary ? canonical : primary)
+                XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                    primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted)) {
+                    XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+                }
+            }
+        }
+    }
+
+    func testMalformedRelevantProjectTrustAlwaysRefusesTrust() {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        let malformed: [Any] = ["trusted", NSNull(), 7,
+                                ["trust_level": NSNull()], ["trust_level": true], ["trust_level": ["trusted"]]]
+        for rejectedKey in [primary, canonical] {
+            for value in malformed {
+                for permitted in [false, true] {
+                    var projects: [String: Any] = [primary: ["trust_level": "trusted"],
+                                                   canonical: ["trust_level": "trusted"]]
+                    projects[rejectedKey] = value
+                    XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                        primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted)) {
+                        XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+                    }
+                }
+            }
+        }
+    }
+
     func testDisabledReasonDiagnosticRetainsBoundedRedactedUnknownText() {
         let checkout = "/fixture/checkout  with spaces"
         let primaryRoot = "/fixture/primary  root"

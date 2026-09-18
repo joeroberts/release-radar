@@ -7,6 +7,78 @@ onboarding and plugin installation flows, including project-scoped worktrees,
 protected assignments and production hook admission from verified assignments.
 Preserve ordinary-worker history/sibling exclusion and deliberate Main retrieval.
 
+### Current bounded canonical project trust-key correction
+
+Main released this recovery/authority slice at BuildAgent-confirmed clean baseline
+`724a81af2dce993598d451ce764d98acb8406cc7`, attached to
+`codex/project-trust-canonical-key` in
+`/Users/jroberts/.codex/worktrees/89a5/release_radar`. Main acknowledged the bounded
+proposal and released source/tests within the exact four-file ownership below.
+Requested Sol/high is not exposed to this
+worker, nor is the named restricted profile; effective workspace-write restrictions
+and non-escalatable denied paths were reported. No subagents. BuildAgent exclusively
+owns all native checks/builds/Git/live operations. Installed shared-execution/tracking
+skill reads are denied; the repository-local authority, independent review,
+owner-acceptance and safety/recovery fallbacks apply without escalation.
+
+Main's actual readiness evidence identifies a project trust-key mismatch: RR sees
+the saved `/var` primary alias as trusted, while Codex queries its `/private/var`
+filesystem canonical key, absent from RR's sandbox-container user configuration.
+Host user configuration has the opposite keys and is not the correction target.
+Main reports installed-version official-loader evidence that stored project keys
+remain literal, queried paths and linked roots resolve canonically. Baseline source
+checked/wrote only `projects[primaryRoot].trust_level`. Foundation URL resolution
+must not be assumed to preserve `/private`; BuildAgent's native68 existing-suite
+observation is Foundation `/var=/var` versus Darwin `realpath` canonical `/private/var`.
+
+Outcome: use Codex-compatible filesystem identity solely for the project trust key
+in `ProjectExecutionSetupClient`, through existing `config/read` user-layer selection
+and version-checked `config/batchWrite`. Main acknowledged source/test work with
+the decision restricted to the supplied primary key and its single canonical key;
+never traverse other configured project entries. Keep existing alias entries.
+Explicit non-trusted or malformed values in either relevant entry refuse readiness
+and new trust. Gate every trust write on `permitOwnedTrust` plus
+the existing current-registration `beforeWrite` check. Assignment verification with
+`permitOwnedTrust: false` remains read-only. Missing canonical trust recovers only
+through existing onboarding Resume Execution Setup; no automatic assignment repair.
+Registration, policy, checkout/root identities, schema, hook matching/hash trust,
+permissions and history protections remain unchanged. No global normalization,
+home/config migration or selection workaround, new endpoint, machinery or wider
+permissions is authorized. Accepted ADRs and governing files remain immutable.
+
+Test-first acceptance uses existing `ProjectExecutionAppServerTests`: actual native
+alias-to-canonical resolution, alias-only trusted entry needing the canonical key,
+existing canonical trust without writes, relevant-key distrust/conflict/malformed
+refusal, absent-key refusal with non-permitted writes and resolution failure closed.
+Tests were authored before real helper/integration implementation; no preimplementation
+behavioral red was executed. Main explicitly withdrew the preimplementation native-red
+freeze and prohibited no-op scaffolding/missing-symbol builds. The actual helpers are
+wired into `verifyHook` for canonical lookup/write/readback with read-only refusal on
+missing canonical trust. Native `realpath` retains its returned filesystem spelling;
+resolver failure throws `hookNotReady`. Tests call the actual integrated decision and
+resolver, without a transport injection framework. Main reports BuildAgent native68
+passed all 11 App Server tests, app/test compilation and documentation/diff checks.
+Main received independent architecture/privacy/correctness reviewer `01a0b22f`'s
+direct final report: review complete, Required NONE and Optional NONE. Reviewer
+archive is not yet claimed. Native68 and independent review are terminal for unchanged
+behavior. Source/tests remain unchanged and frozen. Main authorized BuildAgent's
+scoped local commit after this factual documentation refreeze; no commit is yet
+claimed. This checkpoint does
+not imply acceptance or live permission. Native direct checks remain BuildAgent-owned;
+only directly affected required corrections repeat checks/review. No push, PR, merge,
+tag, release, installation or live retry is released.
+Preserve exact request `f481e256-3332-43aa-88e1-4c3dd2c6368a`, its full envelope below,
+the UI-confirmed partial `preparing` assignment and `worker_start: NONE`. No catalog
+ID/lifecycle/index or application acceptance change is included. Exact files are
+`ReleaseRadarIntegration/ProjectExecutionSetupClient.swift`,
+`ReleaseRadarTests/ProjectExecutionAppServerTests.swift`, this brief and
+`docs/delivery/progress.md`. The observed mismatch establishes only the current
+trust failure, not the complete root cause or a verified fix. Source/unit evidence
+does not prove live success: live canonical trust write/readback, actual RR hook
+discovery, the exact saved request and affected worker startup remain unverified and
+are still required through Main's separately released serialized live route; preserve
+any unknown next failure. Actual-flow acceptance is not yet claimed.
+
 ## Scope, authority and dependencies
 
 The owner explicitly released worker `01a0acb5-bc87-72b3-a06e-8821cb18bfc9`

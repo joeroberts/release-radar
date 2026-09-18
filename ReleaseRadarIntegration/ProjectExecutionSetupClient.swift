@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import OSLog
 import ReleaseRadarCore
@@ -10,6 +11,28 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private let bundle: URL
     private var transport: AppServerTransport?
     private var cleanupFailure: AppServerTransportError?
+
+    nonisolated static func canonicalProjectTrustKey(primaryRoot: String) throws -> String {
+        guard primaryRoot.hasPrefix("/"), !primaryRoot.utf8.contains(0),
+              let resolved = realpath(primaryRoot, nil) else { throw ProjectExecutionError.hookNotReady }
+        defer { free(resolved) }
+        // Keep the filesystem spelling without passing it through Foundation URL normalization.
+        return String(cString: resolved)
+    }
+
+    nonisolated static func needsProjectTrustWrite(primaryRoot: String, canonicalKey: String,
+                                                  projects: [String: Any], permitOwnedTrust: Bool) throws -> Bool {
+        for key in Set([primaryRoot, canonicalKey]) {
+            guard let entry = projects[key] else { continue }
+            guard let project = entry as? [String: Any] else { throw ProjectExecutionError.hookNotReady }
+            if let trust = project["trust_level"] {
+                guard trust as? String == "trusted" else { throw ProjectExecutionError.hookNotReady }
+            }
+        }
+        if (projects[canonicalKey] as? [String: Any])?["trust_level"] as? String == "trusted" { return false }
+        guard permitOwnedTrust else { throw ProjectExecutionError.hookNotReady }
+        return true
+    }
 
     nonisolated static func disabledReasonDiagnostic(_ reason: String, checkout: String,
                                                      primaryRoot: String, userHome: String = NSHomeDirectory()) -> String {
@@ -228,22 +251,19 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
             case .projectFile: inline = false
             case .inline: inline = true
             }
+            let canonicalTrustKey = try Self.canonicalProjectTrustKey(primaryRoot: primaryRoot)
             var layer = try userLayer(await read(primaryRoot))
             let raw = layer["config"] as? [String: Any] ?? [:]
+            guard raw["projects"] == nil || raw["projects"] is [String: Any] else { throw ProjectExecutionError.hookNotReady }
             let projects = raw["projects"] as? [String: Any] ?? [:]
-            let trust = (projects[primaryRoot] as? [String: Any])?["trust_level"] as? String
-            if trust != "trusted" {
-                guard permitOwnedTrust, trust == nil else {
-                    logger.error("Hook verification failed: exact primary project trust is not ready")
-                    throw ProjectExecutionError.hookNotReady
-                }
-                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(primaryRoot) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
+            if try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalTrustKey,
+                                              projects: projects, permitOwnedTrust: permitOwnedTrust) {
+                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(canonicalTrustKey) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
                 layer = try userLayer(await read(primaryRoot, readback: true))
                 let readback = layer["config"] as? [String: Any] ?? [:]
-                guard ((readback["projects"] as? [String: Any])?[primaryRoot] as? [String: Any])?["trust_level"] as? String == "trusted" else {
-                    logger.error("Hook verification failed: primary project trust readback is not ready")
-                    throw ProjectExecutionError.hookNotReady
-                }
+                guard readback["projects"] == nil || readback["projects"] is [String: Any] else { throw ProjectExecutionError.hookNotReady }
+                _ = try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalTrustKey,
+                    projects: readback["projects"] as? [String: Any] ?? [:], permitOwnedTrust: false)
             }
             let reply = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]))
             let owned: ProjectExecutionHookReadiness

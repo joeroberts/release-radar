@@ -2,7 +2,53 @@
 
 ## Current outcome
 
-**Outcome 3 — disposable managed handoff complete; worker setup/isolation acceptance next.**
+**Outcome 3 — canonical project trust-key correction; native68 and independent review passed.**
+Main released only the existing brief/ledger update and concrete proposal from
+BuildAgent-confirmed clean `724a81af2dce993598d451ce764d98acb8406cc7`, attached to
+`codex/project-trust-canonical-key` in the `89a5` worktree. The
+[existing controlling brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#current-bounded-canonical-project-trust-key-correction)
+records this bounded recovery/authority scope. Main acknowledged source/test work
+restricted to the supplied primary key and its single canonical key; no traversal
+of other configured project entries. Tests were authored first, then the real native
+resolver/decision helpers were integrated into `verifyHook`; Main withdrew the
+preimplementation native-red gate, prohibiting no-op scaffolding/missing-symbol builds.
+No preimplementation behavioral red was executed. BuildAgent alone owns native checks/builds/Git/live operations.
+Requested Sol/high and the named restricted profile are unexposed; effective
+workspace-write limitations were reported. Installed skill reads are denied;
+repository-local authority/review/acceptance/safety fallbacks apply, with no escalation.
+
+Main's actual readiness evidence reports saved `/var` primary trust present in RR's
+sandbox-container configuration, but Codex's queried `/private/var` canonical key
+absent. Host user configuration is not the solution. Main's installed-version loader
+evidence retains literal stored keys and canonicalizes queried/linked roots; baseline
+client used only the saved primary string. BuildAgent native68 observed Foundation
+`/var=/var` versus Darwin `realpath` canonical `/private/var`. Correction is limited to the
+client trust key and existing config read/versioned batch-write path: preserve aliases
+and explicit non-trusted/malformed refusal in either relevant entry,
+`permitOwnedTrust: false` read-only verification, current
+registration checks, all root/policy/checkout identities and permission/history/hook
+protections. Recovery uses existing Resume Execution Setup; no global normalization,
+home migration, new machinery or automatic assignment repair.
+
+Preserve request `f481e256-3332-43aa-88e1-4c3dd2c6368a` and its exact full envelope
+in the brief, partial `preparing` assignment, and `worker_start: NONE`. Main reports
+BuildAgent native68 passed all 11 App Server tests, app/test compilation and
+documentation/diff checks. Main received independent reviewer `01a0b22f`'s direct
+final report: review complete, Required NONE and Optional NONE. Native68 and review
+are terminal for unchanged behavior; reviewer archive is not yet claimed.
+Main authorized BuildAgent's scoped local commit after this factual brief/ledger
+refreeze; no commit is yet
+claimed, and no acceptance/live permission is implied. Source/tests remain unchanged.
+The exact four-file source/tests/docs candidate is refrozen. Native `realpath`
+is used only for the client trust key; decision and readback check only the supplied
+and canonical keys. The current mismatch is not the complete root cause or verified
+fix. Live canonical trust write/readback, actual RR hook discovery, the exact saved
+request and affected worker startup remain unverified and required through
+Main's separately released live route, with any next failure unknown.
+No live retry/install, config/app/SQLite
+mutation, push/PR/merge/tag/release, catalog identity/lifecycle change or cleanup is
+released. Next action is BuildAgent's authorized scoped checkpoint commit through Main.
+
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
