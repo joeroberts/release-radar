@@ -127,9 +127,18 @@ compilation and documentation/diff checks; unchanged AppServer13 at native82 and
 Setup23/Profile2/legacy decoding1 at native77 remain terminal. Two real transport-
 launch cases remain deferred and excluded. The same independent reviewer
 `01a0b291-d529-7412-8415-d872c1f2cc89` cleared the final source with no remaining
-Required findings. Actual signed selected-home access/account, bookmark restoration,
-running UI/responsive behavior and worker acceptance remain unverified; source closure
-does not complete Outcome 3. The exact f481 request/reserved state remains unchanged.
+Required findings. BA88 verified the owner-approved installed `8656280` candidate.
+Main's September 18 signed UI check selected `/Users/jroberts/.codex` at 00:14 EDT;
+Folder access was ready. One app relaunch (PID19590, 00:15 EDT) restored the selected
+path/date, and Check Folder Access remained ready. The rendered Connections UI was
+visually verified; responsive acceptance remains open. This proves bookmark access
+and restoration only. `account/read(refreshToken:false)`, `config/read` and `hooks/list`
+remain unverified because their execution-setup route can mutate RR-owned hook/trust.
+Main's next pending authorized runtime step is resolving that route/mutation boundary
+and performing the account/config/hooks readback. No Codex restart, login, token copy
+or worker attempt occurred; the exact f481 request/reserved state is unchanged. This
+result-recording task permits existing docs and a local commit only; Outcome 3 and
+worker acceptance remain incomplete.
 
 ## Scope, authority and dependencies
 

@@ -74,11 +74,18 @@ transport-launch cases are deferred and excluded. Test-first regressions demonst
 the corrected failures using synthetic state, without live provider usage.
 The same independent reviewer `01a0b291-d529-7412-8415-d872c1f2cc89` cleared the final
 candidate with no remaining Required findings; source review is complete.
-The existing brief anchor is restored with explicit historical labeling. Main owns
-later actual signed-app/grant/account/config/hooks/bookmark checks; no live retry,
-reprepare/new assignment, login/refresh, config mutation, installation or cleanup is
-released here. Old unbound/uncertain/reserved assignments and exact f481 partial state
-remain blocked and preserved. No worker turn or complete acceptance is claimed.
+The existing brief anchor is restored with explicit historical labeling. BA88 verified
+the owner-approved installed `8656280` candidate. Main reports signed Settings picker
+selection of `/Users/jroberts/.codex` on September 18 at 00:14 EDT, with Folder access
+ready. After one app relaunch (PID19590, 00:15 EDT), the selected path/date restored and
+Check Folder Access returned ready; the rendered Connections UI was visually verified.
+This checks the bookmark, not account/config/hook readiness or responsive acceptance.
+Those RPCs run through execution setup, which can mutate RR-owned hook/trust settings.
+Main's next pending authorized runtime step is account/config/hooks readback after
+resolving that supported route and mutation boundary; worker readiness remains unproven.
+No Codex restart, login, token copy or worker attempt occurred. Exact f481 request and
+reserved/partial state are unchanged. No full Outcome 3 acceptance is claimed; this
+recording task authorizes only the existing documentation update and local commit.
 
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
