@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**September 18 — bounded disposable startup, permission, STOP and fresh recovery checks completed; resources retired and owner assessment pending.**
+**September 18 — Outcome 3 completion goal active; historical-document isolation acceptance is next.**
 
 Reviewed source `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` is frozen on `codex/coordinator-context-handoff`. Independent review passed with no findings; 37 distinct current Core/WorkerAdapter cases passed across the initial run and affected reruns. Signed stage/install succeeded for 0.1.19/build 1, Team `2UA854NLX4`; app CDHash `197ab7377d995fc852c89d3edbc9058c4a45a1fd`, Coordinator `f19ceb7557cc0dedf87217bf3e1280a6bf6ec453`. Installed binaries/manifest matched stage. No rebuild or product change occurred during acceptance.
 
@@ -17,7 +17,9 @@ The [owning brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#sept
 
 **Authorization/resources:** standing disposable cleanup now covers failed and successfully tested assignments only with confirmed closure, lossless artifact/history preservation and clean checkout. Main owns supported UI retirement. The 598fa3e0 profiling artifact (352,144 bytes) is preserved byte-exact in the designated fixture-side directory; only its verified original was removed. Its completed retirement now removes checkout/profile while preserving branch/session/history; all preserved copies remain retained. Prior 7ed84d1f profile (1,056,432 bytes) and 28-byte marker copies remain in the owner-designated fixture-side preservation directory; its checkout/profile are removed and branch/session/history retained. Revoked generation-1 4fd11768 checkout/profile and existing BA/native/review scratch outputs remain retained. No preserved copy deletion, new worker, source/config/permission change, push/PR/main mutation or fixture Git commit is implied.
 
-**Next eligible work:** Owner assessment of the bounded evidence now that exact retirement/current inventory readback matches. Source/docs remain committed; no native build/test process is running. Main confirmed completed reviewer `01a0b42c-543f-7420-b4fa-82ec6cf0f092` archived after BA preserved its 13 known temporary files byte-exact (261,858 bytes total) at `/Users/jroberts/.codex/tmp/rr-outcome3-review-01a0b42c-preserved/`; b5a9 delivery/staging owner remains retained. Standing tasks are unchanged. Further tests or broader Outcome 3 work require Main's specific release. Defer RR self-onboarding until disposable acceptance and a stable merged release; repository catalog/ledger remain authoritative and Main will flag the time. No Pursuit/self-onboarding action is authorized.
+**Current authorization and next work:** The owner authorized an active goal covering four remaining outcomes: historical-document exclusion and Main’s deliberate retrieval using synthetic material; remaining hook update/removal and onboarding/recovery acceptance with independent UI/QA; second-computer portability without machine-specific manual repairs; and final ledger/catalog, manageable PRs, release and task cleanup. Main has released a read-only Build Agent inspection of the existing synthetic fixture to identify the minimum historical canary and fresh-assignment check. Previously successful checks remain terminal unless changed behavior or a concrete defect warrants repetition. Second-computer access is being established; local acceptance cannot substitute for that result.
+
+Main confirmed completed reviewer `01a0b42c-543f-7420-b4fa-82ec6cf0f092` archived after its known temporary files were preserved; b5a9 remains the retained delivery branch. Main owns this ledger update. No product source change, build, installation or live assignment was started by activating the goal. Defer RR self-onboarding until disposable acceptance and a stable merged release.
 
 
 ## Historical context — non-authoritative for current state
