@@ -1,5 +1,27 @@
 # Outcome 3 project execution setup
 
+## September 18 single replacement-worker startup
+
+Main releases one normal production start for the prepared replacement below.
+Use fresh installed `/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator --mcp`
+from reviewed source `abfaef63`, retaining the same live process/connection for
+status, interrupt and physical close. Do not approve runtime requests, repeat an
+uncertain start or prepare another assignment. Normal account/config/launch checks
+are authorized; additional worker instructions remain Main-owned.
+
+Disposition: **pending; not started**.
+
+```json
+{
+  "tool": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-88116e60-6d46-4939-8828-a3825ebffe89",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository's root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment's next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
 ## September 18 replacement preparation after exact retirement
 
 Main's owner-authorized UI retirement completed for
