@@ -2,6 +2,25 @@
 
 ## Current outcome
 
+**September 18 — hook discovery verified live; worker folder access remains blocked.**
+After owner restart, Main's read-only inventory succeeded. Exact preparation
+`67a32c8b-11fd-430e-b916-439046da4531` became authorized, audit
+`A30491A9-830A-44A1-9359-C7059695B401`, preserving its original checkout/context.
+This verifies the installed linked-checkout hook correction on the production path.
+The single start of worker `2D61D310-649E-4D00-B878-7808A50C1906` failed with
+selected-home `accessRequired` before transport/thread creation. Current Coordinator
+processes map the installed helper; stale Coordinator identity is ruled out.
+Supported close left `connectionClosed: true` and no thread/session; the protected
+assignment remains `unknown`, launch-reserved and uncertain. No repeat start,
+preparation replay or folder reselection followed.
+
+The source conflates bookmark-resolution failure, stale bookmark and denied
+security-scope acquisition, so the precise helper-access cause is unverified.
+RO04 is assigning a fresh read-only Chief Architect investigation of Apple's
+cross-process bookmark contract before recovery or correction. Successful main-app
+preparation does not prove helper bookmark access. Retain the dedicated BA staging
+checkout; actual worker startup, isolation, STOP and recovery remain unverified.
+
 **September 18 — signed acceptance candidate installed; stale MCP helper blocks readback.**
 Candidate `7201abeb` containing source correction `6b4f3fbd` passed the established
 signed staging/install checks. Installed Release Radar is 0.1.19/build 1, CDHash
