@@ -2,6 +2,22 @@
 
 ## Current outcome
 
+**September 18 — linked-checkout source correction verified; live acceptance pending.**
+Source commit `6b4f3fbd84c299f638ae4d9b9162332373fd43f6` ensures the assigned
+checkout's project-layer directory before existing hook discovery. Four native
+regressions first failed; all 35 focused checks passed across GREEN-2/3. Fresh
+independent reviewer `01a0b401` found Required none and Optional none for
+containment, freshness and exact-request recovery; packaged documentation and
+diff checks passed. Chief Architect `01a0b3f0`'s finding is preserved in the
+existing brief and assessment. Main retains signed installation and live
+acceptance of request `67a32c8b-11fd-430e-b916-439046da4531`.
+
+Two regressions remain distinct: fresh linked-checkout hook readiness recurred
+after prior successful preparation; task-delegation approval required a direct
+owner message in RO04 and remains unresolved. The directory correction does not
+resolve delegation approval. Actual startup, isolation, STOP and recovery remain
+unverified.
+
 **September 18 — connection recovered; fresh-fixture acceptance resumed.**
 The owner restarted Codex. Main verified the stale AgentTools PID 32172 had exited
 and the same read-only RR inventory request succeeded with a complete result.
