@@ -77,6 +77,54 @@ final class CodexExecutionContextTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: root.path))
     }
 
+    func testLeaseFailureDiagnosticsSeparateStagesAndSanitizeFoundationErrors() throws {
+        let (store, context) = try fixture()
+        let scope = Scope()
+        let underlying = NSError(domain: NSPOSIXErrorDomain, code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "synthetic-private-underlying"])
+        let error = NSError(domain: NSCocoaErrorDomain, code: 256,
+            userInfo: [NSUnderlyingErrorKey: underlying, NSLocalizedDescriptionKey: "synthetic-private-auth"])
+        XCTAssertThrowsError(try CodexExecutionContextLease(context: context,
+            current: { try store.codexContext() }, resolve: { _ in throw error },
+            start: scope.start, stop: scope.stop)) {
+            XCTAssertTrue($0.localizedDescription.contains("resolve"))
+            XCTAssertTrue($0.localizedDescription.contains("NSCocoaErrorDomain:256"))
+            XCTAssertTrue($0.localizedDescription.contains("NSPOSIXErrorDomain:1"))
+            XCTAssertFalse($0.localizedDescription.contains("synthetic-private"))
+        }
+        for stale in [true, false] {
+            scope.allowed = false
+            XCTAssertThrowsError(try CodexExecutionContextLease(context: context,
+                current: { try store.codexContext() },
+                resolve: { _ in .init(url: URL(fileURLWithPath: context.homePath), isStale: stale) },
+                start: scope.start, stop: scope.stop)) {
+                XCTAssertTrue($0.localizedDescription.contains(stale ? "stale" : "start"))
+            }
+        }
+        scope.allowed = true
+        XCTAssertThrowsError(try CodexExecutionContextLease(context: context,
+            current: { try store.codexContext() },
+            resolve: { _ in .init(url: store.root, isStale: false) },
+            start: scope.start, stop: scope.stop)) {
+            XCTAssertTrue($0.localizedDescription.contains("identity"))
+        }
+    }
+
+    func testLeaseRetainsOriginalResolvedURLWhileComparingCanonicalIdentity() throws {
+        let (store, context) = try fixture()
+        let alias = store.root.deletingLastPathComponent().appendingPathComponent("selected-alias")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: URL(fileURLWithPath: context.homePath))
+        let scope = Scope()
+        let lease = try CodexExecutionContextLease(context: context, current: { try store.codexContext() },
+            resolve: { _ in .init(url: alias, isStale: false) },
+            start: { url in XCTAssertEqual(url, alias); return scope.start(url) },
+            stop: { url in XCTAssertEqual(url, alias); scope.stop(url) })
+        try lease.validate()
+        XCTAssertEqual(scope.stops, 0)
+        lease.release()
+        XCTAssertEqual(scope.stops, 1)
+    }
+
     func testRetainedAssignmentBlocksDifferentHomeButAllowsSameHomeRecovery() throws {
         let (store, context) = try fixture()
         let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)

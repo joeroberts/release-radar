@@ -17,6 +17,9 @@ actor WorkerAdapter {
         var approvals: [String: [String: Any]] = [:]
         var effective: [String: Any] = [:]
         var uncertainApproval: [String: String]?
+        var contextLease: (any ExecutionContextLease)?
+        var accessFailure: CodexExecutionContextAccessFailure?
+        var transportReached = false
     }
     private let store: ProjectExecutionFileStore
     private var workers: [String: Worker] = [:]
@@ -86,7 +89,6 @@ actor WorkerAdapter {
         starting = true; defer { starting = false }
         let id = UUID().uuidString
         workers[id] = Worker(id: id, policy: selected)
-        try selected.reserve() // Durable start intent prevents redispatch after a partial or uncertain start.
         do {
             guard try store.policy(projectID: projectID) == selected.policy else { throw ProjectExecutionError.assignmentNotAuthorized }
             var args = AppServerTransport.executionSetupArguments
@@ -98,12 +100,21 @@ actor WorkerAdapter {
                 Task { await self?.event(id, message) }
             }
             let server: any ExecutionPeer
-            if let serverFactory { server = try serverFactory(selected.policy.appServerExecutable, args, onMessage) }
+            let lease: (any ExecutionContextLease)?
+            if serverFactory != nil { lease = nil }
             else {
-                guard let context = try store.codexContext(), context.id == selected.policy.codexContextID else { throw CodexExecutionContextError.changed }
-                let lease = try CodexExecutionContextLease(context: context, current: { try selected.store.codexContext() })
-                server = try AppServerTransport(executable: selected.policy.appServerExecutable, arguments: args, context: lease, onMessage: onMessage)
+                guard let contextID = selected.policy.codexContextID else { throw CodexExecutionContextAccessFailure(stage: .identity) }
+                // RR only hands off a fresh authorized launch. Existing uncertain
+                // reservations cannot acquire another grant after restart.
+                lease = try CoordinatorCodexContextLease.acquire(store: store, projectID: projectID,
+                    assignmentID: assignmentID, contextID: contextID, attemptID: UUID(uuidString: id)!)
             }
+            workers[id]?.contextLease = lease
+            try selected.reserve() // Durable intent still precedes every child launch.
+            if let serverFactory { server = try serverFactory(selected.policy.appServerExecutable, args, onMessage) }
+            else if let lease { server = try AppServerTransport(executable: selected.policy.appServerExecutable, arguments: args, context: lease, onMessage: onMessage) }
+            else { throw CodexExecutionContextAccessFailure(stage: .handoff) }
+            workers[id]?.transportReached = true
             workers[id]?.server = server
             _ = try await rpc(server, "initialize", ["clientInfo": ["name": "release_radar_coordinator", "version": "1"], "capabilities": ["experimentalApi": true]])
             try server.send(["method": "initialized"])
@@ -149,6 +160,7 @@ actor WorkerAdapter {
         } catch {
             workers[id]?.status = unknown(error) ? "unknown" : "failed"
             workers[id]?.error = error.localizedDescription
+            workers[id]?.accessFailure = error as? CodexExecutionContextAccessFailure
         }
         return try status(workerID: id)
     }
@@ -175,11 +187,18 @@ actor WorkerAdapter {
         var result: [String: Any] = ["workerId": workerID, "status": worker.status,
                                     "messages": worker.messages, "messagesTruncated": worker.truncated,
                                     "effective": worker.effective, "assignmentId": worker.policy.assignment.id,
+                                    "transportReached": worker.transportReached,
                                     "projectId": worker.policy.assignment.registration.projectID.rawValue,
                                     "pendingRequests": worker.approvals.map { ["requestKey": $0.key, "method": $0.value["method"] ?? NSNull(), "params": $0.value["params"] ?? [:]] }]
         if let threadID = worker.threadID { result["threadId"] = threadID }
         if let turnID = worker.turnID { result["turnId"] = turnID }
         if let error = worker.error { result["error"] = error }
+        if let failure = worker.accessFailure {
+            var diagnostic: [String: Any] = ["stage": failure.stage.rawValue]
+            if let domain = failure.domain, let code = failure.code { diagnostic["domain"] = domain; diagnostic["code"] = code }
+            if let domain = failure.underlyingDomain, let code = failure.underlyingCode { diagnostic["underlyingDomain"] = domain; diagnostic["underlyingCode"] = code }
+            result["accessFailure"] = diagnostic
+        }
         if let uncertain = worker.uncertainApproval { result["uncertainApproval"] = uncertain }
         return try RPCObject(result)
     }
@@ -262,7 +281,10 @@ actor WorkerAdapter {
     func close(workerID: String) throws -> RPCObject {
         let worker = try worker(workerID)
         guard !worker.busy, ["completed", "interrupted", "failed", "ready", "unknown"].contains(worker.status) else { throw ProjectExecutionError.assignmentNotAuthorized }
-        do { try worker.server?.close() }
+        do {
+            if let server = worker.server { try server.close() }
+            else { try worker.contextLease?.physicallyClosed() }
+        }
         catch {
             workers[workerID]?.status = "unknown"; workers[workerID]?.error = error.localizedDescription
             do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
@@ -279,7 +301,8 @@ actor WorkerAdapter {
         var failure: Error?
         for worker in workers.values {
             do {
-                try worker.server?.close()
+                if let server = worker.server { try server.close() }
+                else { try worker.contextLease?.physicallyClosed() }
                 try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
             }
             catch {

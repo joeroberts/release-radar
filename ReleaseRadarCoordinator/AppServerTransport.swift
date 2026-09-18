@@ -45,7 +45,7 @@ protocol ExecutionPeer: Sendable {
 /// Newline JSON transport. Correlation IDs do not authorize replay of a mutation.
 final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
     static let executionSetupArguments = ["app-server", "--listen", "stdio://", "-c", "default_permissions=\":read-only\""]
-    private let context: CodexExecutionContextLease?
+    private let context: (any ExecutionContextLease)?
     private let process = Process()
     private let input = Pipe()
     private let output = Pipe()
@@ -67,11 +67,11 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
         return environment
     }
 
-    convenience init(executable: String, arguments: [String], context: CodexExecutionContextLease,
+    convenience init(executable: String, arguments: [String], context: any ExecutionContextLease,
                      onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
         try context.validate()
         try self.init(executable: executable, arguments: arguments,
-            environment: Self.selectedContextEnvironment(homePath: context.context.homePath, inherited: ProcessInfo.processInfo.environment),
+            environment: Self.selectedContextEnvironment(homePath: context.homePath, inherited: ProcessInfo.processInfo.environment),
             context: context, onMessage: onMessage)
     }
 
@@ -86,7 +86,7 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
     }
     #endif
 
-    private init(executable: String, arguments: [String], environment: [String: String], context: CodexExecutionContextLease?, onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
+    private init(executable: String, arguments: [String], environment: [String: String], context: (any ExecutionContextLease)?, onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
         guard executable == CodexExecutionIdentity.executable else { throw ProjectExecutionError.identityMismatch }
         try CodexExecutionIdentity.verify()
         self.context = context
@@ -104,6 +104,15 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
         catch { processExited.leave(); throw error }
         readerExited.enter()
         DispatchQueue(label: "ReleaseRadar.AppServer.reader").async { [self] in readMessages() }
+        context?.onInvalidation { [weak self] in
+            DispatchQueue.global().async { [weak self] in
+                guard let self else { return }
+                let reason: String
+                do { try self.close(); reason = "Context handoff lost; child and reader physically closed. RR grant acknowledgement may remain unresolved." }
+                catch { reason = "Context handoff lost; bounded cleanup is unresolved. No new work may be admitted." }
+                if let event = try? RPCObject(["method": "adapter/connectionLost", "params": ["reason": reason]]) { self.onMessage(event) }
+            }
+        }
     }
 
     func send(_ message: [String: Any]) throws {
@@ -203,7 +212,7 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
         guard readerExited.wait(timeout: .now() + 3) == .success else {
             throw AppServerTransportError(message: "App Server reader remains active after process exit; connection cleanup is incomplete.", outcomeUnknown: true)
         }
-        context?.release()
+        try context?.physicallyClosed()
         if let inputError {
             throw AppServerTransportError(message: "App Server exited, but closing its input failed: \(inputError)", outcomeUnknown: true)
         }

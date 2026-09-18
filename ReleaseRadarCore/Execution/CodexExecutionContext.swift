@@ -1,6 +1,29 @@
 import Darwin
 import Foundation
 
+public struct CodexExecutionContextAccessFailure: Error, LocalizedError, Equatable, Sendable, Codable {
+    public enum Stage: String, Codable, Sendable { case resolve, stale, start, identity, handoff }
+    public let stage: Stage
+    public let domain: String?
+    public let code: Int?
+    public let underlyingDomain: String?
+    public let underlyingCode: Int?
+
+    public init(stage: Stage, error: Error? = nil) {
+        self.stage = stage
+        let foundation = error as NSError?
+        domain = foundation?.domain; code = foundation?.code
+        let underlying = foundation?.userInfo[NSUnderlyingErrorKey] as? NSError
+        underlyingDomain = underlying?.domain; underlyingCode = underlying?.code
+    }
+    public var errorDescription: String? {
+        var detail = ""
+        if let domain, let code { detail += " \(domain):\(code)" }
+        if let underlyingDomain, let underlyingCode { detail += " underlying \(underlyingDomain):\(underlyingCode)" }
+        return "Codex folder access failed at \(stage.rawValue).\(detail) No new work was admitted. Reserved or uncertain assignments cannot be replayed."
+    }
+}
+
 public enum CodexExecutionContextError: Error, LocalizedError, Equatable, Sendable {
     case selectionRequired, accessRequired, changed, subscriptionRequired, routingUnsupported, resourcesRetained
     public var errorDescription: String? {
@@ -67,7 +90,7 @@ public final class CodexExecutionContextLease: @unchecked Sendable {
 
     public convenience init(context: CodexExecutionContext, current: @escaping @Sendable () throws -> CodexExecutionContext?) throws {
         let bookmarks = ProjectBookmarkStore()
-        try self.init(context: context, current: current, resolve: bookmarks.resolve,
+        try self.init(context: context, current: current, resolve: bookmarks.resolveForExecutionContext,
             start: { $0.startAccessingSecurityScopedResource() }, stop: { $0.stopAccessingSecurityScopedResource() })
     }
     init(context: CodexExecutionContext, current: @escaping @Sendable () throws -> CodexExecutionContext?,
@@ -75,14 +98,14 @@ public final class CodexExecutionContextLease: @unchecked Sendable {
          start: @Sendable (URL) -> Bool, stop: @escaping @Sendable (URL) -> Void) throws {
         let resolved: ResolvedProjectBookmark
         do { resolved = try resolve(context.bookmark) }
-        catch { throw CodexExecutionContextError.accessRequired }
-        guard !resolved.isStale else { throw CodexExecutionContextError.accessRequired }
-        guard start(resolved.url) else { throw CodexExecutionContextError.accessRequired }
+        catch { throw CodexExecutionContextAccessFailure(stage: .resolve, error: error) }
+        guard !resolved.isStale else { throw CodexExecutionContextAccessFailure(stage: .stale) }
+        guard start(resolved.url) else { throw CodexExecutionContextAccessFailure(stage: .start) }
         do {
             guard try CodexExecutionContext.canonicalPath(resolved.url.path) == context.homePath,
                   try current() == context else { throw CodexExecutionContextError.changed }
             try context.validateFolder()
-        } catch { stop(resolved.url); throw error }
+        } catch { stop(resolved.url); throw CodexExecutionContextAccessFailure(stage: .identity) }
         self.context = context; self.current = current; self.stop = stop; url = resolved.url
     }
     public func validate() throws {
@@ -94,6 +117,17 @@ public final class CodexExecutionContextLease: @unchecked Sendable {
     public func release() {
         let shouldStop = lock.withLock { if !active { return false }; active = false; return true }
         if shouldStop { stop(url) }
+    }
+    /// Only the durable bookmark's owning process may create this transfer.
+    /// It is memory-only and valid solely for the authenticated handoff.
+    public func makeTemporaryTransferBookmark() throws -> Data {
+        try lock.withLock {
+            guard active, try current() == context else { throw CodexExecutionContextAccessFailure(stage: .identity) }
+            try context.validateFolder()
+            do {
+                return try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
+            } catch { throw CodexExecutionContextAccessFailure(stage: .resolve, error: error) }
+        }
     }
     deinit { release() }
 }

@@ -7,11 +7,111 @@ review.** This document grants no implementation or configuration authority.
 
 Read [the retained App Server findings](#september-16-app-server-findings) and
 [the onboarding/worktree integration contract](#september-16-onboarding-and-worktree-integration-contract)
-for the current follow-up. The original recommendation below is retained as an
+for the integration contract, and [the September 18 bookmark correction](#september-18-selected-context-cross-process-correction)
+for current source verification and pending runtime acceptance. The original recommendation below is retained as an
 attributed September 14 assessment. Its desktop-visibility and VM alternatives
 are not requirements for the approved coordinator plugin or this follow-up.
 Outcome 3 remains open; a reviewed standalone component does not complete RR
 integration. The catalog identity remains proposed/supporting.
+
+### September 18 selected-context cross-process correction
+
+Chief task `01a0b413-4623-73f3-a3c5-81a1b5bf8c69` verified that the baseline RR
+persisted an app-scoped bookmark while Coordinator independently resolved it.
+[Apple DTS 785735](https://developer.apple.com/forums/thread/785735) rejects that
+cross-process contract. Resolution, staleness and access-start failure previously
+collapsed into `accessRequired`; the reported live failure is not diagnosed.
+[Apple DTS 678819](https://developer.apple.com/forums/thread/678819) documents
+temporary implicit bookmark transfer, created without `.withSecurityScope` and
+without `.withoutImplicitSecurityScope`.
+
+RR alone restores its durable bookmark and retains its original resolved URL for
+grant ownership. Canonical paths and device/inode comparisons establish physical
+identity separately. An authenticated internal XPC handoff supplies a fresh,
+memory-only implicit bookmark to the exact Coordinator connection and assignment,
+bound to the complete selected receipt. Admission expires; a restarted connection
+must acquire a new handoff. Missing, expired, wrong-peer or changed-context handoffs
+fail closed. Coordinator receives no general admission to RR command mutation RPCs.
+No bookmark capability appears in MCP responses, worker instructions or logs.
+
+Both processes retain their grants through confirmed physical closure of the
+App Server process and reader. Connection loss alone does not establish closure.
+Receipt freshness, explicit `CODEX_HOME`, account and built-in-provider checks stay
+mandatory. Diagnostics distinguish resolve, stale, start and identity stages and
+report transport reached separately; only error domain/code and underlying
+domain/code are retained, never unrestricted `NSError.userInfo`.
+
+Acceptance requires focused test-first failure/expiry/context/lifetime tests and
+BA's actual separately signed RR-to-Coordinator synthetic boundary verification,
+including fresh handoff after restart. Injected scope tests cannot prove that
+boundary. The existing `67a32c8b-11fd-430e-b916-439046da4531` assignment remains
+unknown, launch-reserved, uncertain and connection-closed with no session. No live
+retry, retirement, replacement, folder selection, installation or state mutation
+is authorized for this correction. Accepted ADRs and catalog identities remain
+unchanged. The Chief settled the specific existing-broker endpoint-discovery and
+deferred-acquisition contract below before transport implementation.
+
+Writer `01a0b418-a8f1-7e03-b8d8-533ef80cdda6` owns source/tests and these existing
+documents from Main-assigned baseline `9ddb37978c106ae4ac62b7e3aa74d311b40deeac`.
+BA owns Git/native/signed checks; Main owns ledger and live state. A fresh
+independent boundary/recovery review is coordinated through RO04 after GREEN.
+Skill reads were denied; repository-local fallback applies. Effective restrictions
+deny Git objects, CodeGraph, history and archives; model/effort and named-profile
+readback are not exposed. No entitlement, SDK, signing or public MCP change is
+included. Preserve all staging and keep the writer task open through BA use.
+
+The Chief's precise clarification accepts endpoint-only discovery on the existing
+broker with mutually authenticated direct anonymous XPC, provided interface
+selection follows code-signature validation and Coordinator receives no app
+registration/command interface. RR admits only a fresh authorized, unreserved,
+session-free assignment; handoff acquisition precedes reservation, and durable
+reservation still precedes App Server creation. RR checks the exact original to
+reserved to bound assignment transition and rejects duplicate acquisition. The
+existing unknown assignment is never eligible for a handoff.
+
+Coordinator uses the deferred ephemeral-access API: resolve the returned `NSURL`
+with `.withoutImplicitStartAccessing`, `.withoutUI` and `.withoutMounting`, retain
+that URL, reject stale results and require explicit access-start success. The SDK's
+`NSURL.h` documents this deferred alternative; [Apple's sandbox guide](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox)
+distinguishes implicit cross-process bookmarks from restored persistent scopes.
+Each successful start balances once after confirmed child/reader closure. A false
+start remains a stage-specific failure, with no unconditional unsandboxed bypass.
+
+Admission expiry limits initial consumption, not the active worker's lifetime.
+Connection invalidation disables future admission and requires bounded child
+cleanup; RR retains the unresolved grant until the original authenticated,
+grant-bound closure acknowledgement. A timeout, missing session or replacement
+connection cannot establish closure. RR cannot preserve an in-memory grant through
+its own termination; the reserved/uncertain assignment retains recovery state,
+and consumed helper capability revocation is not implied by RR lease release.
+
+Source verification: BA established behavioral RED in both added lease tests
+(eight assertion failures, successful compilation), then GREEN for all ten context
+tests. The combined production candidate passed 34/34 focused native tests: context
+10, handoff authority 3 and existing worker 21, with zero failures/unexpected results.
+The first combined attempt compiled no tests because `NSURL` requires an `ObjCBool`
+stale pointer; the bounded import correction passed the subsequent native run.
+The final local identity-stage correction and sanitized worker-status regression
+passed the directly affected four-test handoff class. Current evidence covers 35
+distinct tests (context 10, worker 21, handoff 4) across the combined 34-test run
+and final affected four-test run; no single 35-test run is claimed.
+These results establish unit/integration behavior and app/test compilation, not
+actual cross-process scope feasibility. BA's diff check passed and native/test
+processes were closed. No release build, installation or owner-state operation ran.
+
+Main selected normal production acceptance after independent authority/lifetime
+review and coordinated installation. **The isolated signed route was NOT RUN.**
+No DEBUG probe, fixture adapter, endpoint archive, disposable service or shared
+registration-interruption fixture was added. A regular archive cannot establish
+Mach-right transfer; a disposable rendezvous would add launchd effects and test
+machinery. The source endpoint is BA's scoped local immutable candidate commit;
+RO04 coordinates one fresh review and only Required corrections. Main owns exact
+fresh assignment/prompt resolution and all subsequent runtime release. Normal
+`worker_start` reserves intent and automatically advances through thread and turn
+admission; it is not a grant-only probe. Actual signed startup, isolation, STOP and
+recovery remain pending, and current `67a` remains unchanged. Temporary native
+logs/results, `.build` and `DerivedData` are retained and excluded from the source
+candidate; no cleanup is authorized or performed.
 
 ## Original September 14 recommendation
 

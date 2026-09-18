@@ -1,5 +1,63 @@
 # Outcome 3 project execution setup
 
+## September 18 temporary context handoff correction
+
+Continue the authorized worker-startup correction under Chief's specific contract
+in [the owning assessment](../../../design/outcome3-runtime-enforcement-assessment.md#september-18-selected-context-cross-process-correction).
+RR retains its persistent bookmark and original resolved URL grant; only a fresh
+implicit ephemeral bookmark crosses an authenticated context-only XPC boundary.
+Bind it to the complete selected receipt, physical folder, exact connection and
+assignment; expire admission and fail closed on missing/expired/wrong-peer/context
+input. Retain grants until confirmed physical process/reader closure. Preserve
+receipt freshness, explicit `CODEX_HOME`, account/provider admission and reserved
+state. Separate resolve/stale/start/identity failure stages with sanitized numeric
+error metadata and transport-reached status. No capability data in MCP/context/logs.
+
+Writer `01a0b418-a8f1-7e03-b8d8-533ef80cdda6` is sole source/test/design/brief writer
+in its fresh managed worktree from assigned committed baseline
+`9ddb37978c106ae4ac62b7e3aa74d311b40deeac`, requested Sol/high, ceiling Astra/high.
+Actual model/effort and profile labels are not exposed. Denied skill reads use the
+repository fallback; no denied-path retry, escalation or bypass. Main retains the
+ledger/live state; BA alone performs Git, native RED/GREEN and separately signed
+synthetic boundary verification. RO04 coordinates one fresh independent review
+of the final GREEN candidate and required corrections; BA owns the scoped commit.
+Main authorized BA's local immutable checkpoint before that review; Required
+review corrections retain the same source ownership and bounded commit endpoint.
+No push, merge, installation, live attempt or owner-state/config/SQLite mutation.
+
+Use existing focused tests first for distinct failures, stale/changed identity,
+wrong peer/context, restart/expiry and grant lifetime through closure. Actual
+separately signed RR-to-Coordinator synthetic transfer remains required for full
+Outcome 3 acceptance; mocks are insufficient. Main selected normal production
+acceptance after coordinated reviewed installation. The isolated signed route was
+**NOT RUN**; no DEBUG probe, fixture adapter, disposable service, endpoint archive
+or shared registration-interruption test is included. The bounded source endpoint
+is focused native checks, one fresh authority/lifetime review and BA's scoped local
+candidate commit. Main owns exact fresh runtime identity/prompt and release; normal
+`worker_start` automatically advances through thread/turn admission, not just grant
+acquisition. No live action is released here. Preserve
+unknown/launchReserved/uncertain/connectionClosed/session-nil
+assignment `delivery-67a32c8b-11fd-430e-b916-439046da4531`, old f481 and pilot.
+No broad mutation admission, entitlement expansion, SDK/signing substitution,
+false-scope bypass, persistent helper bookmark, public capability or owner
+reselection workaround. This is an internal access-boundary correction with no
+persistence schema/public contract change; existing RR execution consumers remain
+compatible. Process restart requires a new ephemeral handoff. Preserve accepted
+ADRs, catalog IDs/lifecycle and staging; keep this task open through BA use.
+
+BA direct verification: added lease regressions compiled and failed at the intended
+assertions (2 RED tests, 8 failures); context suite then passed 10/10. Combined native
+candidate passed context 10 + handoff authority 3 + worker 21 = 34/34, zero failures.
+First combined attempt ran zero tests due to the `NSURL` stale pointer's `ObjCBool`
+import requirement, corrected before GREEN. Diff/documentation checks passed and
+native/test processes closed. A final bounded identity-stage correction and direct
+sanitized worker-status regression passed the affected handoff class, 4/4. Current
+evidence covers 35 distinct tests (context 10, worker 21, handoff 4) across combined
+34 and final affected 4 runs, not a single 35-test run. App/test compilation and mocked scope/authority
+checks do not prove actual signed helper scope acquisition. No installation, live
+state/config/account operation or release build ran; temporary native outputs are
+retained and excluded from the local candidate.
+
 ## September 18 fresh-fixture acceptance commands
 
 The owner-authorized disposable acceptance continues after successful restart recovery.

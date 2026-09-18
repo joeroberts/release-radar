@@ -21,6 +21,25 @@ enum ReleaseRadarBridgeTransport {
     static let brokerRequirement = validatedRequirement(
         "anchor apple generic and identifier \"com.rekonlabs.ReleaseRadarBridgeAgent\" and certificate leaf[subject.OU] = \"2UA854NLX4\""
     )
+    static let coordinatorRequirement = validatedRequirement(
+        "anchor apple generic and identifier \"com.rekonlabs.ReleaseRadarCoordinator\" and certificate leaf[subject.OU] = \"2UA854NLX4\""
+    )
+    static let appOrCoordinatorRequirement = validatedRequirement(
+        "anchor apple generic and (identifier \"com.rekonlabs.ReleaseRadar\" or identifier \"com.rekonlabs.ReleaseRadarCoordinator\") and certificate leaf[subject.OU] = \"2UA854NLX4\""
+    )
+
+    // Listener admission pins the actual connection first. This check selects
+    // its narrow interface; the connection is then pinned to that identity too.
+    static func peerMatches(_ connection: NSXPCConnection, requirement text: String) -> Bool {
+        var requirement: SecRequirement?
+        var code: SecCode?
+        guard SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess,
+              let requirement,
+              SecCodeCopyGuestWithAttributes(nil,
+                [kSecGuestAttributePid as String: NSNumber(value: connection.processIdentifier)] as CFDictionary,
+                [], &code) == errSecSuccess, let code else { return false }
+        return SecCodeCheckValidity(code, [], requirement) == errSecSuccess
+    }
 
     static func envelopeVersion(in data: Data) -> Int? {
         guard data.count <= maximumEnvelopeBytes,
@@ -94,6 +113,14 @@ protocol ReleaseRadarToolsBrokerXPC {
 @objc(ReleaseRadarAppBrokerXPC)
 protocol ReleaseRadarAppBrokerXPC {
     func registerApp(_ wireVersion: Int, withReply reply: @escaping (Int) -> Void)
+    func registerContextEndpoint(_ wireVersion: Int, endpoint: NSXPCListenerEndpoint,
+                                withReply reply: @escaping (Int) -> Void)
+}
+
+// Coordinator's broker connection cannot register RR or forward commands.
+@objc(ReleaseRadarContextDiscoveryXPC)
+protocol ReleaseRadarContextDiscoveryXPC {
+    func contextEndpoint(_ wireVersion: Int, withReply reply: @escaping (NSXPCListenerEndpoint?) -> Void)
 }
 
 @objc(ReleaseRadarAppCallbackXPC)
