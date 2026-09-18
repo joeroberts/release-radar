@@ -60,33 +60,20 @@ context lifecycle, setup/retirement and legacy decoding, are terminal. The one a
 case passed at checkpoint78 (one test, zero failures); required compilation,
 documentation/index/diff checks passed. Main authorized the local checkpoint commit
 `28db1e4ea6bc7c89a960ff6abadf30d48af5a14c` (24 files); BA reported a clean tree.
-The one fresh independent review of that immutable candidate identified three required
-corrections, released by Main: nonnil final admission, effective/returned provider
-agreement, and preventing a different-home switch from stranding retained resources.
-Native79 compiled and genuinely failed the unbound-admission regression; native80
-passed all 16 producer and one admission tests, compilation and documentation/diff checks.
-Native81 compiled and genuinely failed all three provider/switch regressions; cleanup
-errors were downstream of unwanted actions in synthetic peers, not live usage.
-The corrections now require default built-in OpenAI routing and returned agreement
-before generation, and reject different-home saves while unretired assignments or
-installed hooks remain. Same-home identity/access recovery and uncertain records are
-preserved. Native82 passed 62 affected tests, compilation and documentation/diff checks;
-BA committed `6bd9d115065a236a88a253534ce4ba9e5c090489`. The same reviewer closed
-routing/final admission but found a stale-context creation race. Native83 compiled and
-genuinely failed its ordering regression: an A-bound preparation persisted after B
-selection and blocked returning to A. The bounded correction now validates selection
-before checkout materialization and persists creation intent under the shared lock;
-stale creation/preparation/authorization saves reject, while STOP/closure/recovery
-updates preserve existing records. Native84 passed 50 affected tests, compilation and
-documentation/diff checks; BA committed `12ef1be4ede7917d4f9b561f79a13f02073a8a7a`.
-The same reviewer closed stale creation but identified STOP waiting behind unrelated
-provisioning. Native85 compiled and genuinely failed the paused-provisioning STOP
-expectation; the test released its semaphore and finished. Its separate cleanup error
-came from the fixture omitting turn-completion confirmation, now supplied explicitly.
-The bounded correction keeps selection-sensitive locking and per-assignment protection,
-while existing STOP/closure saves bypass the selection lock and checkout preparation
-releases the instance mutex. Affected native checks and the same reviewer's check of
-this introduced defect remain pending; routing/final-admission review is terminal.
+The bounded source correction is complete at
+`0c9baa5a7eab9eca609f31f6c762f3204f952af8`; BA reports the assigned tree clean.
+It requires nonnil final admission and effective/returned built-in OpenAI routing,
+preserves same-home identity recovery, and refuses different-home selection while
+resources remain. Context-bound creation validates selection before materializing
+resources and persists intent atomically; stale writers reject. Existing STOP/closure
+updates retain per-assignment protection without waiting on unrelated provisioning.
+Native86 passed all 51 affected cases (Worker21, Context8, Producer16, Store5, Admission1),
+compilation and documentation/diff checks. Unchanged AppServer13 at native82 and
+Setup23, Profile2 and legacy decoding1 at native77 remain terminal; the two real
+transport-launch cases are deferred and excluded. Test-first regressions demonstrated
+the corrected failures using synthetic state, without live provider usage.
+The same independent reviewer `01a0b291-d529-7412-8415-d872c1f2cc89` cleared the final
+candidate with no remaining Required findings; source review is complete.
 The existing brief anchor is restored with explicit historical labeling. Main owns
 later actual signed-app/grant/account/config/hooks/bookmark checks; no live retry,
 reprepare/new assignment, login/refresh, config mutation, installation or cleanup is

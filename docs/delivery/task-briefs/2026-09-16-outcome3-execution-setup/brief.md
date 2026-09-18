@@ -121,6 +121,16 @@ or owner-state mutation occurs in this source slice. Architecture investigation
 instructions remain unchanged. Existing catalog IDs/lifecycle/authority stay unchanged;
 these mutable documents require no checksum or new index row.
 
+The bounded source assignment is complete at
+`0c9baa5a7eab9eca609f31f6c762f3204f952af8`. BA native86 passed 51 affected tests,
+compilation and documentation/diff checks; unchanged AppServer13 at native82 and
+Setup23/Profile2/legacy decoding1 at native77 remain terminal. Two real transport-
+launch cases remain deferred and excluded. The same independent reviewer
+`01a0b291-d529-7412-8415-d872c1f2cc89` cleared the final source with no remaining
+Required findings. Actual signed selected-home access/account, bookmark restoration,
+running UI/responsive behavior and worker acceptance remain unverified; source closure
+does not complete Outcome 3. The exact f481 request/reserved state remains unchanged.
+
 ## Scope, authority and dependencies
 
 The owner explicitly released worker `01a0acb5-bc87-72b3-a06e-8821cb18bfc9`
