@@ -112,8 +112,12 @@ branch `codex/context-acceptance`, clean initial commit
 and the exact folder picker, but Choose Project failed "Sky Computer Use native pipe
 closed before response". Reacquisition and one CUA reset reproduced the transport
 failure; RR executable remains PID19590. Onboarding is unconfirmed: no Initialize
-confirmation or worker start was issued. BA is investigating transport versus app
-failure read-only; no root cause or acceptance success is established. This recording
+confirmation or worker start was issued. BA's completed read-only diagnosis found
+PID19590 alive (state S), installed identity unchanged, normal recent bookmark/UI/XPC
+logs and no termination/panic/assertion or current September 18 crash event. This
+supports an automation pipe/session failure rather than RR crash evidence; the exact
+internal cause and onboarding outcome remain unproven. No acceptance success is
+established. This recording
 does not authorize further live actions; f481 and retained artifacts remain preserved.
 
 Main confirmed the registration/root and removal/re-add recovery commit

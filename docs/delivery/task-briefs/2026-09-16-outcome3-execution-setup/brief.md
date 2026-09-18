@@ -165,8 +165,11 @@ Main reached Initialize Project Tracking and its exact new folder picker. Choose
 Project failed "Sky Computer Use native pipe closed before response"; reacquisition
 and one CUA reset reproduced the transport failure. RR executable remains PID19590,
 but onboarding is unconfirmed. No Initialize confirmation or worker start was issued.
-BA's transport-versus-app diagnosis is read-only and pending; no root cause or acceptance
-success is claimed. The old f481 record and stage/artifacts are preserved; this evidence
+BA's completed read-only diagnosis found PID19590 alive (state S), installed identity
+unchanged, normal recent logs and no current September 18 crash event or termination/
+panic/assertion evidence. This supports an automation pipe/session failure; its exact
+internal cause remains unproven. No onboarding or acceptance success is claimed.
+The old f481 record and stage/artifacts are preserved; this evidence
 update authorizes no implementation, additional live action or cleanup.
 
 ## Scope, authority and dependencies
