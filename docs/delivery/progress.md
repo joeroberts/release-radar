@@ -2,6 +2,32 @@
 
 ## Current outcome
 
+**September 18 — reviewed context-handoff candidate installed; production startup pending.**
+Source candidate `abfaef63a1c42671a433a617c70dfe15efccef69` is committed on
+`codex/coordinator-context-handoff`. Independent authority/lifetime reviewer
+`01a0b42c-543f-7420-b4fa-82ec6cf0f092` returned PASS, with no Required or Optional
+findings. Direct native evidence covers 35 distinct current tests across the
+combined 34-test run and final affected four-test run; documentation and diff
+checks passed. The [owning brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-18-temporary-context-handoff-correction)
+records the bounded source outcome and remaining runtime acceptance.
+
+The established signed Release build, staging and authorized installation/relaunch
+passed from that source commit in retained `b5a9`. Installed 0.1.19/build 1 has
+app CDHash `74f7eb7495785262cb61b264eae3b5016710fa77` and Coordinator CDHash
+`f05c7571783b1eadb552a58831275c7b09e72b28`, Team `2UA854NLX4`; installed app,
+Core, Coordinator, AgentTools, broker and signed manifest match the verified stage.
+Live app PID 80069 maps the installed executable. A fresh installed AgentTools
+read-only inventory succeeded; BA's cached helper returned `appUnavailable` and
+still maps the prior binary. Codex was not restarted. Temporary native/staging
+outputs remain excluded from commits and retained; no version/tag/DMG was created.
+
+Actual production handoff/start, isolation, STOP and recovery remain pending.
+Assignment `delivery-67a32c8b-11fd-430e-b916-439046da4531` remains unknown,
+launch-reserved, uncertain and connection-closed with no session. Main inspected
+the supported Retire resources UI and requested explicit owner cleanup authority;
+that request is unanswered. No retirement, replacement, replay or worker start
+followed this installation. Retain the writer and checkout for downstream work.
+
 **September 18 — hook discovery verified live; worker folder access remains blocked.**
 After owner restart, Main's read-only inventory succeeded. Exact preparation
 `67a32c8b-11fd-430e-b916-439046da4531` became authorized, audit
