@@ -77,8 +77,16 @@ genuinely failed its ordering regression: an A-bound preparation persisted after
 selection and blocked returning to A. The bounded correction now validates selection
 before checkout materialization and persists creation intent under the shared lock;
 stale creation/preparation/authorization saves reject, while STOP/closure/recovery
-updates preserve existing records. Affected native checks and the same reviewer's
-R3 correction closure remain pending; routing/final-admission review is terminal.
+updates preserve existing records. Native84 passed 50 affected tests, compilation and
+documentation/diff checks; BA committed `12ef1be4ede7917d4f9b561f79a13f02073a8a7a`.
+The same reviewer closed stale creation but identified STOP waiting behind unrelated
+provisioning. Native85 compiled and genuinely failed the paused-provisioning STOP
+expectation; the test released its semaphore and finished. Its separate cleanup error
+came from the fixture omitting turn-completion confirmation, now supplied explicitly.
+The bounded correction keeps selection-sensitive locking and per-assignment protection,
+while existing STOP/closure saves bypass the selection lock and checkout preparation
+releases the instance mutex. Affected native checks and the same reviewer's check of
+this introduced defect remain pending; routing/final-admission review is terminal.
 The existing brief anchor is restored with explicit historical labeling. Main owns
 later actual signed-app/grant/account/config/hooks/bookmark checks; no live retry,
 reprepare/new assignment, login/refresh, config mutation, installation or cleanup is

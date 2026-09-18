@@ -286,6 +286,43 @@ final class WorkerAdapterTests: XCTestCase {
         let bound = try fixture.store.assignment(projectID: "project-one", taskID: "task-one")
         XCTAssertEqual(bound.sessionID, "session-one")
     }
+
+    func testUnrelatedProvisioningCannotDelayDurableStopOrInterrupt() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy)
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        let workerID = try XCTUnwrap(started["workerId"] as? String)
+        let entered = expectation(description: "Unrelated checkout provisioning is paused")
+        let interrupted = expectation(description: "STOP and interrupt finish while provisioning remains paused")
+        let release = DispatchSemaphore(value: 0)
+        let creationStore = valid.store
+        let contextID = valid.policy.assignment.codexContextID
+        let creation = Task.detached {
+            do {
+                _ = try creationStore.createAssignment(codexContextID: contextID) {
+                    entered.fulfill()
+                    release.wait()
+                    throw ProjectExecutionError.unavailable // No unrelated resources were created.
+                }
+                return false
+            } catch { return error as? ProjectExecutionError == .unavailable }
+        }
+        await fulfillment(of: [entered], timeout: 5)
+        let stopping = Task {
+            let result = try await adapter.interrupt(workerID: workerID)
+            interrupted.fulfill()
+            return result
+        }
+        await fulfillment(of: [interrupted], timeout: 2)
+        release.signal() // Always unblock the negative run before awaiting its tasks.
+        let cancelledCreation = await creation.value
+        XCTAssertTrue(cancelledCreation)
+        _ = try await stopping.value
+        XCTAssertEqual(try valid.store.assignment(projectID: "project-one", taskID: "task-one").state, .stopped)
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/interrupt" }.count, 1)
+        await adapter.event(workerID, try RPCObject(["method": "turn/completed", "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
+        _ = try await adapter.close(workerID: workerID)
+    }
     func testUncertainStartPersistsUnknownAndNewConnectionCannotRedispatch() async throws {
         let fixture = try fixture(); let peer = Peer(policy: fixture.policy); peer.lostStart = true
         let adapter = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in peer })

@@ -1836,8 +1836,11 @@ with existing Connections error guidance to close/retire resources or restore th
 folder. Context-bound preparation validates selection before materializing its checkout
 and persists the intent under that same lock. A writer captured before a home switch
 cannot later create or prepare/authorize an assignment for the stale identity; existing
-STOP, physical closure and retirement/recovery updates remain available. Existing
-connections compare their exact saved receipt and retain the original grant until
+STOP, physical closure and retirement/recovery updates remain available.
+STOP/closure saves retain per-assignment serialization without waiting on unrelated
+selection-sensitive provisioning. The resource closure releases the store's instance
+mutex; selection-sensitive writers acquire the shared lock before that mutex.
+Existing connections compare their exact saved receipt and retain the original grant until
 physical close. Stop/close remain available after loss.
 Production setup opens the grant before lifecycle mutations, and account admission
 uses `account/read(refreshToken:false)` requiring ChatGPT. Workers additionally require

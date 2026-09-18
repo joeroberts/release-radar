@@ -39,9 +39,9 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     /// Explicit owner selection only. Uses the same protected selection receipt/CAS boundary.
     public func saveCodexContext(_ context: CodexExecutionContext, expected: CodexExecutionContext?) throws {
         try context.validateFolder()
-        try lock.withLock {
-            let path = ["CodexContext", "selection.json"]
-            try withAuthorityLock(["context-selection"]) {
+        try withAuthorityLock(["context-selection"]) {
+            try lock.withLock {
+                let path = ["CodexContext", "selection.json"]
                 if let expected, !expected.identifiesSameFolder(as: context) {
                     try requireRetiredCodexResources()
                 }
@@ -117,9 +117,9 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     }
 
     public func savePolicy(_ value: ProjectExecutionPolicy, expected: ProjectExecutionPolicy?) throws {
-        try lock.withLock {
-            let path = ["Projects", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), "policy.json"]
-            try withAuthorityLock(["context-selection"]) {
+        try withAuthorityLock(["context-selection"]) {
+            try lock.withLock {
+                let path = ["Projects", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), "policy.json"]
                 try withAuthorityLock(path) { try write(value, expected: expected, path: path) }
             }
         }
@@ -127,30 +127,33 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
 
     public func saveAssignment(_ value: ProjectExecutionAssignment, expected: ProjectExecutionAssignment?) throws {
         try value.validated()
-        try lock.withLock {
-            let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
-            try withAuthorityLock(["context-selection"]) {
-                if expected == nil || value.state == .preparing || value.state == .authorized {
-                    try requireSelectedCodexContext(value.codexContextID)
+        let selectionSensitive = expected == nil || value.state == .preparing || value.state == .authorized
+        let persist = {
+            try self.lock.withLock {
+                let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
+                if selectionSensitive {
+                    try self.requireSelectedCodexContext(value.codexContextID)
                 }
-                try withAuthorityLock(path) { try write(value, expected: expected, path: path) }
+                try self.withAuthorityLock(path) { try self.write(value, expected: expected, path: path) }
             }
         }
+        if selectionSensitive { try withAuthorityLock(["context-selection"], persist) }
+        else { try persist() } // STOP/closure cannot wait behind unrelated provisioning.
     }
 
     /// Validate selection before materializing a checkout, then persist its intent
     /// before allowing a different-home selection to inspect the resource inventory.
     public func createAssignment(codexContextID: UUID?, prepare: () throws -> ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
-        try lock.withLock {
-            try withAuthorityLock(["context-selection"]) {
-                try requireSelectedCodexContext(codexContextID)
-                let value = try prepare()
-                try value.validated()
-                guard value.codexContextID == codexContextID else { throw CodexExecutionContextError.changed }
+        try withAuthorityLock(["context-selection"]) {
+            try lock.withLock { try requireSelectedCodexContext(codexContextID) }
+            let value = try prepare() // Keep the instance mutex available to STOP/closure.
+            try value.validated()
+            guard value.codexContextID == codexContextID else { throw CodexExecutionContextError.changed }
+            try lock.withLock {
                 let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
                 try withAuthorityLock(path) { try write(value, expected: Optional<ProjectExecutionAssignment>.none, path: path) }
-                return value
             }
+            return value
         }
     }
 
