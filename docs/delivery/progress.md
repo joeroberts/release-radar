@@ -36,8 +36,11 @@ one startup observation through a fresh installed Coordinator. Worker
 `transportReached: true`; effective settings, thread/turn IDs and approval requests
 were absent. Same-connection supported close confirmed physical cleanup. Replacement
 assignment remains unknown, launch-reserved and uncertain, connection-closed with
-null session. No retry or new preparation followed; full startup/isolation/STOP
-and recovery remain unverified. Retain the writer and checkout for downstream work.
+null session. Read-only source/log diagnosis rules out the observed reservation/
+handoff transition; subsequent config/profile admission remains unresolved.
+Normal EOF closed the idle Coordinator with exit 0 and confirmed process exit.
+No retry or new preparation followed; full startup/isolation/STOP and recovery
+remain unverified. Retain the writer and checkout for downstream work.
 
 **September 18 — hook discovery verified live; worker folder access remains blocked.**
 After owner restart, Main's read-only inventory succeeded. Exact preparation

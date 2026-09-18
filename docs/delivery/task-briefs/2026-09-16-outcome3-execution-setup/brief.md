@@ -20,8 +20,13 @@ The signed handoff reached App Server transport; complete startup is not verifie
 Supported `worker_close` on that same connection returned `connectionClosed` and
 null thread ID. Saved assignment remains unknown, launch-reserved and uncertain,
 now connection-closed with null session. No retry, replacement, runtime approval or
-manual configuration/flag change followed. The idle MCP process handle is retained;
-further diagnosis and recovery remain Main-owned. An ignored `tools.view_image`
+manual configuration/flag change followed. After bounded read-only log capture,
+normal EOF closed MCP session 10016 with exit 0; PID 83913 exit was confirmed.
+Logs and source order establish reservation/handoff validation reached child
+transport. No stage-specific handoff rejection was observed. The precise failure
+among subsequent config/profile admission guards remains unresolved because
+method/response metadata was not retained; no new probe or owner-config inspection
+was performed. Further diagnosis and recovery remain Main-owned. An ignored `tools.view_image`
 setting warning was emitted, but its relationship to the failure is unverified.
 
 ```json
