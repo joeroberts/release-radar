@@ -79,13 +79,30 @@ the owner-approved installed `8656280` candidate. Main reports signed Settings p
 selection of `/Users/jroberts/.codex` on September 18 at 00:14 EDT, with Folder access
 ready. After one app relaunch (PID19590, 00:15 EDT), the selected path/date restored and
 Check Folder Access returned ready; the rendered Connections UI was visually verified.
-This checks the bookmark, not account/config/hook readiness or responsive acceptance.
-Those RPCs run through execution setup, which can mutate RR-owned hook/trust settings.
-Main's next pending authorized runtime step is account/config/hooks readback after
-resolving that supported route and mutation boundary; worker readiness remains unproven.
-No Codex restart, login, token copy or worker attempt occurred. Exact f481 request and
-reserved/partial state are unchanged. No full Outcome 3 acceptance is claimed; this
-recording task authorizes only the existing documentation update and local commit.
+The bookmark check alone does not establish account/config/hooks or responsive acceptance.
+Main subsequently reports one owner-approved Update Execution Hook on the exact
+disposable registration returned "Execution hook update verified", using installed
+`8656280` and the saved selected home. Success passes the source-enforced setup handshake
+(`account/read(refreshToken:false)` requiring ChatGPT), selected user-layer/home equality
+and trusted hooks readback. The actual app setup path is verified; worker provider/profile,
+startup/STOP/recovery and responsive acceptance remain unproven. No worker was attempted.
+
+Main's protected f481 readback reports state unknown, codexContextID/sessionID/turnID null,
+launchReserved true, connectionClosed true and retirement null. Current enabled policy
+context is `9D0895C1-C51D-4D47-8DAC-C80499F6678C`; that identity proves no old-home ownership.
+Read-only source diagnosis found no supported legacy retirement/replacement route:
+retirement rejects nil context, and lost-handle recovery requires an existing cleanup
+receipt and still checks context. This fixture predates the selected-context contract;
+current production preparation pins the selected identity. Legacy migration was excluded.
+Recommend preserving f481 and, under separate live authorization, using a genuinely
+distinct disposable root/project/work item for current-format acceptance, without re-add,
+alias or old-work redispatch. This cannot prove legacy retirement or home switching.
+If legacy cleanup is explicitly required, a separate owner-only app operation needs
+original-home provenance/grant, exact profile ownership and an audited retirement receipt;
+never assign the current context to the old record or treat profile absence in it as cleanup.
+No recovery implementation, Codex restart, login, token copy, replay or owner-state mutation
+occurred in this diagnosis. Exact f481 state/resources remain unchanged. Outcome 3 is
+incomplete; this task permits read-only diagnosis and existing docs/local commit only.
 
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
