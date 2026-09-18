@@ -48,7 +48,7 @@ phases.
 | Former 6G Manage Project activation | Deliver the scoped documentation activation, shared-execution, repository-access and evidence controls. |
 | Former 6H lifecycle/navigation remediation | Deliver Archive/Remove relocation and the remaining navigation work; exclude the already delivered toolbar and search. |
 | Proposed former 6I guided shared-execution setup | Reconcile its residual scope with delivered Outcome 3. This is proposed work only and must not be described as complete. |
-| Repository-plan reconstruction | Design has been reviewed; implementation has not started. |
+| Repository-plan reconstruction | Follows Outcome 3 release closeout. Its supported-projection import design has been reviewed; implementation has not started. The relationship to any documentation cleanup remains pending owner clarification. |
 
 Phase 7, Phase 8 and the unscheduled backlog remain outside P6-remediation.
 Self-onboarding is explicitly **UNSCHEDULED**; Jira ticket pending.
