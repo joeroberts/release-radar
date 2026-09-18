@@ -2,6 +2,21 @@
 
 ## September 18 regular-file replacement preparation and startup
 
+Preparation succeeded once after complete current inventory matched, using fresh installed AgentTools PID 7739, exit 0. Exact envelope was committed in 359f9b76 before submission. Audit B602EFA5-263E-4C6A-9F56-46D9865AF51A returned authorized delivery-7ed84d1f assignment, Terra/medium. Saved assignment exactly matches response; real checkout/.codex and exact owned profile match. No session/reservation/uncertainty/closed flags. Generation 2, phase/task-plan revisions 1, selected context and prepared policy digest unchanged. Assigned settings alone do not establish runtime acceptance.
+
+Startup request below uses the exact prompt parsed from committed 4003248a, associated only with this new assignment, and is committed before submission:
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
 Main observed Resources retired and canceled settings without Save. Main releases one preparation and, only after exact successful saved assignment readback, one startup through fresh installed helpers. Preserve a successful connection; leave runtime approvals unanswered. Failure permits supported same-worker close and normal EOF after confirmed closure, with no automatic replacement/start loop. Reviewed installed product source remains 8b9b979c; no rebuild or source/global/config edits.
 
 Canonical preparation envelope, committed before the single submission:
