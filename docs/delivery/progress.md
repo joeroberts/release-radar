@@ -32,21 +32,36 @@ still supplies the recorded root spelling. These are inputs to the bounded
 [Chief Architecture investigation](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#current-worker-startup-configuration-investigation),
 not authorization for a home switch, credential/config copy or weakened validation.
 
-Main owns current documentation in `codex/worker-startup-config` at
-`/Users/jroberts/.codex/worktrees/rr-worker-startup-config/release_radar`, based on
-`bff4899`. The fresh Chief Architecture task `01a0b25e` is read-only; requested
-Astra/high is not independently exposed. Product edits and another live attempt
-are not released pending the complete supported correction. Existing catalog IDs,
-lifecycle and indexes remain unchanged. No managed-catalog acceptance is claimed.
-Chief Architecture completed: use one explicit context across setup/launch/retirement,
-normalize effective profile validation without widening access, and canonicalize
-coordinator hook comparison. The authenticated desktop context is the smallest
-candidate but RR-process access is unproven and not explicitly granted by app
-entitlements; current release code cannot select that context for a readback.
-The RR context instead requires integrated Codex-managed login/recovery. See the
-[recorded decision boundary](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#chief-architecture-result-and-remaining-decision).
-Next: settle that product/security boundary before the complete source correction.
-No permission expansion, credential transfer or new live attempt is authorized.
+The owner approved explicit selection/access to one existing Codex home and local
+bookmark portability, retaining App Server and the existing subscription/account.
+Main released the bounded source correction through Restricted coordinator. Sole
+source/tests/docs writer `01a0b279` uses BA-confirmed clean attached
+`codex/shared-codex-context`, baseline `77fceeedcc162bc4b017c7b3604616fca90b4cee`, in
+`/Users/jroberts/.codex/worktrees/dd18/release_radar`. Requested Sol/high is not exposed;
+RR skill reads are denied, so local fallback applies. BA owns all native checks/Git.
+The [approved correction](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-17-approved-shared-codex-context-correction)
+and owning mutable design now record identity/lifetime/recovery, exact effective-profile
+ceiling, canonical source matching and RR-only local regeneration. Existing catalog
+IDs/lifecycle/authority/index rows remain unchanged. No managed acceptance is claimed.
+The first genuine native regression (BA checkpoint74) compiled and executed one test,
+then failed `invalidAssignment` at the unchanged raw-profile key guard (exit65).
+No missing-symbol/scaffold failure or negative-ceiling assertion pass is claimed.
+The coherent source/tests candidate is now frozen for BA focused checks: protected
+selection/lease, production binding across lifecycle and hook admission, explicit
+home/read-only bootstrap/account admission, canonical sources and exact normalized
+ceiling. Settings has selection/access recovery controls. Nil-context compatibility
+is confined to explicit test mocks; production protocol defaults reject it.
+BA checkpoint77 compiled app/coordinator/tests and executed 83 cases: 82 passed,
+one paused-start fixture failed before startup because its old `/Primary` SQL root
+no longer matched the real fixture root introduced for canonical-source testing.
+The fixture now binds its generated root; production authorization/revocation guards
+are unchanged. All 82 passes, including normalized ceiling rejection assertions,
+context lifecycle, setup/retirement and legacy decoding, are terminal. The one affected
+case/compilation and one fresh RO04 architecture/security/UX review remain pending. Main owns
+later actual signed-app/grant/account/config/hooks/bookmark checks; no live retry,
+reprepare/new assignment, login/refresh, config mutation, installation or cleanup is
+released here. Old unbound/uncertain/reserved assignments and exact f481 partial state
+remain blocked and preserved. No worker turn or complete acceptance is claimed.
 
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.

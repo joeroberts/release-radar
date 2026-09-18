@@ -4,6 +4,8 @@ import XCTest
 
 final class ProjectExecutionProducerTests: XCTestCase {
     actor Configuration: ProjectExecutionConfiguring {
+        func selectedCodexContextID() async -> UUID? { nil }
+        func useCodexContext(_ expected: UUID?) async {}
         var failProfile = false
         var finishes = 0
         var profiles: [ProjectExecutionPermissionProfile] = []
@@ -43,6 +45,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         }
     }
     private actor CleanupConfiguration: ProjectExecutionConfiguring {
+        func selectedCodexContextID() async -> UUID? { nil }
+        var refuseContext = false
+        func useCodexContext(_ expected: UUID?) async throws { if refuseContext { throw CodexExecutionContextError.changed } }
+        func setContextRefusal(_ value: Bool) { refuseContext = value }
         var removedProfiles: [String] = []
         var conflict = false
         var connectionOpen = false
@@ -80,6 +86,18 @@ final class ProjectExecutionProducerTests: XCTestCase {
         value.connectionClosed = closed; value.launchReserved = true
         if state == .unknown { value.uncertainOutcome = true }
         try store.saveAssignment(value, expected: nil); return value
+    }
+
+    func testRetirementContextLossPreservesOwnedCheckoutProfileAndRequestState() async throws {
+        let (root, _, project, work, store) = try fixture()
+        let value = try cleanupAssignment(store: store, project: project, work: work, state: .stopped, closed: true)
+        let configuration = CleanupConfiguration(); await configuration.setContextRefusal(true)
+        let provisioning = CleanupProvisioning()
+        let lifecycle = ProjectExecutionResourceLifecycle(root: { root }, configuration: configuration, provisioning: provisioning)
+        do { _ = try await lifecycle.retire(project: project, expected: value, requestID: UUID()); XCTFail("Lost context must block cleanup") } catch {}
+        XCTAssertEqual(provisioning.removals, 0)
+        let profiles = await configuration.removedProfiles; XCTAssertTrue(profiles.isEmpty)
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: value.id), value)
     }
 
     func testOwnerRetirementPreservesUnknownOutcomeAndAllowsOnlyExplicitReplacement() async throws {

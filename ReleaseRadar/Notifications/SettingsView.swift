@@ -206,6 +206,38 @@ struct SettingsView: View {
         )
         return settingsScroll {
             RekonSectionPanel {
+                settingsSectionHeader("Codex execution context", systemImage: "folder.badge.person.crop")
+                LabeledContent("Folder access", value: model.codexContextStatus)
+                    .accessibilityIdentifier("codex-context-status")
+                if let path = model.codexContextPath {
+                    Text(path).font(RekonTypography.metadata).textSelection(.enabled)
+                        .accessibilityIdentifier("codex-context-path")
+                }
+                Text("Choose the existing Codex home used by your ChatGPT account. Access includes authentication and history; nothing is copied and your login is preserved.")
+                    .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                Text("Folder access and paths are saved only on this Mac. On another Mac, select its existing Codex folder and set up your projects again. Close known workers before changing context.")
+                    .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                if let selectedAt = model.codexContextSelectedAt {
+                    Text("Selection saved \(selectedAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                }
+                if let failure = model.codexContextFailure {
+                    RekonCallout(tone: .warning, systemImage: "exclamationmark.triangle") {
+                        Text(failure)
+                    }.accessibilityIdentifier("codex-context-recovery")
+                }
+                if let message = model.codexContextMessage {
+                    Text(message).font(RekonTypography.metadata).foregroundStyle(RekonTheme.secondaryText)
+                        .accessibilityIdentifier("codex-context-result")
+                }
+                ViewThatFits(in: .horizontal) {
+                    HStack { codexContextButtons }
+                    VStack(alignment: .leading) { codexContextButtons }
+                }
+            }
+            .task { model.loadCodexExecutionContext() }
+
+            RekonSectionPanel {
                 settingsSectionHeader("Release Radar Codex Plugin", systemImage: "puzzlepiece.extension")
                 LabeledContent {
                     RekonBadge(plugin.status, tone: plugin.badgeTone, systemImage: plugin.systemImage)
@@ -309,6 +341,23 @@ struct SettingsView: View {
                 ]
             )
         }
+    }
+
+    @ViewBuilder
+    private var codexContextButtons: some View {
+        Button(model.codexContextPath == nil ? "Select Codex Folder" : "Select or Restore Codex Folder") {
+            if let folder = CodexFolderAccessPanel.choose() {
+                Task { await model.selectCodexExecutionContext(folder: folder) }
+            }
+        }
+        .buttonStyle(RekonSecondaryButtonStyle())
+        .disabled(model.codexContextSelectionInFlight)
+        .accessibilityIdentifier("codex-context-select")
+        .accessibilityHint("Authorizes access to the exact existing Codex folder, including authentication and history.")
+        Button("Check Folder Access") { model.loadCodexExecutionContext() }
+            .buttonStyle(RekonSecondaryButtonStyle())
+            .disabled(model.codexContextSelectionInFlight)
+            .accessibilityIdentifier("codex-context-check-access")
     }
 
     @ViewBuilder

@@ -9,20 +9,20 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "ExecutionSetup")
     private let plugin: CodexPluginLifecycleCoordinator?
     private let bundle: URL
+    private let executionRoot: @Sendable () throws -> URL
+    private let contextAccessFactory: @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease
+    private var contextAccess: CodexExecutionContextLease?
+    private var boundContext: CodexExecutionContext?
     private var transport: AppServerTransport?
     private var cleanupFailure: AppServerTransportError?
 
     nonisolated static func canonicalProjectTrustKey(primaryRoot: String) throws -> String {
-        guard primaryRoot.hasPrefix("/"), !primaryRoot.utf8.contains(0),
-              let resolved = realpath(primaryRoot, nil) else { throw ProjectExecutionError.hookNotReady }
-        defer { free(resolved) }
-        // Keep the filesystem spelling without passing it through Foundation URL normalization.
-        return String(cString: resolved)
+        try ProjectExecutionHookReadiness.canonicalPrimaryRoot(primaryRoot)
     }
 
     nonisolated static func hookDiscoveryCheckout(primaryRoot: String, canonicalPrimaryRoot: String,
                                                  checkout: String) -> String {
-        checkout == primaryRoot ? canonicalPrimaryRoot : checkout
+        ProjectExecutionHookReadiness.discoveryCheckout(primaryRoot: primaryRoot, canonicalPrimaryRoot: canonicalPrimaryRoot, checkout: checkout)
     }
 
     nonisolated static func needsProjectTrustWrite(primaryRoot: String, canonicalKey: String,
@@ -62,8 +62,35 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         return normalized.count > limit ? String(normalized.prefix(limit)) + "…" : normalized
     }
 
-    init(plugin: CodexPluginLifecycleCoordinator?, bundle: URL = Bundle.main.bundleURL) {
-        self.plugin = plugin; self.bundle = bundle
+    init(plugin: CodexPluginLifecycleCoordinator?, bundle: URL = Bundle.main.bundleURL,
+         executionRoot: @escaping @Sendable () throws -> URL = ProjectExecutionFileStore.applicationRoot,
+         contextAccessFactory: @escaping @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease = { context, store in
+             try CodexExecutionContextLease(context: context, current: { try store.codexContext() })
+         }) {
+        self.plugin = plugin; self.bundle = bundle; self.executionRoot = executionRoot
+        self.contextAccessFactory = contextAccessFactory
+    }
+
+    private func contextStore() throws -> ProjectExecutionFileStore {
+        do { return try ProjectExecutionFileStore(root: executionRoot(), create: false) }
+        catch { throw CodexExecutionContextError.selectionRequired }
+    }
+
+    func selectedCodexContextID() async throws -> UUID? {
+        if let cleanupFailure { throw cleanupFailure }
+        guard let current = try contextStore().codexContext() else { throw CodexExecutionContextError.selectionRequired }
+        if let boundContext, boundContext != current { throw CodexExecutionContextError.changed }
+        boundContext = current
+        return current.id
+    }
+
+    func useCodexContext(_ expected: UUID?) async throws {
+        if let cleanupFailure { throw cleanupFailure }
+        guard let expected, let current = try contextStore().codexContext(), current.id == expected else { throw CodexExecutionContextError.changed }
+        if let boundContext, boundContext != current { throw CodexExecutionContextError.changed }
+        if let contextAccess { try contextAccess.validate() }
+        else { contextAccess = try contextAccessFactory(current, contextStore()) }
+        boundContext = current
     }
 
     static func setup(plugin: CodexPluginLifecycleCoordinator?) -> ProjectExecutionSetupCoordinator {
@@ -121,14 +148,20 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private func rpc(_ method: String, _ params: RPCObject, readback: Bool = false, beforeWrite: @Sendable () async throws -> Void = {}) async throws -> RPCObject {
         if let cleanupFailure { throw cleanupFailure }
         if transport == nil {
+            guard let context = boundContext else { throw CodexExecutionContextError.selectionRequired }
+            try await useCodexContext(context.id)
+            guard let lease = contextAccess else { throw CodexExecutionContextError.accessRequired }
             let connection = try AppServerTransport(executable: CodexExecutionIdentity.executable,
-                arguments: AppServerTransport.executionSetupArguments, onMessage: { _ in })
+                arguments: AppServerTransport.executionSetupArguments, context: lease, onMessage: { _ in })
             transport = connection
             var handshakeOperation = "initialize"
             do {
                 _ = try await connection.call("initialize", RPCObject(["clientInfo": ["name": "release-radar-setup", "version": "1"], "capabilities": ["experimentalApi": true]]))
                 handshakeOperation = "initialized"
                 try connection.send(["method": "initialized"])
+                handshakeOperation = "account/read"
+                let account = try await connection.call("account/read", RPCObject(["refreshToken": false])).object()
+                guard (account["account"] as? [String: Any])?["type"] as? String == "chatgpt" else { throw CodexExecutionContextError.subscriptionRequired }
             } catch {
                 do { try connection.close() }
                 catch {
@@ -163,7 +196,11 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
               let name = layer["name"] as? [String: Any], let file = name["file"] as? String,
               file.hasPrefix("/"), file == URL(fileURLWithPath: file).standardizedFileURL.path,
               URL(fileURLWithPath: file).lastPathComponent == "config.toml",
-              layer["config"] is [String: Any] else { throw ProjectExecutionError.unavailable }
+              layer["config"] is [String: Any], let context = boundContext,
+              try CodexExecutionContext.canonicalPath(URL(fileURLWithPath: file).deletingLastPathComponent().path) == context.homePath else { throw ProjectExecutionError.unavailable }
+        if FileManager.default.fileExists(atPath: file) {
+            guard try CodexExecutionContext.canonicalPath(file) == context.homePath + "/config.toml" else { throw ProjectExecutionError.conflict }
+        }
         return layer
     }
 
@@ -361,8 +398,8 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
 
     func finishConfiguration() throws {
         if let cleanupFailure { throw cleanupFailure }
-        guard let current = transport else { return }
-        do { try current.close(); transport = nil }
+        guard let current = transport else { contextAccess?.release(); contextAccess = nil; boundContext = nil; return }
+        do { try current.close(); transport = nil; contextAccess = nil; boundContext = nil }
         catch {
             let failure = AppServerTransportError(message: "Execution setup cleanup failed: \(error.localizedDescription)", outcomeUnknown: true)
             cleanupFailure = failure; throw failure
@@ -374,7 +411,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         guard let current = transport else { throw cleanupFailure }
         do {
             try current.close() // Explicit owner retry on the retained original connection.
-            transport = nil; self.cleanupFailure = nil
+            transport = nil; contextAccess = nil; boundContext = nil; self.cleanupFailure = nil
         } catch {
             let failure = AppServerTransportError(message: "Execution setup connection recovery remains incomplete: \(error.localizedDescription)", outcomeUnknown: true)
             self.cleanupFailure = failure; throw failure

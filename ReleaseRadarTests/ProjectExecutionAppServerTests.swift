@@ -5,6 +5,56 @@ import XCTest
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionAppServerTests: XCTestCase {
+    func testProductionSetupBindingRejectsAbsentChangedAndUnboundContextsWithoutLaunch() async throws {
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
+        let files = try ProjectExecutionFileStore(root: root, create: true)
+        let client = ProjectExecutionSetupClient(plugin: nil, executionRoot: { root }, contextAccessFactory: { context, files in
+            try CodexExecutionContextLease(context: context, current: { try files.codexContext() },
+                resolve: { _ in .init(url: URL(fileURLWithPath: context.homePath), isStale: false) },
+                start: { _ in true }, stop: { _ in })
+        })
+        do { _ = try await client.selectedCodexContextID(); XCTFail("Missing selection must block") } catch {}
+        do { try await client.useCodexContext(nil); XCTFail("Unbound policy must block") } catch {}
+        let context = try CodexExecutionContext(home: root, bookmark: Data([1]))
+        try files.saveCodexContext(context, expected: nil)
+        let selectedID = try await client.selectedCodexContextID()
+        XCTAssertEqual(selectedID, context.id)
+        try await client.useCodexContext(context.id)
+        do { try await client.useCodexContext(UUID()); XCTFail("Prompt/foreign identity cannot substitute context") } catch {}
+        let changed = try CodexExecutionContext(home: root, bookmark: Data([2]))
+        try files.saveCodexContext(changed, expected: context)
+        do { try await client.useCodexContext(context.id); XCTFail("Changed selection must block") } catch {}
+        try await client.finishConfiguration()
+        XCTAssertEqual(try files.codexContext(), changed)
+    }
+
+    @MainActor
+    func testCodexFolderPickerRequiresExistingExactFolderAndExplainsGrant() {
+        let panel = CodexFolderAccessPanel.make()
+        XCTAssertTrue(panel.canChooseDirectories)
+        XCTAssertFalse(panel.canChooseFiles)
+        XCTAssertFalse(panel.allowsMultipleSelection)
+        XCTAssertFalse(panel.canCreateDirectories)
+        XCTAssertTrue(panel.showsHiddenFiles)
+        XCTAssertTrue(panel.message.contains("authentication and history"))
+        XCTAssertFalse(panel.resolvesAliases)
+    }
+
+    func testSelectedContextEnvironmentRemovesInheritedAuthenticationAndStateOverrides() {
+        let original = ["HOME": "/sandbox-home", "CODEX_HOME": "/wrong-home", "CODEX_SQLITE_HOME": "/wrong-state",
+            "CODEX_API_KEY": "fixture-secret", "OPENAI_API_KEY": "fixture-secret", "CODEX_ACCESS_TOKEN": "fixture-secret",
+            "OPENAI_IDENTITY_TOKEN_FILE": "/wrong-token", "OPENAI_FEDERATION_RULE_ID": "fixture-rule", "PATH": "/usr/bin:/bin"]
+        let environment = AppServerTransport.selectedContextEnvironment(homePath: "/existing-codex", inherited: original)
+        XCTAssertEqual(environment["CODEX_HOME"], "/existing-codex")
+        XCTAssertEqual(environment["HOME"], original["HOME"])
+        XCTAssertEqual(environment["PATH"], original["PATH"])
+        for key in ["CODEX_SQLITE_HOME", "CODEX_API_KEY", "OPENAI_API_KEY", "CODEX_ACCESS_TOKEN", "OPENAI_IDENTITY_TOKEN_FILE", "OPENAI_FEDERATION_RULE_ID"] {
+            XCTAssertNil(environment[key])
+        }
+        XCTAssertEqual(original["CODEX_HOME"], "/wrong-home", "No persistent environment/config mutation")
+        XCTAssertTrue(AppServerTransport.executionSetupArguments.contains("default_permissions=\":read-only\""))
+    }
+
     func testPrimaryHookDiscoveryUsesCanonicalRootAndLinkedDiscoveryKeepsActualCheckout() throws {
         let primary = "/var"
         let canonical = try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: primary)

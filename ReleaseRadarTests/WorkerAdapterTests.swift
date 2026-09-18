@@ -109,6 +109,7 @@ final class WorkerAdapterTests: XCTestCase {
         var lostStart = false
         var broadWrite = false
         var broadRead = false
+        var accountType = "chatgpt"
         var completesImmediately = false
         var closeFailure = false
         var closeCount = 0
@@ -128,6 +129,7 @@ final class WorkerAdapterTests: XCTestCase {
         func call(_ method: String, _ parameters: RPCObject) async throws -> RPCObject {
             calls.append((method, parameters))
             let selected = policy.assignment
+            if method == "account/read" { return try RPCObject(["account": ["type": accountType]]) }
             if method == "config/read" {
                 let paths = try ProjectExecutionPaths(storageRoot: policy.store.root, projectID: selected.registration.projectID.rawValue, taskID: selected.id)
                 var fs = try ProjectExecutionPermissionProfile(assignment: selected, policy: policy.policy, paths: paths).filesystemObject
@@ -146,7 +148,7 @@ final class WorkerAdapterTests: XCTestCase {
             if method == "mcpServerStatus/list" { return try RPCObject(["data": []]) }
             if method == "hooks/list" {
                 if let delayedHooks { self.delayedHooks = nil; await delayedHooks.pause() }
-                return try RPCObject(["data": [["cwd": selected.checkoutPath, "errors": [], "warnings": [], "hooks": [["command": "\"" + policy.policy.handlerPath + "\" --hook", "handlerType": "command", "source": "project", "sourcePath": "/Primary/.codex/hooks.json", "eventName": "userPromptSubmit", "enabled": true, "timeoutSec": 10, "trustStatus": "trusted", "key": "owned-key", "currentHash": "owned-hash"]]]]])
+                return try RPCObject(["data": [["cwd": selected.checkoutPath, "errors": [], "warnings": [], "hooks": [["command": "\"" + policy.policy.handlerPath + "\" --hook", "handlerType": "command", "source": "project", "sourcePath": try CodexExecutionContext.canonicalPath(policy.policy.primaryRoot) + "/.codex/hooks.json", "eventName": "userPromptSubmit", "enabled": true, "timeoutSec": 10, "trustStatus": "trusted", "key": "owned-key", "currentHash": "owned-hash"]]]]])
             }
             if method == "turn/start" {
                 if lostFollowup { throw AppServerTransportError(message: "Fixture uncertain follow-up", outcomeUnknown: true) }
@@ -155,7 +157,7 @@ final class WorkerAdapterTests: XCTestCase {
             return try RPCObject([:])
         }
     }
-    private func fixture() throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
+    private func fixture(primaryRoot: String? = nil) throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let store = try ProjectExecutionFileStore(root: root, create: true)
         let paths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: "task-one")
@@ -164,17 +166,81 @@ final class WorkerAdapterTests: XCTestCase {
         try context.write(to: paths.checkout.appendingPathComponent("AGENTS.md"))
         let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
         let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
-        var policy = ProjectExecutionPolicy(registration: registration, primaryRoot: "/Primary", appServerExecutable: CodexExecutionIdentity.executable, handlerPath: handler)
+        let primary = primaryRoot ?? root.appendingPathComponent("Primary").path
+        if primaryRoot == nil { try FileManager.default.createDirectory(atPath: primary, withIntermediateDirectories: true) }
+        let codex = try CodexExecutionContext(home: root, bookmark: Data([1]))
+        try store.saveCodexContext(codex, expected: nil)
+        var policy = ProjectExecutionPolicy(registration: registration, primaryRoot: primary, appServerExecutable: CodexExecutionIdentity.executable, handlerPath: handler)
         policy.consent = .init(); policy.hookReceipt = .init(command: "\"" + handler + "\" --hook", inline: false, beforeDigest: nil, intendedDigest: String(repeating: "a", count: 64), installed: true)
+        policy.codexContextID = codex.id
         try store.savePolicy(policy, expected: nil)
-        let assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .delivery,
+        var assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .delivery,
             permissionProfile: "rr-worker", model: "gpt-5.6-sol", effort: "high", authorization: "Implement the approved slice",
             context: [.init(path: "AGENTS.md", digest: SHA256.hash(data: context).map { String(format: "%02x", $0) }.joined())],
             excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
-            worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: "/Primary/.git", primaryRoot: "/Primary"))
+            worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: primary + "/.git", primaryRoot: primary))
+        assignment.codexContextID = codex.id
         try store.saveAssignment(assignment, expected: nil)
         return (store, try WorkerPolicy(store: store, projectID: "project-one", taskID: "task-one"))
     }
+    func testEffectiveProfileNormalizationKeepsExactFilesystemAndNetworkCeiling() throws {
+        let fixture = try fixture()
+        let assignment = fixture.policy.assignment
+        let paths = try ProjectExecutionPaths(storageRoot: fixture.store.root, projectID: "project-one", taskID: "task-one")
+        let fs = try ProjectExecutionPermissionProfile(assignment: assignment, policy: fixture.policy.policy, paths: paths).filesystemObject
+        let normalized: [String: Any] = ["description": NSNull(), "extends": NSNull(), "workspace_roots": [],
+            "filesystem": fs, "network": ["enabled": false]]
+        try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: normalized]])
+        for metadata in [["extends": [":workspace"]], ["workspace_roots": ["/Users"]], ["unexpected": false]] as [[String: Any]] {
+            let broadened = normalized.merging(metadata) { _, replacement in replacement }
+            XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: broadened]]))
+        }
+        var broadened = normalized
+        broadened["network"] = ["enabled": true]
+        XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: broadened]]))
+        var addedRoot = fs; addedRoot["/Users"] = "read"; broadened = normalized; broadened["filesystem"] = addedRoot
+        XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: broadened]]))
+    }
+
+    func testSelectedContextCannotSilentlySwitchWorkerToApiBilling() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.accountType = "apiKey"
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        XCTAssertEqual(started["status"] as? String, "failed")
+        XCTAssertFalse(peer.calls.contains { $0.0 == "thread/start" || $0.0 == "turn/start" || $0.0 == "account/login/start" })
+        let account = try XCTUnwrap(peer.calls.first { $0.0 == "account/read" }).1.object()
+        XCTAssertEqual(account["refreshToken"] as? Bool, false)
+        _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+        XCTAssertThrowsError(try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))
+    }
+
+    func testCanonicalPrimarySourceIsUsedForWorkerStartupAndFollowup() async throws {
+        let valid = try fixture(primaryRoot: "/var"); let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        XCTAssertEqual(started["status"] as? String, "completed")
+        _ = try await adapter.followUp(workerID: try XCTUnwrap(started["workerId"] as? String), prompt: "Continue")
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/start" }.count, 2)
+    }
+
+    func testUnboundOrChangedContextBlocksStartupAndFollowupWithoutReplay() async throws {
+        let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.completesImmediately = true
+        var unbound = valid.policy.assignment; unbound.codexContextID = nil
+        try valid.store.saveAssignment(unbound, expected: valid.policy.assignment)
+        XCTAssertThrowsError(try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))
+        try valid.store.saveAssignment(valid.policy.assignment, expected: unbound)
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        let original = try XCTUnwrap(valid.store.codexContext())
+        let replacement = try CodexExecutionContext(home: URL(fileURLWithPath: original.homePath), bookmark: Data([2]))
+        try valid.store.saveCodexContext(replacement, expected: original)
+        do { _ = try await adapter.followUp(workerID: try XCTUnwrap(started["workerId"] as? String), prompt: "Continue"); XCTFail("Changed context must block followup") } catch {}
+        XCTAssertEqual(peer.calls.filter { $0.0 == "turn/start" }.count, 1)
+        XCTAssertThrowsError(try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))
+        _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+        XCTAssertEqual(peer.closeCount, 1, "Physical close remains available after context loss")
+    }
+
     func testVerifiedDelegationCarriesAuthorizationOnceAndPreservesRuntimeApproval() async throws {
         let fixture = try fixture(); let peer = Peer(policy: fixture.policy)
         let adapter = WorkerAdapter(store: fixture.store, serverFactory: { _, _, _ in peer })
@@ -310,10 +376,11 @@ final class WorkerAdapterTests: XCTestCase {
     func testWorkMutationDuringPausedThreadStartRevokesReservationAndPreventsFirstTurn() async throws {
         let valid = try fixture()
         let sql = DeliveryStore(databaseURL: valid.store.root.appendingPathComponent("startup.sqlite"))
+        let primary = valid.policy.policy.primaryRoot
         try await sql.transact(actor: .init(id: "fixture"), reason: "Seed current startup work") { c in
             try c.execute("INSERT INTO projects(id,name) VALUES ('project-one','Fixture')")
-            try c.execute("INSERT INTO project_roots(id,project_id,path) VALUES ('root-one','project-one','/Primary')")
-            try c.execute("INSERT INTO project_bookmarks(project_id,path,bookmark_data,is_stale) VALUES ('project-one','/Primary',?,0)", bindings: [.blob(Data([1]))])
+            try c.execute("INSERT INTO project_roots(id,project_id,path) VALUES ('root-one','project-one',?)", bindings: [.text(primary)])
+            try c.execute("INSERT INTO project_bookmarks(project_id,path,bookmark_data,is_stale) VALUES ('project-one',?,?,0)", bindings: [.text(primary), .blob(Data([1]))])
             try c.execute("INSERT INTO project_registrations(project_id,registration_id,request_generation,setup_state) VALUES ('project-one','registration-one',1,'complete')")
             try DeliveryPlanningPolicy.upsertPhase(projectID: .init(rawValue: "project-one"), phaseID: .init(rawValue: "phase-one"), name: "Phase", mode: .governed, connection: c)
             try c.execute("UPDATE phase_lifecycles SET lifecycle='in_delivery',revision=2 WHERE project_id='project-one' AND phase_id='phase-one'")
@@ -323,9 +390,10 @@ final class WorkerAdapterTests: XCTestCase {
         }
         let work = try await sql.read { try ProjectExecutionWork.read(projectID: .init(rawValue: "project-one"), ticketID: "ticket-one", taskID: "work-one", taskPlanRevision: 1, phaseRevision: 2, connection: $0) }
         let initial = valid.policy.assignment
-        let assigned = ProjectExecutionAssignment(id: initial.id, registration: initial.registration, checkoutPath: initial.checkoutPath, role: initial.role,
+        var assigned = ProjectExecutionAssignment(id: initial.id, registration: initial.registration, checkoutPath: initial.checkoutPath, role: initial.role,
             permissionProfile: initial.permissionProfile, model: initial.model, effort: initial.effort, authorization: initial.authorization,
             context: initial.context, excludedPaths: initial.excludedPaths, worktree: initial.worktree, work: work)
+        assigned.codexContextID = initial.codexContextID
         try valid.store.saveAssignment(assigned, expected: initial)
         let root = valid.store.root; try await sql.observeExecutionAssignments(root: { root })
         let peer = Peer(policy: try WorkerPolicy(store: valid.store, projectID: "project-one", taskID: "task-one"))

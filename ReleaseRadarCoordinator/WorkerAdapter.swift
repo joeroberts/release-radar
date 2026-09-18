@@ -21,11 +21,11 @@ actor WorkerAdapter {
     private let store: ProjectExecutionFileStore
     private var workers: [String: Worker] = [:]
     private var starting = false
-    private let serverFactory: @Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer
+    private let serverFactory: (@Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer)?
     init(store: ProjectExecutionFileStore,
-         serverFactory: @escaping @Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer = {
-             try AppServerTransport(executable: $0, arguments: $1, onMessage: $2)
-         }) { self.store = store; self.serverFactory = serverFactory }
+         serverFactory: (@Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer)? = nil) {
+        self.store = store; self.serverFactory = serverFactory
+    }
 
     private func worker(_ id: String) throws -> Worker {
         guard let value = workers[id] else { throw ProjectExecutionError.identityMismatch }; return value
@@ -89,17 +89,26 @@ actor WorkerAdapter {
         try selected.reserve() // Durable start intent prevents redispatch after a partial or uncertain start.
         do {
             guard try store.policy(projectID: projectID) == selected.policy else { throw ProjectExecutionError.assignmentNotAuthorized }
-            var args = ["app-server", "--listen", "stdio://"]
+            var args = AppServerTransport.executionSetupArguments
             for (key, value) in try selected.overrides(config: [:]).sorted(by: { $0.key < $1.key }) {
                 let data = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
                 args += ["-c", key + "=" + String(decoding: data, as: UTF8.self)]
             }
-            let server = try serverFactory(selected.policy.appServerExecutable, args) { [weak self] message in
+            let onMessage: @Sendable (RPCObject) -> Void = { [weak self] message in
                 Task { await self?.event(id, message) }
+            }
+            let server: any ExecutionPeer
+            if let serverFactory { server = try serverFactory(selected.policy.appServerExecutable, args, onMessage) }
+            else {
+                guard let context = try store.codexContext(), context.id == selected.policy.codexContextID else { throw CodexExecutionContextError.changed }
+                let lease = try CodexExecutionContextLease(context: context, current: { try selected.store.codexContext() })
+                server = try AppServerTransport(executable: selected.policy.appServerExecutable, arguments: args, context: lease, onMessage: onMessage)
             }
             workers[id]?.server = server
             _ = try await rpc(server, "initialize", ["clientInfo": ["name": "release_radar_coordinator", "version": "1"], "capabilities": ["experimentalApi": true]])
             try server.send(["method": "initialized"])
+            let account = try await rpc(server, "account/read", ["refreshToken": false])
+            guard (account["account"] as? [String: Any])?["type"] as? String == "chatgpt" else { throw CodexExecutionContextError.subscriptionRequired }
             let configResult = try await rpc(server, "config/read", ["cwd": selected.assignment.checkoutPath, "includeLayers": false])
             guard let config = configResult["config"] as? [String: Any] else { throw ProjectExecutionError.invalidAssignment }
             try selected.validate(config: config)
@@ -150,10 +159,14 @@ actor WorkerAdapter {
     }
 
     private func verifyHook(_ server: any ExecutionPeer, selected: WorkerPolicy) async throws {
-        let result = try await rpc(server, "hooks/list", ["cwds": [selected.assignment.checkoutPath]])
+        try selected.verifyCodexContext()
+        let canonical = try ProjectExecutionHookReadiness.canonicalPrimaryRoot(selected.policy.primaryRoot)
+        let checkout = ProjectExecutionHookReadiness.discoveryCheckout(primaryRoot: selected.policy.primaryRoot,
+            canonicalPrimaryRoot: canonical, checkout: selected.assignment.checkoutPath)
+        let result = try await rpc(server, "hooks/list", ["cwds": [checkout]])
         let data = try JSONSerialization.data(withJSONObject: result)
-        _ = try ProjectExecutionHookReadiness.resolve(data, checkout: selected.assignment.checkoutPath,
-            primaryRoot: selected.policy.primaryRoot, command: "\"" + selected.policy.handlerPath + "\" --hook", requireTrusted: true, inline: selected.policy.hookReceipt?.inline ?? false)
+        _ = try ProjectExecutionHookReadiness.resolve(data, checkout: checkout,
+            primaryRoot: canonical, command: "\"" + selected.policy.handlerPath + "\" --hook", requireTrusted: true, inline: selected.policy.hookReceipt?.inline ?? false)
     }
 
     func status(workerID: String) throws -> RPCObject {

@@ -7,7 +7,7 @@ onboarding and plugin installation flows, including project-scoped worktrees,
 protected assignments and production hook admission from verified assignments.
 Preserve ordinary-worker history/sibling exclusion and deliberate Main retrieval.
 
-### Current worker startup configuration investigation
+### Worker startup configuration investigation (pre-correction)
 
 Objective: finish actual RR-owned linked-worktree hook readiness and affected
 worker startup without widening permission or trust boundaries. The prior
@@ -48,14 +48,14 @@ Authoritative references:
 - [Environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables):
   CODEX_HOME owns config, authentication and state, not configuration alone.
 
-Assignment: Main owns this existing brief/progress update on
+Prior investigation assignment: Main owned the brief/progress update on
 `codex/worker-startup-config` from `bff4899` in
 `/Users/jroberts/.codex/worktrees/rr-worker-startup-config/release_radar`.
 Fresh Chief Architecture task `01a0b25e-bdfc-7b20-bac9-14b5b53f7862` investigates
 the supported complete correction read-only, requested Astra/high (not exposed),
 without owner config/credential inspection or live operations. Its recommendation
 must preserve original Outcome 3 scope and classify necessary changes and unknowns.
-No product implementation or additional live attempt is yet released.
+At that investigation checkpoint product implementation and another live attempt were held. The approved source release below supersedes that implementation hold; live attempts remain held.
 
 Direct checks remain repository-native; the next material implementation requires
 focused boundary tests and one appropriate independent review. BuildAgent owns
@@ -64,38 +64,57 @@ Catalog IDs/lifecycle/indexes and accepted ADRs remain unchanged; no new artifac
 or mutable-document checksum is needed. Scoped local commits remain authorized;
 push/PR, installation and subsequent live changes retain their explicit boundaries.
 
-### Chief Architecture result and remaining decision
+### September 17 approved shared Codex context correction
 
-Chief Architecture completed its read-only investigation. The complete correction
-needs one explicitly selected Codex execution context for setup, verification,
-launch and retirement; normalized effective-profile validation that preserves the
-exact filesystem/network ceiling and rejects meaningful inheritance/extra roots;
-and canonical source matching in coordinator admission and follow-up. Keep raw
-persisted profile ownership/removal checks distinct from effective API values.
-Worker bootstrap also needs the existing explicit read-only default before the
-assigned profile is selected. No trust hash or credential copying is proposed.
+The owner approved one explicitly selected **existing** Codex home shared by setup,
+verification, assignment preparation, worker startup/follow-up and resource retirement,
+using the existing ChatGPT subscription/account. Selection grants access to the exact
+folder, including authentication and history; it does not copy either. Keep App Server.
+The selection contract is independent of the macOS picker. Folder paths and security-
+scoped bookmarks remain machine-local; on another machine explicitly select its
+existing context and regenerate only RR-owned project/assignment configuration from
+onboarded projects and assigned checkouts. Preserve unrelated settings. No credential,
+history or trust copying, API-key migration, global home entitlement, installer-helper
+expansion, new authentication engine/dashboard or headless deployment is included.
 
-The smallest candidate is the authenticated desktop context, but actual signed
-RR-process access is unverified. Source entitlements grant the app sandbox,
-app-group, user-selected folders and network client; they do not explicitly grant
-desktop Codex-home access. Release transport has no context-selection interface.
-Therefore current code cannot perform the proposed selected-context readback,
-and neither terminal access nor installer-helper access proves RR access. This
-is a source limitation, not a newly observed runtime denial.
+Delivery owner `01a0b279` owns source/tests and the existing brief, mutable design,
+progress and necessary metadata, exclusively. BuildAgent confirmed clean attached
+`codex/shared-codex-context` at `77fceeedcc162bc4b017c7b3604616fca90b4cee` in
+`/Users/jroberts/.codex/worktrees/dd18/release_radar`; Main released bounded work
+through Restricted coordinator. Requested Sol/high is not exposed for independent
+confirmation; ceiling Astra/high only for a named issue. No subagents. Effective
+runtime denies `.git`, `.codegraph` and archive reads; both installed RR skills are
+unreadable, so repository-local governing fallback applies without further probes.
+BuildAgent owns all native tests/builds and trusted Git.
 
-The alternative supported by official App Server documentation is the RR context
-with Codex-managed authentication and recovery. This requires an integrated login
-flow; redirecting the worker alone is incomplete. Changing access/installer-helper
-authority, introducing authentication ownership, or choosing a new login experience
-is not silently authorized by the investigation. Settle this product/security
-boundary before releasing the complete source correction. Preserve all current
-permission/trust checks and the closed failed assignment's reserved state.
+Bind a protected context identity to policies and assignments, reject prompt overrides,
+and hold security scope for each connection's lifetime. Missing/changed/denied/stale
+context fails closed with recovery in existing Settings Connections. Old assignments
+without proven context and all uncertain/reserved assignments remain blocked; no
+migration, replay or reset is authorized. Preserve the exact saved f481 envelope and
+partial state recorded below. Normalize effective profile metadata while comparing the
+exact filesystem/network ceiling, refusing meaningful inheritance or additional roots.
+Raw profile ownership/removal remains exact. Use explicit read-only bootstrap and the
+already verified setup canonical-source contract in worker admission/follow-up.
 
-No actual worker turn has run. Current official docs support configuration and
-login contracts; the architect could not retrieve exact-version upstream source
-and did not use moving-main source as installed-version proof. Exact normalized
-field values, selected-process account/model readiness and reserved-assignment
-recovery remain to be established through bounded checks once the route is chosen.
+Tests first in existing native suites cover context persistence/lifetime/loss/change,
+policy binding, normalized profile rejection and canonical hook matching. Inspect
+`docs/design/mockups/settings.png`; use existing Connections presentation, record the
+new picker/recovery extension in the owning mutable design. One fresh independent
+review through Main→RO04 covers concrete architecture/security/UX risks. BA runs focused
+native checks and existing documentation/index/diff checks, then scoped local commits.
+No push/PR/merge, release/version/tag, installation or cleanup is released here.
+
+Later runtime acceptance, serialized by Main with explicit live authorization, must
+use the actual signed app and selected grant: `account/read` with `refreshToken:false`,
+`config/read`, `hooks/list` sanitized metadata, close, and bookmark restoration after
+relaunch. Source/unit evidence cannot prove signed-child access, account/hook readiness,
+worker startup or complete acceptance. No live grant/config mutation, authentication
+refresh/login change, Codex restart, worker retry/start/reset/reprepare/new assignment
+or owner-state mutation occurs in this source slice. Architecture investigation
+`01a0b26e` supplies bounded source evidence, not runtime proof. Accepted ADRs and governing
+instructions remain unchanged. Existing catalog IDs/lifecycle/authority stay unchanged;
+these mutable documents require no checksum or new index row.
 
 ## Scope, authority and dependencies
 

@@ -47,6 +47,7 @@ public struct ProjectExecutionPaths: Sendable {
 public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public enum State: String, Codable, Sendable { case authorized, preparing, stopped, revoked, superseded, unknown, closed }
     public enum Role: String, Codable, Sendable { case delivery, review }
+    public var codexContextID: UUID? = nil
     public var connectionClosed: Bool? = nil
     public var launchReserved: Bool? = nil
     public var finalizationFailed: Bool? = nil
@@ -228,6 +229,7 @@ public struct ProjectExecutionPolicy: Codable, Equatable, Sendable {
     public var hookReceipt: HookReceipt?
     public var hookRemovalReceipt: HookRemovalReceipt?
     public var previousProjectIDs: [String]? = nil
+    public var codexContextID: UUID? = nil
     public var bindingRecoveryPending: Bool? = nil
     public var relocatedHookReceipt: HookReceipt? = nil
     public init(registration: ProjectRegistration, primaryRoot: String, appServerExecutable: String, handlerPath: String, enabled: Bool = true) {

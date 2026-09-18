@@ -37,10 +37,14 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
         let store = try ProjectExecutionFileStore(root: root(), create: false)
         let policy = try store.policy(projectID: value.registration.projectID.rawValue)
         guard value.state == .preparing, value.sessionID == nil, value.launchReserved != true, value.uncertainOutcome != true,
+              value.codexContextID == policy.codexContextID,
               value.preparedPolicyDigest == (try Self.policyDigest(policy)), policy.enabled, policy.bindingRecoveryPending != true,
               policy.registration == value.registration, policy.handlerPath == handlerPath,
               policy.hookReceipt?.installed == true,
               try store.assignment(projectID: value.registration.projectID.rawValue, taskID: value.id) == value else { throw ProjectExecutionError.assignmentNotAuthorized }
+        if let contextID = value.codexContextID {
+            guard try store.codexContext()?.id == contextID else { throw CodexExecutionContextError.changed }
+        }
         try value.verifyContext()
         var admitted = value; admitted.state = .authorized; admitted.finalizationFailed = nil
         try store.saveAssignment(admitted, expected: value)
@@ -55,6 +59,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
               current.permissionProfile == value.permissionProfile, current.model == value.model,
               current.effort == value.effort, current.authorization == value.authorization,
               current.excludedPaths == value.excludedPaths,
+              current.codexContextID == value.codexContextID,
               current.context == value.context, current.worktree == value.worktree,
               current.reviewOfAssignmentID == value.reviewOfAssignmentID, current.baselineFromAssignmentID == value.baselineFromAssignmentID else { throw ProjectExecutionError.identityMismatch }
         guard [.preparing, .authorized, .unknown].contains(current.state) else { return }
@@ -90,6 +95,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
               policy.handlerPath == handlerPath, policy.appServerExecutable == CodexExecutionIdentity.executable,
               policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(), policy.hookReceipt?.installed == true,
               policy.hookReceipt?.command == "\"" + handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
+        try await configuration.useCodexContext(policy.codexContextID)
         try await configuration.validateInstallation(handlerPath: handlerPath)
         let role: ProjectExecutionAssignment.Role = reviewOfAssignmentID == nil ? .delivery : .review
         let id = role.rawValue + "-" + requestID.uuidString.lowercased()
@@ -101,7 +107,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             ($0.uncertainOutcome == true || $0.state == .unknown || ($0.sessionID != nil || $0.launchReserved == true) && $0.connectionClosed != true && $0.state != .closed)
         }) else { throw StoreError.unavailable("Close and explicitly retire the previous registration's worker resources in project settings before preparing replacement work. Its unresolved outcome is preserved.") }
         if let existing = inventory.first(where: { $0.id == id }) {
-            guard existing.work == work, existing.registration == registration, existing.role == role,
+            guard existing.codexContextID == policy.codexContextID, existing.work == work, existing.registration == registration, existing.role == role,
                   existing.reviewOfAssignmentID == reviewOfAssignmentID, existing.baselineFromAssignmentID == baselineFromAssignmentID,
                   existing.uncertainOutcome != true, existing.retirement == nil,
                   existing.state == .preparing || (existing.state == .revoked && existing.finalizationFailed == true && existing.sessionID == nil && existing.launchReserved != true) else { throw ProjectExecutionError.assignmentNotAuthorized }
@@ -150,6 +156,7 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             authorization: authorization, context: contexts,
             excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive", tree.commonGitDirectory, policy.primaryRoot],
             worktree: tree, work: work, reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID)
+        assignment.codexContextID = policy.codexContextID
         try assignment.verifyContext() // Pins must match committed checkout, not dirty primary edits.
         try reader.verifyStable()
         assignment.state = .preparing
@@ -160,6 +167,8 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
     private func configure(_ intent: ProjectExecutionAssignment, paths: ProjectExecutionPaths,
                            policy: ProjectExecutionPolicy, store: ProjectExecutionFileStore) async throws -> ProjectExecutionAssignment {
         var assignment = intent
+        guard assignment.codexContextID == policy.codexContextID else { throw CodexExecutionContextError.changed }
+        try await configuration.useCodexContext(policy.codexContextID)
         let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
         let definition = try profile.definition
         if let prior = assignment.permissionProfileDefinition {

@@ -7,6 +7,8 @@ public enum ProjectExecutionHookStorage: Sendable {
 }
 
 public protocol ProjectExecutionConfiguring: Sendable {
+    func selectedCodexContextID() async throws -> UUID?
+    func useCodexContext(_ expected: UUID?) async throws
     func validateInstallation(handlerPath: String) async throws
     func validateHandlerIdentity(handlerPath: String) async throws
     func hookStorage(primaryRoot: String) async throws -> ProjectExecutionHookStorage
@@ -20,6 +22,8 @@ public protocol ProjectExecutionConfiguring: Sendable {
 }
 
 public extension ProjectExecutionConfiguring {
+    func selectedCodexContextID() async throws -> UUID? { throw CodexExecutionContextError.selectionRequired }
+    func useCodexContext(_ expected: UUID?) async throws { throw CodexExecutionContextError.selectionRequired }
     func validateHandlerIdentity(handlerPath: String) async throws { try await validateInstallation(handlerPath: handlerPath) }
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data) async throws { throw ProjectExecutionError.unavailable }
     func removeWorkerProfile(primaryRoot: String, profileID: String, expected: Data, beforeWrite: @Sendable () async throws -> Void) async throws {
@@ -85,6 +89,8 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
                                   removedRegistrations: [ProjectRegistration] = [],
                                   beforeWrite: @escaping @Sendable () async throws -> Void = {}) async throws {
         let registration = try identity(project)
+        let contextID = try await configuration.selectedCodexContextID()
+        try await configuration.useCodexContext(contextID)
         try await configuration.validateInstallation(handlerPath: handlerPath)
         try await beforeWrite()
         let store = try store()
@@ -109,6 +115,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
                       owned?.command == "\"" + existing.handlerPath + "\" --hook" else { throw ProjectExecutionError.conflict }
                 policy = .init(registration: registration, primaryRoot: existing.primaryRoot,
                     appServerExecutable: existing.appServerExecutable, handlerPath: handlerPath, enabled: existing.enabled)
+                policy.codexContextID = existing.codexContextID
                 policy.consent = existing.consent; policy.hookReceipt = existing.hookReceipt; policy.hookRemovalReceipt = existing.hookRemovalReceipt
                 policy.previousProjectIDs = existing.previousProjectIDs
                 policy.bindingRecoveryPending = true
@@ -121,6 +128,11 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
                            appServerExecutable: CodexExecutionIdentity.executable, handlerPath: handlerPath)
             policy.consent = ProjectExecutionPolicy.Consent()
             try store.savePolicy(policy, expected: nil)
+        }
+        if policy.codexContextID != contextID {
+            guard policy.codexContextID == nil && policy.hookReceipt == nil || permitHandlerUpdate || permitOwnerResume else { throw CodexExecutionContextError.changed }
+            var bound = policy; bound.codexContextID = contextID
+            try store.savePolicy(bound, expected: policy); policy = bound
         }
         let mode = try await configuration.hookStorage(primaryRoot: policy.primaryRoot)
         let inline: Bool
@@ -207,6 +219,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
             try revokeOldAssignments(store: store, projectID: project.projectID.rawValue)
             var rebound = ProjectExecutionPolicy(registration: registration, primaryRoot: project.canonicalRoot.path,
                 appServerExecutable: existing.appServerExecutable, handlerPath: existing.handlerPath, enabled: existing.enabled)
+            rebound.codexContextID = existing.codexContextID
             rebound.consent = existing.consent; rebound.previousProjectIDs = existing.previousProjectIDs
             rebound.bindingRecoveryPending = true
             if existing.primaryRoot == project.canonicalRoot.path {
@@ -232,6 +245,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
             if prior.enabled { var disabled = prior; disabled.enabled = false; try store.savePolicy(disabled, expected: prior) }
             var adopted = current ?? ProjectExecutionPolicy(registration: registration, primaryRoot: project.canonicalRoot.path,
                 appServerExecutable: CodexExecutionIdentity.executable, handlerPath: handlerPath)
+            adopted.codexContextID = prior.codexContextID
             adopted.consent = ProjectExecutionPolicy.Consent(); adopted.hookReceipt = hook
             adopted.bindingRecoveryPending = true
             adopted.previousProjectIDs = Array(Set((prior.previousProjectIDs ?? []) + [removed.projectID.rawValue])).sorted()
@@ -283,6 +297,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         guard try store.assignments(projectID: project.projectID.rawValue).allSatisfy({ value in
             (value.state != .unknown && value.uncertainOutcome != true || value.state == .superseded && value.retirement?.completed == true) && (value.state == .closed || value.connectionClosed == true || value.sessionID == nil && value.launchReserved != true)
         }) else { throw ProjectExecutionHookRemovalError.workersNotClosed }
+        try await configuration.useCodexContext(policy.codexContextID)
         try await configuration.validateHandlerIdentity(handlerPath: handlerPath)
         let mode = try await configuration.hookStorage(primaryRoot: policy.primaryRoot)
         let repository = try ProjectExecutionFileStore(root: project.canonicalRoot, create: false)
@@ -356,6 +371,7 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         guard policy.registration == registration, policy.primaryRoot == project.canonicalRoot.path,
               policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(), let receipt = policy.hookReceipt, receipt.installed,
               receipt.command == "\"" + handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
+        try await configuration.useCodexContext(policy.codexContextID)
         try await configuration.verifyHook(primaryRoot: policy.primaryRoot, checkout: policy.primaryRoot, command: receipt.command, permitOwnedTrust: false, beforeWrite: {})
         guard try store.policy(projectID: project.projectID.rawValue) == policy else { throw ProjectExecutionError.conflict }
     }

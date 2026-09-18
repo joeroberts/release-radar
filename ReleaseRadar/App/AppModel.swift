@@ -95,6 +95,12 @@ final class AppModel {
     private(set) var navigationFailureMessage: String?
     private(set) var navigationFocus: NavigationFocus? = .route(.projects)
     var dashboardError: String?
+    var codexContextPath: String?
+    var codexContextSelectedAt: Date?
+    var codexContextStatus = "Selection required"
+    var codexContextFailure: String?
+    var codexContextMessage: String?
+    var codexContextSelectionInFlight = false
     var codexSnapshot = CodexSnapshot.unavailable(reason: UnavailableCodexObserver.defaultReason)
     var codexPluginState: CodexPluginPresentationState = .checking
     var codexPluginOperation: CodexPluginOperation?
@@ -2205,6 +2211,55 @@ final class AppModel {
                 workingDirectory: $0.workingDirectory,
                 title: $0.goal?.objective ?? $0.id
             )
+        }
+    }
+
+    func loadCodexExecutionContext() {
+        codexContextFailure = nil
+        do {
+            let files = try ProjectExecutionFileStore(root: ProjectExecutionFileStore.applicationRoot(), create: false)
+            guard let context = try files.codexContext() else {
+                codexContextPath = nil; codexContextSelectedAt = nil; codexContextStatus = "Selection required"
+                return
+            }
+            codexContextPath = context.homePath; codexContextSelectedAt = context.selectedAt
+            let access = try CodexExecutionContextLease(context: context, current: { try files.codexContext() })
+            defer { access.release() }
+            try access.validate()
+            codexContextStatus = "Folder access ready"
+        } catch {
+            codexContextStatus = "Access needs attention"
+            codexContextFailure = CodexExecutionContextError.accessRequired.localizedDescription
+        }
+    }
+
+    /// Explicit folder selection writes only the machine-local protected receipt.
+    func selectCodexExecutionContext(folder: URL) async {
+        guard !codexContextSelectionInFlight else { return }
+        codexContextSelectionInFlight = true; defer { codexContextSelectionInFlight = false }
+        codexContextMessage = nil; codexContextFailure = nil
+        guard folder.startAccessingSecurityScopedResource() else {
+            codexContextStatus = "Access needs attention"
+            codexContextFailure = CodexExecutionContextError.accessRequired.localizedDescription
+            return
+        }
+        defer { folder.stopAccessingSecurityScopedResource() }
+        do {
+            let bookmark = try ProjectBookmarkStore().makeBookmark(for: folder)
+            let files = try ProjectExecutionFileStore(root: ProjectExecutionFileStore.applicationRoot(), create: true)
+            let previous = try files.codexContext()
+            let candidate = try CodexExecutionContext(home: folder, bookmark: bookmark, previousContextID: previous?.id)
+            // Reselecting the same physical folder restores its grant without migrating assignments.
+            let selected = if let previous, previous.identifiesSameFolder(as: candidate) {
+                try CodexExecutionContext(home: folder, bookmark: bookmark, id: previous.id, previousContextID: previous.previousContextID)
+            } else { candidate }
+            try await store.transact(actor: .init(id: "owner"), reason: "Owner authorized Codex context selection request \(selected.id.uuidString); protected folder receipt save pending.") { _ in }
+            try files.saveCodexContext(selected, expected: previous)
+            loadCodexExecutionContext()
+            codexContextMessage = "Codex folder selection saved on this Mac. Review each project's execution hook setup to regenerate Release Radar configuration. Existing reserved or uncertain assignments remain blocked."
+        } catch {
+            codexContextStatus = "Access needs attention"
+            codexContextFailure = "Codex folder selection could not be saved. \(error.localizedDescription)"
         }
     }
 

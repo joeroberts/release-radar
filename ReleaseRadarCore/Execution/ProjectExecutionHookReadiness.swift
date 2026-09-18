@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import OSLog
 
@@ -6,6 +7,18 @@ public struct ProjectExecutionHookReadiness: Sendable {
     public let key: String
     public let currentHash: String
     public let trustStatus: String
+
+    /// Preserve filesystem spelling for Codex's source identity (including /var).
+    public static func canonicalPrimaryRoot(_ primaryRoot: String) throws -> String {
+        guard primaryRoot.hasPrefix("/"), !primaryRoot.utf8.contains(0),
+              let resolved = realpath(primaryRoot, nil) else { throw ProjectExecutionError.hookNotReady }
+        defer { free(resolved) }
+        return String(cString: resolved)
+    }
+
+    public static func discoveryCheckout(primaryRoot: String, canonicalPrimaryRoot: String, checkout: String) -> String {
+        checkout == primaryRoot ? canonicalPrimaryRoot : checkout
+    }
 
     public static func resolve(_ data: Data, checkout: String, primaryRoot: String,
                                command: String, requireTrusted: Bool, inline: Bool = false) throws -> Self {

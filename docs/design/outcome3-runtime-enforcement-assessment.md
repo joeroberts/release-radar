@@ -1780,3 +1780,58 @@ only after availability is established. Audit/full acceptance remain pending;
 the three-document status update is refrozen. No source/test/contract or
 catalog identity/index change; the worker performs no native/Git/live/config/SQLite
 operation or cleanup.
+
+
+### September 17 approved selected Codex context contract
+
+One app-owned exact existing Codex home is selected explicitly and used across setup,
+verification, preparation, worker startup/follow-up and retirement. Reuse its existing
+ChatGPT subscription/account through App Server. The selector grants folder access,
+including authentication and history, without copying either. A protected machine-local
+identity and security-scoped bookmark live outside ordinary-worker checkouts; policies
+and assignments bind that identity. Prompt-supplied homes cannot override it. Hold the
+grant until the connection physically closes, including failed/uncertain cleanup.
+Missing, changed, moved, denied or stale context blocks further lifecycle admission;
+existing Connections settings offers exact-folder reselection and actionable recovery.
+Never migrate uncertain/reserved assignments or replay their starts. Old unbound
+assignments remain blocked. Preserve original f481 request/state.
+
+The macOS picker is an adapter to a separate context contract. Paths/bookmarks are
+machine-local and excluded from portable project data. On another machine select its
+existing authenticated context, onboard the project and regenerate only RR-owned
+configuration from its local project/checkouts. Preserve unrelated configuration and
+strict raw owned-profile removal. No credential/history/trust copying, global home
+entitlement, installer-helper expansion, new authentication engine, API-key migration,
+execution dashboard or headless server deployment is included.
+
+Transport sets explicit validated `CODEX_HOME` and the read-only bootstrap default.
+Effective config metadata may include normalized description/extends/workspace_roots;
+accept only non-authorizing metadata and exact filesystem/network limits, reject
+meaningful inheritance/additional roots. Worker hook matching uses setup's canonical
+primary source while preserving actual linked checkout identity.
+
+Visual reference: `mockups/settings.png`. Extend the existing Connections section with
+an exact-folder selector, saved context status, explicit access explanation and recovery;
+use its existing panels, responsive controls and accessibility identifiers. This is a
+necessary extension because the reference predates execution-context selection.
+Runtime/visual comparison and bookmark restoration remain open until the actual signed
+app is exercised under Main's later live authorization. Minimum readback is
+`account/read(refreshToken:false)`, `config/read`, `hooks/list` sanitized metadata then
+physical close; no thread creation or reserved-assignment replay. Official
+[Codex authentication](https://learn.chatgpt.com/docs/auth),
+[environment](https://learn.chatgpt.com/docs/config-file/environment-variables),
+[App Server](https://learn.chatgpt.com/docs/app-server) and
+[Apple sandbox access](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox)
+support the candidate contract, not installed signed-child/account readiness.
+
+The bounded source stores a selection receipt (identity, selection time, prior identity,
+folder fingerprint and bookmark) in protected execution storage; only UUID bindings
+enter policies/assignments. Owner selection records an application audit intent before
+saving the protected receipt. No receipt includes account/token/credential content.
+Same-physical-folder reselection restores access with the same identity; a different
+folder gets a new identity. Existing connections compare their exact saved receipt and
+retain the original grant until physical close. Stop/close remain available after loss.
+Production setup opens the grant before lifecycle mutations, and account admission
+uses `account/read(refreshToken:false)` requiring ChatGPT; inherited auth/state overrides
+are removed only from the child environment. This does not prove the selected account
+or credential backend is accessible to the signed production child.

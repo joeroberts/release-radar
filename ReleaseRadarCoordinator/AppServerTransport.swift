@@ -45,6 +45,7 @@ protocol ExecutionPeer: Sendable {
 /// Newline JSON transport. Correlation IDs do not authorize replay of a mutation.
 final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
     static let executionSetupArguments = ["app-server", "--listen", "stdio://", "-c", "default_permissions=\":read-only\""]
+    private let context: CodexExecutionContextLease?
     private let process = Process()
     private let input = Pipe()
     private let output = Pipe()
@@ -56,28 +57,43 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
     private let readerExited = DispatchGroup()
     private let onMessage: @Sendable (RPCObject) -> Void
 
-    convenience init(executable: String, arguments: [String], onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
-        try self.init(executable: executable, arguments: arguments, environment: nil, onMessage: onMessage)
+    static func selectedContextEnvironment(homePath: String, inherited: [String: String]) -> [String: String] {
+        var environment = inherited
+        for key in ["CODEX_SQLITE_HOME", "CODEX_API_KEY", "OPENAI_API_KEY", "CODEX_ACCESS_TOKEN",
+                    "OPENAI_IDENTITY_TOKEN_FILE", "OPENAI_FEDERATION_RULE_ID", "OPENAI_WORKLOAD_IDENTITY_CONTEXT"] {
+            environment.removeValue(forKey: key)
+        }
+        environment["CODEX_HOME"] = homePath
+        return environment
+    }
+
+    convenience init(executable: String, arguments: [String], context: CodexExecutionContextLease,
+                     onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
+        try context.validate()
+        try self.init(executable: executable, arguments: arguments,
+            environment: Self.selectedContextEnvironment(homePath: context.context.homePath, inherited: ProcessInfo.processInfo.environment),
+            context: context, onMessage: onMessage)
     }
 
     #if DEBUG
-    // Fixture-only isolation. Release callers cannot redirect Codex's home.
+    // Fixture-only isolation, separate from protected production selection.
     convenience init(fixtureHome: URL, onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
         guard fixtureHome.isFileURL, fixtureHome.resolvingSymlinksInPath().path == fixtureHome.path else {
             throw ProjectExecutionError.identityMismatch
         }
         try self.init(executable: CodexExecutionIdentity.executable, arguments: Self.executionSetupArguments,
-            environment: ["HOME": fixtureHome.path, "CODEX_HOME": fixtureHome.appendingPathComponent("codex").path, "PATH": "/usr/bin:/bin"], onMessage: onMessage)
+            environment: ["HOME": fixtureHome.path, "CODEX_HOME": fixtureHome.appendingPathComponent("codex").path, "PATH": "/usr/bin:/bin"], context: nil, onMessage: onMessage)
     }
     #endif
 
-    private init(executable: String, arguments: [String], environment: [String: String]?, onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
+    private init(executable: String, arguments: [String], environment: [String: String], context: CodexExecutionContextLease?, onMessage: @escaping @Sendable (RPCObject) -> Void) throws {
         guard executable == CodexExecutionIdentity.executable else { throw ProjectExecutionError.identityMismatch }
         try CodexExecutionIdentity.verify()
+        self.context = context
         self.onMessage = onMessage
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
-        if let environment { process.environment = environment }
+        process.environment = environment
         process.standardInput = input
         process.standardOutput = output
         process.standardError = FileHandle.standardError
@@ -91,6 +107,8 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
     }
 
     func send(_ message: [String: Any]) throws {
+        // STOP/interrupt and physical close remain possible after access/context loss.
+        if message["method"] as? String != "turn/interrupt" { try context?.validate() }
         let bytes = try JSONSerialization.data(withJSONObject: message) + Data([10])
         try lock.withLock {
             guard alive else { throw AppServerTransportError(message: "App Server disconnected; no automatic replay.", outcomeUnknown: true) }
@@ -185,6 +203,7 @@ final class AppServerTransport: ExecutionPeer, @unchecked Sendable {
         guard readerExited.wait(timeout: .now() + 3) == .success else {
             throw AppServerTransportError(message: "App Server reader remains active after process exit; connection cleanup is incomplete.", outcomeUnknown: true)
         }
+        context?.release()
         if let inputError {
             throw AppServerTransportError(message: "App Server exited, but closing its input failed: \(inputError)", outcomeUnknown: true)
         }

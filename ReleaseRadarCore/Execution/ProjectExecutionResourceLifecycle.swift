@@ -91,6 +91,10 @@ public actor ProjectExecutionResourceLifecycle {
             return retired // Replacement still requires fresh current-work admission.
         } catch {
             let failure = error
+            if !attemptedClose, !previouslyPending, pendingClose == nil {
+                do { try await configuration.finishConfiguration() }
+                catch { throw StoreError.unavailable("Resource retirement failed: \(failure.localizedDescription). Context cleanup failed: \(error.localizedDescription). Preserve the original request.") }
+            }
             if !attemptedClose, !previouslyPending, let pendingClose, pendingClose.projectID == project.projectID.rawValue,
                pendingClose.assignmentID == expected.id, pendingClose.requestID == requestID {
                 do {
@@ -118,6 +122,7 @@ public actor ProjectExecutionResourceLifecycle {
             guard try store.policy(projectID: project.projectID.rawValue) == policy,
                   try store.assignment(projectID: project.projectID.rawValue, taskID: expected.id) == expected else { throw ProjectExecutionError.conflict }
         }
+        try await configuration.useCodexContext(expected.codexContextID)
         if expected.retirement?.profileRemoved != true {
             guard let definition = expected.permissionProfileDefinition else { throw ProjectExecutionError.unavailable }
             do {
@@ -126,6 +131,7 @@ public actor ProjectExecutionResourceLifecycle {
             } catch { let failure = error; try await configuration.finishConfiguration(); throw failure }
             try await configuration.finishConfiguration() // Only this new configuration helper.
         }
+        try await configuration.finishConfiguration() // Release this request's folder grant, never the lost original handle.
         try await validate()
         var recovered = expected; recovered.retirement?.profileRemoved = true; recovered.retirement?.replacementAllowed = true
         try store.saveAssignment(recovered, expected: expected)
@@ -169,6 +175,7 @@ public actor ProjectExecutionResourceLifecycle {
             guard tree.primaryRoot == policy.primaryRoot else { throw StoreError.unavailable("The original permission profile definition is unavailable. Preserve the old resources and resolve their ownership before retirement.") }
             definition = try ProjectExecutionPermissionProfile(assignment: expected, policy: policy, paths: paths).definition
         }
+        try await configuration.useCodexContext(expected.codexContextID)
         try await configuration.validateHandlerIdentity(handlerPath: policy.handlerPath)
         try await beforeWrite()
         guard try store.policy(projectID: project.projectID.rawValue) == policy,
@@ -183,6 +190,7 @@ public actor ProjectExecutionResourceLifecycle {
         // Prune only the exact clean owned checkout; libgit2 retains its branch
         // and committed history. A dirty checkout prevents any profile mutation.
         if current.retirement?.worktreeRemoved != true {
+            try await configuration.useCodexContext(expected.codexContextID)
             guard try !store.assignments(projectID: project.projectID.rawValue).contains(where: {
                 $0.id != current.id && ($0.reviewOfAssignmentID == current.id || $0.baselineFromAssignmentID == current.id) && $0.retirement?.completed != true
             }) else { throw ProjectExecutionError.conflict }
@@ -191,6 +199,7 @@ public actor ProjectExecutionResourceLifecycle {
             try store.saveAssignment(removed, expected: current); current = removed
         }
         if current.retirement?.profileRemoved != true {
+            try await configuration.useCodexContext(expected.codexContextID)
             try await beforeWrite()
             guard try store.policy(projectID: project.projectID.rawValue) == policy,
                   try store.assignment(projectID: project.projectID.rawValue, taskID: current.id) == current else { throw ProjectExecutionError.conflict }

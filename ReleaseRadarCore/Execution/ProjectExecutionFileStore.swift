@@ -29,6 +29,22 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     }
     deinit { close(descriptor) }
 
+    public func codexContext() throws -> CodexExecutionContext? {
+        try lock.withLock {
+            let path = ["CodexContext", "selection.json"]
+            return try exists(path) ? read(CodexExecutionContext.self, path: path) : nil
+        }
+    }
+
+    /// Explicit owner selection only. Uses the same protected selection receipt/CAS boundary.
+    public func saveCodexContext(_ context: CodexExecutionContext, expected: CodexExecutionContext?) throws {
+        try context.validateFolder()
+        try lock.withLock {
+            let path = ["CodexContext", "selection.json"]
+            try withAuthorityLock(path) { try write(context, expected: expected, path: path) }
+        }
+    }
+
     public func policy(projectID: String) throws -> ProjectExecutionPolicy {
         try lock.withLock { try read(ProjectExecutionPolicy.self, path: ["Projects", ProjectExecutionPaths.component(projectID), "policy.json"]) }
     }
