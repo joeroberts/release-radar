@@ -4,7 +4,9 @@
 
 Owner sequencing decision: defer onboarding Release Radar’s own repository into RR until disposable-project acceptance and a stable merged release. Its existing repository catalog and ledger remain authoritative; Main will flag the appropriate time. No Pursuit or self-onboarding action is authorized.
 
-**September 18 — bounded STOP/closure confirmed; artifacts preserved and clean checkout ready for supported retirement.**
+**September 18 — stopped resources retired; fresh-assignment recovery acceptance released.**
+
+Main retired stopped7ed84d1f once, canceled settings without Save. Exact receipt 0AB918F7-F2B2-4B66-B700-C3173F6BCF12 confirms superseded completed retirement, checkout/profile absent, retained baseline branch and known session/reservation/confirmed closure, uncertainty absent. Preserved artifact copies remain retained. Main releases exact fresh request598fa3e0 with new recovery prompt and successful-turn closure, after current inventory and saved readback match. No old stopped-worker replay or full Outcome3 PASS.
 
 Owner expanded standing disposable cleanup authorization to successfully tested assignments with confirmed closure, preserved artifacts/history and clean checkout. Exact stopped7ed84d1f is covered; Main owns UI retirement. BA copied only default.profraw and 28-byte marker byte-exact through real no-follow paths to the owner-designated fixture-side acceptance-artifacts/delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f, verified both then removed only originals. Preserved copies retained as temporary test artifacts; no fixture staging/commit. Checkout is clean including ignored/untracked files; saved closure/profile/retained branch match. No retirement/new worker occurred in BA step. Existing direct startup/isolation/STOP evidence and UnknownProcessId/child-process limitations remain; no full Outcome3 PASS.
 

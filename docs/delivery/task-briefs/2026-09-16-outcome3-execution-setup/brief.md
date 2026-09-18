@@ -1,5 +1,30 @@
 # Outcome 3 project execution setup
 
+## September 18 fresh-assignment post-STOP recovery acceptance
+
+Main performed supported stopped7ed84d1f retirement once, observed Resources retired and canceled settings without Save. Exact read-only receipt `0AB918F7-F2B2-4B66-B700-C3173F6BCF12` confirms superseded/completed, priorState stopped, checkout/profile removed, no close uncertainty. Exact resources are absent; branch remains at ecb738e87ba16e0bca55f74e486f1c6a2aaee769, known session/reservation/confirmed closure preserved, uncertainty absent. Preserved artifact copies remain outside the removed checkout. BA performed no retirement mutation.
+
+Main releases one fresh preparation and, only after successful exact saved assignment/checkout/profile readback, one startup using its new bounded recovery prompt; then supported close and normal EOF after confirmation. Complete current inventory must match before preparation. Preserve generated profiling output; no replay, automatic approvals, retry loop, new source/config/permission change or additional test.
+
+Exact canonical prepare envelope, committed before submission:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "598fa3e0-197e-44df-aec1-91e2a0a9da38",
+  "reason": "Verify supported fresh-assignment recovery after observed STOP and confirmed closed clean retirement.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
 ## September 18 preserved artifacts and expanded disposable cleanup authorization
 
 Owner extends standing disposable acceptance cleanup to successfully tested assignments, subject to confirmed physical closure, lossless artifact/history preservation and clean checkout retirement. This explicitly covers stopped `delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f`. It authorizes no unrelated cleanup, source/global/config/permission change or new worker; Main owns supported UI retirement, with no parallel mutation.
