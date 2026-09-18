@@ -2,6 +2,21 @@
 
 ## September 18 fresh-assignment post-STOP recovery acceptance
 
+Preparation succeeded once through fresh normal installed AgentTools PID 13365, exit 0, after complete current inventory matched generation 2/phase and task-plan revisions 1. Envelope committed 9b99dbd7 before call. Audit `A4DCBF5C-EE51-4099-9D20-6651A0FE8FBD` returned authorized Terra/medium; saved assignment response, real checkout/.codex and exact owned profile match. No prior session/reservation/uncertainty/closed flags. Selected context/policy digest unchanged.
+
+Exact new-assignment startup request, committed before single submission:
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-598fa3e0-197e-44df-aec1-91e2a0a9da38",
+    "prompt": "This is the synthetic post-STOP recovery acceptance. Report your assigned current working directory and read only its root README.md heading using ordinary allowed tools. Do not modify files, access history or sibling checkouts, use network, launch tasks, or request escalation. Finish the turn."
+  }
+}
+```
+
 Main performed supported stopped7ed84d1f retirement once, observed Resources retired and canceled settings without Save. Exact read-only receipt `0AB918F7-F2B2-4B66-B700-C3173F6BCF12` confirms superseded/completed, priorState stopped, checkout/profile removed, no close uncertainty. Exact resources are absent; branch remains at ecb738e87ba16e0bca55f74e486f1c6a2aaee769, known session/reservation/confirmed closure preserved, uncertainty absent. Preserved artifact copies remain outside the removed checkout. BA performed no retirement mutation.
 
 Main releases one fresh preparation and, only after successful exact saved assignment/checkout/profile readback, one startup using its new bounded recovery prompt; then supported close and normal EOF after confirmation. Complete current inventory must match before preparation. Preserve generated profiling output; no replay, automatic approvals, retry loop, new source/config/permission change or additional test.
