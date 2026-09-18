@@ -127,4 +127,42 @@ final class CodexExecutionContextTests: XCTestCase {
         try store.saveCodexContext(replacement, expected: context)
         XCTAssertEqual(try store.codexContext(), replacement)
     }
+
+    func testPreparationValidatedBeforeHomeSwitchCannotSaveStaleIntent() throws {
+        let (store, original) = try fixture()
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
+        var pending = ProjectExecutionAssignment(id: "paused-preparation", registration: registration,
+            checkoutPath: store.root.appendingPathComponent("checkout").path, role: .delivery, permissionProfile: "rr-paused",
+            model: "gpt-5.6-terra", effort: "medium", authorization: "Approved bounded work",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], state: .preparing)
+        pending.codexContextID = original.id
+        // Preparation captured A; removal left no retained inventory before B was selected.
+        let other = store.root.appendingPathComponent("other-existing-home")
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        let replacement = try CodexExecutionContext(home: other, bookmark: Data([2]))
+        try store.saveCodexContext(replacement, expected: original)
+        XCTAssertThrowsError(try store.saveAssignment(pending, expected: nil)) {
+            XCTAssertEqual($0 as? CodexExecutionContextError, .changed)
+        }
+        XCTAssertTrue(try store.assignments(projectID: "project-one").isEmpty)
+        XCTAssertEqual(try store.codexContext(), replacement)
+        var materialized = false
+        XCTAssertThrowsError(try store.createAssignment(codexContextID: original.id) {
+            materialized = true
+            return pending
+        })
+        XCTAssertFalse(materialized, "Stale context must fail before creating checkout resources")
+        try store.saveCodexContext(original, expected: replacement)
+        XCTAssertEqual(try store.codexContext(), original, "A stale writer must not strand original-context recovery")
+        let created = try store.createAssignment(codexContextID: original.id) { pending }
+        XCTAssertEqual(created, pending)
+        XCTAssertThrowsError(try store.saveCodexContext(replacement, expected: original))
+        // Even after external selection corruption, STOP/closure can preserve the intent.
+        let receipt = store.root.appendingPathComponent("CodexContext/selection.json")
+        try JSONEncoder().encode(replacement).write(to: receipt)
+        var stopped = pending; stopped.state = .stopped; stopped.connectionClosed = true
+        try store.saveAssignment(stopped, expected: pending)
+        XCTAssertEqual(try store.assignment(projectID: "project-one", taskID: pending.id), stopped)
+    }
 }

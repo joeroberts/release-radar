@@ -130,9 +130,36 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
         try lock.withLock {
             let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
             try withAuthorityLock(["context-selection"]) {
+                if expected == nil || value.state == .preparing || value.state == .authorized {
+                    try requireSelectedCodexContext(value.codexContextID)
+                }
                 try withAuthorityLock(path) { try write(value, expected: expected, path: path) }
             }
         }
+    }
+
+    /// Validate selection before materializing a checkout, then persist its intent
+    /// before allowing a different-home selection to inspect the resource inventory.
+    public func createAssignment(codexContextID: UUID?, prepare: () throws -> ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
+        try lock.withLock {
+            try withAuthorityLock(["context-selection"]) {
+                try requireSelectedCodexContext(codexContextID)
+                let value = try prepare()
+                try value.validated()
+                guard value.codexContextID == codexContextID else { throw CodexExecutionContextError.changed }
+                let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
+                try withAuthorityLock(path) { try write(value, expected: Optional<ProjectExecutionAssignment>.none, path: path) }
+                return value
+            }
+        }
+    }
+
+    private func requireSelectedCodexContext(_ id: UUID?) throws {
+        // Legacy fixtures/records remain writable; production lifecycle admission
+        // independently rejects unbound contexts. Existing STOP/close updates remain available.
+        guard let id else { return }
+        let path = ["CodexContext", "selection.json"]
+        guard try exists(path), try read(CodexExecutionContext.self, path: path).id == id else { throw CodexExecutionContextError.changed }
     }
 
     /// A home switch cannot strand profiles, checkouts or installed hook ownership.

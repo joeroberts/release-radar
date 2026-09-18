@@ -1833,8 +1833,12 @@ folder gets a new identity only after retained assignments are retired and insta
 execution hooks are removed; protected inventory and selection share the native writer
 lock with policy/assignment saves. Refusal preserves the receipt and resource records,
 with existing Connections error guidance to close/retire resources or restore the same
-folder. Existing connections compare their exact saved receipt and
-retain the original grant until physical close. Stop/close remain available after loss.
+folder. Context-bound preparation validates selection before materializing its checkout
+and persists the intent under that same lock. A writer captured before a home switch
+cannot later create or prepare/authorize an assignment for the stale identity; existing
+STOP, physical closure and retirement/recovery updates remain available. Existing
+connections compare their exact saved receipt and retain the original grant until
+physical close. Stop/close remain available after loss.
 Production setup opens the grant before lifecycle mutations, and account admission
 uses `account/read(refreshToken:false)` requiring ChatGPT. Workers additionally require
 the effective built-in `openai` provider and default OpenAI/ChatGPT endpoints before

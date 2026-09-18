@@ -70,8 +70,15 @@ errors were downstream of unwanted actions in synthetic peers, not live usage.
 The corrections now require default built-in OpenAI routing and returned agreement
 before generation, and reject different-home saves while unretired assignments or
 installed hooks remain. Same-home identity/access recovery and uncertain records are
-preserved. The complete correction is frozen for affected native checks; the same
-reviewer's correction check remains pending.
+preserved. Native82 passed 62 affected tests, compilation and documentation/diff checks;
+BA committed `6bd9d115065a236a88a253534ce4ba9e5c090489`. The same reviewer closed
+routing/final admission but found a stale-context creation race. Native83 compiled and
+genuinely failed its ordering regression: an A-bound preparation persisted after B
+selection and blocked returning to A. The bounded correction now validates selection
+before checkout materialization and persists creation intent under the shared lock;
+stale creation/preparation/authorization saves reject, while STOP/closure/recovery
+updates preserve existing records. Affected native checks and the same reviewer's
+R3 correction closure remain pending; routing/final-admission review is terminal.
 The existing brief anchor is restored with explicit historical labeling. Main owns
 later actual signed-app/grant/account/config/hooks/bookmark checks; no live retry,
 reprepare/new assignment, login/refresh, config mutation, installation or cleanup is

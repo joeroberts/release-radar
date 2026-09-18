@@ -147,19 +147,21 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             let bytes = try reader.read(path)
             return .init(path: path, digest: SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined())
         }
-        let tree = try provisioning.prepare(primaryRoot: project.canonicalRoot, checkout: paths.checkout,
-            projectID: project.projectID.rawValue, taskID: id, baseline: baseline)
-        let authorization = "Project onboarding authorizes the recorded bounded work \(work.ticketID)/\(work.taskID): \(work.outcome). Task: \(work.title)."
-        var assignment = ProjectExecutionAssignment(id: id, registration: registration, checkoutPath: paths.checkout.path, role: role,
-            permissionProfile: "rr-" + id, model: "gpt-5.6-terra", effort: role == .review ? "high" : "medium",
-            authorization: authorization, context: contexts,
-            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive", tree.commonGitDirectory, policy.primaryRoot],
-            worktree: tree, work: work, reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID)
-        assignment.codexContextID = policy.codexContextID
-        try assignment.verifyContext() // Pins must match committed checkout, not dirty primary edits.
-        try reader.verifyStable()
-        assignment.state = .preparing
-        try store.saveAssignment(assignment, expected: nil)
+        let assignment = try store.createAssignment(codexContextID: policy.codexContextID) {
+            let tree = try provisioning.prepare(primaryRoot: project.canonicalRoot, checkout: paths.checkout,
+                projectID: project.projectID.rawValue, taskID: id, baseline: baseline)
+            let authorization = "Project onboarding authorizes the recorded bounded work \(work.ticketID)/\(work.taskID): \(work.outcome). Task: \(work.title)."
+            var assignment = ProjectExecutionAssignment(id: id, registration: registration, checkoutPath: paths.checkout.path, role: role,
+                permissionProfile: "rr-" + id, model: "gpt-5.6-terra", effort: role == .review ? "high" : "medium",
+                authorization: authorization, context: contexts,
+                excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive", tree.commonGitDirectory, policy.primaryRoot],
+                worktree: tree, work: work, reviewOfAssignmentID: reviewOfAssignmentID, baselineFromAssignmentID: baselineFromAssignmentID)
+            assignment.codexContextID = policy.codexContextID
+            try assignment.verifyContext() // Pins must match committed checkout, not dirty primary edits.
+            try reader.verifyStable()
+            assignment.state = .preparing
+            return assignment
+        }
         return try await configure(assignment, paths: paths, policy: policy, store: store)
     }
 
