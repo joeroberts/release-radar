@@ -1,0 +1,12 @@
+Release Radar uses libgit2 1.9.5, copyright the libgit2 contributors.
+License: GNU GPL version 2 with the upstream linking exception; all upstream
+third-party notices are included verbatim in libgit2-COPYING.txt.
+
+Exact immutable upstream source revision:
+f7a4071c766ceea3915415e22134cbe3e581c420
+https://github.com/libgit2/libgit2/tree/f7a4071c766ceea3915415e22134cbe3e581c420
+
+The complete corresponding, unmodified upstream source archive accompanies this
+application as libgit2-source.tar.gz in this directory. Build integration uses
+that verified archive offline. The application uses only local repository APIs;
+HTTPS, SSH, NTLM and GSSAPI are disabled in this build, with system regcomp.

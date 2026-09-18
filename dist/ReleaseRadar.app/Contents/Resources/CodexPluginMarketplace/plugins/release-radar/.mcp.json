@@ -2,5 +2,9 @@
   "release_radar": {
     "command": "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarAgentTools",
     "args": []
+  },
+  "coordinator_workers": {
+    "command": "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator",
+    "args": ["--mcp"]
   }
 }

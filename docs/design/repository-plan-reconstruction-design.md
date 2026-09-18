@@ -2,8 +2,10 @@
 
 Status: owner-approved product decisions and entry-screen reference; independent
 architecture/security-recovery/UX design review passed with no findings.
-Documentation persistence and review are authorized.
-Implementation, publication and live Pursuit recovery are not authorized.
+Documentation persistence and review are authorized. Implementation is authorized
+only after the preceding repository-documentation reconciliation and the scoped
+design prerequisites identified below. Publication and live owner-data recovery
+remain separately authorized operations.
 
 ## Outcome and sequence
 
