@@ -5,7 +5,9 @@ public struct ResolvedProjectBookmark: Equatable, Sendable {
     public let isStale: Bool
 
     public init(url: URL, isStale: Bool) {
-        self.url = url.standardizedFileURL.resolvingSymlinksInPath()
+        // Scope ownership belongs to the URL returned by Foundation. Callers
+        // canonicalize separately when comparing physical folder identity.
+        self.url = url
         self.isStale = isStale
     }
 }
@@ -59,7 +61,7 @@ public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
 
     public func makeBookmark(for url: URL) throws -> Data {
         do {
-            return try url.standardizedFileURL.resolvingSymlinksInPath().bookmarkData(
+            return try url.bookmarkData(
                 options: [.withSecurityScope],
                 includingResourceValuesForKeys: nil,
                 relativeTo: nil
@@ -77,6 +79,12 @@ public struct ProjectBookmarkStore: ProjectBookmarkStoring, Sendable {
         } catch {
             throw ProjectBookmarkError.bookmarkResolutionFailed
         }
+    }
+
+    // Execution diagnostics retain only sanitized Foundation error codes. The
+    // ordinary onboarding error contract remains unchanged.
+    func resolveForExecutionContext(_ bookmark: Data) throws -> ResolvedProjectBookmark {
+        try bookmarkResolver(bookmark)
     }
 
     private static func resolveBookmark(_ bookmark: Data) throws -> ResolvedProjectBookmark {

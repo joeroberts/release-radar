@@ -1,9 +1,179 @@
 import Foundation
 import Security
 import XCTest
+@testable import ReleaseRadar
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionAppServerTests: XCTestCase {
+    func testProductionSetupBindingRejectsAbsentChangedAndUnboundContextsWithoutLaunch() async throws {
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
+        let files = try ProjectExecutionFileStore(root: root, create: true)
+        let client = ProjectExecutionSetupClient(plugin: nil, executionRoot: { root }, contextAccessFactory: { context, files in
+            try CodexExecutionContextLease(context: context, current: { try files.codexContext() },
+                resolve: { _ in .init(url: URL(fileURLWithPath: context.homePath), isStale: false) },
+                start: { _ in true }, stop: { _ in })
+        })
+        do { _ = try await client.selectedCodexContextID(); XCTFail("Missing selection must block") } catch {}
+        do { try await client.useCodexContext(nil); XCTFail("Unbound policy must block") } catch {}
+        let context = try CodexExecutionContext(home: root, bookmark: Data([1]))
+        try files.saveCodexContext(context, expected: nil)
+        let selectedID = try await client.selectedCodexContextID()
+        XCTAssertEqual(selectedID, context.id)
+        try await client.useCodexContext(context.id)
+        do { try await client.useCodexContext(UUID()); XCTFail("Prompt/foreign identity cannot substitute context") } catch {}
+        let changed = try CodexExecutionContext(home: root, bookmark: Data([2]))
+        try files.saveCodexContext(changed, expected: context)
+        do { try await client.useCodexContext(context.id); XCTFail("Changed selection must block") } catch {}
+        try await client.finishConfiguration()
+        XCTAssertEqual(try files.codexContext(), changed)
+    }
+
+    @MainActor
+    func testCodexFolderPickerRequiresExistingExactFolderAndExplainsGrant() {
+        let panel = CodexFolderAccessPanel.make()
+        XCTAssertTrue(panel.canChooseDirectories)
+        XCTAssertFalse(panel.canChooseFiles)
+        XCTAssertFalse(panel.allowsMultipleSelection)
+        XCTAssertFalse(panel.canCreateDirectories)
+        XCTAssertTrue(panel.showsHiddenFiles)
+        XCTAssertTrue(panel.message.contains("authentication and history"))
+        XCTAssertFalse(panel.resolvesAliases)
+    }
+
+    func testSelectedContextEnvironmentRemovesInheritedAuthenticationAndStateOverrides() {
+        let original = ["HOME": "/sandbox-home", "CODEX_HOME": "/wrong-home", "CODEX_SQLITE_HOME": "/wrong-state",
+            "CODEX_API_KEY": "fixture-secret", "OPENAI_API_KEY": "fixture-secret", "CODEX_ACCESS_TOKEN": "fixture-secret",
+            "OPENAI_IDENTITY_TOKEN_FILE": "/wrong-token", "OPENAI_FEDERATION_RULE_ID": "fixture-rule",
+            "OPENAI_BASE_URL": "https://provider.invalid/v1", "PATH": "/usr/bin:/bin"]
+        let environment = AppServerTransport.selectedContextEnvironment(homePath: "/existing-codex", inherited: original)
+        XCTAssertEqual(environment["CODEX_HOME"], "/existing-codex")
+        XCTAssertEqual(environment["HOME"], original["HOME"])
+        XCTAssertEqual(environment["PATH"], original["PATH"])
+        for key in ["CODEX_SQLITE_HOME", "CODEX_API_KEY", "OPENAI_API_KEY", "OPENAI_BASE_URL", "CODEX_ACCESS_TOKEN", "OPENAI_IDENTITY_TOKEN_FILE", "OPENAI_FEDERATION_RULE_ID"] {
+            XCTAssertNil(environment[key])
+        }
+        XCTAssertEqual(original["CODEX_HOME"], "/wrong-home", "No persistent environment/config mutation")
+        XCTAssertTrue(AppServerTransport.executionSetupArguments.contains("default_permissions=\":read-only\""))
+    }
+
+    func testPrimaryHookDiscoveryUsesCanonicalRootAndLinkedDiscoveryKeepsActualCheckout() throws {
+        let primary = "/var"
+        let canonical = try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: primary)
+        XCTAssertEqual(ProjectExecutionSetupClient.hookDiscoveryCheckout(
+            primaryRoot: primary, canonicalPrimaryRoot: canonical, checkout: primary), "/private/var")
+        XCTAssertEqual(ProjectExecutionSetupClient.hookDiscoveryCheckout(
+            primaryRoot: canonical, canonicalPrimaryRoot: canonical, checkout: canonical), canonical)
+        let linked = "/var/linked-worker"
+        XCTAssertEqual(ProjectExecutionSetupClient.hookDiscoveryCheckout(
+            primaryRoot: primary, canonicalPrimaryRoot: canonical, checkout: linked), linked)
+    }
+
+    func testProjectTrustKeyUsesFilesystemCanonicalSystemAlias() throws {
+        let foundation = URL(fileURLWithPath: "/var").resolvingSymlinksInPath().path
+        let canonical = try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: "/var")
+        XCTAssertEqual(canonical, "/private/var")
+        XCTAssertEqual(try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: foundation), canonical)
+        XCTAssertEqual(try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: canonical), canonical)
+        print("RR trust-key resolver Foundation /var=\(foundation); filesystem canonical=\(canonical)")
+    }
+
+    func testProjectTrustKeyResolutionFailureRefusesReadiness() {
+        let missing = "/var/rr-missing-trust-root-" + UUID().uuidString
+        XCTAssertThrowsError(try ProjectExecutionSetupClient.canonicalProjectTrustKey(primaryRoot: missing)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+        }
+    }
+
+    func testCanonicalProjectTrustNeedsNoWriteAndKeepsAliasEntries() throws {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        let projects: [String: Any] = [primary: ["trust_level": "trusted"],
+                                      canonical: ["trust_level": "trusted"],
+                                      "/unrelated": ["trust_level": "untrusted"]]
+        for permitted in [false, true] {
+            XCTAssertFalse(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted))
+            XCTAssertFalse(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                primaryRoot: canonical, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted))
+        }
+        XCTAssertEqual((projects[primary] as? [String: String])?["trust_level"], "trusted")
+        XCTAssertEqual((projects["/unrelated"] as? [String: String])?["trust_level"], "untrusted")
+        XCTAssertFalse(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical,
+            projects: [canonical: ["trust_level": "trusted"]], permitOwnedTrust: false))
+    }
+
+    func testAliasOnlyTrustRequiresPermittedCanonicalWrite() throws {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        let projects: [String: Any] = [primary: ["trust_level": "trusted"]]
+        XCTAssertTrue(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: true))
+        XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: false)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+        }
+        XCTAssertTrue(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: [:], permitOwnedTrust: true))
+        XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+            primaryRoot: primary, canonicalKey: canonical, projects: [:], permitOwnedTrust: false)) {
+            XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+        }
+        XCTAssertNil(projects[canonical], "Deciding whether a write is permitted must not mutate aliases or trust")
+    }
+
+    func testRelevantProjectDistrustAndConflictsAlwaysRefuseTrust() {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        for rejectedKey in [primary, canonical] {
+            for permitted in [false, true] {
+                var projects: [String: Any] = [primary: ["trust_level": "trusted"],
+                                               canonical: ["trust_level": "trusted"]]
+                projects[rejectedKey] = ["trust_level": "untrusted"]
+                XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                    primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted)) {
+                    XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+                }
+                projects.removeValue(forKey: rejectedKey == primary ? canonical : primary)
+                XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                    primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted)) {
+                    XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+                }
+            }
+        }
+    }
+
+    func testMalformedRelevantProjectTrustAlwaysRefusesTrust() {
+        let primary = "/var/fixture", canonical = "/private/var/fixture"
+        let malformed: [Any] = ["trusted", NSNull(), 7,
+                                ["trust_level": NSNull()], ["trust_level": true], ["trust_level": ["trusted"]]]
+        for rejectedKey in [primary, canonical] {
+            for value in malformed {
+                for permitted in [false, true] {
+                    var projects: [String: Any] = [primary: ["trust_level": "trusted"],
+                                                   canonical: ["trust_level": "trusted"]]
+                    projects[rejectedKey] = value
+                    XCTAssertThrowsError(try ProjectExecutionSetupClient.needsProjectTrustWrite(
+                        primaryRoot: primary, canonicalKey: canonical, projects: projects, permitOwnedTrust: permitted)) {
+                        XCTAssertEqual($0 as? ProjectExecutionError, .hookNotReady)
+                    }
+                }
+            }
+        }
+    }
+
+    func testDisabledReasonDiagnosticRetainsBoundedRedactedUnknownText() {
+        let checkout = "/fixture/checkout  with spaces"
+        let primaryRoot = "/fixture/primary  root"
+        let home = "/fixture/home  directory"
+        let reason = "disabled\nfor \(checkout) and \(primaryRoot) using \(home)/.codex/config.toml from \(home)"
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic(reason, checkout: checkout, primaryRoot: primaryRoot, userHome: home),
+                       "disabled for <checkout> and <primary-root> using <user-config> from <user-home>")
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic("unknown reason", checkout: checkout, primaryRoot: primaryRoot, userHome: home), "unknown reason")
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic("\u{2028}\n", checkout: checkout, primaryRoot: primaryRoot, userHome: home), "<empty>")
+        let oversized = String(repeating: "x", count: 241)
+        let capped = ProjectExecutionSetupClient.disabledReasonDiagnostic(oversized, checkout: checkout, primaryRoot: primaryRoot, userHome: home)
+        XCTAssertEqual(capped.count, 241)
+        XCTAssertTrue(capped.hasSuffix("…"))
+    }
+
     func testSetupTransportReadsPermissionTablesWithoutChangingOwnerDefault() async throws {
         let home = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let codex = home.appendingPathComponent("codex")

@@ -29,6 +29,27 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     }
     deinit { close(descriptor) }
 
+    public func codexContext() throws -> CodexExecutionContext? {
+        try lock.withLock {
+            let path = ["CodexContext", "selection.json"]
+            return try exists(path) ? read(CodexExecutionContext.self, path: path) : nil
+        }
+    }
+
+    /// Explicit owner selection only. Uses the same protected selection receipt/CAS boundary.
+    public func saveCodexContext(_ context: CodexExecutionContext, expected: CodexExecutionContext?) throws {
+        try context.validateFolder()
+        try withAuthorityLock(["context-selection"]) {
+            try lock.withLock {
+                let path = ["CodexContext", "selection.json"]
+                if let expected, !expected.identifiesSameFolder(as: context) {
+                    try requireRetiredCodexResources()
+                }
+                try withAuthorityLock(path) { try write(context, expected: expected, path: path) }
+            }
+        }
+    }
+
     public func policy(projectID: String) throws -> ProjectExecutionPolicy {
         try lock.withLock { try read(ProjectExecutionPolicy.self, path: ["Projects", ProjectExecutionPaths.component(projectID), "policy.json"]) }
     }
@@ -96,18 +117,92 @@ public final class ProjectExecutionFileStore: @unchecked Sendable {
     }
 
     public func savePolicy(_ value: ProjectExecutionPolicy, expected: ProjectExecutionPolicy?) throws {
-        try lock.withLock {
-            let path = ["Projects", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), "policy.json"]
-            try withAuthorityLock(path) { try write(value, expected: expected, path: path) }
+        try withAuthorityLock(["context-selection"]) {
+            try lock.withLock {
+                let path = ["Projects", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), "policy.json"]
+                try withAuthorityLock(path) { try write(value, expected: expected, path: path) }
+            }
         }
     }
 
     public func saveAssignment(_ value: ProjectExecutionAssignment, expected: ProjectExecutionAssignment?) throws {
         try value.validated()
-        try lock.withLock {
-            let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
-            try withAuthorityLock(path) { try write(value, expected: expected, path: path) }
+        let selectionSensitive = expected == nil || value.state == .preparing || value.state == .authorized
+        let persist = {
+            try self.lock.withLock {
+                let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
+                if selectionSensitive {
+                    try self.requireSelectedCodexContext(value.codexContextID)
+                }
+                try self.withAuthorityLock(path) { try self.write(value, expected: expected, path: path) }
+            }
         }
+        if selectionSensitive { try withAuthorityLock(["context-selection"], persist) }
+        else { try persist() } // STOP/closure cannot wait behind unrelated provisioning.
+    }
+
+    /// Validate selection before materializing a checkout, then persist its intent
+    /// before allowing a different-home selection to inspect the resource inventory.
+    public func createAssignment(codexContextID: UUID?, prepare: () throws -> ProjectExecutionAssignment) throws -> ProjectExecutionAssignment {
+        try withAuthorityLock(["context-selection"]) {
+            try lock.withLock { try requireSelectedCodexContext(codexContextID) }
+            let value = try prepare() // Keep the instance mutex available to STOP/closure.
+            try value.validated()
+            guard value.codexContextID == codexContextID else { throw CodexExecutionContextError.changed }
+            try lock.withLock {
+                let path = ["Assignments", try ProjectExecutionPaths.component(value.registration.projectID.rawValue), try ProjectExecutionPaths.component(value.id), "assignment.json"]
+                try withAuthorityLock(path) { try write(value, expected: Optional<ProjectExecutionAssignment>.none, path: path) }
+            }
+            return value
+        }
+    }
+
+    private func requireSelectedCodexContext(_ id: UUID?) throws {
+        // Legacy fixtures/records remain writable; production lifecycle admission
+        // independently rejects unbound contexts. Existing STOP/close updates remain available.
+        guard let id else { return }
+        let path = ["CodexContext", "selection.json"]
+        guard try exists(path), try read(CodexExecutionContext.self, path: path).id == id else { throw CodexExecutionContextError.changed }
+    }
+
+    /// A home switch cannot strand profiles, checkouts or installed hook ownership.
+    /// Called under the shared selection lock used by policy/assignment writers.
+    private func requireRetiredCodexResources() throws {
+        for project in try childNames(["Assignments"]) {
+            for task in try childNames(["Assignments", project]) {
+                let value = try read(ProjectExecutionAssignment.self, path: ["Assignments", project, task, "assignment.json"])
+                try value.validated()
+                guard value.id == task, value.registration.projectID.rawValue == project else { throw ProjectExecutionError.identityMismatch }
+                guard value.retirement?.completed == true else { throw CodexExecutionContextError.resourcesRetained }
+            }
+        }
+        for project in try childNames(["Projects"]) {
+            let value = try read(ProjectExecutionPolicy.self, path: ["Projects", project, "policy.json"])
+            guard value.registration.projectID.rawValue == project else { throw ProjectExecutionError.identityMismatch }
+            guard value.hookReceipt?.installed != true else { throw CodexExecutionContextError.resourcesRetained }
+        }
+    }
+
+    private func childNames(_ path: [String]) throws -> [String] {
+        guard try exists(path) else { return [] }
+        let directory = try parent(path + ["unused"], create: false); defer { close(directory) }
+        let listing = openat(directory, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard listing >= 0, let stream = fdopendir(listing) else {
+            if listing >= 0 { close(listing) }; throw ProjectExecutionError.unavailable
+        }
+        defer { closedir(stream) }
+        var names = [String](); errno = 0
+        while let entry = readdir(stream) {
+            let name = withUnsafePointer(to: &entry.pointee.d_name) {
+                $0.withMemoryRebound(to: CChar.self, capacity: 256) { String(cString: $0) }
+            }
+            if name == "." || name == ".." { continue }
+            try ProjectExecutionPaths.component(name)
+            guard names.count < 1000 else { throw ProjectExecutionError.unavailable }
+            names.append(name); errno = 0
+        }
+        guard errno == 0 else { throw ProjectExecutionError.unavailable }
+        return names
     }
 
     /// Serialize cooperating native writers across process instances. The stable

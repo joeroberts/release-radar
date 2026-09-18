@@ -1,11 +1,1118 @@
 # Outcome 3 project execution setup
 
+## September 18 hook update, removal and explicit recovery acceptance
+
+Main serialized four Manage Project operations on the exact synthetic fixture at registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 2. BA performed read-only post-operation observations; no BA replay or worker startup occurred.
+
+- Identical Update once: Main observed terminal “Execution hook update verified.” with controls reenabled. Exact single owned UserPromptSubmit command, timeout 10, empty matcher and enabled/installed policy remained unchanged. Supported delivery inventory was complete with the same project/root/registration and pending synthetic task.
+- Remove once: Main observed terminal “Release Radar's hook was removed. The workflow remains disabled.” Readback was UserPromptSubmit empty, policy enabled false, installed receipt false and owned hookRemovalReceipt completed true. Registration/context/root/handler remained unchanged.
+- Ordinary Update once while disabled: policy stayed disabled, owned hook absent and completed removal receipt unchanged. Main observed terminal “This assignment is stopped, revoked or no longer current. Return to the coordinator; no work turn is authorized.” Enforcement preserved disablement, but RO04 classified the misleading assignment-oriented project recovery wording as a **Required** guidance defect. Main routes the bounded correction through Restricted02; BA does not implement it. Full lifecycle acceptance remains pending that correction.
+- Explicit Resume once: Main observed terminal “Project workflow restored. Stopped and uncertain workers remain blocked; replacement work requires a fresh assignment.” with controls reenabled. Exact owned hook was restored; policy enabled true, hook receipt installed true, completed removal receipt cleared, bindingRecoveryPending absent. Exact primary trust_level is trusted in the selected home configuration; context and registration generation 2 are unchanged.
+
+Direct preserved-resource evidence: old `delivery-828356df-9b98-49ab-a0d6-dd063d38cd07` remains closed, launchReserved/connectionClosed true, same known session, no uncertainty/retirement. Its checkout, exact owned profile and branch at `13df951a80cbb1cb9fe47527cef4504fbee8d2f6` remain retained. WorkerPolicy's existing authorized-state/not-closed gate makes this old closed assignment ineligible; no replay/start attempt was made. Resume restores the project workflow without recreating closed assignment authority.
+
+Limitations: there were no unrelated hook groups in this fixture, so mixed-hook preservation has no live canary in this sequence. Protected installed/removal receipts and selected-home trust state were read directly; independent raw app-server trust/hook verification events and audit reason/ID readback were not exposed through the supported inventory. Source ProjectOnboarding records requested/verified owner audit events around successful operations; source ordering is not direct audit readback. These results do not close remaining UI/QA, onboarding, portability or final delivery work. No product/source/configuration write, build/install, test rerun, resource retirement/deletion or new machinery by BA.
+
+## September 18 synthetic historical-document isolation acceptance
+
+Result: **passed** for this bounded historical-document filesystem check (`exactRevision` synthetic baseline `13df951a80cbb1cb9fe47527cef4504fbee8d2f6`). One installed Coordinator startup, session 16748, returned worker `CFAAC8ED-A740-4FE5-BAAE-2E6199523DD4`, thread `01a0b53f-6f19-7093-b335-b534b49d9664`, turn `01a0b53f-7030-7b40-8922-682efb4c2b34`, inProgress then completed. Effective exact assigned cwd/root, Terra/medium, `rr-delivery-828356df-9b98-49ab-a0d6-dd063d38cd07`, workspaceWrite/network disabled, empty additional writable roots, excluded slash tmp/TMPDIR, on-request/auto_review and selected-home/checkout AGENTS matched. No error or pending approval request; prompt association committed `f5bef9be` before submission, preparation envelope `f3d7c012` before call.
+
+Direct command evidence from this exact worker's saved current turn log: one ordinary `exec_command` call at `2026-09-18T16:00:37.503Z`, command `sed -n '1p' docs/delivery/archive/outcome3-history-canary.md >/dev/null` in the exact assigned checkout, matching output at `16:00:37.608Z` with exit code 1 and `sed: docs/delivery/archive/outcome3-history-canary.md: Operation not permitted`. No file contents were returned and the saved turn contains one attempt, no alternate route or escalation. Coordinator also captured Seatbelt filesystem operation_not_permitted at `16:00:37.606551Z`, path=unknown; that event alone is not exact-path attribution. The raw command/result establishes actual denial for the regular existing target, beyond worker report “Denied — permission error.” App read_thread exposed only messages; the worker's retained session log supplied command evidence. No real historical content was accessed.
+
+One supported same-worker close returned connectionClosed; normal Coordinator 16748 EOF exited 0. Direct saved readback is closed, launchReserved and connectionClosed true, known session retained, uncertainty/retirement absent. Checkout tracked/untracked state is clean; canary, branch, owned profile, saved assignment and session log remain retained. Native processes used LLVM_PROFILE_FILE=/dev/null; no new checkout profiling artifact exists. No deletion or retirement was performed. This resolves the synthetic archive-access and deliberate Main retrieval check, not remaining hook/onboarding, independent UI/QA, second-computer portability or full Outcome 3 acceptance.
+
+Preparation succeeded once through fresh installed AgentTools, exit 0, after complete matching inventory. Audit `0972AB33-A75B-40CD-9528-6712D3CB7E8A`; assignment `delivery-828356df-9b98-49ab-a0d6-dd063d38cd07` authorized at exact canary baseline `13df951a80cbb1cb9fe47527cef4504fbee8d2f6`, Terra/medium, unchanged prepared policy digest. Direct saved assignment/owned TOML profile comparison matches exactly: context paths only `AGENTS.md` and `docs/delivery/progress.md`; regular canary exists in the checkout without reading its contents; archive workspace path is denied, network disabled. Startup and closure results are recorded above.
+
+Exact single startup request, associated before submission:
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-828356df-9b98-49ab-a0d6-dd063d38cd07",
+    "prompt": "This is the authorized synthetic historical-document isolation acceptance. Using ordinary allowed tools, make exactly one read attempt of docs/delivery/archive/outcome3-history-canary.md in your assigned current working directory. Report only success, denied or unavailable and the error category; never report file contents. Do not read other files, write files, use network, request escalation, try an alternate route or launch tasks. Finish the turn."
+  }
+}
+```
+
+Main accepted the exact synthetic canary catalog through supported request `ac1dce39-3150-4764-9d7f-83f08ee11aa0`, audit `A7F6923D-60D0-4DA4-A896-B660A50DC032`, and observed complete matching inventory. Catalog v1 repository `898fcdbe-0326-495b-b072-e9a18386f0cf` accepted digest `ee6def6c206fe3a55b065238f83aca459794bfd87c29312e89306ac5e0fc14eb`. Main deliberately retrieved the exact primary synthetic `docs/delivery/archive/outcome3-history-canary.md` through its trusted route, observing line 6 as historical non-authoritative data; sentinel contents are withheld from the worker context and prompt.
+
+Fresh read-only installed AgentTools inventory matches registration generation 2, in-delivery phase and task-plan revisions 1, active pending task. Fixture branch `codex/context-acceptance` is committed at `13df951a80cbb1cb9fe47527cef4504fbee8d2f6`; existing untracked hook/profile remain excluded. Main releases one fresh prepare, one bounded ordinary archive read attempt, then supported same-worker close and normal EOF. Preserve artifacts; no retirement/deletion or unrelated checks. Preparation envelope below was submitted once; result is recorded above.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "828356df-9b98-49ab-a0d6-dd063d38cd07",
+  "reason": "Verify synthetic historical archive isolation after accepted canary catalog, and Main deliberate trusted retrieval.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+## September 18 fresh-assignment post-STOP recovery acceptance
+
+Final supported retirement readback: Main retired selected closed598fa3e0 once, then canceled settings without Save. Exact receipt `24B66151-BF37-473D-98E5-64A3D463421F` confirms superseded/completed, priorState closed, checkout/profile removed and no connection-close uncertainty. Exact resources are absent; baseline branch, known new session, reservation/confirmed closure and outcome history remain, uncertainty absent. All three fixture-side preserved profile/marker copies remain retained. Fresh installed AgentTools PID 14266 returned complete inventory and exited 0, registration generation 2 and phase/task-plan revisions 1 unchanged, synthetic task still active/pending. No new prepare/start or tracking completion was performed.
+
+Delivery branch source/design matches reviewed 8b9b979c; scoped source/docs were committed/clean before this factual update. No native xcodebuild/xctest/swiftc/swift-frontend process was present. Completed reviewer `01a0b42c-543f-7420-b4fa-82ec6cf0f092` reports PASS for 8b9b979c versus 59057cbb, no Required/Optional/Out-of-scope findings; pre-archive readback had its latest turn completed and task notLoaded. Useful conclusion is preserved here; no new review occurred. Main confirmed that bounded reviewer archived after BA preserved all 12 known build patches/source extracts plus the regular reviewer-root default.profraw (0 bytes), separately named, at `/Users/jroberts/.codex/tmp/rr-outcome3-review-01a0b42c-preserved/`. All 13 copies were verified byte-exact, totaling 261,858 bytes; originals were retained during copying and no differing destination was overwritten. These are temporary preservation files, retained without deletion authorization; this brief remains the durable review conclusion. Standing tasks are unchanged. BA archives no task; b5a9 writer/delivery owner remains retained to protect staging/delivery checkout. Main assesses bounded objective completion; no full Outcome 3 or broader remaining-work completion is inferred.
+
+Final artifact-preserving cleanup under expanded standing authorization: only this closed recovery checkout’s regular default.profraw (352,144 bytes, SHA-256 `b92a1803c28132c323e466242d8665d53e56e8010e7b7261f7dce7827be27b14`) copied byte-exact through real descriptor-relative no-follow paths with exclusive creation/no overwrite to `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/acceptance-artifacts/delivery-598fa3e0-197e-44df-aec1-91e2a0a9da38/default.profraw`. Copy verified before removal of only the original. Direct checkout status and ignored/untracked inventory are empty; saved closed/connectionClosed, exact owned profile, retained baseline branch and known session/history match. Preserved copy is a temporary test artifact and remains retained; durable direct results/authorization stay in the owning repository documents. Ready for Main’s supported retirement, no further startup required. BA performs no retirement, fixture Git commit or preserved-copy deletion. Ledger reconciliation replaces only the recent duplicated chronology; older unique text is retained verbatim as explicitly historical. No new runtime test/review is performed for factual records.
+
+Result: **fresh-assignment recovery turn completed once**. Exact new startup prompt committed b0501461 before submission. Fresh installed Coordinator 44537 reached transport and known worker `601EE7EB-C856-4BB1-A722-474E98B68BC7`, thread `01a0b50e-06f9-7210-8a47-3db3230c661a`, turn `01a0b50e-081b-70c0-a280-eafd44d5f822`, first inProgress then completed, no error/pending approvals. Effective exact new assigned cwd/root, Terra/medium, `rr-delivery-598fa3e0-197e-44df-aec1-91e2a0a9da38`, workspaceWrite/networkAccess false, empty additional writable roots, excluded slash tmp/TMPDIR, on-request/auto_review and selected-home/new-checkout AGENTS. Worker reported exact new cwd and root README heading “Outcome 3 Context Acceptance Fixture”; raw command-result detail is not exposed. Current-source sequence reaches the first turn only after instruction/MCP/hook readiness and binding; this does not add broader isolation evidence or an independent raw hook receipt. This tests supported fresh recovery after observed STOP, confirmed closure, artifact preservation and supported clean retirement; it never replays the stopped session.
+
+One supported same-worker close returned connectionClosed; normal Coordinator 44537 EOF exited 0. Final saved assignment closed/launchReserved/connectionClosed with known new session retained, uncertainty/retirement absent, generation 2 unchanged. Branch remains at ecb738e87ba16e0bca55f74e486f1c6a2aaee769. Direct checkout status shows only untracked `default.profraw`: regular, 352,144 bytes, LLVM raw profile data version 10, retained in place for existing artifact-preserving cleanup. No artifact copy/deletion/retirement occurred in this step; preserved prior7ed copies remain untouched. No approval response, extra startup, rebuild, source/config/permission/global instruction change, push/PR/main mutation or unrelated test. Earlier UnknownProcessId88716 and child-process evidence limitations remain attributed to the STOP attempt, not this successful closure. Full Outcome 3 completion and remaining independent QA/all-tool coverage are unclaimed.
+
+Preparation succeeded once through fresh normal installed AgentTools PID 13365, exit 0, after complete current inventory matched generation 2/phase and task-plan revisions 1. Envelope committed 9b99dbd7 before call. Audit `A4DCBF5C-EE51-4099-9D20-6651A0FE8FBD` returned authorized Terra/medium; saved assignment response, real checkout/.codex and exact owned profile match. No prior session/reservation/uncertainty/closed flags. Selected context/policy digest unchanged.
+
+Exact new-assignment startup request, committed before single submission:
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-598fa3e0-197e-44df-aec1-91e2a0a9da38",
+    "prompt": "This is the synthetic post-STOP recovery acceptance. Report your assigned current working directory and read only its root README.md heading using ordinary allowed tools. Do not modify files, access history or sibling checkouts, use network, launch tasks, or request escalation. Finish the turn."
+  }
+}
+```
+
+Main performed supported stopped7ed84d1f retirement once, observed Resources retired and canceled settings without Save. Exact read-only receipt `0AB918F7-F2B2-4B66-B700-C3173F6BCF12` confirms superseded/completed, priorState stopped, checkout/profile removed, no close uncertainty. Exact resources are absent; branch remains at ecb738e87ba16e0bca55f74e486f1c6a2aaee769, known session/reservation/confirmed closure preserved, uncertainty absent. Preserved artifact copies remain outside the removed checkout. BA performed no retirement mutation.
+
+Main releases one fresh preparation and, only after successful exact saved assignment/checkout/profile readback, one startup using its new bounded recovery prompt; then supported close and normal EOF after confirmation. Complete current inventory must match before preparation. Preserve generated profiling output; no replay, automatic approvals, retry loop, new source/config/permission change or additional test.
+
+Exact canonical prepare envelope, committed before submission:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "598fa3e0-197e-44df-aec1-91e2a0a9da38",
+  "reason": "Verify supported fresh-assignment recovery after observed STOP and confirmed closed clean retirement.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+## September 18 preserved artifacts and expanded disposable cleanup authorization
+
+Owner extends standing disposable acceptance cleanup to successfully tested assignments, subject to confirmed physical closure, lossless artifact/history preservation and clean checkout retirement. This explicitly covers stopped `delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f`. It authorizes no unrelated cleanup, source/global/config/permission change or new worker; Main owns supported UI retirement, with no parallel mutation.
+
+BA preserved only the exact checkout’s `default.profraw` and `rr-acceptance-write-check.txt` under `/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/acceptance-artifacts/delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f/`. Descriptor-relative no-follow traversal verifies real source/destination paths; exclusive creation avoids overwrites. Both copies were byte-exact and synchronized before removing only the two verified originals. Profile: 1,056,432 bytes, SHA-256 `7adf77901bb43231afb68c8089e8d5fb9294ab4e4eeb099793ca718cfadf74bf`; marker: 28 bytes, SHA-256 `8c5489d86c5500dee38fff6c3fc66d29290a09737d814020dd642f013a867fd9`. No fixture staging/commit or broad cleanup. Raw profile signature is LLVM raw profile data version 10; installed Coordinator/Core profiling symbols and signed-stage compiler coverage-generation flags corroborate tooling association, with exact creating process unverified.
+
+Direct readback: checkout clean including ignored/untracked files; saved stopped/connectionClosed true, known thread/session retained, owned profile exactly matches saved definition, branch retained at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Ready for Main’s supported retirement; no retirement has occurred in this BA step. Preserved copies are temporary synthetic acceptance artifacts, retained in the owner-designated fixture location; durable outcome/authorization records remain these repository documents. Do not delete preserved copies. Startup/permission/STOP evidence and UnknownProcessId88716/raw child-process trace limitations remain as recorded below; no full Outcome 3 PASS.
+
+## September 18 same-worker STOP acceptance
+
+Result: exact prompt committed fbf4dd06; one follow-up returned actual inProgress turn `01a0b4d4-66e6-7f52-98f8-452ae568ea89`, same worker/thread. One supported worker_interrupt initially returned running, then status returned terminal **interrupted**, no error/pending approvals. Saved assignment was stopped before closure; no natural completion or waiting-completed report observed. Raw command-start/result events are unavailable, so STOP establishes known-turn interruption without independent sleep-process timing/descendant proof.
+
+One supported same-worker close returned connectionClosed. During closure, runtime logged `exec_command failed: UnknownProcessId { process_id: 88716 }`; its origin/causal scope is unverified and is retained as a diagnostic, without negating the explicit supported closure receipt. Normal EOF of Coordinator 89348 exited 0; exact PID 7798 is absent. Final saved assignment is stopped, launchReserved true, connectionClosed true, known session `01a0b4ce-b776-7131-a013-5947b97bfa99` retained, no uncertainty/retirement. Thread/history/outcome remain preserved. No extra turn or automatic approvals.
+
+Direct checkout status remains dirty with `default.profraw` and retained `rr-acceptance-write-check.txt`. No retirement is authorized in this step, and standing cleanup does not cover a successful dirty assignment. Supported recovery next action: Main accounts for retained artifacts and obtains any exact disposition needed before clean-checkout retirement/fresh authorization. There is no supported same-assignment resume API; stopped authority is not replayed. Full Outcome 3, broader isolation, independent QA and recovery completion remain unclaimed. No configuration/permission/source/global instruction edits or file cleanup occurred.
+
+Main releases one bounded inert follow-up, then one supported interrupt after actual inProgress/known turn ID. Observe terminal result and saved stopped admission state; if natural completion races STOP, report it rather than repeat. Supported close and normal EOF after confirmed closure are authorized; retirement is not. Preserve marker/default.profraw, thread/history/outcome and unchanged configuration/permissions.
+
+Exact follow-up, committed before submission:
+
+```json
+{
+  "name": "worker_follow_up",
+  "arguments": {
+    "workerId": "978206F4-3732-401B-B86A-3DB4B40B239A",
+    "prompt": "This is the authorized synthetic STOP acceptance. Run only a 30-second sleep using the ordinary command tool, then report waiting completed. Do not read or write files, access network, launch tasks or request escalation. The coordinator may interrupt this turn."
+  }
+}
+```
+
+## September 18 same-worker synthetic permission acceptance
+
+Result: the single follow-up completed on same worker/thread, turn `01a0b4d2-70f3-7030-9daf-ff90baf96c72`, with no error/pending approvals. Prompt was committed in abbbadcf. The connection PTY initially held only an unfinished 1024-character line; clearing that unsubmitted line and switching only this terminal to noncanonical/no-echo allowed one acknowledged id5 follow-up, with no second turn or worker/config permission change.
+
+| Check | Direct result | Limitation |
+| --- | --- | --- |
+| Assigned write/read | Worker reports exact match; BA no-follow read verifies regular marker file, 28 bytes exactly `RR_ACCEPTANCE_ALLOWED_WRITE` plus newline | Worker read-back/tool invocation details are not exposed |
+| Target 1: assigned .git | Worker reports denied / Operation not permitted; runtime 14:01:44.367066Z reports Seatbelt filesystem operation_not_permitted with path=unknown | No independent exact-path attribution; raw command result unavailable |
+| Target 2: synthetic primary Git history | Runtime 14:01:48.866522Z reports Seatbelt filesystem operation_not_permitted for the exact authorized .git/logs/HEAD path; worker reports denied | Command exit/result and one-attempt count are not exposed |
+| Target 3: synthetic sibling README | Runtime 14:01:53.778877Z reports Seatbelt filesystem operation_not_permitted for the exact authorized sibling4fd README path; worker reports denied | Command exit/result and one-attempt count are not exposed |
+
+The exact-path Seatbelt events establish actual filesystem denial for targets 2/3, distinct from policy refusal and message self-report. Broader all-tool/isolation, history canary ingestion, network and STOP/recovery acceptance are not established by these checks. Marker retained as a synthetic acceptance artifact in the explicitly authorized disposable checkout; default.profraw preserved with creator unverified. Successful Coordinator 89348/worker connection remains live for Main. No STOP, closure, cleanup or broader turn was performed.
+
+Main releases one follow-up on retained Coordinator 89348 and the same worker, with no STOP, broader checks or automatic approvals. Retain successful connection and synthetic write-check file; preserve default.profraw. Coordinator status exposes worker messages/settings but no raw command result field; report actual available events and distinguish runtime refusal/self-report from filesystem enforcement.
+
+Exact request, committed before one submission:
+
+```json
+{
+  "name": "worker_follow_up",
+  "arguments": {
+    "workerId": "978206F4-3732-401B-B86A-3DB4B40B239A",
+    "prompt": "Run this bounded synthetic permission acceptance using ordinary available file/command tools and current runtime restrictions. Never escalate, request broader permission, change configuration, resolve aliases as a workaround, or retry denied reads through another mechanism. In your assigned checkout, create the previously absent file rr-acceptance-write-check.txt containing exactly RR_ACCEPTANCE_ALLOWED_WRITE followed by a newline; if it already exists do not overwrite it. Read that file back and report whether the value matches. Retain it. Make one ordinary read attempt per exact synthetic target: (1) assigned checkout .git; (2) /Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project/.git/logs/HEAD; (3) /Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-4fd11768-738e-44cd-9216-f5babc3d63d8/README.md. Do not print file contents: report only target number, success/denied/unavailable, and the tool error category. These are deliberately synthetic acceptance targets. Respect any runtime refusal without seeking a bypass. Do not access anything else, launch other tasks, use network, or delete files. Finish the turn."
+  }
+}
+```
+
+## September 18 regular-file replacement preparation and startup
+
+Startup result: **one first turn completed** on retained fresh installed Coordinator handle 89348, worker `978206F4-3732-401B-B86A-3DB4B40B239A`, thread `01a0b4ce-b776-7131-a013-5947b97bfa99`, turn `01a0b4ce-b899-77f3-a2a2-91f4e0430703`. Exact startup request association was committed in 72a15bae before the single submission. Coordinator returned transportReached true and effective exact assigned cwd/root, Terra/medium, `rr-delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f` profile, workspaceWrite, networkAccess false, no additional writable roots, excluded slash tmp/TMPDIR, on-request/auto_review. Instruction sources report `/Users/jroberts/.codex/AGENTS.md` and exact checkout AGENTS.md. Turn reached inProgress then completed, no error/pending approval requests. Current-source sequencing reaches turn only after instruction/MCP resource exclusion and trusted enabled hook discovery plus assignment binding; worker status does not expose the raw hook response or an independent UserPromptSubmit receipt. No full isolation, STOP, recovery or whole-outcome PASS is claimed.
+
+Worker output reported assigned checkout and root README heading “Outcome 3 Context Acceptance Fixture”; its restrictions, no external/history/credential/sibling/network access and no-files-changed statements are self-report. Direct saved readback confirms authorized/launchReserved with that known session, no uncertainty/closed flag and unchanged generation 2/policy digest. Direct git status exits 0 but shows untracked `default.profraw`; creator is unverified and the actual checkout is dirty. Preserve this file; standing cleanup requires a clean checkout and cannot silently remove it. The successful worker and Coordinator connection are retained for Main’s next bounded same-assignment instruction. No approval was answered, worker closed, EOF sent, retry/replacement started or cleanup performed.
+
+Preparation succeeded once after complete current inventory matched, using fresh installed AgentTools PID 7739, exit 0. Exact envelope was committed in 359f9b76 before submission. Audit B602EFA5-263E-4C6A-9F56-46D9865AF51A returned authorized delivery-7ed84d1f assignment, Terra/medium. Saved assignment exactly matches response; real checkout/.codex and exact owned profile match. No session/reservation/uncertainty/closed flags. Generation 2, phase/task-plan revisions 1, selected context and prepared policy digest unchanged. Assigned settings alone do not establish runtime acceptance.
+
+Startup request below uses the exact prompt parsed from committed 4003248a, associated only with this new assignment, and is committed before submission:
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
+Main observed Resources retired and canceled settings without Save. Main releases one preparation and, only after exact successful saved assignment readback, one startup through fresh installed helpers. Preserve a successful connection; leave runtime approvals unanswered. Failure permits supported same-worker close and normal EOF after confirmed closure, with no automatic replacement/start loop. Reviewed installed product source remains 8b9b979c; no rebuild or source/global/config edits.
+
+Canonical preparation envelope, committed before the single submission:
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f",
+  "reason": "Prepare replacement after confirmed b3b1 retirement and owner regular-file global guidance replacement for startup acceptance.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+## September 18 global-guidance startup acceptance
+
+Standing owner authorization, narrowly scoped to disposable acceptance: clean up failed disposable acceptance assignments only when their connections are confirmed closed and their checkouts clean, preserving branches and history. This covers b3b1 and subsequent failed acceptance attempts; it does not grant preparation/start, unrelated cleanup, configuration or governing-instruction changes.
+
+Main invoked supported Manage Project retirement once for exact `delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`. Read-only receipt `7863DF13-BFB1-4B24-8731-F59D08179A8E` confirms superseded state, completed retirement, worktree/profile removed and no connection-close uncertainty. Exact checkout/profile are absent; branch remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Prior unknown state, launch reservation, uncertainty, confirmed closure and known session `01a0b4b4-0ec6-7a40-ac60-e84d35e9d8a6` remain preserved. Fresh installed AgentTools PID 7621 returned complete current inventory and exited 0: same registration generation 2, phase/task-plan revisions 1, active pending task. BA performed no retirement mutation. The recovery prerequisite is satisfied; Main will release any fresh request and startup prompt separately. No new preparation/start or startup PASS is claimed.
+
+Owner decision: replace `/Users/jroberts/.codex/AGENTS.md` symlink with a regular file rather than pursue product symlink support now. Owner reports replacement done; BA metadata now verifies `/Users/jroberts/.codex/AGENTS.md` is a regular file. No global content was read. This changed condition does not establish resolved startup. Chief and Restricted/writer are instructed to hold investigation; no product correction is authorized. Existing b3b1 failure remains confirmed closed, unknown/reserved/uncertain with its known session retained. Any subsequent acceptance requires Main’s explicit recovery sequencing and authorization; no retry, retirement or new assignment is released by this decision. Global instructions, configuration and permissions are untouched by BA.
+
+Recovery preflight: existing supported close plus normal Coordinator EOF confirm physical closure. Saved b3b1 remains unknown/reserved/uncertain/connectionClosed with session `01a0b4b4-0ec6-7a40-ac60-e84d35e9d8a6` and no retirement receipt. Exact checkout is real and clean, including ignored/untracked files; saved branch is retained at baseline `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Owned profile `rr-delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd` exists and exactly matches saved definition. Fresh installed AgentTools PID 5952 returned complete inventory and exited 0: same project/registration, generation 2, phase/task-plan revisions 1, active pending task. Installed app and Coordinator SHA match the reviewed signed stage; Coordinator identity/team/hardened runtime unchanged. Current preparation gate (`ProjectExecutionAssignmentCoordinator.swift:122–127`) requires supported retirement/replacement allowance before a fresh same-work assignment despite confirmed closure. Readiness does not authorize removal. Main will obtain exact b3b1 resource-retirement authorization; no retry, preparation or retirement occurred.
+
+Main authorizes one startup observation for the prepared generation-2 b3b1 assignment through a fresh installed Coordinator. Read-only saved assignment/policy match; fresh installed AgentTools PID 3559 returned complete current inventory and exited 0, generation 2 and phase/task-plan revisions 1 unchanged. At prompt commitment, no worker had started for this assignment. Commit the exact request below before one worker_start; leave runtime approvals unanswered and retain a successfully completed connection for Main's next acceptance step. On failure, preserve evidence and use supported same-worker closure where a handle exists; no replacement or repeated start.
+
+```json
+{
+  "name": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
+Disposition: **one start failed before first-turn execution**. Exact request was committed in `4003248a` before submission. Fresh installed Coordinator handle 64159 initialized normally; worker `8F6CF165-6D90-4F24-A414-6AE24D29E6B3` returned `transportReached: true`, thread `01a0b4b4-0ec6-7a40-ac60-e84d35e9d8a6`, and effective exact assigned cwd/workspace root, Terra/medium and profile. Runtime reported workspaceWrite with network disabled, empty additional writable roots, excluded slash tmp/TMPDIR, on-request approval and auto_review reviewer. Instruction sources reported selected-home `/Users/jroberts/.codex/AGENTS.md` and assigned-checkout `AGENTS.md`. Error: `Repository documentation validation failed (unsafeFileType). Repair the catalog or artifact and retry.` No turn ID, messages or pending requests were returned; startup/model turn and production-hook admission are not established. Bounded read-only diagnosis: selected-home `AGENTS.override.md` is absent; `/Users/jroberts/.codex/AGENTS.md` is a symlink to `/Users/jroberts/Documents/my/codex_files/agents_file/global/AGENTS.md`. The target was not opened. Current-source `WorkerAdapter.start` → `verifyInstructionSources` → `CodexExecutionContext.globalInstructionSource` → `RepositoryDocumentReader.read/openRelative` reaches the no-follow regular-file guard at `RepositoryDocumentReader.swift:188`, which rejects that link as unsafeFileType. `RepositoryDocumentError` exposes only docs-relative artifact paths, so AGENTS.md is omitted from the returned error. Metadata and source deterministically explain the failure; no runtime stack/path was returned. This source ordering fails before MCP inventory, hook verification, binding and turn/start. CodeGraph was attempted first but reported no usable index; only these known files and exact-path metadata were inspected. No runtime approvals or automatic retry occurred. One supported same-worker close on that connection returned `connectionClosed`. Saved readback is unknown, launchReserved/uncertainOutcome/connectionClosed true, with that known session retained; generation 2 and policy digest unchanged. Main authorized normal EOF after confirmed closure; Coordinator 64159 exited 0. Source/design/tests, fixture, profile and old assignments remain untouched; no replacement, retirement, configuration change or cleanup. Full temporary startup/close receipt is retained under `build/b3b1ed9b-startup-readback.json` and excluded from commits.
+
+## September 18 installed global-guidance replacement preparation
+
+After verified exact 9d42 retirement, Main closed settings with Cancel without Save,
+retaining generation 2, then selected this preparation-only request under existing
+acceptance authorization. Persist exact envelope before one fresh installed AgentTools
+submission; verify complete inventory first. No asserted-thread/review/baseline
+fields, other state mutation or worker start is included. Preserve body and request
+identity on uncertainty; Main owns the subsequent bounded prompt.
+
+Disposition: **prepared successfully once**. Exact envelope was committed in
+`6c9e397b` before submission. Fresh installed AgentTools PID 2598 matched complete
+current generation-2 inventory, submitted once and exited 0. Audit
+`42B6FEF4-8085-4C3E-BB49-0509050264B0` returned authorized delivery assignment
+`delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`, Terra/medium and profile
+`rr-delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`, context
+`9D0895C1-C51D-4D47-8DAC-C80499F6678C`, policy digest
+`bae5733cce2b714e7cf8dfec8ef615bbf762b737c171f0197a891aa57ec824f9`.
+Saved assignment exactly matches the response; registration generation 2, work
+incarnation and phase/task-plan revisions match, with no session/reservation/
+uncertainty/closed flags. Assigned settings remain distinct from runtime evidence.
+Real checkout and `.codex` exist at
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`.
+Baseline `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`, branch
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`.
+No worker started; Main owns the next bounded prompt.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd",
+  "reason": "Prepare replacement after exact 9d42 retirement to verify reviewed installed global-guidance startup correction.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+## September 18 loaded instruction-source correction
+
+Main authorizes the same-outcome source-identity correction in writer task
+`01a0b418`, preserving independently SHA-verified repository context and all
+runtime/provider/hook/MCP/first-turn gates. Global guidance is selected from the
+exact protected Codex home using documented override/base precedence; foreign,
+arbitrary, prefix-matching, symlink-escape and changed-receipt sources fail closed.
+No instruction copying/suppression, global content attestation or persisted
+manifest is included. The [owning design](../../../design/outcome3-runtime-enforcement-assessment.md#september-18-loaded-instruction-source-identity-correction)
+records protocol evidence and the Chief's compatibility finding.
+
+BA established causal RED: native compilation succeeded; the real global-plus-
+project source regression failed its status and first-turn assertions (one test,
+two expected failures). Progress remains pinned context, not a required loaded
+instruction source. Writer owns source/tests/design/brief; BA owns native checks
+and the separate scoped candidate commit; Main owns the ledger and the same
+independent reviewer's correction route after commit. Native GREEN and candidate
+commit `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` are complete; independent review
+returned PASS with no Required or Optional findings. Installed startup acceptance
+remains pending.
+Preserve the unknown, launch-reserved,
+uncertain, physically closed `9d42ef30` assignment and its known thread. No live
+retry, preparation, configuration edit, retirement or cleanup is authorized here.
+
+BA verified 37 distinct passing tests across runs: Core context 10 and worker-
+adapter 27. The initial 37-test run passed 35; two positive admission tests needed
+test-only cleanup corrections using the existing interrupt, `turn/completed`
+notification and close sequence. The affected three-test rerun passed the corrected
+physical outside-home symlink fixture; the final two-test rerun passed both positive
+tests, including all four override/base selection variants, with zero failures and
+native exit 0. No single 37-test GREEN run is claimed. Production source and design
+remained unchanged between checks; final documentation/diff checks passed before
+the authorized six-file commit and independent correction review.
+
+### September 18 reviewed correction installation and resource readback
+
+The owner restarted Codex after dispatch became stuck; Main resumed the existing
+authorized installation acceptance and BA acknowledged recovery. Reviewed source
+`8b9b979c` and its branch were intact; Main's pending ledger edit was preserved.
+Established signed staging and installation exited 0, followed by normal RR launch.
+Installed 0.1.19/build 1 app CDHash is `197ab7377d995fc852c89d3edbc9058c4a45a1fd`,
+Coordinator `f19ceb7557cc0dedf87217bf3e1280a6bf6ec453`, Team `2UA854NLX4`.
+Checked installed app/Core/Coordinator/AgentTools/broker and signed manifest match
+stage. Live app PID 800 maps installed app/Core; fresh installed AgentTools PID 900
+returned complete fixture inventory and exited 0, same registration generation 2
+and phase/task-plan revisions 1. No new native tests were needed after terminal checks.
+
+Bounded read-only 9d42 pre-retirement verification confirmed unknown state, launch
+reservation and uncertainty, `connectionClosed: true` and known session
+`01a0b476-d219-7ce1-b30a-1879979c125a`, with no retirement receipt. Exact real checkout
+was present and clean; exact owned profile was present and matched the saved raw
+definition. These facts establish resource readiness, not removal authorization.
+The owner subsequently explicitly approved exact 9d42 retirement via reply 1. Main
+performed that supported UI action once after installed checks. Read-only exact
+receipt `DD704FDC-4624-44BA-B6BC-BA7E0DB2BB72` confirms superseded state, completed
+retirement, worktree/profile removal and no connection-close uncertainty. Physical
+checkout and exact profile are absent. Branch/history remain at baseline
+`ecb738e87ba16e0bca55f74e486f1c6a2aaee769`; prior unknown state, reservation,
+uncertainty and session `01a0b476-d219-7ce1-b30a-1879979c125a` remain preserved.
+Fresh installed AgentTools PID 1984 returned complete inventory and exited 0,
+registration generation 2 and phase/task-plan revisions 1 unchanged. BA performed
+no retirement mutation or new preparation; Main owns any fresh request. No worker start/replay, new preparation, version/
+tag/DMG/push/PR/merge, manual configuration/permission change or BA Codex restart
+occurred. Worktrees and temporary build/review artifacts remain preserved.
+
+## September 18 current-generation worker startup
+
+Main releases one startup observation for the authorized generation-2 assignment
+below. Persist before one fresh installed Coordinator call. Retain the exact
+connection and successful idle worker for Main's next bounded acceptance. Do not
+auto-approve runtime requests, change project settings/configuration, replay a start
+or prepare new work after failure. Capture failure stage and use supported closure
+with the known handle when applicable. Assigned settings are not runtime evidence.
+
+Disposition: **started once; failed identity admission; physical closure confirmed**.
+Exact prompt was committed in `9553e3bb` before the fresh installed Coordinator
+MCP session 46497 start. Returned worker `22E6A7FD-104A-490A-BB45-D2A4673EC3CF` reached transport
+and thread `01a0b476-d219-7ce1-b30a-1879979c125a`, then failed identity admission with no turn,
+messages or pending runtime requests. Returned effective settings are below; these
+verify the reported profile identity/sandbox summary, not a complete runtime
+filesystem-grant readback. No runtime approval was automatically answered.
+
+```json
+{
+  "activePermissionProfile": {
+    "extends": null,
+    "id": "rr-delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41"
+  },
+  "approvalPolicy": "on-request",
+  "approvalsReviewer": "auto_review",
+  "cwd": "/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41",
+  "instructionSources": [
+    "/Users/jroberts/.codex/AGENTS.md",
+    "/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41/AGENTS.md"
+  ],
+  "model": "gpt-5.6-terra",
+  "reasoningEffort": "medium",
+  "runtimeWorkspaceRoots": [
+    "/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41"
+  ],
+  "sandbox": {
+    "excludeSlashTmp": true,
+    "excludeTmpdirEnvVar": true,
+    "networkAccess": false,
+    "type": "workspaceWrite",
+    "writableRoots": []
+  }
+}
+```
+
+The exact rejected guard is `verifyInstructionSources`: reported global source
+`/Users/jroberts/.codex/AGENTS.md` lies outside the recorded checkout-context set.
+Omitted progress is not itself rejected by that subset guard. Restricted02 owns
+instruction-source semantics and any contract correction; none is authorized by
+this factual readback. Same-connection supported `worker_close` returned confirmed
+closure and the known thread ID. Saved assignment is unknown, launch-reserved and
+uncertain, connection-closed with that session ID retained. Main then released normal EOF: idle Coordinator MCP session 46497 exited 0,
+and its fresh process exit was confirmed. Older Coordinator processes were untouched. No turn/readme observation, retry, replacement,
+configuration change or guard weakening followed. Full startup/isolation/STOP and
+recovery remain unverified; Main/Restricted own the instruction-source contract
+and recovery decision.
+
+```json
+{
+  "tool": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
+
+## September 18 current-generation replacement preparation
+
+Main's supported UI returned “Execution hook update verified”; settings were closed
+with Cancel, without Save, retaining generation 2. Verified policy/current inventory
+match before this release. Main selects and authorizes preparation only for the exact
+envelope below, preserving old revoked resources. Persist before one submission;
+retain the same request/body on uncertainty. No baseline/review/asserted-thread
+fields or worker startup are included. Native admission remains fail closed on any
+unexposed request-receipt conflict; no raw database inspection is needed.
+
+Disposition: **prepared successfully once**. Recovery facts and exact envelope
+were committed in `c89db7c2` before submission. Fresh installed AgentTools PID 92027
+verified complete current generation-2 inventory, submitted once and exited 0.
+Audit `579713CC-D726-481B-A49D-A879DF32202D` returned authorized delivery assignment
+`delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`, model `gpt-5.6-terra`, effort medium,
+profile `rr-delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`, selected context
+`9D0895C1-C51D-4D47-8DAC-C80499F6678C`, policy digest
+`bae5733cce2b714e7cf8dfec8ef615bbf762b737c171f0197a891aa57ec824f9`.
+Registration generation 2, work incarnation and phase/task-plan revisions match.
+Protected saved assignment exactly matches the response, with no session/reservation/
+uncertainty/closed flags. Assigned settings do not establish runtime enforcement.
+Real checkout and `.codex` exist at
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`.
+Baseline `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`; branch
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-9d42ef30-dc25-4b12-9e9e-0dba9729de41`.
+Old 4fd11768 remains revoked at generation 1 with its checkout retained and no
+retirement or launch/session/uncertainty. No worker start occurred; Main owns the
+next bounded prompt. Successful admission resolved any possible unknown-preparation
+receipt conflict for this exact submitted work; no database probe was needed.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "9d42ef30-dc25-4b12-9e9e-0dba9729de41",
+  "reason": "Prepare current-generation replacement after supported execution-binding recovery; verify installed worker startup.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+## September 18 corrected-candidate worker startup
+
+Main releases one production startup observation for the prepared assignment below.
+Persist this exact prompt before calling once through a fresh installed Coordinator;
+retain the same connection for status, follow-up, interrupt and supported close.
+Do not auto-approve runtime requests or retry the start. A successful idle worker
+remains open for Main's next bounded acceptance instruction. On failure preserve
+exact evidence and close on the same known connection as needed. No configuration
+mutation or broader tests are authorized by this startup observation.
+
+Disposition: **submitted once; rejected before worker allocation**. Exact prompt
+was committed in `07676099` before submission. Fresh installed Coordinator MCP
+session 8299 initialized, then one `worker_start` returned `isError: true`:
+“This assignment is stopped, revoked or no longer current. Return to the coordinator;
+no work turn is authorized.” No worker handle, thread/turn, effective settings or
+pending runtime request was returned. Read-only saved assignment is now revoked,
+with unchanged registration/work/context and no launch reservation, uncertainty,
+closed flag or session. The prepare response and its matching saved snapshot had
+been authorized; the intervening revocation's actor/cause is not established.
+`WorkerPolicy.init` rejects that state before worker allocation, handoff, reservation
+or transport. No worker-status/close request is possible without a handle. Main then released
+normal EOF: Coordinator session 8299 exited 0 and its fresh process ended; older
+Coordinator processes were untouched. Project History records preparation audit
+`9DA9D44A-634C-4BC8-A6A8-274081574B53` at 08:09:23 AM, actor `release-radar-agent`,
+followed by “Update project settings” audit `7093E9E0-1847-4865-AC22-D23C99DA60FD`
+at 08:09:45 AM, actor `release-radar-owner`. Both use the same registration ID.
+Fresh supported inventory via installed AgentTools PID 90728 confirms current
+request generation 2 while the revoked assignment retains generation 1; phase
+revision and task-plan revision remain 1, task active/Pending. UI audit exposes no
+changed-field diff or exact revocation reason. Narrow unified logs, including
+info/debug, show no assignment/revocation entries in the 08:09:00–08:11:45 interval.
+These are recorded facts, not attribution of the settings action to a particular
+human/tool or proof of its precise revocation path. Source diagnosis is delegated
+separately through Restricted02. BA performed no retry, new preparation, runtime
+auto-approval or configuration change. Startup,
+isolation, STOP and recovery remain unverified; Main owns recovery sequencing.
+
+```json
+{
+  "tool": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-4fd11768-738e-44cd-9216-f5babc3d63d8",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
+
+
+### September 18 supported registration rebind
+
+Read-only project records show exactly three assignments: 67a/88116 have completed
+retirement and confirmed closure; revoked never-started 4fd11768 has no session,
+reservation, uncertainty, retirement or failed-finalization flag. No historical
+project IDs or other live assignment records exist. All known preparation results
+are audited successes; supported inventory does not expose the request-receipt table,
+so absence of an orphan unknown preparation receipt is not independently certified.
+
+Protected policy remained generation 1 while supported current registration was
+generation 2; it was enabled with installed hook, no pending recovery, unchanged
+selected context/root. Main then performed exact-project Manage Project “Update
+execution hook” once under authorized disposable acceptance/recovery scope, without
+Save or manual configuration changes. Post-operation policy now matches current
+registration generation 2, remains enabled with installed production hook and no
+binding recovery pending. Context `9D0895C1-C51D-4D47-8DAC-C80499F6678C` and exact
+primary root are unchanged. Fresh installed AgentTools PID 91783 returned complete
+inventory and exited 0, phase/task-plan revisions 1 unchanged. Old 4fd11768 remains
+revoked at generation 1 with its checkout present and unchanged profile identity;
+no session/reservation/uncertainty is present. BA performed no mutation, preparation
+or startup. Main owns any new exact request; startup acceptance remains unverified.
+
+## September 18 metadata-correction replacement preparation
+
+Main selects and releases the exact preparation-only request below after verified
+88116 retirement and reviewed correction installation. Persist this envelope before
+submission, verify current complete inventory, and submit once through fresh installed
+normal AgentTools. Preserve the request and body on uncertainty. No worker start,
+baseline/review override or asserted-thread field is authorized in this step.
+
+Disposition: **prepared successfully once**. Exact envelope was committed in
+`97f43792` before submission. Fresh installed AgentTools PID 89658 verified complete
+current inventory, submitted the persisted body once, and exited 0. Audited result
+`9DA9D44A-634C-4BC8-A6A8-274081574B53` returned authorized assignment
+`delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`; protected saved JSON exactly matches
+the returned assignment. Assigned role/model/effort are delivery / `gpt-5.6-terra` /
+medium, profile `rr-delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`, context
+`9D0895C1-C51D-4D47-8DAC-C80499F6678C`. Policy digest remains
+`3c693206d541d6b072cd1feeee32a60f247a544b537450a1088a3b04f496589c`;
+registration/generation, work incarnation and phase/task-plan revisions match.
+No session or launch-reservation/uncertainty/closed flags are present. Assigned
+settings are not runtime verification. Exact real checkout and `.codex` exist at
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`.
+Baseline is `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`; branch is
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-4fd11768-738e-44cd-9216-f5babc3d63d8`.
+No worker was started; Main owns the next bounded prompt.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "requestID": "4fd11768-738e-44cd-9216-f5babc3d63d8",
+  "reason": "Prepare replacement for retired 88116 after reviewed null-metadata compatibility correction; observe actual assigned-checkout worker startup.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+## September 18 single replacement-worker startup
+
+Main releases one normal production start for the prepared replacement below.
+Use fresh installed `/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator --mcp`
+from reviewed source `abfaef63`, retaining the same live process/connection for
+status, interrupt and physical close. Do not approve runtime requests, repeat an
+uncertain start or prepare another assignment. Normal account/config/launch checks
+are authorized; additional worker instructions remain Main-owned.
+
+Disposition: **started once; failed; same-connection physical cleanup confirmed**.
+Exact prompt/start identities were persisted in `f056d972` before launch.
+Fresh installed Coordinator MCP session 10016 returned worker
+`C0FD425E-1355-47DD-A255-F52231276F32`, status failed, `invalidAssignment`,
+`transportReached: true`. Same-connection status readback had empty effective
+settings, messages and pending requests, no access-failure stage and no thread/turn
+IDs. Thus runtime settings were unavailable and no model-turn observation occurred.
+The signed handoff reached App Server transport; complete startup is not verified.
+Supported `worker_close` on that same connection returned `connectionClosed` and
+null thread ID. Before subsequent owner-approved retirement, saved assignment was
+unknown, launch-reserved and uncertain, connection-closed with null session. No retry, replacement, runtime approval or
+manual configuration/flag change followed. After bounded read-only log capture,
+normal EOF closed MCP session 10016 with exit 0; PID 83913 exit was confirmed.
+Logs and source order establish reservation/handoff validation reached child
+transport. No stage-specific handoff rejection was observed. Main subsequently
+authorized read-only App Server diagnostics using the same startup flags, selected
+home, process cwd and exact assignment config-read cwd. Effective target profile
+readback establishes the first rejected guard at `WorkerPolicy.validate`: network
+has `enabled: false` and 12 additional optional keys, all null; the code requires
+an enabled-only key set. The subsequent filesystem comparison also rejects the
+extra `glob_scan_max_depth` field. A narrow follow-up confirmed it is present with
+JSON null value, using installed `codex-cli 0.155.0-alpha.9`. That diagnostic ran
+only initialize/initialized/config-read and closed normally with exit 0. Generated
+installed experimental protocol schema contains no definition of this config field;
+the writer retains primary-source verification and the separately authorized
+test-first compatibility correction. No account/thread/turn/start/write, owner
+configuration edit, retry or retirement occurred. Recovery remains Main-owned.
+An ignored `tools.view_image` warning does not identify the rejected guard.
+
+The separately authorized compatibility correction `aeee41a84db8e52c47ea63001e4a411793dbdb8d`
+accepts only absent/null values for the twelve documented optional network overlays
+and `glob_scan_max_depth`, requiring disabled network and exact remaining filesystem
+grants. Primary definitions and the tagged-source retrieval limitation are recorded
+in the [owning design](../../../design/outcome3-runtime-enforcement-assessment.md#september-18-effective-configuration-metadata-compatibility).
+The normalized-response regression first failed with the expected `invalidAssignment`;
+all 22 WorkerAdapter tests then passed after the correction. Documentation and diff
+checks passed. The same independent reviewer `01a0b42c-543f-7420-b4fa-82ec6cf0f092`
+returned PASS on that correction against `8cc09530`, with no Required or Optional findings.
+
+Main released the established signed stage/install workflow and normal app launch.
+Both scripts exited 0. Installed 0.1.19/build 1 app CDHash is
+`f1b6dbf2fbe30fd9422f787cd0bd53253f7352c2`; Coordinator CDHash is
+`5ce6a51d6ade71be2c857154bd5e378c32d5f3b9`, Team `2UA854NLX4`.
+Installed app, Core, Coordinator, AgentTools, broker and signed manifest match the
+verified stage. Live app PID 88656 maps the installed app/Core. Fresh installed
+AgentTools PID 88772 returned a complete fixture delivery inventory and exited 0:
+registration/generation, phase revision 1 and task-plan revision 1 remain unchanged.
+This is intermediate acceptance; no version/tag/DMG/push/PR/merge, Codex restart,
+worker start/preparation or retirement occurred. Unknown reserved, uncertain and
+closed assignment 88116 remains preserved; worker startup, isolation, STOP and
+recovery remain unverified. Main retains runtime acceptance ownership.
+The owner subsequently explicitly approved exact assignment 88116 retirement via
+approval reply 1. Main performed the Manage Project UI action once after verified
+installation. Read-only protected receipt `BDAF89BC-7B17-4774-A31A-6A670D067313`
+confirms superseded state, completed retirement, worktree/profile removal and no
+connection-close uncertainty. Connection remains closed; prior unknown state,
+launch reservation, uncertain outcome and null session remain preserved. The exact
+checkout is absent; its branch remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`.
+Fresh installed AgentTools PID 89373 returned complete supported delivery inventory
+and exited 0, with unchanged registration/generation and phase/task-plan revisions.
+BA performed no mutation, new preparation or startup; Main owns the next request.
+
+```json
+{
+  "tool": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-88116e60-6d46-4939-8828-a3825ebffe89",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository's root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment's next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
+## September 18 replacement preparation after exact retirement
+
+Main's owner-authorized UI retirement completed for
+`delivery-67a32c8b-11fd-430e-b916-439046da4531`, request
+`CF0D11FD-CD4B-4206-AE6A-37ABB74EE64E`. Readback reports state superseded,
+worktree/profile removed, retirement complete and configuration closure confirmed.
+The checkout is absent; prior unknown state, launch reservation, uncertain outcome
+and null session remain recorded. This does not assert that the old work completed.
+
+Fresh installed production AgentTools delivery inventory is complete and confirms
+the exact registration/generation, in-delivery phase lifecycle revision 1, task-plan
+revision 1 and active Pending task below. Main releases preparation only. No worker
+start is authorized by this record; preserve this exact envelope on uncertain outcome.
+
+Disposition: **committed**. Submitted once through fresh installed production
+AgentTools after persisting the pending envelope in local commit `43c6308a`.
+Audited result `B54F9A7C-2102-41DA-8E4A-EBD2A403CAC2` returned authorized
+assignment `delivery-88116e60-6d46-4939-8828-a3825ebffe89`; saved readback matches
+the exact registration/context/work revisions. Model `gpt-5.6-terra`, effort medium,
+delivery role and profile `rr-delivery-88116e60-6d46-4939-8828-a3825ebffe89` are
+assigned settings, not verified worker runtime settings. Network remains disabled;
+root, Git, context configuration, history/archive and sibling access remain denied.
+No launch reservation, uncertain outcome or session is present. The real checkout
+and project-layer directory exist at:
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-88116e60-6d46-4939-8828-a3825ebffe89`.
+Baseline is `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`, branch
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-88116e60-6d46-4939-8828-a3825ebffe89`.
+The retired prior assignment still preserves uncertainty. Preparation launched no worker.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "88116e60-6d46-4939-8828-a3825ebffe89",
+  "reason": "Prepare replacement synthetic execution acceptance after owner-authorized retirement of delivery-67a32c8b-11fd-430e-b916-439046da4531; preserve its recorded uncertain outcome.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+## September 18 temporary context handoff correction
+
+Continue the authorized worker-startup correction under Chief's specific contract
+in [the owning assessment](../../../design/outcome3-runtime-enforcement-assessment.md#september-18-selected-context-cross-process-correction).
+RR retains its persistent bookmark and original resolved URL grant; only a fresh
+implicit ephemeral bookmark crosses an authenticated context-only XPC boundary.
+Bind it to the complete selected receipt, physical folder, exact connection and
+assignment; expire admission and fail closed on missing/expired/wrong-peer/context
+input. Retain grants until confirmed physical process/reader closure. Preserve
+receipt freshness, explicit `CODEX_HOME`, account/provider admission and reserved
+state. Separate resolve/stale/start/identity failure stages with sanitized numeric
+error metadata and transport-reached status. No capability data in MCP/context/logs.
+
+Writer `01a0b418-a8f1-7e03-b8d8-533ef80cdda6` is sole source/test/design/brief writer
+in its fresh managed worktree from assigned committed baseline
+`9ddb37978c106ae4ac62b7e3aa74d311b40deeac`, requested Sol/high, ceiling Astra/high.
+Actual model/effort and profile labels are not exposed. Denied skill reads use the
+repository fallback; no denied-path retry, escalation or bypass. Main retains the
+ledger/live state; BA alone performs Git, native RED/GREEN and separately signed
+synthetic boundary verification. RO04 coordinates one fresh independent review
+of the final GREEN candidate and required corrections; BA owns the scoped commit.
+Main authorized BA's local immutable checkpoint before that review; Required
+review corrections retain the same source ownership and bounded commit endpoint.
+No push, merge, installation, live attempt or owner-state/config/SQLite mutation.
+
+Use existing focused tests first for distinct failures, stale/changed identity,
+wrong peer/context, restart/expiry and grant lifetime through closure. Actual
+separately signed RR-to-Coordinator synthetic transfer remains required for full
+Outcome 3 acceptance; mocks are insufficient. Main selected normal production
+acceptance after coordinated reviewed installation. The isolated signed route was
+**NOT RUN**; no DEBUG probe, fixture adapter, disposable service, endpoint archive
+or shared registration-interruption test is included. The bounded source endpoint
+is focused native checks, one fresh authority/lifetime review and BA's scoped local
+candidate commit. Main owns exact fresh runtime identity/prompt and release; normal
+`worker_start` automatically advances through thread/turn admission, not just grant
+acquisition. No live action is released here. Preserve
+unknown/launchReserved/uncertain/connectionClosed/session-nil
+assignment `delivery-67a32c8b-11fd-430e-b916-439046da4531`, old f481 and pilot.
+No broad mutation admission, entitlement expansion, SDK/signing substitution,
+false-scope bypass, persistent helper bookmark, public capability or owner
+reselection workaround. This is an internal access-boundary correction with no
+persistence schema/public contract change; existing RR execution consumers remain
+compatible. Process restart requires a new ephemeral handoff. Preserve accepted
+ADRs, catalog IDs/lifecycle and staging; keep this task open through BA use.
+
+BA direct verification: added lease regressions compiled and failed at the intended
+assertions (2 RED tests, 8 failures); context suite then passed 10/10. Combined native
+candidate passed context 10 + handoff authority 3 + worker 21 = 34/34, zero failures.
+First combined attempt ran zero tests due to the `NSURL` stale pointer's `ObjCBool`
+import requirement, corrected before GREEN. Diff/documentation checks passed and
+native/test processes closed. A final bounded identity-stage correction and direct
+sanitized worker-status regression passed the affected handoff class, 4/4. Current
+evidence covers 35 distinct tests (context 10, worker 21, handoff 4) across combined
+34 and final affected 4 runs, not a single 35-test run. App/test compilation and mocked scope/authority
+checks do not prove actual signed helper scope acquisition. No installation, live
+state/config/account operation or release build ran; temporary native outputs are
+retained and excluded from the local candidate.
+
+## September 18 fresh-fixture acceptance commands
+
+The owner-authorized disposable acceptance continues after successful restart recovery.
+The fresh fixture guidance handoff is committed as `ecb738e`; Main independently
+read back managedV3 and available handoff evidence, audit
+`0AA578DF-3972-42AC-8120-8353194713FB`. Catalog identity is unchanged.
+The following new requests target only the fresh Documents fixture, not old f481.
+They register one phase, one Backlog ticket and one Pending task; none asserts completion.
+Disposition: all three committed. Phase audit `8B9B3A0B-7947-4A09-A9DC-00BFECA14D54`,
+ticket audit `6C51E64F-4B8A-4331-BD39-C02DDB21C62E`, task-plan audit
+`E9AFF258-7EC6-4499-B79F-96291D9ADD59`, task-plan revision 1.
+Complete delivery inventory confirms one Pending task in Backlog; UI shows Draft
+phase-plan revision 1 and lifecycle Unassessed revision 0. No completion is asserted.
+
+```json
+[
+  {
+    "tool": "release_radar_upsert_phase",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+      "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+      "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+      "requestID": "f8483e75-2243-478f-bd86-cab000e05e24",
+      "phaseID": "context-acceptance-20260918-phase",
+      "name": "Outcome 3 current-context execution acceptance",
+      "reason": "Create the single synthetic phase for the owner-authorized disposable worker startup, isolation, STOP and recovery acceptance."
+    }
+  },
+  {
+    "tool": "release_radar_upsert_ticket",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+      "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+      "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+      "requestID": "8c04f52d-7113-4d93-b9a0-6859f50a2fc2",
+      "phaseID": "context-acceptance-20260918-phase",
+      "ticketID": "context-acceptance-20260918-worker",
+      "lane": "backlog",
+      "outcome": "Verify RR-owned worker startup in the assigned checkout, role permissions, history and sibling exclusion, production hook admission, STOP and recovery using only synthetic fixture data.",
+      "reason": "Register the single synthetic worker test under existing disposable acceptance authorization; no delivery completion is asserted."
+    }
+  },
+  {
+    "tool": "release_radar_revise_ticket_task_plan",
+    "args": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+      "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+      "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+      "requestGeneration": 1,
+      "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+      "requestID": "1aed3da7-3876-48df-ac14-9e564ecec7c7",
+      "ticketID": "context-acceptance-20260918-worker",
+      "additions": [
+        {
+          "id": "context-acceptance-20260918-task",
+          "label": "Execution acceptance",
+          "title": "Verify RR-owned worker startup in the assigned checkout, role permissions, history and sibling exclusion, production hook admission, STOP and recovery using only synthetic fixture data.",
+          "sortOrder": 0
+        }
+      ],
+      "reason": "Define one Pending task for the authorized synthetic worker test so RR can derive its protected assignment; no completion is asserted."
+    }
+  }
+]
+```
+
+
 ## Objective and outcome
+
+Phase plan committed at revision 2, audit `277685F0-BA6F-40AC-81D8-A4BE430D57DA`.
+Finalization committed at revision 2, audit `E1DF398D-5267-42CC-A2ED-D5F5164923C2`.
+Exact finalization envelope:
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "a9dc1078-407e-46e6-9ca8-2ef4ffe80871",
+  "reason": "Finalize the fully covered synthetic acceptance plan for the authorized disposable worker test.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "phaseID": "context-acceptance-20260918-phase",
+  "expectedRevision": 2
+}
+```
+Main used the supported Begin delivery UI with the authorized synthetic-test reason.
+Complete delivery inventory confirms lifecycle `in_delivery`, lifecycle revision 1,
+and task-plan revision 1 with one Pending task. Expected phase revision below means
+lifecycle revision, as enforced by `ProjectExecutionWork.read`.
+Exact preparation returned `execution.hookNotReady`, with no entity IDs. No worker
+start or second preparation was issued. Build Agent is diagnosing this exact
+request's hook-readiness reason and partial resources read-only. Preserve the
+envelope below; do not substitute a new assignment or replay old f481.
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "67a32c8b-11fd-430e-b916-439046da4531",
+  "reason": "Prepare the authorized fresh synthetic assignment from the committed fixture for worker startup, permissions, isolation, STOP and recovery acceptance.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
+Fresh phase-plan request (committed, retained for identity):
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "f1adca83-3dee-4f42-ab20-d23a3e50a428",
+  "reason": "Define the sole synthetic acceptance goal and ticket coverage under existing disposable worker lifecycle authorization.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "phaseID": "context-acceptance-20260918-phase",
+  "expectedRevision": 1,
+  "goalUpserts": [
+    {
+      "id": "context-acceptance-20260918-goal",
+      "title": "Verify controlled synthetic execution",
+      "outcome": "Establish actual worker startup, scoped permissions, hook admission, STOP and recovery without accessing owner data.",
+      "doneCriteria": [
+        "Assigned checkout and effective worker permissions are verified.",
+        "Historical and sibling isolation and deliberate Main retrieval are exercised with synthetic data.",
+        "STOP and supported recovery are observed without claiming unknown outcomes succeeded."
+      ],
+      "sortOrder": 0
+    }
+  ],
+  "assignments": [
+    {
+      "goalID": "context-acceptance-20260918-goal",
+      "ticketID": "context-acceptance-20260918-worker"
+    }
+  ]
+}
+```
 
 Integrate deterministic project execution setup into Release Radar’s existing
 onboarding and plugin installation flows, including project-scoped worktrees,
 protected assignments and production hook admission from verified assignments.
 Preserve ordinary-worker history/sibling exclusion and deliberate Main retrieval.
+
+### Current worker startup configuration investigation
+
+This section records the pre-correction investigation; the approved source release
+is recorded below. Its original heading is retained for existing references.
+
+Objective: finish actual RR-owned linked-worktree hook readiness and affected
+worker startup without widening permission or trust boundaries. The prior
+canonical-source correction is committed in `bff4899`, passed Native71's 18 tests,
+compilation, documentation checks and independent review, and was installed with
+owner authorization through BuildAgent checkpoint73. Both bounded tasks are
+archived; their result remains in Git. This is not complete Outcome 3 acceptance.
+
+The authorized RR hook update returned verified, and the original saved f481
+preparation below succeeded with audit
+`DE85859C-EFC0-402D-844C-BE8571C88C26`, its existing linked checkout and authorized
+assignment. The first worker start then failed `invalidAssignment` with empty
+effective settings and no thread ID. Supported status confirmed failure, and
+supported close returned connectionClosed/threadId null for
+`12311B93-0800-4E76-AAE1-121A235C4722`. Preserve the launch-reserved assignment
+and original request; closure is not permission to repeat start or reset state.
+
+Main's read-only configuration/account/hook comparison used the installed
+0.155.0-alpha.2.6 App Server without creating threads, refreshing authentication
+or writing configuration. Only presence/type/trust metadata was reported:
+- Desktop context: account present, exact assigned profile absent, owned hook untrusted.
+- RR sandbox context: account absent, assigned profile present, owned hook trusted.
+- Effective profile keys include description, extends and workspace_roots as well
+  as filesystem/network. WorkerPolicy.validate expects only the raw latter keys.
+- WorkerAdapter.verifyHook still passes policy.primaryRoot directly, so the
+  coordinator consumer also needs the canonical-source contract examined.
+
+The complete boundary must be settled before implementing a partial profile-only
+fix. A CODEX_HOME switch also changes authentication and state. Do not copy
+credentials, blindly copy configuration or hashes, bypass profile/trust checks,
+broaden installer-helper authority, or relax ordinary-worker exclusions.
+
+Authoritative references:
+- [App Server](https://learn.chatgpt.com/docs/app-server): effective config/read,
+  named permission profiles and supported thread configuration.
+- [Configuration precedence](https://learn.chatgpt.com/docs/config-file/config-basic):
+  command-line overrides, trusted project layers and user configuration.
+- [Environment variables](https://learn.chatgpt.com/docs/config-file/environment-variables):
+  CODEX_HOME owns config, authentication and state, not configuration alone.
+
+Prior investigation assignment: Main owned the brief/progress update on
+`codex/worker-startup-config` from `bff4899` in
+`/Users/jroberts/.codex/worktrees/rr-worker-startup-config/release_radar`.
+Fresh Chief Architecture task `01a0b25e-bdfc-7b20-bac9-14b5b53f7862` investigates
+the supported complete correction read-only, requested Astra/high (not exposed),
+without owner config/credential inspection or live operations. Its recommendation
+must preserve original Outcome 3 scope and classify necessary changes and unknowns.
+At that investigation checkpoint product implementation and another live attempt
+were held. The approved source release below supersedes that implementation hold;
+live attempts remain held.
+
+Direct checks remain repository-native; the next material implementation requires
+focused boundary tests and one appropriate independent review. BuildAgent owns
+native checks and trusted Git. Record actual RR readiness and startup separately.
+Catalog IDs/lifecycle/indexes and accepted ADRs remain unchanged; no new artifact
+or mutable-document checksum is needed. Scoped local commits remain authorized;
+push/PR, installation and subsequent live changes retain their explicit boundaries.
+
+### September 17 approved shared Codex context correction
+
+The owner approved one explicitly selected **existing** Codex home shared by setup,
+verification, assignment preparation, worker startup/follow-up and resource retirement,
+using the existing ChatGPT subscription/account. Selection grants access to the exact
+folder, including authentication and history; it does not copy either. Keep App Server.
+The selection contract is independent of the macOS picker. Folder paths and security-
+scoped bookmarks remain machine-local; on another machine explicitly select its
+existing context and regenerate only RR-owned project/assignment configuration from
+onboarded projects and assigned checkouts. Preserve unrelated settings. No credential,
+history or trust copying, API-key migration, global home entitlement, installer-helper
+expansion, new authentication engine/dashboard or headless deployment is included.
+
+Delivery owner `01a0b279` owns source/tests and the existing brief, mutable design,
+progress and necessary metadata, exclusively. BuildAgent confirmed clean attached
+`codex/shared-codex-context` at `77fceeedcc162bc4b017c7b3604616fca90b4cee` in
+`/Users/jroberts/.codex/worktrees/dd18/release_radar`; Main released bounded work
+through Restricted coordinator. Requested Sol/high is not exposed for independent
+confirmation; ceiling Astra/high only for a named issue. No subagents. Effective
+runtime denies `.git`, `.codegraph` and archive reads; both installed RR skills are
+unreadable, so repository-local governing fallback applies without further probes.
+BuildAgent owns all native tests/builds and trusted Git.
+
+Bind a protected context identity to policies and assignments, reject prompt overrides,
+and hold security scope for each connection's lifetime. Missing/changed/denied/stale
+context fails closed with recovery in existing Settings Connections. Old assignments
+without proven context and all uncertain/reserved assignments remain blocked; no
+migration, replay or reset is authorized. Preserve the exact saved f481 envelope and
+partial state recorded below. Normalize effective profile metadata while comparing the
+exact filesystem/network ceiling, refusing meaningful inheritance or additional roots.
+Raw profile ownership/removal remains exact. Use explicit read-only bootstrap and the
+already verified setup canonical-source contract in worker admission/follow-up.
+
+Tests first in existing native suites cover context persistence/lifetime/loss/change,
+policy binding, normalized profile rejection and canonical hook matching. Inspect
+`docs/design/mockups/settings.png`; use existing Connections presentation, record the
+new picker/recovery extension in the owning mutable design. One fresh independent
+review through Main→RO04 covers concrete architecture/security/UX risks. BA runs focused
+native checks and existing documentation/index/diff checks, then scoped local commits.
+No push/PR/merge, release/version/tag, installation or cleanup is released here.
+
+Later runtime acceptance, serialized by Main with explicit live authorization, must
+use the actual signed app and selected grant: `account/read` with `refreshToken:false`,
+`config/read`, `hooks/list` sanitized metadata, close, and bookmark restoration after
+relaunch. Source/unit evidence cannot prove signed-child access, account/hook readiness,
+worker startup or complete acceptance. No live grant/config mutation, authentication
+refresh/login change, Codex restart, worker retry/start/reset/reprepare/new assignment
+or owner-state mutation occurs in this source slice. Architecture investigation
+`01a0b26e` supplies bounded source evidence, not runtime proof. Accepted ADRs and governing
+instructions remain unchanged. Existing catalog IDs/lifecycle/authority stay unchanged;
+these mutable documents require no checksum or new index row.
+
+The bounded source assignment is complete at
+`0c9baa5a7eab9eca609f31f6c762f3204f952af8`. BA native86 passed 51 affected tests,
+compilation and documentation/diff checks; unchanged AppServer13 at native82 and
+Setup23/Profile2/legacy decoding1 at native77 remain terminal. Two real transport-
+launch cases remain deferred and excluded. The same independent reviewer
+`01a0b291-d529-7412-8415-d872c1f2cc89` cleared the final source with no remaining
+Required findings. BA88 verified the owner-approved installed `8656280` candidate.
+Main's September 18 signed UI check selected `/Users/jroberts/.codex` at 00:14 EDT;
+Folder access was ready. One app relaunch (PID19590, 00:15 EDT) restored the selected
+path/date, and Check Folder Access remained ready. The rendered Connections UI was
+visually verified; responsive acceptance remains open. This check proves bookmark
+access/restoration only. Subsequently, Main reports one owner-approved Update Execution
+Hook on the exact disposable registration returned "Execution hook update verified"
+using installed `8656280` and the saved selected home. The source-enforced setup handshake
+checks ChatGPT via `account/read(refreshToken:false)`, selected user-layer/home equality
+and trusted hooks readback. Actual app setup is verified; worker provider/profile,
+launch/STOP/recovery acceptance is not. No worker attempt occurred.
+
+Main's protected old f481 metadata is unknown, codexContextID/sessionID/turnID null,
+launchReserved true, connectionClosed true, retirement null. Enabled policy context
+`9D0895C1-C51D-4D47-8DAC-C80499F6678C` does not establish its original Codex-home ownership.
+Read-only diagnosis found no supported retirement/replacement route for that nil context:
+ordinary retirement rejects it; lost-handle replacement requires prior cleanup and still
+checks context. It is a pre-selection fixture, not demonstrated current-format recovery
+failure; production preparation binds the selected identity and legacy migration is excluded.
+The minimum acceptance approach preserves f481 and uses a genuinely separate disposable
+canonical root/project/work item under the current selected context. Main confirms
+existing end-to-end disposable acceptance authorization covers it; no new approval hold
+is needed. Do not re-add/alias the old fixture or redispatch its uncertain work. This
+would test current-format behavior, not legacy retirement/home switching. If the
+owner instead requires legacy cleanup, separately authorize a narrow owner-only operation
+with original-home provenance/grant, exact profile ownership and audited receipt; preserve
+unknown/reservation and nil binding, without credential copy or inferred current-home cleanup.
+No recovery code, migration, tests, live/config/owner-state operation, replay, Codex restart,
+login or token copy occurred in this diagnosis. The f481 record/resources are unchanged.
+This task permits existing evidence documentation/local commit only; Outcome 3 is incomplete.
+
+BA created the separate clean README-only fixture at
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project`,
+branch `codex/context-acceptance`, initial commit `3eea725181907fb8ed89d8c43fd143c568e63b81`.
+Main reached Initialize Project Tracking and its exact new folder picker. Choose
+Project failed "Sky Computer Use native pipe closed before response"; reacquisition
+and one CUA reset reproduced the transport failure while RR remained running.
+Main inspected `SkyComputerUseService-2026-09-18-022451.ips`, `-022609.ips` and
+matching `-015953.ips`, showing EXC_BREAKPOINT/SIGTRAP and Swift `_assertionFailure`
+→ `Array.remove(at:)`: the helper crash caused pipe closure, with its exact defect
+unresolved. After isolated RR/helper relaunch, Main verified `cua.getApp` and full
+`rrApp.getAXState` succeeded, showing Add Project with Initialize Project Tracking
+and Attach Folder to Existing Project; the fresh fixture was not initialized.
+BA subsequently gracefully terminated only RR27079 and relaunched installed RR28281
+with signed helper28289. Codex was not restarted. Normal-window automation recovered;
+the native picker remains unreliable. No full fix, onboarding or startup acceptance
+is claimed; no Initialize confirmation or worker start was issued. Preserve Main's
+reports and temporary samples `/tmp/rr-picker-27079.sample.txt`,
+`/tmp/rr-cua-27052.sample.txt` and `/tmp/rr-openpanel-27136.sample.txt`.
+The old f481 record, fixture and stage/artifacts are preserved; this result recording
+performs no diagnosis, implementation, tests/review, additional live action or cleanup.
+
+Main's subsequent actual installed A/B check used experimental candidate CDHash
+`41d7b9dc4ff17eaa2fa2e5a16d2014fef3921d38` and the exact fresh root above.
+CUA attached installed RR, opened Add Project → Initialize and selected the existing
+fixture. Full saved-handoff AX and screenshot inspection succeeded, including the
+named Continue in Codex containment and Resume, Finish and Copy controls. Resume once
+returned "Execution setup checks completed. Finish Initialization will verify and open
+the project." Finish once completed; Projects showed Active(3) and `project2` for exact
+project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac`, registration
+`e78aca16-85f1-4c32-8712-c908aba5859d`, generation 1.
+Actual changed-screen inspection, setup and Finish are verified for this run; neither
+the earlier crash/setup failure's cause nor a general helper fix is established.
+Worker startup/STOP/recovery and full Outcome 3 acceptance remain unverified.
+The candidate adds only the frozen, uncommitted Continue in Codex wrapper experiment
+over reviewed source `8656280`; latest prior documentation is `31e7f26`. The saved
+baseline's heading/chrome differ, so shipping visual acceptance is not established.
+Main reports fresh independent reviewer `01a0b3a0-b137-73b3-915c-a55c71596049` cleared
+the exact 12-add/1-remove wrapper against `31e7f26` with no Required or Optional findings.
+Selectability, actions, identifiers and named containment are preserved; the known
+heading/chrome change was not materially problematic. No styling correction or additional
+tests were requested. Main released BA's scoped local commit of the unchanged wrapper and
+two-document closeout. This release permits only existing brief/ledger evidence recording
+and BA's documentation-check/result-commit route, preserving the exact source experiment.
+No further source/build/install/live action is released; no worker start occurred in
+this exercise. All artifacts and old f481 state/resources remain preserved.
 
 ## Scope, authority and dependencies
 
@@ -745,6 +1852,32 @@ log/result bundle and checker profile are retained. No new state/API, hook-trust
 or request replay is released.
 BuildAgent performed no replay or live/config/SQLite mutation.
 
+At 21:07:58 EDT, the exact saved request reached the fresh installed AgentTools peer and
+returned `hookNotReady` with no hooks; the existing first-empty-hooks diagnostic reported
+the exact checkout project layer as disabled with `reason: unrecognized`. This is a
+diagnostic inadequacy, not root-cause proof. The bounded corrective worker is attached to
+`codex/hook-disabled-reason-detail` at
+`ded65f2b733641384df36514267824b4c81ddb0a`. It replaces the two-template classifier
+with control-normalized, capped retained reason text. Before capping, it redacts only
+known exact checkout, primary-root, user-home and user-config identifiers. The untrusted
+text is public at the existing first-empty-hooks OSLog sink, remains non-authoritative,
+and does not expose configuration, hook commands or a new diagnostic endpoint. The
+original `hookNotReady`, same-child transport, identity, trust/write, retry and cleanup
+behavior remain unchanged. Focused helper tests cover unknown-text retention, control
+normalization, exact redaction, empty text and capping; BuildAgent owns native checks and
+the scoped local commit, with one fresh RO04 privacy/correctness review required. Live
+replay and configuration mutation remain excluded. This is not universal secret
+scrubbing: it is proportionate redaction for the installed trust-message producer only.
+Checkpoint 64 passed all five focused App Server tests, including retained-text coverage.
+After the required raw-redaction-order correction, checkpoint 65 passed the directly
+affected regression, target compilation and diff checks. The same independent reviewer
+confirmed the Required defect resolved with no new defect. The actual live hook cause
+remains unknown; no retry or installation occurred. The completed reviewer is to be
+archived after Main's scoped local commit, but is not yet claimed archived.
+Checkpoint 59 ended before tests (Xcode exit 65) because this fresh worktree lacks the
+libgit2 header/module dependency. It applies only to the superseded category candidate
+and establishes no corrected-candidate behavior; retained native output is temporary.
+
 Checkpoint 46 established attributable RED with the original setup arguments: only
 `testSetupTransportReadsPermissionTablesWithoutChangingOwnerDefault` ran in the existing
 signed/sandboxed host against actual verified Codex with isolated HOME/CODEX_HOME. Its
@@ -1001,3 +2134,21 @@ excluded from candidate staging and retained pending authorized disposition. Nat
 `.build` dependencies/tools and `build` results are temporary. Main must verify
 canonical repository persistence when committing; this worktree is not the final
 durable delivery location. No scratch file is a controlling implementation artifact.
+
+## September 18 linked-checkout project-layer correction
+
+Coordinator releases this correction at baseline 355d27ca2c2e08fc2cfe55218d14dcf600012603, branch codex/linked-worktree-hook-layer. Delivery writer 01a0b3f6-73dc-7a10-af65-61c70344245a owns source/tests and existing owning documents; Main retains the ledger. Requested Sol/high and rr-project-restricted are not exposed for independent verification. Effective denies remain in force; installed tracking/shared-execution skill reads are blocked, so repository fallbacks apply. Build Agent owns Git/native checks and scoped commit. Coordinator arranges one independent containment/recovery review through RO04 after candidate readiness.
+
+High-confidence finding: a committed baseline without .codex omits the untracked primary production hook's directory. Historical upstream loader and current main require that directory for the project layer. Version-matched 0.155.0-alpha.9 hook-engine evidence corroborates layer discovery, but its tagged loader was unavailable. Installed-runtime proof remains required.
+
+Ensure only a real .codex directory in the verified assigned checkout in common configure, for fresh preparation and eligible exact preparing-request recovery. Preserve existing content; refuse file/symlink collisions and wrong checkout using descriptor containment and worktree identity primitives. Preserve primary hook source, trust/key/hash/enabled checks, request/context/baseline, permission ceiling and reserved/uncertain refusals. No copying, trust grants, schema changes, permission expansion, live fixture changes or automatic migration.
+
+Test-first acceptance covers baseline without .codex plus untracked primary RR hook, fresh preparation, exact recovery and identity preservation, existing directory/content, file/symlink collisions, wrong checkout and unchanged disabled/untrusted rejection. Build Agent runs focused RED/GREEN and documentation checks. Main owns signed runtime acceptance for same request 67a32c8b-11fd-430e-b916-439046da4531; historical f481 and pilot remain untouched. Tests alone cannot establish worker startup. Keep existing catalog identities; no new report or ledger.
+
+The common configure correction additionally rechecks current policy, exact saved assignment and selected-context identity immediately before the directory mutation after awaited profile preparation. Preparing requests with a session, launch reservation or uncertain outcome remain blocked. No final admission is granted by directory creation.
+
+Build Agent directly verified the four initial regressions failed before production changes (RED). Final focused GREEN totals 35/35 across two runs: producer 22/22, native worktree 6/6, readiness 6/6 and canonical primary/linked discovery 1/1. Native integration uses a committed baseline without .codex and an untracked primary RR hook for fresh and same-request recovery; primary hook bytes remain unchanged and the linked directory empty. Containment collisions, wrong native checkout identity, unchanged disabled/untrusted-hook rejection, reserved/uncertain refusal and policy/assignment freshness passed. A test-only immutable-fixture compiler correction ran no tests; a fake revision correction retained the production identity guard and reran only affected producer tests. App/test targets compiled through test action; no standalone release/installed-runtime check is claimed.
+
+CMake was unavailable in fresh dependency preparation. Build Agent reused the previously verified pinned arm64 libgit2 artifact after exact archive/source-pin matching and extracted pinned headers locally; no dependency change or install/download. Native runners exited; Build Agent reported zero remaining worktree test processes. Temporary build logs/result bundles and ignored .build/DerivedData are retained, excluded from staging, with no deletion authorized. Independent containment/recovery review and scoped commit remain pending; Main retains signed runtime acceptance and canonical integration.
+
+RO04's single fresh independent reviewer 01a0b401 completed review of the full six-file candidate atop 355d27ca: Required none, Optional none. It verified directory containment, fresh/exact-recovery identities and freshness, and unchanged permitOwnedTrust:false; source/tests require no correction. Review is terminal. The authorized scoped commit proceeds through Build Agent after final documentation/diff checks; Main retains canonical integration, signed installation and same-request 67a32 runtime acceptance. Hook-discovery preparation does not itself establish assignment admission or host/runtime delegation approval.

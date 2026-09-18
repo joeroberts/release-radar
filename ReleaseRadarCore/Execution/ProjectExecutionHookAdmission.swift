@@ -17,10 +17,14 @@ public enum ProjectExecutionHookAdmission {
         guard policy.version == 1, policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(),
               policy.hookReceipt?.installed == true,
               policy.hookReceipt?.command == "\"" + policy.handlerPath + "\" --hook" else { throw ProjectExecutionError.assignmentNotAuthorized }
+        guard let contextID = policy.codexContextID, assignment.codexContextID == contextID,
+              let context = try store.codexContext(), context.id == contextID else { throw CodexExecutionContextError.changed }
+        try context.validateFolder()
         try assignment.admit(registration: policy.registration, checkoutPath: checkout.path,
                              sessionID: sessionID, boundSessionID: assignment.sessionID)
         try assignment.verifyContext()
-        guard try store.policy(projectID: project) == policy,
+        guard try store.codexContext()?.id == contextID,
+              try store.policy(projectID: project) == policy,
               try store.assignment(projectID: project, taskID: task) == assignment else { throw ProjectExecutionError.assignmentNotAuthorized }
         return assignment
     }

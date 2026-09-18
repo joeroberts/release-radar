@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import OSLog
 import ReleaseRadarCore
@@ -8,11 +9,88 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private let logger = Logger(subsystem: "com.rekonlabs.ReleaseRadar", category: "ExecutionSetup")
     private let plugin: CodexPluginLifecycleCoordinator?
     private let bundle: URL
+    private let executionRoot: @Sendable () throws -> URL
+    private let contextAccessFactory: @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease
+    private var contextAccess: CodexExecutionContextLease?
+    private var boundContext: CodexExecutionContext?
     private var transport: AppServerTransport?
     private var cleanupFailure: AppServerTransportError?
 
-    init(plugin: CodexPluginLifecycleCoordinator?, bundle: URL = Bundle.main.bundleURL) {
-        self.plugin = plugin; self.bundle = bundle
+    nonisolated static func canonicalProjectTrustKey(primaryRoot: String) throws -> String {
+        try ProjectExecutionHookReadiness.canonicalPrimaryRoot(primaryRoot)
+    }
+
+    nonisolated static func hookDiscoveryCheckout(primaryRoot: String, canonicalPrimaryRoot: String,
+                                                 checkout: String) -> String {
+        ProjectExecutionHookReadiness.discoveryCheckout(primaryRoot: primaryRoot, canonicalPrimaryRoot: canonicalPrimaryRoot, checkout: checkout)
+    }
+
+    nonisolated static func needsProjectTrustWrite(primaryRoot: String, canonicalKey: String,
+                                                  projects: [String: Any], permitOwnedTrust: Bool) throws -> Bool {
+        for key in Set([primaryRoot, canonicalKey]) {
+            guard let entry = projects[key] else { continue }
+            guard let project = entry as? [String: Any] else { throw ProjectExecutionError.hookNotReady }
+            if let trust = project["trust_level"] {
+                guard trust as? String == "trusted" else { throw ProjectExecutionError.hookNotReady }
+            }
+        }
+        if (projects[canonicalKey] as? [String: Any])?["trust_level"] as? String == "trusted" { return false }
+        guard permitOwnedTrust else { throw ProjectExecutionError.hookNotReady }
+        return true
+    }
+
+    nonisolated static func disabledReasonDiagnostic(_ reason: String, checkout: String,
+                                                     primaryRoot: String, userHome: String = NSHomeDirectory()) -> String {
+        let userConfig = userHome + "/.codex/config.toml"
+        let redactions = [(checkout, "<checkout>"), (primaryRoot, "<primary-root>"),
+                          (userConfig, "<user-config>"), (userHome, "<user-home>")]
+            .sorted { $0.0.count > $1.0.count }
+        let redacted = redactions.reduce(reason) { value, redaction in
+            guard !redaction.0.isEmpty else { return value }
+            return value.replacingOccurrences(of: redaction.0, with: redaction.1)
+        }
+        var controlsNormalized = ""
+        for scalar in redacted.unicodeScalars {
+            switch scalar.properties.generalCategory {
+            case .control, .lineSeparator, .paragraphSeparator: controlsNormalized.append(" ")
+            default: controlsNormalized.unicodeScalars.append(scalar)
+            }
+        }
+        let normalized = controlsNormalized.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let limit = 240
+        guard !normalized.isEmpty else { return "<empty>" }
+        return normalized.count > limit ? String(normalized.prefix(limit)) + "…" : normalized
+    }
+
+    init(plugin: CodexPluginLifecycleCoordinator?, bundle: URL = Bundle.main.bundleURL,
+         executionRoot: @escaping @Sendable () throws -> URL = ProjectExecutionFileStore.applicationRoot,
+         contextAccessFactory: @escaping @Sendable (CodexExecutionContext, ProjectExecutionFileStore) throws -> CodexExecutionContextLease = { context, store in
+             try CodexExecutionContextLease(context: context, current: { try store.codexContext() })
+         }) {
+        self.plugin = plugin; self.bundle = bundle; self.executionRoot = executionRoot
+        self.contextAccessFactory = contextAccessFactory
+    }
+
+    private func contextStore() throws -> ProjectExecutionFileStore {
+        do { return try ProjectExecutionFileStore(root: executionRoot(), create: false) }
+        catch { throw CodexExecutionContextError.selectionRequired }
+    }
+
+    func selectedCodexContextID() async throws -> UUID? {
+        if let cleanupFailure { throw cleanupFailure }
+        guard let current = try contextStore().codexContext() else { throw CodexExecutionContextError.selectionRequired }
+        if let boundContext, boundContext != current { throw CodexExecutionContextError.changed }
+        boundContext = current
+        return current.id
+    }
+
+    func useCodexContext(_ expected: UUID?) async throws {
+        if let cleanupFailure { throw cleanupFailure }
+        guard let expected, let current = try contextStore().codexContext(), current.id == expected else { throw CodexExecutionContextError.changed }
+        if let boundContext, boundContext != current { throw CodexExecutionContextError.changed }
+        if let contextAccess { try contextAccess.validate() }
+        else { contextAccess = try contextAccessFactory(current, contextStore()) }
+        boundContext = current
     }
 
     static func setup(plugin: CodexPluginLifecycleCoordinator?) -> ProjectExecutionSetupCoordinator {
@@ -70,14 +148,20 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private func rpc(_ method: String, _ params: RPCObject, readback: Bool = false, beforeWrite: @Sendable () async throws -> Void = {}) async throws -> RPCObject {
         if let cleanupFailure { throw cleanupFailure }
         if transport == nil {
+            guard let context = boundContext else { throw CodexExecutionContextError.selectionRequired }
+            try await useCodexContext(context.id)
+            guard let lease = contextAccess else { throw CodexExecutionContextError.accessRequired }
             let connection = try AppServerTransport(executable: CodexExecutionIdentity.executable,
-                arguments: AppServerTransport.executionSetupArguments, onMessage: { _ in })
+                arguments: AppServerTransport.executionSetupArguments, context: lease, onMessage: { _ in })
             transport = connection
             var handshakeOperation = "initialize"
             do {
                 _ = try await connection.call("initialize", RPCObject(["clientInfo": ["name": "release-radar-setup", "version": "1"], "capabilities": ["experimentalApi": true]]))
                 handshakeOperation = "initialized"
                 try connection.send(["method": "initialized"])
+                handshakeOperation = "account/read"
+                let account = try await connection.call("account/read", RPCObject(["refreshToken": false])).object()
+                guard (account["account"] as? [String: Any])?["type"] as? String == "chatgpt" else { throw CodexExecutionContextError.subscriptionRequired }
             } catch {
                 do { try connection.close() }
                 catch {
@@ -112,7 +196,11 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
               let name = layer["name"] as? [String: Any], let file = name["file"] as? String,
               file.hasPrefix("/"), file == URL(fileURLWithPath: file).standardizedFileURL.path,
               URL(fileURLWithPath: file).lastPathComponent == "config.toml",
-              layer["config"] is [String: Any] else { throw ProjectExecutionError.unavailable }
+              layer["config"] is [String: Any], let context = boundContext,
+              try CodexExecutionContext.canonicalPath(URL(fileURLWithPath: file).deletingLastPathComponent().path) == context.homePath else { throw ProjectExecutionError.unavailable }
+        if FileManager.default.fileExists(atPath: file) {
+            guard try CodexExecutionContext.canonicalPath(file) == context.homePath + "/config.toml" else { throw ProjectExecutionError.conflict }
+        }
         return layer
     }
 
@@ -200,41 +288,40 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     }
 
     func verifyHook(primaryRoot: String, checkout: String, command: String, permitOwnedTrust: Bool, beforeWrite: @Sendable () async throws -> Void) async throws {
+            let canonicalPrimaryRoot = try Self.canonicalProjectTrustKey(primaryRoot: primaryRoot)
+            let discoveryCheckout = Self.hookDiscoveryCheckout(primaryRoot: primaryRoot,
+                canonicalPrimaryRoot: canonicalPrimaryRoot, checkout: checkout)
             let inline: Bool
-            switch try await hookStorage(primaryRoot: primaryRoot) {
+            switch try await hookStorage(primaryRoot: canonicalPrimaryRoot) {
             case .projectFile: inline = false
             case .inline: inline = true
             }
             var layer = try userLayer(await read(primaryRoot))
             let raw = layer["config"] as? [String: Any] ?? [:]
+            guard raw["projects"] == nil || raw["projects"] is [String: Any] else { throw ProjectExecutionError.hookNotReady }
             let projects = raw["projects"] as? [String: Any] ?? [:]
-            let trust = (projects[primaryRoot] as? [String: Any])?["trust_level"] as? String
-            if trust != "trusted" {
-                guard permitOwnedTrust, trust == nil else {
-                    logger.error("Hook verification failed: exact primary project trust is not ready")
-                    throw ProjectExecutionError.hookNotReady
-                }
-                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(primaryRoot) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
+            if try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalPrimaryRoot,
+                                              projects: projects, permitOwnedTrust: permitOwnedTrust) {
+                try await writeUser(root: primaryRoot, layer: layer, key: "projects." + quoted(canonicalPrimaryRoot) + ".trust_level", value: "trusted", beforeWrite: beforeWrite)
                 layer = try userLayer(await read(primaryRoot, readback: true))
                 let readback = layer["config"] as? [String: Any] ?? [:]
-                guard ((readback["projects"] as? [String: Any])?[primaryRoot] as? [String: Any])?["trust_level"] as? String == "trusted" else {
-                    logger.error("Hook verification failed: primary project trust readback is not ready")
-                    throw ProjectExecutionError.hookNotReady
-                }
+                guard readback["projects"] == nil || readback["projects"] is [String: Any] else { throw ProjectExecutionError.hookNotReady }
+                _ = try Self.needsProjectTrustWrite(primaryRoot: primaryRoot, canonicalKey: canonicalPrimaryRoot,
+                    projects: readback["projects"] as? [String: Any] ?? [:], permitOwnedTrust: false)
             }
-            let reply = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]))
+            let reply = try await rpc("hooks/list", RPCObject(["cwds": [discoveryCheckout]]))
             let owned: ProjectExecutionHookReadiness
             do {
-                owned = try ProjectExecutionHookReadiness.resolve(reply.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: !permitOwnedTrust, inline: inline)
+                owned = try ProjectExecutionHookReadiness.resolve(reply.data, checkout: discoveryCheckout, primaryRoot: canonicalPrimaryRoot, command: command, requireTrusted: !permitOwnedTrust, inline: inline)
             } catch let error as ProjectExecutionError {
                 if error == .hookNotReady { logger.error("Hook verification failed: first hooks/list readiness check") }
                 if error == .hookNotReady,
                    let result = try? JSONSerialization.jsonObject(with: reply.data) as? [String: Any],
                    let entries = result["data"] as? [[String: Any]],
-                   let entry = entries.first(where: { $0["cwd"] as? String == checkout }),
+                   let entry = entries.first(where: { $0["cwd"] as? String == discoveryCheckout }),
                    let hooks = entry["hooks"] as? [[String: Any]], hooks.isEmpty {
                     do {
-                        let observation = try await read(checkout)
+                        let observation = try await read(discoveryCheckout)
                         if let config = observation["config"] as? [String: Any],
                            let enabled = (config["features"] as? [String: Any])?["hooks"] as? Bool {
                             if enabled {
@@ -252,7 +339,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                             }
                             let projectLayers = layers.filter { layer in
                                 let name = layer["name"] as? [String: Any]
-                                return name?["type"] as? String == "project" && name?["dotCodexFolder"] as? String == checkout + "/.codex"
+                                return name?["type"] as? String == "project" && name?["dotCodexFolder"] as? String == discoveryCheckout + "/.codex"
                             }
                             if !supported {
                                 logger.error("Empty hook observation: checkout project layer metadata is unsupported")
@@ -263,8 +350,9 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                             } else if let layer = projectLayers.first {
                                 if layer["disabledReason"] is NSNull {
                                     logger.error("Empty hook observation: exact checkout project layer is enabled")
-                                } else if layer["disabledReason"] is String {
-                                    logger.error("Empty hook observation: exact checkout project layer is disabled")
+                                } else if let disabledReason = layer["disabledReason"] as? String {
+                                    let diagnostic = Self.disabledReasonDiagnostic(disabledReason, checkout: discoveryCheckout, primaryRoot: primaryRoot)
+                                    logger.error("Empty hook observation: exact checkout project layer is disabled (reason: \(diagnostic, privacy: .public))")
                                 } else {
                                     logger.error("Empty hook observation: checkout project layer enablement is unsupported")
                                 }
@@ -297,9 +385,10 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                 layer = try userLayer(await read(primaryRoot))
                 try await writeUser(root: primaryRoot, layer: layer, key: "hooks.state." + quoted(owned.key), value: ["trusted_hash": owned.currentHash], beforeWrite: beforeWrite)
             }
-            let readback = try await rpc("hooks/list", RPCObject(["cwds": [checkout]]), readback: true)
+            let readback = try await rpc("hooks/list", RPCObject(["cwds": [discoveryCheckout]]), readback: true)
             do {
-                _ = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: checkout, primaryRoot: primaryRoot, command: command, requireTrusted: true, inline: inline)
+                let observed = try ProjectExecutionHookReadiness.resolve(readback.data, checkout: discoveryCheckout, primaryRoot: canonicalPrimaryRoot, command: command, requireTrusted: true, inline: inline)
+                try owned.verifyTrustedReadback(observed)
             } catch let error as ProjectExecutionError {
                 if error == .hookNotReady { logger.error("Hook verification failed: hooks/list readiness readback") }
                 throw error
@@ -309,8 +398,8 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
 
     func finishConfiguration() throws {
         if let cleanupFailure { throw cleanupFailure }
-        guard let current = transport else { return }
-        do { try current.close(); transport = nil }
+        guard let current = transport else { contextAccess?.release(); contextAccess = nil; boundContext = nil; return }
+        do { try current.close(); transport = nil; contextAccess = nil; boundContext = nil }
         catch {
             let failure = AppServerTransportError(message: "Execution setup cleanup failed: \(error.localizedDescription)", outcomeUnknown: true)
             cleanupFailure = failure; throw failure
@@ -322,7 +411,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
         guard let current = transport else { throw cleanupFailure }
         do {
             try current.close() // Explicit owner retry on the retained original connection.
-            transport = nil; self.cleanupFailure = nil
+            transport = nil; contextAccess = nil; boundContext = nil; self.cleanupFailure = nil
         } catch {
             let failure = AppServerTransportError(message: "Execution setup connection recovery remains incomplete: \(error.localizedDescription)", outcomeUnknown: true)
             self.cleanupFailure = failure; throw failure

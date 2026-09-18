@@ -7,11 +7,155 @@ review.** This document grants no implementation or configuration authority.
 
 Read [the retained App Server findings](#september-16-app-server-findings) and
 [the onboarding/worktree integration contract](#september-16-onboarding-and-worktree-integration-contract)
-for the current follow-up. The original recommendation below is retained as an
+for the integration contract, and [the September 18 bookmark correction](#september-18-selected-context-cross-process-correction)
+for current source verification and pending runtime acceptance. The original recommendation below is retained as an
 attributed September 14 assessment. Its desktop-visibility and VM alternatives
 are not requirements for the approved coordinator plugin or this follow-up.
 Outcome 3 remains open; a reviewed standalone component does not complete RR
 integration. The catalog identity remains proposed/supporting.
+
+### September 18 loaded instruction-source identity correction
+
+The generation-2 startup reached matching runtime settings and created a thread,
+then rejected global selected-home `AGENTS.md` before a model turn. Recorded
+repository context and loaded instruction sources are distinct: context remains
+independently SHA-verified and listed in worker instructions; a progress document
+need not be an automatic instruction source. The installed `0.155.0-alpha.9`
+generated response schema describes loaded instruction-file paths, corroborating
+the [primary protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/src/protocol/v2/thread.rs)
+and [documented global/project discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+
+Chief task `01a0b413` found this compatible with the selected-home contract. Main
+authorized admitting the first nonempty `AGENTS.override.md` or `AGENTS.md` from
+the exact protected selected home, independently of response paths, alongside
+the existing pinned checkout-source ceiling. Descriptor-relative no-follow reads
+and folder checks refuse symlink escapes and unsafe files; selection checks use
+bounded UTF-8 reads with the existing 16 MiB repository file limit. Worker policy
+captures and rechecks the complete selected receipt, including same-ID changes.
+This admits source identity; it does not attest instruction bytes loaded by Codex.
+No global manifest, content pin, copied/suppressed owner instruction, filesystem
+grant or other admission gate is added or changed.
+
+BA compiled and ran the causal global-plus-project regression against unchanged
+production code: one test, two expected failures, no first turn. Focused GREEN,
+scoped commit and the same independent reviewer's correction review remain
+pending. The closed, reserved/uncertain generation-2 assignment and known thread
+remain preserved; installed startup requires separate Main authorization.
+
+### September 18 effective configuration metadata compatibility
+
+BA's installed Codex `0.155.0-alpha.9` readback identifies the startup rejection:
+`config/read` includes twelve null optional network fields alongside `enabled: false`
+and null `filesystem.glob_scan_max_depth`. The [primary Codex configuration definitions](https://github.com/openai/codex/blob/main/codex-rs/config/src/permissions_toml.rs)
+define these as optional overlays and an optional scan-depth limit. Tagged source
+retrieval was unavailable; current primary definitions match the observed fields.
+
+Worker admission accepts only the twelve named optional network fields when absent
+or null, while requiring `enabled: false`. It removes only an absent/null glob-depth
+metadata field before comparing every filesystem grant exactly. Nonnull overlays,
+numeric depths, unknown fields, inheritance, additional roots and custom routing
+remain rejected. Raw owned-profile definitions/removal and owner configuration stay
+unchanged. Native regression/review precede the scoped correction commit; installed
+worker startup still requires Main's separate authorization and acceptance.
+
+### September 18 selected-context cross-process correction
+
+Chief task `01a0b413-4623-73f3-a3c5-81a1b5bf8c69` verified that the baseline RR
+persisted an app-scoped bookmark while Coordinator independently resolved it.
+[Apple DTS 785735](https://developer.apple.com/forums/thread/785735) rejects that
+cross-process contract. Resolution, staleness and access-start failure previously
+collapsed into `accessRequired`; the reported live failure is not diagnosed.
+[Apple DTS 678819](https://developer.apple.com/forums/thread/678819) documents
+temporary implicit bookmark transfer, created without `.withSecurityScope` and
+without `.withoutImplicitSecurityScope`.
+
+RR alone restores its durable bookmark and retains its original resolved URL for
+grant ownership. Canonical paths and device/inode comparisons establish physical
+identity separately. An authenticated internal XPC handoff supplies a fresh,
+memory-only implicit bookmark to the exact Coordinator connection and assignment,
+bound to the complete selected receipt. Admission expires; a restarted connection
+must acquire a new handoff. Missing, expired, wrong-peer or changed-context handoffs
+fail closed. Coordinator receives no general admission to RR command mutation RPCs.
+No bookmark capability appears in MCP responses, worker instructions or logs.
+
+Both processes retain their grants through confirmed physical closure of the
+App Server process and reader. Connection loss alone does not establish closure.
+Receipt freshness, explicit `CODEX_HOME`, account and built-in-provider checks stay
+mandatory. Diagnostics distinguish resolve, stale, start and identity stages and
+report transport reached separately; only error domain/code and underlying
+domain/code are retained, never unrestricted `NSError.userInfo`.
+
+Acceptance requires focused test-first failure/expiry/context/lifetime tests and
+BA's actual separately signed RR-to-Coordinator synthetic boundary verification,
+including fresh handoff after restart. Injected scope tests cannot prove that
+boundary. The existing `67a32c8b-11fd-430e-b916-439046da4531` assignment remains
+unknown, launch-reserved, uncertain and connection-closed with no session. No live
+retry, retirement, replacement, folder selection, installation or state mutation
+is authorized for this correction. Accepted ADRs and catalog identities remain
+unchanged. The Chief settled the specific existing-broker endpoint-discovery and
+deferred-acquisition contract below before transport implementation.
+
+Writer `01a0b418-a8f1-7e03-b8d8-533ef80cdda6` owns source/tests and these existing
+documents from Main-assigned baseline `9ddb37978c106ae4ac62b7e3aa74d311b40deeac`.
+BA owns Git/native/signed checks; Main owns ledger and live state. A fresh
+independent boundary/recovery review is coordinated through RO04 after GREEN.
+Skill reads were denied; repository-local fallback applies. Effective restrictions
+deny Git objects, CodeGraph, history and archives; model/effort and named-profile
+readback are not exposed. No entitlement, SDK, signing or public MCP change is
+included. Preserve all staging and keep the writer task open through BA use.
+
+The Chief's precise clarification accepts endpoint-only discovery on the existing
+broker with mutually authenticated direct anonymous XPC, provided interface
+selection follows code-signature validation and Coordinator receives no app
+registration/command interface. RR admits only a fresh authorized, unreserved,
+session-free assignment; handoff acquisition precedes reservation, and durable
+reservation still precedes App Server creation. RR checks the exact original to
+reserved to bound assignment transition and rejects duplicate acquisition. The
+existing unknown assignment is never eligible for a handoff.
+
+Coordinator uses the deferred ephemeral-access API: resolve the returned `NSURL`
+with `.withoutImplicitStartAccessing`, `.withoutUI` and `.withoutMounting`, retain
+that URL, reject stale results and require explicit access-start success. The SDK's
+`NSURL.h` documents this deferred alternative; [Apple's sandbox guide](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox)
+distinguishes implicit cross-process bookmarks from restored persistent scopes.
+Each successful start balances once after confirmed child/reader closure. A false
+start remains a stage-specific failure, with no unconditional unsandboxed bypass.
+
+Admission expiry limits initial consumption, not the active worker's lifetime.
+Connection invalidation disables future admission and requires bounded child
+cleanup; RR retains the unresolved grant until the original authenticated,
+grant-bound closure acknowledgement. A timeout, missing session or replacement
+connection cannot establish closure. RR cannot preserve an in-memory grant through
+its own termination; the reserved/uncertain assignment retains recovery state,
+and consumed helper capability revocation is not implied by RR lease release.
+
+Source verification: BA established behavioral RED in both added lease tests
+(eight assertion failures, successful compilation), then GREEN for all ten context
+tests. The combined production candidate passed 34/34 focused native tests: context
+10, handoff authority 3 and existing worker 21, with zero failures/unexpected results.
+The first combined attempt compiled no tests because `NSURL` requires an `ObjCBool`
+stale pointer; the bounded import correction passed the subsequent native run.
+The final local identity-stage correction and sanitized worker-status regression
+passed the directly affected four-test handoff class. Current evidence covers 35
+distinct tests (context 10, worker 21, handoff 4) across the combined 34-test run
+and final affected four-test run; no single 35-test run is claimed.
+These results establish unit/integration behavior and app/test compilation, not
+actual cross-process scope feasibility. BA's diff check passed and native/test
+processes were closed. No release build, installation or owner-state operation ran.
+
+Main selected normal production acceptance after independent authority/lifetime
+review and coordinated installation. **The isolated signed route was NOT RUN.**
+No DEBUG probe, fixture adapter, endpoint archive, disposable service or shared
+registration-interruption fixture was added. A regular archive cannot establish
+Mach-right transfer; a disposable rendezvous would add launchd effects and test
+machinery. The source endpoint is BA's scoped local immutable candidate commit;
+RO04 coordinates one fresh review and only Required corrections. Main owns exact
+fresh assignment/prompt resolution and all subsequent runtime release. Normal
+`worker_start` reserves intent and automatically advances through thread and turn
+admission; it is not a grant-only probe. Actual signed startup, isolation, STOP and
+recovery remain pending, and current `67a` remains unchanged. Temporary native
+logs/results, `.build` and `DerivedData` are retained and excluded from the source
+candidate; no cleanup is authorized or performed.
 
 ## Original September 14 recommendation
 
@@ -1780,3 +1924,84 @@ only after availability is established. Audit/full acceptance remain pending;
 the three-document status update is refrozen. No source/test/contract or
 catalog identity/index change; the worker performs no native/Git/live/config/SQLite
 operation or cleanup.
+
+
+### September 17 approved selected Codex context contract
+
+One app-owned exact existing Codex home is selected explicitly and used across setup,
+verification, preparation, worker startup/follow-up and retirement. Reuse its existing
+ChatGPT subscription/account through App Server. The selector grants folder access,
+including authentication and history, without copying either. A protected machine-local
+identity and security-scoped bookmark live outside ordinary-worker checkouts; policies
+and assignments bind that identity. Prompt-supplied homes cannot override it. Hold the
+grant until the connection physically closes, including failed/uncertain cleanup.
+Missing, changed, moved, denied or stale context blocks further lifecycle admission;
+existing Connections settings offers exact-folder reselection and actionable recovery.
+Never migrate uncertain/reserved assignments or replay their starts. Old unbound
+assignments remain blocked. Preserve original f481 request/state.
+
+The macOS picker is an adapter to a separate context contract. Paths/bookmarks are
+machine-local and excluded from portable project data. On another machine select its
+existing authenticated context, onboard the project and regenerate only RR-owned
+configuration from its local project/checkouts. Preserve unrelated configuration and
+strict raw owned-profile removal. No credential/history/trust copying, global home
+entitlement, installer-helper expansion, new authentication engine, API-key migration,
+execution dashboard or headless server deployment is included.
+
+Transport sets explicit validated `CODEX_HOME` and the read-only bootstrap default.
+Effective config metadata may include normalized description/extends/workspace_roots;
+accept only non-authorizing metadata and exact filesystem/network limits, reject
+meaningful inheritance/additional roots. Worker hook matching uses setup's canonical
+primary source while preserving actual linked checkout identity.
+
+Visual reference: `mockups/settings.png`. Extend the existing Connections section with
+an exact-folder selector, saved context status, explicit access explanation and recovery;
+use its existing panels, responsive controls and accessibility identifiers. This is a
+necessary extension because the reference predates execution-context selection.
+Runtime/visual comparison and bookmark restoration remain open until the actual signed
+app is exercised under Main's later live authorization. Minimum readback is
+`account/read(refreshToken:false)`, `config/read`, `hooks/list` sanitized metadata then
+physical close; no thread creation or reserved-assignment replay. Official
+[Codex authentication](https://learn.chatgpt.com/docs/auth),
+[environment](https://learn.chatgpt.com/docs/config-file/environment-variables),
+[App Server](https://learn.chatgpt.com/docs/app-server) and
+[Apple sandbox access](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox)
+support the candidate contract, not installed signed-child/account readiness.
+
+The bounded source stores a selection receipt (identity, selection time, prior identity,
+folder fingerprint and bookmark) in protected execution storage; only UUID bindings
+enter policies/assignments. Owner selection records an application audit intent before
+saving the protected receipt. No receipt includes account/token/credential content.
+Same-physical-folder reselection restores access with the same identity. A different
+folder gets a new identity only after retained assignments are retired and installed
+execution hooks are removed; protected inventory and selection share the native writer
+lock with policy/assignment saves. Refusal preserves the receipt and resource records,
+with existing Connections error guidance to close/retire resources or restore the same
+folder. Context-bound preparation validates selection before materializing its checkout
+and persists the intent under that same lock. A writer captured before a home switch
+cannot later create or prepare/authorize an assignment for the stale identity; existing
+STOP, physical closure and retirement/recovery updates remain available.
+STOP/closure saves retain per-assignment serialization without waiting on unrelated
+selection-sensitive provisioning. The resource closure releases the store's instance
+mutex; selection-sensitive writers acquire the shared lock before that mutex.
+Existing connections compare their exact saved receipt and retain the original grant until
+physical close. Stop/close remain available after loss.
+Production setup opens the grant before lifecycle mutations, and account admission
+uses `account/read(refreshToken:false)` requiring ChatGPT. Workers additionally require
+the effective built-in `openai` provider and default OpenAI/ChatGPT endpoints before
+thread creation, then require returned `thread.modelProvider == openai` before binding
+or generation. Custom routing fails closed without editing unrelated configuration.
+Inherited auth/state/base-URL overrides are removed only from the child environment.
+Final preparation admission requires a nonnil identity matching policy and selection;
+legacy records remain readable and are preserved on refusal. This does not prove the selected account
+or credential backend is accessible to the signed production child.
+
+### September 18 linked-checkout project layer
+
+Chief Architect's read-only investigation identifies a high-confidence missing-directory cause: RR owns the primary production hook, provisions the linked checkout from committed files and verifies discovery there without ensuring .codex exists. The [historical loader](https://raw.githubusercontent.com/openai/codex/rust-v0.154.0-alpha.6.2/codex-rs/config/src/loader/mod.rs) and [current loader](https://raw.githubusercontent.com/openai/codex/main/codex-rs/config/src/loader/mod.rs) skip a missing .codex before primary hook inheritance. An empty real directory supplies the project layer without copying hooks/config. The [version-matched 0.155.0-alpha.9 discovery engine](https://raw.githubusercontent.com/openai/codex/rust-v0.155.0-alpha.9/codex-rs/hooks/src/engine/discovery.rs) reads layer hook folders; its tagged loader was unavailable, so corroboration does not prove installed behavior. Yesterday's success does not establish whether its checkout lacked .codex.
+
+The correction ensures the directory under the verified assigned checkout in common configure, for fresh preparation and eligible exact preparing-request recovery. Descriptor-relative no-follow creation preserves existing directories/content and refuses collisions. Worktree/context/baseline identity and .codex worker denial remain controlling. Primary hook source/trust identity stay unchanged. No persistence schema, public consumer contract, trust grant or automatic migration changes. Refusal preserves the preparing request for explicit recovery.
+
+Focused checks and independent containment/recovery review precede Build Agent's scoped commit. Main owns signed installation/runtime acceptance for same request 67a32c8b-11fd-430e-b916-439046da4531. Native tests do not prove production discovery or worker startup.
+
+Direct source acceptance: Build Agent reports 35/35 focused checks across GREEN-2/3, including actual native worktree fresh/same-request preparation with a committed baseline lacking .codex and untracked primary owned hook. The linked directory is empty and primary hook unchanged. Existing canonical discovery and exact trust/key/hash/enabled readiness rejection remain passing. The pre-mutation boundary rechecks saved policy/assignment and selected context after awaited profile preparation; reserved/uncertain preparing requests cannot materialize the layer. Four initial regressions had native RED; later native/freshness coverage has no separate RED claim. App/test compilation is verified; independent containment/recovery review, scoped commit, canonical integration and installed signed-runtime acceptance remain pending. Existing catalog artifact IDs and checksum policy are unchanged.

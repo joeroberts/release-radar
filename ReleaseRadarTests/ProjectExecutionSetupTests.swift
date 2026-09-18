@@ -15,6 +15,14 @@ final class ProjectExecutionSetupTests: XCTestCase {
         func resume() { release?.resume(); release = nil }
     }
     actor Configuration: ProjectExecutionConfiguring {
+        var codexContextID: UUID?
+        var contextUses: [UUID?] = []
+        func selectedCodexContextID() async -> UUID? { codexContextID }
+        func useCodexContext(_ expected: UUID?) async throws {
+            guard expected == codexContextID else { throw CodexExecutionContextError.changed }
+            contextUses.append(expected)
+        }
+        func selectContext(_ id: UUID) { codexContextID = id }
         var inline: Data?
         var failReadiness = true
         var finishes = 0
@@ -53,6 +61,29 @@ final class ProjectExecutionSetupTests: XCTestCase {
         let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
         return (base.appendingPathComponent("Execution"), repository,
                 AuthorizedProject(registration: registration, canonicalRoot: repository, authorizedRoots: [repository]))
+    }
+
+    func testExplicitUpdateBindsNewContextButDoesNotMigrateReservedAssignment() async throws {
+        let (root, _, project) = try fixture(); let configuration = Configuration(); await configuration.recover()
+        let first = UUID(); await configuration.selectContext(first)
+        let setup = ProjectExecutionSetupCoordinator(root: { root }, configuration: configuration, handlerPath: "/RR/handler")
+        try await setup.prepare(project: project)
+        let files = try ProjectExecutionFileStore(root: root, create: false)
+        XCTAssertEqual(try files.policy(projectID: "project-one").codexContextID, first)
+        var old = ProjectExecutionAssignment(id: "old-worker", registration: try XCTUnwrap(project.registration),
+            checkoutPath: root.appendingPathComponent("Worktrees/project-one/old-worker").path, role: .delivery,
+            permissionProfile: "old-profile", model: "gpt-5.6-terra", effort: "medium", authorization: "Approved scope",
+            context: [.init(path: "AGENTS.md", digest: String(repeating: "a", count: 64))],
+            excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"], state: .unknown)
+        old.codexContextID = first; old.launchReserved = true; old.uncertainOutcome = true
+        try files.saveAssignment(old, expected: nil)
+        let second = UUID(); await configuration.selectContext(second)
+        do { try await setup.verify(project: project); XCTFail("Context mismatch must block verification") } catch {}
+        do { try await setup.prepare(project: project); XCTFail("Ordinary prepare cannot migrate existing context") } catch {}
+        XCTAssertEqual(try files.policy(projectID: "project-one").codexContextID, first)
+        try await setup.update(project: project)
+        XCTAssertEqual(try files.policy(projectID: "project-one").codexContextID, second)
+        XCTAssertEqual(try files.assignment(projectID: "project-one", taskID: "old-worker"), old)
     }
 
     func testOwnerUpdateRecoversNewGenerationWithoutReauthorizingOldAssignment() async throws {

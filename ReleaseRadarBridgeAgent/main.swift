@@ -4,10 +4,12 @@ import Foundation
 private final class BridgeBrokerState: @unchecked Sendable {
     private let lock = NSLock()
     private var appConnection: NSXPCConnection?
+    private var contextEndpoint: NSXPCListenerEndpoint?
 
     func registerApp(_ connection: NSXPCConnection) {
         lock.lock()
         appConnection = connection
+        contextEndpoint = nil
         lock.unlock()
     }
 
@@ -15,9 +17,18 @@ private final class BridgeBrokerState: @unchecked Sendable {
         lock.lock()
         if appConnection === connection {
             appConnection = nil
+            contextEndpoint = nil
         }
         lock.unlock()
     }
+
+    func registerContextEndpoint(_ endpoint: NSXPCListenerEndpoint, connection: NSXPCConnection) -> Bool {
+        lock.withLock {
+            guard appConnection === connection else { return false }
+            contextEndpoint = endpoint; return true
+        }
+    }
+    func selectedContextEndpoint() -> NSXPCListenerEndpoint? { lock.withLock { contextEndpoint } }
 
     func forward(
         wireVersion: Int,
@@ -119,6 +130,19 @@ private final class AppEndpoint: NSObject, ReleaseRadarAppBrokerXPC, @unchecked 
         state.registerApp(connection)
         reply(ReleaseRadarBridgeTransport.wireVersion)
     }
+    func registerContextEndpoint(_ wireVersion: Int, endpoint: NSXPCListenerEndpoint,
+                                 withReply reply: @escaping (Int) -> Void) {
+        reply(wireVersion == ReleaseRadarBridgeTransport.wireVersion && state.registerContextEndpoint(endpoint, connection: connection)
+            ? ReleaseRadarBridgeTransport.wireVersion : 0)
+    }
+}
+
+private final class ContextDiscoveryEndpoint: NSObject, ReleaseRadarContextDiscoveryXPC {
+    private let state: BridgeBrokerState
+    init(state: BridgeBrokerState) { self.state = state }
+    func contextEndpoint(_ wireVersion: Int, withReply reply: @escaping (NSXPCListenerEndpoint?) -> Void) {
+        reply(wireVersion == ReleaseRadarBridgeTransport.wireVersion ? state.selectedContextEndpoint() : nil)
+    }
 }
 
 private final class ToolsListenerDelegate: NSObject, NSXPCListenerDelegate {
@@ -149,8 +173,16 @@ private final class AppListenerDelegate: NSObject, NSXPCListenerDelegate {
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
         guard connection.effectiveUserIdentifier == getuid(),
-              let requirement = ReleaseRadarBridgeTransport.appRequirement
-        else { return false }
+              let app = ReleaseRadarBridgeTransport.appRequirement,
+              let coordinator = ReleaseRadarBridgeTransport.coordinatorRequirement else { return false }
+        if ReleaseRadarBridgeTransport.peerMatches(connection, requirement: coordinator) {
+            connection.setCodeSigningRequirement(coordinator)
+            connection.exportedInterface = NSXPCInterface(with: ReleaseRadarContextDiscoveryXPC.self)
+            connection.exportedObject = ContextDiscoveryEndpoint(state: state)
+            connection.resume(); return true
+        }
+        guard ReleaseRadarBridgeTransport.peerMatches(connection, requirement: app) else { return false }
+        let requirement = app
         connection.setCodeSigningRequirement(requirement)
         connection.remoteObjectInterface = NSXPCInterface(with: ReleaseRadarAppCallbackXPC.self)
         connection.exportedInterface = NSXPCInterface(with: ReleaseRadarAppBrokerXPC.self)
@@ -188,6 +220,8 @@ private let toolsListener = NSXPCListener(machServiceName: ReleaseRadarBridgeTra
 private let appListener = NSXPCListener(machServiceName: ReleaseRadarBridgeTransport.appMachService)
 toolsListener.delegate = toolsDelegate
 appListener.delegate = appDelegate
+guard let appAdmission = ReleaseRadarBridgeTransport.appOrCoordinatorRequirement else { exit(1) }
+appListener.setConnectionCodeSigningRequirement(appAdmission)
 toolsListener.resume()
 appListener.resume()
 RunLoop.current.run()

@@ -1,8 +1,404 @@
 # Release Radar delivery state
 
+## Main task transition
+
+Main `01a0b54e-8f55-7c62-8bf4-4090f49b0a84` owns the full Outcome 3 goal and this ledger. The owner authorized replacement of the three supporting roles; the [current handoff](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md#september-18-supporting-role-replacement--complete) records exact tasks, settings, retained resources and transfer state.
+
+- RO Coordinator 05: `01a0b55a-5031-7eb3-987c-773d896dfcb9`; READY after owner selection of `rr-project-ro`: fresh runtime is read-only, network restricted, automatic escalation review, with root and Git/history denials. Ownership transferred; exact profile/model/effort labels are unexposed.
+- Restricted Coordinator 03: `01a0b55a-536f-7640-bcc4-4f66b3c14d54`; READY after owner selection of `rr-project-restricted` and approval-mode adjustment: restricted filesystem unchanged, network enabled, reviewer `auto_review`, authorized task-message delivery succeeded. Ownership transferred; exact approval-policy/profile/model/effort labels remain unexposed.
+- Build Agent 02: `01a0b55a-56ad-71c1-a93c-4552cf69514a`; READY: effective `danger-full-access` / network enabled / approval `never` matches predecessor, and existing Git/gh/Xcode/signing-tool availability was verified read-only. Ownership transferred.
+
+Predecessors have quiesced; the old Build Agent completed its only live RED run and confirmed process exit. RO04 and the old Build Agent were archived after readiness and recorded transfer; supported attachment checks showed no managed worktrees on either task (old BA retained PR #89). Restricted02 was subsequently archived after its replacement demonstrated successful routing; its supported attachment inventory was empty. All branches/worktrees/artifacts remain preserved. RO05 and Build Agent 02 are accepted for their roles; subsequent product work is recorded below. Restricted03 is now accepted after successful routing verification. Creation requested Astra/medium for coordinators and Terra/medium for Build Agent; effective model/effort readback is unavailable.
+
+Implementation [PR #89](https://github.com/joeroberts/release-radar/pull/89) is open against main; its last verified published coordination revision is `f4d5f26fa11a38a422164d98d843235439754ded`. Owner merges.
+
+The separate correction writer `01a0b553-0483-7613-b708-46972e116258` delivered candidate `7332710e077c9afab333e9662a410ed60f55134f` in `/Users/jroberts/.codex/worktrees/bf75/release_radar`, branch `codex/hook-update-recovery-guidance-delivery`, from baseline `a42aef1bbf2a5e3812fe00bcef576b043bc91bb7`. The dedicated `workflowDisabled` error gives Resume guidance only for the eligible disabled Update path and preserves distinct authorization/conflict/unavailability handling. Build Agent 02 reports four focused native tests passed, zero failures/skips; causal RED preceded implementation. Logs/results remain under the writer's `.build/native-checks/`. No correction installation or UI acceptance is claimed.
+
+Additional direct evidence on unchanged candidate `7332710e`: `ProjectExecutionHookTests.testMergePreservesUnrelatedHooksAndRepeatedSetupIsIdempotent` ran alone and passed (1 executed, zero failures/skips). It preserves `user-hook` and top-level `other:true`; repeated merge is byte-identical. Results are retained under `.build/native-checks/hook-merge-preservation-green-20260918-1.{log,xcresult}`. The earlier four-test result also directly proves Update conflict preserves owner-controlled configuration and Remove preserves unrelated entries while preventing implicit re-enable. These are isolated native test results; installed mixed-hook Update/conflict feedback and independent UI/AX acceptance remain unverified. No passing correction test was repeated.
+
+Fresh independent reviewer `01a0b56b-637e-7bd0-a781-b554de66a373` passed corrected source candidate `2827a059b80ce0e0401feaa48ca69f8b0537d932`. Its one Required finding was resolved by adding the missing `workflowDisabled` title/tone/accessibility/Resume-wording assertions to the existing `FailureStatePresentationTests` method. Build Agent ran that method alone: one passed, zero failures/skips; retained result `failure-state-workflow-disabled-green-20260918-1`. Reviewer inspected the correction in clean f67c; no remaining Required or Optional source findings. Existing lifecycle checks were not repeated.
+
+Build Agent staged and installed reviewed `2827a059` using the established signed acceptance workflow. Version remains 0.1.19/build 1, bundle `com.rekonlabs.ReleaseRadar`, Team `2UA854NLX4`; source/stage/installed executable SHA-256 all match `6a6a29ccc64a22bda0f506ba552c5d0a822b3d7ced519feb0eec27b0be3476c5`. No final DMG/tag/version change occurred. Main launched the installation and the installed AgentTools returned complete exact fixture inventory (registration e78aca16, generation 2, phase/task revisions 1); the connector returned appUnavailable, so its availability is not claimed.
+
+Main's affected installed UI check reached terminal Remove, then disabled Update displayed the intended project-level Resume guidance and retained the stopped/uncertain-worker warning, with controls enabled. No Save or Resume followed; the disposable workflow remains disabled for inspection. This is Main-observed evidence. Independent reviewer CUA failed before any screenshot/AX observation because its runtime could not read the system OpenSSL configuration; no reviewer UI pass or permission change is claimed. Independent installed UI, normal/narrow onboarding/settings QA, mixed-hook live feedback and actual second-Mac portability remain pending.
+
+The former b5a9 checkout is now absent and unregistered; cause and the disposition of its uncommitted/generated artifacts are unverified. Its committed branch and ledger remain intact. Build Agent created `/Users/jroberts/.codex/worktrees/outcome3-handoff-ledger/release_radar` on the existing `codex/coordinator-context-handoff` branch at `f4d5f26` for Main's documentation updates. No recovery, deletion or main mutation was performed. Preserve all remaining branches, worktrees and artifacts. Actual second-computer access remains unresolved; local checks cannot substitute for portability proof.
+
 ## Current outcome
 
-**Outcome 3 — disposable managed handoff complete; worker setup/isolation acceptance next.**
+**September 18 — Outcome 3 completion goal active; historical isolation passed and hook recovery guidance correction remains.**
+
+Reviewed source `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` is frozen on `codex/coordinator-context-handoff`. Independent review passed with no findings; 37 distinct current Core/WorkerAdapter cases passed across the initial run and affected reruns. Signed stage/install succeeded for 0.1.19/build 1, Team `2UA854NLX4`; app CDHash `197ab7377d995fc852c89d3edbc9058c4a45a1fd`, Coordinator `f19ceb7557cc0dedf87217bf3e1280a6bf6ec453`. Installed binaries/manifest matched stage. No rebuild or product change occurred during acceptance.
+
+The [owning brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-18-fresh-assignment-post-stop-recovery-acceptance) retains exact requests, IDs, results and historical checkpoints. Disposable project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac` remains at registration generation 2 and phase/task-plan revisions 1 in the last complete supported inventory; its synthetic task is still pending.
+
+- **Startup:** 7ed84d1f completed its first turn with exact assigned cwd/root, Terra/medium, owned restricted profile, network disabled and on-request/auto_review. Worker reported the fixture README heading.
+- **Permission checks:** retained marker was directly verified byte-exact. Exact-path Seatbelt events denied synthetic primary Git history and sibling README. Local .git denial is worker report plus a path=unknown event; raw command results/one-attempt count are unavailable.
+- **STOP:** known turn `01a0b4d4-66e6-7f52-98f8-452ae568ea89` returned terminal interrupted after one supported interrupt; saved state became stopped. Supported close and normal Coordinator EOF confirmed closure.
+- **Fresh recovery:** after lossless artifact preservation and completed supported 7ed84d1f retirement, new request 598fa3e0 prepared once and completed new thread `01a0b50e-06f9-7210-8a47-3db3230c661a` / turn `01a0b50e-081b-70c0-a280-eafd44d5f822` with expected effective settings. Its supported close/EOF succeeded. Completed supported retirement receipt 24B66151-BF37-473D-98E5-64A3D463421F records superseded state, prior closed, checkout/profile removed, branch/session/reservation/confirmed closure retained and uncertainty absent; no acceptance worker/Coordinator connection remains live.
+
+- **Historical-document isolation:** committed synthetic canary/catalog `13df951a` accepted by Main (audit `A7F6923D-60D0-4DA4-A896-B660A50DC032`); Main deliberately retrieved the historical non-authoritative passage through the trusted route. Fresh assignment `delivery-828356df-9b98-49ab-a0d6-dd063d38cd07` omitted the canary from context and denied the archive path in its exact owned profile. One ordinary read in completed turn `01a0b53f-7030-7b40-8922-682efb4c2b34` exited 1 with exact target Operation not permitted in the saved command/result; no contents returned. Supported close/normal EOF succeeded, saved closed with no uncertainty; clean checkout/profile/branch/history retained. Exact requests/results are in the owning brief.
+
+- **Hook lifecycle:** Main’s single identical Update, Remove, disabled Update rejection and explicit Resume reached terminal UI results; BA verified exact owned hook/policy transitions and unchanged registration generation 2. Removal disabled the workflow; ordinary Update preserved disablement; explicit Resume restored the hook and enabled policy. Closed828 assignment/resources remain retained and closed authority ineligible under the existing gate; no replay was attempted. RO04 identified misleading disabled Update recovery wording as Required; The bounded correction is now routed through Restricted Coordinator 03 and awaiting review as recorded above. Full lifecycle acceptance remains pending that correction. See the owning brief for direct evidence and limits.
+
+**Direct limitations:** no second-computer proof, no full all-tool/alternate-route isolation; remaining independent runtime/UI QA is pending. Independent raw prompt-submit hook receipt remains unavailable; reaching a turn is evidence interpreted against current instruction/MCP/hook/binding ordering. Selected-home global symlinks remain unsupported; the owner replaced AGENTS.md with a verified regular file. STOP-close logged UnknownProcessId88716; sleep-start/descendant timing is unverified. Missing Coordinator alone does not prove child sleep state. These bounded results do not establish full Outcome 3 or owner acceptance.
+
+**Authorization/resources:** standing disposable cleanup now covers failed and successfully tested assignments only with confirmed closure, lossless artifact/history preservation and clean checkout. Main owns supported UI retirement. The 598fa3e0 profiling artifact (352,144 bytes) is preserved byte-exact in the designated fixture-side directory; only its verified original was removed. Its completed retirement now removes checkout/profile while preserving branch/session/history; all preserved copies remain retained. Prior 7ed84d1f profile (1,056,432 bytes) and 28-byte marker copies remain in the owner-designated fixture-side preservation directory; its checkout/profile are removed and branch/session/history retained. Revoked generation-1 4fd11768 checkout/profile and existing BA/native/review scratch outputs remain retained. No preserved copy deletion, new worker, source/config/permission change, push/PR/main mutation or fixture Git commit is implied.
+
+**Current authorization and next work:** The owner authorized an active goal covering four remaining outcomes: historical-document exclusion and Main’s deliberate retrieval using synthetic material; remaining hook update/removal and onboarding/recovery acceptance with independent UI/QA; second-computer portability without machine-specific manual repairs; and final ledger/catalog, manageable PRs, release and task cleanup. Main accepted the committed synthetic canary catalog and deliberately retrieved its historical non-authoritative passage through the trusted route. That fresh assignment and single ordinary archive read check now passed with direct command-denial evidence and confirmed closure; the existing owning brief retains exact requests and results. Required hook recovery guidance correction is assigned through Restricted Coordinator 03; hook/onboarding, remaining independent UI/QA, second-computer portability and final delivery work remain active under Main’s sequencing. Previously successful checks remain terminal unless changed behavior or a concrete defect warrants repetition. Second-computer access is being established; local acceptance cannot substitute for that result.
+
+Main confirmed completed reviewer `01a0b42c-543f-7420-b4fa-82ec6cf0f092` archived after its known temporary files were preserved; the delivery branch remains retained, with the replacement documentation checkout recorded above. Main owns this ledger update. No product source change, build, installation or live assignment was started by activating the goal. Defer RR self-onboarding until disposable acceptance and a stable merged release.
+
+
+## Historical context — non-authoritative for current state
+
+The following prior checkpoints are retained verbatim for provenance. They do not describe current installation, runtime connections, authorization or acceptance; use Current outcome above. Exact recent startup/recovery history remains in the existing owning brief.
+
+**September 18 — reviewed permission-metadata correction installed; production startup pending.**
+Source candidate `abfaef63a1c42671a433a617c70dfe15efccef69` is committed on
+`codex/coordinator-context-handoff`. Independent authority/lifetime reviewer
+`01a0b42c-543f-7420-b4fa-82ec6cf0f092` returned PASS, with no Required or Optional
+findings. Direct native evidence covers 35 distinct current tests across the
+combined 34-test run and final affected four-test run; documentation and diff
+checks passed. The [owning brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-18-temporary-context-handoff-correction)
+records the bounded source outcome and remaining runtime acceptance.
+
+The bounded permission-metadata correction `aeee41a84db8e52c47ea63001e4a411793dbdb8d`
+accepts only documented null overlays, preserving disabled network and exact grants.
+Its new regression first failed as expected; all 22 WorkerAdapter tests passed after
+correction. The same independent reviewer returned PASS with no Required or Optional
+findings; documentation and diff checks passed. Main released signed staging,
+installation and normal launch from that source candidate. Both scripts exited 0.
+Installed 0.1.19/build 1 app CDHash is `f1b6dbf2fbe30fd9422f787cd0bd53253f7352c2`,
+Coordinator CDHash `5ce6a51d6ade71be2c857154bd5e378c32d5f3b9`, Team `2UA854NLX4`.
+Installed app, Core, Coordinator, AgentTools, broker and signed manifest match stage.
+Live app PID 88656 maps the installed app/Core. Fresh installed AgentTools PID 88772
+returned a complete fixture delivery inventory and exited 0; its registration,
+phase revision and task-plan revision remain unchanged. Temporary native/staging
+outputs and reviewer evidence remain retained and excluded from commits. No
+version/tag/DMG/push/PR/merge, Codex restart or worker replay occurred.
+Main completed the explicitly owner-approved exact assignment 88116 retirement
+through Manage Project. Read-only receipt `BDAF89BC-7B17-4774-A31A-6A670D067313`
+confirms superseded state, completed retirement, checkout/profile removal and
+confirmed closure. Prior unknown state, launch reservation, uncertainty and null
+session remain recorded. The exact checkout is absent and its committed branch
+remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Fresh supported inventory
+readback succeeded with unchanged registration, phase and task-plan revisions.
+BA performed no retirement mutation. Main then released fresh preparation-only
+request `4fd11768-738e-44cd-9216-f5babc3d63d8`; its exact envelope was committed before
+submission, without baseline/review/asserted-thread fields. Fresh installed helper
+verified current inventory and submitted once. Audit `9DA9D44A-634C-4BC8-A6A8-274081574B53`
+returned authorized delivery assignment with Terra/medium and the bounded profile;
+saved assignment exactly matches the response and its real checkout exists. No
+worker started during preparation. Main then released one bounded startup
+observation, persisted before submission. It returned an immediate authorization
+rejection with no worker handle; read-only assignment is revoked with no reservation,
+session or uncertainty. Earlier preparation/saved readback had been authorized;
+the intervening revocation's cause is unverified. Source ordering rejects that state
+before worker allocation or child launch. Main released normal EOF and the idle Coordinator exited 0. Project History
+records “Update project settings” at 08:09:45 AM, actor `release-radar-owner`, audit
+`7093E9E0-1847-4865-AC22-D23C99DA60FD`, after preparation at 08:09:23 AM. Fresh
+supported inventory confirms current registration generation 2 versus the revoked
+assignment's generation 1, with unchanged phase/task-plan revisions. The audit
+exposes no changed-field diff or exact revocation reason; source diagnosis remains
+separately delegated. Narrow unified logs provide no further trigger entry. BA
+performed no retry, replacement or configuration mutation. Runtime startup and
+remaining acceptance are unverified. The owning brief records the exact prompt/result.
+
+Read-only policy showed generation 1 against current registration generation 2,
+with enabled/installed hook and unchanged context/root. Main performed exact-project
+“Update execution hook” once without Save. Post-operation protected policy now
+matches generation 2, is enabled with installed hook and no binding recovery pending;
+selected context/root and phase/task-plan revisions remain unchanged. Fresh supported
+inventory succeeded. Old never-started 4fd11768 stays revoked at generation 1 with
+its checkout retained. Only the three known assignment records exist; known preparation
+results succeeded, while supported inventory cannot certify absence of an orphan
+unknown request receipt directly. Main then selected generation-2 preparation
+request `9d42ef30-dc25-4b12-9e9e-0dba9729de41`. Exact envelope and recovery facts were
+committed before one submission; fresh complete inventory matched. Audit
+`579713CC-D726-481B-A49D-A879DF32202D` returned authorized delivery/Terra/medium
+assignment, saved response exactly matches and its real checkout exists. Successful
+native admission establishes no conflicting unknown-preparation receipt blocked
+this exact work. Old revoked generation-1 resources remain retained. No worker
+started during preparation. Main then released one startup observation, persisted
+before submission. Worker `22E6A7FD-104A-490A-BB45-D2A4673EC3CF` reached thread
+`01a0b476-d219-7ce1-b30a-1879979c125a` with exact cwd/roots/Terra/medium/profile,
+network disabled, on-request approval and auto-review reviewer, then failed identity
+admission. Exact `verifyInstructionSources` guard rejects global
+`/Users/jroberts/.codex/AGENTS.md` outside the recorded checkout-context set; omitted
+progress is not the subset guard's rejection condition. Restricted02 owns semantics
+and any separately authorized contract correction. No turn/messages/requests occurred.
+Same-connection supported closure confirmed physical cleanup; assignment remains
+unknown/reserved/uncertain and connection-closed with known session ID retained.
+Main released normal EOF; idle Coordinator exited 0 and its fresh process ended. No retry, new preparation,
+configuration edit or guard weakening followed. Startup and remaining acceptance
+remain unverified; Main/Restricted own contract/recovery sequencing.
+
+Actual production handoff/start, isolation, STOP and recovery remain pending.
+Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`
+completed under request `CF0D11FD-CD4B-4206-AE6A-37ABB74EE64E`: exact clean checkout
+and owned profile removed, configuration closure confirmed, state superseded.
+Prior unknown state, launch reservation, uncertainty and null session remain recorded.
+After complete current inventory matched the expected identities/revisions, Main's
+fresh preparation-only request `88116e60-6d46-4939-8828-a3825ebffe89` succeeded once,
+audit `B54F9A7C-2102-41DA-8E4A-EBD2A403CAC2`. Saved replacement assignment is authorized,
+Terra/medium with the bounded delivery profile, no launch reservation or session.
+Its exact envelope and readback are in the controlling brief. Main then released
+one startup observation through a fresh installed Coordinator. Worker
+`C0FD425E-1355-47DD-A255-F52231276F32` failed with `invalidAssignment` after
+`transportReached: true`; effective settings, thread/turn IDs and approval requests
+were absent. Same-connection supported close confirmed physical cleanup. Before
+owner-approved retirement, replacement assignment was unknown, launch-reserved and
+uncertain, connection-closed with null session. Read-only source/log diagnosis rules out the observed reservation/
+handoff transition. An authorized effective-config read identified the first
+rejection: the target network profile has `enabled: false` plus 12 optional fields
+serialized as null, while `WorkerPolicy.validate` requires only `enabled`. Its
+filesystem also includes `glob_scan_max_depth: null`, breaking the subsequent raw
+profile equality check. Installed Codex is `0.155.0-alpha.9`; the narrow follow-up
+read confirmed that field is present and JSON null, then exited normally. The
+reviewed compatibility correction is now installed; runtime acceptance remains Main-owned.
+No account, thread, turn or assignment mutation occurred in these diagnostics.
+Normal EOF closed the idle Coordinator with exit 0 and confirmed process exit.
+No retry or new preparation followed; full startup/isolation/STOP and recovery
+remain unverified. Retain the writer and checkout for downstream work.
+
+**September 18 — hook discovery verified live; worker folder access remains blocked.**
+After owner restart, Main's read-only inventory succeeded. Exact preparation
+`67a32c8b-11fd-430e-b916-439046da4531` became authorized, audit
+`A30491A9-830A-44A1-9359-C7059695B401`, preserving its original checkout/context.
+This verifies the installed linked-checkout hook correction on the production path.
+The single start of worker `2D61D310-649E-4D00-B878-7808A50C1906` failed with
+selected-home `accessRequired` before transport/thread creation. Current Coordinator
+processes map the installed helper; stale Coordinator identity is ruled out.
+Supported close left `connectionClosed: true` and no thread/session; the protected
+assignment remains `unknown`, launch-reserved and uncertain. No repeat start,
+preparation replay or folder reselection followed.
+
+The source conflates bookmark-resolution failure, stale bookmark and denied
+security-scope acquisition, so the precise helper-access cause is unverified.
+RO04 is assigning a fresh read-only Chief Architect investigation of Apple's
+cross-process bookmark contract before recovery or correction. Successful main-app
+preparation does not prove helper bookmark access. Retain the dedicated BA staging
+checkout; actual worker startup, isolation, STOP and recovery remain unverified.
+
+**September 18 — signed acceptance candidate installed; stale MCP helper blocks readback.**
+Candidate `7201abeb` containing source correction `6b4f3fbd` passed the established
+signed staging/install checks. Installed Release Radar is 0.1.19/build 1, CDHash
+`bf6d03929c44db85604356b379f8a21fe7eb0d26`; live PID 66989 maps the installed app.
+Main's first read-only inventory returned `appUnavailable`: at 06:24:05, bridge
+PID 67007 rejected AgentTools peer 52461 with signing status -67065. That helper
+maps pre-install inode 41789043; the current installed helper is inode 41891717.
+No preparation replay or worker start occurred. Preserve exact request
+`67a32c8b-11fd-430e-b916-439046da4531` in the existing brief.
+
+The active staging build was interrupted when checkout 387b disappeared during
+completed-writer archival; its ignored artifacts are not claimed preserved.
+Committed source and ledger were restored into the dedicated, unbound
+`outcome3-hook-layer-stage` worktree on `codex/linked-hook-layer-stage`, and the
+required package build succeeded there. Retain this checkout and its artifacts
+through owner restart/live acceptance disposition; no cleanup, additional
+recovery probe, restart, process termination or reinstall is authorized here.
+Transport recovery and live acceptance remain pending; the separate unresolved
+task-delegation approval issue remains unchanged.
+
+**September 18 — linked-checkout source correction verified; live acceptance pending.**
+Source commit `6b4f3fbd84c299f638ae4d9b9162332373fd43f6` ensures the assigned
+checkout's project-layer directory before existing hook discovery. Four native
+regressions first failed; all 35 focused checks passed across GREEN-2/3. Fresh
+independent reviewer `01a0b401` found Required none and Optional none for
+containment, freshness and exact-request recovery; packaged documentation and
+diff checks passed. Chief Architect `01a0b3f0`'s finding is preserved in the
+existing brief and assessment. Main retains signed installation and live
+acceptance of request `67a32c8b-11fd-430e-b916-439046da4531`.
+
+Two regressions remain distinct: fresh linked-checkout hook readiness recurred
+after prior successful preparation; task-delegation approval required a direct
+owner message in RO04 and remains unresolved. The directory correction does not
+resolve delegation approval. Actual startup, isolation, STOP and recovery remain
+unverified.
+
+**September 18 — connection recovered; fresh-fixture acceptance resumed.**
+The owner restarted Codex. Main verified the stale AgentTools PID 32172 had exited
+and the same read-only RR inventory request succeeded with a complete result.
+Before restart, the failed call was directly traced to that process mapping the
+pre-install backup helper and an XPC code-signature rejection. No permission or
+configuration change was needed for this recovery. Computer Use again reads the
+fixture overview and project settings successfully.
+
+The fresh Documents fixture is committed on `codex/context-acceptance` at
+`c4d77b8`; its five-file bootstrap passed the packaged documentation check.
+RR readback confirms project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac`,
+registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 1, accepted
+repository `898fcdbe-0326-495b-b072-e9a18386f0cf`, catalog v1 and digest
+`b9096b02ecd0379864dc2d224fae178ca5c5326b6c5b02fb84bfb78bf07f24bb`.
+The managed-v3 guidance handoff is committed as `ecb738e`, audit
+`0AA578DF-3972-42AC-8120-8353194713FB`; Main independently read back the complete
+inventory and available handoff evidence. Both bounded fixture tasks are archived.
+Main registered one synthetic Backlog ticket and Pending task, finalized its
+fully covered phase plan at revision 2, and used Begin delivery. Complete readback
+confirms `in_delivery` lifecycle revision 1 and task-plan revision 1.
+Exact preparation `67a32c8b-11fd-430e-b916-439046da4531` returned
+`execution.hookNotReady`, with no entity IDs. No worker started or retry occurred.
+The exact requests and successful registration audits are retained in the existing
+brief. Build Agent is diagnosing this request's readiness reason and partial state
+read-only. Actual startup, isolation, STOP and recovery remain unverified.
+
+The previous source checkout `dd18` is absent. Build Agent restored committed
+`34622e44` into branch `codex/outcome3-context-acceptance-closeout` at
+`/Users/jroberts/.codex/worktrees/outcome3-context-acceptance-closeout/release_radar`.
+Main owns this ledger; the canonical `main` checkout and old f481 resources remain
+untouched. Existing catalog identities and navigation are unchanged.
+
+**Outcome 3 — fresh-project setup and Finish verified; worker startup acceptance remains open.**
+The canonical hook correction is committed as `bff4899`. BuildAgent Native71
+passed 18 focused tests and app/test compilation; documentation/diff checks and
+independent review passed with no Required or Optional findings. Stage72 and
+owner-approved installation73 verified the signed candidate; Release Radar was
+relaunched on September 17 at 22:23:53 EDT. The bounded writer and reviewer are
+archived, and committed source plus staging output are preserved.
+
+Main used the authorized Update execution hook control; RR returned “Execution
+hook update verified.” The one unchanged saved `f481e256-3332-43aa-88e1-4c3dd2c6368a`
+preparation succeeded, returning its original linked checkout and authorized
+assignment (audit `DE85859C-EFC0-402D-844C-BE8571C88C26`). This verifies RR-owned
+linked-checkout hook readiness during preparation, not complete worker acceptance.
+
+The subsequent authorized start failed with `invalidAssignment` before returning
+a thread or effective settings. Supported status confirmed failure; supported
+close returned `connectionClosed` and null thread ID for worker
+`12311B93-0800-4E76-AAE1-121A235C4722`. No second start, new assignment or repeated
+preparation occurred. Preserve the original request and launch-reservation state;
+physical closure does not itself clear an uncertain assignment.
+
+Read-only App Server comparison identified a configuration ownership mismatch:
+the desktop context has an account but lacks the assigned profile and canonical
+hook trust; RR's sandbox context has that profile and trusted hook but no account.
+Effective profile serialization also includes metadata fields absent from raw TOML,
+while WorkerPolicy currently requires exact raw keys. Coordinator hook verification
+still supplies the recorded root spelling. These are inputs to the bounded
+[Chief Architecture investigation](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#current-worker-startup-configuration-investigation),
+not authorization for a home switch, credential/config copy or weakened validation.
+
+The owner approved explicit selection/access to one existing Codex home and local
+bookmark portability, retaining App Server and the existing subscription/account.
+Main released the bounded source correction through Restricted coordinator. Sole
+source/tests/docs writer `01a0b279` uses BA-confirmed clean attached
+`codex/shared-codex-context`, baseline `77fceeedcc162bc4b017c7b3604616fca90b4cee`, in
+`/Users/jroberts/.codex/worktrees/dd18/release_radar`. Requested Sol/high is not exposed;
+RR skill reads are denied, so local fallback applies. BA owns all native checks/Git.
+The [approved correction](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-17-approved-shared-codex-context-correction)
+and owning mutable design now record identity/lifetime/recovery, exact effective-profile
+ceiling, canonical source matching and RR-only local regeneration. Existing catalog
+IDs/lifecycle/authority/index rows remain unchanged. No managed acceptance is claimed.
+The first genuine native regression (BA checkpoint74) compiled and executed one test,
+then failed `invalidAssignment` at the unchanged raw-profile key guard (exit65).
+No missing-symbol/scaffold failure or negative-ceiling assertion pass is claimed.
+The coherent source/tests candidate is now frozen for BA focused checks: protected
+selection/lease, production binding across lifecycle and hook admission, explicit
+home/read-only bootstrap/account admission, canonical sources and exact normalized
+ceiling. Settings has selection/access recovery controls. Nil-context compatibility
+is confined to explicit test mocks; production protocol defaults reject it.
+BA checkpoint77 compiled app/coordinator/tests and executed 83 cases: 82 passed,
+one paused-start fixture failed before startup because its old `/Primary` SQL root
+no longer matched the real fixture root introduced for canonical-source testing.
+The fixture now binds its generated root; production authorization/revocation guards
+are unchanged. All 82 passes, including normalized ceiling rejection assertions,
+context lifecycle, setup/retirement and legacy decoding, are terminal. The one affected
+case passed at checkpoint78 (one test, zero failures); required compilation,
+documentation/index/diff checks passed. Main authorized the local checkpoint commit
+`28db1e4ea6bc7c89a960ff6abadf30d48af5a14c` (24 files); BA reported a clean tree.
+The bounded source correction is complete at
+`0c9baa5a7eab9eca609f31f6c762f3204f952af8`; BA reports the assigned tree clean.
+It requires nonnil final admission and effective/returned built-in OpenAI routing,
+preserves same-home identity recovery, and refuses different-home selection while
+resources remain. Context-bound creation validates selection before materializing
+resources and persists intent atomically; stale writers reject. Existing STOP/closure
+updates retain per-assignment protection without waiting on unrelated provisioning.
+Native86 passed all 51 affected cases (Worker21, Context8, Producer16, Store5, Admission1),
+compilation and documentation/diff checks. Unchanged AppServer13 at native82 and
+Setup23, Profile2 and legacy decoding1 at native77 remain terminal; the two real
+transport-launch cases are deferred and excluded. Test-first regressions demonstrated
+the corrected failures using synthetic state, without live provider usage.
+The same independent reviewer `01a0b291-d529-7412-8415-d872c1f2cc89` cleared the final
+candidate with no remaining Required findings; source review is complete.
+The existing brief anchor is restored with explicit historical labeling. BA88 verified
+the owner-approved installed `8656280` candidate. Main reports signed Settings picker
+selection of `/Users/jroberts/.codex` on September 18 at 00:14 EDT, with Folder access
+ready. After one app relaunch (PID19590, 00:15 EDT), the selected path/date restored and
+Check Folder Access returned ready; the rendered Connections UI was visually verified.
+The bookmark check alone does not establish account/config/hooks or responsive acceptance.
+Main subsequently reports one owner-approved Update Execution Hook on the exact
+disposable registration returned "Execution hook update verified", using installed
+`8656280` and the saved selected home. Success passes the source-enforced setup handshake
+(`account/read(refreshToken:false)` requiring ChatGPT), selected user-layer/home equality
+and trusted hooks readback. The actual app setup path is verified; worker provider/profile,
+startup/STOP/recovery and responsive acceptance remain unproven. No worker was attempted.
+
+Main's protected f481 readback reports state unknown, codexContextID/sessionID/turnID null,
+launchReserved true, connectionClosed true and retirement null. Current enabled policy
+context is `9D0895C1-C51D-4D47-8DAC-C80499F6678C`; that identity proves no old-home ownership.
+Read-only source diagnosis found no supported legacy retirement/replacement route:
+retirement rejects nil context, and lost-handle recovery requires an existing cleanup
+receipt and still checks context. This fixture predates the selected-context contract;
+current production preparation pins the selected identity. Legacy migration was excluded.
+Preserve f481 and use a genuinely distinct disposable root/project/work item for
+current-format acceptance, without re-add, alias or old-work redispatch. Main confirms
+this is covered by existing disposable end-to-end authorization; no new approval hold
+applies. It cannot prove legacy retirement or home switching.
+If legacy cleanup is explicitly required, a separate owner-only app operation needs
+original-home provenance/grant, exact profile ownership and an audited retirement receipt;
+never assign the current context to the old record or treat profile absence in it as cleanup.
+No recovery implementation, Codex restart, login, token copy, replay or owner-state mutation
+occurred in this diagnosis. Exact f481 state/resources remain unchanged. Outcome 3 is
+incomplete; this task permits existing evidence documentation/local commit only.
+
+BA created the separate README-only synthetic fixture at
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project`,
+branch `codex/context-acceptance`, clean initial commit
+`3eea725181907fb8ed89d8c43fd143c568e63b81`. Main reached Initialize Project Tracking
+and the exact folder picker, but Choose Project failed "Sky Computer Use native pipe
+closed before response". Reacquisition and one CUA reset reproduced the transport
+failure while RR remained running; no Initialize confirmation or worker start was issued.
+Main subsequently inspected `SkyComputerUseService-2026-09-18-022451.ips`,
+`-022609.ips` and matching `-015953.ips`: EXC_BREAKPOINT/SIGTRAP with Swift
+`_assertionFailure` → `Array.remove(at:)`. The helper crash caused native pipe closure;
+the exact helper defect remains unresolved. This is not an RR crash or full fix.
+After isolated RR/helper relaunch, Main verified `cua.getApp` and `rrApp.getAXState`
+succeeded; full AX showed Add Project with Initialize Project Tracking and Attach
+Folder to Existing Project. The fresh fixture was not initialized. BA then gracefully
+terminated only RR27079 and relaunched installed RR28281 with signed helper28289;
+Codex was not restarted. Normal-window automation recovered; native picker reliability,
+onboarding and startup acceptance remain unproven. Main's reports and temporary samples
+`/tmp/rr-picker-27079.sample.txt`, `/tmp/rr-cua-27052.sample.txt` and
+`/tmp/rr-openpanel-27136.sample.txt` are preserved. This recording performs no additional
+diagnosis/live action; f481, fixture and stage/artifacts remain unchanged and retained.
+
+Main subsequently verified the installed experimental A/B candidate, CDHash
+`41d7b9dc4ff17eaa2fa2e5a16d2014fef3921d38`, against that exact fresh root.
+CUA attached RR, opened Add Project → Initialize and selected the existing fixture;
+full saved-handoff AX and screenshot inspection succeeded, exposing the named
+Continue in Codex container and Resume, Finish and Copy controls. Resume was invoked
+once and returned "Execution setup checks completed. Finish Initialization will verify
+and open the project." Finish was invoked once and completed; Projects showed Active(3)
+and `project2`, exact project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac`,
+registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 1.
+This verifies actual changed-screen inspection, setup and Finish in this run. It does
+not establish that the wrapper caused the earlier crash or setup failure, a general
+helper fix, worker startup/STOP/recovery, or Outcome 3 completion.
+The installed experiment contains only the uncommitted Continue in Codex wrapper
+substitution over reviewed source `8656280`; latest prior documentation is `31e7f26`.
+That one-file source experiment remains frozen. Its heading/chrome differ from the
+saved baseline; shipping visual acceptance remains open. Main reports fresh independent
+reviewer `01a0b3a0-b137-73b3-915c-a55c71596049` cleared the exact 12-add/1-remove wrapper
+against `31e7f26` with no Required or Optional findings. Selectability, actions, identifiers
+and named containment are preserved; the heading/chrome change was not materially
+problematic. No styling correction or additional tests were requested. Main released
+BA's scoped local commit of the unchanged wrapper and two-document closeout.
+Current worker authorization is limited to
+this two-document evidence recording and BA's documentation-check/result-commit route;
+no further source/build/install/live action is released. All artifacts and old f481
+state/resources remain retained; no worker start occurred in this exercise.
+
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
 Corrected checkpoint 16 passed the app build, all 51 affected tests and
@@ -468,6 +864,30 @@ and have the chief architect assess integration/refactor needs. Hook readiness a
 startup remain pending; why the prior real effective default was absent is also unresolved.
 Temporary outputs remain retained. Worker preparation and full Outcome 3 acceptance
 remain open.
+
+At 21:07:58 EDT, the exact saved request reached the fresh installed AgentTools peer and
+returned `hookNotReady` with no hooks; the existing first-empty-hooks diagnostic reported
+the exact checkout project layer as disabled with `reason: unrecognized`. This is a
+diagnostic inadequacy, not root-cause evidence. The corrective slice is attached to
+`codex/hook-disabled-reason-detail` at
+`ded65f2b733641384df36514267824b4c81ddb0a`. It replaces template classification with
+bounded, control-normalized retained reason text, redacting only known exact checkout,
+primary-root, user-home and user-config identifiers before the cap. The untrusted text is
+logged publicly at the existing first-empty-hooks sink; it creates no authority or new
+state, API, parser, endpoint, trust/configuration operation or live replay. Existing
+`hookNotReady`, same-child read, trust/write/retry/cleanup and request semantics remain
+unchanged. The authorized endpoint remains a scoped local commit after focused checks and
+one fresh RO04 privacy/correctness review; no live replay or configuration mutation is
+released. The published text is useful only for this installed trust-message producer;
+it is not universal secret scrubbing. Checkpoint 59 ended before tests (Xcode exit 65) because this fresh worktree lacks the libgit2 header/module dependency;
+it applies only to the
+superseded category candidate and establishes no corrected-candidate behavior.
+Checkpoint 64 passed all five focused App Server tests, including retained-text coverage.
+After the required raw-redaction-order correction, checkpoint 65 passed the directly
+affected regression, target compilation and diff checks. The same independent reviewer
+confirmed that the Required defect is resolved and found no new defect. The actual live
+hook cause remains unknown; no retry or installation occurred. The completed reviewer is
+to be archived after Main's scoped local commit, but is not yet claimed archived.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/
@@ -830,6 +1250,10 @@ Current coordination is tracking closeout; no new product implementation is open
 
 ## Current authorization
 
+Current bounded acceptance authority: reviewed installed candidate is frozen; the completed startup/permission/STOP/fresh-recovery checks authorize no additional turn or product correction. Owner standing disposable cleanup covers failed and successfully tested assignments only after confirmed closure, lossless artifact/history preservation and clean-checkout retirement. Main owns the next supported UI retirement and owner acceptance decision. No push/PR/main mutation, governing/global/config/permission change, Pursuit or self-onboarding action is released.
+
+Historical Outcome 3 implementation release below is preserved as provenance, not a fresh release or current runtime-status statement.
+
 **September 16 — Outcome 3 execution setup implementation is released.** The
 owner explicitly authorized the assigned worker’s onboarding/plugin implementation,
 including production hook integration, on `codex/outcome3-execution-setup` at
@@ -901,6 +1325,8 @@ remains sequenced after Phase 6H. Proposed guided-setup label 6I does not silent
 add another dependency. No live reconstruction is authorized.
 
 ## Verification and remaining limitations
+
+Current September 18 bounded direct results and evidence limits are summarized above and retained in the owning brief. Native source checks/review remain terminal; no new native tests ran during factual reconciliation. Successful documentation/index and diff checks validate these records, not full Outcome 3 or owner acceptance. The older verification results below remain attributed to their own source/release/scope.
 
 BuildAgent built the native Release package from clean source `0670e7a` using the
 existing staging script: exit 0, strict signing/entitlements and source/staged
@@ -989,6 +1415,10 @@ prior release checkpoints, review outcomes and task closeouts are preserved in
 the [Historical Phase 6 record](archive/2026-09-11-phase6-delivery-history.md#september-12-release-and-integration-checkpoints).
 
 ## Next eligible work
+
+For this acceptance goal: exact recovery retirement readback matches; Main assesses bounded completion. Latest complete supported inventory (installed helper PID14266, exit0) remains generation2/phase and task-plan revisions1, task active/pending. No tracking completion is inferred. No further startup is needed. Remaining broader all-tool/runtime/UI QA, historical archive canary and second-computer proof remain unpassed and require a specific release if pursued. RR self-onboarding waits for disposable acceptance and a stable merged release; Main will flag the time.
+
+Historical package-closeout context below is retained; its installation-hold wording is not current 0.1.19 installed-state readback.
 
 PR #70 merge, source/package review, direct checks, branch/PR and annotated tag
 publication are complete. Installation stays on hold; no live recovery journey is

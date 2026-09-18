@@ -29,6 +29,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
     private let service: SMAppService
     private let callback: AgentBridgeAppCallback
     private let ownedStore: DeliveryStore?
+    private let contextHandoff: CodexContextHandoffHost?
     private var connection: NSXPCConnection?
     private var registeredHere = false
 
@@ -36,6 +37,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
         dispatcher: AgentCommandDispatcher?,
         queries: AgentQueryDispatcher,
         ownedStore: DeliveryStore? = nil,
+        contextHandoff: CodexContextHandoffHost? = nil,
         maintenanceMode: DocumentationMaintenanceMode? = nil,
         beforeDispatch: @escaping @Sendable (AgentCommandEnvelope) async -> Void,
         afterDispatchBeforeReply: @escaping @Sendable (AgentCommandEnvelope, AgentCommandResult) async -> Void,
@@ -51,6 +53,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             afterReply: afterReply
         )
         self.ownedStore = ownedStore
+        self.contextHandoff = contextHandoff
     }
 
     static func start(
@@ -73,6 +76,7 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             dispatcher: dispatcher,
             queries: AgentQueryDispatcher(store: store),
             ownedStore: store,
+            contextHandoff: .production,
             beforeDispatch: beforeDispatch,
             afterDispatchBeforeReply: afterDispatchBeforeReply,
             afterReply: afterReply
@@ -177,6 +181,26 @@ final class AgentBridgeApplicationHost: @unchecked Sendable {
             let returnedVersion = try await awaitRegistration(on: connection)
             guard returnedVersion == ReleaseRadarBridgeTransport.wireVersion else {
                 throw AgentBridgeApplicationError.connectFailed("Bridge version mismatch")
+            }
+            if let contextHandoff {
+                let endpoint = try contextHandoff.endpoint()
+                // The endpoint has no folder capability. Its direct listener
+                // independently authenticates exact Coordinator signing.
+                let version: Int = try await withCheckedThrowingContinuation { continuation in
+                    let response = AgentBridgeContinuationGate(continuation)
+                    guard let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
+                        response.resume(throwing: CodexExecutionContextAccessFailure(stage: .handoff))
+                    }) as? ReleaseRadarAppBrokerXPC else {
+                        response.resume(throwing: CodexExecutionContextAccessFailure(stage: .handoff)); return
+                    }
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 5) {
+                        response.resume(throwing: CodexExecutionContextAccessFailure(stage: .handoff))
+                    }
+                    proxy.registerContextEndpoint(ReleaseRadarBridgeTransport.wireVersion, endpoint: endpoint) {
+                        response.resume(returning: $0)
+                    }
+                }
+                guard version == ReleaseRadarBridgeTransport.wireVersion else { throw CodexExecutionContextAccessFailure(stage: .handoff) }
             }
         } catch {
             connection.invalidate()

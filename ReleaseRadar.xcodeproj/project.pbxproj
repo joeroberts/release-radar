@@ -128,6 +128,8 @@
 		E10000000000000000000007 /* Coordinator entitlements */ = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (ReleaseRadarCoordinator.entitlements, ); target = E10000000000000000000008; };
 		E1000000000000000000000F /* Coordinator adapter test sources */ = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (CoordinatorMain.swift, ReleaseRadarCoordinator.entitlements, ); target = A20000000000000000000004; };
 		E10000000000000000000010 /* App configuration transport */ = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (CoordinatorMain.swift, WorkerAdapter.swift, WorkerPolicy.swift, ReleaseRadarCoordinator.entitlements, ); target = A20000000000000000000001; };
+		E10000000000000000000011 /* Coordinator bridge discovery */ = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (PluginLifecycleXPCContracts.swift, ); target = E10000000000000000000008; };
+		E10000000000000000000012 /* Coordinator discovery tests */ = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (PluginLifecycleXPCContracts.swift, ); target = A20000000000000000000004; };
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -137,7 +139,7 @@
 		A10000000000000000000006 /* ReleaseRadarTests */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A90000000000000000000003 /* Exceptions for ReleaseRadarTests folder in ReleaseRadarTests target */, ); path = ReleaseRadarTests; sourceTree = "<group>"; };
 		A10000000000000000000007 /* ReleaseRadarUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; path = ReleaseRadarUITests; sourceTree = "<group>"; };
 		A10000000000000000000008 /* ReleaseRadarIntegration */ = {isa = PBXFileSystemSynchronizedRootGroup; path = ReleaseRadarIntegration; sourceTree = "<group>"; };
-		A10000000000000000000009 /* ReleaseRadarTransport */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A90000000000000000000004, A90000000000000000000005, A90000000000000000000006, ); path = ReleaseRadarTransport; sourceTree = "<group>"; };
+		A10000000000000000000009 /* ReleaseRadarTransport */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A90000000000000000000004, A90000000000000000000005, A90000000000000000000006, E10000000000000000000011, E10000000000000000000012, ); path = ReleaseRadarTransport; sourceTree = "<group>"; };
 		A1000000000000000000000A /* ReleaseRadarBridgeAgent */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A90000000000000000000002 /* Exceptions for ReleaseRadarBridgeAgent folder in ReleaseRadarBridgeAgent target */, ); path = ReleaseRadarBridgeAgent; sourceTree = "<group>"; };
 		A1000000000000000000000B /* ReleaseRadarPluginLifecycleHelper */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (A90000000000000000000007, ); path = ReleaseRadarPluginLifecycleHelper; sourceTree = "<group>"; };
 		A1000000000000000000000C /* ReleaseRadarDocumentationTool */ = {isa = PBXFileSystemSynchronizedRootGroup; path = ReleaseRadarDocumentationTool; sourceTree = "<group>"; };
@@ -245,7 +247,7 @@
 			buildPhases = (C13000000000000000000001 /* Sources */, C13000000000000000000002 /* Frameworks */, C13000000000000000000003 /* Resources */, );
 			buildRules = ();
 			dependencies = (A80000000000000000000002 /* PBXTargetDependency */, A80000000000000000000003 /* PBXTargetDependency */, A80000000000000000000007 /* PBXTargetDependency */, );
-			fileSystemSynchronizedGroups = (A10000000000000000000006 /* ReleaseRadarTests */, E10000000000000000000006, );
+			fileSystemSynchronizedGroups = (A10000000000000000000006 /* ReleaseRadarTests */, E10000000000000000000006, A10000000000000000000009, );
 			name = ReleaseRadarTests;
 			packageProductDependencies = ();
 			productName = ReleaseRadarTests;
@@ -281,7 +283,7 @@
             productReference = A1000000000000000000001C;
             productType = "com.apple.product-type.tool";
         };
-		E10000000000000000000008 /* ReleaseRadarCoordinator */ = {isa = PBXNativeTarget; buildConfigurationList = E10000000000000000000009; buildPhases = (E1000000000000000000000A, E1000000000000000000000B, ); buildRules = (); dependencies = (A80000000000000000000009, ); fileSystemSynchronizedGroups = (E10000000000000000000006, ); name = ReleaseRadarCoordinator; packageProductDependencies = (); productName = ReleaseRadarCoordinator; productReference = E10000000000000000000003; productType = "com.apple.product-type.tool"; };
+		E10000000000000000000008 /* ReleaseRadarCoordinator */ = {isa = PBXNativeTarget; buildConfigurationList = E10000000000000000000009; buildPhases = (E1000000000000000000000A, E1000000000000000000000B, ); buildRules = (); dependencies = (A80000000000000000000009, ); fileSystemSynchronizedGroups = (E10000000000000000000006, A10000000000000000000009, ); name = ReleaseRadarCoordinator; packageProductDependencies = (); productName = ReleaseRadarCoordinator; productReference = E10000000000000000000003; productType = "com.apple.product-type.tool"; };
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */

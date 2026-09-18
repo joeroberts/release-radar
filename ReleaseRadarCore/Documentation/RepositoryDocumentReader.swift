@@ -114,6 +114,38 @@ final class RepositoryDocumentReader {
         }
     }
 
+    /// Fixed app-owned setup operation: materialize the linked project's layer,
+    /// never its configuration or hooks. The retained root was opened without
+    /// following user links; check its current path identity around the mutation.
+    func ensureProjectLayerDirectory() throws {
+        func verifyRootIdentity() throws {
+            let current = try Self.openRoot(rootURL)
+            defer { close(current) }
+            var info = stat()
+            guard fstat(current, &info) == 0, info.st_dev == rootStamp.device,
+                  info.st_ino == rootStamp.inode, info.st_mode == rootStamp.mode,
+                  info.st_uid == getuid(), info.st_mode & 0o022 == 0 else {
+                throw ProjectExecutionError.identityMismatch
+            }
+        }
+        try verifyStable()
+        try verifyRootIdentity()
+        if mkdirat(root, ".codex", 0o700) != 0, errno != EEXIST {
+            throw StoreError.unavailable("Cannot create the assigned checkout's .codex project directory. Preserve the checkout and resume setup in Release Radar.")
+        }
+        let directory: Int32
+        do { directory = try openRelative(".codex", directory: true) }
+        catch { throw ProjectExecutionError.conflict }
+        defer { close(directory) }
+        var opened = stat(), entry = stat()
+        guard fstat(directory, &opened) == 0,
+              opened.st_uid == getuid(), opened.st_mode & 0o022 == 0,
+              fstatat(root, ".codex", &entry, AT_SYMLINK_NOFOLLOW) == 0,
+              opened.st_dev == entry.st_dev, opened.st_ino == entry.st_ino,
+              entry.st_mode & S_IFMT == S_IFDIR else { throw ProjectExecutionError.conflict }
+        try verifyRootIdentity()
+    }
+
     static func validatePath(_ path: String, limits: RepositoryDocumentContract.Limits, docsOnly: Bool = true) throws {
         guard !path.isEmpty, path.utf8.count <= limits.maximumPathBytes,
               path == path.precomposedStringWithCanonicalMapping,

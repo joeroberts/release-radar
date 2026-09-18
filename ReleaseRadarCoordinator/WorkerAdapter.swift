@@ -17,15 +17,18 @@ actor WorkerAdapter {
         var approvals: [String: [String: Any]] = [:]
         var effective: [String: Any] = [:]
         var uncertainApproval: [String: String]?
+        var contextLease: (any ExecutionContextLease)?
+        var accessFailure: CodexExecutionContextAccessFailure?
+        var transportReached = false
     }
     private let store: ProjectExecutionFileStore
     private var workers: [String: Worker] = [:]
     private var starting = false
-    private let serverFactory: @Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer
+    private let serverFactory: (@Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer)?
     init(store: ProjectExecutionFileStore,
-         serverFactory: @escaping @Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer = {
-             try AppServerTransport(executable: $0, arguments: $1, onMessage: $2)
-         }) { self.store = store; self.serverFactory = serverFactory }
+         serverFactory: (@Sendable (String, [String], @escaping @Sendable (RPCObject) -> Void) throws -> any ExecutionPeer)? = nil) {
+        self.store = store; self.serverFactory = serverFactory
+    }
 
     private func worker(_ id: String) throws -> Worker {
         guard let value = workers[id] else { throw ProjectExecutionError.identityMismatch }; return value
@@ -86,20 +89,37 @@ actor WorkerAdapter {
         starting = true; defer { starting = false }
         let id = UUID().uuidString
         workers[id] = Worker(id: id, policy: selected)
-        try selected.reserve() // Durable start intent prevents redispatch after a partial or uncertain start.
         do {
             guard try store.policy(projectID: projectID) == selected.policy else { throw ProjectExecutionError.assignmentNotAuthorized }
-            var args = ["app-server", "--listen", "stdio://"]
+            var args = AppServerTransport.executionSetupArguments
             for (key, value) in try selected.overrides(config: [:]).sorted(by: { $0.key < $1.key }) {
                 let data = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
                 args += ["-c", key + "=" + String(decoding: data, as: UTF8.self)]
             }
-            let server = try serverFactory(selected.policy.appServerExecutable, args) { [weak self] message in
+            let onMessage: @Sendable (RPCObject) -> Void = { [weak self] message in
                 Task { await self?.event(id, message) }
             }
+            let server: any ExecutionPeer
+            let lease: (any ExecutionContextLease)?
+            if serverFactory != nil { lease = nil }
+            else {
+                guard let contextID = selected.policy.codexContextID else { throw CodexExecutionContextAccessFailure(stage: .identity) }
+                // RR only hands off a fresh authorized launch. Existing uncertain
+                // reservations cannot acquire another grant after restart.
+                lease = try CoordinatorCodexContextLease.acquire(store: store, projectID: projectID,
+                    assignmentID: assignmentID, contextID: contextID, attemptID: UUID(uuidString: id)!)
+            }
+            workers[id]?.contextLease = lease
+            try selected.reserve() // Durable intent still precedes every child launch.
+            if let serverFactory { server = try serverFactory(selected.policy.appServerExecutable, args, onMessage) }
+            else if let lease { server = try AppServerTransport(executable: selected.policy.appServerExecutable, arguments: args, context: lease, onMessage: onMessage) }
+            else { throw CodexExecutionContextAccessFailure(stage: .handoff) }
+            workers[id]?.transportReached = true
             workers[id]?.server = server
             _ = try await rpc(server, "initialize", ["clientInfo": ["name": "release_radar_coordinator", "version": "1"], "capabilities": ["experimentalApi": true]])
             try server.send(["method": "initialized"])
+            let account = try await rpc(server, "account/read", ["refreshToken": false])
+            guard (account["account"] as? [String: Any])?["type"] as? String == "chatgpt" else { throw CodexExecutionContextError.subscriptionRequired }
             let configResult = try await rpc(server, "config/read", ["cwd": selected.assignment.checkoutPath, "includeLayers": false])
             guard let config = configResult["config"] as? [String: Any] else { throw ProjectExecutionError.invalidAssignment }
             try selected.validate(config: config)
@@ -110,6 +130,7 @@ actor WorkerAdapter {
             ])
             guard let thread = result["thread"] as? [String: Any], let threadID = thread["id"] as? String else { throw ProjectExecutionError.identityMismatch }
             workers[id]?.threadID = threadID
+            guard thread["modelProvider"] as? String == "openai" else { throw CodexExecutionContextError.routingUnsupported }
             workers[id]?.effective = result.filter { ["cwd", "runtimeWorkspaceRoots", "model", "reasoningEffort", "activePermissionProfile", "sandbox", "approvalPolicy", "approvalsReviewer", "instructionSources"].contains($0.key) }
             guard result["cwd"] as? String == selected.assignment.checkoutPath,
                   result["runtimeWorkspaceRoots"] as? [String] == [selected.assignment.checkoutPath],
@@ -139,21 +160,29 @@ actor WorkerAdapter {
         } catch {
             workers[id]?.status = unknown(error) ? "unknown" : "failed"
             workers[id]?.error = error.localizedDescription
+            workers[id]?.accessFailure = error as? CodexExecutionContextAccessFailure
         }
         return try status(workerID: id)
     }
 
     private func verifyInstructionSources(_ value: Any?, selected: WorkerPolicy) throws {
         guard let sources = value as? [String] else { throw ProjectExecutionError.identityMismatch }
-        let expected = Set(selected.assignment.context.map { selected.assignment.checkoutPath + "/" + $0.path })
+        try selected.verifyCodexContext()
+        var expected = Set(selected.assignment.context.map { selected.assignment.checkoutPath + "/" + $0.path })
+        if let global = try selected.codexContext.globalInstructionSource() { expected.insert(global) }
+        try selected.verifyCodexContext()
         guard sources.allSatisfy(expected.contains) else { throw ProjectExecutionError.identityMismatch }
     }
 
     private func verifyHook(_ server: any ExecutionPeer, selected: WorkerPolicy) async throws {
-        let result = try await rpc(server, "hooks/list", ["cwds": [selected.assignment.checkoutPath]])
+        try selected.verifyCodexContext()
+        let canonical = try ProjectExecutionHookReadiness.canonicalPrimaryRoot(selected.policy.primaryRoot)
+        let checkout = ProjectExecutionHookReadiness.discoveryCheckout(primaryRoot: selected.policy.primaryRoot,
+            canonicalPrimaryRoot: canonical, checkout: selected.assignment.checkoutPath)
+        let result = try await rpc(server, "hooks/list", ["cwds": [checkout]])
         let data = try JSONSerialization.data(withJSONObject: result)
-        _ = try ProjectExecutionHookReadiness.resolve(data, checkout: selected.assignment.checkoutPath,
-            primaryRoot: selected.policy.primaryRoot, command: "\"" + selected.policy.handlerPath + "\" --hook", requireTrusted: true, inline: selected.policy.hookReceipt?.inline ?? false)
+        _ = try ProjectExecutionHookReadiness.resolve(data, checkout: checkout,
+            primaryRoot: canonical, command: "\"" + selected.policy.handlerPath + "\" --hook", requireTrusted: true, inline: selected.policy.hookReceipt?.inline ?? false)
     }
 
     func status(workerID: String) throws -> RPCObject {
@@ -161,11 +190,18 @@ actor WorkerAdapter {
         var result: [String: Any] = ["workerId": workerID, "status": worker.status,
                                     "messages": worker.messages, "messagesTruncated": worker.truncated,
                                     "effective": worker.effective, "assignmentId": worker.policy.assignment.id,
+                                    "transportReached": worker.transportReached,
                                     "projectId": worker.policy.assignment.registration.projectID.rawValue,
                                     "pendingRequests": worker.approvals.map { ["requestKey": $0.key, "method": $0.value["method"] ?? NSNull(), "params": $0.value["params"] ?? [:]] }]
         if let threadID = worker.threadID { result["threadId"] = threadID }
         if let turnID = worker.turnID { result["turnId"] = turnID }
         if let error = worker.error { result["error"] = error }
+        if let failure = worker.accessFailure {
+            var diagnostic: [String: Any] = ["stage": failure.stage.rawValue]
+            if let domain = failure.domain, let code = failure.code { diagnostic["domain"] = domain; diagnostic["code"] = code }
+            if let domain = failure.underlyingDomain, let code = failure.underlyingCode { diagnostic["underlyingDomain"] = domain; diagnostic["underlyingCode"] = code }
+            result["accessFailure"] = diagnostic
+        }
         if let uncertain = worker.uncertainApproval { result["uncertainApproval"] = uncertain }
         return try RPCObject(result)
     }
@@ -248,7 +284,10 @@ actor WorkerAdapter {
     func close(workerID: String) throws -> RPCObject {
         let worker = try worker(workerID)
         guard !worker.busy, ["completed", "interrupted", "failed", "ready", "unknown"].contains(worker.status) else { throw ProjectExecutionError.assignmentNotAuthorized }
-        do { try worker.server?.close() }
+        do {
+            if let server = worker.server { try server.close() }
+            else { try worker.contextLease?.physicallyClosed() }
+        }
         catch {
             workers[workerID]?.status = "unknown"; workers[workerID]?.error = error.localizedDescription
             do { try worker.policy.mark(.unknown, sessionID: worker.threadID, from: [.authorized, .stopped]) }
@@ -265,7 +304,8 @@ actor WorkerAdapter {
         var failure: Error?
         for worker in workers.values {
             do {
-                try worker.server?.close()
+                if let server = worker.server { try server.close() }
+                else { try worker.contextLease?.physicallyClosed() }
                 try worker.policy.mark(worker.status == "completed" ? .closed : .stopped, sessionID: worker.threadID, from: [.authorized, .stopped, .revoked, .superseded, .unknown], connectionClosed: true)
             }
             catch {
