@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**September 18 — reviewed context-handoff candidate installed; production startup pending.**
+**September 18 — reviewed permission-metadata correction installed; production startup pending.**
 Source candidate `abfaef63a1c42671a433a617c70dfe15efccef69` is committed on
 `codex/coordinator-context-handoff`. Independent authority/lifetime reviewer
 `01a0b42c-543f-7420-b4fa-82ec6cf0f092` returned PASS, with no Required or Optional
@@ -11,15 +11,23 @@ combined 34-test run and final affected four-test run; documentation and diff
 checks passed. The [owning brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#september-18-temporary-context-handoff-correction)
 records the bounded source outcome and remaining runtime acceptance.
 
-The established signed Release build, staging and authorized installation/relaunch
-passed from that source commit in retained `b5a9`. Installed 0.1.19/build 1 has
-app CDHash `74f7eb7495785262cb61b264eae3b5016710fa77` and Coordinator CDHash
-`f05c7571783b1eadb552a58831275c7b09e72b28`, Team `2UA854NLX4`; installed app,
-Core, Coordinator, AgentTools, broker and signed manifest match the verified stage.
-Live app PID 80069 maps the installed executable. A fresh installed AgentTools
-read-only inventory succeeded; BA's cached helper returned `appUnavailable` and
-still maps the prior binary. Codex was not restarted. Temporary native/staging
-outputs remain excluded from commits and retained; no version/tag/DMG was created.
+The bounded permission-metadata correction `aeee41a84db8e52c47ea63001e4a411793dbdb8d`
+accepts only documented null overlays, preserving disabled network and exact grants.
+Its new regression first failed as expected; all 22 WorkerAdapter tests passed after
+correction. The same independent reviewer returned PASS with no Required or Optional
+findings; documentation and diff checks passed. Main released signed staging,
+installation and normal launch from that source candidate. Both scripts exited 0.
+Installed 0.1.19/build 1 app CDHash is `f1b6dbf2fbe30fd9422f787cd0bd53253f7352c2`,
+Coordinator CDHash `5ce6a51d6ade71be2c857154bd5e378c32d5f3b9`, Team `2UA854NLX4`.
+Installed app, Core, Coordinator, AgentTools, broker and signed manifest match stage.
+Live app PID 88656 maps the installed app/Core. Fresh installed AgentTools PID 88772
+returned a complete fixture delivery inventory and exited 0; its registration,
+phase revision and task-plan revision remain unchanged. Temporary native/staging
+outputs and reviewer evidence remain retained and excluded from commits. No
+version/tag/DMG/push/PR/merge, Codex restart or worker replay occurred.
+The owner has now explicitly approved exact assignment 88116 retirement through
+Main's Manage Project UI. Installation is verified and UI mutation is released;
+retirement has not been performed by BA or verified in this record.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.
 Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`
@@ -43,7 +51,7 @@ serialized as null, while `WorkerPolicy.validate` requires only `enabled`. Its
 filesystem also includes `glob_scan_max_depth: null`, breaking the subsequent raw
 profile equality check. Installed Codex is `0.155.0-alpha.9`; the narrow follow-up
 read confirmed that field is present and JSON null, then exited normally. The
-writer owns the separately authorized schema-verified compatibility correction.
+reviewed compatibility correction is now installed; runtime acceptance remains Main-owned.
 No account, thread, turn or assignment mutation occurred in these diagnostics.
 Normal EOF closed the idle Coordinator with exit 0 and confirmed process exit.
 No retry or new preparation followed; full startup/isolation/STOP and recovery

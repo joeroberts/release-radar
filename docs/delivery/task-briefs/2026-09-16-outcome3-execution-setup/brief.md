@@ -38,19 +38,31 @@ test-first compatibility correction. No account/thread/turn/start/write, owner
 configuration edit, retry or retirement occurred. Recovery remains Main-owned.
 An ignored `tools.view_image` warning does not identify the rejected guard.
 
-The separately authorized compatibility correction accepts only absent/null values
-for the twelve documented optional network overlays and `glob_scan_max_depth`,
-requiring disabled network and exact remaining filesystem grants. Primary Codex
-configuration definitions and the tagged-source retrieval limitation are recorded
+The separately authorized compatibility correction `aeee41a84db8e52c47ea63001e4a411793dbdb8d`
+accepts only absent/null values for the twelve documented optional network overlays
+and `glob_scan_max_depth`, requiring disabled network and exact remaining filesystem
+grants. Primary definitions and the tagged-source retrieval limitation are recorded
 in the [owning design](../../../design/outcome3-runtime-enforcement-assessment.md#september-18-effective-configuration-metadata-compatibility).
-No profile/configuration edit, numeric-depth acceptance, live retry or retirement
-is included. BA compiled and ran the real JSON-normalized response regression
-against unchanged production code: one expected `invalidAssignment` failure at
-the positive assertion, with negative assertions passing. BA then passed the full
-WorkerAdapterTests suite: 22 tests, zero failures, native exit 0. Documentation and
-diff checks passed; no native test processes remained. The same independent
-reviewer's correction review and a coherent scoped commit remain pending; Main
-retains the ledger and installed-runtime acceptance.
+The normalized-response regression first failed with the expected `invalidAssignment`;
+all 22 WorkerAdapter tests then passed after the correction. Documentation and diff
+checks passed. The same independent reviewer `01a0b42c-543f-7420-b4fa-82ec6cf0f092`
+returned PASS on that correction against `8cc09530`, with no Required or Optional findings.
+
+Main released the established signed stage/install workflow and normal app launch.
+Both scripts exited 0. Installed 0.1.19/build 1 app CDHash is
+`f1b6dbf2fbe30fd9422f787cd0bd53253f7352c2`; Coordinator CDHash is
+`5ce6a51d6ade71be2c857154bd5e378c32d5f3b9`, Team `2UA854NLX4`.
+Installed app, Core, Coordinator, AgentTools, broker and signed manifest match the
+verified stage. Live app PID 88656 maps the installed app/Core. Fresh installed
+AgentTools PID 88772 returned a complete fixture delivery inventory and exited 0:
+registration/generation, phase revision 1 and task-plan revision 1 remain unchanged.
+This is intermediate acceptance; no version/tag/DMG/push/PR/merge, Codex restart,
+worker start/preparation or retirement occurred. Unknown reserved, uncertain and
+closed assignment 88116 remains preserved; worker startup, isolation, STOP and
+recovery remain unverified. Main retains runtime acceptance ownership.
+The owner subsequently explicitly approved exact assignment 88116 retirement via
+approval reply 1. Main owns that Manage Project UI action; BA released UI mutation
+after installed identity/readback checks, without performing or claiming retirement.
 
 ```json
 {
