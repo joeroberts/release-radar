@@ -33,7 +33,7 @@ Its exact envelope was committed before one fresh-helper submission, after compl
 inventory matched. Audit `42B6FEF4-8085-4C3E-BB49-0509050264B0` returned authorized
 delivery/Terra/medium assignment with exact saved-response match and real checkout.
 No worker started; Main owns the subsequent bounded prompt. Full startup/model turn, isolation,
-STOP and recovery acceptance remain pending. No worker replay, new preparation,
+STOP and recovery acceptance remain pending. No worker replay,
 version/tag/DMG/push/PR/merge, permission change or BA-initiated Codex restart occurred.
 Temporary build/review outputs and worktrees remain retained and excluded from commits.
 
