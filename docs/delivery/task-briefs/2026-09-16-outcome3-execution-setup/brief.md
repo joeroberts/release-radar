@@ -1,5 +1,29 @@
 # Outcome 3 project execution setup
 
+## September 18 corrected-candidate worker startup
+
+Main releases one production startup observation for the prepared assignment below.
+Persist this exact prompt before calling once through a fresh installed Coordinator;
+retain the same connection for status, follow-up, interrupt and supported close.
+Do not auto-approve runtime requests or retry the start. A successful idle worker
+remains open for Main's next bounded acceptance instruction. On failure preserve
+exact evidence and close on the same known connection as needed. No configuration
+mutation or broader tests are authorized by this startup observation.
+
+Disposition: **pending startup**.
+
+```json
+{
+  "tool": "worker_start",
+  "arguments": {
+    "projectId": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+    "assignmentId": "delivery-4fd11768-738e-44cd-9216-f5babc3d63d8",
+    "prompt": "Outcome 3 disposable acceptance: establish that this worker starts in its assigned checkout. Report your current working directory and runtime-supplied filesystem, network, and approval settings, distinguishing unavailable fields. Read only the repository root README.md if it exists and report its heading; do not search outside the assigned checkout. Do not modify files, launch other tasks, access history, credentials, .git, .codex, sibling checkouts, or network services. Then finish this turn and wait for the same assignment’s next bounded acceptance instruction. This is a startup observation, not delivery completion."
+  }
+}
+```
+
+
 ## September 18 metadata-correction replacement preparation
 
 Main selects and releases the exact preparation-only request below after verified
