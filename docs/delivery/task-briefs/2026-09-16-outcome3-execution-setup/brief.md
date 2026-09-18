@@ -10,7 +10,20 @@ remains open for Main's next bounded acceptance instruction. On failure preserve
 exact evidence and close on the same known connection as needed. No configuration
 mutation or broader tests are authorized by this startup observation.
 
-Disposition: **pending startup**.
+Disposition: **submitted once; rejected before worker allocation**. Exact prompt
+was committed in `07676099` before submission. Fresh installed Coordinator MCP
+session 8299 initialized, then one `worker_start` returned `isError: true`:
+“This assignment is stopped, revoked or no longer current. Return to the coordinator;
+no work turn is authorized.” No worker handle, thread/turn, effective settings or
+pending runtime request was returned. Read-only saved assignment is now revoked,
+with unchanged registration/work/context and no launch reservation, uncertainty,
+closed flag or session. The prepare response and its matching saved snapshot had
+been authorized; the intervening revocation's actor/cause is not established.
+`WorkerPolicy.init` rejects that state before worker allocation, handoff, reservation
+or transport. No worker-status/close request is possible without a handle; the idle
+Coordinator connection remains retained pending Main's closure/diagnosis direction.
+No retry, new preparation, auto-approval or configuration change followed. Startup,
+isolation, STOP and recovery remain unverified; Main owns recovery sequencing.
 
 ```json
 {

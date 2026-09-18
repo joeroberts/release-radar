@@ -38,7 +38,14 @@ submission, without baseline/review/asserted-thread fields. Fresh installed help
 verified current inventory and submitted once. Audit `9DA9D44A-634C-4BC8-A6A8-274081574B53`
 returned authorized delivery assignment with Terra/medium and the bounded profile;
 saved assignment exactly matches the response and its real checkout exists. No
-worker started. Main owns the next bounded prompt; the owning brief records identity.
+worker started during preparation. Main then released one bounded startup
+observation, persisted before submission. It returned an immediate authorization
+rejection with no worker handle; read-only assignment is revoked with no reservation,
+session or uncertainty. Earlier preparation/saved readback had been authorized;
+the intervening revocation's cause is unverified. Source ordering rejects that state
+before worker allocation or child launch. Coordinator connection remains retained
+pending Main direction; no retry or replacement followed. Runtime startup and
+remaining acceptance are unverified. The owning brief records the exact prompt/result.
 
 Actual production handoff/start, isolation, STOP and recovery remain pending.
 Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`
