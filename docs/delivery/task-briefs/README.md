@@ -958,6 +958,7 @@ Leaf: no child collections.
 | ID | Path | Kind | Authority | Lifecycle | Supersedes | Superseded by |
 | --- | --- | --- | --- | --- | --- | --- |
 | rr-outcome3-execution-setup-brief-2026-09-16 | [docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/brief.md](2026-09-16-outcome3-execution-setup/brief.md) | document | controlling &#40;delivery.outcome3-execution-setup&#41; | active | none | none |
+| rr-outcome3-main-handoff-2026-09-18 | [docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md](2026-09-16-outcome3-execution-setup/main-handoff.md) | document | supporting | active | none | none |
 
 ### Children
 

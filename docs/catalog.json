@@ -24,8 +24,13 @@
       "path": "docs/delivery/task-briefs/2026-09-15-plugin-verification-sandbox-fix",
       "parentCollection": "delivery.task-briefs",
       "purpose": "Signed helper verification regression; progress controls authorization",
-      "allowedContents": ["Controlling task brief"],
-      "prohibitedContents": ["Owner data and credentials", "Temporary build output"],
+      "allowedContents": [
+        "Controlling task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
       "isLeaf": true,
       "firstRead": "rr-plugin-verification-sandbox-fix-brief-2026-09-15",
       "archiveDestination": "delivery.archive"
@@ -51,8 +56,13 @@
       "path": "docs/delivery/task-briefs/2026-09-15-installed-plugin-cache-containment",
       "parentCollection": "delivery.task-briefs",
       "purpose": "Installed plugin cache containment; progress controls authorization",
-      "allowedContents": ["Controlling task brief"],
-      "prohibitedContents": ["Owner data and credentials", "Temporary build output"],
+      "allowedContents": [
+        "Controlling task brief"
+      ],
+      "prohibitedContents": [
+        "Owner data and credentials",
+        "Temporary build output"
+      ],
       "isLeaf": true,
       "firstRead": "rr-installed-plugin-cache-containment-brief-2026-09-15",
       "archiveDestination": "delivery.archive"
@@ -951,7 +961,6 @@
       "firstRead": "rr-outcome3-runtime-enforcement-brief-2026-09-14",
       "archiveDestination": "delivery.archive"
     }
-
   ],
   "artifacts": [
     {
@@ -978,8 +987,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-15-plugin-verification-sandbox-fix",
       "supersedes": [],
-      "applicationSensitivity": ["none"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-installed-plugin-cache-containment-brief-2026-09-15",
@@ -990,8 +1003,12 @@
       "authorityRole": "delivery.installed-plugin-cache-containment",
       "parentCollection": "delivery.task-briefs.2026-09-15-installed-plugin-cache-containment",
       "supersedes": [],
-      "applicationSensitivity": ["none"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-r10-task11b-installed-workflow-repair-evidence",
@@ -6852,8 +6869,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-add-project-initialize-minimum-2026-09-12",
@@ -6863,8 +6884,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-add-project-attach-confirmation-default-2026-09-12",
@@ -6874,8 +6899,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-add-project-attach-confirmation-minimum-2026-09-12",
@@ -6885,8 +6914,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-add-project-attach-empty-2026-09-12",
@@ -6896,8 +6929,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-add-project-rds-later-workflows-2026-09-12",
@@ -6907,8 +6944,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-release-0.1.15-packaging-2026-09-12",
@@ -6918,8 +6959,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-search-focus-0.1.16-wide-2026-09-12",
@@ -6929,8 +6974,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-search-focus-0.1.16-compact-2026-09-12",
@@ -6940,8 +6989,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-release-0.1.16-packaging-2026-09-12",
@@ -6951,8 +7004,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.evidence",
       "supersedes": [],
-      "applicationSensitivity": ["evidence"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "evidence"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-operative-authority-reconciliation-brief-2026-09-13",
@@ -6962,8 +7019,12 @@
       "authorityLevel": "nonAuthoritative",
       "parentCollection": "delivery.task-briefs.2026-09-13-operative-authority-reconciliation",
       "supersedes": [],
-      "applicationSensitivity": ["none"],
-      "checksum": {"policy": "notApplicable"}
+      "applicationSensitivity": [
+        "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
     },
     {
       "artifactID": "rr-current-document-workspace-pilot-brief-2026-09-13",
@@ -7291,6 +7352,21 @@
       "supersedes": [],
       "applicationSensitivity": [
         "none"
+      ],
+      "checksum": {
+        "policy": "notApplicable"
+      }
+    },
+    {
+      "artifactID": "rr-outcome3-main-handoff-2026-09-18",
+      "path": "docs/delivery/task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md",
+      "kind": "document",
+      "lifecycle": "active",
+      "authorityLevel": "supporting",
+      "parentCollection": "delivery.task-briefs.2026-09-16-outcome3-execution-setup",
+      "supersedes": [],
+      "applicationSensitivity": [
+        "guidance"
       ],
       "checksum": {
         "policy": "notApplicable"

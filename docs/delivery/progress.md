@@ -1,5 +1,9 @@
 # Release Radar delivery state
 
+## Main task transition
+
+The owner requested a clean stopping point and replacement Main task. Current bounded acceptance records are committed; the guidance correction has not been dispatched. The checked [Main handoff and restart prompt](task-briefs/2026-09-16-outcome3-execution-setup/main-handoff.md) is ready in the scoped handoff commit. New work is held for the owner-requested Main transition. Outcome 3 remains open. The handoff identifies verified results, exact retained work, remaining acceptance and existing authorizations; it does not replace this ledger.
+
 ## Current outcome
 
 **September 18 — Outcome 3 completion goal active; historical isolation passed and hook recovery guidance correction remains.**
