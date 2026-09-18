@@ -468,6 +468,23 @@ and have the chief architect assess integration/refactor needs. Hook readiness a
 startup remain pending; why the prior real effective default was absent is also unresolved.
 Temporary outputs remain retained. Worker preparation and full Outcome 3 acceptance
 remain open.
+
+BuildAgent confirmed the clean corrective worktree is attached to
+`codex/hook-layer-disabled-reason` at `9671b6fe83e2d48cc3188e88eb113e8eda9bb474`.
+The approved slice projects the exact-checkout project layer's string `disabledReason`
+only when it matches one of the two installed trust templates: fixed
+`explicit-untrusted` or `missing-trust` plus fixed `checkout`/`primary-root` target
+labels. It preserves the original `hookNotReady`, same-child read, trust/write/retry/
+cleanup and request semantics; the raw reason, configuration, hook command and paths
+are not logged. Unknown text remains unrecognized.
+The observed differing `disabledReason` values remain environment-dependent evidence,
+not an established cause. Checkpoint 61 passed the seven focused projection/context/
+readiness/setup tests with zero failures (Xcode exit 0), and fresh RO04 review found no
+Required or Optional findings. The authorized endpoint remains a scoped local commit;
+no live replay or configuration mutation is released. Checkpoint 59 ended before tests
+(Xcode exit 65) because this fresh worktree lacks the libgit2 header/module dependency;
+it applies only to the
+superseded category candidate and establishes no corrected-candidate behavior.
 Main retains serialized live operations and all native/Git work; the source worker
 performs none. Prior unrelated checks/reviews remain terminal. Shipping plugin
 bytes/digest and catalog identity/lifecycle/purpose remain unchanged; existing temporary/

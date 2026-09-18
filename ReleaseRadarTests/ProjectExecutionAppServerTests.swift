@@ -1,9 +1,26 @@
 import Foundation
 import Security
 import XCTest
+@testable import ReleaseRadar
 @testable import ReleaseRadarCore
 
 final class ProjectExecutionAppServerTests: XCTestCase {
+    func testDisabledReasonDiagnosticProjectsOnlyExactKnownTrustTemplates() {
+        let checkout = "/fixture/checkout"
+        let primaryRoot = "/fixture/primary"
+        let explicitUntrusted = "\(checkout) is marked as untrusted in the effective configuration. To load project-local config, hooks, and exec policies, update its trust setting. If that setting is managed by your organization, contact your administrator."
+        let explicitUntrustedPrimary = "\(primaryRoot) is marked as untrusted in the effective configuration. To load project-local config, hooks, and exec policies, update its trust setting. If that setting is managed by your organization, contact your administrator."
+        let missingTrust = "To load project-local config, hooks, and exec policies, add \(primaryRoot) as a trusted project in /fixture/codex/config.toml."
+        let missingTrustCheckout = "To load project-local config, hooks, and exec policies, add \(checkout) as a trusted project in /fixture/codex/config.toml."
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic(explicitUntrusted, checkout: checkout, primaryRoot: primaryRoot), .explicitUntrusted(target: .checkout))
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic(explicitUntrustedPrimary, checkout: checkout, primaryRoot: primaryRoot), .explicitUntrusted(target: .primaryRoot))
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic(missingTrust, checkout: checkout, primaryRoot: primaryRoot), .missingTrust(target: .primaryRoot))
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic(missingTrustCheckout, checkout: checkout, primaryRoot: primaryRoot), .missingTrust(target: .checkout))
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic("secret-token=abc123", checkout: checkout, primaryRoot: primaryRoot), .unrecognized)
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic("To load project-local config, hooks, and exec policies, add \(checkout) as a trusted project in secret-token=abc123", checkout: checkout, primaryRoot: primaryRoot), .unrecognized)
+        XCTAssertEqual(ProjectExecutionSetupClient.disabledReasonDiagnostic("To load project-local config, hooks, and exec policies, add /other/project as a trusted project in /fixture/codex/config.toml.", checkout: checkout, primaryRoot: primaryRoot), .unrecognized)
+    }
+
     func testSetupTransportReadsPermissionTablesWithoutChangingOwnerDefault() async throws {
         let home = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let codex = home.appendingPathComponent("codex")

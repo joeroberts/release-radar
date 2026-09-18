@@ -745,6 +745,23 @@ log/result bundle and checker profile are retained. No new state/API, hook-trust
 or request replay is released.
 BuildAgent performed no replay or live/config/SQLite mutation.
 
+BuildAgent subsequently confirmed the clean corrective worktree is attached to
+`codex/hook-layer-disabled-reason` at `9671b6fe83e2d48cc3188e88eb113e8eda9bb474`.
+The approved diagnostic correction projects a string `disabledReason` only when it
+matches one of the two installed trust templates. It logs fixed `explicit-untrusted` or
+`missing-trust` and fixed `checkout`/`primary-root` target labels for the already
+supported exact-checkout first-empty-hooks path; unknown text remains unrecognized. It
+does not log the raw reason, configuration, hooks, commands or paths, and it preserves
+the original `hookNotReady`, same-child transport, identity, trust/write, retry and
+cleanup behavior. The distinct observed values are environment-dependent evidence, not
+root-cause proof. Checkpoint 61 passed the seven focused projection/context/readiness/
+setup tests with zero failures (Xcode exit 0), and fresh RO04 review found no Required
+or Optional findings. Main/BuildAgent's scoped local commit remains the endpoint; live
+replay/configuration mutation remains excluded.
+Checkpoint 59 ended before tests (Xcode exit 65) because this fresh worktree lacks the
+libgit2 header/module dependency. It applies only to the superseded category candidate
+and establishes no corrected-candidate behavior; retained native output is temporary.
+
 Checkpoint 46 established attributable RED with the original setup arguments: only
 `testSetupTransportReadsPermissionTablesWithoutChangingOwnerDefault` ran in the existing
 signed/sandboxed host against actual verified Codex with isolated HOME/CODEX_HOME. Its
