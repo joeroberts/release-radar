@@ -53,6 +53,16 @@ separately delegated. Narrow unified logs provide no further trigger entry. BA
 performed no retry, replacement or configuration mutation. Runtime startup and
 remaining acceptance are unverified. The owning brief records the exact prompt/result.
 
+Read-only policy showed generation 1 against current registration generation 2,
+with enabled/installed hook and unchanged context/root. Main performed exact-project
+“Update execution hook” once without Save. Post-operation protected policy now
+matches generation 2, is enabled with installed hook and no binding recovery pending;
+selected context/root and phase/task-plan revisions remain unchanged. Fresh supported
+inventory succeeded. Old never-started 4fd11768 stays revoked at generation 1 with
+its checkout retained. Only the three known assignment records exist; known preparation
+results succeeded, while supported inventory cannot certify absence of an orphan
+unknown request receipt. No new preparation or worker start followed this readback.
+
 Actual production handoff/start, isolation, STOP and recovery remain pending.
 Main's explicitly owner-authorized retirement of `delivery-67a32c8b-11fd-430e-b916-439046da4531`
 completed under request `CF0D11FD-CD4B-4206-AE6A-37ABB74EE64E`: exact clean checkout

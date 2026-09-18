@@ -1,5 +1,34 @@
 # Outcome 3 project execution setup
 
+## September 18 current-generation replacement preparation
+
+Main's supported UI returned “Execution hook update verified”; settings were closed
+with Cancel, without Save, retaining generation 2. Verified policy/current inventory
+match before this release. Main selects and authorizes preparation only for the exact
+envelope below, preserving old revoked resources. Persist before one submission;
+retain the same request/body on uncertainty. No baseline/review/asserted-thread
+fields or worker startup are included. Native admission remains fail closed on any
+unexposed request-receipt conflict; no raw database inspection is needed.
+
+Disposition: **pending submission**.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 2,
+  "requestID": "9d42ef30-dc25-4b12-9e9e-0dba9729de41",
+  "reason": "Prepare current-generation replacement after supported execution-binding recovery; verify installed worker startup.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
 ## September 18 corrected-candidate worker startup
 
 Main releases one production startup observation for the prepared assignment below.
@@ -48,6 +77,29 @@ isolation, STOP and recovery remain unverified; Main owns recovery sequencing.
 }
 ```
 
+
+
+### September 18 supported registration rebind
+
+Read-only project records show exactly three assignments: 67a/88116 have completed
+retirement and confirmed closure; revoked never-started 4fd11768 has no session,
+reservation, uncertainty, retirement or failed-finalization flag. No historical
+project IDs or other live assignment records exist. All known preparation results
+are audited successes; supported inventory does not expose the request-receipt table,
+so absence of an orphan unknown preparation receipt is not independently certified.
+
+Protected policy remained generation 1 while supported current registration was
+generation 2; it was enabled with installed hook, no pending recovery, unchanged
+selected context/root. Main then performed exact-project Manage Project “Update
+execution hook” once under authorized disposable acceptance/recovery scope, without
+Save or manual configuration changes. Post-operation policy now matches current
+registration generation 2, remains enabled with installed production hook and no
+binding recovery pending. Context `9D0895C1-C51D-4D47-8DAC-C80499F6678C` and exact
+primary root are unchanged. Fresh installed AgentTools PID 91783 returned complete
+inventory and exited 0, phase/task-plan revisions 1 unchanged. Old 4fd11768 remains
+revoked at generation 1 with its checkout present and unchanged profile identity;
+no session/reservation/uncertainty is present. BA performed no mutation, preparation
+or startup. Main owns any new exact request; startup acceptance remains unverified.
 
 ## September 18 metadata-correction replacement preparation
 
