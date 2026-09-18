@@ -2,55 +2,51 @@
 
 ## Current outcome
 
-**Outcome 3 — canonical hook source and definition-trust correction; Native71 and independent review passed.**
-BuildAgent confirms clean `codex/hook-canonical-source` attached at exact
-`186c7aaf29cc29eaad765c9263e1ace0483530b3` in the `13f2` worktree. Main released the
-existing brief/ledger update, informative proposal, then tests-first minimal source
-implementation entirely inside the approved owning boundary; no second acknowledgment
-is needed. The [controlling brief](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#current-bounded-canonical-hook-source-and-definition-trust-correction)
-records scope, risks, checks, review and scoped local commit endpoint. BuildAgent alone
-owns native/direct/docs/diff checks, builds, Git and live actions. Requested Sol/high
-and named profile are unexposed; effective restrictions reported. Skill reads denied;
-repository-local fallbacks apply without retries. No subagents or denied-path probes.
+**Outcome 3 — RR hook preparation verified; worker startup configuration remains unresolved.**
+The canonical hook correction is committed as `bff4899`. BuildAgent Native71
+passed 18 focused tests and app/test compilation; documentation/diff checks and
+independent review passed with no Required or Optional findings. Stage72 and
+owner-approved installation73 verified the signed candidate; Release Radar was
+relaunched on September 17 at 22:23:53 EDT. The bounded writer and reviewer are
+archived, and committed source plus staging output are preserved.
 
-Main reports installed `186c7aa` and Update Execution Hook recovery repaired canonical
-project trust/readback; UI showed “Execution hook update verified”. Exact saved retry
-at 22:04:53 failed “owned sourcePath mismatch”; no worker started. Separate read-only
-installed App Server probes under RR container CODEX_HOME returned one owned hook from
-canonical primary and linked cwd, identical canonical `/private/.../.codex/hooks.json`
-source/key/hash, enabled true, correct event/command, both untrusted, no errors/warnings.
-This comparison is not actual RR-process acceptance or proof of the complete root cause.
+Main used the authorized Update execution hook control; RR returned “Execution
+hook update verified.” The one unchanged saved `f481e256-3332-43aa-88e1-4c3dd2c6368a`
+preparation succeeded, returning its original linked checkout and authorized
+assignment (audit `DE85859C-EFC0-402D-844C-BE8571C88C26`). This verifies RR-owned
+linked-checkout hook readiness during preparation, not complete worker acceptance.
 
-Use existing verified canonicalPrimaryRoot for exact owned source and primary hook
-discovery/storage and returned definition trust/readback. Production roots are derived
-at runtime through the existing realpath helper. Linked discovery uses actual linked cwd
-with strict response-cwd checks and requires exact canonical source plus actual trusted
-hash. Preserve raw registered/policy/assignment/request identities, schemas, read-only
-and current-registration gates, command/event/hash/trust/duplicate/exclusion protections.
-No alias fallback/manual hash transfer/global normalization/new machinery is authorized.
-Preserve the full exact `f481e256-3332-43aa-88e1-4c3dd2c6368a` envelope in the brief,
-partial `preparing` assignment and `worker_start: NONE`. Tests were authored first,
-then the real minimal client discovery/source and HookReadiness trusted-readback
-implementation; no native red, scaffolding or transport seam. Exact six-file ownership
-is in the brief. The candidate is frozen for
-the authorized scoped local commit. Main reports BuildAgent Native71 passed all 18
-focused tests (12 App Server, 6 HookReadiness), app/test compilation and documentation/
-diff checks. Main received fresh independent architecture/privacy/correctness reviewer
-`01a0b24a`'s completed final report: Required NONE and Optional NONE. Checks/review are
-terminal for unchanged behavior; reviewer archive is not claimed. Exact canonical
-source/discovery/storage and same-key/hash trusted readback preserve read-only,
-registration and admission gates. Source/tests remain unchanged and frozen; this
-factual brief/ledger update is refrozen for BuildAgent documentation/diff checks.
-No local commit or complete actual-flow fix is yet claimed.
+The subsequent authorized start failed with `invalidAssignment` before returning
+a thread or effective settings. Supported status confirmed failure; supported
+close returned `connectionClosed` and null thread ID for worker
+`12311B93-0800-4E76-AAE1-121A235C4722`. No second start, new assignment or repeated
+preparation occurred. Preserve the original request and launch-reservation state;
+physical closure does not itself clear an uncertain assignment.
 
-Catalog identities/lifecycle/indexes, accepted ADRs and governing files remain unchanged.
-Scoped local commit is the endpoint after checks/review via Main/BuildAgent. No worker
-live/config/trust/hook/install/retry/restart/SQLite/app mutation, cleanup, version/tag,
-push/PR/release is released. Actual RR hook discovery and affected worker startup remain
-required through Main's separately released serialized live route. Actual RR canonical
-definition trust/discovery, exact saved f481 retry and affected worker startup remain
-unverified. Next action: BuildAgent documentation/diff checks and Main-authorized
-six-file scoped local commit; no native/review redo or worker Git/live action.
+Read-only App Server comparison identified a configuration ownership mismatch:
+the desktop context has an account but lacks the assigned profile and canonical
+hook trust; RR's sandbox context has that profile and trusted hook but no account.
+Effective profile serialization also includes metadata fields absent from raw TOML,
+while WorkerPolicy currently requires exact raw keys. Coordinator hook verification
+still supplies the recorded root spelling. These are inputs to the bounded
+[Chief Architecture investigation](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#current-worker-startup-configuration-investigation),
+not authorization for a home switch, credential/config copy or weakened validation.
+
+Main owns current documentation in `codex/worker-startup-config` at
+`/Users/jroberts/.codex/worktrees/rr-worker-startup-config/release_radar`, based on
+`bff4899`. The fresh Chief Architecture task `01a0b25e` is read-only; requested
+Astra/high is not independently exposed. Product edits and another live attempt
+are not released pending the complete supported correction. Existing catalog IDs,
+lifecycle and indexes remain unchanged. No managed-catalog acceptance is claimed.
+Chief Architecture completed: use one explicit context across setup/launch/retirement,
+normalize effective profile validation without widening access, and canonicalize
+coordinator hook comparison. The authenticated desktop context is the smallest
+candidate but RR-process access is unproven and not explicitly granted by app
+entitlements; current release code cannot select that context for a readback.
+The RR context instead requires integrated Codex-managed login/recovery. See the
+[recorded decision boundary](task-briefs/2026-09-16-outcome3-execution-setup/brief.md#chief-architecture-result-and-remaining-decision).
+Next: settle that product/security boundary before the complete source correction.
+No permission expansion, credential transfer or new live attempt is authorized.
 
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
