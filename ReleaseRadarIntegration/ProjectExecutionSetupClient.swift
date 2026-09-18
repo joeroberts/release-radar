@@ -11,45 +11,27 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
     private var transport: AppServerTransport?
     private var cleanupFailure: AppServerTransportError?
 
-    enum DisabledReasonDiagnostic: Equatable {
-        case explicitUntrusted(target: ProjectLayerTarget)
-        case missingTrust(target: ProjectLayerTarget)
-        case unrecognized
-
-        var message: String {
-            switch self {
-            case let .explicitUntrusted(target): "explicit-untrusted, target: \(target.rawValue)"
-            case let .missingTrust(target): "missing-trust, target: \(target.rawValue)"
-            case .unrecognized: "unrecognized"
-            }
-        }
-    }
-
-    enum ProjectLayerTarget: String {
-        case checkout
-        case primaryRoot = "primary-root"
-    }
-
     nonisolated static func disabledReasonDiagnostic(_ reason: String, checkout: String,
-                                                     primaryRoot: String) -> DisabledReasonDiagnostic {
-        let explicitUntrustedSuffix = " is marked as untrusted in the effective configuration. To load project-local config, hooks, and exec policies, update its trust setting. If that setting is managed by your organization, contact your administrator."
-        let missingTrustPrefix = "To load project-local config, hooks, and exec policies, add "
-        let missingTrustInfix = " as a trusted project in "
-        for (key, target) in [(checkout, ProjectLayerTarget.checkout), (primaryRoot, .primaryRoot)] {
-            if reason == key + explicitUntrustedSuffix {
-                return .explicitUntrusted(target: target)
-            }
-            let prefix = missingTrustPrefix + key + missingTrustInfix
-            guard reason.hasPrefix(prefix), reason.hasSuffix(".") else { continue }
-            let userConfigFile = String(reason.dropFirst(prefix.count).dropLast())
-            if userConfigFile.hasPrefix("/"),
-               URL(fileURLWithPath: userConfigFile).lastPathComponent == "config.toml",
-               userConfigFile == URL(fileURLWithPath: userConfigFile).standardizedFileURL.path,
-               !userConfigFile.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) {
-                return .missingTrust(target: target)
+                                                     primaryRoot: String, userHome: String = NSHomeDirectory()) -> String {
+        let userConfig = userHome + "/.codex/config.toml"
+        let redactions = [(checkout, "<checkout>"), (primaryRoot, "<primary-root>"),
+                          (userConfig, "<user-config>"), (userHome, "<user-home>")]
+            .sorted { $0.0.count > $1.0.count }
+        let redacted = redactions.reduce(reason) { value, redaction in
+            guard !redaction.0.isEmpty else { return value }
+            return value.replacingOccurrences(of: redaction.0, with: redaction.1)
+        }
+        var controlsNormalized = ""
+        for scalar in redacted.unicodeScalars {
+            switch scalar.properties.generalCategory {
+            case .control, .lineSeparator, .paragraphSeparator: controlsNormalized.append(" ")
+            default: controlsNormalized.unicodeScalars.append(scalar)
             }
         }
-        return .unrecognized
+        let normalized = controlsNormalized.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let limit = 240
+        guard !normalized.isEmpty else { return "<empty>" }
+        return normalized.count > limit ? String(normalized.prefix(limit)) + "…" : normalized
     }
 
     init(plugin: CodexPluginLifecycleCoordinator?, bundle: URL = Bundle.main.bundleURL) {
@@ -306,7 +288,7 @@ actor ProjectExecutionSetupClient: ProjectExecutionConfiguring {
                                     logger.error("Empty hook observation: exact checkout project layer is enabled")
                                 } else if let disabledReason = layer["disabledReason"] as? String {
                                     let diagnostic = Self.disabledReasonDiagnostic(disabledReason, checkout: checkout, primaryRoot: primaryRoot)
-                                    logger.error("Empty hook observation: exact checkout project layer is disabled (reason: \(diagnostic.message, privacy: .public))")
+                                    logger.error("Empty hook observation: exact checkout project layer is disabled (reason: \(diagnostic, privacy: .public))")
                                 } else {
                                     logger.error("Empty hook observation: checkout project layer enablement is unsupported")
                                 }

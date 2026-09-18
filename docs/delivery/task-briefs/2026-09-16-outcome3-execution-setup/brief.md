@@ -745,19 +745,28 @@ log/result bundle and checker profile are retained. No new state/API, hook-trust
 or request replay is released.
 BuildAgent performed no replay or live/config/SQLite mutation.
 
-BuildAgent subsequently confirmed the clean corrective worktree is attached to
-`codex/hook-layer-disabled-reason` at `9671b6fe83e2d48cc3188e88eb113e8eda9bb474`.
-The approved diagnostic correction projects a string `disabledReason` only when it
-matches one of the two installed trust templates. It logs fixed `explicit-untrusted` or
-`missing-trust` and fixed `checkout`/`primary-root` target labels for the already
-supported exact-checkout first-empty-hooks path; unknown text remains unrecognized. It
-does not log the raw reason, configuration, hooks, commands or paths, and it preserves
-the original `hookNotReady`, same-child transport, identity, trust/write, retry and
-cleanup behavior. The distinct observed values are environment-dependent evidence, not
-root-cause proof. Checkpoint 61 passed the seven focused projection/context/readiness/
-setup tests with zero failures (Xcode exit 0), and fresh RO04 review found no Required
-or Optional findings. Main/BuildAgent's scoped local commit remains the endpoint; live
-replay/configuration mutation remains excluded.
+At 21:07:58 EDT, the exact saved request reached the fresh installed AgentTools peer and
+returned `hookNotReady` with no hooks; the existing first-empty-hooks diagnostic reported
+the exact checkout project layer as disabled with `reason: unrecognized`. This is a
+diagnostic inadequacy, not root-cause proof. The bounded corrective worker is attached to
+`codex/hook-disabled-reason-detail` at
+`ded65f2b733641384df36514267824b4c81ddb0a`. It replaces the two-template classifier
+with control-normalized, capped retained reason text. Before capping, it redacts only
+known exact checkout, primary-root, user-home and user-config identifiers. The untrusted
+text is public at the existing first-empty-hooks OSLog sink, remains non-authoritative,
+and does not expose configuration, hook commands or a new diagnostic endpoint. The
+original `hookNotReady`, same-child transport, identity, trust/write, retry and cleanup
+behavior remain unchanged. Focused helper tests cover unknown-text retention, control
+normalization, exact redaction, empty text and capping; BuildAgent owns native checks and
+the scoped local commit, with one fresh RO04 privacy/correctness review required. Live
+replay and configuration mutation remain excluded. This is not universal secret
+scrubbing: it is proportionate redaction for the installed trust-message producer only.
+Checkpoint 64 passed all five focused App Server tests, including retained-text coverage.
+After the required raw-redaction-order correction, checkpoint 65 passed the directly
+affected regression, target compilation and diff checks. The same independent reviewer
+confirmed the Required defect resolved with no new defect. The actual live hook cause
+remains unknown; no retry or installation occurred. The completed reviewer is to be
+archived after Main's scoped local commit, but is not yet claimed archived.
 Checkpoint 59 ended before tests (Xcode exit 65) because this fresh worktree lacks the
 libgit2 header/module dependency. It applies only to the superseded category candidate
 and establishes no corrected-candidate behavior; retained native output is temporary.
