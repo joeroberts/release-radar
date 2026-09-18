@@ -37,7 +37,14 @@ one startup observation through a fresh installed Coordinator. Worker
 were absent. Same-connection supported close confirmed physical cleanup. Replacement
 assignment remains unknown, launch-reserved and uncertain, connection-closed with
 null session. Read-only source/log diagnosis rules out the observed reservation/
-handoff transition; subsequent config/profile admission remains unresolved.
+handoff transition. An authorized effective-config read identified the first
+rejection: the target network profile has `enabled: false` plus 12 optional fields
+serialized as null, while `WorkerPolicy.validate` requires only `enabled`. Its
+filesystem also includes `glob_scan_max_depth: null`, breaking the subsequent raw
+profile equality check. Installed Codex is `0.155.0-alpha.9`; the narrow follow-up
+read confirmed that field is present and JSON null, then exited normally. The
+writer owns the separately authorized schema-verified compatibility correction.
+No account, thread, turn or assignment mutation occurred in these diagnostics.
 Normal EOF closed the idle Coordinator with exit 0 and confirmed process exit.
 No retry or new preparation followed; full startup/isolation/STOP and recovery
 remain unverified. Retain the writer and checkout for downstream work.

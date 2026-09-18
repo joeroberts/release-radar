@@ -23,11 +23,20 @@ now connection-closed with null session. No retry, replacement, runtime approval
 manual configuration/flag change followed. After bounded read-only log capture,
 normal EOF closed MCP session 10016 with exit 0; PID 83913 exit was confirmed.
 Logs and source order establish reservation/handoff validation reached child
-transport. No stage-specific handoff rejection was observed. The precise failure
-among subsequent config/profile admission guards remains unresolved because
-method/response metadata was not retained; no new probe or owner-config inspection
-was performed. Further diagnosis and recovery remain Main-owned. An ignored `tools.view_image`
-setting warning was emitted, but its relationship to the failure is unverified.
+transport. No stage-specific handoff rejection was observed. Main subsequently
+authorized read-only App Server diagnostics using the same startup flags, selected
+home, process cwd and exact assignment config-read cwd. Effective target profile
+readback establishes the first rejected guard at `WorkerPolicy.validate`: network
+has `enabled: false` and 12 additional optional keys, all null; the code requires
+an enabled-only key set. The subsequent filesystem comparison also rejects the
+extra `glob_scan_max_depth` field. A narrow follow-up confirmed it is present with
+JSON null value, using installed `codex-cli 0.155.0-alpha.9`. That diagnostic ran
+only initialize/initialized/config-read and closed normally with exit 0. Generated
+installed experimental protocol schema contains no definition of this config field;
+the writer retains primary-source verification and the separately authorized
+test-first compatibility correction. No account/thread/turn/start/write, owner
+configuration edit, retry or retirement occurred. Recovery remains Main-owned.
+An ignored `tools.view_image` warning does not identify the rejected guard.
 
 ```json
 {
