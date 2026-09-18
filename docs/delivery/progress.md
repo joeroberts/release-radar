@@ -4,7 +4,9 @@
 
 Owner sequencing decision: defer onboarding Release Radar’s own repository into RR until disposable-project acceptance and a stable merged release. Its existing repository catalog and ledger remain authoritative; Main will flag the appropriate time. No Pursuit or self-onboarding action is authorized.
 
-**September 18 — startup and bounded permission follow-up completed; STOP/recovery pending on retained connection.**
+**September 18 — bounded STOP observed interrupted; worker/Coordinator closed, artifact disposition and recovery pending.**
+
+STOP prompt committed fbf4dd06; one same-worker follow-up reached known inProgress turn 01a0b4d4-66e6-7f52-98f8-452ae568ea89. One supported interrupt was followed by terminal interrupted and saved stopped state. Supported same-worker close confirmed connectionClosed; normal Coordinator89348 EOF exited0, exact PID7798 absent. Saved stopped/launchReserved/known session/confirmed closure retained, uncertainty/retirement absent. Runtime close diagnostic exec_command UnknownProcessId88716 is preserved; raw sleep-start/descendant trace unavailable. Checkout retains marker/default.profraw and is dirty, so no retirement/cleanup performed or authorized in this step. Main owns artifact accounting/disposition, supported retirement and fresh authorization if continuing recovery; no stopped-worker replay or full Outcome3 PASS.
 
 One same-worker follow-up (prompt committed abbbadcf) completed turn 01a0b4d2-70f3-7030-9daf-ff90baf96c72. BA verifies retained regular write marker matches exactly; runtime Seatbelt events directly deny exact synthetic primary Git-history and sibling README paths. Local .git denial is worker report with an unattributed path=unknown sandbox event. Raw command results/one-attempt count unavailable. No pending approvals/error; retained Coordinator89348/worker978206F4 stays live. Marker/default.profraw preserved; no STOP/close/cleanup or broad isolation PASS.
 

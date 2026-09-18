@@ -2,6 +2,12 @@
 
 ## September 18 same-worker STOP acceptance
 
+Result: exact prompt committed fbf4dd06; one follow-up returned actual inProgress turn `01a0b4d4-66e6-7f52-98f8-452ae568ea89`, same worker/thread. One supported worker_interrupt initially returned running, then status returned terminal **interrupted**, no error/pending approvals. Saved assignment was stopped before closure; no natural completion or waiting-completed report observed. Raw command-start/result events are unavailable, so STOP establishes known-turn interruption without independent sleep-process timing/descendant proof.
+
+One supported same-worker close returned connectionClosed. During closure, runtime logged `exec_command failed: UnknownProcessId { process_id: 88716 }`; its origin/causal scope is unverified and is retained as a diagnostic, without negating the explicit supported closure receipt. Normal EOF of Coordinator 89348 exited 0; exact PID 7798 is absent. Final saved assignment is stopped, launchReserved true, connectionClosed true, known session `01a0b4ce-b776-7131-a013-5947b97bfa99` retained, no uncertainty/retirement. Thread/history/outcome remain preserved. No extra turn or automatic approvals.
+
+Direct checkout status remains dirty with `default.profraw` and retained `rr-acceptance-write-check.txt`. No retirement is authorized in this step, and standing cleanup does not cover a successful dirty assignment. Supported recovery next action: Main accounts for retained artifacts and obtains any exact disposition needed before clean-checkout retirement/fresh authorization. There is no supported same-assignment resume API; stopped authority is not replayed. Full Outcome 3, broader isolation, independent QA and recovery completion remain unclaimed. No configuration/permission/source/global instruction edits or file cleanup occurred.
+
 Main releases one bounded inert follow-up, then one supported interrupt after actual inProgress/known turn ID. Observe terminal result and saved stopped admission state; if natural completion races STOP, report it rather than repeat. Supported close and normal EOF after confirmed closure are authorized; retirement is not. Preserve marker/default.profraw, thread/history/outcome and unchanged configuration/permissions.
 
 Exact follow-up, committed before submission:
