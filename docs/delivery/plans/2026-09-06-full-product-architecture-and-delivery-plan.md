@@ -51,8 +51,7 @@ phases.
 | Repository-plan reconstruction | Design has been reviewed; implementation has not started. |
 
 Phase 7, Phase 8 and the unscheduled backlog remain outside P6-remediation.
-Self-onboarding is explicitly **UNSCHEDULED**; its Jira ticket is pending and no
-link is invented here.
+Self-onboarding is explicitly **UNSCHEDULED**; Jira ticket pending.
 
 Phase 3 source delivery is merged through PR #35 (`6f528c5`). The owner authorized
 Phase 4 RM2/P7/P8 and issue #9 through scoped source/tests/docs, commits, pushes and
