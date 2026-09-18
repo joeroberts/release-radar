@@ -94,15 +94,27 @@ Read-only source diagnosis found no supported legacy retirement/replacement rout
 retirement rejects nil context, and lost-handle recovery requires an existing cleanup
 receipt and still checks context. This fixture predates the selected-context contract;
 current production preparation pins the selected identity. Legacy migration was excluded.
-Recommend preserving f481 and, under separate live authorization, using a genuinely
-distinct disposable root/project/work item for current-format acceptance, without re-add,
-alias or old-work redispatch. This cannot prove legacy retirement or home switching.
+Preserve f481 and use a genuinely distinct disposable root/project/work item for
+current-format acceptance, without re-add, alias or old-work redispatch. Main confirms
+this is covered by existing disposable end-to-end authorization; no new approval hold
+applies. It cannot prove legacy retirement or home switching.
 If legacy cleanup is explicitly required, a separate owner-only app operation needs
 original-home provenance/grant, exact profile ownership and an audited retirement receipt;
 never assign the current context to the old record or treat profile absence in it as cleanup.
 No recovery implementation, Codex restart, login, token copy, replay or owner-state mutation
 occurred in this diagnosis. Exact f481 state/resources remain unchanged. Outcome 3 is
-incomplete; this task permits read-only diagnosis and existing docs/local commit only.
+incomplete; this task permits existing evidence documentation/local commit only.
+
+BA created the separate README-only synthetic fixture at
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project`,
+branch `codex/context-acceptance`, clean initial commit
+`3eea725181907fb8ed89d8c43fd143c568e63b81`. Main reached Initialize Project Tracking
+and the exact folder picker, but Choose Project failed "Sky Computer Use native pipe
+closed before response". Reacquisition and one CUA reset reproduced the transport
+failure; RR executable remains PID19590. Onboarding is unconfirmed: no Initialize
+confirmation or worker start was issued. BA is investigating transport versus app
+failure read-only; no root cause or acceptance success is established. This recording
+does not authorize further live actions; f481 and retained artifacts remain preserved.
 
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.

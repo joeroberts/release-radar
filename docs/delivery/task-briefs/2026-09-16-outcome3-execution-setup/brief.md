@@ -146,16 +146,28 @@ Read-only diagnosis found no supported retirement/replacement route for that nil
 ordinary retirement rejects it; lost-handle replacement requires prior cleanup and still
 checks context. It is a pre-selection fixture, not demonstrated current-format recovery
 failure; production preparation binds the selected identity and legacy migration is excluded.
-The minimum recommended acceptance approach is preserving f481 and later explicitly
-authorizing a genuinely separate disposable canonical root/project/work item under the
-current selected context. Do not re-add/alias the old fixture or redispatch its uncertain
-work. This verifies current-format behavior, not legacy retirement/home switching. If the
+The minimum acceptance approach preserves f481 and uses a genuinely separate disposable
+canonical root/project/work item under the current selected context. Main confirms
+existing end-to-end disposable acceptance authorization covers it; no new approval hold
+is needed. Do not re-add/alias the old fixture or redispatch its uncertain work. This
+would test current-format behavior, not legacy retirement/home switching. If the
 owner instead requires legacy cleanup, separately authorize a narrow owner-only operation
 with original-home provenance/grant, exact profile ownership and audited receipt; preserve
 unknown/reservation and nil binding, without credential copy or inferred current-home cleanup.
 No recovery code, migration, tests, live/config/owner-state operation, replay, Codex restart,
 login or token copy occurred in this diagnosis. The f481 record/resources are unchanged.
-This task permits source inspection and existing docs/local commit only; Outcome 3 is incomplete.
+This task permits existing evidence documentation/local commit only; Outcome 3 is incomplete.
+
+BA created the separate clean README-only fixture at
+`/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project`,
+branch `codex/context-acceptance`, initial commit `3eea725181907fb8ed89d8c43fd143c568e63b81`.
+Main reached Initialize Project Tracking and its exact new folder picker. Choose
+Project failed "Sky Computer Use native pipe closed before response"; reacquisition
+and one CUA reset reproduced the transport failure. RR executable remains PID19590,
+but onboarding is unconfirmed. No Initialize confirmation or worker start was issued.
+BA's transport-versus-app diagnosis is read-only and pending; no root cause or acceptance
+success is claimed. The old f481 record and stage/artifacts are preserved; this evidence
+update authorizes no implementation, additional live action or cleanup.
 
 ## Scope, authority and dependencies
 
