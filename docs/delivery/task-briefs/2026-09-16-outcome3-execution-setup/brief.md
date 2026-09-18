@@ -38,6 +38,20 @@ test-first compatibility correction. No account/thread/turn/start/write, owner
 configuration edit, retry or retirement occurred. Recovery remains Main-owned.
 An ignored `tools.view_image` warning does not identify the rejected guard.
 
+The separately authorized compatibility correction accepts only absent/null values
+for the twelve documented optional network overlays and `glob_scan_max_depth`,
+requiring disabled network and exact remaining filesystem grants. Primary Codex
+configuration definitions and the tagged-source retrieval limitation are recorded
+in the [owning design](../../../design/outcome3-runtime-enforcement-assessment.md#september-18-effective-configuration-metadata-compatibility).
+No profile/configuration edit, numeric-depth acceptance, live retry or retirement
+is included. BA compiled and ran the real JSON-normalized response regression
+against unchanged production code: one expected `invalidAssignment` failure at
+the positive assertion, with negative assertions passing. BA then passed the full
+WorkerAdapterTests suite: 22 tests, zero failures, native exit 0. Documentation and
+diff checks passed; no native test processes remained. The same independent
+reviewer's correction review and a coherent scoped commit remain pending; Main
+retains the ledger and installed-runtime acceptance.
+
 ```json
 {
   "tool": "worker_start",

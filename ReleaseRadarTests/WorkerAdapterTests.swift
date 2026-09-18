@@ -212,6 +212,50 @@ final class WorkerAdapterTests: XCTestCase {
         }
     }
 
+    func testEffectiveProfileAcceptsCodexConfigReadNullMetadataOnly() throws {
+        let fixture = try fixture()
+        let assignment = fixture.policy.assignment
+        let paths = try ProjectExecutionPaths(storageRoot: fixture.store.root, projectID: "project-one", taskID: "task-one")
+        var fs = try ProjectExecutionPermissionProfile(assignment: assignment, policy: fixture.policy.policy, paths: paths).filesystemObject
+        fs["glob_scan_max_depth"] = NSNull()
+        let optionalNetworkFields = ["proxy_url", "enable_socks5", "socks_url", "enable_socks5_udp",
+            "allow_upstream_proxy", "dangerously_allow_non_loopback_proxy", "dangerously_allow_all_unix_sockets",
+            "mode", "domains", "unix_sockets", "allow_local_binding", "mitm"]
+        var network: [String: Any] = ["enabled": false]
+        for key in optionalNetworkFields { network[key] = NSNull() }
+        let normalized: [String: Any] = ["description": NSNull(), "extends": NSNull(), "workspace_roots": NSNull(),
+            "filesystem": fs, "network": network]
+        let config: [String: Any] = ["permissions": [assignment.permissionProfile: normalized]]
+        // Match the JSON-normalized installed Codex 0.155.0-alpha.9 config/read response.
+        let decoded = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONSerialization.data(withJSONObject: config)) as? [String: Any])
+        XCTAssertNoThrow(try fixture.policy.validate(config: decoded))
+
+        for key in optionalNetworkFields {
+            for value in [true, false, "full", [:], []] as [Any] {
+                var changedNetwork = network; changedNetwork[key] = value
+                var changed = normalized; changed["network"] = changedNetwork
+                XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: changed]]), key)
+            }
+        }
+        for value in [true, NSNull(), "false"] as [Any] {
+            var changedNetwork = network; changedNetwork["enabled"] = value
+            var changed = normalized; changed["network"] = changedNetwork
+            XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: changed]]))
+        }
+        var unknownNetwork = network; unknownNetwork["unexpected"] = NSNull()
+        var changed = normalized; changed["network"] = unknownNetwork
+        XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: changed]]))
+        for value in [1, 0, "read", [:]] as [Any] {
+            var changedFS = fs; changedFS["glob_scan_max_depth"] = value
+            changed = normalized; changed["filesystem"] = changedFS
+            XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: changed]]))
+        }
+        for addition in [["/Users": "read"], ["unexpected": NSNull()]] as [[String: Any]] {
+            changed = normalized; changed["filesystem"] = fs.merging(addition) { _, replacement in replacement }
+            XCTAssertThrowsError(try fixture.policy.validate(config: ["permissions": [assignment.permissionProfile: changed]]))
+        }
+    }
+
     func testSelectedContextCannotSilentlySwitchWorkerToApiBilling() async throws {
         let valid = try fixture(); let peer = Peer(policy: valid.policy); peer.accountType = "apiKey"
         let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })

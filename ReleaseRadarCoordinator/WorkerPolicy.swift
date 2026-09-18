@@ -91,11 +91,24 @@ struct WorkerPolicy {
               Set(profile.keys).isSubset(of: ["description", "extends", "workspace_roots", "filesystem", "network"]),
               profile["description"] == nil || profile["description"] is NSNull || profile["description"] is String,
               Self.emptyMetadata(profile["extends"]), Self.emptyMetadata(profile["workspace_roots"]),
-              let network = profile["network"] as? [String: Any], Set(network.keys) == ["enabled"], network["enabled"] as? Bool == false,
+              let network = profile["network"] as? [String: Any], Self.disabledNetwork(network),
               let fs = profile["filesystem"] as? [String: Any] else { throw ProjectExecutionError.invalidAssignment }
         let paths = try ProjectExecutionPaths(storageRoot: store.root, projectID: assignment.registration.projectID.rawValue, taskID: assignment.id)
         let expected = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
-        guard NSDictionary(dictionary: fs).isEqual(to: expected.filesystemObject) else { throw ProjectExecutionError.invalidAssignment }
+        // config/read serializes the unset optional scan depth as null, separate from grants.
+        guard fs["glob_scan_max_depth"] == nil || fs["glob_scan_max_depth"] is NSNull else { throw ProjectExecutionError.invalidAssignment }
+        var entries = fs; entries.removeValue(forKey: "glob_scan_max_depth")
+        guard NSDictionary(dictionary: entries).isEqual(to: expected.filesystemObject) else { throw ProjectExecutionError.invalidAssignment }
+    }
+
+    private static func disabledNetwork(_ network: [String: Any]) -> Bool {
+        let optionalFields: Set<String> = ["proxy_url", "enable_socks5", "socks_url", "enable_socks5_udp",
+            "allow_upstream_proxy", "dangerously_allow_non_loopback_proxy", "dangerously_allow_all_unix_sockets",
+            "mode", "domains", "unix_sockets", "allow_local_binding", "mitm"]
+        // Only documented, unset overlays are metadata; every configured value fails closed.
+        return network["enabled"] as? Bool == false && network.allSatisfy {
+            $0.key == "enabled" || (optionalFields.contains($0.key) && $0.value is NSNull)
+        }
     }
 
     private static func emptyMetadata(_ value: Any?) -> Bool {

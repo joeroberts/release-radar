@@ -14,6 +14,22 @@ are not requirements for the approved coordinator plugin or this follow-up.
 Outcome 3 remains open; a reviewed standalone component does not complete RR
 integration. The catalog identity remains proposed/supporting.
 
+### September 18 effective configuration metadata compatibility
+
+BA's installed Codex `0.155.0-alpha.9` readback identifies the startup rejection:
+`config/read` includes twelve null optional network fields alongside `enabled: false`
+and null `filesystem.glob_scan_max_depth`. The [primary Codex configuration definitions](https://github.com/openai/codex/blob/main/codex-rs/config/src/permissions_toml.rs)
+define these as optional overlays and an optional scan-depth limit. Tagged source
+retrieval was unavailable; current primary definitions match the observed fields.
+
+Worker admission accepts only the twelve named optional network fields when absent
+or null, while requiring `enabled: false`. It removes only an absent/null glob-depth
+metadata field before comparing every filesystem grant exactly. Nonnull overlays,
+numeric depths, unknown fields, inheritance, additional roots and custom routing
+remain rejected. Raw owned-profile definitions/removal and owner configuration stay
+unchanged. Native regression/review precede the scoped correction commit; installed
+worker startup still requires Main's separate authorization and acceptance.
+
 ### September 18 selected-context cross-process correction
 
 Chief task `01a0b413-4623-73f3-a3c5-81a1b5bf8c69` verified that the baseline RR
