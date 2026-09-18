@@ -4,7 +4,9 @@
 
 Owner sequencing decision: defer onboarding Release Radar’s own repository into RR until disposable-project acceptance and a stable merged release. Its existing repository catalog and ledger remain authoritative; Main will flag the appropriate time. No Pursuit or self-onboarding action is authorized.
 
-**September 18 — new disposable worker completed startup; same connection retained for further acceptance.**
+**September 18 — startup and bounded permission follow-up completed; STOP/recovery pending on retained connection.**
+
+One same-worker follow-up (prompt committed abbbadcf) completed turn 01a0b4d2-70f3-7030-9daf-ff90baf96c72. BA verifies retained regular write marker matches exactly; runtime Seatbelt events directly deny exact synthetic primary Git-history and sibling README paths. Local .git denial is worker report with an unattributed path=unknown sandbox event. Raw command results/one-attempt count unavailable. No pending approvals/error; retained Coordinator89348/worker978206F4 stays live. Marker/default.profraw preserved; no STOP/close/cleanup or broad isolation PASS.
 
 Standing owner authorization, narrowly scoped to disposable acceptance: clean up failed disposable acceptance assignments only when their connections are confirmed closed and their checkouts clean, preserving branches and history. This covers b3b1 and subsequent failed acceptance attempts; it does not grant preparation/start, unrelated cleanup, configuration or governing-instruction changes.
 
