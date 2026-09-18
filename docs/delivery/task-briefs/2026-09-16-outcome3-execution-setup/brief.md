@@ -1,5 +1,21 @@
 # Outcome 3 project execution setup
 
+## September 18 same-worker synthetic permission acceptance
+
+Main releases one follow-up on retained Coordinator 89348 and the same worker, with no STOP, broader checks or automatic approvals. Retain successful connection and synthetic write-check file; preserve default.profraw. Coordinator status exposes worker messages/settings but no raw command result field; report actual available events and distinguish runtime refusal/self-report from filesystem enforcement.
+
+Exact request, committed before one submission:
+
+```json
+{
+  "name": "worker_follow_up",
+  "arguments": {
+    "workerId": "978206F4-3732-401B-B86A-3DB4B40B239A",
+    "prompt": "Run this bounded synthetic permission acceptance using ordinary available file/command tools and current runtime restrictions. Never escalate, request broader permission, change configuration, resolve aliases as a workaround, or retry denied reads through another mechanism. In your assigned checkout, create the previously absent file rr-acceptance-write-check.txt containing exactly RR_ACCEPTANCE_ALLOWED_WRITE followed by a newline; if it already exists do not overwrite it. Read that file back and report whether the value matches. Retain it. Make one ordinary read attempt per exact synthetic target: (1) assigned checkout .git; (2) /Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project/.git/logs/HEAD; (3) /Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-4fd11768-738e-44cd-9216-f5babc3d63d8/README.md. Do not print file contents: report only target number, success/denied/unavailable, and the tool error category. These are deliberately synthetic acceptance targets. Respect any runtime refusal without seeking a bypass. Do not access anything else, launch other tasks, use network, or delete files. Finish the turn."
+  }
+}
+```
+
 ## September 18 regular-file replacement preparation and startup
 
 Startup result: **one first turn completed** on retained fresh installed Coordinator handle 89348, worker `978206F4-3732-401B-B86A-3DB4B40B239A`, thread `01a0b4ce-b776-7131-a013-5947b97bfa99`, turn `01a0b4ce-b899-77f3-a2a2-91f4e0430703`. Exact startup request association was committed in 72a15bae before the single submission. Coordinator returned transportReached true and effective exact assigned cwd/root, Terra/medium, `rr-delivery-7ed84d1f-47ba-4bec-81aa-7bb1d08d4a6f` profile, workspaceWrite, networkAccess false, no additional writable roots, excluded slash tmp/TMPDIR, on-request/auto_review. Instruction sources report `/Users/jroberts/.codex/AGENTS.md` and exact checkout AGENTS.md. Turn reached inProgress then completed, no error/pending approval requests. Current-source sequencing reaches turn only after instruction/MCP resource exclusion and trusted enabled hook discovery plus assignment binding; worker status does not expose the raw hook response or an independent UserPromptSubmit receipt. No full isolation, STOP, recovery or whole-outcome PASS is claimed.
