@@ -119,6 +119,8 @@ final class WorkerAdapterTests: XCTestCase {
         var lostFollowup = false
         var delayedHooks: Gate?
         var delayedThreadStart: Gate?
+        var instructionSources: [String]?
+        var beforeThreadStartReturn: (() throws -> Void)?
         init(policy: WorkerPolicy) { self.policy = policy }
         func send(_ object: [String: Any]) throws {
             if sendFailure { throw AppServerTransportError(message: "Fixture uncertain approval response", outcomeUnknown: true) }
@@ -142,10 +144,11 @@ final class WorkerAdapterTests: XCTestCase {
             if method == "thread/start" {
                 if let delayedThreadStart { self.delayedThreadStart = nil; await delayedThreadStart.pause() }
                 if lostStart { throw AppServerTransportError(message: "Unknown start", outcomeUnknown: true) }
+                try beforeThreadStartReturn?()
                 return try RPCObject(["thread": ["id": "session-one", "modelProvider": returnedModelProvider], "cwd": selected.checkoutPath,
                     "runtimeWorkspaceRoots": [selected.checkoutPath], "model": selected.model, "reasoningEffort": selected.effort,
                     "activePermissionProfile": ["id": selected.permissionProfile], "sandbox": ["networkAccess": false],
-                    "approvalPolicy": "on-request", "instructionSources": [selected.checkoutPath + "/AGENTS.md"]])
+                    "approvalPolicy": "on-request", "instructionSources": instructionSources ?? [selected.checkoutPath + "/AGENTS.md"]])
             }
             if method == "mcpServerStatus/list" { return try RPCObject(["data": []]) }
             if method == "hooks/list" {
@@ -159,13 +162,21 @@ final class WorkerAdapterTests: XCTestCase {
             return try RPCObject([:])
         }
     }
-    private func fixture(primaryRoot: String? = nil) throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
+    private func fixture(primaryRoot: String? = nil, includeProgress: Bool = false) throws -> (store: ProjectExecutionFileStore, policy: WorkerPolicy) {
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent(UUID().uuidString)
         let store = try ProjectExecutionFileStore(root: root, create: true)
         let paths = try ProjectExecutionPaths(storageRoot: root, projectID: "project-one", taskID: "task-one")
         try FileManager.default.createDirectory(at: paths.checkout, withIntermediateDirectories: true)
         let context = Data("Current applicable instructions".utf8)
         try context.write(to: paths.checkout.appendingPathComponent("AGENTS.md"))
+        var contexts: [ProjectExecutionAssignment.Context] = [.init(path: "AGENTS.md", digest: SHA256.hash(data: context).map { String(format: "%02x", $0) }.joined())]
+        if includeProgress {
+            let progress = Data("Current bounded delivery context".utf8)
+            let url = paths.checkout.appendingPathComponent("docs/delivery/progress.md")
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try progress.write(to: url)
+            contexts.append(.init(path: "docs/delivery/progress.md", digest: SHA256.hash(data: progress).map { String(format: "%02x", $0) }.joined()))
+        }
         let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
         let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
         let primary = primaryRoot ?? root.appendingPathComponent("Primary").path
@@ -178,13 +189,109 @@ final class WorkerAdapterTests: XCTestCase {
         try store.savePolicy(policy, expected: nil)
         var assignment = ProjectExecutionAssignment(id: "task-one", registration: registration, checkoutPath: paths.checkout.path, role: .delivery,
             permissionProfile: "rr-worker", model: "gpt-5.6-sol", effort: "high", authorization: "Implement the approved slice",
-            context: [.init(path: "AGENTS.md", digest: SHA256.hash(data: context).map { String(format: "%02x", $0) }.joined())],
+            context: contexts,
             excludedPaths: [".git", ".codegraph", ".superpowers/sdd", "docs/delivery/archive"],
             worktree: .init(checkout: paths.checkout.path, baseline: String(repeating: "a", count: 40), branch: "codex/rr-project-one-task-one", commonGitDirectory: primary + "/.git", primaryRoot: primary))
         assignment.codexContextID = codex.id
         try store.saveAssignment(assignment, expected: nil)
         return (store, try WorkerPolicy(store: store, projectID: "project-one", taskID: "task-one"))
     }
+    func testSelectedHomeGlobalAndProjectGuidanceAdmitFirstTurnWithoutProgressInstructionSource() async throws {
+        let valid = try fixture(includeProgress: true)
+        let global = valid.store.root.appendingPathComponent("AGENTS.md")
+        try Data("Owner global guidance".utf8).write(to: global)
+        let peer = Peer(policy: valid.policy)
+        peer.instructionSources = [global.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        XCTAssertEqual(started["status"] as? String, "inProgress")
+        XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
+        _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
+        await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
+            "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
+        _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+    }
+
+    func testGlobalGuidanceUsesFirstNonEmptyOverrideOrBase() async throws {
+        for override in [nil, "Override guidance", "", " \n\t"] as [String?] {
+            let valid = try fixture()
+            let base = valid.store.root.appendingPathComponent("AGENTS.md")
+            let replacement = valid.store.root.appendingPathComponent("AGENTS.override.md")
+            try Data("Base guidance".utf8).write(to: base)
+            if let override { try Data(override.utf8).write(to: replacement) }
+            let expected = override?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? replacement : base
+            let peer = Peer(policy: valid.policy)
+            peer.instructionSources = [expected.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+            XCTAssertEqual(started["status"] as? String, "inProgress")
+            XCTAssertTrue(peer.calls.contains { $0.0 == "turn/start" })
+            _ = try await adapter.interrupt(workerID: try XCTUnwrap(started["workerId"] as? String))
+            await adapter.event(try XCTUnwrap(started["workerId"] as? String), try RPCObject(["method": "turn/completed",
+                "params": ["threadId": "session-one", "turn": ["id": "turn-one", "status": "interrupted"]]]))
+            _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+        }
+    }
+
+    func testGlobalGuidanceRejectsForeignArbitraryAndUnselectedSources() async throws {
+        for kind in ["foreign", "prefix", "arbitrary", "base-with-override", "both", "empty"] {
+            let valid = try fixture()
+            let home = valid.store.root.path
+            try Data((kind == "empty" ? "" : "Base guidance").utf8).write(to: valid.store.root.appendingPathComponent("AGENTS.md"))
+            if ["base-with-override", "both"].contains(kind) {
+                try Data("Override guidance".utf8).write(to: valid.store.root.appendingPathComponent("AGENTS.override.md"))
+            }
+            let sources: [String]
+            switch kind {
+            case "foreign": sources = [home + "/Foreign/AGENTS.md"]
+            case "prefix": sources = [home + "-other/AGENTS.md"]
+            case "arbitrary": sources = [home + "/other.md"]
+            case "both": sources = [home + "/AGENTS.md", home + "/AGENTS.override.md"]
+            default: sources = [home + "/AGENTS.md"]
+            }
+            let peer = Peer(policy: valid.policy)
+            peer.instructionSources = sources + [valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+            let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+            let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+            XCTAssertEqual(started["status"] as? String, "failed", kind)
+            XCTAssertFalse(peer.calls.contains { $0.0 == "turn/start" }, kind)
+            _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+        }
+    }
+
+    func testGlobalGuidanceSymlinkEscapeCannotAdmitFirstTurn() async throws {
+        let valid = try fixture()
+        let outside = valid.store.root.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + "-AGENTS.md")
+        try Data("Outside guidance".utf8).write(to: outside)
+        let global = valid.store.root.appendingPathComponent("AGENTS.override.md")
+        try FileManager.default.createSymbolicLink(atPath: global.path, withDestinationPath: outside.path)
+        let peer = Peer(policy: valid.policy)
+        peer.instructionSources = [global.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        XCTAssertEqual(started["status"] as? String, "failed")
+        XCTAssertFalse(peer.calls.contains { $0.0 == "turn/start" })
+        _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+    }
+
+    func testChangedSelectedHomeReceiptBlocksGlobalGuidanceDespiteSameContextID() async throws {
+        let valid = try fixture()
+        let original = try XCTUnwrap(valid.store.codexContext())
+        let global = URL(fileURLWithPath: original.homePath).appendingPathComponent("AGENTS.md")
+        try Data("Owner guidance".utf8).write(to: global)
+        let peer = Peer(policy: valid.policy)
+        peer.instructionSources = [global.path, valid.policy.assignment.checkoutPath + "/AGENTS.md"]
+        peer.beforeThreadStartReturn = {
+            let changed = try CodexExecutionContext(home: URL(fileURLWithPath: original.homePath), bookmark: Data([2]), id: original.id)
+            try valid.store.saveCodexContext(changed, expected: original)
+        }
+        let adapter = WorkerAdapter(store: valid.store, serverFactory: { _, _, _ in peer })
+        let started = try await adapter.start(projectID: "project-one", assignmentID: "task-one", prompt: "Begin").object()
+        XCTAssertEqual(started["status"] as? String, "failed")
+        XCTAssertFalse(peer.calls.contains { $0.0 == "turn/start" })
+        _ = try await adapter.close(workerID: try XCTUnwrap(started["workerId"] as? String))
+    }
+
     func testEffectiveProfileNormalizationKeepsExactFilesystemAndNetworkCeiling() throws {
         let fixture = try fixture()
         let assignment = fixture.policy.assignment

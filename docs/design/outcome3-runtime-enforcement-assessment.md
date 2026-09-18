@@ -14,6 +14,34 @@ are not requirements for the approved coordinator plugin or this follow-up.
 Outcome 3 remains open; a reviewed standalone component does not complete RR
 integration. The catalog identity remains proposed/supporting.
 
+### September 18 loaded instruction-source identity correction
+
+The generation-2 startup reached matching runtime settings and created a thread,
+then rejected global selected-home `AGENTS.md` before a model turn. Recorded
+repository context and loaded instruction sources are distinct: context remains
+independently SHA-verified and listed in worker instructions; a progress document
+need not be an automatic instruction source. The installed `0.155.0-alpha.9`
+generated response schema describes loaded instruction-file paths, corroborating
+the [primary protocol](https://github.com/openai/codex/blob/main/codex-rs/app-server-protocol/src/protocol/v2/thread.rs)
+and [documented global/project discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+
+Chief task `01a0b413` found this compatible with the selected-home contract. Main
+authorized admitting the first nonempty `AGENTS.override.md` or `AGENTS.md` from
+the exact protected selected home, independently of response paths, alongside
+the existing pinned checkout-source ceiling. Descriptor-relative no-follow reads
+and folder checks refuse symlink escapes and unsafe files; selection checks use
+bounded UTF-8 reads with the existing 16 MiB repository file limit. Worker policy
+captures and rechecks the complete selected receipt, including same-ID changes.
+This admits source identity; it does not attest instruction bytes loaded by Codex.
+No global manifest, content pin, copied/suppressed owner instruction, filesystem
+grant or other admission gate is added or changed.
+
+BA compiled and ran the causal global-plus-project regression against unchanged
+production code: one test, two expected failures, no first turn. Focused GREEN,
+scoped commit and the same independent reviewer's correction review remain
+pending. The closed, reserved/uncertain generation-2 assignment and known thread
+remain preserved; installed startup requires separate Main authorization.
+
 ### September 18 effective configuration metadata compatibility
 
 BA's installed Codex `0.155.0-alpha.9` readback identifies the startup rejection:

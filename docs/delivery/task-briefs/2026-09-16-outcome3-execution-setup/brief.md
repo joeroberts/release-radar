@@ -1,5 +1,37 @@
 # Outcome 3 project execution setup
 
+## September 18 loaded instruction-source correction
+
+Main authorizes the same-outcome source-identity correction in writer task
+`01a0b418`, preserving independently SHA-verified repository context and all
+runtime/provider/hook/MCP/first-turn gates. Global guidance is selected from the
+exact protected Codex home using documented override/base precedence; foreign,
+arbitrary, prefix-matching, symlink-escape and changed-receipt sources fail closed.
+No instruction copying/suppression, global content attestation or persisted
+manifest is included. The [owning design](../../../design/outcome3-runtime-enforcement-assessment.md#september-18-loaded-instruction-source-identity-correction)
+records protocol evidence and the Chief's compatibility finding.
+
+BA established causal RED: native compilation succeeded; the real global-plus-
+project source regression failed its status and first-turn assertions (one test,
+two expected failures). Progress remains pinned context, not a required loaded
+instruction source. Writer owns source/tests/design/brief; BA owns native checks
+and the separate scoped candidate commit; Main owns the ledger and the same
+independent reviewer's correction route after commit. Native GREEN is recorded
+below; scoped commit, review and installed startup acceptance remain pending.
+Preserve the unknown, launch-reserved,
+uncertain, physically closed `9d42ef30` assignment and its known thread. No live
+retry, preparation, configuration edit, retirement or cleanup is authorized here.
+
+BA verified 37 distinct passing tests across runs: Core context 10 and worker-
+adapter 27. The initial 37-test run passed 35; two positive admission tests needed
+test-only cleanup corrections using the existing interrupt, `turn/completed`
+notification and close sequence. The affected three-test rerun passed the corrected
+physical outside-home symlink fixture; the final two-test rerun passed both positive
+tests, including all four override/base selection variants, with zero failures and
+native exit 0. No single 37-test GREEN run is claimed. Production source and design
+remained unchanged between checks; the six-file candidate is frozen for final
+documentation/diff checks and the authorized scoped commit before review.
+
 ## September 18 current-generation worker startup
 
 Main releases one startup observation for the authorized generation-2 assignment

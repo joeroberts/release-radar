@@ -167,7 +167,10 @@ actor WorkerAdapter {
 
     private func verifyInstructionSources(_ value: Any?, selected: WorkerPolicy) throws {
         guard let sources = value as? [String] else { throw ProjectExecutionError.identityMismatch }
-        let expected = Set(selected.assignment.context.map { selected.assignment.checkoutPath + "/" + $0.path })
+        try selected.verifyCodexContext()
+        var expected = Set(selected.assignment.context.map { selected.assignment.checkoutPath + "/" + $0.path })
+        if let global = try selected.codexContext.globalInstructionSource() { expected.insert(global) }
+        try selected.verifyCodexContext()
         guard sources.allSatisfy(expected.contains) else { throw ProjectExecutionError.identityMismatch }
     }
 

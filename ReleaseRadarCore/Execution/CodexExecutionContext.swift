@@ -77,6 +77,26 @@ public struct CodexExecutionContext: Codable, Equatable, Sendable {
     public func identifiesSameFolder(as other: Self) -> Bool {
         homePath == other.homePath && device == other.device && inode == other.inode
     }
+
+    /// Selects the documented global source identity; it does not attest bytes loaded by Codex.
+    public func globalInstructionSource() throws -> String? {
+        try validateFolder()
+        let reader = try RepositoryDocumentReader(rootURL: URL(fileURLWithPath: homePath),
+            limits: .init(maximumFileBytes: 16 * 1_048_576), afterRead: nil)
+        for name in ["AGENTS.override.md", "AGENTS.md"] {
+            let data: Data
+            do { data = try reader.read(name) }
+            catch let error as RepositoryDocumentError where error.code == .missingFile { continue }
+            guard let text = String(data: data, encoding: .utf8) else { throw RepositoryDocumentError(.invalidUTF8) }
+            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
+            try reader.verifyStable()
+            try validateFolder()
+            return homePath + "/" + name
+        }
+        try reader.verifyStable()
+        try validateFolder()
+        return nil
+    }
 }
 
 /// A connection owns this lease until its process and reader physically close.

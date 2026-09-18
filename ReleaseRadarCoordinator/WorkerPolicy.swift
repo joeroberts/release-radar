@@ -7,11 +7,14 @@ struct WorkerPolicy {
     let assignment: ProjectExecutionAssignment
     let policy: ProjectExecutionPolicy
     let snapshot: URL
+    let codexContext: CodexExecutionContext
 
     init(store: ProjectExecutionFileStore, projectID: String, taskID: String) throws {
         self.store = store
         policy = try store.policy(projectID: projectID)
         assignment = try store.assignment(projectID: projectID, taskID: taskID)
+        guard let context = try store.codexContext() else { throw CodexExecutionContextError.changed }
+        codexContext = context
         guard policy.version == 1, policy.enabled, policy.bindingRecoveryPending != true, policy.consent == ProjectExecutionPolicy.Consent(),
               policy.hookReceipt?.installed == true, policy.appServerExecutable == CodexExecutionIdentity.executable,
               policy.registration == assignment.registration,
@@ -27,7 +30,7 @@ struct WorkerPolicy {
 
     func verifyCodexContext() throws {
         guard let id = policy.codexContextID, assignment.codexContextID == id,
-              try store.codexContext()?.id == id else { throw CodexExecutionContextError.changed }
+              codexContext.id == id, try store.codexContext() == codexContext else { throw CodexExecutionContextError.changed }
     }
 
     func verifyContext() throws {
