@@ -99,6 +99,13 @@ public actor ProjectExecutionSetupCoordinator: ProjectExecutionSettingUp {
         try recoverBinding(project: project, registration: registration, store: store, removedRegistrations: removedRegistrations)
         var policy: ProjectExecutionPolicy
         if let existing = try store.policyIfPresent(projectID: project.projectID.rawValue) {
+            if permitHandlerUpdate, !permitOwnerResume, !existing.enabled,
+               existing.registration == registration, existing.primaryRoot == project.canonicalRoot.path,
+               existing.appServerExecutable == CodexExecutionIdentity.executable,
+               existing.hookRemovalReceipt?.completed == true,
+               existing.consent == ProjectExecutionPolicy.Consent() {
+                throw ProjectExecutionError.workflowDisabled
+            }
             if permitOwnerResume {
                 guard !existing.enabled else { throw StoreError.unavailable("The project workflow is already enabled. Existing stopped or uncertain workers still require their own recovery.") }
                 guard existing.hookRemovalReceipt == nil || existing.hookRemovalReceipt?.completed == true else { throw StoreError.unavailable("Finish hook removal and resolve its conflicting edits before resuming the project workflow.") }

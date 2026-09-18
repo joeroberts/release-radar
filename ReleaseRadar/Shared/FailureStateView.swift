@@ -255,7 +255,7 @@ struct FailureStatePresentation: Equatable, Sendable {
         switch agentError {
         case let .execution(error):
             switch error {
-            case .unavailable, .hookNotReady:
+            case .unavailable, .hookNotReady, .workflowDisabled:
                 self.init(title: "Execution setup needed", detail: error.localizedDescription,
                           systemImage: "gearshape.badge.exclamationmark", tone: .warning,
                           accessibilityID: "failure-execution-setup")

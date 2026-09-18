@@ -5,6 +5,7 @@ public enum ProjectExecutionError: Error, LocalizedError, Codable, Equatable, Se
     case invalidAssignment
     case unavailable
     case assignmentNotAuthorized
+    case workflowDisabled
     case identityMismatch
     case conflict
     case hookNotReady
@@ -14,6 +15,7 @@ public enum ProjectExecutionError: Error, LocalizedError, Codable, Equatable, Se
         case .invalidAssignment: "The execution assignment is invalid. Ask the coordinator to prepare a new bounded assignment."
         case .unavailable: "Project execution setup is unavailable. Resume setup in Release Radar before launching work."
         case .assignmentNotAuthorized: "This assignment is stopped, revoked or no longer current. Return to the coordinator; no work turn is authorized."
+        case .workflowDisabled: "This project workflow is disabled. Choose Resume project workflow to restore the verified hook. Stopped and uncertain workers remain blocked; replacement work requires a fresh assignment."
         case .identityMismatch: "The execution assignment does not match this project, checkout or session. Return to the coordinator."
         case .conflict: "Release Radar execution setup conflicts with an existing edit. Preserve the edit and resolve it in project setup."
         case .hookNotReady: "The project hook is missing, disabled, changed or untrusted. Resume execution setup in Release Radar."

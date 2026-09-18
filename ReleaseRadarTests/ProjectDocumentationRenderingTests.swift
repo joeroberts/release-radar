@@ -450,6 +450,45 @@ final class ProjectDocumentationRenderingTests: XCTestCase {
         )
 
         try await render(
+            ProjectSettingsEditor(
+                initial: .init(registration: registration, projectName: "RDS Project", excludedTaskIDs: []),
+                tasks: [],
+                manageExecutionHook: { _ in throw ProjectExecutionError.workflowDisabled },
+                save: { _, _ in
+                    XCTFail("Rendering must not save project settings")
+                    return .init(registration: registration, projectName: "RDS Project", excludedTaskIDs: [])
+                }
+            ),
+            name: "disabled-workflow-update-guidance",
+            width: 620,
+            expected: nil,
+            expectedText: [
+                "This project workflow is disabled. Choose Resume project workflow to restore the verified hook.",
+                "Stopped and uncertain workers remain blocked; replacement work requires a fresh assignment.",
+            ],
+            absentText: ["Return to the coordinator; no work turn is authorized."],
+            pressIdentifiers: ["project-settings-execution-update"]
+        )
+
+        try await render(
+            ProjectSettingsEditor(
+                initial: .init(registration: registration, projectName: "RDS Project", excludedTaskIDs: []),
+                tasks: [],
+                manageExecutionHook: { _ in throw ProjectExecutionError.unavailable },
+                save: { _, _ in
+                    XCTFail("Rendering must not save project settings")
+                    return .init(registration: registration, projectName: "RDS Project", excludedTaskIDs: [])
+                }
+            ),
+            name: "unavailable-workflow-update-guidance",
+            width: 620,
+            expected: nil,
+            expectedText: ["Project execution setup is unavailable. Resume setup in Release Radar before launching work."],
+            absentText: ["This project workflow is disabled"],
+            pressIdentifiers: ["project-settings-execution-update"]
+        )
+
+        try await render(
             ProjectLifecycleHelpView(),
             name: "rds-project-lifecycle-help",
             width: 620,
