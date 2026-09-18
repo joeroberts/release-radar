@@ -16,8 +16,10 @@ project source regression failed its status and first-turn assertions (one test,
 two expected failures). Progress remains pinned context, not a required loaded
 instruction source. Writer owns source/tests/design/brief; BA owns native checks
 and the separate scoped candidate commit; Main owns the ledger and the same
-independent reviewer's correction route after commit. Native GREEN is recorded
-below; scoped commit, review and installed startup acceptance remain pending.
+independent reviewer's correction route after commit. Native GREEN and candidate
+commit `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` are complete; independent review
+returned PASS with no Required or Optional findings. Installed startup acceptance
+remains pending.
 Preserve the unknown, launch-reserved,
 uncertain, physically closed `9d42ef30` assignment and its known thread. No live
 retry, preparation, configuration edit, retirement or cleanup is authorized here.
@@ -29,8 +31,32 @@ notification and close sequence. The affected three-test rerun passed the correc
 physical outside-home symlink fixture; the final two-test rerun passed both positive
 tests, including all four override/base selection variants, with zero failures and
 native exit 0. No single 37-test GREEN run is claimed. Production source and design
-remained unchanged between checks; the six-file candidate is frozen for final
-documentation/diff checks and the authorized scoped commit before review.
+remained unchanged between checks; final documentation/diff checks passed before
+the authorized six-file commit and independent correction review.
+
+### September 18 reviewed correction installation and resource readback
+
+The owner restarted Codex after dispatch became stuck; Main resumed the existing
+authorized installation acceptance and BA acknowledged recovery. Reviewed source
+`8b9b979c` and its branch were intact; Main's pending ledger edit was preserved.
+Established signed staging and installation exited 0, followed by normal RR launch.
+Installed 0.1.19/build 1 app CDHash is `197ab7377d995fc852c89d3edbc9058c4a45a1fd`,
+Coordinator `f19ceb7557cc0dedf87217bf3e1280a6bf6ec453`, Team `2UA854NLX4`.
+Checked installed app/Core/Coordinator/AgentTools/broker and signed manifest match
+stage. Live app PID 800 maps installed app/Core; fresh installed AgentTools PID 900
+returned complete fixture inventory and exited 0, same registration generation 2
+and phase/task-plan revisions 1. No new native tests were needed after terminal checks.
+
+Bounded read-only 9d42 pre-retirement verification confirmed unknown state, launch
+reservation and uncertainty, `connectionClosed: true` and known session
+`01a0b476-d219-7ce1-b30a-1879979c125a`, with no retirement receipt. Exact real checkout
+was present and clean; exact owned profile was present and matched the saved raw
+definition. These facts establish resource readiness, not removal authorization.
+The owner subsequently explicitly approved exact 9d42 retirement via reply 1. Main
+owns that supported UI action; BA released it after installed checks without retiring
+resources or claiming an outcome. No worker start/replay, new preparation, version/
+tag/DMG/push/PR/merge, manual configuration/permission change or BA Codex restart
+occurred. Worktrees and temporary build/review artifacts remain preserved.
 
 ## September 18 current-generation worker startup
 

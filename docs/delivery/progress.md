@@ -2,6 +2,31 @@
 
 ## Current outcome
 
+**September 18 — reviewed global-guidance correction installed; startup acceptance pending.**
+Correction `8b9b979cc7b0ca82ab24e4f5b8500252a326ea96` admits documented global
+guidance only from the protected selected Codex home, separately from pinned
+repository context. Causal RED reproduced the rejection; all 37 distinct current
+Core/WorkerAdapter cases passed across the initial run and affected reruns.
+Independent review returned PASS with no Required or Optional findings.
+
+After the owner restarted Codex, the authorized build dispatch recovered. BA
+preserved Main's pending ledger update and used the established signed stage/install
+workflow from that reviewed source. Both scripts exited 0. Installed 0.1.19/build 1
+app CDHash `197ab7377d995fc852c89d3edbc9058c4a45a1fd`, Coordinator CDHash
+`f19ceb7557cc0dedf87217bf3e1280a6bf6ec453`, Team `2UA854NLX4`; checked binaries and
+signed manifest match the verified stage. Live app PID 800 maps installed app/Core.
+Fresh installed AgentTools PID 900 returned complete fixture inventory and exited 0,
+registration generation 2 and phase/task-plan revisions 1 unchanged.
+
+Read-only exact 9d42 pre-retirement records show unknown/reserved/uncertain with
+confirmed closure and known session; its checkout is clean and owned profile matches
+the saved definition. The owner explicitly approved exact 9d42 retirement via reply 1;
+Main's supported UI action is now released after installation checks. BA has not
+performed retirement or verified its result. Full startup/model turn, isolation,
+STOP and recovery acceptance remain pending. No worker replay, new preparation,
+version/tag/DMG/push/PR/merge, permission change or BA-initiated Codex restart occurred.
+Temporary build/review outputs and worktrees remain retained and excluded from commits.
+
 **September 18 — reviewed permission-metadata correction installed; production startup pending.**
 Source candidate `abfaef63a1c42671a433a617c70dfe15efccef69` is committed on
 `codex/coordinator-context-handoff`. Independent authority/lifetime reviewer
