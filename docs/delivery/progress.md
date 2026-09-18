@@ -2,6 +2,26 @@
 
 ## Current outcome
 
+**September 18 — signed acceptance candidate installed; stale MCP helper blocks readback.**
+Candidate `7201abeb` containing source correction `6b4f3fbd` passed the established
+signed staging/install checks. Installed Release Radar is 0.1.19/build 1, CDHash
+`bf6d03929c44db85604356b379f8a21fe7eb0d26`; live PID 66989 maps the installed app.
+Main's first read-only inventory returned `appUnavailable`: at 06:24:05, bridge
+PID 67007 rejected AgentTools peer 52461 with signing status -67065. That helper
+maps pre-install inode 41789043; the current installed helper is inode 41891717.
+No preparation replay or worker start occurred. Preserve exact request
+`67a32c8b-11fd-430e-b916-439046da4531` in the existing brief.
+
+The active staging build was interrupted when checkout 387b disappeared during
+completed-writer archival; its ignored artifacts are not claimed preserved.
+Committed source and ledger were restored into the dedicated, unbound
+`outcome3-hook-layer-stage` worktree on `codex/linked-hook-layer-stage`, and the
+required package build succeeded there. Retain this checkout and its artifacts
+through owner restart/live acceptance disposition; no cleanup, additional
+recovery probe, restart, process termination or reinstall is authorized here.
+Transport recovery and live acceptance remain pending; the separate unresolved
+task-delegation approval issue remains unchanged.
+
 **September 18 — linked-checkout source correction verified; live acceptance pending.**
 Source commit `6b4f3fbd84c299f638ae4d9b9162332373fd43f6` ensures the assigned
 checkout's project-layer directory before existing hook discovery. Four native
