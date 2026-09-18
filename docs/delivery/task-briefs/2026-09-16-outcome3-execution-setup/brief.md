@@ -9,7 +9,22 @@ submission; verify complete inventory first. No asserted-thread/review/baseline
 fields, other state mutation or worker start is included. Preserve body and request
 identity on uncertainty; Main owns the subsequent bounded prompt.
 
-Disposition: **pending submission**.
+Disposition: **prepared successfully once**. Exact envelope was committed in
+`6c9e397b` before submission. Fresh installed AgentTools PID 2598 matched complete
+current generation-2 inventory, submitted once and exited 0. Audit
+`42B6FEF4-8085-4C3E-BB49-0509050264B0` returned authorized delivery assignment
+`delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`, Terra/medium and profile
+`rr-delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`, context
+`9D0895C1-C51D-4D47-8DAC-C80499F6678C`, policy digest
+`bae5733cce2b714e7cf8dfec8ef615bbf762b737c171f0197a891aa57ec824f9`.
+Saved assignment exactly matches the response; registration generation 2, work
+incarnation and phase/task-plan revisions match, with no session/reservation/
+uncertainty/closed flags. Assigned settings remain distinct from runtime evidence.
+Real checkout and `.codex` exist at
+`/Users/jroberts/Library/Group Containers/2UA854NLX4.com.rekonlabs.ReleaseRadar/Execution/Worktrees/project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac/delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`.
+Baseline `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`, branch
+`codex/rr-project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac-delivery-b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`.
+No worker started; Main owns the next bounded prompt.
 
 ```json
 {

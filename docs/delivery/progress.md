@@ -27,7 +27,12 @@ checkout/profile removal and confirmed closure. Exact checkout/profile are absen
 branch remains at `ecb738e87ba16e0bca55f74e486f1c6a2aaee769`. Prior unknown state,
 reservation, uncertainty and known session `01a0b476-d219-7ce1-b30a-1879979c125a`
 remain recorded. Fresh supported inventory remains complete at generation 2, unchanged
-phase/task-plan revisions 1. BA performed no retirement mutation or fresh preparation. Full startup/model turn, isolation,
+phase/task-plan revisions 1. BA performed no retirement mutation. Main canceled
+settings without Save and selected fresh request `b3b1ed9b-9cd8-4e97-8f44-780c44f4b0bd`.
+Its exact envelope was committed before one fresh-helper submission, after complete
+inventory matched. Audit `42B6FEF4-8085-4C3E-BB49-0509050264B0` returned authorized
+delivery/Terra/medium assignment with exact saved-response match and real checkout.
+No worker started; Main owns the subsequent bounded prompt. Full startup/model turn, isolation,
 STOP and recovery acceptance remain pending. No worker replay, new preparation,
 version/tag/DMG/push/PR/merge, permission change or BA-initiated Codex restart occurred.
 Temporary build/review outputs and worktrees remain retained and excluded from commits.
