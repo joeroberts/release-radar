@@ -1,5 +1,39 @@
 # Outcome 3 project execution setup
 
+## September 18 replacement preparation after exact retirement
+
+Main's owner-authorized UI retirement completed for
+`delivery-67a32c8b-11fd-430e-b916-439046da4531`, request
+`CF0D11FD-CD4B-4206-AE6A-37ABB74EE64E`. Readback reports state superseded,
+worktree/profile removed, retirement complete and configuration closure confirmed.
+The checkout is absent; prior unknown state, launch reservation, uncertain outcome
+and null session remain recorded. This does not assert that the old work completed.
+
+Fresh installed production AgentTools delivery inventory is complete and confirms
+the exact registration/generation, in-delivery phase lifecycle revision 1, task-plan
+revision 1 and active Pending task below. Main releases preparation only. No worker
+start is authorized by this record; preserve this exact envelope on uncertain outcome.
+
+Disposition: **pending; not submitted**.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "assertedThreadID": "01a0a034-404c-7d80-91aa-4caf10bc80b3",
+  "requestID": "88116e60-6d46-4939-8828-a3825ebffe89",
+  "reason": "Prepare replacement synthetic execution acceptance after owner-authorized retirement of delivery-67a32c8b-11fd-430e-b916-439046da4531; preserve its recorded uncertain outcome.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
 ## September 18 temporary context handoff correction
 
 Continue the authorized worker-startup correction under Chief's specific contract
