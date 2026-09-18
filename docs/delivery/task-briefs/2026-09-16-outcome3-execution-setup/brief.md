@@ -179,6 +179,27 @@ reports and temporary samples `/tmp/rr-picker-27079.sample.txt`,
 The old f481 record, fixture and stage/artifacts are preserved; this result recording
 performs no diagnosis, implementation, tests/review, additional live action or cleanup.
 
+Main's subsequent actual installed A/B check used experimental candidate CDHash
+`41d7b9dc4ff17eaa2fa2e5a16d2014fef3921d38` and the exact fresh root above.
+CUA attached installed RR, opened Add Project → Initialize and selected the existing
+fixture. Full saved-handoff AX and screenshot inspection succeeded, including the
+named Continue in Codex containment and Resume, Finish and Copy controls. Resume once
+returned "Execution setup checks completed. Finish Initialization will verify and open
+the project." Finish once completed; Projects showed Active(3) and `project2` for exact
+project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac`, registration
+`e78aca16-85f1-4c32-8712-c908aba5859d`, generation 1.
+Actual changed-screen inspection, setup and Finish are verified for this run; neither
+the earlier crash/setup failure's cause nor a general helper fix is established.
+Worker startup/STOP/recovery and full Outcome 3 acceptance remain unverified.
+The candidate adds only the frozen, uncommitted Continue in Codex wrapper experiment
+over reviewed source `8656280`; latest prior documentation is `31e7f26`. The saved
+baseline's heading/chrome differ, so shipping visual acceptance is not established.
+Independent wrapper review is required before source commit; Main/RO04 own fresh
+review dispatch. This release permits only existing brief/ledger evidence recording
+and BA's documentation-check/result-commit route, preserving the exact source experiment.
+No further source/build/install/live action is released; no worker start occurred in
+this exercise. All artifacts and old f481 state/resources remain preserved.
+
 ## Scope, authority and dependencies
 
 The owner explicitly released worker `01a0acb5-bc87-72b3-a06e-8821cb18bfc9`

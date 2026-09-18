@@ -2,7 +2,7 @@
 
 ## Current outcome
 
-**Outcome 3 — RR hook preparation verified; worker startup configuration remains unresolved.**
+**Outcome 3 — fresh-project setup and Finish verified; worker startup acceptance remains open.**
 The canonical hook correction is committed as `bff4899`. BuildAgent Native71
 passed 18 focused tests and app/test compilation; documentation/diff checks and
 independent review passed with no Required or Optional findings. Stage72 and
@@ -125,6 +125,27 @@ onboarding and startup acceptance remain unproven. Main's reports and temporary 
 `/tmp/rr-picker-27079.sample.txt`, `/tmp/rr-cua-27052.sample.txt` and
 `/tmp/rr-openpanel-27136.sample.txt` are preserved. This recording performs no additional
 diagnosis/live action; f481, fixture and stage/artifacts remain unchanged and retained.
+
+Main subsequently verified the installed experimental A/B candidate, CDHash
+`41d7b9dc4ff17eaa2fa2e5a16d2014fef3921d38`, against that exact fresh root.
+CUA attached RR, opened Add Project → Initialize and selected the existing fixture;
+full saved-handoff AX and screenshot inspection succeeded, exposing the named
+Continue in Codex container and Resume, Finish and Copy controls. Resume was invoked
+once and returned "Execution setup checks completed. Finish Initialization will verify
+and open the project." Finish was invoked once and completed; Projects showed Active(3)
+and `project2`, exact project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac`,
+registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 1.
+This verifies actual changed-screen inspection, setup and Finish in this run. It does
+not establish that the wrapper caused the earlier crash or setup failure, a general
+helper fix, worker startup/STOP/recovery, or Outcome 3 completion.
+The installed experiment contains only the uncommitted Continue in Codex wrapper
+substitution over reviewed source `8656280`; latest prior documentation is `31e7f26`.
+That one-file source experiment remains frozen. Its heading/chrome differ from the
+saved baseline; shipping visual acceptance and independent wrapper review remain open.
+Main/RO04 own the fresh review dispatch. Current worker authorization is limited to
+this two-document evidence recording and BA's documentation-check/result-commit route;
+no further source/build/install/live action is released. All artifacts and old f481
+state/resources remain retained; no worker start occurred in this exercise.
 
 Main confirmed the registration/root and removal/re-add recovery commit
 `58d86bf05dac2456f7e52b0b325964b1fbdc0d13` on the assigned branch/worktree.
