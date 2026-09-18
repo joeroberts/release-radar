@@ -169,6 +169,10 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
                            policy: ProjectExecutionPolicy, store: ProjectExecutionFileStore) async throws -> ProjectExecutionAssignment {
         var assignment = intent
         guard assignment.codexContextID == policy.codexContextID else { throw CodexExecutionContextError.changed }
+        guard assignment.state == .preparing, assignment.sessionID == nil,
+              assignment.launchReserved != true, assignment.uncertainOutcome != true else {
+            throw ProjectExecutionError.assignmentNotAuthorized
+        }
         try await configuration.useCodexContext(policy.codexContextID)
         let profile = try ProjectExecutionPermissionProfile(assignment: assignment, policy: policy, paths: paths)
         let definition = try profile.definition
@@ -179,6 +183,23 @@ public actor ProjectExecutionAssignmentCoordinator: ProjectExecutionAssignmentPr
             try store.saveAssignment(assignment, expected: intent)
         }
         try await configuration.prepareWorkerProfile(primaryRoot: policy.primaryRoot, profile: profile)
+        guard let tree = assignment.worktree, tree.checkout == paths.checkout.path,
+              assignment.checkoutPath == paths.checkout.path, tree.primaryRoot == policy.primaryRoot else {
+            throw ProjectExecutionError.identityMismatch
+        }
+        let checkout = try RepositoryDocumentReader(rootURL: paths.checkout,
+            limits: .init(maximumFileBytes: 16 * 1_048_576), afterRead: nil)
+        guard try provisioning.candidateRevision(worktree: tree) == tree.baseline else {
+            throw ProjectExecutionError.identityMismatch
+        }
+        guard try store.policy(projectID: assignment.registration.projectID.rawValue) == policy,
+              try store.assignment(projectID: assignment.registration.projectID.rawValue, taskID: assignment.id) == assignment else {
+            throw ProjectExecutionError.assignmentNotAuthorized
+        }
+        if let contextID = assignment.codexContextID {
+            guard try store.codexContext()?.id == contextID else { throw CodexExecutionContextError.changed }
+        }
+        try checkout.ensureProjectLayerDirectory()
         try await configuration.verifyHook(primaryRoot: policy.primaryRoot, checkout: paths.checkout.path,
             command: "\"" + handlerPath + "\" --hook", permitOwnedTrust: false, beforeWrite: {})
         try assignment.verifyContext()

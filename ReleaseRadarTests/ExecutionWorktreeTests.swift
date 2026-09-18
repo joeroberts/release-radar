@@ -85,4 +85,85 @@ final class ExecutionWorktreeTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.checkout.path))
         XCTAssertEqual(try head(at: fixture.checkout).revision, fixture.baseline)
     }
+    private func executionFixture(_ fixture: (root: URL, checkout: URL, baseline: String)) throws
+        -> (root: URL, project: AuthorizedProject, work: ProjectExecutionWork, store: ProjectExecutionFileStore) {
+        let root = fixture.root.deletingLastPathComponent().appendingPathComponent("Execution")
+        let store = try ProjectExecutionFileStore(root: root, create: true)
+        let context = try CodexExecutionContext(home: root, bookmark: Data([1]))
+        try store.saveCodexContext(context, expected: nil)
+        let registration = ProjectRegistration(projectID: .init(rawValue: "project-one"), registrationID: "registration-one", requestGeneration: 1)
+        let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
+        var policy = ProjectExecutionPolicy(registration: registration, primaryRoot: fixture.root.path,
+            appServerExecutable: CodexExecutionIdentity.executable, handlerPath: handler)
+        policy.codexContextID = context.id; policy.consent = .init()
+        policy.hookReceipt = .init(command: "\"" + handler + "\" --hook", inline: false,
+            beforeDigest: nil, intendedDigest: String(repeating: "a", count: 64), installed: true)
+        try store.savePolicy(policy, expected: nil)
+        let work = ProjectExecutionWork(projectID: registration.projectID, ticketID: "ticket-one", taskID: "work-one",
+            outcome: "Bounded outcome", title: "Approved task", taskPlanRevision: 1, phaseID: "phase-one", phaseRevision: 1)
+        return (root, .init(registration: registration, canonicalRoot: fixture.root, authorizedRoots: [fixture.root]), work, store)
+    }
+
+    func testNativeUntrackedPrimaryHookLeavesEmptyLinkedLayerForFreshAndExactRecovery() async throws {
+        for recovery in [false, true] {
+            let fixture = try fixture()
+            let execution = try executionFixture(fixture)
+            let handler = "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator"
+            let hook = try ProjectExecutionHookRegistration.merge(nil, command: "\"" + handler + "\" --hook", previousCommand: nil)
+            let primary = try ProjectExecutionFileStore(root: fixture.root, create: false)
+            try primary.saveHookConfiguration(hook, expected: nil) // Untracked, after the committed baseline.
+            let configuration = ProjectExecutionProducerTests.Configuration()
+            await configuration.requireLayer()
+            if recovery { await configuration.setFailure(true) }
+            let producer = ProjectExecutionAssignmentCoordinator(root: { execution.root }, configuration: configuration,
+                handlerPath: handler, provisioning: LibGit2WorktreeProvisioner())
+            let request = UUID()
+            var pending: ProjectExecutionAssignment?
+            if recovery {
+                do { _ = try await producer.prepare(project: execution.project, work: execution.work, requestID: request,
+                    reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["source.txt"]); XCTFail("Expected pending profile failure") }
+                catch { XCTAssertEqual(error as? ProjectExecutionError, .hookNotReady) }
+                pending = try XCTUnwrap(execution.store.assignments(projectID: "project-one").first)
+                XCTAssertFalse(FileManager.default.fileExists(atPath: pending!.checkoutPath + "/.codex"))
+                await configuration.setFailure(false)
+            }
+            let prepared = try await producer.prepare(project: execution.project, work: execution.work, requestID: request,
+                reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["source.txt"])
+            XCTAssertEqual(prepared.worktree?.baseline, fixture.baseline)
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: prepared.checkoutPath + "/.codex"), [])
+            XCTAssertEqual(try primary.hookConfiguration(), hook)
+            XCTAssertEqual(try LibGit2WorktreeProvisioner().candidateRevision(worktree: XCTUnwrap(prepared.worktree)), fixture.baseline)
+            if let pending {
+                XCTAssertEqual(prepared.id, pending.id); XCTAssertEqual(prepared.worktree, pending.worktree)
+                XCTAssertEqual(prepared.context, pending.context); XCTAssertEqual(prepared.codexContextID, pending.codexContextID)
+                XCTAssertEqual(prepared.permissionProfileDefinition, pending.permissionProfileDefinition)
+            }
+        }
+    }
+
+    func testNativeWrongRecoveryCheckoutIdentityRefusesProjectLayerCreation() async throws {
+        let fixture = try fixture()
+        let execution = try executionFixture(fixture)
+        let configuration = ProjectExecutionProducerTests.Configuration(); await configuration.setFailure(true)
+        let producer = ProjectExecutionAssignmentCoordinator(root: { execution.root }, configuration: configuration,
+            handlerPath: "/Applications/ReleaseRadar.app/Contents/Helpers/ReleaseRadarCoordinator", provisioning: LibGit2WorktreeProvisioner())
+        let request = UUID()
+        do { _ = try await producer.prepare(project: execution.project, work: execution.work, requestID: request,
+            reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["source.txt"]) } catch {}
+        let pending = try XCTUnwrap(execution.store.assignments(projectID: "project-one").first)
+        let tree = try XCTUnwrap(pending.worktree)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(pending)) as? [String: Any])
+        var worktree = try XCTUnwrap(object["worktree"] as? [String: Any])
+        worktree["commonGitDirectory"] = tree.commonGitDirectory + "-other"; object["worktree"] = worktree
+        let wrong = try JSONDecoder().decode(ProjectExecutionAssignment.self, from: JSONSerialization.data(withJSONObject: object))
+        try execution.store.saveAssignment(wrong, expected: pending)
+        await configuration.setFailure(false)
+        do { _ = try await producer.prepare(project: execution.project, work: execution.work, requestID: request,
+            reviewOfAssignmentID: nil, baselineFromAssignmentID: nil, contextPaths: ["source.txt"]); XCTFail("Wrong checkout identity must refuse") }
+        catch { XCTAssertEqual(error as? ProjectExecutionError, .identityMismatch) }
+        XCTAssertEqual(try execution.store.assignment(projectID: "project-one", taskID: wrong.id), wrong)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: wrong.checkoutPath + "/.codex"))
+        let checks = await configuration.hookChecks; XCTAssertEqual(checks, 0)
+    }
+
 }
