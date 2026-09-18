@@ -2,6 +2,31 @@
 
 ## Current outcome
 
+**September 18 — connection recovered; fresh-fixture acceptance resumed.**
+The owner restarted Codex. Main verified the stale AgentTools PID 32172 had exited
+and the same read-only RR inventory request succeeded with a complete result.
+Before restart, the failed call was directly traced to that process mapping the
+pre-install backup helper and an XPC code-signature rejection. No permission or
+configuration change was needed for this recovery. Computer Use again reads the
+fixture overview and project settings successfully.
+
+The fresh Documents fixture is committed on `codex/context-acceptance` at
+`c4d77b8`; its five-file bootstrap passed the packaged documentation check.
+RR readback confirms project `project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac`,
+registration `e78aca16-85f1-4c32-8712-c908aba5859d`, generation 1, accepted
+repository `898fcdbe-0326-495b-b072-e9a18386f0cf`, catalog v1 and digest
+`b9096b02ecd0379864dc2d224fae178ca5c5326b6c5b02fb84bfb78bf07f24bb`.
+Delivery inventory contains no phases or tickets. The completed bootstrap task
+is archived; a fresh task owns only the managed-guidance handoff and its audit.
+Main will then register the authorized synthetic work and exercise actual
+assignment/startup, isolation, STOP and recovery. These remain unverified.
+
+The previous source checkout `dd18` is absent. Build Agent restored committed
+`34622e44` into branch `codex/outcome3-context-acceptance-closeout` at
+`/Users/jroberts/.codex/worktrees/outcome3-context-acceptance-closeout/release_radar`.
+Main owns this ledger; the canonical `main` checkout and old f481 resources remain
+untouched. Existing catalog identities and navigation are unchanged.
+
 **Outcome 3 — fresh-project setup and Finish verified; worker startup acceptance remains open.**
 The canonical hook correction is committed as `bff4899`. BuildAgent Native71
 passed 18 focused tests and app/test compilation; documentation/diff checks and
