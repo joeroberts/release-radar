@@ -1,5 +1,32 @@
 # Outcome 3 project execution setup
 
+## September 18 metadata-correction replacement preparation
+
+Main selects and releases the exact preparation-only request below after verified
+88116 retirement and reviewed correction installation. Persist this envelope before
+submission, verify current complete inventory, and submit once through fresh installed
+normal AgentTools. Preserve the request and body on uncertainty. No worker start,
+baseline/review override or asserted-thread field is authorized in this step.
+
+Disposition: **pending submission**.
+
+```json
+{
+  "version": 1,
+  "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/rr-outcome3-context-acceptance-20260918/project",
+  "registrationProjectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "registrationID": "e78aca16-85f1-4c32-8712-c908aba5859d",
+  "requestGeneration": 1,
+  "requestID": "4fd11768-738e-44cd-9216-f5babc3d63d8",
+  "reason": "Prepare replacement for retired 88116 after reviewed null-metadata compatibility correction; observe actual assigned-checkout worker startup.",
+  "projectID": "project-d1f51777-632b-4ffc-9d1a-e0952f2c23ac",
+  "ticketID": "context-acceptance-20260918-worker",
+  "taskID": "context-acceptance-20260918-task",
+  "expectedTaskPlanRevision": 1,
+  "expectedPhaseRevision": 1
+}
+```
+
 ## September 18 single replacement-worker startup
 
 Main releases one normal production start for the prepared replacement below.
