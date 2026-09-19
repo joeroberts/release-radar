@@ -2,15 +2,15 @@
 
 ## Current release delivery checkpoint
 
-Draft [PR #105](https://github.com/joeroberts/release-radar/pull/105) is open against
-main from `codex/connector-recovery-baseline`; branch push is complete. It includes
-the existing #98/#100 prerequisites and explicitly preserves their disposition.
-No merge occurred; local tagv0.1.23 has not been pushed. The verified0.1.23 DMG is
+[PR #105](https://github.com/joeroberts/release-radar/pull/105) was merged by the
+owner on September 19 at 17:41:02 UTC, merge commit
+`cf67b6ae0ec1fe6d234db048b74f0daf6f91de76`. Its existing #98/#100 prerequisites
+and branches remain preserved. Local tag v0.1.23 has not been pushed. The verified 0.1.23 DMG is
 committed underdist/ and installed. Fresh-client supported inventory and audited
 original-request refusal replay passed. Overall #99 remains open: retained-client
 signed-upgrade/native broker acceptance is deferred to another Mac; independent
-healthy-state UI QA passed; exact RR evidence/task reconciliation remains pending.
-All three RR tasks remain pending. Earlier no-push/install wording below describes
+healthy-state UI QA passed. Approved RR reconciliation is committed: evidence
+revision 4, task-plan revision 2, task 02 Completed; tasks 01/03 remain Pending. Earlier no-push/install wording below describes
 prior checkpoints, not this current release state.
 
 Independent installed UI review by RO Coordinator 05
@@ -30,7 +30,7 @@ No permission denial was observed; the earlier Codex approval flag was misleadin
 Owner clarified sequencing: finish this ticket's closeout before returning to the
 blocked ticket. No blocked-ticket implementation has started.
 
-### Connector closeout reconciliation — proposed, not applied
+### Connector closeout reconciliation — committed
 
 Supported RO readback confirms the exact canonical root, project
 `project-fffdc0e0b15b9b86`, registration
@@ -63,9 +63,225 @@ owner acceptance remain unchanged. Exact task definitions:
   independent recovery and UI review. Unchanged/Pending: the complete verification
   scope is not established by the narrower successful checks.
 
-Owner approval of this exact reconciliation is pending. Persist exact ordered
-command envelopes before execution; refresh baseline first and stop if it changed.
-This proposal does not close GitHub #99, merge PR #105 or claim deferred acceptance.
+Owner approved this exact evidence/task-status closeout update after merging PR #105.
+The ordered envelopes below committed through Main's supported connector after
+owner-requested retry. Readback confirms all three observations are applicable,
+available and passed; all target expectations are satisfied. Task 02 is Completed
+at plan revision 2; tasks 01/03 remain Pending, ticket in_progress, phase in_delivery
+revision 1 and owner acceptance notAccepted. No deferred verification is claimed. This update
+does not close GitHub #99 or claim deferred acceptance.
+
+#### Approved ordered command envelopes
+
+Observation timestamps denote this review of recorded claims, not original test execution.
+The final command executed only after successful current evidence readback.
+
+```json
+[
+  {
+    "tool": "release_radar_record_delivery_evidence_target",
+    "disposition": "committed",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "ticketID": "rr-p6-connector-recovery",
+      "requestID": "24efc6de-f326-4db9-8cb3-eb036d869e67",
+      "target": {
+        "projectID": "project-fffdc0e0b15b9b86",
+        "rootID": "project-fffdc0e0b15b9b86-root-0",
+        "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+        "catalogVersion": 1,
+        "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+      },
+      "expectedEvidenceRevision": 0,
+      "revision": {
+        "commitSHA": "1fa2dc4d7f850b5d05f30f7b912c8f92953af3b7",
+        "checkoutState": "clean"
+      },
+      "expectations": [
+        {
+          "category": "check",
+          "scope": "rr-p6-connector-recovery-task-02"
+        },
+        {
+          "category": "build",
+          "scope": "rr-p6-connector-recovery-task-02"
+        },
+        {
+          "category": "installation"
+        }
+      ],
+      "reason": "Owner-approved task02 evidence reconciliation; packaged product source only, not full retained-client or second-Mac acceptance."
+    },
+    "result": {
+      "auditEventID": "CB20552D-11D8-420F-9A7A-2F67CAAEB822",
+      "deliveryEvidenceRevision": 1
+    }
+  },
+  {
+    "tool": "release_radar_append_delivery_evidence_observation",
+    "disposition": "committed",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "ticketID": "rr-p6-connector-recovery",
+      "requestID": "400d364a-f0df-4488-bfd9-a12da8b839d0",
+      "target": {
+        "projectID": "project-fffdc0e0b15b9b86",
+        "rootID": "project-fffdc0e0b15b9b86-root-0",
+        "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+        "catalogVersion": 1,
+        "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+      },
+      "expectedEvidenceRevision": 1,
+      "observation": {
+        "id": "c43dcc81-7016-415e-8f21-21bca9851aae",
+        "targetVersion": 1,
+        "fact": {
+          "category": "check",
+          "scope": "rr-p6-connector-recovery-task-02"
+        },
+        "source": {
+          "kind": "recordedClaim",
+          "label": "Build Agent focused tests and independent recovery/security, metadata and installed healthy-state UI reviews; progress.md records results and limits."
+        },
+        "sourceAvailability": "available",
+        "outcome": "passed",
+        "observedAt": "2026-09-19T17:44:39.049Z",
+        "recordedAt": "2026-09-19T17:44:39.049Z"
+      },
+      "reason": "17 recovery tests, 31 package tests and UI assertion passed; independent source and healthy-state UI review passed. Fresh supported inventory and audited refusal replay passed. Retained-client upgrade and second-Mac verification excluded. Recorded from attributed completed reports at reconciliation time."
+    },
+    "result": {
+      "auditEventID": "41D85AFB-D6EA-4EBB-8A3E-C39FBC528330",
+      "deliveryEvidenceRevision": 2
+    }
+  },
+  {
+    "tool": "release_radar_append_delivery_evidence_observation",
+    "disposition": "committed",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "ticketID": "rr-p6-connector-recovery",
+      "requestID": "7614f0ef-c27f-444a-bf6c-0005b75a452c",
+      "target": {
+        "projectID": "project-fffdc0e0b15b9b86",
+        "rootID": "project-fffdc0e0b15b9b86-root-0",
+        "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+        "catalogVersion": 1,
+        "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+      },
+      "expectedEvidenceRevision": 2,
+      "observation": {
+        "id": "c91c4998-1130-44c2-a258-32a1e5645766",
+        "targetVersion": 1,
+        "fact": {
+          "category": "build",
+          "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+          "revision": {
+            "commitSHA": "1fa2dc4d7f850b5d05f30f7b912c8f92953af3b7",
+            "checkoutState": "clean"
+          },
+          "buildID": "ReleaseRadar-0.1.23-build1",
+          "scope": "rr-p6-connector-recovery-task-02"
+        },
+        "source": {
+          "kind": "recordedClaim",
+          "label": "Build Agent 02 signed package verification, recorded in docs/delivery/progress.md"
+        },
+        "sourceAvailability": "available",
+        "outcome": "passed",
+        "observedAt": "2026-09-19T17:44:39.049Z",
+        "recordedAt": "2026-09-19T17:44:39.049Z"
+      },
+      "reason": "Verified dist/ReleaseRadar-0.1.23.dmg; SHA256 92226c3d873b13d6aff30ff22ee00ef5a828bd9b3a46cae8ff977e2f5c280da4. Product source is target commit; later commits were documentation/release artifact records. Recorded from attributed completed reports at reconciliation time."
+    },
+    "result": {
+      "auditEventID": "D9908D96-F8B1-4169-9D8E-2304448E5BB7",
+      "deliveryEvidenceRevision": 3
+    }
+  },
+  {
+    "tool": "release_radar_append_delivery_evidence_observation",
+    "disposition": "committed",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "ticketID": "rr-p6-connector-recovery",
+      "requestID": "bac9d6ee-bc62-4ea3-aef2-36fb3e42e3e8",
+      "target": {
+        "projectID": "project-fffdc0e0b15b9b86",
+        "rootID": "project-fffdc0e0b15b9b86-root-0",
+        "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+        "catalogVersion": 1,
+        "catalogDigest": "e81833b73cb6616e926877f15d9b576f3118d7be2a4dad45e0dc715bd4f5220e"
+      },
+      "expectedEvidenceRevision": 3,
+      "observation": {
+        "id": "2fd8d067-3dc5-4fa3-be4c-118920730a93",
+        "targetVersion": 1,
+        "fact": {
+          "category": "installation",
+          "repositoryID": "e7475429-ef51-4368-ad9e-61d9073d5a4f",
+          "revision": {
+            "commitSHA": "1fa2dc4d7f850b5d05f30f7b912c8f92953af3b7",
+            "checkoutState": "clean"
+          },
+          "installationID": "ReleaseRadar-0.1.23-local-2026-09-19",
+          "buildID": "ReleaseRadar-0.1.23-build1",
+          "context": "/Applications/ReleaseRadar.app; Build Agent verified staged/installed identity and strict signing. Local installation only; no second-Mac or retained-client upgrade acceptance."
+        },
+        "source": {
+          "kind": "recordedClaim",
+          "label": "Build Agent 02 installed identity verification; RO Coordinator 05 installed healthy-state UI review"
+        },
+        "sourceAvailability": "available",
+        "outcome": "passed",
+        "observedAt": "2026-09-19T17:44:39.049Z",
+        "recordedAt": "2026-09-19T17:44:39.049Z"
+      },
+      "reason": "Installed0.1.23 build1; staged/installed CDHash 6a84869dd80afbdfdb6bffaa284cd99357863185. Independent healthy-state UI observations passed normal, narrow and expanded capture sizes. Recorded from attributed completed reports at reconciliation time."
+    },
+    "result": {
+      "auditEventID": "769AA069-C85C-4F59-AC8B-6CAE9DDBB220",
+      "deliveryEvidenceRevision": 4
+    }
+  },
+  {
+    "tool": "release_radar_complete_ticket_task",
+    "disposition": "committed",
+    "arguments": {
+      "version": 1,
+      "projectRoot": "/Users/jroberts/Documents/dev/joeroberts/RekonLabs/release_radar",
+      "registrationID": "8edc840e-2847-4eeb-af68-282d5ed12b11",
+      "registrationProjectID": "project-fffdc0e0b15b9b86",
+      "requestGeneration": 1,
+      "ticketID": "rr-p6-connector-recovery",
+      "requestID": "4a6790e5-edbc-409b-bb53-4a610faa3073",
+      "expectedRevision": 1,
+      "taskID": "rr-p6-connector-recovery-task-02",
+      "reason": "Owner approved exact reconciliation: complete implemented task02 only after current applicable successful scoped evidence readback. Tasks01/03 remain Pending; no lane, phase or owner-acceptance change."
+    },
+    "result": {
+      "auditEventID": "1EC6E04C-ABF2-4156-B1F3-4F932FDDBDD7",
+      "ticketTaskPlanRevision": 2
+    }
+  }
+]
+```
 
 ## Authorized preparation recovery repair
 
