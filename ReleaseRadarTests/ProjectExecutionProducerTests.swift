@@ -699,8 +699,10 @@ final class ProjectExecutionProducerTests: XCTestCase {
         XCTAssertEqual(review.role, .review); XCTAssertEqual(review.worktree?.baseline, String(repeating: "b", count: 40))
         XCTAssertNotEqual(review.checkoutPath, delivery.checkoutPath); XCTAssertNil(review.sessionID)
         XCTAssertEqual(review.reviewOfAssignmentID, delivery.id)
+        XCTAssertEqual(review.reviewScratchVersion, ProjectExecutionAssignment.xcodeBuildScratchVersion)
         let profiles = await configuration.profiles
         XCTAssertEqual(profiles.last?.workspace["."], "read")
+        XCTAssertEqual(profiles.last?.workspace[".build"], "write")
         await reviewProducer.finishPreparation(work: work, requestID: reviewRequestID)
     }
 

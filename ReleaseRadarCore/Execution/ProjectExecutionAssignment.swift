@@ -49,6 +49,9 @@ public struct ProjectExecutionPaths: Sendable {
 public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public enum State: String, Codable, Sendable { case authorized, preparing, stopped, revoked, superseded, unknown, closed }
     public enum Role: String, Codable, Sendable { case delivery, review }
+    /// Explicitly opt newly prepared reviews into the task-local Xcode build
+    /// scratch grant. An absent value is the legacy read-only review profile.
+    public static let xcodeBuildScratchVersion = 1
     public var codexContextID: UUID? = nil
     public var connectionClosed: Bool? = nil
     public var launchReserved: Bool? = nil
@@ -87,6 +90,7 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
     public let work: ProjectExecutionWork?
     public let reviewOfAssignmentID: String?
     public let baselineFromAssignmentID: String?
+    public let reviewScratchVersion: Int?
     public var state: State
     public var sessionID: String?
 
@@ -94,13 +98,15 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
                 permissionProfile: String, model: String, effort: String, authorization: String,
                 context: [Context], excludedPaths: [String], state: State = .authorized, sessionID: String? = nil,
                 worktree: ExecutionWorktree? = nil, work: ProjectExecutionWork? = nil,
-                reviewOfAssignmentID: String? = nil, baselineFromAssignmentID: String? = nil) {
+                reviewOfAssignmentID: String? = nil, baselineFromAssignmentID: String? = nil,
+                reviewScratchVersion: Int? = nil) {
         version = 1; self.id = id; self.registration = registration; self.checkoutPath = checkoutPath
         self.role = role; self.permissionProfile = permissionProfile; self.model = model; self.effort = effort
         self.authorization = authorization; self.context = context; self.excludedPaths = excludedPaths
         self.state = state; self.sessionID = sessionID
         self.worktree = worktree
         self.work = work; self.reviewOfAssignmentID = reviewOfAssignmentID; self.baselineFromAssignmentID = baselineFromAssignmentID
+        self.reviewScratchVersion = reviewScratchVersion
     }
 
     @discardableResult public func validated(effort override: String? = nil) throws -> Self {
@@ -120,6 +126,9 @@ public struct ProjectExecutionAssignment: Codable, Equatable, Sendable {
             throw ProjectExecutionError.invalidAssignment
         }
         if let preparedPolicyDigest, preparedPolicyDigest.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) == nil { throw ProjectExecutionError.invalidAssignment }
+        if let reviewScratchVersion {
+            guard role == .review, reviewScratchVersion == Self.xcodeBuildScratchVersion else { throw ProjectExecutionError.invalidAssignment }
+        }
         if let definition = permissionProfileDefinition {
             guard definition.count <= 32_768,
                   let object = try JSONSerialization.jsonObject(with: definition) as? [String: Any],
