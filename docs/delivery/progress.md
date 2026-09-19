@@ -2,12 +2,24 @@
 
 ## Active goal — remaining blocked P6 tickets
 
+Confirmed visual-review capability blocker: `ReleaseRadarCoordinator/WorkerPolicy.swift`
+explicitly sets both `features.view_image` and `tools.view_image` to false in
+managed-worker overrides. Screenshot conversion cannot provide image access to
+that worker. Review `review-84a083ac-14c0-49a6-afc1-5aedc41122b2` was interrupted,
+physically closed and is being archived; it provides no visual acceptance.
+Owner decision requested for a separate bounded correction enabling read-only
+image viewing for review assignments only, retaining filesystem/network/history
+and management restrictions. No capability/configuration/product change is
+authorized or made by this proposal. Metrics source and passing renders remain
+preserved; integration/release awaits visual review.
+
 Metrics visual review remains incomplete. Main inspected the review transcript:
 the worker compiled a temporary Swift thumbnail helper despite explicit
 no-compilation instructions, then attempted OCR tooling. Main requested interrupt
 and confirmed interrupted status. Product source was not edited. The same
-assignment was resumed only to use a genuine exposed image-viewing tool, or
-report its absence and stop; further compilation/conversion/OCR is prohibited.
+assignment's attempted follow-up was rejected as stopped/revoked; no resumed
+work was authorized. Visual verification still needs an image-capable supported
+review assignment; further compilation/conversion/OCR is not an alternative.
 Temporary review outputs remain preserved in its `.build` directory. No visual
 acceptance or product defect is inferred from this tooling limitation.
 
