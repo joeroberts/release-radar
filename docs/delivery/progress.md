@@ -47,8 +47,9 @@ Owner explicitly approved retirement of only stopped assignment
 Resources retired; prior outcome remains recorded. Branch/commit6690634c preserved,
 ignored build artifacts remain in `.build/connector-recovery-45a9dcbd-preserved/`.
 App/script0.1.23 metadata integrated into canonical branch. Earlier conflicting
-preparation requesta81c6fc2 is superseded without execution; its retired parent is
-not a valid baseline. A fresh request uses the integrated canonical baseline to
+preparation requesta81c6fc2 remains unresolved; its retired parent is
+not a valid baseline. Main previously described it as superseded, but no supported
+operation established that disposition. A fresh request uses the integrated canonical baseline to
 finish bundled plugin version/digest and corresponding tests. No installation,
 packaging or second-Mac acceptance yet. Existing signing/permissions remain unchanged
 except deletion of the exact retired generated worker profile explicitly approved.
@@ -59,6 +60,23 @@ Fresh preparation `f9fe67ac-d7c8-48c7-b023-6eb831a29c64` returned
 remaining entries Closed. Do not infer successful admission from retirement.
 No replacement launched. Build Agent assigned bounded read-only source diagnosis;
 no additional retirement, direct state access/repair or implementation authorized.
+
+## Preparation receipt recovery defect
+
+Read-only source diagnosis identifies a durable admission trap: dispatcher records
+outcomeUnknown intent before preparation; a preparation conflict returns an error
+without settling that receipt. A different request is then rejected while that
+receipt remains uncertain. Exact replay of originala81c6fc2 after approved retirement
+returned `execution.assignmentNotAuthorized`; its parent45a9dcbd is retired. Fresh
+f9fe67ac returns conflict. UI shows remaining workers Closed. These observations
+are consistent with the receipt trap; no direct database read was used to assert
+its persisted contents. Source: ProjectExecutionAssignmentCommandDispatcher.swift
+intent/replay/error paths and ProjectExecutionAssignmentCoordinator.swift parent guard.
+Main's claim that retirement alone would unblock release was incomplete. No data
+loss: partial release changes integrated, original branch retained, build artifacts
+preserved. No supported receipt recovery operation is exposed. Do not mutate control
+files/SQLite or use another task identity to evade admission. Packaging remains
+blocked pending a supported correction to preparation failure/replay recovery.
 
 ## Local integration and completed UI findings
 
