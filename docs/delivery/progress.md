@@ -65,6 +65,22 @@ Review worker `B8927ECA-991B-4C85-B83D-4A48E867A1C3`, task
 network disabled. Source review proceeds while Build Agent diagnoses XCTest;
 runtime/UI correctness remains unproven.
 
+Corrected metrics source review is running under
+`review-e92c2f41-bf76-4cd3-8138-e4206585d86f`, from closed correction delivery
+`delivery-43907196-a74b-42cc-b82c-bf1b3fa02e80` at `401907a7`.
+Same phase/task revisions 1; request `e92c2f41-bf76-4cd3-8138-e4206585d86f`,
+audit `1030CEE9-FF47-4473-8C20-480A7E9B2738`. An ignored profiling file caused
+initial conflict and was preserved in
+`/tmp/rr-metrics-43907196-review-artifacts/default.profraw`; exact replay succeeded.
+Worker `98FBBB72-7BCE-4663-967A-F6464EFBD645`, task
+`01a0baf0-4fd5-73f2-8b1a-bfd31cd53808`, is verified Terra/high/read-only/no-network.
+
+Build Agent's corrected diagnostic delivered DYLD variables and localized the
+pre-main stall to opening the top-level built ReleaseRadarCore.framework. It is
+checking the ordinary runner correction of prioritizing the existing signed
+embedded framework. No changed signing, source, entitlements or permissions;
+no passing test result yet.
+
 ### Metrics corrected candidate — verification queued
 
 Candidate `401907a7` removes the two-line value limit and corrects the rendering
